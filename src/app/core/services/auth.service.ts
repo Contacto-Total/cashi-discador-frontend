@@ -33,20 +33,31 @@ export class AuthService {
   }
 
   login(username: string, password: string): Observable<LoginResponse> {
-    const request: LoginRequest = { username, password };
+    // Mapear parámetros (inglés) a request del backend (español)
+    const request: LoginRequest = {
+      nombreUsuario: username,
+      contrasena: password
+    };
     return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, request).pipe(
       tap(response => {
-        localStorage.setItem(this.TOKEN_KEY, response.token);
+        // Guardar access token y refresh token
+        localStorage.setItem(this.TOKEN_KEY, response.accessToken);
+        localStorage.setItem('refresh_token', response.refreshToken);
 
-        // Convert LoginResponse to User object
+        // Dividir nombreCompleto en firstName y lastName
+        const nameParts = response.nombreCompleto?.split(' ') || ['', ''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Mapear respuesta del backend (español) al modelo User (inglés)
         const user: User = {
-          id: response.id,
-          username: response.username,
+          id: response.idUsuario,
+          username: response.nombreUsuario,
           email: response.email,
-          firstName: response.firstName,
-          lastName: response.lastName,
-          role: response.role as UserRole,
-          sipExtension: response.sipExtension,
+          firstName: firstName,
+          lastName: lastName,
+          role: (response.roles?.[0] || 'AGENT') as UserRole,
+          sipExtension: response.extensionSip,
           active: true
         };
 
@@ -58,6 +69,7 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem(this.USER_KEY);
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);

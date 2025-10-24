@@ -18,18 +18,22 @@ export enum UserRole {
 }
 
 export interface LoginRequest {
-  username: string;
-  password: string;
+  nombreUsuario: string;
+  contrasena: string;
 }
 
 export interface LoginResponse {
-  token: string;
-  type: string;
-  id: number;
-  username: string;
+  // Campos del auth-backend (en español)
+  idUsuario: number;
+  nombreUsuario: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-  sipExtension: string;
+  nombreCompleto: string;
+  extensionSip: string;
+  accessToken: string;
+  refreshToken: string;
+  tipoToken: string;
+  expiresIn: number;
+  roles: string[];
+  permisos: string[];
+  mensaje: string;
 }
