@@ -1,0 +1,84 @@
+<mat-card class="contact-card">
+  <mat-card-header>
+    <mat-card-title>Current Contact</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading contact...</p>
+    </div>
+
+    <div *ngIf="!loading && !contact" class="no-contact">
+      <mat-icon>person_off</mat-icon>
+      <p>No contact available</p>
+    </div>
+
+    <div *ngIf="!loading && contact" class="contact-info">
+      <div class="contact-avatar">
+        {{ getContactInitials() }}
+      </div>
+
+      <div class="contact-details">
+        <h2 class="contact-name">{{ getFullName() }}</h2>
+
+        <div class="contact-item">
+          <mat-icon>phone</mat-icon>
+          <span>{{ contact.phoneNumber }}</span>
+        </div>
+
+        <div class="contact-item" *ngIf="contact.email">
+          <mat-icon>email</mat-icon>
+          <span>{{ contact.email }}</span>
+        </div>
+
+        <div class="contact-item" *ngIf="contact.campaignId">
+          <mat-icon>campaign</mat-icon>
+          <span>Campaign ID: {{ contact.campaignId }}</span>
+        </div>
+      </div>
+
+      <div class="contact-history" *ngIf="contact.attempts > 0">
+        <h3>Previous Attempts</h3>
+        <div class="history-item">
+          <mat-icon>history</mat-icon>
+          <span>Attempts: {{ contact.attempts }}</span>
+        </div>
+        <div class="history-item" *ngIf="contact.lastCallDate">
+          <mat-icon>event</mat-icon>
+          <span>Last call: {{ contact.lastCallDate | date:'short' }}</span>
+        </div>
+        <div class="history-item" *ngIf="contact.status">
+          <mat-icon>info</mat-icon>
+          <span>Status: {{ contact.status }}</span>
+        </div>
+      </div>
+
+      <div class="contact-notes" *ngIf="contact.notes">
+        <h3>Notes</h3>
+        <p>{{ contact.notes }}</p>
+      </div>
+
+      <div class="contact-actions">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="onCall()"
+          [disabled]="!canCall"
+          class="call-button">
+          <mat-icon>phone</mat-icon>
+          Call
+        </button>
+
+        <button
+          mat-stroked-button
+          (click)="onSkip()"
+          [disabled]="!canCall"
+          class="skip-button">
+          <mat-icon>skip_next</mat-icon>
+          Skip
+        </button>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

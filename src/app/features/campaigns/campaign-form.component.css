@@ -1,0 +1,73 @@
+.campaign-form-container {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.campaign-form-container h1 {
+  font-size: 32px;
+  font-weight: 500;
+  margin-bottom: 24px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.form-row.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.slider-container label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+}
+
+.slider-container mat-slider {
+  width: 100%;
+}
+
+.slider-container mat-hint {
+  font-size: 12px;
+  color: #666;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .campaign-form-container {
+    padding: 16px;
+  }
+
+  .form-row.two-columns {
+    grid-template-columns: 1fr;
+  }
+}

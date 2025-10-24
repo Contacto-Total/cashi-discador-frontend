@@ -1,0 +1,49 @@
+<div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()">
+  <mat-toolbar color="primary" class="app-toolbar">
+    <button mat-icon-button (click)="sidenav.toggle()">
+      <mat-icon>menu</mat-icon>
+    </button>
+    <span class="app-title">{{ title }}</span>
+    <span class="spacer"></span>
+    <span *ngIf="authService.currentUser$ | async as user">
+      {{ user.firstName }} {{ user.lastName }}
+    </span>
+    <button mat-icon-button (click)="logout()">
+      <mat-icon>logout</mat-icon>
+    </button>
+  </mat-toolbar>
+
+  <mat-sidenav-container class="sidenav-container">
+    <mat-sidenav #sidenav mode="side" opened class="sidenav">
+      <mat-nav-list>
+        <!-- Agent menu items -->
+        <ng-container *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
+          <a mat-list-item routerLink="/dialer" routerLinkActive="active">
+            <mat-icon matListItemIcon>phone</mat-icon>
+            <span matListItemTitle>Softphone</span>
+          </a>
+          <a mat-list-item routerLink="/contacts" routerLinkActive="active">
+            <mat-icon matListItemIcon>contacts</mat-icon>
+            <span matListItemTitle>Contactos</span>
+          </a>
+        </ng-container>
+
+        <!-- Admin menu items -->
+        <ng-container *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+          <a mat-list-item routerLink="/admin/monitoring" routerLinkActive="active">
+            <mat-icon matListItemIcon>supervisor_account</mat-icon>
+            <span matListItemTitle>Monitoreo</span>
+          </a>
+        </ng-container>
+      </mat-nav-list>
+    </mat-sidenav>
+
+    <mat-sidenav-content class="main-content">
+      <router-outlet></router-outlet>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+</div>
+
+<div *ngIf="isLoginPage() || !authService.isAuthenticated()">
+  <router-outlet></router-outlet>
+</div>

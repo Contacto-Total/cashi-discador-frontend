@@ -1,0 +1,130 @@
+<div class="monitoring-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>supervisor_account</mat-icon>
+        Panel de Supervisión - Llamadas Activas
+      </mat-card-title>
+      <div class="header-actions">
+        <button mat-raised-button color="primary" (click)="loadActiveCalls()">
+          <mat-icon>refresh</mat-icon>
+          Actualizar
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Loading spinner -->
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner></mat-spinner>
+        <p>Cargando llamadas activas...</p>
+      </div>
+
+      <!-- No active calls message -->
+      <div *ngIf="!loading && activeCalls.length === 0" class="no-calls">
+        <mat-icon>phone_disabled</mat-icon>
+        <p>No hay llamadas activas en este momento</p>
+      </div>
+
+      <!-- Active calls table -->
+      <div *ngIf="!loading && activeCalls.length > 0" class="table-container">
+        <table mat-table [dataSource]="activeCalls" class="calls-table">
+
+          <!-- Agent Column -->
+          <ng-container matColumnDef="agent">
+            <th mat-header-cell *matHeaderCellDef>Agente</th>
+            <td mat-cell *matCellDef="let call">
+              <div class="agent-info">
+                <mat-icon>person</mat-icon>
+                <div>
+                  <div class="agent-name">{{call.agentName}}</div>
+                  <div class="agent-ext">Ext: {{call.agentExtension}}</div>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Client Column -->
+          <ng-container matColumnDef="client">
+            <th mat-header-cell *matHeaderCellDef>Cliente</th>
+            <td mat-cell *matCellDef="let call">
+              <div class="client-info">
+                <mat-icon>phone</mat-icon>
+                <span>{{call.clientNumber}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Duration Column -->
+          <ng-container matColumnDef="duration">
+            <th mat-header-cell *matHeaderCellDef>Duración</th>
+            <td mat-cell *matCellDef="let call">
+              <div class="duration">
+                <mat-icon>timer</mat-icon>
+                <span>{{formatDuration(call.duration)}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- State Column -->
+          <ng-container matColumnDef="state">
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let call">
+              <div class="call-state" [class]="'state-' + call.callState.toLowerCase()">
+                <mat-icon [color]="getStateColor(call.callState)">
+                  {{getStateIcon(call.callState)}}
+                </mat-icon>
+                <span>{{call.callState}}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Campaign Column -->
+          <ng-container matColumnDef="campaign">
+            <th mat-header-cell *matHeaderCellDef>Campaña</th>
+            <td mat-cell *matCellDef="let call">
+              <span class="campaign-name">{{call.campaignName || '-'}}</span>
+            </td>
+          </ng-container>
+
+          <!-- Actions Column -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let call">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="superviseCall(call)"
+                matTooltip="Abrir pantalla de supervisión">
+                <mat-icon>supervisor_account</mat-icon>
+                Supervisar
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+
+      <!-- Legend -->
+      <div *ngIf="!loading && activeCalls.length > 0" class="legend">
+        <h4>Modos de Monitoreo:</h4>
+        <div class="legend-items">
+          <div class="legend-item">
+            <mat-icon color="primary">visibility</mat-icon>
+            <span><strong>VIGÍA:</strong> Escuchas la llamada, pero nadie te escucha</span>
+          </div>
+          <div class="legend-item">
+            <mat-icon color="accent">hearing</mat-icon>
+            <span><strong>SUSURRO:</strong> Solo el agente puede escucharte, el cliente no</span>
+          </div>
+          <div class="legend-item">
+            <mat-icon color="warn">group_add</mat-icon>
+            <span><strong>TRIPARTITA:</strong> Todos te escuchan (agente y cliente)</span>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

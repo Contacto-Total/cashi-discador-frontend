@@ -1,0 +1,166 @@
+<div class="dashboard-container">
+  <h1 class="dashboard-title">Dashboard</h1>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <div *ngIf="!loading && stats" class="dashboard-content">
+    <!-- Statistics Cards -->
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon color="primary">call</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.totalCallsToday }}</h3>
+            <p>Total Calls Today</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon style="color: #4caf50;">phone_in_talk</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.answeredCallsToday }}</h3>
+            <p>Answered Calls</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon style="color: #ff9800;">timer</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ formatDuration(stats.averageDuration) }}</h3>
+            <p>Average Duration</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon style="color: #2196f3;">person</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ stats.availableAgents }} / {{ stats.availableAgents + stats.busyAgents }}</h3>
+            <p>Available Agents</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon style="color: #4caf50;">trending_up</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ (stats.contactRate * 100).toFixed(1) }}%</h3>
+            <p>Contact Rate</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-icon">
+            <mat-icon style="color: #f44336;">trending_down</mat-icon>
+          </div>
+          <div class="stat-info">
+            <h3>{{ (stats.abandonRate * 100).toFixed(1) }}%</h3>
+            <p>Abandon Rate</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Chart Section -->
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>Calls Activity</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-container">
+          <canvas id="callsChart"></canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Active Campaigns -->
+    <mat-card class="campaigns-card">
+      <mat-card-header>
+        <mat-card-title>Active Campaigns</mat-card-title>
+        <button mat-raised-button color="primary" routerLink="/campaigns/new">
+          <mat-icon>add</mat-icon>
+          New Campaign
+        </button>
+      </mat-card-header>
+      <mat-card-content>
+        <table mat-table [dataSource]="activeCampaigns" class="campaigns-table">
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Campaign Name</th>
+            <td mat-cell *matCellDef="let campaign">{{ campaign.name }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let campaign">
+              <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
+                {{ campaign.status }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="dialMode">
+            <th mat-header-cell *matHeaderCellDef>Dial Mode</th>
+            <td mat-cell *matCellDef="let campaign">{{ campaign.dialMode }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Actions</th>
+            <td mat-cell *matCellDef="let campaign">
+              <button mat-icon-button [routerLink]="['/campaigns', campaign.id]">
+                <mat-icon>visibility</mat-icon>
+              </button>
+              <button mat-icon-button [routerLink]="['/campaigns', campaign.id, 'edit']">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <div *ngIf="activeCampaigns.length === 0" class="no-data">
+          <mat-icon>info</mat-icon>
+          <p>No active campaigns</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <button mat-raised-button color="primary" routerLink="/dialer">
+        <mat-icon>phone</mat-icon>
+        Go to Dialer
+      </button>
+      <button mat-raised-button routerLink="/contacts">
+        <mat-icon>contacts</mat-icon>
+        Manage Contacts
+      </button>
+      <button mat-raised-button routerLink="/reports">
+        <mat-icon>assessment</mat-icon>
+        View Reports
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,104 @@
+<div class="campaign-form-container">
+  <h1>{{ isEditMode ? 'Edit Campaign' : 'New Campaign' }}</h1>
+
+  <mat-card>
+    <mat-card-content>
+      <form [formGroup]="campaignForm" (ngSubmit)="onSubmit()">
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Campaign Name</mat-label>
+            <input matInput formControlName="name" placeholder="Enter campaign name">
+            <mat-error *ngIf="campaignForm.get('name')?.hasError('required')">
+              Name is required
+            </mat-error>
+            <mat-error *ngIf="campaignForm.get('name')?.hasError('minlength')">
+              Name must be at least 3 characters
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea matInput formControlName="description" rows="3" placeholder="Enter campaign description"></textarea>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row two-columns">
+          <mat-form-field appearance="outline">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option *ngFor="let status of statuses" [value]="status">
+                {{ status }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Dial Mode</mat-label>
+            <mat-select formControlName="dialMode">
+              <mat-option *ngFor="let mode of dialModes" [value]="mode">
+                {{ mode }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row two-columns">
+          <mat-form-field appearance="outline">
+            <mat-label>Start Date</mat-label>
+            <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+            <mat-datepicker #startPicker></mat-datepicker>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>End Date</mat-label>
+            <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+            <mat-datepicker #endPicker></mat-datepicker>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row two-columns">
+          <mat-form-field appearance="outline">
+            <mat-label>Max Attempts</mat-label>
+            <input matInput type="number" formControlName="maxAttempts" min="1" max="10">
+            <mat-hint>Maximum call attempts per contact (1-10)</mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Retry Interval (minutes)</mat-label>
+            <input matInput type="number" formControlName="retryInterval" min="1">
+            <mat-hint>Time between retry attempts</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Caller ID</mat-label>
+            <input matInput formControlName="callerId" placeholder="Phone number to display">
+            <mat-hint>The phone number that will be shown to contacts</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="form-row" *ngIf="campaignForm.get('dialMode')?.value === 'PREDICTIVE'">
+          <div class="slider-container">
+            <label>Aggressiveness: {{ formatAggressiveness(campaignForm.get('aggressiveness')?.value) }}</label>
+            <mat-slider min="1.0" max="2.0" step="0.1" showTickMarks discrete>
+              <input matSliderThumb formControlName="aggressiveness">
+            </mat-slider>
+            <mat-hint>Controls how many calls to dial per available agent (1.0 = conservative, 2.0 = aggressive)</mat-hint>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button mat-button type="button" (click)="onCancel()">Cancel</button>
+          <button mat-raised-button color="primary" type="submit" [disabled]="loading || campaignForm.invalid">
+            {{ isEditMode ? 'Update' : 'Create' }} Campaign
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>

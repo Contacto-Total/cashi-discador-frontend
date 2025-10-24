@@ -1,0 +1,53 @@
+<mat-card class="call-notes-card">
+  <mat-card-header>
+    <mat-card-title>Call Notes & Disposition</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form [formGroup]="notesForm" (ngSubmit)="onSubmit()">
+      <div class="form-section">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Disposition</mat-label>
+          <mat-select formControlName="disposition">
+            <mat-option *ngFor="let disposition of dispositions" [value]="disposition">
+              {{ disposition | titlecase }}
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="notesForm.get('disposition')?.hasError('required')">
+            Disposition is required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Call Notes</mat-label>
+          <textarea
+            matInput
+            formControlName="notes"
+            rows="5"
+            placeholder="Enter details about this call..."></textarea>
+          <mat-error *ngIf="notesForm.get('notes')?.hasError('required')">
+            Notes are required
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Schedule Callback (Optional)</mat-label>
+          <input
+            matInput
+            [matDatepicker]="callbackPicker"
+            formControlName="scheduleCallback"
+            placeholder="Select date for callback">
+          <mat-datepicker-toggle matSuffix [for]="callbackPicker"></mat-datepicker-toggle>
+          <mat-datepicker #callbackPicker></mat-datepicker>
+        </mat-form-field>
+      </div>
+
+      <div class="form-actions">
+        <button mat-button type="button" (click)="onSkip()">Skip</button>
+        <button mat-raised-button color="primary" type="submit" [disabled]="loading || notesForm.invalid">
+          Save Notes
+        </button>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

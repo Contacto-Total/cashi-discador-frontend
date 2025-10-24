@@ -1,0 +1,47 @@
+<mat-card class="call-history-card">
+  <mat-card-header>
+    <mat-card-title>Recent Calls</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div *ngIf="calls.length === 0" class="no-history">
+      <mat-icon>history</mat-icon>
+      <p>No call history</p>
+    </div>
+
+    <table mat-table [dataSource]="calls" *ngIf="calls.length > 0" class="history-table">
+      <ng-container matColumnDef="time">
+        <th mat-header-cell *matHeaderCellDef>Time</th>
+        <td mat-cell *matCellDef="let call">
+          {{ call.startTime | date:'HH:mm' }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="contact">
+        <th mat-header-cell *matHeaderCellDef>Contact</th>
+        <td mat-cell *matCellDef="let call">
+          {{ call.phoneNumber }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="duration">
+        <th mat-header-cell *matHeaderCellDef>Duration</th>
+        <td mat-cell *matCellDef="let call">
+          {{ formatDuration(call.duration) }}
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let call">
+          <mat-icon [style.color]="getStatusColor(call.status)">
+            {{ getStatusIcon(call.status) }}
+          </mat-icon>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table>
+  </mat-card-content>
+</mat-card>

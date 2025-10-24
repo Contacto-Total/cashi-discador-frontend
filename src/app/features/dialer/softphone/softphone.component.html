@@ -1,0 +1,106 @@
+<mat-card class="softphone-card">
+  <mat-card-header>
+    <mat-card-title>Softphone</mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="phone-display">
+      <div class="status-indicator" [style.background-color]="getStatusColor()">
+        <mat-icon class="status-icon">{{ callState === CallState.ACTIVE ? 'phone_in_talk' : 'phone' }}</mat-icon>
+      </div>
+
+      <div class="status-text" [style.color]="getStatusColor()">
+        {{ getStatusText() }}
+      </div>
+
+      <div class="phone-number" *ngIf="phoneNumber">
+        {{ phoneNumber }}
+      </div>
+
+      <div class="call-duration" *ngIf="isActive()">
+        {{ formatDuration(duration) }}
+      </div>
+    </div>
+
+    <div class="control-buttons">
+      <button
+        mat-mini-fab
+        color="warn"
+        (click)="onHangup()"
+        [disabled]="!canHangup"
+        matTooltip="Hang up">
+        <mat-icon>call_end</mat-icon>
+      </button>
+
+      <button
+        mat-mini-fab
+        [color]="isMuted ? 'accent' : 'primary'"
+        (click)="onMute()"
+        [disabled]="!isActive()"
+        matTooltip="{{ isMuted ? 'Unmute' : 'Mute' }}">
+        <mat-icon>{{ isMuted ? 'mic_off' : 'mic' }}</mat-icon>
+      </button>
+
+      <button
+        mat-mini-fab
+        (click)="onHold()"
+        [disabled]="!isActive()"
+        matTooltip="Hold">
+        <mat-icon>pause</mat-icon>
+      </button>
+    </div>
+
+    <div class="dtmf-keypad">
+      <div class="keypad-title">Dialpad</div>
+      <div class="keypad-grid">
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('1')" [disabled]="!isActive()">
+          <span class="digit">1</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('2')" [disabled]="!isActive()">
+          <span class="digit">2</span>
+          <span class="letters">ABC</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('3')" [disabled]="!isActive()">
+          <span class="digit">3</span>
+          <span class="letters">DEF</span>
+        </button>
+
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('4')" [disabled]="!isActive()">
+          <span class="digit">4</span>
+          <span class="letters">GHI</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('5')" [disabled]="!isActive()">
+          <span class="digit">5</span>
+          <span class="letters">JKL</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('6')" [disabled]="!isActive()">
+          <span class="digit">6</span>
+          <span class="letters">MNO</span>
+        </button>
+
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('7')" [disabled]="!isActive()">
+          <span class="digit">7</span>
+          <span class="letters">PQRS</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('8')" [disabled]="!isActive()">
+          <span class="digit">8</span>
+          <span class="letters">TUV</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('9')" [disabled]="!isActive()">
+          <span class="digit">9</span>
+          <span class="letters">WXYZ</span>
+        </button>
+
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('*')" [disabled]="!isActive()">
+          <span class="digit">*</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('0')" [disabled]="!isActive()">
+          <span class="digit">0</span>
+        </button>
+        <button mat-raised-button class="dtmf-key" (click)="onDTMF('#')" [disabled]="!isActive()">
+          <span class="digit">#</span>
+        </button>
+      </div>
+    </div>
+  </mat-card-content>
+</mat-card>

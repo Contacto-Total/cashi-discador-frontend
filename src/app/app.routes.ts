@@ -1,0 +1,38 @@
+import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+
+export const routes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
+  },
+  {
+    path: 'dialer',
+    loadComponent: () => import('./features/dialer/test-softphone/test-softphone.component').then(m => m.TestSoftphoneComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'contacts',
+    loadComponent: () => import('./features/contacts/contact-list.component').then(m => m.ContactListComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'admin/monitoring',
+    loadComponent: () => import('./features/admin/admin-monitoring/admin-monitoring.component').then(m => m.AdminMonitoringComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'admin/supervision/:callUuid',
+    loadComponent: () => import('./features/admin/admin-call-supervision/admin-call-supervision').then(m => m.AdminCallSupervision),
+    canActivate: [authGuard]
+  },
+  {
+    path: '',
+    redirectTo: '/login',
+    pathMatch: 'full'
+  },
+  {
+    path: '**',
+    redirectTo: '/login'
+  }
+];

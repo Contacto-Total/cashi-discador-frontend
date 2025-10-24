@@ -1,0 +1,61 @@
+<div class="dialer-container">
+  <!-- Header Section -->
+  <div class="dialer-header">
+    <div class="agent-info">
+      <mat-icon>person</mat-icon>
+      <span class="agent-name">{{ (authService.currentUser$ | async)?.firstName }} {{ (authService.currentUser$ | async)?.lastName }}</span>
+      <mat-chip [style.background-color]="getAgentStatusColor()" class="status-chip">
+        {{ getAgentStatusLabel() }}
+      </mat-chip>
+    </div>
+    <div class="call-timer">
+      <mat-icon>timer</mat-icon>
+      <span class="timer-text">{{ formatTimer(callDuration) }}</span>
+    </div>
+  </div>
+
+  <!-- Main Dialer Content -->
+  <div class="dialer-content">
+    <!-- Left Column: Contact Card -->
+    <div class="left-column">
+      <app-contact-card
+        [contact]="currentContact"
+        [loading]="loading"
+        [canCall]="canMakeCall()"
+        (callClicked)="makeCall()"
+        (skipClicked)="skipContact()">
+      </app-contact-card>
+
+      <!-- Call History -->
+      <app-call-history
+        [agentId]="agentId"
+        [refreshTrigger]="currentCall?.id">
+      </app-call-history>
+    </div>
+
+    <!-- Right Column: Softphone -->
+    <div class="right-column">
+      <app-softphone
+        [callState]="callState"
+        [duration]="callDuration"
+        [isMuted]="isMuted()"
+        [phoneNumber]="currentContact?.phoneNumber || ''"
+        [canHangup]="isInCall()"
+        (hangupClicked)="hangupCall()"
+        (muteClicked)="toggleMute()">
+      </app-softphone>
+    </div>
+  </div>
+
+  <!-- Call Notes Section (shown after call ends) -->
+  <div class="notes-section" *ngIf="showNotesForm && currentCall">
+    <app-call-notes
+      [call]="currentCall"
+      [contact]="currentContact"
+      (notesComplete)="onNotesComplete()">
+    </app-call-notes>
+  </div>
+
+  <!-- Hidden audio element for remote stream -->
+  <audio #audioElement autoplay></audio>
+</div>
