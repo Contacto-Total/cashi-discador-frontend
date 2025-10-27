@@ -9,8 +9,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { AuthService } from '../../whatsapp/auth.service';
-import { LoginRequest } from '../../models/auth.model';
+import { AuthService } from '../../../../core/services/whatsapp/auth.service';
+import { LoginRequest } from '../../../../core/models/auth.model';
 
 @Component({
   selector: 'app-login',
