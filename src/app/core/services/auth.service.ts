@@ -103,4 +103,46 @@ export class AuthService {
     const user = this.getCurrentUser();
     return user ? user.id : null;
   }
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refresh_token');
+  }
+
+  refreshToken(): Observable<LoginResponse> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/refresh-token`, {
+      refreshToken: refreshToken
+    }).pipe(
+      tap(response => {
+        // Actualizar access token
+        localStorage.setItem(this.TOKEN_KEY, response.accessToken);
+        // El refresh token no cambia, pero si viene uno nuevo, actualizarlo
+        if (response.refreshToken) {
+          localStorage.setItem('refresh_token', response.refreshToken);
+        }
+      })
+    );
+  }
+
+  isTokenExpiringSoon(): boolean {
+    const token = this.getToken();
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiry = payload.exp * 1000;
+      const now = Date.now();
+      // Renovar si falta menos de 5 minutos para expirar
+      const fiveMinutes = 5 * 60 * 1000;
+      return (expiry - now) < fiveMinutes && expiry > now;
+    } catch (e) {
+      return false;
+    }
+  }
 }
