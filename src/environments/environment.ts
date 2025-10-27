@@ -1,8 +1,11 @@
 export const environment = {
   production: true,
 
-    // Backend a través de Apache proxy (URLs relativas)
-    apiUrl: '/api',
+    // Auth Backend (puerto 8082)
+    apiUrl: '/auth-api',
+
+    // API Gateway (puerto 8000) - para otras APIs
+    gatewayUrl: '/api',
     wsUrl: '/ws',
 
     // WhatsApp Backend
