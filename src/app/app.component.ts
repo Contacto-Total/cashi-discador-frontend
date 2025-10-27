@@ -46,14 +46,21 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Connect to WebSocket if authenticated
-    if (this.authService.isAuthenticated()) {
-      this.websocketService.connect();
-      this.iniciarMonitoreoInactividad();
-    }
-
     // Cargar configuraciones de sesión
     this.sessionConfig.cargarConfiguracion().subscribe();
+
+    // Suscribirse a cambios en el usuario autenticado
+    this.authService.currentUser$.subscribe(user => {
+      if (user && this.authService.isAuthenticated()) {
+        // Usuario autenticado - iniciar servicios
+        this.websocketService.connect();
+        this.iniciarMonitoreoInactividad();
+      } else {
+        // Usuario no autenticado - detener servicios
+        this.inactivityService.detener();
+        this.websocketService.disconnect();
+      }
+    });
   }
 
   ngOnDestroy(): void {
