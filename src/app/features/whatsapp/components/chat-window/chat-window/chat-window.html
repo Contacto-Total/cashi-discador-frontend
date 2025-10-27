@@ -1,0 +1,191 @@
+<div class="chat-window-container">
+  <!-- Chat header -->
+  <div *ngIf="currentChat" class="chat-header">
+    <div class="header-left">
+      <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
+      <mat-icon *ngIf="!currentChat.profilePictureUrl" class="avatar-icon">account_circle</mat-icon>
+      <div class="chat-info">
+        <span class="chat-name">{{ getChatDisplayName() }}</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button mat-icon-button class="header-icon">
+        <mat-icon>search</mat-icon>
+      </button>
+      <button mat-icon-button class="header-icon">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="!currentChat">
+    <div class="empty-content">
+      <div class="empty-icon">
+        <svg viewBox="0 0 303 172" width="360" height="210">
+          <path fill="#525252" d="M151.5,0A75.5,75.5,0,1,1,76,75.5,75.5,75.5,0,0,1,151.5,0m0,140A64.5,64.5,0,1,0,87,75.5,64.5,64.5,0,0,0,151.5,140Z"/>
+        </svg>
+      </div>
+      <h1>Chat Contacto Total</h1>
+      <p>Selecciona un chat para comenzar a conversar</p>
+    </div>
+  </div>
+
+  <!-- Messages container -->
+  <div class="messages-container" #messagesContainer *ngIf="currentChat">
+    <div
+      *ngFor="let message of messages"
+      class="message-wrapper"
+      [class.from-me]="message.fromMe"
+      [class.from-them]="!message.fromMe">
+
+      <div class="message-bubble">
+        <!-- Botón de reply (aparece al hover) -->
+        <button mat-icon-button class="reply-button" (click)="replyToMessage(message)" title="Responder">
+          <mat-icon>reply</mat-icon>
+        </button>
+
+        <!-- Mensaje citado -->
+        <div *ngIf="message.quotedMessageId" class="quoted-message">
+          <div class="quoted-line"></div>
+          <div class="quoted-content">
+            <div class="quoted-sender" [class.quoted-me]="message.quotedFromMe">
+              {{ message.quotedFromMe ? 'Tú' : message.quotedSender }}
+            </div>
+            <div class="quoted-text">{{ message.quotedText || 'Archivo adjunto' }}</div>
+          </div>
+        </div>
+
+        <div *ngIf="message.hasMedia && message.media" class="message-media">
+          <img *ngIf="isImageMedia(message.media.mime)"
+               [src]="getMediaSrc(message.media)"
+               alt="Imagen"
+               class="media-image">
+          <video *ngIf="isVideoMedia(message.media.mime)"
+                 [src]="getMediaSrc(message.media)"
+                 controls
+                 class="media-video">
+          </video>
+          <div *ngIf="isAudioMedia(message.media.mime)" class="media-audio">
+            <button mat-icon-button class="audio-play-button" (click)="toggleAudio($event, message.msgId)">
+              <mat-icon>{{ isAudioPlaying(message.msgId) ? 'pause' : 'play_arrow' }}</mat-icon>
+            </button>
+            <div class="audio-controls">
+              <div class="audio-waveform">
+                <div class="audio-progress-bg">
+                  <div class="audio-progress-fill" [style.width.%]="getAudioProgress(message.msgId)"></div>
+                </div>
+                <input
+                  type="range"
+                  class="audio-slider"
+                  min="0"
+                  max="100"
+                  [value]="getAudioProgress(message.msgId)"
+                  (input)="seekAudio($event, message.msgId)">
+              </div>
+              <div class="audio-time">
+                <span>{{ getAudioCurrentTime(message.msgId) }}</span>
+                <span class="audio-duration">{{ getAudioDuration(message.msgId) }}</span>
+              </div>
+            </div>
+            <button mat-icon-button class="audio-speed-button" (click)="changeSpeed($event, message.msgId)">
+              <span class="speed-text">{{ getAudioSpeed(message.msgId) }}x</span>
+            </button>
+            <audio
+              #audioElement
+              [src]="getMediaSrc(message.media)"
+              [id]="'audio-' + message.msgId"
+              (timeupdate)="onAudioTimeUpdate(message.msgId)"
+              (loadedmetadata)="onAudioLoaded(message.msgId)"
+              (loadeddata)="onAudioLoaded(message.msgId)"
+              (canplay)="onAudioLoaded(message.msgId)"
+              (durationchange)="onAudioLoaded(message.msgId)"
+              (ended)="onAudioEnded(message.msgId)"
+              preload="metadata"
+              style="display: none">
+            </audio>
+          </div>
+        </div>
+        <div class="message-text" *ngIf="message.text">{{ message.text }}</div>
+        <div class="message-footer">
+          <span class="message-time">{{ formatTime(message.timestamp) }}</span>
+          <mat-icon
+            *ngIf="message.fromMe"
+            class="message-status"
+            [class]="getMessageStatusClass(message.status)">
+            {{ getMessageStatusIcon(message.status) }}
+          </mat-icon>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input container -->
+  <div class="input-container" *ngIf="currentChat">
+    <!-- Reply preview -->
+    <div *ngIf="replyingTo" class="reply-preview">
+      <div class="reply-preview-content">
+        <div class="reply-preview-header">
+          <mat-icon class="reply-icon">reply</mat-icon>
+          <span class="reply-preview-title">Respondiendo a {{ replyingTo.fromMe ? 'ti mismo' : (replyingTo.chatTitle || 'Usuario') }}</span>
+        </div>
+        <div class="reply-preview-text">{{ replyingTo.text || 'Archivo adjunto' }}</div>
+      </div>
+      <button mat-icon-button class="reply-close-button" (click)="cancelReply()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- TEMPORALMENTE DESACTIVADO - Banners de bloqueo -->
+    <!-- <div *ngIf="windowStatus?.hasActiveWindow && !isChatBlocked"
+         class="window-warning-banner">
+      ⚠️ Tienes {{ getTimeRemaining() }} para responder o el chat se bloqueará
+    </div>
+
+    <div *ngIf="isChatBlocked" class="chat-blocked-banner">
+      🚫 Chat bloqueado. Espera a que {{ getChatDisplayName() }} te escriba de nuevo.
+    </div> -->
+
+    <div class="input-row">
+      <input
+        type="file"
+        #fileInput
+        (change)="onFileSelected($event)"
+        accept="image/*,video/*,audio/*"
+        style="display: none">
+
+      <button mat-icon-button class="input-icon" (click)="openFileSelector()">
+        <mat-icon>add</mat-icon>
+      </button>
+
+      <div class="message-input-wrapper">
+        <input
+          type="text"
+          class="message-input"
+          placeholder="Escribe un mensaje aquí"
+          [(ngModel)]="messageText"
+          (keypress)="onKeyPress($event)"
+          autocomplete="off">
+      </div>
+
+      <button mat-icon-button class="input-icon">
+        <mat-icon>sentiment_satisfied_alt</mat-icon>
+      </button>
+
+      <button
+        *ngIf="messageText.trim()"
+        mat-icon-button
+        class="send-button"
+        (click)="sendMessage()">
+        <mat-icon>send</mat-icon>
+      </button>
+
+      <button
+        *ngIf="!messageText.trim()"
+        mat-icon-button
+        class="input-icon">
+        <mat-icon>mic</mat-icon>
+      </button>
+    </div>
+  </div>
+</div>

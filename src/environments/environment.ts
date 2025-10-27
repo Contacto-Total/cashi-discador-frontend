@@ -5,6 +5,10 @@ export const environment = {
     apiUrl: '/api',
     wsUrl: '/ws',
 
+    // WhatsApp Backend
+    whatsappApiUrl: '/wsp-api',
+    whatsappWsUrl: '/wsp-ws',
+
     // FreeSWITCH on AWS - WebSocket SIP over SSL (port 7443)
     freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
     freeswitchDomain: 'cobranza.contactototal.com.pe'

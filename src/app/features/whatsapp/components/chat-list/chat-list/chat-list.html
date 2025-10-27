@@ -1,0 +1,70 @@
+<div class="chat-list-container">
+  <!-- Header -->
+  <div class="sidebar-header">
+    <div class="header-left">
+      <span class="username-display">{{ getCurrentUsername() }}</span>
+    </div>
+    <div class="header-right">
+      <button mat-icon-button class="header-icon theme-toggle" (click)="toggleTheme()" [title]="isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
+        <mat-icon>{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</mat-icon>
+      </button>
+      <button mat-icon-button class="header-icon" [matMenuTriggerFor]="menu">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="logout()">
+          <mat-icon>logout</mat-icon>
+          <span>Cerrar sesión</span>
+        </button>
+      </mat-menu>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-container">
+    <div class="search-wrapper">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        placeholder="Buscar o empezar un chat"
+        [(ngModel)]="searchText"
+        (ngModelChange)="filterChats()"
+        class="search-input">
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    <button class="filter-tab active">Todos</button>
+    <button class="filter-tab">No leídos</button>
+  </div>
+
+  <!-- Chat list -->
+  <div class="chat-list">
+    <div
+      *ngFor="let chat of filteredChats"
+      (click)="selectChat(chat)"
+      [class.selected]="selectedChatJid === chat.jid"
+      class="chat-item">
+
+      <div class="chat-avatar">
+        <img *ngIf="chat.profilePictureUrl" [src]="chat.profilePictureUrl" class="profile-pic" alt="Profile">
+        <mat-icon *ngIf="!chat.profilePictureUrl">account_circle</mat-icon>
+      </div>
+
+      <div class="chat-content">
+        <div class="chat-top">
+          <span class="chat-name">{{ formatChatName(chat) }}</span>
+          <span class="chat-time">{{ formatTime(chat.lastMsgTs) }}</span>
+        </div>
+
+        <div class="chat-bottom">
+          <span class="chat-last-message">{{ truncateMessage(chat.lastMsgText) }}</span>
+          <span class="chat-unread" *ngIf="chat.unreadCount && chat.unreadCount > 0">
+            {{ chat.unreadCount }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

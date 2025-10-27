@@ -1,0 +1,80 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.login-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #128C7E;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.whatsapp-icon {
+  font-size: 32px;
+  width: 32px;
+  height: 32px;
+  color: #25D366;
+}
+
+mat-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+mat-card-subtitle {
+  text-align: center;
+  color: #666;
+  margin-top: 8px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.login-button {
+  height: 48px;
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 16px;
+  background-color: #128C7E;
+
+  &:hover:not([disabled]) {
+    background-color: #075E54;
+  }
+}
+
+.button-spinner {
+  display: inline-block;
+  margin: 0 auto;
+}
+
+mat-form-field {
+  mat-icon[matPrefix] {
+    color: #666;
+    margin-right: 8px;
+  }
+}
