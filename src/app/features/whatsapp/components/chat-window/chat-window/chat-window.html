@@ -137,12 +137,16 @@
     </div>
 
     <!-- Banners de estado de ventana -->
-    <div *ngIf="windowStatus?.hasActiveWindow && !isChatBlocked"
+    <div *ngIf="isNewChat && !isChatBlocked" class="new-chat-banner">
+      💬 El cliente debe iniciar esta conversación para poder enviar mensajes
+    </div>
+
+    <div *ngIf="windowStatus?.hasActiveWindow && !isChatBlocked && !isNewChat"
          class="window-warning-banner">
       ⚠️ Tienes {{ getTimeRemaining() }} para responder o el chat se bloqueará
     </div>
 
-    <div *ngIf="isChatBlocked" class="chat-blocked-banner">
+    <div *ngIf="isChatBlocked && !isNewChat" class="chat-blocked-banner">
       🚫 Chat bloqueado. Espera a que {{ getChatDisplayName() }} te escriba de nuevo.
     </div>
 
@@ -154,7 +158,7 @@
         accept="image/*,video/*,audio/*"
         style="display: none">
 
-      <button mat-icon-button class="input-icon" (click)="openFileSelector()" [disabled]="isChatBlocked">
+      <button mat-icon-button class="input-icon" (click)="openFileSelector()" [disabled]="isChatBlocked || isNewChat">
         <mat-icon>add</mat-icon>
       </button>
 
@@ -165,11 +169,11 @@
           [placeholder]="getInputPlaceholder()"
           [(ngModel)]="messageText"
           (keypress)="onKeyPress($event)"
-          [disabled]="isChatBlocked"
+          [disabled]="isChatBlocked || isNewChat"
           autocomplete="off">
       </div>
 
-      <button mat-icon-button class="input-icon" [disabled]="isChatBlocked">
+      <button mat-icon-button class="input-icon" [disabled]="isChatBlocked || isNewChat">
         <mat-icon>sentiment_satisfied_alt</mat-icon>
       </button>
 
@@ -178,7 +182,7 @@
         mat-icon-button
         class="send-button"
         (click)="sendMessage()"
-        [disabled]="isChatBlocked">
+        [disabled]="isChatBlocked || isNewChat">
         <mat-icon>send</mat-icon>
       </button>
 
@@ -186,7 +190,7 @@
         *ngIf="!messageText.trim()"
         mat-icon-button
         class="input-icon"
-        [disabled]="isChatBlocked">
+        [disabled]="isChatBlocked || isNewChat">
         <mat-icon>mic</mat-icon>
       </button>
     </div>

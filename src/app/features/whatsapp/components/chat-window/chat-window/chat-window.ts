@@ -52,6 +52,7 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   // Window status state
   windowStatus: any = null;
   isChatBlocked: boolean = false;
+  isNewChat: boolean = false;
   hoursRemaining: number = 0;
   minutesRemaining: number = 0;
   private windowCheckInterval: any;
@@ -111,6 +112,7 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     this.messageService.currentMessages$.subscribe(messages => {
       console.log('📬 Mensajes recibidos:', messages);
       this.messages = messages;
+      this.checkIfNewChat();
       this.shouldScroll = true;
     });
   }
@@ -154,6 +156,27 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
         this.minutesRemaining = 0;
       }
     });
+  }
+
+  // Verificar si es un chat nuevo (el cliente debe escribir primero)
+  checkIfNewChat(): void {
+    if (!this.messages || this.messages.length === 0) {
+      // No hay mensajes = chat nuevo
+      this.isNewChat = true;
+      console.log('💬 Chat nuevo detectado - Cliente debe iniciar conversación');
+      return;
+    }
+
+    // Verificar si hay algún mensaje del cliente (fromMe = false)
+    const hasClientMessage = this.messages.some(msg => !msg.fromMe);
+
+    if (!hasClientMessage) {
+      // Solo hay mensajes del agente = chat nuevo aún
+      this.isNewChat = true;
+      console.log('💬 Chat sin mensajes del cliente - Cliente debe iniciar conversación');
+    } else {
+      this.isNewChat = false;
+    }
   }
 
   // Iniciar verificación periódica cada 30 segundos
@@ -507,11 +530,14 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
   // Verificar si se puede enviar mensajes
   canSendMessage(): boolean {
-    return !this.isChatBlocked && !!this.currentChat;
+    return !this.isChatBlocked && !this.isNewChat && !!this.currentChat;
   }
 
   // Obtener texto de placeholder
   getInputPlaceholder(): string {
+    if (this.isNewChat) {
+      return '💬 El cliente debe iniciar esta conversación';
+    }
     if (this.isChatBlocked) {
       return '🚫 Chat bloqueado - Espera a que el cliente te escriba';
     }
