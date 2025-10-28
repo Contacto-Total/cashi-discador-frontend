@@ -55,7 +55,9 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   isNewChat: boolean = false;
   hoursRemaining: number = 0;
   minutesRemaining: number = 0;
+  secondsRemaining: number = 0;
   private windowCheckInterval: any;
+  private countdownInterval: any;
 
   constructor(
     private messageService: MessageService,
@@ -111,9 +113,21 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
     this.messageService.currentMessages$.subscribe(messages => {
       console.log('📬 Mensajes recibidos:', messages);
+      const previousLength = this.messages.length;
       this.messages = messages;
       this.checkIfNewChat();
       this.shouldScroll = true;
+
+      // Si llegó un mensaje nuevo del cliente, verificar estado de ventana
+      if (messages.length > previousLength) {
+        const lastMessage = messages[messages.length - 1];
+        if (!lastMessage.fromMe) {
+          console.log('💬 Mensaje nuevo del cliente - Verificando estado de ventana');
+          setTimeout(() => {
+            this.checkWindowStatus();
+          }, 1000);
+        }
+      }
     });
   }
 
@@ -128,6 +142,7 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
   ngOnDestroy(): void {
     this.stopWindowCheck();
+    this.stopCountdown();
   }
 
   // Verificar estado de ventana de respuesta
@@ -141,11 +156,23 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
         this.hoursRemaining = status.hoursRemaining || 0;
         this.minutesRemaining = status.minutesRemaining || 0;
 
+        // Calcular segundos totales para countdown
+        const totalSeconds = (this.hoursRemaining * 3600) + (this.minutesRemaining * 60);
+        this.secondsRemaining = totalSeconds;
+
         console.log('🔍 Window status:', {
           blocked: this.isChatBlocked,
           hours: this.hoursRemaining,
-          minutes: this.minutesRemaining
+          minutes: this.minutesRemaining,
+          seconds: this.secondsRemaining
         });
+
+        // Iniciar countdown si hay ventana activa y no está bloqueado
+        if (status.hasActiveWindow && !this.isChatBlocked && totalSeconds > 0) {
+          this.startCountdown();
+        } else {
+          this.stopCountdown();
+        }
       },
       error: (err) => {
         // Silenciar errores para no bloquear la UI
@@ -154,6 +181,8 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
         this.windowStatus = null;
         this.hoursRemaining = 0;
         this.minutesRemaining = 0;
+        this.secondsRemaining = 0;
+        this.stopCountdown();
       }
     });
   }
@@ -195,6 +224,36 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  // Iniciar countdown en tiempo real
+  startCountdown(): void {
+    this.stopCountdown();
+
+    this.countdownInterval = setInterval(() => {
+      if (this.secondsRemaining > 0) {
+        this.secondsRemaining--;
+
+        // Actualizar horas y minutos
+        this.hoursRemaining = Math.floor(this.secondsRemaining / 3600);
+        this.minutesRemaining = Math.floor((this.secondsRemaining % 3600) / 60);
+
+      } else {
+        // Tiempo agotado - bloquear chat automáticamente
+        console.log('⏰ Tiempo agotado - Bloqueando chat');
+        this.isChatBlocked = true;
+        this.windowStatus = { ...this.windowStatus, isBlocked: true, hasActiveWindow: false };
+        this.stopCountdown();
+      }
+    }, 1000); // Cada segundo
+  }
+
+  // Detener countdown
+  stopCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+  }
+
   sendMessage(): void {
     if (!this.currentChat || !this.messageText.trim()) return;
 
@@ -226,6 +285,11 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
       this.messageService.sendMessage(this.currentChat.jid, this.messageText.trim());
     }
     this.messageText = '';
+
+    // Verificar estado de ventana después de enviar (se reinicia la ventana)
+    setTimeout(() => {
+      this.checkWindowStatus();
+    }, 1000);
   }
 
   // Reply methods
