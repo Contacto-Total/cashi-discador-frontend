@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
-import { User } from '../../models/user.model';
+import { User, LoginResponse } from '../../models/user.model';
+import { LoginRequest, RegisterRequest, AuthResponse } from '../../models/auth.model';
 import { environment } from '../../../../environments/environment';
 
 @Injectable({
@@ -21,25 +22,20 @@ export class AuthService {
     private router: Router
   ) {}
 
-  login(credentials: LoginRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_BASE}/auth/login`, credentials)
+  login(credentials: LoginRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.API_BASE}/auth/login`, credentials)
       .pipe(
         tap(response => {
-          console.log('🔍 Respuesta del backend:', response);
-          console.log('🔍 accessToken:', response.accessToken);
-          console.log('🔍 nombreUsuario:', response.nombreUsuario);
-          console.log('🔍 nombreCompleto:', response.nombreCompleto);
-          console.log('🔍 roles:', response.roles);
-          this.storeAuthData(response);
+          this.storeAuthData(response as any);
         })
       );
   }
 
-  register(data: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.API_BASE}/auth/register`, data)
+  register(data: RegisterRequest): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.API_BASE}/auth/register`, data)
       .pipe(
         tap(response => {
-          this.storeAuthData(response);
+          this.storeAuthData(response as any);
         })
       );
   }
@@ -64,20 +60,30 @@ export class AuthService {
     return this.currentUserSubject.value;
   }
 
-  private storeAuthData(response: AuthResponse): void {
+  private storeAuthData(response: any): void {
     // El backend devuelve accessToken, nombreUsuario y nombreCompleto
     const token = response.accessToken || response.token || '';
     localStorage.setItem(this.TOKEN_KEY, token);
 
+    // Dividir nombreCompleto en firstName y lastName
+    const nameParts = response.nombreCompleto?.split(' ') || ['', ''];
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
     const user: User = {
+      id: response.idUsuario || 0,
       username: response.nombreUsuario || response.username || 'Usuario',
-      fullName: response.nombreCompleto || response.nombreUsuario || 'Usuario',
-      role: response.roles?.[0] || response.role || 'AGENT'
+      email: response.email || '',
+      firstName: firstName,
+      lastName: lastName,
+      role: (response.roles?.[0] || response.role || 'AGENT') as any,
+      sipExtension: response.extensionSip || '',
+      active: true
     };
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this.currentUserSubject.next(user);
 
-    console.log('✅ Usuario autenticado:', user.fullName || user.username);
+    console.log('✅ Usuario autenticado:', `${firstName} ${lastName}`.trim() || user.username);
   }
 
   private getUserFromStorage(): User | null {
