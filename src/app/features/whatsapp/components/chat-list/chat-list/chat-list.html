@@ -5,9 +5,6 @@
       <span class="username-display">{{ getCurrentUsername() }}</span>
     </div>
     <div class="header-right">
-      <button mat-icon-button class="header-icon theme-toggle" (click)="toggleTheme()" [title]="isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'">
-        <mat-icon>{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</mat-icon>
-      </button>
       <button mat-icon-button class="header-icon" [matMenuTriggerFor]="menu">
         <mat-icon>more_vert</mat-icon>
       </button>
