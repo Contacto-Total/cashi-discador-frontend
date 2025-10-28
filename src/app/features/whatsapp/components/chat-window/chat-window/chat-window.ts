@@ -645,8 +645,11 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   // Obtener tiempo restante formateado
   getTimeRemaining(): string {
     if (this.hoursRemaining > 0) {
+      // Si hay horas: mostrar horas y minutos
       return `${this.hoursRemaining}h ${this.minutesRemaining}min`;
     }
-    return `${this.minutesRemaining}min`;
+    // Si no hay horas: mostrar minutos y segundos
+    const seconds = this.secondsRemaining % 60;
+    return `${this.minutesRemaining}min ${seconds}seg`;
   }
 }
