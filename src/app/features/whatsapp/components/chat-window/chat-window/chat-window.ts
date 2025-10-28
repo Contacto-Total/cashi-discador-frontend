@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -218,6 +218,14 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  onEscapePressed(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.currentChat) {
+      event.preventDefault();
+      this.messageService.selectChat(null);
     }
   }
 
