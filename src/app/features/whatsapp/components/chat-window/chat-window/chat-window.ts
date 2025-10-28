@@ -436,7 +436,6 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
     // PRIORIDAD 2: Si ya tiene una URL completa (desde el backend Go), usarla
     if (media.url && (media.url.startsWith('http://') || media.url.startsWith('https://'))) {
-      console.log('✅ URL completa:', media.url);
       return media.url;
     }
 
@@ -444,12 +443,10 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     if (media.url && media.mime) {
       // Verificar si ya tiene el prefijo data:
       if (media.url.startsWith('data:')) {
-        console.log('✅ Data URL ya formado');
         return media.url;
       }
       // Construir el data URL
       const dataUrl = `data:${media.mime};base64,${media.url}`;
-      console.log('✅ Data URL construido:', dataUrl.substring(0, 100) + '...');
       return dataUrl;
     }
 
