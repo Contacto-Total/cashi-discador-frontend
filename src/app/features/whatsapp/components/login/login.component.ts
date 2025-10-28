@@ -61,7 +61,7 @@ export class LoginComponent {
 
     this.authService.login(this.credentials).subscribe({
       next: (response) => {
-        this.snackBar.open(response.message || 'Login exitoso', 'Cerrar', {
+        this.snackBar.open('Login exitoso', 'Cerrar', {
           duration: 2000
         });
 
