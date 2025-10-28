@@ -1,5 +1,4 @@
 .chat-window-container {
-  display: flex;
   flex-direction: column;
   height: 100%;
   background: #0A0E27;
@@ -524,7 +523,7 @@
 
 // Input container
 .input-container {
-
+  display: flex;
   flex-direction: column;
   background: #1E293B;
   flex-shrink: 0;
