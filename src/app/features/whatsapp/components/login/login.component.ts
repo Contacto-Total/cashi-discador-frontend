@@ -64,7 +64,16 @@ export class LoginComponent {
         this.snackBar.open(response.message || 'Login exitoso', 'Cerrar', {
           duration: 2000
         });
-        this.router.navigate([this.returnUrl]);
+
+        // Redirigir según el rol del usuario
+        const user = this.authService.getCurrentUser();
+        if (user?.role === 'AGENT') {
+          // Agentes van a WhatsApp
+          this.router.navigate(['/whatsapp']);
+        } else {
+          // Admins y otros van a la URL de retorno o dashboard
+          this.router.navigate([this.returnUrl]);
+        }
       },
       error: (error) => {
         this.loading = false;
