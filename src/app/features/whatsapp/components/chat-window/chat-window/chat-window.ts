@@ -416,7 +416,6 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
   isImageMedia(mimetype?: string): boolean {
     const isImage = mimetype?.startsWith('image/') || false;
-    console.log('🖼️ isImageMedia:', mimetype, '→', isImage);
     return isImage;
   }
 
@@ -429,12 +428,9 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   getMediaSrc(media: any): string {
-    console.log('📸 getMediaSrc called with:', media);
-
     // PRIORIDAD 1: Si tiene base64Data guardado en BD, usarlo
     if (media.base64Data && media.mime) {
       const dataUrl = `data:${media.mime};base64,${media.base64Data}`;
-      console.log('✅ Usando base64 de BD (longitud:', media.base64Data.length, ')');
       return dataUrl;
     }
 
