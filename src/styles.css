@@ -10,8 +10,9 @@ html, body {
 }
 
 body {
-  font-family: 'Roboto', sans-serif;
-  background-color: #f5f5f5;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  background-color: #0A0E27;
+  color: #ffffff;
 }
 
 /* Material Design Overrides */
@@ -131,31 +132,33 @@ body.light-theme {
   --card-border: #e5e7eb;
 }
 
-/* Dark Theme */
+/* Dark Theme - CASHI Design */
 body.dark-theme {
-  --primary-bg: #1a1d29;
-  --secondary-bg: #0f1419;
-  --tertiary-bg: #0d1b2a;
-  --header-bg: #1e3a5f;
-  --client-bar-bg: #1a1d29;
-  --text-primary: #e5e7eb;
-  --text-secondary: #9ca3af;
+  --primary-bg: #0A0E27;
+  --secondary-bg: #0A0E27;
+  --tertiary-bg: #1E293B;
+  --header-bg: #0A0E27;
+  --client-bar-bg: #1E293B;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
   --text-inverse: #ffffff;
-  --border-color: #374151;
-  --input-bg: #1f2937;
-  --input-border: #4b5563;
-  --panel-bg: #0d1b2a;
-  --panel-text: #6ee7b7;
-  --button-primary: #10b981;
-  --button-danger: #dc3545;
-  --button-secondary: #6c757d;
-  --accent-danger: #f87171;
-  --accent-warning: #fbbf24;
-  --accent-info: #60a5fa;
-  --theme-button-bg: #fbbf24;
-  --theme-button-text: #1a1a1a;
-  --shadow: 0 2px 8px rgba(0,0,0,0.4);
-  --card-border: #374151;
+  --border-color: #334155;
+  --input-bg: #1E293B;
+  --input-border: #334155;
+  --panel-bg: #1E293B;
+  --panel-text: #10B981;
+  --button-primary: #10B981;
+  --button-danger: #ef4444;
+  --button-secondary: #475569;
+  --accent-danger: #ef4444;
+  --accent-warning: #f59e0b;
+  --accent-info: #3b82f6;
+  --theme-button-bg: #10B981;
+  --theme-button-text: #ffffff;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --card-border: #334155;
+  --card-bg: #1E293B;
+  --hover-bg: #334155;
 }
 
 /* Apply theme variables */
@@ -165,15 +168,304 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Scrollbar for dark theme */
+/* Scrollbar CASHI Style */
+::-webkit-scrollbar-track {
+  background: #0A0E27;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
 body.dark-theme ::-webkit-scrollbar-track {
-  background: #2d2d2d;
+  background: #0A0E27;
 }
 
 body.dark-theme ::-webkit-scrollbar-thumb {
-  background: #505050;
+  background: #334155;
 }
 
 body.dark-theme ::-webkit-scrollbar-thumb:hover {
-  background: #707070;
+  background: #475569;
+}
+
+/* ========================================
+   CASHI DESIGN SYSTEM
+   ======================================== */
+
+/* Material Overrides - CASHI Style */
+.mat-mdc-card {
+  background-color: #1E293B !important;
+  color: #ffffff !important;
+  border: 1px solid #334155 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+.mat-mdc-button.mat-primary,
+.mat-mdc-raised-button.mat-primary {
+  background-color: #10B981 !important;
+  color: #ffffff !important;
+}
+
+.mat-mdc-button.mat-warn,
+.mat-mdc-raised-button.mat-warn {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+.mat-mdc-text-field-wrapper {
+  background-color: #1E293B !important;
+}
+
+.mat-mdc-form-field-focus-overlay {
+  background-color: #10B981 !important;
+}
+
+.mat-mdc-input-element {
+  color: #ffffff !important;
+  caret-color: #10B981 !important;
+}
+
+.mat-mdc-select {
+  background-color: #1E293B !important;
+  color: #ffffff !important;
+}
+
+.mat-mdc-select-value {
+  color: #ffffff !important;
+}
+
+.mat-mdc-select-arrow {
+  color: #94a3b8 !important;
+}
+
+.mat-mdc-option {
+  background-color: #1E293B !important;
+  color: #ffffff !important;
+}
+
+.mat-mdc-option:hover {
+  background-color: #334155 !important;
+}
+
+.mat-mdc-option.mat-selected {
+  background-color: #10B981 !important;
+  color: #ffffff !important;
+}
+
+.mat-mdc-table {
+  background-color: #1E293B !important;
+  color: #ffffff !important;
+}
+
+.mat-mdc-header-cell {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.05em !important;
+}
+
+.mat-mdc-cell {
+  color: #ffffff !important;
+}
+
+.mat-mdc-row:hover {
+  background-color: #334155 !important;
+}
+
+.mat-mdc-toolbar {
+  background-color: #0A0E27 !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid #334155 !important;
+}
+
+.mat-mdc-icon-button {
+  color: #94a3b8 !important;
+}
+
+.mat-mdc-icon-button:hover {
+  color: #10B981 !important;
+}
+
+/* CASHI Buttons */
+.cashi-btn-primary {
+  background-color: #10B981;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cashi-btn-primary:hover {
+  background-color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.cashi-btn-secondary {
+  background-color: #475569;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cashi-btn-secondary:hover {
+  background-color: #64748b;
+}
+
+.cashi-btn-danger {
+  background-color: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cashi-btn-danger:hover {
+  background-color: #dc2626;
+}
+
+/* CASHI Cards */
+.cashi-card {
+  background-color: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.cashi-card:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+/* CASHI Inputs */
+.cashi-input {
+  background-color: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 16px;
+  color: #ffffff;
+  width: 100%;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.cashi-input:focus {
+  outline: none;
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.cashi-input::placeholder {
+  color: #64748b;
+}
+
+/* CASHI Select */
+.cashi-select {
+  background-color: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 16px;
+  color: #ffffff;
+  width: 100%;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cashi-select:focus {
+  outline: none;
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+/* CASHI Toggle Switch */
+.cashi-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.cashi-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cashi-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #475569;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.cashi-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.cashi-toggle input:checked + .cashi-toggle-slider {
+  background-color: #10B981;
+}
+
+.cashi-toggle input:checked + .cashi-toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* CASHI Badge */
+.cashi-badge {
+  background-color: #10B981;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.cashi-badge-danger {
+  background-color: #ef4444;
+}
+
+.cashi-badge-warning {
+  background-color: #f59e0b;
+}
+
+.cashi-badge-info {
+  background-color: #3b82f6;
 }

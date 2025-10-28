@@ -1,55 +1,67 @@
 <div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()">
-  <mat-toolbar color="primary" class="app-toolbar">
-    <button mat-icon-button (click)="sidenav.toggle()">
-      <mat-icon>menu</mat-icon>
-    </button>
-    <span class="app-title">{{ title }}</span>
-    <span class="spacer"></span>
-    <span *ngIf="authService.currentUser$ | async as user">
-      {{ user.firstName }} {{ user.lastName }}
-    </span>
-    <button mat-icon-button (click)="logout()">
-      <mat-icon>logout</mat-icon>
-    </button>
-  </mat-toolbar>
+  <!-- CASHI Navbar -->
+  <nav class="cashi-navbar">
+    <div class="navbar-left">
+      <!-- Logo CASHI -->
+      <div class="cashi-logo">
+        <div class="logo-icon">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </div>
+        <span class="logo-text">CASHI</span>
+      </div>
 
-  <mat-sidenav-container class="sidenav-container">
-    <mat-sidenav #sidenav mode="side" opened class="sidenav">
-      <mat-nav-list>
-        <!-- Agent menu items -->
-        <ng-container *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
-          <a mat-list-item routerLink="/dialer" routerLinkActive="active">
-            <mat-icon matListItemIcon>phone</mat-icon>
-            <span matListItemTitle>Softphone</span>
-          </a>
-          <a mat-list-item routerLink="/contacts" routerLinkActive="active">
-            <mat-icon matListItemIcon>contacts</mat-icon>
-            <span matListItemTitle>Contactos</span>
-          </a>
-          <a mat-list-item routerLink="/whatsapp" routerLinkActive="active">
-            <mat-icon matListItemIcon>chat</mat-icon>
-            <span matListItemTitle>WhatsApp</span>
-          </a>
-        </ng-container>
+      <!-- Menu Items -->
+      <div class="navbar-menu">
+        <a routerLink="/dialer" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
+          <mat-icon>phone</mat-icon>
+          <span>Cobranza</span>
+        </a>
+        <a routerLink="/contacts" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
+          <mat-icon>people</mat-icon>
+          <span>Clientes</span>
+        </a>
+        <a routerLink="/admin/monitoring" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+          <mat-icon>supervisor_account</mat-icon>
+          <span>Monitoreo</span>
+        </a>
+        <a routerLink="/whatsapp" routerLinkActive="active" class="nav-item">
+          <mat-icon>chat</mat-icon>
+          <span>WhatsApp</span>
+        </a>
+      </div>
+    </div>
 
-        <!-- Admin menu items -->
-        <ng-container *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <a mat-list-item routerLink="/admin/monitoring" routerLinkActive="active">
-            <mat-icon matListItemIcon>supervisor_account</mat-icon>
-            <span matListItemTitle>Monitoreo</span>
-          </a>
-          <a mat-list-item routerLink="/whatsapp" routerLinkActive="active">
-            <mat-icon matListItemIcon>chat</mat-icon>
-            <span matListItemTitle>WhatsApp</span>
-          </a>
-        </ng-container>
-      </mat-nav-list>
-    </mat-sidenav>
+    <div class="navbar-right">
+      <!-- Carga de Datos -->
+      <button mat-button class="nav-dropdown">
+        <mat-icon>folder_open</mat-icon>
+        <span>Carga de Datos</span>
+        <mat-icon class="dropdown-arrow">expand_more</mat-icon>
+      </button>
 
-    <mat-sidenav-content class="main-content">
-      <router-outlet></router-outlet>
-    </mat-sidenav-content>
-  </mat-sidenav-container>
+      <!-- Mantenimiento -->
+      <button mat-button class="nav-dropdown">
+        <mat-icon>settings</mat-icon>
+        <span>Mantenimiento</span>
+        <mat-icon class="dropdown-arrow">expand_more</mat-icon>
+      </button>
+
+      <!-- Notifications -->
+      <button mat-icon-button class="nav-icon-btn">
+        <mat-icon>notifications</mat-icon>
+      </button>
+
+      <!-- User Profile -->
+      <button mat-icon-button class="nav-icon-btn" (click)="logout()">
+        <mat-icon>person</mat-icon>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <router-outlet></router-outlet>
+  </div>
 </div>
 
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">
