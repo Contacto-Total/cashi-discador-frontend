@@ -60,13 +60,19 @@ export class AuthService {
   }
 
   private storeAuthData(response: AuthResponse): void {
-    localStorage.setItem(this.TOKEN_KEY, response.token);
+    // El backend devuelve accessToken, nombreUsuario y nombreCompleto
+    const token = response.accessToken || response.token || '';
+    localStorage.setItem(this.TOKEN_KEY, token);
+
     const user: User = {
-      username: response.username,
-      role: response.role
+      username: response.nombreUsuario || response.username || 'Usuario',
+      fullName: response.nombreCompleto || response.nombreUsuario || 'Usuario',
+      role: response.roles?.[0] || response.role || 'AGENT'
     };
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this.currentUserSubject.next(user);
+
+    console.log('✅ Usuario autenticado:', user.fullName || user.username);
   }
 
   private getUserFromStorage(): User | null {

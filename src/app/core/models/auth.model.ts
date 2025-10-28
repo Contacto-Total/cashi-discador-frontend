@@ -10,13 +10,19 @@ export interface RegisterRequest {
 }
 
 export interface AuthResponse {
-  token: string;
-  username: string;
-  role: string;
-  message: string;
+  accessToken: string;
+  token?: string;  // Alias para compatibilidad
+  nombreUsuario: string;
+  username?: string;  // Alias para compatibilidad
+  nombreCompleto?: string;  // Nombre completo del usuario
+  roles: string[];
+  role?: string;  // Alias para compatibilidad
+  mensaje?: string;
+  message?: string;  // Alias para compatibilidad
 }
 
 export interface User {
   username: string;
+  fullName?: string;  // Nombre completo para mostrar
   role: string;
 }

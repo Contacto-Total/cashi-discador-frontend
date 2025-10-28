@@ -75,7 +75,9 @@ export class ChatList implements OnInit {
   }
 
   getCurrentUsername(): string {
-    return this.authService.getCurrentUser()?.username || 'Usuario';
+    const user = this.authService.getCurrentUser();
+    // Mostrar nombre completo, si no existe mostrar username, si no existe mostrar 'Usuario'
+    return user?.fullName || user?.username || 'Usuario';
   }
 
   filterChats(): void {
