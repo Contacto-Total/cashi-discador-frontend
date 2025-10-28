@@ -68,13 +68,20 @@ export class LoginComponent implements OnInit {
         this.loading = false;
         // Redirect based on user role
         const user = this.authService.getCurrentUser();
+        console.log('🔍 LOGIN DEBUG - Usuario:', user);
+        console.log('🔍 LOGIN DEBUG - Rol:', user?.role);
+        console.log('🔍 LOGIN DEBUG - Tipo de rol:', typeof user?.role);
+        console.log('🔍 LOGIN DEBUG - ¿Es AGENT?:', user?.role === 'AGENT');
+        console.log('🔍 LOGIN DEBUG - ¿Es agent?:', user?.role === 'agent');
+
         if (user?.role === 'ADMIN') {
+          console.log('➡️ Redirigiendo a ADMIN monitoring');
           this.router.navigate(['/admin/monitoring']);
         } else if (user?.role === 'AGENT') {
-          // Agentes van a WhatsApp
+          console.log('➡️ Redirigiendo a WHATSAPP');
           this.router.navigate(['/whatsapp']);
         } else {
-          // Otros roles van al dialer
+          console.log('➡️ Redirigiendo a DIALER (rol no reconocido)');
           this.router.navigate(['/dialer']);
         }
       },
