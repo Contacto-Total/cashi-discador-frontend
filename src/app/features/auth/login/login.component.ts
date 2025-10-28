@@ -72,7 +72,6 @@ export class LoginComponent implements OnInit {
         console.log('🔍 LOGIN DEBUG - Rol:', user?.role);
         console.log('🔍 LOGIN DEBUG - Tipo de rol:', typeof user?.role);
         console.log('🔍 LOGIN DEBUG - ¿Es AGENT?:', user?.role === 'AGENT');
-        console.log('🔍 LOGIN DEBUG - ¿Es agent?:', user?.role === 'agent');
 
         if (user?.role === 'ADMIN') {
           console.log('➡️ Redirigiendo a ADMIN monitoring');
