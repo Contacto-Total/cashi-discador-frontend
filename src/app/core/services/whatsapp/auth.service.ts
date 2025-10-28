@@ -25,6 +25,11 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${this.API_BASE}/auth/login`, credentials)
       .pipe(
         tap(response => {
+          console.log('🔍 Respuesta del backend:', response);
+          console.log('🔍 accessToken:', response.accessToken);
+          console.log('🔍 nombreUsuario:', response.nombreUsuario);
+          console.log('🔍 nombreCompleto:', response.nombreCompleto);
+          console.log('🔍 roles:', response.roles);
           this.storeAuthData(response);
         })
       );
