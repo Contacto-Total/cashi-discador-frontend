@@ -206,7 +206,14 @@ export class MessageService {
     });
   }
 
-  selectChat(chat: Chat): void {
+  selectChat(chat: Chat | null): void {
+    if (chat === null) {
+      console.log('💬 Chat deseleccionado');
+      this.currentChatSubject.next(null);
+      this.currentMessagesSubject.next([]);
+      return;
+    }
+
     console.log('💬 Chat seleccionado:', chat.name);
     this.currentChatSubject.next(chat);
     this.loadMessages(chat.jid);
