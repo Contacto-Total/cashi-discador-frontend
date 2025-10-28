@@ -136,15 +136,15 @@
       </button>
     </div>
 
-    <!-- TEMPORALMENTE DESACTIVADO - Banners de bloqueo -->
-    <!-- <div *ngIf="windowStatus?.hasActiveWindow && !isChatBlocked"
+    <!-- Banners de estado de ventana -->
+    <div *ngIf="windowStatus?.hasActiveWindow && !isChatBlocked"
          class="window-warning-banner">
       ⚠️ Tienes {{ getTimeRemaining() }} para responder o el chat se bloqueará
     </div>
 
     <div *ngIf="isChatBlocked" class="chat-blocked-banner">
       🚫 Chat bloqueado. Espera a que {{ getChatDisplayName() }} te escriba de nuevo.
-    </div> -->
+    </div>
 
     <div class="input-row">
       <input
@@ -154,7 +154,7 @@
         accept="image/*,video/*,audio/*"
         style="display: none">
 
-      <button mat-icon-button class="input-icon" (click)="openFileSelector()">
+      <button mat-icon-button class="input-icon" (click)="openFileSelector()" [disabled]="isChatBlocked">
         <mat-icon>add</mat-icon>
       </button>
 
@@ -162,13 +162,14 @@
         <input
           type="text"
           class="message-input"
-          placeholder="Escribe un mensaje aquí"
+          [placeholder]="getInputPlaceholder()"
           [(ngModel)]="messageText"
           (keypress)="onKeyPress($event)"
+          [disabled]="isChatBlocked"
           autocomplete="off">
       </div>
 
-      <button mat-icon-button class="input-icon">
+      <button mat-icon-button class="input-icon" [disabled]="isChatBlocked">
         <mat-icon>sentiment_satisfied_alt</mat-icon>
       </button>
 
@@ -176,14 +177,16 @@
         *ngIf="messageText.trim()"
         mat-icon-button
         class="send-button"
-        (click)="sendMessage()">
+        (click)="sendMessage()"
+        [disabled]="isChatBlocked">
         <mat-icon>send</mat-icon>
       </button>
 
       <button
         *ngIf="!messageText.trim()"
         mat-icon-button
-        class="input-icon">
+        class="input-icon"
+        [disabled]="isChatBlocked">
         <mat-icon>mic</mat-icon>
       </button>
     </div>

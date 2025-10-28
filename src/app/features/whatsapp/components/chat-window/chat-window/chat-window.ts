@@ -99,13 +99,13 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     this.messageService.currentChat$.subscribe(chat => {
       this.currentChat = chat;
 
-      // TEMPORALMENTE DESACTIVADO - Verificar ventana
-      // if (chat) {
-      //   this.checkWindowStatus();
-      //   this.startWindowCheck();
-      // } else {
-      //   this.stopWindowCheck();
-      // }
+      // Verificar estado de ventana cuando cambia el chat
+      if (chat) {
+        this.checkWindowStatus();
+        this.startWindowCheck();
+      } else {
+        this.stopWindowCheck();
+      }
     });
 
     this.messageService.currentMessages$.subscribe(messages => {
