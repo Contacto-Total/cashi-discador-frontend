@@ -29,7 +29,7 @@ export interface MonitoringRequest {
   providedIn: 'root'
 })
 export class AdminMonitoringService {
-  private apiUrl = `${environment.apiUrl}/admin/monitoring`;
+  private apiUrl = `${environment.gatewayUrl}/admin/monitoring`;
 
   constructor(private http: HttpClient) {}
 
