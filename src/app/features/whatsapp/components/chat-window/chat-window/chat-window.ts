@@ -129,6 +129,40 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
         }
       }
     });
+
+    // Escuchar actualizaciones de estado de ventana en tiempo real
+    this.messageService.windowStatusUpdate$.subscribe(update => {
+      if (!update || !this.currentChat) return;
+
+      // Si la actualización es para el chat actual
+      if (update.chat === this.currentChat.jid || update.jid === this.currentChat.jid) {
+        console.log('🔔 Actualización de ventana en tiempo real:', update);
+
+        // Actualizar estado inmediatamente
+        if (update.isBlocked !== undefined) {
+          this.isChatBlocked = update.isBlocked;
+        }
+
+        if (update.hoursRemaining !== undefined) {
+          this.hoursRemaining = update.hoursRemaining;
+        }
+
+        if (update.minutesRemaining !== undefined) {
+          this.minutesRemaining = update.minutesRemaining;
+        }
+
+        // Recalcular countdown
+        const totalSeconds = (this.hoursRemaining * 3600) + (this.minutesRemaining * 60);
+        this.secondsRemaining = totalSeconds;
+
+        // Reiniciar countdown si hay tiempo
+        if (totalSeconds > 0 && !this.isChatBlocked) {
+          this.startCountdown();
+        } else {
+          this.stopCountdown();
+        }
+      }
+    });
   }
 
   ngAfterViewChecked(): void {

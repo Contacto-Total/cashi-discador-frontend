@@ -14,12 +14,14 @@ export class MessageService {
   private allItemsSubject = new BehaviorSubject<Chat[]>([]);
   private currentChatSubject = new BehaviorSubject<Chat | null>(null);
   private currentMessagesSubject = new BehaviorSubject<Message[]>([]);
+  private windowStatusUpdateSubject = new BehaviorSubject<any>(null);
 
   chats$ = this.chatsSubject.asObservable();
   contacts$ = this.contactsSubject.asObservable();
   allItems$ = this.allItemsSubject.asObservable();
   currentChat$ = this.currentChatSubject.asObservable();
   currentMessages$ = this.currentMessagesSubject.asObservable();
+  windowStatusUpdate$ = this.windowStatusUpdateSubject.asObservable();
 
   constructor(
     private apiService: ApiService,
@@ -48,6 +50,12 @@ export class MessageService {
             break;
           case 'CHAT_UPDATE':
             this.loadChats();
+            break;
+          case 'WINDOW_STATUS':
+          case 'WINDOW_UPDATE':
+          case 'BLOCKED':
+          case 'UNBLOCKED':
+            this.handleWindowStatusUpdate(wsMsg);
             break;
           default:
             console.log('⚠️ Tipo de mensaje desconocido:', msgType);
@@ -173,6 +181,13 @@ export class MessageService {
         this.currentMessagesSubject.next([...messages]);
       }
     }
+  }
+
+  private handleWindowStatusUpdate(payload: any): void {
+    console.log('🔔 Actualización de estado de ventana recibida:', payload);
+
+    // Emitir el evento para que chat-window lo escuche
+    this.windowStatusUpdateSubject.next(payload);
   }
 
   loadChats(): void {
