@@ -70,7 +70,11 @@ export class LoginComponent implements OnInit {
         const user = this.authService.getCurrentUser();
         if (user?.role === 'ADMIN') {
           this.router.navigate(['/admin/monitoring']);
+        } else if (user?.role === 'AGENT') {
+          // Agentes van a WhatsApp
+          this.router.navigate(['/whatsapp']);
         } else {
+          // Otros roles van al dialer
           this.router.navigate(['/dialer']);
         }
       },
