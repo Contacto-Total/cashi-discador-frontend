@@ -1,0 +1,206 @@
+<div class="campaign-container">
+  <!-- Header -->
+  <div class="header">
+    <h1>📋 Gestión de Campañas</h1>
+    <button class="btn-create" (click)="openCreateModal()">
+      <span>➕</span>
+      <span>Nueva Campaña</span>
+    </button>
+  </div>
+
+  <!-- Error / Success Messages -->
+  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+  <div *ngIf="successMessage" class="success-message">✅ {{ successMessage }}</div>
+
+  <!-- Import Stats Card -->
+  <div *ngIf="importStats" class="import-stats-card">
+    <h3>📊 Datos Disponibles para Importar</h3>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span class="stat-value">{{ importStats.totalTelefonosActivos }}</span>
+        <span class="stat-label">Teléfonos Activos</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value">{{ importStats.totalTelefonosPreferidos }}</span>
+        <span class="stat-label">Teléfonos Preferidos</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-source">{{ importStats.fuenteDatos }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Campaigns List -->
+  <div class="campaigns-list" *ngIf="!loading">
+    <div *ngIf="campaigns.length === 0" class="empty-state">
+      <p>📭 No hay campañas creadas todavía</p>
+      <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
+    </div>
+
+    <div *ngFor="let campaign of campaigns" class="campaign-card">
+      <div class="campaign-header">
+        <div class="campaign-title">
+          <h3>{{ campaign.name }}</h3>
+          <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
+            {{ getStatusText(campaign.status) }}
+          </span>
+        </div>
+        <div class="campaign-actions">
+          <button
+            *ngIf="canActivate(campaign)"
+            class="btn-action btn-activate"
+            (click)="activarCampaign(campaign)"
+            title="Activar campaña">
+            ▶️
+          </button>
+          <button
+            *ngIf="canPause(campaign)"
+            class="btn-action btn-pause"
+            (click)="pausarCampaign(campaign)"
+            title="Pausar campaña">
+            ⏸️
+          </button>
+          <button
+            class="btn-action btn-import"
+            (click)="openImportModal(campaign)"
+            title="Importar contactos">
+            📥
+          </button>
+          <button
+            *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
+            class="btn-action btn-delete"
+            (click)="deleteCampaign(campaign)"
+            title="Eliminar campaña">
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div class="campaign-body">
+        <p *ngIf="campaign.description" class="campaign-description">
+          {{ campaign.description }}
+        </p>
+
+        <div class="campaign-stats" *ngIf="campaign.totalContacts !== undefined">
+          <div class="stat">
+            <span class="stat-label">Total Contactos:</span>
+            <span class="stat-value">{{ campaign.totalContacts || 0 }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Pendientes:</span>
+            <span class="stat-value">{{ campaign.pendingContacts || 0 }}</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Contactados:</span>
+            <span class="stat-value">{{ campaign.contactedContacts || 0 }}</span>
+          </div>
+        </div>
+
+        <div class="campaign-meta">
+          <span>Modo: <strong>{{ campaign.dialMode }}</strong></span>
+          <span>Intentos: <strong>{{ campaign.maxAttempts }}</strong></span>
+          <span *ngIf="campaign.createdAt">Creada: <strong>{{ campaign.createdAt | date: 'short' }}</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando...</p>
+  </div>
+</div>
+
+<!-- Create Campaign Modal -->
+<div *ngIf="showCreateModal" class="modal-overlay" (click)="closeCreateModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>➕ Nueva Campaña</h2>
+      <button class="btn-close" (click)="closeCreateModal()">✖</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre de la Campaña *</label>
+        <input
+          type="text"
+          [(ngModel)]="newCampaign.name"
+          placeholder="Ej: Campaña Cobranza Enero 2025"
+          class="form-input"
+          required>
+      </div>
+
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea
+          [(ngModel)]="newCampaign.description"
+          placeholder="Descripción de la campaña..."
+          class="form-textarea"
+          rows="3"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Modo de Discado</label>
+          <select [(ngModel)]="newCampaign.dialMode" class="form-select">
+            <option value="MANUAL">Manual</option>
+            <option value="PROGRESSIVE">Progresivo</option>
+            <option value="PREDICTIVE">Predictivo</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Intentos Máximos</label>
+          <input
+            type="number"
+            [(ngModel)]="newCampaign.maxAttempts"
+            class="form-input"
+            min="1"
+            max="10">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeCreateModal()">Cancelar</button>
+      <button class="btn-submit" (click)="createCampaign()">Crear Campaña</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Contacts Modal -->
+<div *ngIf="showImportModal" class="modal-overlay" (click)="closeImportModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>📥 Importar Contactos</h2>
+      <button class="btn-close" (click)="closeImportModal()">✖</button>
+    </div>
+
+    <div class="modal-body">
+      <p><strong>Campaña:</strong> {{ selectedCampaign?.name }}</p>
+
+      <div class="form-group">
+        <label>Límite de Contactos a Importar</label>
+        <input
+          type="number"
+          [(ngModel)]="importLimit"
+          class="form-input"
+          min="1"
+          max="10000"
+          placeholder="100">
+        <small>Se importarán hasta {{ importLimit }} contactos desde la tabla externa</small>
+      </div>
+
+      <div class="info-box">
+        <p>ℹ️ Los contactos se importarán desde: <strong>{{ importStats?.fuenteDatos }}</strong></p>
+        <p>📊 Disponibles: <strong>{{ importStats?.totalTelefonosActivos }}</strong> teléfonos activos</p>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeImportModal()">Cancelar</button>
+      <button class="btn-submit" (click)="importarContactos()">Importar</button>
+    </div>
+  </div>
+</div>

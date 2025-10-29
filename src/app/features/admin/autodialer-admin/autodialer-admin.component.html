@@ -1,0 +1,118 @@
+<div class="autodialer-container">
+  <!-- Header -->
+  <div class="header">
+    <h1>🤖 Panel de Auto-Dialer</h1>
+    <div class="status-badge" [style.background-color]="getStatusColor()">
+      {{ getStatusText() }}
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">
+    ❌ {{ error }}
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="successMessage" class="success-message">
+    ✅ {{ successMessage }}
+  </div>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <div class="control-section">
+      <h2>Control del Sistema</h2>
+      <p class="subtitle">Activar o desactivar el sistema de discado automático</p>
+
+      <button
+        class="toggle-btn"
+        [class.active]="isActivo"
+        [disabled]="loading"
+        (click)="toggleAutoDialer()">
+        <span class="btn-icon">{{ getButtonIcon() }}</span>
+        <span>{{ getButtonText() }}</span>
+      </button>
+
+      <div class="info-box" *ngIf="!isActivo">
+        <p>ℹ️ El auto-dialer está inactivo. Cuando lo actives, el sistema comenzará a asignar llamadas automáticamente a los agentes disponibles.</p>
+      </div>
+
+      <div class="info-box active" *ngIf="isActivo">
+        <p>🟢 El auto-dialer está activo. Las llamadas se están asignando automáticamente a los agentes disponibles.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estadísticas en tiempo real -->
+  <div class="statistics-panel" *ngIf="estadisticas">
+    <h2>📊 Estadísticas en Tiempo Real</h2>
+    <p class="subtitle">Actualización automática cada 5 segundos</p>
+
+    <div class="stats-grid">
+      <!-- Agentes Disponibles -->
+      <div class="stat-card green">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas.agentesDisponibles }}</div>
+          <div class="stat-label">Agentes Disponibles</div>
+        </div>
+      </div>
+
+      <!-- Contactos Pendientes -->
+      <div class="stat-card blue">
+        <div class="stat-icon">📋</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas.contactosPendientes }}</div>
+          <div class="stat-label">Contactos Pendientes</div>
+        </div>
+      </div>
+
+      <!-- Llamadas Activas -->
+      <div class="stat-card orange">
+        <div class="stat-icon">📞</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas.llamadasActivas }}</div>
+          <div class="stat-label">Llamadas Activas</div>
+        </div>
+      </div>
+
+      <!-- Llamadas Completadas Hoy -->
+      <div class="stat-card purple">
+        <div class="stat-icon">✅</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas.llamadasCompletadasHoy }}</div>
+          <div class="stat-label">Completadas Hoy</div>
+        </div>
+      </div>
+
+      <!-- Contactos Completados -->
+      <div class="stat-card teal">
+        <div class="stat-icon">🎯</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas.contactosCompletados }}</div>
+          <div class="stat-label">Total Completados</div>
+        </div>
+      </div>
+
+      <!-- Contactos Fallidos -->
+      <div class="stat-card red">
+        <div class="stat-icon">❌</div>
+        <div class="stat-content">
+          <div class="stat-value">{{ estadisticas.contactosFallidos }}</div>
+          <div class="stat-label">Llamadas Fallidas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Información Técnica -->
+  <div class="technical-info">
+    <h3>ℹ️ Información Técnica</h3>
+    <ul>
+      <li><strong>Frecuencia de Procesamiento:</strong> Cada 10 segundos</li>
+      <li><strong>Auto-Respuesta de Agentes:</strong> Activada (sin botón contestar)</li>
+      <li><strong>Llamadas a Destinos:</strong> Normal (con botón contestar)</li>
+      <li><strong>Asignación:</strong> 1 agente → 1 contacto por ciclo</li>
+      <li><strong>Condición:</strong> Solo agentes en estado DISPONIBLE</li>
+    </ul>
+  </div>
+</div>
