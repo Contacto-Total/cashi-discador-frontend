@@ -12,7 +12,7 @@
 
       <!-- Menu Items -->
       <div class="navbar-menu">
-        <a routerLink="/dialer" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
+        <a routerLink="/agent-dashboard" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
           <mat-icon>phone</mat-icon>
           <span>Cobranza</span>
         </a>
