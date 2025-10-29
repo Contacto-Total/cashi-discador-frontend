@@ -41,7 +41,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
   currentContact: Contact | null = null;
   currentCall: Call | null = null;
-  agentStatus: AgentState = AgentState.AVAILABLE;
+  agentStatus: AgentState = AgentState.DISPONIBLE;
   campaignId: number | null = null;
 
   callState: CallState = CallState.IDLE;
@@ -281,9 +281,9 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
   getAgentStatusColor(): string {
     switch (this.agentStatus) {
-      case AgentState.AVAILABLE: return '#4caf50';
-      case AgentState.BUSY: return '#f44336';
-      case AgentState.BREAK: return '#ff9800';
+      case AgentState.DISPONIBLE: return '#4caf50';
+      case AgentState.EN_LLAMADA: return '#f44336';
+      case AgentState.REFRIGERIO: return '#ff9800';
       default: return '#999';
     }
   }

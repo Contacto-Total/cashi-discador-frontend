@@ -1,36 +1,60 @@
+// Modelo para el nuevo sistema de estados de agentes
 export interface AgentStatus {
-  id: number;
-  agentId: number;
-  status: AgentState;
-  campaignId?: number;
-  startTime: Date;
-  endTime?: Date;
-  reason?: string;
-  agentName?: string;
+  idUsuario: number;
+  estadoActual: AgentState;
+  estadoAnterior?: AgentState;
+  timestampCambio: string;
+  tiempoEnEstadoMinutos: number;
+  sessionId?: string;
+  notas?: string;
 }
 
 export enum AgentState {
-  OFFLINE = 'OFFLINE',
-  AVAILABLE = 'AVAILABLE',
-  BUSY = 'BUSY',
-  BREAK = 'BREAK',
-  AFTER_CALL_WORK = 'AFTER_CALL_WORK'
+  DISPONIBLE = 'DISPONIBLE',
+  EN_REUNION = 'EN_REUNION',
+  REFRIGERIO = 'REFRIGERIO',
+  SSHH = 'SSHH',
+  EN_LLAMADA = 'EN_LLAMADA',
+  TIPIFICANDO = 'TIPIFICANDO',
+  EN_MANUAL = 'EN_MANUAL'
+}
+
+export interface AgentStatusResponse {
+  idUsuario: number;
+  estadoActual: string;
+  estadoAnterior?: string;
+  timestampCambio: string;
+  tiempoEnEstadoMinutos: number;
+  notas?: string;
+  sessionId?: string;
 }
 
 export interface ChangeStatusRequest {
-  status: AgentState;
-  reason?: string;
-  campaignId?: number;
+  estado: string;
+  notas?: string;
 }
 
-export interface AgentPerformance {
-  agentId: number;
-  agentName: string;
-  totalCalls: number;
-  answeredCalls: number;
-  totalTalkTime: number;
-  averageTalkTime: number;
-  successfulContacts: number;
-  availableTime: number;
-  breakTime: number;
+export interface EstadosDisponibles {
+  estadosManuales: string[];
+  estadosSistema: string[];
+  todosLosEstados: string[];
 }
+
+// Labels amigables para los estados
+export const AGENT_STATE_LABELS: Record<AgentState, string> = {
+  [AgentState.DISPONIBLE]: 'Disponible',
+  [AgentState.EN_REUNION]: 'En Reunión',
+  [AgentState.REFRIGERIO]: 'Refrigerio',
+  [AgentState.SSHH]: 'Baño',
+  [AgentState.EN_LLAMADA]: 'En Llamada',
+  [AgentState.TIPIFICANDO]: 'Tipificando',
+  [AgentState.EN_MANUAL]: 'Modo Manual'
+};
+
+// Estados que el agente puede cambiar manualmente
+export const MANUAL_STATES = [
+  AgentState.DISPONIBLE,
+  AgentState.EN_REUNION,
+  AgentState.REFRIGERIO,
+  AgentState.SSHH
+];
