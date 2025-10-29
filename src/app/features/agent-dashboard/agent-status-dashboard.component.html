@@ -31,62 +31,68 @@
     <!-- Status Dashboard -->
     <div *ngIf="currentStatus && !loading" class="status-dashboard">
 
-      <!-- Current Status Card -->
-      <div class="status-card">
-        <h2>Estado Actual</h2>
-        <div class="current-status">
-          <div class="status-badge" [style.background-color]="getStateColor(currentStatus.estadoActual)">
-            {{ stateLabels[currentStatus.estadoActual] }}
+      <!-- Left Column -->
+      <div class="left-column">
+        <!-- Current Status Card -->
+        <div class="status-card">
+          <h2>Estado Actual</h2>
+          <div class="current-status">
+            <div class="status-badge" [style.background-color]="getStateColor(currentStatus.estadoActual)">
+              {{ stateLabels[currentStatus.estadoActual] }}
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Change Status Section -->
-      <div class="change-status-section">
-        <h2>Cambiar Estado</h2>
-        <p class="section-subtitle">Selecciona tu estado actual</p>
-
-        <div class="status-buttons">
-          <button
-            *ngFor="let state of manualStates"
-            class="status-btn"
-            [class.active]="isCurrentState(state)"
-            [class.disabled]="!canChangeToState(state) || loading"
-            [disabled]="!canChangeToState(state) || loading"
-            [style.border-color]="getStateColor(state)"
-            (click)="changeStatus(state)">
-            <div class="status-btn-icon" [style.background-color]="getStateColor(state)"></div>
-            <span>{{ stateLabels[state] }}</span>
-          </button>
+        <!-- Info Card -->
+        <div class="info-card">
+          <h3>ℹ️ Información</h3>
+          <ul>
+            <li><strong>Disponible:</strong> Recibirás llamadas automáticas</li>
+            <li><strong>En Reunión/Refrigerio/Baño:</strong> No recibirás llamadas</li>
+            <li><strong>Modo Manual:</strong> Puedes llamar, pero no recibes automáticas</li>
+          </ul>
         </div>
       </div>
 
-      <!-- Manual Calling Section -->
-      <div class="manual-calling-section">
-        <h2>Llamadas Manuales</h2>
-        <p class="section-subtitle">Inicia el modo manual para realizar llamadas sin que te caigan automáticas</p>
+      <!-- Right Column -->
+      <div class="right-column">
+        <!-- Change Status Section -->
+        <div class="change-status-section">
+          <h2>Cambiar Estado</h2>
+          <p class="section-subtitle">Selecciona tu estado actual</p>
 
-        <button
-          class="manual-call-btn"
-          [disabled]="loading || currentStatus.estadoActual === AgentState.EN_LLAMADA || currentStatus.estadoActual === AgentState.TIPIFICANDO"
-          (click)="enterManualMode()">
-          <span class="btn-icon">📞</span>
-          <span>LLAMAR MANUAL</span>
-        </button>
+          <div class="status-buttons">
+            <button
+              *ngFor="let state of manualStates"
+              class="status-btn"
+              [class.active]="isCurrentState(state)"
+              [class.disabled]="!canChangeToState(state) || loading"
+              [disabled]="!canChangeToState(state) || loading"
+              [style.border-color]="getStateColor(state)"
+              (click)="changeStatus(state)">
+              <div class="status-btn-icon" [style.background-color]="getStateColor(state)"></div>
+              <span>{{ stateLabels[state] }}</span>
+            </button>
+          </div>
+        </div>
 
-        <p class="manual-call-note" *ngIf="currentStatus.estadoActual === AgentState.EN_MANUAL">
-          Estás en modo manual. Ve al softphone para hacer llamadas.
-        </p>
-      </div>
+        <!-- Manual Calling Section -->
+        <div class="manual-calling-section">
+          <h2>Llamadas Manuales</h2>
+          <p class="section-subtitle">Inicia el modo manual para realizar llamadas</p>
 
-      <!-- Info Card -->
-      <div class="info-card">
-        <h3>ℹ️ Información</h3>
-        <ul>
-          <li><strong>Disponible:</strong> Recibirás llamadas automáticas</li>
-          <li><strong>En Reunión/Refrigerio/Baño:</strong> No recibirás llamadas</li>
-          <li><strong>Modo Manual:</strong> Puedes llamar, pero no recibes automáticas</li>
-        </ul>
+          <button
+            class="manual-call-btn"
+            [disabled]="loading || currentStatus.estadoActual === AgentState.EN_LLAMADA || currentStatus.estadoActual === AgentState.TIPIFICANDO"
+            (click)="enterManualMode()">
+            <span class="btn-icon">📞</span>
+            <span>LLAMAR MANUAL</span>
+          </button>
+
+          <p class="manual-call-note" *ngIf="currentStatus.estadoActual === AgentState.EN_MANUAL">
+            Estás en modo manual. Ve al softphone para hacer llamadas.
+          </p>
+        </div>
       </div>
 
     </div>
