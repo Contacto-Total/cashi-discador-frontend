@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
@@ -24,9 +24,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   loading: boolean = false;
   error: string | null = null;
 
-  // Timer para el tiempo en el estado actual
-  currentTimeInState: string = '00:00';
-  private timerSubscription?: Subscription;
   private statusSubscription?: Subscription;
 
   // Estados disponibles
@@ -49,7 +46,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
     this.loadAgentStatus(user.id);
-    this.startTimer();
 
     // Polling cada 30 segundos
     this.statusSubscription = this.agentStatusService
@@ -58,9 +54,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.timerSubscription) {
-      this.timerSubscription.unsubscribe();
-    }
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
     }
@@ -135,26 +128,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
         console.error('Error entering manual mode:', err);
         this.error = 'Error al entrar en modo manual';
         this.loading = false;
-      }
-    });
-  }
-
-  private startTimer(): void {
-    this.timerSubscription = interval(1000).subscribe(() => {
-      if (this.currentStatus) {
-        const start = new Date(this.currentStatus.timestampCambio);
-        const now = new Date();
-        const diff = Math.floor((now.getTime() - start.getTime()) / 1000);
-
-        const hours = Math.floor(diff / 3600);
-        const minutes = Math.floor((diff % 3600) / 60);
-        const seconds = diff % 60;
-
-        if (hours > 0) {
-          this.currentTimeInState = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        } else {
-          this.currentTimeInState = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        }
       }
     });
   }
