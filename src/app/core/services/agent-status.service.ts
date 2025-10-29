@@ -15,7 +15,8 @@ import {
   providedIn: 'root'
 })
 export class AgentStatusService {
-  private apiUrl = `${environment.apiUrl}/api/agent-status`;
+  // Usar gatewayUrl porque agent-status está en el backend de discador (puerto 8080)
+  private apiUrl = `${environment.gatewayUrl}/agent-status`;
   private currentStatusSubject = new BehaviorSubject<AgentStatus | null>(null);
   public currentStatus$ = this.currentStatusSubject.asObservable();
 
