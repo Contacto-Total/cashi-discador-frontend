@@ -131,21 +131,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
   /**
    * Conectar automáticamente a FreeSWITCH al iniciar sesión
+   * Igual que en test-softphone.component.ts
    */
   private async conectarFreeSWITCH(user: any): Promise<void> {
-    // Verificar que el usuario tenga extensión SIP
     if (!user.sipExtension) {
-      console.warn('⚠️ Usuario sin extensión SIP, no se puede conectar a FreeSWITCH');
+      console.warn('⚠️ Usuario sin extensión SIP');
       return;
     }
 
     try {
       console.log('🔌 Conectando automáticamente a FreeSWITCH...');
 
-      // Conectar a FreeSWITCH
       await this.sipService.register(
         user.sipExtension,
-        user.sipExtension, // La contraseña es la misma que la extensión en FreeSWITCH
+        '1234',
         environment.freeswitchWsUrl,
         environment.freeswitchDomain
       );
@@ -153,7 +152,6 @@ export class AppComponent implements OnInit, OnDestroy {
       console.log('✅ Conectado a FreeSWITCH exitosamente');
     } catch (error) {
       console.error('❌ Error al conectar a FreeSWITCH:', error);
-      // No bloqueamos el inicio de sesión si falla FreeSWITCH
     }
   }
 
