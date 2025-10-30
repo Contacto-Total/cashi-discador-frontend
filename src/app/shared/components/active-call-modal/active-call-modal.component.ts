@@ -24,11 +24,7 @@ import { interval, Subscription } from 'rxjs';
       <mat-dialog-actions align="center">
         <button mat-raised-button [color]="isMuted ? 'accent' : 'primary'" (click)="toggleMute()">
           <mat-icon>{{ isMuted ? 'mic_off' : 'mic' }}</mat-icon>
-          {{ isMuted ? 'Activar' : 'Silenciar' }}
-        </button>
-        <button mat-raised-button color="primary" (click)="toggleHold()">
-          <mat-icon>{{ isOnHold ? 'play_arrow' : 'pause' }}</mat-icon>
-          {{ isOnHold ? 'Reanudar' : 'Hold' }}
+          {{ isMuted ? 'Activar Mic' : 'Silenciar' }}
         </button>
         <button mat-raised-button color="warn" (click)="hangup()">
           <mat-icon>call_end</mat-icon>
@@ -94,7 +90,6 @@ export class ActiveCallModalComponent implements OnInit, OnDestroy {
   callDuration: string = '00:00';
   callStatus: string = 'Conectado';
   isMuted: boolean = false;
-  isOnHold: boolean = false;
 
   private startTime: Date = new Date();
   private timerSubscription?: Subscription;
@@ -119,12 +114,8 @@ export class ActiveCallModalComponent implements OnInit, OnDestroy {
         setTimeout(() => {
           this.dialogRef.close();
         }, 1000);
-      } else if (state === CallState.HELD) {
-        this.callStatus = 'En espera';
-        this.isOnHold = true;
       } else if (state === CallState.ACTIVE) {
         this.callStatus = 'Conectado';
-        this.isOnHold = false;
       }
     });
   }
@@ -153,18 +144,6 @@ export class ActiveCallModalComponent implements OnInit, OnDestroy {
       this.sipService.mute();
       this.isMuted = true;
       this.callStatus = 'Micrófono silenciado';
-    }
-  }
-
-  toggleHold(): void {
-    if (this.isOnHold) {
-      this.sipService.unhold();
-      this.isOnHold = false;
-      this.callStatus = 'Conectado';
-    } else {
-      this.sipService.hold();
-      this.isOnHold = true;
-      this.callStatus = 'En espera';
     }
   }
 
