@@ -146,7 +146,7 @@ export class AppComponent implements OnInit, OnDestroy {
       await this.sipService.register(
         user.sipExtension,
         user.sipExtension, // La contraseña es la misma que la extensión en FreeSWITCH
-        environment.freeswitchWsServer,
+        environment.freeswitchWsUrl,
         environment.freeswitchDomain
       );
 
