@@ -179,9 +179,18 @@ export class SipService {
 
             this.currentSession = session;
 
-            // If auto-answer is enabled (admin supervision mode), answer immediately without ringtone
-            if (this.autoAnswerEnabled) {
-              console.log('🤖 Auto-answering call (admin supervision mode)');
+            // Check if this is an auto-answer call (from auto-dialer)
+            // Auto-answer is triggered by SIP header Alert-Info or Call-Info
+            const request = session._request;
+            const hasAutoAnswer = request && (
+              request.hasHeader('Alert-Info') ||
+              request.hasHeader('Call-Info') ||
+              request.hasHeader('Answer-After')
+            );
+
+            // If auto-answer is enabled (admin supervision OR auto-dialer), answer immediately without ringtone
+            if (this.autoAnswerEnabled || hasAutoAnswer) {
+              console.log('🤖 Auto-answering call (auto-dialer mode)');
               this.currentCallState = CallState.CONNECTING;
               this.onCallStatus.emit(this.currentCallState);
 

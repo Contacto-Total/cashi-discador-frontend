@@ -157,10 +157,21 @@ export class AppComponent implements OnInit, OnDestroy {
 
       console.log('✅ Conectado a FreeSWITCH exitosamente');
 
-      // Suscribirse a llamadas entrantes
+      // Suscribirse a llamadas entrantes (solo para llamadas normales, no auto-answer)
       this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((data) => {
         this.mostrarLlamadaEntrante(data.from);
       });
+
+      // Suscribirse a cambios de estado para detectar llamadas auto-contestadas
+      this.sipService.onCallStatus.subscribe((state) => {
+        if (state === 'ACTIVE' && !this.activeCallDialogRef && !this.incomingCallDialogRef) {
+          // Llamada activa sin popups abiertos = auto-contestada
+          console.log('🤖 Llamada auto-contestada, abriendo popup de control');
+          // Obtener el número desde la sesión actual (no tenemos onIncomingCall event)
+          this.mostrarLlamadaActiva('Auto-dialer');
+        }
+      });
+
       console.log('📞 Escuchando llamadas entrantes...');
     } catch (error) {
       console.error('❌ Error al conectar a FreeSWITCH:', error);
