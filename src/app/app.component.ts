@@ -13,6 +13,7 @@ import { SipService } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
+import { IncomingCallModalComponent } from './shared/components/incoming-call-modal/incoming-call-modal.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -36,7 +37,9 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Call Center';
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
+  private incomingCallSubscription?: Subscription;
   private dialogRef: any;
+  private incomingCallDialogRef: any;
 
   constructor(
     public authService: AuthService,
@@ -73,6 +76,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
+    this.incomingCallSubscription?.unsubscribe();
     this.inactivityService.detener();
   }
 
@@ -150,9 +154,46 @@ export class AppComponent implements OnInit, OnDestroy {
       );
 
       console.log('✅ Conectado a FreeSWITCH exitosamente');
+
+      // Suscribirse a llamadas entrantes
+      this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((data) => {
+        this.mostrarLlamadaEntrante(data.from);
+      });
+      console.log('📞 Escuchando llamadas entrantes...');
     } catch (error) {
       console.error('❌ Error al conectar a FreeSWITCH:', error);
     }
+  }
+
+  /**
+   * Mostrar popup de llamada entrante
+   */
+  private mostrarLlamadaEntrante(from: string): void {
+    // No mostrar modal si ya está abierto
+    if (this.incomingCallDialogRef) {
+      return;
+    }
+
+    this.incomingCallDialogRef = this.dialog.open(IncomingCallModalComponent, {
+      width: '400px',
+      disableClose: true,
+      hasBackdrop: true,
+      data: { from }
+    });
+
+    this.incomingCallDialogRef.afterClosed().subscribe((result: string) => {
+      this.incomingCallDialogRef = null;
+
+      if (result === 'answer') {
+        // Contestar la llamada
+        this.sipService.answer();
+        console.log('✅ Llamada contestada');
+      } else if (result === 'reject') {
+        // Rechazar la llamada
+        this.sipService.hangup();
+        console.log('❌ Llamada rechazada');
+      }
+    });
   }
 
   logout(): void {
