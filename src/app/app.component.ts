@@ -9,9 +9,11 @@ import { MatListModule } from '@angular/material/list';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from './core/services/auth.service';
 import { WebsocketService } from './core/services/websocket.service';
+import { SipService } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
+import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -39,6 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(
     public authService: AuthService,
     private websocketService: WebsocketService,
+    private sipService: SipService,
     private inactivityService: InactivityService,
     private sessionConfig: SessionConfigService,
     private dialog: MatDialog,
@@ -55,10 +58,14 @@ export class AppComponent implements OnInit, OnDestroy {
         // Usuario autenticado - iniciar servicios
         this.websocketService.connect();
         this.iniciarMonitoreoInactividad();
+
+        // Conectar a FreeSWITCH automáticamente
+        this.conectarFreeSWITCH(user);
       } else {
         // Usuario no autenticado - detener servicios
         this.inactivityService.detener();
         this.websocketService.disconnect();
+        this.sipService.unregister();
       }
     });
   }
@@ -122,9 +129,38 @@ export class AppComponent implements OnInit, OnDestroy {
     alert('Tu sesión ha expirado por inactividad');
   }
 
+  /**
+   * Conectar automáticamente a FreeSWITCH al iniciar sesión
+   */
+  private async conectarFreeSWITCH(user: any): Promise<void> {
+    // Verificar que el usuario tenga extensión SIP
+    if (!user.sipExtension) {
+      console.warn('⚠️ Usuario sin extensión SIP, no se puede conectar a FreeSWITCH');
+      return;
+    }
+
+    try {
+      console.log('🔌 Conectando automáticamente a FreeSWITCH...');
+
+      // Conectar a FreeSWITCH
+      await this.sipService.register(
+        user.sipExtension,
+        user.sipExtension, // La contraseña es la misma que la extensión en FreeSWITCH
+        environment.freeswitchWsServer,
+        environment.freeswitchDomain
+      );
+
+      console.log('✅ Conectado a FreeSWITCH exitosamente');
+    } catch (error) {
+      console.error('❌ Error al conectar a FreeSWITCH:', error);
+      // No bloqueamos el inicio de sesión si falla FreeSWITCH
+    }
+  }
+
   logout(): void {
     this.inactivityService.detener();
     this.websocketService.disconnect();
+    this.sipService.unregister();
     this.authService.logout();
   }
 
