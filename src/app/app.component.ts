@@ -157,6 +157,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
       console.log('✅ Conectado a FreeSWITCH exitosamente');
 
+      // HABILITAR AUTO-ANSWER para el auto-dialer
+      // Esto hace que TODAS las llamadas entrantes se contesten automáticamente
+      this.sipService.enableAutoAnswer();
+      console.log('🤖 Auto-answer HABILITADO para auto-dialer');
+
       // Suscribirse a llamadas entrantes (solo para llamadas normales, no auto-answer)
       this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((data) => {
         this.mostrarLlamadaEntrante(data.from);
