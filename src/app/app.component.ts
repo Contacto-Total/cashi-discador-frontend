@@ -169,11 +169,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
       // Suscribirse a cambios de estado para detectar llamadas auto-contestadas
       this.sipService.onCallStatus.subscribe((state) => {
+        console.log(`📡 [App] Estado de llamada: ${state}, activeDialog=${!!this.activeCallDialogRef}, incomingDialog=${!!this.incomingCallDialogRef}`);
+
         if (state === 'ACTIVE' && !this.activeCallDialogRef && !this.incomingCallDialogRef) {
           // Llamada activa sin popups abiertos = auto-contestada
-          console.log('🤖 Llamada auto-contestada, abriendo popup de control');
+          console.log('🤖 [App] Llamada auto-contestada detectada, abriendo popup de control');
           // Obtener el número desde la sesión actual (no tenemos onIncomingCall event)
           this.mostrarLlamadaActiva('Auto-dialer');
+        } else if (state === 'ACTIVE') {
+          console.log('✅ [App] Llamada ACTIVE pero popup ya está abierto, no hacer nada');
         }
       });
 
@@ -223,8 +227,11 @@ export class AppComponent implements OnInit, OnDestroy {
   private mostrarLlamadaActiva(from: string): void {
     // No mostrar modal si ya está abierto
     if (this.activeCallDialogRef) {
+      console.log('⚠️ [App] Popup de llamada activa ya está abierto, no abrir otro');
       return;
     }
+
+    console.log('📞 [App] Abriendo popup de llamada activa para:', from);
 
     this.activeCallDialogRef = this.dialog.open(ActiveCallModalComponent, {
       width: '400px',
@@ -234,8 +241,8 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
     this.activeCallDialogRef.afterClosed().subscribe(() => {
+      console.log('📞 [App] Popup de llamada activa CERRADO');
       this.activeCallDialogRef = null;
-      console.log('📞 Popup de llamada activa cerrado');
     });
   }
 

@@ -109,13 +109,20 @@ export class ActiveCallModalComponent implements OnInit, OnDestroy {
 
     // Subscribe to call state changes
     this.callStateSubscription = this.sipService.onCallStatus.subscribe(state => {
+      console.log('📞 [ActiveCallModal] Estado de llamada cambió a:', state);
+
       if (state === CallState.ENDED) {
+        console.log('📴 [ActiveCallModal] Llamada finalizada, cerrando popup en 1 segundo...');
         this.callStatus = 'Llamada finalizada';
         setTimeout(() => {
+          console.log('📴 [ActiveCallModal] Cerrando popup ahora');
           this.dialogRef.close();
         }, 1000);
       } else if (state === CallState.ACTIVE) {
+        console.log('✅ [ActiveCallModal] Llamada activa');
         this.callStatus = 'Conectado';
+      } else {
+        console.log(`🔄 [ActiveCallModal] Estado: ${state}`);
       }
     });
   }
