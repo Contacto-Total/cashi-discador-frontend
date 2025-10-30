@@ -14,6 +14,7 @@ import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { IncomingCallModalComponent } from './shared/components/incoming-call-modal/incoming-call-modal.component';
+import { ActiveCallModalComponent } from './shared/components/active-call-modal/active-call-modal.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -40,6 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private incomingCallSubscription?: Subscription;
   private dialogRef: any;
   private incomingCallDialogRef: any;
+  private activeCallDialogRef: any;
 
   constructor(
     public authService: AuthService,
@@ -188,11 +190,36 @@ export class AppComponent implements OnInit, OnDestroy {
         // Contestar la llamada
         this.sipService.answer();
         console.log('✅ Llamada contestada');
+
+        // Abrir popup de llamada activa
+        this.mostrarLlamadaActiva(from);
       } else if (result === 'reject') {
         // Rechazar la llamada
         this.sipService.hangup();
         console.log('❌ Llamada rechazada');
       }
+    });
+  }
+
+  /**
+   * Mostrar popup de llamada activa con controles
+   */
+  private mostrarLlamadaActiva(from: string): void {
+    // No mostrar modal si ya está abierto
+    if (this.activeCallDialogRef) {
+      return;
+    }
+
+    this.activeCallDialogRef = this.dialog.open(ActiveCallModalComponent, {
+      width: '400px',
+      disableClose: true,
+      hasBackdrop: false, // Permitir interactuar con la página de fondo
+      data: { from }
+    });
+
+    this.activeCallDialogRef.afterClosed().subscribe(() => {
+      this.activeCallDialogRef = null;
+      console.log('📞 Popup de llamada activa cerrado');
     });
   }
 
