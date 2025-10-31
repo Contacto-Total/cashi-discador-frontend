@@ -6,10 +6,10 @@ import { Subscription, interval } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { CampaignAdminService, CampaignStatistics, CampaignCall } from '../../../core/services/campaign-admin.service';
 import { BaseChartDirective } from 'ng2-charts';
-import { Chart, ChartConfiguration, ChartData, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Chart, ChartConfiguration, ChartData, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
 
-// Registrar componentes de Chart.js
-Chart.register(ArcElement, Tooltip, Legend);
+// Registrar TODOS los componentes necesarios de Chart.js
+Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
 @Component({
   selector: 'app-campaign-detail',
