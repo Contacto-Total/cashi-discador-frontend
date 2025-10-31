@@ -1,10 +1,25 @@
 <div class="campaign-list-container">
   <div class="header">
     <h1>Campaigns</h1>
-    <button mat-raised-button color="primary" routerLink="/campaigns/new">
-      <mat-icon>add</mat-icon>
-      New Campaign
-    </button>
+    <div class="header-actions">
+      <!-- Auto-Dialer Toggle Button -->
+      <button
+        mat-raised-button
+        [color]="getAutoDialerButtonColor()"
+        (click)="toggleAutoDialer()"
+        [disabled]="autoDialerLoading"
+        [matTooltip]="getAutoDialerTooltip()"
+        class="autodialer-toggle-btn">
+        <mat-icon>{{ getAutoDialerButtonIcon() }}</mat-icon>
+        {{ getAutoDialerButtonText() }}
+      </button>
+
+      <!-- New Campaign Button -->
+      <button mat-raised-button color="primary" routerLink="/campaigns/new">
+        <mat-icon>add</mat-icon>
+        New Campaign
+      </button>
+    </div>
   </div>
 
   <mat-card>

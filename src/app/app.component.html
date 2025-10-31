@@ -24,10 +24,6 @@
           <mat-icon>supervisor_account</mat-icon>
           <span>Monitoreo</span>
         </a>
-        <a routerLink="/admin/autodialer" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <mat-icon>phone_forwarded</mat-icon>
-          <span>Auto-Dialer</span>
-        </a>
         <a routerLink="/admin/campaigns" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
           <mat-icon>campaign</mat-icon>
           <span>Campañas</span>

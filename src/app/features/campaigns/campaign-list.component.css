@@ -17,8 +17,18 @@
   font-weight: 500;
 }
 
-.header button mat-icon {
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.header-actions button mat-icon {
   margin-right: 8px;
+}
+
+.autodialer-toggle-btn {
+  min-width: 180px;
 }
 
 .loading-container {

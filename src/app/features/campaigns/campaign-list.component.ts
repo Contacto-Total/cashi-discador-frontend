@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -8,8 +8,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Subscription } from 'rxjs';
 import { CampaignService } from '../../core/services/campaign.service';
 import { Campaign, CampaignStatus } from '../../core/models/campaign.model';
+import { AutoDialerService } from '../../core/services/autodialer.service';
 
 @Component({
   selector: 'app-campaign-list',
@@ -23,20 +26,37 @@ import { Campaign, CampaignStatus } from '../../core/models/campaign.model';
     MatIconModule,
     MatChipsModule,
     MatProgressSpinnerModule,
-    MatMenuModule
+    MatMenuModule,
+    MatTooltipModule
   ],
   templateUrl: './campaign-list.component.html',
   styleUrls: ['./campaign-list.component.css']
 })
-export class CampaignListComponent implements OnInit {
+export class CampaignListComponent implements OnInit, OnDestroy {
   campaigns: Campaign[] = [];
   loading = true;
   displayedColumns: string[] = ['name', 'status', 'dialMode', 'startDate', 'contacts', 'actions'];
 
-  constructor(private campaignService: CampaignService) {}
+  // Auto-Dialer state
+  isAutoDialerActive: boolean = false;
+  autoDialerLoading: boolean = false;
+  private autoDialerSubscription?: Subscription;
+
+  constructor(
+    private campaignService: CampaignService,
+    private autoDialerService: AutoDialerService
+  ) {}
 
   ngOnInit(): void {
     this.loadCampaigns();
+    this.loadAutoDialerState();
+    this.startAutoDialerPolling();
+  }
+
+  ngOnDestroy(): void {
+    if (this.autoDialerSubscription) {
+      this.autoDialerSubscription.unsubscribe();
+    }
   }
 
   loadCampaigns(): void {
@@ -118,5 +138,87 @@ export class CampaignListComponent implements OnInit {
 
   canStop(campaign: Campaign): boolean {
     return campaign.status === CampaignStatus.ACTIVE || campaign.status === CampaignStatus.PAUSED;
+  }
+
+  // ========================================
+  // AUTO-DIALER METHODS
+  // ========================================
+
+  /**
+   * Carga el estado actual del auto-dialer
+   */
+  loadAutoDialerState(): void {
+    this.autoDialerService.getEstado().subscribe({
+      next: (response) => {
+        this.isAutoDialerActive = response.activo;
+      },
+      error: (err) => {
+        console.error('Error loading auto-dialer state:', err);
+      }
+    });
+  }
+
+  /**
+   * Inicia polling del estado del auto-dialer cada 5 segundos
+   */
+  startAutoDialerPolling(): void {
+    this.autoDialerSubscription = this.autoDialerService.startStatsPolling().subscribe({
+      next: (stats) => {
+        this.isAutoDialerActive = stats.activo;
+      },
+      error: (err) => {
+        console.error('Error polling auto-dialer stats:', err);
+      }
+    });
+  }
+
+  /**
+   * Toggle auto-dialer (activar/desactivar)
+   */
+  toggleAutoDialer(): void {
+    this.autoDialerLoading = true;
+
+    this.autoDialerService.toggle('admin').subscribe({
+      next: (response) => {
+        this.autoDialerLoading = false;
+        this.isAutoDialerActive = response.activo;
+        console.log('Auto-Dialer toggled:', response.mensaje);
+      },
+      error: (err) => {
+        console.error('Error toggling auto-dialer:', err);
+        this.autoDialerLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Obtiene el texto del botón del auto-dialer
+   */
+  getAutoDialerButtonText(): string {
+    if (this.autoDialerLoading) return 'Procesando...';
+    return this.isAutoDialerActive ? 'PAUSAR DISCADO' : 'INICIAR DISCADO';
+  }
+
+  /**
+   * Obtiene el ícono del botón del auto-dialer
+   */
+  getAutoDialerButtonIcon(): string {
+    return this.isAutoDialerActive ? 'pause' : 'play_arrow';
+  }
+
+  /**
+   * Obtiene el color del botón del auto-dialer
+   */
+  getAutoDialerButtonColor(): string {
+    return this.isAutoDialerActive ? 'warn' : 'primary';
+  }
+
+  /**
+   * Obtiene el tooltip del botón
+   */
+  getAutoDialerTooltip(): string {
+    return this.isAutoDialerActive
+      ? 'Pausar el sistema de discado automático'
+      : 'Iniciar el sistema de discado automático';
   }
 }
