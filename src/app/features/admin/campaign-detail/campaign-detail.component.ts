@@ -39,7 +39,7 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
   showChart: boolean = false;
 
   // Configuración del gráfico de dona
-  public doughnutChartType: ChartType = 'doughnut';
+  public doughnutChartType: 'doughnut' = 'doughnut' as const;
   public doughnutChartData: ChartData<'doughnut'> = {
     labels: [],
     datasets: []
