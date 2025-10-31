@@ -25,6 +25,55 @@
   <div *ngIf="error" class="error-message">❌ {{ error }}</div>
   <div *ngIf="successMessage" class="success-message">✅ {{ successMessage }}</div>
 
+  <!-- Auto-Dialer Metrics -->
+  <div class="metrics-panel" *ngIf="autoDialerStats">
+    <h3>📊 Métricas del Auto-Dialer en Tiempo Real</h3>
+    <div class="metrics-grid">
+      <div class="metric-item">
+        <span class="metric-icon">👥</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.agentesDisponibles }}</span>
+          <span class="metric-label">Agentes Disponibles</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon">📋</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
+          <span class="metric-label">Pendientes</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon">📞</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
+          <span class="metric-label">Llamadas Activas</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon">✅</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasCompletadasHoy }}</span>
+          <span class="metric-label">Completadas Hoy</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon">🎯</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosCompletados }}</span>
+          <span class="metric-label">Total Completados</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon">❌</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosFallidos }}</span>
+          <span class="metric-label">Fallidos</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Import Stats Card -->
   <div *ngIf="importStats" class="import-stats-card">
     <h3>📊 Datos Disponibles para Importar</h3>

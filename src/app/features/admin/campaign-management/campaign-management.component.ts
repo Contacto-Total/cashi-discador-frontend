@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
-import { AutoDialerService } from '../../../core/services/autodialer.service';
+import { AutoDialerService, AutoDialerEstadisticas } from '../../../core/services/autodialer.service';
 
 @Component({
   selector: 'app-campaign-management',
@@ -37,6 +37,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   // Auto-Dialer state
   isAutoDialerActive: boolean = false;
   autoDialerLoading: boolean = false;
+  autoDialerStats: AutoDialerEstadisticas | null = null;
   private autoDialerSubscription?: Subscription;
 
   constructor(
@@ -327,6 +328,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.autoDialerSubscription = this.autoDialerService.startStatsPolling().subscribe({
       next: (stats) => {
         this.isAutoDialerActive = stats.activo;
+        this.autoDialerStats = stats;
       },
       error: (err) => {
         console.error('Error polling auto-dialer stats:', err);
