@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo } from '../../../core/services/autodialer.service';
@@ -46,7 +47,8 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   constructor(
     private campaignService: CampaignAdminService,
-    private autoDialerService: AutoDialerService
+    private autoDialerService: AutoDialerService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -468,6 +470,15 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       case 'SSHH': return 'SSHH';
       case 'TIPIFICANDO': return 'Tipificando';
       default: return estado;
+    }
+  }
+
+  /**
+   * Navega al detalle de una campaña
+   */
+  viewCampaignDetail(campaign: Campaign): void {
+    if (campaign.id) {
+      this.router.navigate(['/admin/campaigns', campaign.id]);
     }
   }
 }

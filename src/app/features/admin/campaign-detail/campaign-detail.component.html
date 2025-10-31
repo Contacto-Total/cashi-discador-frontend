@@ -1,0 +1,225 @@
+<div class="campaign-detail-container">
+  <!-- Header with back button -->
+  <div class="header">
+    <button class="btn-back" (click)="goBack()">
+      <span>⬅</span>
+      <span>Volver a Campañas</span>
+    </button>
+    <h1>📋 Detalle de Campaña</h1>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && !statistics" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando...</p>
+  </div>
+
+  <!-- Campaign Statistics -->
+  <div *ngIf="statistics" class="statistics-section">
+    <!-- Campaign Header -->
+    <div class="campaign-header-card">
+      <div class="campaign-title-section">
+        <h2>{{ statistics.nombre }}</h2>
+        <span
+          class="status-badge"
+          [style.background-color]="getEstadoCampanaColor(statistics.estadoActual)">
+          {{ getEstadoCampanaTexto(statistics.estadoActual) }}
+        </span>
+      </div>
+      <p *ngIf="statistics.descripcion" class="campaign-description">
+        {{ statistics.descripcion }}
+      </p>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
+      <!-- Estado Actual -->
+      <div class="metric-card">
+        <span class="metric-icon">📊</span>
+        <div class="metric-content">
+          <span class="metric-label">Estado Actual</span>
+          <span class="metric-value">{{ getEstadoCampanaTexto(statistics.estadoActual) }}</span>
+        </div>
+      </div>
+
+      <!-- Fecha Inicio -->
+      <div class="metric-card">
+        <span class="metric-icon">📅</span>
+        <div class="metric-content">
+          <span class="metric-label">Fecha Inicio</span>
+          <span class="metric-value">
+            {{ statistics.fechaInicio ? (statistics.fechaInicio | date: 'dd-MM-yyyy') : '-' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Fecha Final -->
+      <div class="metric-card">
+        <span class="metric-icon">🏁</span>
+        <div class="metric-content">
+          <span class="metric-label">Fecha Final</span>
+          <span class="metric-value">
+            {{ statistics.fechaFinal ? (statistics.fechaFinal | date: 'dd-MM-yyyy') : '-' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Total de Registros -->
+      <div class="metric-card">
+        <span class="metric-icon">📋</span>
+        <div class="metric-content">
+          <span class="metric-label">Total de Registros</span>
+          <span class="metric-value">{{ statistics.totalRegistros | number }}</span>
+        </div>
+      </div>
+
+      <!-- Falta Reintentar -->
+      <div class="metric-card">
+        <span class="metric-icon">🔄</span>
+        <div class="metric-content">
+          <span class="metric-label">Falta Reintentar</span>
+          <span class="metric-value">{{ statistics.faltaReintentar | number }}</span>
+        </div>
+      </div>
+
+      <!-- Reintentos Completados -->
+      <div class="metric-card">
+        <span class="metric-icon">✅</span>
+        <div class="metric-content">
+          <span class="metric-label">Reintentos Completados</span>
+          <span class="metric-value">{{ statistics.reintentosCompletados | number }}</span>
+        </div>
+      </div>
+
+      <!-- Falta Llamar -->
+      <div class="metric-card">
+        <span class="metric-icon">📞</span>
+        <div class="metric-content">
+          <span class="metric-label">Falta Llamar</span>
+          <span class="metric-value">{{ statistics.faltaLlamar | number }}</span>
+        </div>
+      </div>
+
+      <!-- Duración Promedio Llamada -->
+      <div class="metric-card">
+        <span class="metric-icon">⏱️</span>
+        <div class="metric-content">
+          <span class="metric-label">Duración Promedio Llamada</span>
+          <span class="metric-value">{{ statistics.duracionPromedioLlamada }}</span>
+        </div>
+      </div>
+
+      <!-- Duración Máxima Llamada -->
+      <div class="metric-card">
+        <span class="metric-icon">⏰</span>
+        <div class="metric-content">
+          <span class="metric-label">Duración Máxima Llamada</span>
+          <span class="metric-value">{{ statistics.duracionMaximaLlamada }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calls History Table -->
+  <div *ngIf="statistics" class="calls-section">
+    <div class="table-header">
+      <h3>📞 Registro de Llamadas</h3>
+
+      <div class="table-controls">
+        <!-- Page Size Selector -->
+        <div class="page-size-control">
+          <label>Mostrar</label>
+          <select (change)="onPageSizeChange($event)" [value]="pageSize">
+            <option *ngFor="let option of pageSizeOptions" [value]="option">{{ option }}</option>
+          </select>
+          <label>registros</label>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-control">
+          <label>Búsqueda:</label>
+          <input
+            type="text"
+            [(ngModel)]="searchTerm"
+            (keyup.enter)="onSearch()"
+            placeholder="Buscar..."
+            class="search-input">
+          <button (click)="onSearch()" class="btn-search">🔍</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+      <table class="calls-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Teléfono</th>
+            <th>Dato</th>
+            <th>Estado</th>
+            <th>Causa</th>
+            <th>Duración</th>
+            <th>Int.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let call of calls">
+            <td>{{ call.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ call.telefono }}</td>
+            <td>{{ call.dato }}</td>
+            <td>
+              <span class="estado-badge" [ngClass]="getEstadoClass(call.estado)">
+                {{ getEstadoTexto(call.estado) }}
+              </span>
+            </td>
+            <td>{{ call.causa || '-' }}</td>
+            <td>{{ call.duracion }}</td>
+            <td class="text-center">{{ call.intentos }}</td>
+          </tr>
+          <tr *ngIf="calls.length === 0">
+            <td colspan="7" class="empty-row">
+              📭 No hay llamadas registradas para esta campaña
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages > 0">
+      <div class="pagination-info">
+        Mostrando {{ (currentPage * pageSize) + 1 }} a
+        {{ Math.min((currentPage + 1) * pageSize, totalElements) }} de
+        {{ totalElements }} registros
+      </div>
+
+      <div class="pagination-controls">
+        <button
+          class="btn-page"
+          [disabled]="currentPage === 0"
+          (click)="onPageChange(currentPage - 1)">
+          ⬅ Anterior
+        </button>
+
+        <button
+          *ngFor="let page of getPageNumbers()"
+          class="btn-page-number"
+          [class.active]="page === currentPage"
+          (click)="onPageChange(page)">
+          {{ page + 1 }}
+        </button>
+
+        <button
+          class="btn-page"
+          [disabled]="currentPage === totalPages - 1"
+          (click)="onPageChange(currentPage + 1)">
+          Siguiente ➡
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

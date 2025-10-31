@@ -33,6 +33,56 @@ export interface ImportStats {
   fuenteDatos: string;
 }
 
+export interface CampaignStatistics {
+  idCampana: number;
+  nombre: string;
+  descripcion?: string;
+  estadoActual: string;
+  fechaInicio?: string;
+  fechaFinal?: string;
+  totalRegistros: number;
+  faltaReintentar: number;
+  reintentosCompletados: number;
+  faltaLlamar: number;
+  totalLlamadas: number;
+  llamadasExitosas: number;
+  llamadasNoContestadas: number;
+  llamadasFallidas: number;
+  llamadasAbandonadas: number;
+  duracionPromedioLlamada: string;
+  duracionMaximaLlamada: string;
+  duracionPromedioSegundos: number;
+  duracionMaximaSegundos: number;
+  modoDiscado: string;
+  intentosMaximos: number;
+  intervaloReintento: number;
+}
+
+export interface CampaignCall {
+  idLlamada: number;
+  fecha: string;
+  telefono: string;
+  dato: string;
+  estado: string;
+  causa?: string;
+  duracion: string;
+  duracionSegundos: number;
+  intentos: number;
+  agenteNombre?: string;
+  agenteExtension?: string;
+  uuidLlamada: string;
+  idContacto: number;
+  estadoContacto: string;
+}
+
+export interface CampaignCallsResponse {
+  content: CampaignCall[];
+  totalElements: number;
+  totalPages: number;
+  currentPage: number;
+  pageSize: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -144,5 +194,23 @@ export class CampaignAdminService {
       'COMPLETED': 'Completada'
     };
     return texts[status] || status;
+  }
+
+  /**
+   * Obtiene estadísticas detalladas de una campaña
+   */
+  getCampaignStatistics(id: number): Observable<CampaignStatistics> {
+    return this.http.get<CampaignStatistics>(`${this.apiUrl}/${id}/statistics`, { headers: this.getHeaders() });
+  }
+
+  /**
+   * Obtiene el historial de llamadas de una campaña con paginación y búsqueda
+   */
+  getCampaignCalls(id: number, page: number = 0, size: number = 10, search?: string): Observable<CampaignCallsResponse> {
+    let url = `${this.apiUrl}/${id}/calls?page=${page}&size=${size}`;
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+    return this.http.get<CampaignCallsResponse>(url, { headers: this.getHeaders() });
   }
 }

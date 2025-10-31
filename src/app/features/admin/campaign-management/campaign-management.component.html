@@ -40,13 +40,19 @@
 
         <div *ngFor="let campaign of campaigns" class="campaign-card-compact">
           <div class="campaign-header-compact">
-            <div class="campaign-title-compact">
+            <div class="campaign-title-compact" (click)="viewCampaignDetail(campaign)" style="cursor: pointer;">
               <h3>{{ campaign.name }}</h3>
               <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
                 {{ getStatusText(campaign.status) }}
               </span>
             </div>
             <div class="campaign-actions">
+              <button
+                class="btn-action-small btn-view"
+                (click)="viewCampaignDetail(campaign)"
+                title="Ver detalle">
+                👁️
+              </button>
               <button
                 *ngIf="canActivate(campaign)"
                 class="btn-action-small btn-activate"
