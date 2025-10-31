@@ -96,13 +96,6 @@
   font-size: 14px;
 }
 
-/* Metrics Grid */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-  margin-bottom: 30px;
-}
 
 .metric-card {
   background: #1e293b;
@@ -404,12 +397,14 @@
 .flip-container {
   perspective: 1500px;
   margin-bottom: 30px;
-  min-height: 350px;
+  position: relative;
+  height: 380px;
 }
 
 .flip-card-front,
 .flip-card-back {
   width: 100%;
+  height: 100%;
   backface-visibility: hidden;
   transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
   position: absolute;
@@ -419,23 +414,27 @@
 
 .flip-card-front {
   transform: rotateY(0deg);
-  position: relative;
 }
 
 .flip-card-back {
   transform: rotateY(-180deg);
-  visibility: hidden;
 }
 
 .flip-container.flipped .flip-card-front {
   transform: rotateY(180deg);
-  visibility: hidden;
 }
 
 .flip-container.flipped .flip-card-back {
   transform: rotateY(0deg);
-  visibility: visible;
-  position: relative;
+}
+
+/* Metrics Grid - Ajustar altura */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  height: 100%;
+  align-content: start;
 }
 
 /* Chart and Stats Container */
