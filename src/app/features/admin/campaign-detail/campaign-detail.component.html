@@ -28,14 +28,21 @@
           [style.background-color]="getEstadoCampanaColor(statistics.estadoActual)">
           {{ getEstadoCampanaTexto(statistics.estadoActual) }}
         </span>
+        <!-- Toggle Button -->
+        <button class="btn-toggle-chart" (click)="toggleChart()" title="Ver gráfico de distribución">
+          {{ showChart ? '📊 Ver Métricas' : '📈 Ver Gráfico' }}
+        </button>
       </div>
       <p *ngIf="statistics.descripcion" class="campaign-description">
         {{ statistics.descripcion }}
       </p>
     </div>
 
-    <!-- Metrics Grid -->
-    <div class="metrics-grid">
+    <!-- Flip Container -->
+    <div class="flip-container" [class.flipped]="showChart">
+      <!-- Front: Metrics Grid -->
+      <div class="flip-card-front">
+        <div class="metrics-grid">
       <!-- Estado Actual -->
       <div class="metric-card">
         <span class="metric-icon">📊</span>
@@ -118,6 +125,80 @@
         <div class="metric-content">
           <span class="metric-label">Duración Máxima Llamada</span>
           <span class="metric-value">{{ statistics.duracionMaximaLlamada }}</span>
+        </div>
+      </div>
+        </div>
+      </div>
+
+      <!-- Back: Chart and Stats Table -->
+      <div class="flip-card-back">
+        <div class="chart-stats-container">
+          <!-- Donut Chart -->
+          <div class="chart-section">
+            <h3>Distribución de Llamadas</h3>
+            <div class="chart-wrapper">
+              <canvas baseChart
+                [data]="doughnutChartData"
+                [type]="doughnutChartType"
+                [options]="doughnutChartOptions">
+              </canvas>
+              <div class="chart-center-text">
+                <div class="center-value">{{ statistics.totalLlamadas }}</div>
+                <div class="center-label">Total</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Table -->
+          <div class="stats-table-section">
+            <h3>Estado Llamadas</h3>
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Estado</th>
+                  <th>Cantidad</th>
+                  <th>Porcentaje</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasContestadas, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #10B981"></span> Contestadas</td>
+                  <td>{{ statistics.llamadasContestadas | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasContestadas, statistics.totalLlamadas) }}</td>
+                </tr>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasCortas, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #F59E0B"></span> Cortas</td>
+                  <td>{{ statistics.llamadasCortas | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasCortas, statistics.totalLlamadas) }}</td>
+                </tr>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasAbandonadas, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #EF4444"></span> Abandonadas</td>
+                  <td>{{ statistics.llamadasAbandonadas | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasAbandonadas, statistics.totalLlamadas) }}</td>
+                </tr>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasNoContestadas, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #F97316"></span> No Responden</td>
+                  <td>{{ statistics.llamadasNoContestadas | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasNoContestadas, statistics.totalLlamadas) }}</td>
+                </tr>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasBuzonVoz, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #3B82F6"></span> Buzón de Voz</td>
+                  <td>{{ statistics.llamadasBuzonVoz | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasBuzonVoz, statistics.totalLlamadas) }}</td>
+                </tr>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasFallidas, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #6B7280"></span> Fallidas</td>
+                  <td>{{ statistics.llamadasFallidas | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasFallidas, statistics.totalLlamadas) }}</td>
+                </tr>
+                <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasPausadas, statistics.totalLlamadas))">
+                  <td><span class="color-dot" style="background-color: #94A3B8"></span> Pausadas</td>
+                  <td>{{ statistics.llamadasPausadas | number }}</td>
+                  <td>{{ getPercentage(statistics.llamadasPausadas, statistics.totalLlamadas) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

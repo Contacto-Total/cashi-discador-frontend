@@ -56,6 +56,10 @@ export interface CampaignStatistics {
   modoDiscado: string;
   intentosMaximos: number;
   intervaloReintento: number;
+  llamadasContestadas: number;
+  llamadasCortas: number;
+  llamadasBuzonVoz: number;
+  llamadasPausadas: number;
 }
 
 export interface CampaignCall {

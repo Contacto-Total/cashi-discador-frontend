@@ -5,11 +5,13 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { CampaignAdminService, CampaignStatistics, CampaignCall } from '../../../core/services/campaign-admin.service';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
 
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BaseChartDirective],
   templateUrl: './campaign-detail.component.html',
   styleUrls: ['./campaign-detail.component.css']
 })
@@ -32,6 +34,36 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
 
   // Exponer Math para usar en el template
   Math = Math;
+
+  // Toggle para mostrar gráfico o métricas
+  showChart: boolean = false;
+
+  // Configuración del gráfico de dona
+  public doughnutChartType: ChartType = 'doughnut';
+  public doughnutChartData: ChartData<'doughnut'> = {
+    labels: [],
+    datasets: []
+  };
+  public doughnutChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+            return `${label}: ${value} (${percentage}%)`;
+          }
+        }
+      }
+    }
+  };
 
   private pollingSubscription?: Subscription;
 
@@ -70,6 +102,7 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
     this.campaignService.getCampaignStatistics(this.campaignId).subscribe({
       next: (stats) => {
         this.statistics = stats;
+        this.updateChartData(stats);
       },
       error: (err) => {
         console.error('Error loading campaign statistics:', err);
@@ -228,5 +261,63 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
       'COMPLETED': '#3B82F6'
     };
     return colores[estado] || '#6B7280';
+  }
+
+  /**
+   * Toggle para mostrar/ocultar el gráfico
+   */
+  toggleChart(): void {
+    this.showChart = !this.showChart;
+  }
+
+  /**
+   * Actualiza los datos del gráfico de dona
+   */
+  updateChartData(stats: CampaignStatistics): void {
+    const total = stats.totalLlamadas;
+
+    this.doughnutChartData = {
+      labels: ['Contestadas', 'Cortas', 'Abandonadas', 'No Responden', 'Buzón de Voz', 'Fallidas', 'Pausadas'],
+      datasets: [{
+        data: [
+          stats.llamadasContestadas || 0,
+          stats.llamadasCortas || 0,
+          stats.llamadasAbandonadas || 0,
+          stats.llamadasNoContestadas || 0,
+          stats.llamadasBuzonVoz || 0,
+          stats.llamadasFallidas || 0,
+          stats.llamadasPausadas || 0
+        ],
+        backgroundColor: [
+          '#10B981', // Verde - Contestadas
+          '#F59E0B', // Amarillo - Cortas
+          '#EF4444', // Rojo - Abandonadas
+          '#F97316', // Naranja - No Responden
+          '#3B82F6', // Azul - Buzón de Voz
+          '#6B7280', // Gris oscuro - Fallidas
+          '#94A3B8'  // Gris claro - Pausadas
+        ],
+        borderWidth: 2,
+        borderColor: '#1e293b'
+      }]
+    };
+  }
+
+  /**
+   * Obtiene el porcentaje de un estado
+   */
+  getPercentage(value: number, total: number): string {
+    if (total === 0) return '0%';
+    return ((value / total) * 100).toFixed(0) + '%';
+  }
+
+  /**
+   * Obtiene la clase CSS para la fila de la tabla según el porcentaje
+   */
+  getRowClass(percentage: string): string {
+    const percent = parseFloat(percentage);
+    if (percent >= 50) return 'high-percentage';
+    if (percent >= 20) return 'medium-percentage';
+    return 'low-percentage';
   }
 }

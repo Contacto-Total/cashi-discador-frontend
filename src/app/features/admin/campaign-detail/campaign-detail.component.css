@@ -64,6 +64,24 @@
   font-weight: 600;
 }
 
+.btn-toggle-chart {
+  padding: 8px 16px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s;
+  margin-left: auto;
+}
+
+.btn-toggle-chart:hover {
+  background: #2563EB;
+  transform: translateY(-2px);
+}
+
 .status-badge {
   padding: 6px 12px;
   border-radius: 6px;
@@ -382,6 +400,151 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Flip Animation Container */
+.flip-container {
+  perspective: 1500px;
+  margin-bottom: 30px;
+  min-height: 400px;
+}
+
+.flip-card-front,
+.flip-card-back {
+  width: 100%;
+  backface-visibility: hidden;
+  transition: transform 0.8s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+
+.flip-card-front {
+  transform: rotateY(0deg);
+}
+
+.flip-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateY(-180deg);
+}
+
+.flip-container.flipped .flip-card-front {
+  transform: rotateY(180deg);
+}
+
+.flip-container.flipped .flip-card-back {
+  transform: rotateY(0deg);
+}
+
+/* Chart and Stats Container */
+.chart-stats-container {
+  display: grid;
+  grid-template-columns: 45% 55%;
+  gap: 30px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.chart-section,
+.stats-table-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-section h3,
+.stats-table-section h3 {
+  margin: 0 0 20px 0;
+  color: #f1f5f9;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Chart Wrapper */
+.chart-wrapper {
+  position: relative;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.center-value {
+  font-size: 42px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1;
+}
+
+.center-label {
+  font-size: 14px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* Stats Table */
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0f172a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stats-table thead {
+  background: #1e293b;
+}
+
+.stats-table th {
+  padding: 12px;
+  text-align: left;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 2px solid #334155;
+}
+
+.stats-table td {
+  padding: 12px;
+  color: #e2e8f0;
+  font-size: 14px;
+  border-bottom: 1px solid #334155;
+}
+
+.stats-table tbody tr:hover {
+  background: #1e293b;
+}
+
+.color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Row classes based on percentage */
+.high-percentage td {
+  font-weight: 600;
+}
+
+.medium-percentage td {
+  font-weight: 500;
+}
+
+.low-percentage td {
+  opacity: 0.8;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .campaign-detail-container {
@@ -409,5 +572,13 @@
 
   .search-input {
     width: 100%;
+  }
+
+  .chart-stats-container {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-wrapper {
+    height: 300px;
   }
 }
