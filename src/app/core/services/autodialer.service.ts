@@ -19,6 +19,17 @@ export interface AutoDialerEstadisticas {
   llamadasCompletadasHoy: number;
   contactosCompletados: number;
   contactosFallidos: number;
+  // Nuevas métricas detalladas
+  totalLlamadas: number;
+  llamadasEnCola: number;
+  llamadasConectadas: number;
+  llamadasMarcando: number;
+  llamadasNoContestadas: number;
+  llamadasAbandonadas: number;
+  duracionPromedioSegundos: number;
+  duracionPromedioFormato: string;
+  duracionMaximaSegundos: number;
+  duracionMaximaFormato: string;
 }
 
 @Injectable({
