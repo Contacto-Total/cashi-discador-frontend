@@ -25,7 +25,97 @@
   <div *ngIf="error" class="error-message">❌ {{ error }}</div>
   <div *ngIf="successMessage" class="success-message">✅ {{ successMessage }}</div>
 
-  <!-- Auto-Dialer Metrics -->
+  <!-- Main Content: Two Columns Layout -->
+  <div class="two-column-layout">
+    <!-- LEFT COLUMN: Campaigns List -->
+    <div class="left-column">
+      <h2 class="section-title">📋 Campañas</h2>
+
+      <!-- Campaigns List -->
+      <div class="campaigns-scrollable" *ngIf="!loading">
+        <div *ngIf="campaigns.length === 0" class="empty-state">
+          <p>📭 No hay campañas creadas todavía</p>
+          <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
+        </div>
+
+        <div *ngFor="let campaign of campaigns" class="campaign-card-compact">
+          <div class="campaign-header-compact">
+            <div class="campaign-title-compact">
+              <h3>{{ campaign.name }}</h3>
+              <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
+                {{ getStatusText(campaign.status) }}
+              </span>
+            </div>
+            <div class="campaign-actions">
+              <button
+                *ngIf="canActivate(campaign)"
+                class="btn-action-small btn-activate"
+                (click)="activarCampaign(campaign)"
+                title="Activar campaña">
+                ▶️
+              </button>
+              <button
+                *ngIf="canPause(campaign)"
+                class="btn-action-small btn-pause"
+                (click)="pausarCampaign(campaign)"
+                title="Pausar campaña">
+                ⏸️
+              </button>
+              <button
+                class="btn-action-small btn-import"
+                (click)="openImportModal(campaign)"
+                title="Importar contactos">
+                📥
+              </button>
+              <button
+                *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
+                class="btn-action-small btn-delete"
+                (click)="deleteCampaign(campaign)"
+                title="Eliminar campaña">
+                🗑️
+              </button>
+            </div>
+          </div>
+
+          <div class="campaign-body-compact">
+            <p *ngIf="campaign.description" class="campaign-description-compact">
+              {{ campaign.description }}
+            </p>
+
+            <div class="campaign-stats-compact" *ngIf="campaign.totalContacts !== undefined">
+              <div class="stat-compact">
+                <span class="stat-label-compact">Total:</span>
+                <span class="stat-value-compact">{{ campaign.totalContacts || 0 }}</span>
+              </div>
+              <div class="stat-compact">
+                <span class="stat-label-compact">Pendientes:</span>
+                <span class="stat-value-compact">{{ campaign.pendingContacts || 0 }}</span>
+              </div>
+              <div class="stat-compact">
+                <span class="stat-label-compact">Contactados:</span>
+                <span class="stat-value-compact">{{ campaign.contactedContacts || 0 }}</span>
+              </div>
+            </div>
+
+            <div class="campaign-meta-compact">
+              <span>{{ campaign.dialMode }}</span>
+              <span>Max: {{ campaign.maxAttempts }}</span>
+              <span *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Cargando...</p>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Metrics and Future Content -->
+    <div class="right-column">
+      <!-- Auto-Dialer Metrics -->
   <div class="metrics-panel" *ngIf="autoDialerStats">
     <h3>📊 Métricas del Auto-Dialer en Tiempo Real</h3>
     <div class="metrics-grid">
@@ -127,106 +217,12 @@
           <span class="metric-label">Duración máxima de llamada</span>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Import Stats Card -->
-  <div *ngIf="importStats" class="import-stats-card">
-    <h3>📊 Datos Disponibles para Importar</h3>
-    <div class="stats-grid">
-      <div class="stat-item">
-        <span class="stat-value">{{ importStats.totalTelefonosActivos }}</span>
-        <span class="stat-label">Teléfonos Activos</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-value">{{ importStats.totalTelefonosPreferidos }}</span>
-        <span class="stat-label">Teléfonos Preferidos</span>
-      </div>
-      <div class="stat-item">
-        <span class="stat-source">{{ importStats.fuenteDatos }}</span>
+      <!-- Future Content Section -->
+      <div class="future-content-section">
+        <!-- Aquí irá contenido importante después -->
       </div>
     </div>
-  </div>
-
-  <!-- Campaigns List -->
-  <div class="campaigns-list" *ngIf="!loading">
-    <div *ngIf="campaigns.length === 0" class="empty-state">
-      <p>📭 No hay campañas creadas todavía</p>
-      <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
-    </div>
-
-    <div *ngFor="let campaign of campaigns" class="campaign-card">
-      <div class="campaign-header">
-        <div class="campaign-title">
-          <h3>{{ campaign.name }}</h3>
-          <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
-            {{ getStatusText(campaign.status) }}
-          </span>
-        </div>
-        <div class="campaign-actions">
-          <button
-            *ngIf="canActivate(campaign)"
-            class="btn-action btn-activate"
-            (click)="activarCampaign(campaign)"
-            title="Activar campaña">
-            ▶️
-          </button>
-          <button
-            *ngIf="canPause(campaign)"
-            class="btn-action btn-pause"
-            (click)="pausarCampaign(campaign)"
-            title="Pausar campaña">
-            ⏸️
-          </button>
-          <button
-            class="btn-action btn-import"
-            (click)="openImportModal(campaign)"
-            title="Importar contactos">
-            📥
-          </button>
-          <button
-            *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
-            class="btn-action btn-delete"
-            (click)="deleteCampaign(campaign)"
-            title="Eliminar campaña">
-            🗑️
-          </button>
-        </div>
-      </div>
-
-      <div class="campaign-body">
-        <p *ngIf="campaign.description" class="campaign-description">
-          {{ campaign.description }}
-        </p>
-
-        <div class="campaign-stats" *ngIf="campaign.totalContacts !== undefined">
-          <div class="stat">
-            <span class="stat-label">Total Contactos:</span>
-            <span class="stat-value">{{ campaign.totalContacts || 0 }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Pendientes:</span>
-            <span class="stat-value">{{ campaign.pendingContacts || 0 }}</span>
-          </div>
-          <div class="stat">
-            <span class="stat-label">Contactados:</span>
-            <span class="stat-value">{{ campaign.contactedContacts || 0 }}</span>
-          </div>
-        </div>
-
-        <div class="campaign-meta">
-          <span>Modo: <strong>{{ campaign.dialMode }}</strong></span>
-          <span>Intentos: <strong>{{ campaign.maxAttempts }}</strong></span>
-          <span *ngIf="campaign.createdAt">Creada: <strong>{{ campaign.createdAt | date: 'short' }}</strong></span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <div class="spinner"></div>
-    <p>Cargando...</p>
   </div>
 </div>
 
