@@ -217,47 +217,49 @@
           <span class="metric-label">Duración máxima de llamada</span>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- Agentes en Tiempo Real -->
-      <div class="agentes-panel">
-        <h3>👥 Agentes en Tiempo Real</h3>
-        <div class="agentes-table-container">
-          <table class="agentes-table">
-            <thead>
-              <tr>
-                <th>Agente</th>
-                <th>Estado</th>
-                <th>Teléfono</th>
-                <th>Desde</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row">
-                <td class="agente-info">
-                  <div class="agente-extension">SIP/{{ agente.sipExtension }}</div>
-                  <div class="agente-nombre">{{ agente.nombreCompleto }}</div>
-                </td>
-                <td class="agente-estado">
-                  <span class="estado-badge" [style.background-color]="getEstadoColor(agente.estadoActual)">
-                    {{ getEstadoIcon(agente.estadoActual) }} {{ getEstadoTexto(agente.estadoActual) }}
-                  </span>
-                </td>
-                <td class="agente-telefono">
-                  {{ agente.telefonoDestino || '-' }}
-                </td>
-                <td class="agente-tiempo">
-                  {{ formatTiempo(agente.segundosEnEstado) }}
-                </td>
-              </tr>
-              <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
-                <td colspan="4" style="text-align: center; color: #94a3b8;">
-                  No hay agentes registrados
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <!-- Agentes en Tiempo Real -->
+  <div class="agentes-panel">
+    <h3>👥 Agentes en Tiempo Real</h3>
+    <div class="agentes-table-container">
+      <table class="agentes-table">
+        <thead>
+          <tr>
+            <th>Agente</th>
+            <th>Estado</th>
+            <th>Teléfono</th>
+            <th>Desde</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let agente of agentesMonitoreo" class="agente-row">
+            <td class="agente-info">
+              <div class="agente-extension">SIP/{{ agente.sipExtension }}</div>
+              <div class="agente-nombre">{{ agente.nombreCompleto }}</div>
+            </td>
+            <td class="agente-estado">
+              <span class="estado-badge" [style.background-color]="getEstadoColor(agente.estadoActual)">
+                {{ getEstadoIcon(agente.estadoActual) }} {{ getEstadoTexto(agente.estadoActual) }}
+              </span>
+            </td>
+            <td class="agente-telefono">
+              {{ agente.telefonoDestino || '-' }}
+            </td>
+            <td class="agente-tiempo">
+              {{ formatTiempo(agente.segundosEnEstado) }}
+            </td>
+          </tr>
+          <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
+            <td colspan="4" style="text-align: center; color: #94a3b8;">
+              No hay agentes registrados
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
     </div>
   </div>
 </div>
