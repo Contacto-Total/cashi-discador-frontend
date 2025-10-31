@@ -1,0 +1,65 @@
+<div class="extensions-container">
+  <!-- Header -->
+  <div class="header">
+    <button class="btn-back" (click)="goBack()">
+      <span>⬅</span>
+      <span>Volver a Campañas</span>
+    </button>
+    <h1>📞 Registro de Extensiones</h1>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading && extensions.length === 0" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando extensiones...</p>
+  </div>
+
+  <!-- Extensions Table -->
+  <div *ngIf="!loading || extensions.length > 0" class="extensions-section">
+    <div class="table-header">
+      <h3>📋 Extensiones Registradas</h3>
+      <div class="info-badge">
+        Total: {{ extensions.length }}
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table class="extensions-table">
+        <thead>
+          <tr>
+            <th>Extensión/Anexo</th>
+            <th>Nombre</th>
+            <th>IP</th>
+            <th>Puerto</th>
+            <th>Estado</th>
+            <th>Respuesta</th>
+            <th>User Agent</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let ext of extensions">
+            <td class="extension-cell">{{ ext.extension }}</td>
+            <td>{{ ext.fullName || ext.displayName || '-' }}</td>
+            <td>{{ ext.ipAddress }}</td>
+            <td>{{ ext.port }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getStatusClass(ext.status)">
+                {{ ext.status }}
+              </span>
+            </td>
+            <td class="ping-cell">{{ ext.pingMs }}</td>
+            <td class="user-agent-cell">{{ ext.userAgent || '-' }}</td>
+          </tr>
+          <tr *ngIf="extensions.length === 0">
+            <td colspan="7" class="empty-row">
+              📭 No hay extensiones registradas en este momento
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

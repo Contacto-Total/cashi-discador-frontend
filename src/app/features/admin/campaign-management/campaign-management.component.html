@@ -228,7 +228,12 @@
 
   <!-- Agentes en Tiempo Real -->
   <div class="agentes-panel">
-    <h3>👥 Agentes en Tiempo Real</h3>
+    <div class="agentes-header">
+      <h3>👥 Agentes en Tiempo Real</h3>
+      <button class="btn-view-all" (click)="navigateToExtensions()">
+        📞 Ver Extensiones
+      </button>
+    </div>
     <div class="agentes-table-container">
       <table class="agentes-table">
         <thead>

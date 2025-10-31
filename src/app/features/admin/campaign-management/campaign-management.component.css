@@ -210,14 +210,37 @@
   flex-direction: column;
 }
 
+.agentes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #0A0E27;
+  border-bottom: 1px solid #334155;
+}
+
 .agentes-panel h3 {
   margin: 0;
-  padding: 1rem;
   font-size: 0.95rem;
   color: #ffffff;
   font-weight: 600;
-  background: #0A0E27;
-  border-bottom: 1px solid #334155;
+}
+
+.btn-view-all {
+  padding: 6px 12px;
+  background: #3B82F6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.btn-view-all:hover {
+  background: #2563EB;
+  transform: translateY(-2px);
 }
 
 .agentes-table-container {

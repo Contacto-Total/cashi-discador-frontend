@@ -25,6 +25,19 @@ export interface MonitoringRequest {
   adminUsername: string;
 }
 
+export interface ExtensionRegistration {
+  extension: string;
+  username: string;
+  displayName: string;
+  ipAddress: string;
+  port: string;
+  status: string;
+  pingMs: string;
+  userAgent: string;
+  userId?: number;
+  fullName?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -131,5 +144,12 @@ export class AdminMonitoringService {
       adminExtension: '1000',
       adminUsername: 'admin'
     });
+  }
+
+  /**
+   * Get SIP extension registrations
+   */
+  getExtensionRegistrations(): Observable<ExtensionRegistration[]> {
+    return this.http.get<ExtensionRegistration[]>(`${this.apiUrl}/extensions/registrations`);
   }
 }

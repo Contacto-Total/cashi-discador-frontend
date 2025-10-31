@@ -37,6 +37,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'admin/extensions',
+    loadComponent: () => import('./features/admin/extensions-registry/extensions-registry.component').then(m => m.ExtensionsRegistryComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'whatsapp',
     loadComponent: () => import('./features/whatsapp/components/main/main.component').then(m => m.MainComponent),
     canActivate: [authGuard]

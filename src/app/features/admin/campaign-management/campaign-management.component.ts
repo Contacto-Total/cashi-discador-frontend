@@ -481,4 +481,11 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       this.router.navigate(['/admin/campaigns', campaign.id]);
     }
   }
+
+  /**
+   * Navega a la pantalla de registro de extensiones
+   */
+  navigateToExtensions(): void {
+    this.router.navigate(['/admin/extensions']);
+  }
 }
