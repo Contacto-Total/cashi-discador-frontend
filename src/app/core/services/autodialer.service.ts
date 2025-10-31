@@ -32,6 +32,16 @@ export interface AutoDialerEstadisticas {
   duracionMaximaFormato: string;
 }
 
+export interface AgenteMonitoreo {
+  idUsuario: number;
+  sipExtension: string;
+  nombreCompleto: string;
+  estadoActual: string;
+  telefonoDestino: string | null;
+  segundosEnEstado: number;
+  uuidLlamadaActual: string | null;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -118,6 +128,26 @@ export class AutoDialerService {
     return interval(5000).pipe(
       startWith(0),
       switchMap(() => this.getEstadisticas())
+    );
+  }
+
+  /**
+   * Obtiene lista de agentes para monitoreo en tiempo real
+   */
+  getAgentesMonitoreo(): Observable<AgenteMonitoreo[]> {
+    return this.http.get<AgenteMonitoreo[]>(
+      `${this.apiUrl}/agentes-monitoreo`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Inicia polling de agentes cada 3 segundos
+   */
+  startAgentesPolling(): Observable<AgenteMonitoreo[]> {
+    return interval(3000).pipe(
+      startWith(0),
+      switchMap(() => this.getAgentesMonitoreo())
     );
   }
 }
