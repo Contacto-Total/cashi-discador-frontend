@@ -30,6 +30,9 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
   // Búsqueda
   searchTerm: string = '';
 
+  // Exponer Math para usar en el template
+  Math = Math;
+
   private pollingSubscription?: Subscription;
 
   constructor(
