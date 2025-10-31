@@ -24,6 +24,12 @@
   font-weight: 600;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 /* Buttons */
 .btn-create {
   display: flex;
@@ -174,18 +180,42 @@
   cursor: pointer;
   font-size: 1rem;
   transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-action:hover {
   transform: scale(1.1);
 }
 
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-activate {
+  background: #10B981;
+  color: white;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
+}
+
 .btn-activate:hover {
-  background: rgba(16, 185, 129, 0.2);
+  background: #059669;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-pause {
+  background: #F59E0B;
+  color: white;
+  padding: 0.7rem 1.5rem;
+  font-weight: 600;
 }
 
 .btn-pause:hover {
-  background: rgba(245, 158, 11, 0.2);
+  background: #D97706;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
 }
 
 .btn-import:hover {
@@ -428,7 +458,17 @@
 
   .header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .header-actions button {
+    width: 100%;
   }
 
   .campaigns-list {
