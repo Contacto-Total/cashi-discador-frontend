@@ -85,6 +85,13 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   onCampaignChange(): void {
     console.log('Selected campaign changed to:', this.selectedCampaignId);
+
+    // Restart stats polling with new campaign filter
+    if (this.autoDialerSubscription) {
+      this.autoDialerSubscription.unsubscribe();
+    }
+    this.startAutoDialerPolling();
+
     // Restart llamadas polling with new campaign filter
     if (this.llamadasSubscription) {
       this.llamadasSubscription.unsubscribe();
@@ -94,9 +101,11 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   /**
    * Inicia polling del estado del auto-dialer cada 5 segundos
+   * Filtra por campaña si hay una seleccionada
    */
   startAutoDialerPolling(): void {
-    this.autoDialerSubscription = this.autoDialerService.startStatsPolling().subscribe({
+    const campaignId = this.selectedCampaignId || undefined;
+    this.autoDialerSubscription = this.autoDialerService.startStatsPolling(campaignId).subscribe({
       next: (stats) => {
         this.autoDialerStats = stats;
       },

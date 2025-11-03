@@ -116,10 +116,14 @@ export class AutoDialerService {
 
   /**
    * Obtiene estadísticas en tiempo real
+   * @param campaignId ID de campaña para filtrar (opcional)
    */
-  getEstadisticas(): Observable<AutoDialerEstadisticas> {
+  getEstadisticas(campaignId?: number): Observable<AutoDialerEstadisticas> {
+    const url = campaignId
+      ? `${this.apiUrl}/estadisticas?campaignId=${campaignId}`
+      : `${this.apiUrl}/estadisticas`;
     return this.http.get<AutoDialerEstadisticas>(
-      `${this.apiUrl}/estadisticas`,
+      url,
       { headers: this.getHeaders() }
     );
   }
@@ -136,11 +140,12 @@ export class AutoDialerService {
 
   /**
    * Inicia polling de estadísticas cada 5 segundos
+   * @param campaignId ID de campaña para filtrar (opcional)
    */
-  startStatsPolling(): Observable<AutoDialerEstadisticas> {
+  startStatsPolling(campaignId?: number): Observable<AutoDialerEstadisticas> {
     return interval(5000).pipe(
       startWith(0),
-      switchMap(() => this.getEstadisticas())
+      switchMap(() => this.getEstadisticas(campaignId))
     );
   }
 
