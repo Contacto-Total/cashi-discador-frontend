@@ -1,7 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { PortfolioService } from '../../services/portfolio.service';
 import { TypificationService } from '../../services/typification.service';
 import { Portfolio, CreatePortfolioRequest, UpdatePortfolioRequest } from '../../models/portfolio.model';
@@ -10,7 +9,7 @@ import { Tenant } from '../../models/tenant.model';
 @Component({
   selector: 'app-portfolio-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-slate-950 p-6">
       <!-- Header -->
@@ -19,7 +18,6 @@ import { Tenant } from '../../models/tenant.model';
           <div>
             <div class="flex items-center gap-3 mb-2">
               <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-                <lucide-angular name="folder" [size]="24" class="text-white"></lucide-angular>
               </div>
               <div>
                 <h1 class="text-2xl font-bold text-white">Gestión de Carteras</h1>
@@ -31,7 +29,6 @@ import { Tenant } from '../../models/tenant.model';
           <button (click)="openCreateDialog()"
                   [disabled]="selectedTenantId === 0"
                   class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer">
-            <lucide-angular name="plus" [size]="18"></lucide-angular>
             <span>Nueva Cartera</span>
           </button>
         </div>
@@ -64,7 +61,6 @@ import { Tenant } from '../../models/tenant.model';
                 <p class="text-3xl font-bold text-white">{{ portfolios().length }}</p>
               </div>
               <div class="w-12 h-12 bg-purple-900/30 rounded-lg flex items-center justify-center">
-                <lucide-angular name="folder" [size]="24" class="text-purple-400"></lucide-angular>
               </div>
             </div>
           </div>
@@ -76,7 +72,6 @@ import { Tenant } from '../../models/tenant.model';
                 <p class="text-3xl font-bold text-green-400">{{ getActivePortfolios() }}</p>
               </div>
               <div class="w-12 h-12 bg-green-900/30 rounded-lg flex items-center justify-center">
-                <lucide-angular name="check-circle" [size]="24" class="text-green-400"></lucide-angular>
               </div>
             </div>
           </div>
@@ -88,7 +83,6 @@ import { Tenant } from '../../models/tenant.model';
                 <p class="text-3xl font-bold text-red-400">{{ getInactivePortfolios() }}</p>
               </div>
               <div class="w-12 h-12 bg-red-900/30 rounded-lg flex items-center justify-center">
-                <lucide-angular name="x-circle" [size]="24" class="text-red-400"></lucide-angular>
               </div>
             </div>
           </div>
@@ -98,7 +92,6 @@ import { Tenant } from '../../models/tenant.model';
         <div class="max-w-7xl mx-auto mb-6">
           <div class="bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-800">
             <div class="relative">
-              <lucide-angular name="search" [size]="18" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></lucide-angular>
               <input type="text"
                      [(ngModel)]="searchTerm"
                      placeholder="Buscar carteras por código, nombre o tipo..."
@@ -136,7 +129,6 @@ import { Tenant } from '../../models/tenant.model';
                     <tr class="hover:bg-slate-800/50 transition-colors">
                       <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center gap-2">
-                          <lucide-angular name="folder" [size]="16" class="text-purple-400"></lucide-angular>
                           <span class="text-sm font-medium text-white">{{ portfolio.portfolioCode }}</span>
                         </div>
                       </td>
@@ -161,14 +153,12 @@ import { Tenant } from '../../models/tenant.model';
                         <div class="flex items-center gap-2">
                           <button (click)="openEditDialog(portfolio)"
                                   class="p-2 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer">
-                            <lucide-angular name="edit" [size]="16"></lucide-angular>
                           </button>
                           <button (click)="deletePortfolio(portfolio)"
                                   [disabled]="portfolio.hasSubPortfolios"
                                   [class]="portfolio.hasSubPortfolios ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-red-900/30 cursor-pointer'"
                                   class="p-2 rounded-lg transition-colors disabled:opacity-50"
                                   [title]="portfolio.hasSubPortfolios ? 'No se puede eliminar: tiene subcarteras asociadas' : 'Eliminar'">
-                            <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                           </button>
                         </div>
                       </td>
@@ -199,7 +189,6 @@ import { Tenant } from '../../models/tenant.model';
             </h2>
             <button (click)="closeDialog()"
                     class="text-gray-400 hover:text-white transition-colors">
-              <lucide-angular name="x" [size]="20"></lucide-angular>
             </button>
           </div>
 

@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import {
-  LucideAngularModule,
-} from 'lucide-angular';
+  ,
 import { catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -32,7 +31,7 @@ import { CustomerService } from '../../customers/services/customer.service';
   imports: [
     CommonModule,
     FormsModule,
-    LucideAngularModule,
+    ,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent
   ],
@@ -42,7 +41,6 @@ import { CustomerService } from '../../customers/services/customer.service';
       @if (showSuccess()) {
         <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">
           <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
-            <lucide-angular name="check-circle" [size]="24"></lucide-angular>
             <div>
               <div class="font-bold">¡Gestión Guardada!</div>
               <div class="text-sm opacity-90">Los datos se registraron correctamente</div>
@@ -59,12 +57,10 @@ import { CustomerService } from '../../customers/services/customer.service';
               <div>
                 <div class="flex items-center gap-1.5">
                   <div class="bg-blue-500 dark:bg-blue-600 p-1 rounded">
-                    <lucide-angular name="activity" [size]="14"></lucide-angular>
                   </div>
                   <div>
                     <h1 class="text-sm font-bold">Gestión de Cobranza</h1>
                     <p class="text-[9px] text-blue-200 dark:text-blue-300 flex items-center gap-0.5">
-                      <lucide-angular name="bar-chart-3" [size]="8"></lucide-angular>
                       {{ campaign().nombre }}
                     </p>
                   </div>
@@ -89,10 +85,8 @@ import { CustomerService } from '../../customers/services/customer.service';
                 title="Cambiar tema"
               >
                 @if (themeService.isDarkMode()) {
-                  <lucide-angular name="sun" [size]="16" class="text-yellow-300 group-hover:rotate-45 transition-transform duration-300"></lucide-angular>
                   <span class="text-[10px] text-yellow-300 font-semibold">OSCURO</span>
                 } @else {
-                  <lucide-angular name="moon" [size]="16" class="text-white group-hover:rotate-12 transition-transform duration-300"></lucide-angular>
                   <span class="text-[10px] text-white font-semibold">CLARO</span>
                 }
               </button>
@@ -165,7 +159,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             <div class="flex items-center gap-3 text-xs">
               <div>
                 <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold flex items-center gap-0.5">
-                  <lucide-angular name="users" [size]="8"></lucide-angular>
                   Cliente
                 </div>
                 <div class="text-xs font-bold text-gray-900 dark:text-white">{{ customerData().nombre_completo }}</div>
@@ -190,14 +183,12 @@ import { CustomerService } from '../../customers/services/customer.service';
             <div class="flex items-center gap-2">
               <div class="text-right bg-red-50 dark:bg-red-950/30 px-2 py-1 rounded border border-red-200 dark:border-red-900/50">
                 <div class="text-[9px] text-red-600 dark:text-red-200 font-semibold flex items-center justify-end gap-0.5">
-                  <lucide-angular name="dollar-sign" [size]="8"></lucide-angular>
                   Deuda
                 </div>
                 <div class="text-sm font-bold text-red-600 dark:text-red-100">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</div>
               </div>
               <div class="text-right bg-orange-50 dark:bg-orange-950/30 px-2 py-1 rounded border border-orange-200 dark:border-orange-900/50">
                 <div class="text-[9px] text-orange-600 dark:text-orange-200 font-semibold flex items-center justify-end gap-0.5">
-                  <lucide-angular name="clock" [size]="8"></lucide-angular>
                   Mora
                 </div>
                 <div class="text-sm font-bold text-orange-600 dark:text-orange-100">{{ customerData().deuda.dias_mora }}</div>
@@ -220,7 +211,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                   (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-700 dark:text-gray-100 hover:text-blue-700 dark:hover:text-blue-200 hover:bg-gray-50 dark:hover:bg-gray-800')"
               >
                 <div class="flex items-center justify-center gap-1">
-                  <lucide-angular [name]="tab.icon" [size]="12"></lucide-angular>
                   {{ tab.label }}
                 </div>
                 @if (activeTab() === tab.id) {
@@ -262,7 +252,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                               [class.text-slate-600]="!field.highlight && !themeService.isDarkMode()"
                               [class.dark:text-slate-400]="!field.highlight && themeService.isDarkMode()">
                               @if (field.highlight) {
-                                <lucide-angular name="star" [size]="8"></lucide-angular>
                               }
                               {{ field.label }}
                             </div>
@@ -282,7 +271,6 @@ import { CustomerService } from '../../customers/services/customer.service';
 
                   @if (customerOutputFields().length === 0) {
                     <div class="text-center py-4 text-slate-500 dark:text-slate-400 text-xs">
-                      <lucide-angular name="alert-circle" [size]="16" class="mx-auto mb-2"></lucide-angular>
                       <p>No hay campos configurados para mostrar</p>
                       <p class="text-[10px] mt-1">Configure los campos en Mantenimiento > Salidas de Cliente</p>
                     </div>
@@ -294,7 +282,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                 <div class="space-y-2">
                   <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
                     <div class="text-[10px] font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-1">
-                      <lucide-angular name="building" [size]="10"></lucide-angular>
                       Info. Producto
                     </div>
                     <div class="space-y-1 text-[10px]">
@@ -323,7 +310,6 @@ import { CustomerService } from '../../customers/services/customer.service';
 
                   <div class="bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-900/50 rounded-lg p-2">
                     <div class="text-[10px] font-bold text-red-800 dark:text-red-100 mb-1 flex items-center gap-1">
-                      <lucide-angular name="alert-circle" [size]="10"></lucide-angular>
                       Detalle Deuda
                     </div>
                     <div class="space-y-1 text-[10px]">
@@ -357,7 +343,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                 <div class="space-y-2">
                   @if (historialGestiones().length === 0) {
                     <div class="text-center py-8 space-y-3">
-                      <lucide-angular name="inbox" [size]="48" class="mx-auto text-gray-300 dark:text-gray-600"></lucide-angular>
                       <div>
                         <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Sin gestiones previas</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -370,7 +355,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                       <button
                         (click)="loadManagementHistory()"
                         class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors flex items-center gap-2 mx-auto">
-                        <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
                         Recargar Historial
                       </button>
                     </div>
@@ -379,7 +363,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                       <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
                         <div class="flex justify-between items-start mb-1">
                           <div class="text-[9px] font-bold text-gray-700 dark:text-gray-100 flex items-center gap-1">
-                            <lucide-angular name="clock" [size]="8"></lucide-angular>
                             {{ gestion.fecha }}
                           </div>
                           <div class="text-[9px] text-gray-500 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ gestion.asesor }}</div>
@@ -395,7 +378,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                             <div class="mt-2 p-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded">
                               <div class="flex items-center justify-between gap-1 mb-1">
                                 <div class="flex items-center gap-1">
-                                  <lucide-angular name="calendar" [size]="10" class="text-purple-600 dark:text-purple-400"></lucide-angular>
                                   <span class="text-[9px] font-bold text-purple-900 dark:text-purple-200 uppercase">Cronograma</span>
                                 </div>
                                 <button
@@ -434,7 +416,6 @@ import { CustomerService } from '../../customers/services/customer.service';
               <div class="flex items-center justify-between">
                 <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs">
                   <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
-                    <lucide-angular name="phone-call" [size]="14" [class]="callActive() ? 'text-green-700 dark:text-green-200' : 'text-blue-700 dark:text-blue-200'"></lucide-angular>
                   </div>
                   Control de Llamada
                 </h3>
@@ -444,7 +425,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                     [disabled]="callActive()"
                     class="px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
                   >
-                    <lucide-angular name="phone" [size]="14"></lucide-angular>
                     Iniciar
                   </button>
                   <button
@@ -452,7 +432,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                     [disabled]="!callActive()"
                     class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
                   >
-                    <lucide-angular name="phone-off" [size]="14"></lucide-angular>
                     Finalizar
                   </button>
                 </div>
@@ -479,11 +458,9 @@ import { CustomerService } from '../../customers/services/customer.service';
                     <option [value]="tip.id">[{{ tip.codigo }}] {{ tip.label }}</option>
                   }
                 </select>
-                <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
               </div>
               @if (errors().resultadoContacto) {
                 <div class="text-red-600 text-[10px] mt-1 flex items-center gap-1">
-                  <lucide-angular name="alert-circle" [size]="12"></lucide-angular>
                   Requerido
                 </div>
               }
@@ -517,11 +494,9 @@ import { CustomerService } from '../../customers/services/customer.service';
                           <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
                         }
                       </select>
-                      <lucide-angular name="chevron-down" [size]="16" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"></lucide-angular>
                     </div>
                     @if (errors().tipoGestion && $index === 0) {
                       <div class="text-red-600 dark:text-red-400 text-[10px] mt-1 flex items-center gap-1">
-                        <lucide-angular name="alert-circle" [size]="12"></lucide-angular>
                         Requerido
                       </div>
                     }
@@ -534,7 +509,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             @if (isLoadingDynamicFields()) {
               <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
-                  <lucide-angular name="clock" [size]="16" class="animate-spin"></lucide-angular>
                   <span class="text-xs">Cargando campos adicionales...</span>
                 </div>
               </div>
@@ -543,7 +517,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0) {
               <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
-                  <lucide-angular name="alert-circle" [size]="16"></lucide-angular>
                   <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
                 </div>
               </div>
@@ -564,7 +537,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             @if (isLoadingSchedules()) {
               <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3 animate-pulse">
                 <div class="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
-                  <lucide-angular name="clock" [size]="16" class="animate-spin"></lucide-angular>
                   <span class="text-xs font-semibold">Cargando cronogramas pendientes...</span>
                 </div>
               </div>
@@ -575,7 +547,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <div class="p-1.5 bg-purple-500 dark:bg-purple-600 rounded">
-                      <lucide-angular name="calendar" [size]="14" class="text-white"></lucide-angular>
                     </div>
                     <div>
                       <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Cronograma Activo Detectado</h4>
@@ -630,7 +601,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                           type="button"
                           (click)="applyNextInstallmentPayment()"
                           class="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
-                          <lucide-angular name="chevron-down" [size]="12"></lucide-angular>
                           Usar Próxima Cuota
                         </button>
                       }
@@ -641,7 +611,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                           type="button"
                           (click)="applyFullSchedulePayment()"
                           class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
-                          <lucide-angular name="wallet" [size]="12"></lucide-angular>
                           Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
                         </button>
                       }
@@ -649,7 +618,6 @@ import { CustomerService } from '../../customers/services/customer.service';
 
                     <!-- Info Note -->
                     <div class="text-[9px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
-                      <lucide-angular name="info" [size]="10" class="mt-0.5 flex-shrink-0"></lucide-angular>
                       <span>El pago se aplicará automáticamente a las cuotas pendientes en orden de vencimiento</span>
                     </div>
                   </div>
@@ -660,7 +628,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             <!-- Observaciones - COMPACTAS -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300">
               <label class="font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                <lucide-angular name="message-square" [size]="12" class="text-purple-600 dark:text-purple-200"></lucide-angular>
                 Observaciones
               </label>
               <textarea
@@ -675,7 +642,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-900/50 rounded-lg p-2">
               <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
                 <div class="p-0.5 bg-amber-400 dark:bg-amber-600 rounded">
-                  <lucide-angular name="message-square" [size]="10" class="text-white"></lucide-angular>
                 </div>
                 Notas Privadas
               </label>
@@ -696,17 +662,14 @@ import { CustomerService } from '../../customers/services/customer.service';
                 class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
-                  <lucide-angular name="clock" [size]="14" class="animate-spin"></lucide-angular>
                   Guardando...
                 } @else {
-                  <lucide-angular name="save" [size]="14"></lucide-angular>
                   Guardar Gestión
                 }
               </button>
               <button
                 class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
               >
-                <lucide-angular name="x" [size]="14"></lucide-angular>
                 Cancelar
               </button>
             </div>
@@ -721,7 +684,6 @@ import { CustomerService } from '../../customers/services/customer.service';
             <!-- Header del modal -->
             <div class="bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white px-6 py-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <lucide-angular name="calendar" [size]="24"></lucide-angular>
                 <div>
                   <h2 class="text-lg font-bold">Cronograma de Pagos</h2>
                   <p class="text-sm opacity-90">Gestión {{ scheduleManagementId() }}</p>
@@ -731,7 +693,6 @@ import { CustomerService } from '../../customers/services/customer.service';
                 type="button"
                 (click)="closeScheduleDetail()"
                 class="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                <lucide-angular name="x" [size]="20"></lucide-angular>
               </button>
             </div>
 

@@ -1,7 +1,6 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { PortfolioService } from '../../services/portfolio.service';
 import { TypificationService } from '../../services/typification.service';
 import { Portfolio, SubPortfolio, CreateSubPortfolioRequest, UpdateSubPortfolioRequest } from '../../models/portfolio.model';
@@ -10,7 +9,7 @@ import { Tenant } from '../../models/tenant.model';
 @Component({
   selector: 'app-subportfolio-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-slate-950 p-6">
       <!-- Header -->
@@ -19,7 +18,6 @@ import { Tenant } from '../../models/tenant.model';
           <div>
             <div class="flex items-center gap-3 mb-2">
               <div class="w-12 h-12 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg">
-                <lucide-angular name="folder-tree" [size]="24" class="text-white"></lucide-angular>
               </div>
               <div>
                 <h1 class="text-2xl font-bold text-white">Gestión de Subcarteras</h1>
@@ -31,7 +29,6 @@ import { Tenant } from '../../models/tenant.model';
           <button (click)="openCreateDialog()"
                   [disabled]="selectedPortfolioId === 0"
                   class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer">
-            <lucide-angular name="plus" [size]="18"></lucide-angular>
             <span>Nueva Subcartera</span>
           </button>
         </div>
@@ -85,7 +82,6 @@ import { Tenant } from '../../models/tenant.model';
                 <p class="text-3xl font-bold text-white">{{ subPortfolios().length }}</p>
               </div>
               <div class="w-12 h-12 bg-emerald-900/30 rounded-lg flex items-center justify-center">
-                <lucide-angular name="folder-tree" [size]="24" class="text-emerald-400"></lucide-angular>
               </div>
             </div>
           </div>
@@ -97,7 +93,6 @@ import { Tenant } from '../../models/tenant.model';
                 <p class="text-3xl font-bold text-green-400">{{ getActiveSubPortfolios() }}</p>
               </div>
               <div class="w-12 h-12 bg-green-900/30 rounded-lg flex items-center justify-center">
-                <lucide-angular name="check-circle" [size]="24" class="text-green-400"></lucide-angular>
               </div>
             </div>
           </div>
@@ -109,7 +104,6 @@ import { Tenant } from '../../models/tenant.model';
                 <p class="text-3xl font-bold text-gray-500">{{ getInactiveSubPortfolios() }}</p>
               </div>
               <div class="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center">
-                <lucide-angular name="x-circle" [size]="24" class="text-gray-500"></lucide-angular>
               </div>
             </div>
           </div>
@@ -120,7 +114,6 @@ import { Tenant } from '../../models/tenant.model';
           <div class="bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-800">
             <div class="flex items-center gap-4">
               <div class="flex-1 relative">
-                <lucide-angular name="search" [size]="20" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></lucide-angular>
                 <input type="text"
                        [(ngModel)]="searchTerm"
                        (ngModelChange)="filterSubPortfolios()"
@@ -142,7 +135,6 @@ import { Tenant } from '../../models/tenant.model';
             } @else if (filteredSubPortfolios().length === 0) {
               <div class="p-12 text-center">
                 <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <lucide-angular name="folder-tree" [size]="32" class="text-gray-600"></lucide-angular>
                 </div>
                 <p class="text-gray-300 mb-2">No se encontraron subcarteras</p>
                 <p class="text-sm text-gray-500">
@@ -195,12 +187,10 @@ import { Tenant } from '../../models/tenant.model';
                             <button (click)="editSubPortfolio(subPortfolio)"
                                     class="p-2 text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                                     title="Editar">
-                              <lucide-angular name="edit" [size]="16"></lucide-angular>
                             </button>
                             <button (click)="deleteSubPortfolio(subPortfolio)"
                                     class="p-2 text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                                     title="Eliminar">
-                              <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                             </button>
                           </div>
                         </td>
@@ -224,7 +214,6 @@ import { Tenant } from '../../models/tenant.model';
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <lucide-angular name="folder-tree" [size]="20"></lucide-angular>
                 </div>
                 <div>
                   <h2 class="text-xl font-bold">{{ editingSubPortfolio() ? 'Editar Subcartera' : 'Nueva Subcartera' }}</h2>
@@ -232,7 +221,6 @@ import { Tenant } from '../../models/tenant.model';
                 </div>
               </div>
               <button (click)="closeDialog()" class="text-white/80 hover:text-white">
-                <lucide-angular name="x" [size]="20"></lucide-angular>
               </button>
             </div>
           </div>

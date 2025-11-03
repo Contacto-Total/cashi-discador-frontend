@@ -1,7 +1,6 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { UsuarioService, UsuarioRequest, UsuarioResponse } from '../../services/usuario.service';
 import { RolService, RolResponse } from '../../services/rol.service';
 import { TenantService } from '../../services/tenant.service';
@@ -41,7 +40,7 @@ interface Role {
 @Component({
   selector: 'app-user-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
       <div class="flex-1 overflow-y-auto">
@@ -50,7 +49,6 @@ interface Role {
           <div class="mb-3">
             <div class="flex items-center gap-2">
               <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-                <lucide-angular name="users" [size]="16" class="text-white"></lucide-angular>
               </div>
               <div>
                 <h1 class="text-lg font-bold text-white">Gestión de Usuarios</h1>
@@ -65,13 +63,11 @@ interface Role {
             <div class="col-span-3 bg-slate-900 rounded-lg border border-slate-800 shadow-sm flex flex-col max-h-[calc(100vh-140px)]">
               <div class="p-3 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center gap-2">
-                  <lucide-angular name="list" [size]="16" class="text-blue-400"></lucide-angular>
                   <h2 class="text-sm font-bold text-white">Usuarios</h2>
                   <span class="text-xs text-gray-400">({{ users().length }})</span>
                 </div>
                 <button (click)="createNewUser()"
                         class="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors flex items-center gap-1">
-                  <lucide-angular name="plus" [size]="12"></lucide-angular>
                   Nuevo
                 </button>
               </div>
@@ -81,7 +77,6 @@ interface Role {
                 <div class="flex gap-1.5">
                   <!-- Input de búsqueda -->
                   <div class="relative flex-1">
-                    <lucide-angular name="search" [size]="14" class="absolute left-1.5 top-1/2 -translate-y-1/2 text-gray-500"></lucide-angular>
                     <input type="text"
                            [(ngModel)]="searchTerm"
                            placeholder="Buscar usuario..."
@@ -93,7 +88,6 @@ interface Role {
                     <button (click)="toggleFilterDropdown()"
                             [class]="activeFilter() ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-700 hover:bg-slate-600'"
                             class="p-1.5 rounded transition-colors">
-                      <lucide-angular name="filter" [size]="14" class="text-white"></lucide-angular>
                     </button>
 
                     <!-- Dropdown de filtros -->
@@ -116,17 +110,14 @@ interface Role {
                             <div class="space-y-1">
                               <button (click)="setFilterType('INQUILINO')"
                                       class="w-full flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-blue-500/50 rounded text-xs text-white transition-colors">
-                                <lucide-angular name="building" [size]="14" class="text-blue-400"></lucide-angular>
                                 <span>Proveedor</span>
                               </button>
                               <button (click)="setFilterType('CARTERA')"
                                       class="w-full flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-purple-500/50 rounded text-xs text-white transition-colors">
-                                <lucide-angular name="briefcase" [size]="14" class="text-purple-400"></lucide-angular>
                                 <span>Cartera</span>
                               </button>
                               <button (click)="setFilterType('SUBCARTERA')"
                                       class="w-full flex items-center gap-2 px-3 py-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600 hover:border-green-500/50 rounded text-xs text-white transition-colors">
-                                <lucide-angular name="folder" [size]="14" class="text-green-400"></lucide-angular>
                                 <span>Subcartera</span>
                               </button>
                             </div>
@@ -137,7 +128,6 @@ interface Role {
                             <div class="flex items-center justify-between mb-2">
                               <button (click)="filterType.set(null)"
                                       class="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors">
-                                <lucide-angular name="arrow-left" [size]="12"></lucide-angular>
                                 <span>Volver</span>
                               </button>
                             </div>
@@ -182,15 +172,11 @@ interface Role {
                   <div class="mt-1.5 flex items-center gap-1">
                     <div class="inline-flex items-center gap-1 px-2 py-1 bg-blue-900/40 border border-blue-500 rounded text-xs text-white">
                       @if (activeFilter()!.type === 'INQUILINO') {
-                        <lucide-angular name="building" [size]="10" class="text-blue-400"></lucide-angular>
                       } @else if (activeFilter()!.type === 'CARTERA') {
-                        <lucide-angular name="briefcase" [size]="10" class="text-purple-400"></lucide-angular>
                       } @else {
-                        <lucide-angular name="folder" [size]="10" class="text-green-400"></lucide-angular>
                       }
                       <span>{{ activeFilter()!.name }}</span>
                       <button (click)="clearFilter()" class="ml-1 hover:text-red-400">
-                        <lucide-angular name="x" [size]="10"></lucide-angular>
                       </button>
                     </div>
                   </div>
@@ -200,13 +186,11 @@ interface Role {
               <div class="p-2 space-y-1 overflow-y-auto flex-1">
                 @if (filteredUsers().length === 0 && users().length > 0) {
                   <div class="text-center py-8">
-                    <lucide-angular name="search-x" [size]="28" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-xs text-gray-400">Sin resultados</p>
                     <p class="text-xs text-gray-500">Intenta otra búsqueda</p>
                   </div>
                 } @else if (users().length === 0) {
                   <div class="text-center py-8">
-                    <lucide-angular name="user-x" [size]="28" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-xs text-gray-400">Sin usuarios</p>
                     <p class="text-xs text-gray-500">Crea uno nuevo</p>
                   </div>
@@ -218,7 +202,6 @@ interface Role {
                       <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
                           <div class="flex items-center gap-1">
-                            <lucide-angular name="user" [size]="12" class="text-blue-400 flex-shrink-0"></lucide-angular>
                             <h3 class="text-xs font-semibold text-white truncate">{{ user.nombreCompleto }}</h3>
                           </div>
                           <div class="mt-0.5 text-xs text-gray-500 truncate">
@@ -234,7 +217,6 @@ interface Role {
                         </div>
                         <button (click)="deleteUser(user); $event.stopPropagation()"
                                 class="p-0.5 text-gray-400 hover:text-red-400 rounded transition-colors flex-shrink-0">
-                          <lucide-angular name="trash-2" [size]="12"></lucide-angular>
                         </button>
                       </div>
                     </div>
@@ -247,7 +229,6 @@ interface Role {
             <div class="col-span-5 bg-slate-900 rounded-lg border border-slate-800 shadow-sm flex flex-col max-h-[calc(100vh-140px)]">
               <div class="p-3 border-b border-slate-800 flex-shrink-0">
                 <div class="flex items-center gap-2">
-                  <lucide-angular name="user-cog" [size]="16" class="text-blue-400"></lucide-angular>
                   <h2 class="text-sm font-bold text-white">
                     {{ selectedUser()?.id ? 'Editar Usuario' : selectedUser() ? 'Nuevo Usuario' : 'Información' }}
                   </h2>
@@ -326,7 +307,6 @@ interface Role {
 
                     @if (!selectedUser()!.id) {
                       <div class="bg-blue-900/20 border border-blue-700/50 rounded p-2 flex items-start gap-2">
-                        <lucide-angular name="info" [size]="14" class="text-blue-400 flex-shrink-0 mt-0.5"></lucide-angular>
                         <div class="text-xs text-blue-300">
                           La contraseña se generará automáticamente al crear el usuario
                         </div>
@@ -343,7 +323,6 @@ interface Role {
                   </div>
                 } @else {
                   <div class="text-center py-12">
-                    <lucide-angular name="user-circle" [size]="32" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-sm text-gray-400">Selecciona o crea un usuario</p>
                   </div>
                 }
@@ -354,7 +333,6 @@ interface Role {
             <div class="col-span-4 bg-slate-900 rounded-lg border border-slate-800 shadow-sm flex flex-col max-h-[calc(100vh-140px)]">
               <div class="p-3 border-b border-slate-800 flex-shrink-0">
                 <div class="flex items-center gap-2">
-                  <lucide-angular name="shield-check" [size]="16" class="text-purple-400"></lucide-angular>
                   <h2 class="text-sm font-bold text-white">Roles Asignados</h2>
                   <span class="text-xs text-gray-400">({{ selectedUser() ? selectedUser()!.roleIds.length : 0 }})</span>
                 </div>
@@ -365,7 +343,6 @@ interface Role {
                   <div class="space-y-1.5">
                     @if (availableRoles().length === 0) {
                       <div class="text-center py-8">
-                        <lucide-angular name="shield-off" [size]="28" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                         <p class="text-xs text-gray-400">Sin roles disponibles</p>
                         <p class="text-xs text-gray-500">Crea roles primero</p>
                       </div>
@@ -378,7 +355,6 @@ interface Role {
                                  class="mt-0.5 w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
                           <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5">
-                              <lucide-angular name="shield-check" [size]="12" class="text-purple-400"></lucide-angular>
                               <h3 class="text-xs font-semibold text-white group-hover:text-purple-300">{{ role.name }}</h3>
                             </div>
                             <p class="text-xs text-gray-500 leading-tight mt-0.5">{{ role.description }}</p>
@@ -389,7 +365,6 @@ interface Role {
                   </div>
                 } @else {
                   <div class="text-center py-12">
-                    <lucide-angular name="shield" [size]="32" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-xs text-gray-400">Selecciona un usuario para asignar roles</p>
                   </div>
                 }
@@ -407,7 +382,6 @@ interface Role {
               <button (click)="saveUser()"
                       [disabled]="!isUserValid()"
                       class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded text-sm font-semibold transition-colors flex items-center gap-1.5">
-                <lucide-angular name="save" [size]="16"></lucide-angular>
                 Guardar
               </button>
             </div>
@@ -421,7 +395,6 @@ interface Role {
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div class="bg-slate-800 rounded-lg border border-slate-700 shadow-2xl max-w-md w-full">
           <div class="p-4 border-b border-slate-700 flex items-center gap-2">
-            <lucide-angular name="key" [size]="20" class="text-green-400"></lucide-angular>
             <h3 class="text-base font-bold text-white">Usuario Creado Exitosamente</h3>
           </div>
 
@@ -431,7 +404,6 @@ interface Role {
             </p>
 
             <div class="bg-amber-900/20 border border-amber-700/50 rounded p-3 flex items-start gap-2">
-              <lucide-angular name="alert-triangle" [size]="16" class="text-amber-400 flex-shrink-0 mt-0.5"></lucide-angular>
               <div class="text-xs text-amber-300">
                 <strong>Importante:</strong> Copia esta contraseña ahora. No se volverá a mostrar.
               </div>
@@ -446,7 +418,6 @@ interface Role {
                        class="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded text-white font-mono text-sm">
                 <button (click)="copyPassword()"
                         class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-colors flex items-center gap-1.5">
-                  <lucide-angular [name]="passwordCopied() ? 'check' : 'copy'" [size]="14"></lucide-angular>
                   {{ passwordCopied() ? 'Copiado' : 'Copiar' }}
                 </button>
               </div>

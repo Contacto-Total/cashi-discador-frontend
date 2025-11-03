@@ -4,7 +4,7 @@
   @if (showSuccess()) {
     <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">
       <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
-        <lucide-angular name="check-circle" [size]="24"></lucide-angular>
+        
         <div>
           <div class="font-bold">¡Cambio Guardado!</div>
           <div class="text-sm opacity-90">La configuración se actualizó correctamente</div>
@@ -21,12 +21,12 @@
           <div>
             <div class="flex items-center gap-1.5">
               <div class="bg-blue-500 dark:bg-blue-600 p-1 rounded">
-                <lucide-angular name="settings" [size]="14"></lucide-angular>
+                
               </div>
               <div>
                 <h1 class="text-sm font-bold">Mantenimiento de Tipificaciones</h1>
                 <p class="text-[9px] text-blue-200 dark:text-blue-300 flex items-center gap-0.5">
-                  <lucide-angular name="bar-chart-3" [size]="8"></lucide-angular>
+                  
                   Configuración de clasificaciones
                 </p>
               </div>
@@ -44,10 +44,10 @@
                 : 'bg-blue-500/90 hover:bg-blue-600 border-blue-600')"
             title="Cambiar tema">
             @if (themeService.isDarkMode()) {
-              <lucide-angular name="sun" [size]="16" class="text-yellow-300 group-hover:rotate-45 transition-transform duration-300"></lucide-angular>
+              
               <span class="text-[10px] text-yellow-300 font-semibold">OSCURO</span>
             } @else {
-              <lucide-angular name="moon" [size]="16" class="text-white group-hover:rotate-12 transition-transform duration-300"></lucide-angular>
+              
               <span class="text-[10px] text-white font-semibold">CLARO</span>
             }
           </button>
@@ -123,7 +123,7 @@
           <button
             (click)="openCreateRootDialog()"
             class="px-3 py-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition-colors flex items-center gap-1">
-            <lucide-angular name="plus" [size]="12"></lucide-angular>
+            
             Nueva Tipificación
           </button>
           <button
@@ -181,7 +181,7 @@
         @if (treeNodes.length === 0) {
           <!-- Empty State -->
           <div class="text-center py-20">
-            <lucide-angular name="settings" [size]="64" class="text-slate-300 dark:text-slate-600 mx-auto mb-4"></lucide-angular>
+            
             <p class="text-slate-500 dark:text-slate-400 text-lg font-semibold mb-2">No hay tipificaciones configuradas</p>
             <p class="text-slate-400 dark:text-slate-500 text-sm mb-6">Comienza creando tu primera tipificación</p>
           </div>
@@ -246,9 +246,9 @@
             (click)="toggleNode(node.typification.id); $event.stopPropagation()"
             class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
             @if (isExpanded(node.typification.id)) {
-              <lucide-angular name="chevron-down" [size]="14"></lucide-angular>
+              
             } @else {
-              <lucide-angular name="chevron-right" [size]="14"></lucide-angular>
+              
             }
           </button>
         } @else {
@@ -303,14 +303,14 @@
           (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
           title="Agregar hijo"
           class="w-5 h-5 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-          <lucide-angular name="plus" [size]="12"></lucide-angular>
+          
         </button>
 
         <button
           (click)="openEditDialog(node.typification); $event.stopPropagation()"
           title="Editar"
           class="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-          <lucide-angular name="edit" [size]="12"></lucide-angular>
+          
         </button>
 
         <button
@@ -320,7 +320,7 @@
           [class.opacity-30]="node.typification.isSystem"
           [class.cursor-not-allowed]="node.typification.isSystem"
           class="w-5 h-5 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-          <lucide-angular name="trash-2" [size]="12"></lucide-angular>
+          
         </button>
       </div>
     </div>

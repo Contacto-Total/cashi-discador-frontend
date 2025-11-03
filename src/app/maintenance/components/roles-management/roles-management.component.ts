@@ -1,7 +1,6 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { TenantService } from '../../services/tenant.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { Tenant } from '../../models/tenant.model';
@@ -38,7 +37,7 @@ interface Role {
 @Component({
   selector: 'app-roles-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
       <div class="flex-1 overflow-y-auto">
@@ -47,7 +46,6 @@ interface Role {
           <div class="mb-3">
             <div class="flex items-center gap-2">
               <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg flex items-center justify-center">
-                <lucide-angular name="shield-check" [size]="16" class="text-white"></lucide-angular>
               </div>
               <div>
                 <h1 class="text-lg font-bold text-white">Gestión de Roles</h1>
@@ -62,13 +60,11 @@ interface Role {
             <div class="col-span-3 bg-slate-900 rounded-lg border border-slate-800 shadow-sm flex flex-col max-h-[calc(100vh-140px)]">
               <div class="p-3 border-b border-slate-800 flex items-center justify-between flex-shrink-0">
                 <div class="flex items-center gap-2">
-                  <lucide-angular name="list" [size]="16" class="text-purple-400"></lucide-angular>
                   <h2 class="text-sm font-bold text-white">Roles</h2>
                   <span class="text-xs text-gray-400">({{ roles().length }})</span>
                 </div>
                 <button (click)="createNewRole()"
                         class="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-semibold transition-colors flex items-center gap-1">
-                  <lucide-angular name="plus" [size]="12"></lucide-angular>
                   Nuevo
                 </button>
               </div>
@@ -76,7 +72,6 @@ interface Role {
               <div class="p-2 space-y-1 overflow-y-auto flex-1">
                 @if (roles().length === 0) {
                   <div class="text-center py-8">
-                    <lucide-angular name="shield-off" [size]="28" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-xs text-gray-400">Sin roles</p>
                     <p class="text-xs text-gray-500">Crea uno nuevo</p>
                   </div>
@@ -88,7 +83,6 @@ interface Role {
                       <div class="flex items-start justify-between">
                         <div class="flex-1 min-w-0">
                           <div class="flex items-center gap-1">
-                            <lucide-angular name="shield-check" [size]="12" class="text-purple-400 flex-shrink-0"></lucide-angular>
                             <h3 class="text-xs font-semibold text-white truncate">{{ role.name }}</h3>
                           </div>
                           <div class="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
@@ -99,7 +93,6 @@ interface Role {
                         </div>
                         <button (click)="deleteRole(role); $event.stopPropagation()"
                                 class="p-0.5 text-gray-400 hover:text-red-400 rounded transition-colors flex-shrink-0">
-                          <lucide-angular name="trash-2" [size]="12"></lucide-angular>
                         </button>
                       </div>
                     </div>
@@ -113,7 +106,6 @@ interface Role {
               <div class="p-3 border-b border-slate-800 flex-shrink-0">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <lucide-angular name="map-pin" [size]="16" class="text-green-400"></lucide-angular>
                     <h2 class="text-sm font-bold text-white">Asignaciones</h2>
                     <span class="text-xs text-gray-400">({{ selectedRole() ? selectedRole()!.assignments.length : 0 }})</span>
                   </div>
@@ -121,7 +113,6 @@ interface Role {
                     <button (click)="toggleExpandAll()"
                             [title]="isAnyExpanded() ? 'Colapsar todo' : 'Expandir todo'"
                             class="p-1 text-xs text-gray-400 hover:text-white hover:bg-slate-700 rounded transition-colors">
-                      <lucide-angular [name]="isAnyExpanded() ? 'chevron-up' : 'chevron-down'" [size]="12"></lucide-angular>
                     </button>
                   }
                 </div>
@@ -139,16 +130,13 @@ interface Role {
                                    [checked]="isTenantAssigned(tenant.id)"
                                    (change)="toggleTenantAssignment(tenant.id)"
                                    class="w-3.5 h-3.5 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500">
-                            <lucide-angular name="building-2" [size]="12" class="text-blue-400"></lucide-angular>
                             <span class="text-xs font-semibold text-white group-hover:text-purple-300 flex-1">
                               {{ tenant.tenantName }}
                             </span>
                             @if (getPortfoliosByTenant(tenant.id).length > 0) {
                               <button (click)="toggleTenantExpand(tenant.id); $event.stopPropagation()"
                                       class="p-0.5 hover:bg-slate-700 rounded">
-                                <lucide-angular [name]="isTenantExpanded(tenant.id) ? 'chevron-down' : 'chevron-right'"
                                                 [size]="12"
-                                                class="text-gray-400"></lucide-angular>
                               </button>
                             }
                           </label>
@@ -171,16 +159,13 @@ interface Role {
                                            [checked]="isPortfolioAssigned(portfolio.id)"
                                            (change)="togglePortfolioAssignment(tenant.id, portfolio.id)"
                                            class="w-3 h-3 text-green-600 bg-slate-700 border-slate-600 rounded focus:ring-green-500">
-                                    <lucide-angular name="folder" [size]="11" class="text-green-400"></lucide-angular>
                                     <span class="text-xs font-medium text-gray-300 group-hover:text-purple-300 flex-1">
                                       {{ portfolio.portfolioName }}
                                     </span>
                                     @if (getSubPortfoliosByPortfolio(portfolio.id).length > 0) {
                                       <button (click)="togglePortfolioExpand(portfolio.id); $event.stopPropagation()"
                                               class="p-0.5 hover:bg-slate-700 rounded">
-                                        <lucide-angular [name]="isPortfolioExpanded(portfolio.id) ? 'chevron-down' : 'chevron-right'"
                                                         [size]="11"
-                                                        class="text-gray-400"></lucide-angular>
                                       </button>
                                     }
                                   </label>
@@ -201,7 +186,6 @@ interface Role {
                                                  [checked]="isSubPortfolioAssigned(subPortfolio.id)"
                                                  (change)="toggleSubPortfolioAssignment(tenant.id, portfolio.id, subPortfolio.id)"
                                                  class="w-3 h-3 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500">
-                                          <lucide-angular name="folder-tree" [size]="10" class="text-purple-400"></lucide-angular>
                                           <span class="text-xs text-gray-400 group-hover:text-purple-300">
                                             {{ subPortfolio.subPortfolioName }}
                                           </span>
@@ -219,7 +203,6 @@ interface Role {
                   </div>
                 } @else {
                   <div class="text-center py-12">
-                    <lucide-angular name="map" [size]="32" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-xs text-gray-400">Selecciona un rol para asignar</p>
                   </div>
                 }
@@ -230,7 +213,6 @@ interface Role {
             <div class="col-span-5 bg-slate-900 rounded-lg border border-slate-800 shadow-sm flex flex-col max-h-[calc(100vh-140px)]">
               <div class="p-3 border-b border-slate-800 flex-shrink-0">
                 <div class="flex items-center gap-2">
-                  <lucide-angular name="edit" [size]="16" class="text-purple-400"></lucide-angular>
                   <h2 class="text-sm font-bold text-white">
                     {{ selectedRole()?.id ? 'Editar Rol' : selectedRole() ? 'Nuevo Rol' : 'Información' }}
                   </h2>
@@ -277,7 +259,6 @@ interface Role {
                       @for (category of permissionCategories(); track category) {
                         <div class="bg-slate-800 rounded border border-slate-700 p-2">
                           <div class="flex items-center gap-1.5 mb-1.5">
-                            <lucide-angular name="package" [size]="12" class="text-purple-400"></lucide-angular>
                             <h4 class="text-xs font-semibold text-white">{{ category }}</h4>
                           </div>
                           <div class="space-y-0.5 ml-4">
@@ -304,7 +285,6 @@ interface Role {
                   </div>
                 } @else {
                   <div class="text-center py-12">
-                    <lucide-angular name="hand-metal" [size]="32" class="text-gray-600 mx-auto mb-2"></lucide-angular>
                     <p class="text-sm text-gray-400">Selecciona o crea un rol</p>
                   </div>
                 }
@@ -322,7 +302,6 @@ interface Role {
               <button (click)="saveRole()"
                       [disabled]="!isRoleValid()"
                       class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded text-sm font-semibold transition-colors flex items-center gap-1.5">
-                <lucide-angular name="save" [size]="16"></lucide-angular>
                 Guardar
               </button>
             </div>

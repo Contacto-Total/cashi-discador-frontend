@@ -2,7 +2,6 @@ import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucideAngularModule } from 'lucide-angular';
 import { TypificationService } from '../../services/typification.service';
 import { Tenant } from '../../models/tenant.model';
 import { Portfolio } from '../../models/portfolio.model';
@@ -23,7 +22,7 @@ interface QuickSetupTemplate {
 @Component({
   selector: 'app-setup-wizard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
@@ -33,7 +32,6 @@ interface QuickSetupTemplate {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                <lucide-angular name="zap" [size]="24"></lucide-angular>
               </div>
               <div>
                 <h2 class="text-2xl font-bold">Configuración Express</h2>
@@ -41,7 +39,6 @@ interface QuickSetupTemplate {
               </div>
             </div>
             <button (click)="close()" class="text-white/80 hover:text-white">
-              <lucide-angular name="x" [size]="24"></lucide-angular>
             </button>
           </div>
         </div>
@@ -65,7 +62,6 @@ interface QuickSetupTemplate {
                               : 'border-gray-200 dark:border-gray-700 hover:border-blue-300')">
                     <div class="flex items-start gap-3">
                       <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-green-500 rounded-lg flex items-center justify-center text-white flex-shrink-0">
-                        <lucide-angular [name]="template.icon" [size]="20"></lucide-angular>
                       </div>
                       <div class="flex-1 min-w-0">
                         <h4 class="font-bold text-gray-900 dark:text-white text-sm mb-1">{{ template.name }}</h4>
@@ -84,7 +80,6 @@ interface QuickSetupTemplate {
               <!-- Tenant Info -->
               <div class="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
                 <h3 class="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <lucide-angular name="building-2" [size]="18" class="text-blue-600"></lucide-angular>
                   Datos del Cliente
                 </h3>
                 <div class="grid grid-cols-2 gap-3">
@@ -99,7 +94,6 @@ interface QuickSetupTemplate {
               <div class="bg-gray-50 dark:bg-slate-700 p-4 rounded-xl">
                 <div class="flex items-center justify-between mb-3">
                   <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <lucide-angular name="folder-tree" [size]="18" class="text-green-600"></lucide-angular>
                     Se crearán estas carteras
                   </h3>
                   <span class="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-full font-bold">
@@ -139,7 +133,6 @@ interface QuickSetupTemplate {
           @if (step() === 3) {
             <div class="text-center py-8">
               <div class="inline-flex items-center justify-center w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full mb-4">
-                <lucide-angular name="check" [size]="40" class="text-green-600 dark:text-green-400"></lucide-angular>
               </div>
               <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">¡Listo!</h3>
               <p class="text-gray-600 dark:text-gray-400 mb-6">
@@ -175,7 +168,6 @@ interface QuickSetupTemplate {
                   <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Creando...
                 } @else {
-                  <lucide-angular name="rocket" [size]="18"></lucide-angular>
                   Crear Todo
                 }
               </button>

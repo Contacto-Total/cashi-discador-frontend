@@ -1,13 +1,12 @@
 import { Component, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusRequest } from '../../services/payment-schedule.service';
 
 @Component({
   selector: 'app-installment-status-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -16,7 +15,6 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
           <!-- Header -->
           <div class="bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <lucide-angular name="calendar-check" [size]="24"></lucide-angular>
               <div>
                 <h2 class="text-lg font-bold">Actualizar Estado de Cuota</h2>
                 <p class="text-sm opacity-90">Cuota #{{ installment()?.installmentNumber }}</p>
@@ -26,7 +24,6 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
               (click)="close()"
               class="p-2 hover:bg-white/20 rounded-lg transition-colors"
               type="button">
-              <lucide-angular name="x" [size]="20"></lucide-angular>
             </button>
           </div>
 
@@ -71,7 +68,6 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
                     ? 'bg-green-100 dark:bg-green-900/30 border-green-500 dark:border-green-600 text-green-900 dark:text-green-300'
                     : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-green-400'"
                   class="border-2 rounded-lg p-4 flex flex-col items-center gap-2 transition-all">
-                  <lucide-angular name="check-circle" [size]="24"></lucide-angular>
                   <span class="text-sm font-bold">Completado</span>
                 </button>
 
@@ -82,7 +78,6 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
                     ? 'bg-red-100 dark:bg-red-900/30 border-red-500 dark:border-red-600 text-red-900 dark:text-red-300'
                     : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-red-400'"
                   class="border-2 rounded-lg p-4 flex flex-col items-center gap-2 transition-all">
-                  <lucide-angular name="alert-circle" [size]="24"></lucide-angular>
                   <span class="text-sm font-bold">Vencido</span>
                 </button>
 
@@ -93,7 +88,6 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
                     ? 'bg-gray-100 dark:bg-gray-700/30 border-gray-500 dark:border-gray-600 text-gray-900 dark:text-gray-300'
                     : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-gray-400'"
                   class="border-2 rounded-lg p-4 flex flex-col items-center gap-2 transition-all">
-                  <lucide-angular name="x-circle" [size]="24"></lucide-angular>
                   <span class="text-sm font-bold">Cancelado</span>
                 </button>
               </div>
@@ -152,7 +146,6 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
             <!-- Error message -->
             @if (errorMessage()) {
               <div class="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-red-900 dark:text-red-300 px-4 py-3 rounded-lg flex items-start gap-2">
-                <lucide-angular name="alert-triangle" [size]="18" class="flex-shrink-0 mt-0.5"></lucide-angular>
                 <span class="text-sm">{{ errorMessage() }}</span>
               </div>
             }
@@ -176,10 +169,8 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
                      disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-purple-600
                      flex items-center gap-2">
               @if (isSaving()) {
-                <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
                 <span>Guardando...</span>
               } @else {
-                <lucide-angular name="check" [size]="16"></lucide-angular>
                 <span>Guardar</span>
               }
             </button>

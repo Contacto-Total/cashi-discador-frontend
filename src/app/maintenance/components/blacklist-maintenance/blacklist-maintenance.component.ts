@@ -2,7 +2,6 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
-import { LucideAngularModule } from 'lucide-angular';
 import { BlacklistService } from '../../services/blacklist.service';
 import { TypificationService } from '../../services/typification.service';
 import { PortfolioService } from '../../services/portfolio.service';
@@ -14,7 +13,7 @@ import { environment } from '../../../../environments/environment';
 @Component({
   selector: 'app-blacklist-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   styles: [`
     @keyframes slideIn {
       from {
@@ -36,7 +35,6 @@ import { environment } from '../../../../environments/environment';
       <div class="max-w-7xl mx-auto mb-6">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-lg">
-            <lucide-angular name="shield-ban" [size]="24" class="text-white"></lucide-angular>
           </div>
           <div>
             <h1 class="text-2xl font-bold text-white">Gestión de Blacklist</h1>
@@ -129,7 +127,6 @@ import { environment } from '../../../../environments/environment';
             </div>
           } @else if (filteredBlacklists().length === 0) {
             <div class="p-12 text-center">
-              <lucide-angular name="shield-ban" [size]="48" class="mx-auto text-gray-600 mb-4"></lucide-angular>
               <p class="text-gray-400 text-lg mb-2">No hay bloqueos registrados</p>
               <p class="text-gray-500 text-sm">Usa el formulario de arriba para añadir un nuevo bloqueo</p>
             </div>
@@ -144,7 +141,6 @@ import { environment } from '../../../../environments/environment';
                         <button (click)="toggleFilterPopover('tenant')"
                                 class="p-1 hover:bg-slate-700 rounded transition-colors"
                                 [class.text-red-400]="filterTenantId">
-                          <lucide-angular name="filter" [size]="14"></lucide-angular>
                         </button>
                       </div>
                       @if (openFilterPopover === 'tenant') {
@@ -166,7 +162,6 @@ import { environment } from '../../../../environments/environment';
                         <button (click)="toggleFilterPopover('portfolio')"
                                 class="p-1 hover:bg-slate-700 rounded transition-colors"
                                 [class.text-red-400]="filterPortfolioId">
-                          <lucide-angular name="filter" [size]="14"></lucide-angular>
                         </button>
                       </div>
                       @if (openFilterPopover === 'portfolio') {
@@ -188,7 +183,6 @@ import { environment } from '../../../../environments/environment';
                         <button (click)="toggleFilterPopover('subportfolio')"
                                 class="p-1 hover:bg-slate-700 rounded transition-colors"
                                 [class.text-red-400]="filterSubPortfolioId">
-                          <lucide-angular name="filter" [size]="14"></lucide-angular>
                         </button>
                       </div>
                       @if (openFilterPopover === 'subportfolio') {
@@ -210,13 +204,11 @@ import { environment } from '../../../../environments/environment';
                         <button (click)="toggleFilterPopover('document')"
                                 class="p-1 hover:bg-slate-700 rounded transition-colors"
                                 [class.text-red-400]="searchTerm">
-                          <lucide-angular name="filter" [size]="14"></lucide-angular>
                         </button>
                       </div>
                       @if (openFilterPopover === 'document') {
                         <div class="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-2 z-50 w-48">
                           <div class="relative">
-                            <lucide-angular name="search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500"></lucide-angular>
                             <input type="text"
                                    [(ngModel)]="searchTerm"
                                    (ngModelChange)="applyFilters()"
@@ -280,7 +272,6 @@ import { environment } from '../../../../environments/environment';
         <div class="bg-red-900 border border-red-700 rounded-lg shadow-2xl p-4 max-w-md">
           <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
-              <lucide-angular name="alert-circle" [size]="20" class="text-red-400"></lucide-angular>
             </div>
             <div class="flex-1">
               <h3 class="text-sm font-semibold text-white mb-1">Error</h3>
@@ -288,7 +279,6 @@ import { environment } from '../../../../environments/environment';
             </div>
             <button (click)="errorMessage.set(null)"
                     class="flex-shrink-0 text-red-400 hover:text-red-300 transition-colors">
-              <lucide-angular name="x" [size]="18"></lucide-angular>
             </button>
           </div>
         </div>
@@ -302,7 +292,6 @@ import { environment } from '../../../../environments/environment';
           <div class="p-6">
             <div class="flex items-center gap-3 mb-4">
               <div class="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
-                <lucide-angular name="shield-ban" [size]="24" class="text-red-400"></lucide-angular>
               </div>
               <h3 class="text-lg font-bold text-white">Confirmar Bloqueo</h3>
             </div>

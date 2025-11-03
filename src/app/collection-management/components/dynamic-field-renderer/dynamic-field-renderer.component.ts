@@ -1,7 +1,6 @@
 import { Component, effect, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import {
   FieldConfig,
   MetadataSchema,
@@ -12,13 +11,12 @@ import { ManagementClassification } from '../../models/system-config.model';
 @Component({
   selector: 'app-dynamic-field-renderer',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     @if (schema() && schema()!.fields && schema()!.fields.length > 0) {
       <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3">
         <!-- Header -->
         <div class="flex items-center gap-2 text-purple-800 dark:text-purple-200 mb-3 pb-2 border-b border-purple-200 dark:border-purple-800">
-          <lucide-angular name="settings" [size]="14"></lucide-angular>
           <h3 class="font-bold text-xs uppercase tracking-wide">Campos Adicionales</h3>
         </div>
 
@@ -207,7 +205,6 @@ import { ManagementClassification } from '../../models/system-config.model';
                         }
                         @if (field.allowDeleteRow) {
                           <th class="px-3 py-2 text-center text-[10px] font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide border-b-2 border-purple-300 dark:border-purple-700 w-16">
-                            <lucide-angular name="trash-2" [size]="12"></lucide-angular>
                           </th>
                         }
                       </tr>
@@ -311,7 +308,6 @@ import { ManagementClassification } from '../../models/system-config.model';
                                 class="inline-flex items-center justify-center w-7 h-7 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
                                 title="Eliminar fila"
                               >
-                                <lucide-angular name="x" [size]="14"></lucide-angular>
                               </button>
                             </td>
                           }
@@ -322,7 +318,6 @@ import { ManagementClassification } from '../../models/system-config.model';
                           <td [attr.colspan]="field.columns!.length + (field.allowDeleteRow ? 1 : 0)" class="px-4 py-12 text-center">
                             <div class="flex flex-col items-center gap-2">
                               <div class="w-12 h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                                <lucide-angular name="table-2" [size]="24" class="text-purple-400 dark:text-purple-500"></lucide-angular>
                               </div>
                               <p class="text-[11px] text-gray-500 dark:text-gray-400 font-medium">No hay registros en la tabla</p>
                               <p class="text-[10px] text-gray-400 dark:text-gray-500">Haz clic en "Agregar Fila" para comenzar</p>
@@ -346,7 +341,6 @@ import { ManagementClassification } from '../../models/system-config.model';
                             hover:border-purple-600 dark:hover:border-purple-400 
                             transition-all flex items-center justify-center gap-2 text-[11px] font-semibold"
                     >
-                      <lucide-angular name="plus-circle" [size]="14"></lucide-angular>
                       Agregar Fila
                     </button>
                   </div>

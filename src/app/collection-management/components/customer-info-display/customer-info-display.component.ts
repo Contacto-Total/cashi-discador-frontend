@@ -1,6 +1,5 @@
 import { Component, Input, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule } from 'lucide-angular';
 import {
   CustomerDisplayService,
   CustomerDisplayConfig,
@@ -12,12 +11,11 @@ import {
 @Component({
   selector: 'app-customer-info-display',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule],
   template: `
     <div class="customer-info-container" *ngIf="customerData()">
       <div class="customer-header">
         <div class="customer-title">
-          <lucide-angular name="user" [size]="24" class="title-icon"></lucide-angular>
           <h2>{{ displayConfig()?.title || 'Información del Cliente' }}</h2>
         </div>
         <div class="customer-status" [class.active]="customerData()?.status === 'ACTIVO'">
@@ -52,7 +50,6 @@ import {
     </div>
 
     <div class="no-data" *ngIf="!customerData()">
-      <lucide-angular name="user-x" [size]="48" class="no-data-icon"></lucide-angular>
       <p>No hay información del cliente disponible</p>
     </div>
   `,

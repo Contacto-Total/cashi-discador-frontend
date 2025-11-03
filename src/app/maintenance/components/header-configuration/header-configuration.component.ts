@@ -1,7 +1,6 @@
 import { Component, OnInit, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { HeaderConfigurationService } from '../../services/header-configuration.service';
 import { FieldDefinitionService } from '../../services/field-definition.service';
 import { TypificationService } from '../../services/typification.service';
@@ -20,7 +19,7 @@ import { SubPortfolio } from '../../models/portfolio.model';
 @Component({
   selector: 'app-header-configuration',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
       <div class="flex-1 overflow-y-auto">
@@ -29,7 +28,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
       <div class="mb-2">
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center">
-            <lucide-angular name="table-2" [size]="16" class="text-white"></lucide-angular>
           </div>
           <div>
             <h1 class="text-lg font-bold text-white">Configuración de Cabeceras</h1>
@@ -45,7 +43,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
             <!-- Proveedor -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1">
-                <lucide-angular name="building-2" [size]="16" class="inline mr-1"></lucide-angular>
                 Proveedor
               </label>
               <select [(ngModel)]="selectedTenantId"
@@ -61,7 +58,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
             <!-- Cartera -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1">
-                <lucide-angular name="folder" [size]="16" class="inline mr-1"></lucide-angular>
                 Cartera
               </label>
               <select [(ngModel)]="selectedPortfolioId"
@@ -78,7 +74,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
             <!-- Subcartera -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1">
-                <lucide-angular name="folder-tree" [size]="16" class="inline mr-1"></lucide-angular>
                 Subcartera
               </label>
               <select [(ngModel)]="selectedSubPortfolioId"
@@ -95,7 +90,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
             <!-- Tipo de Carga -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1">
-                <lucide-angular name="database" [size]="16" class="inline mr-1"></lucide-angular>
                 Tipo de Carga
               </label>
               <select [(ngModel)]="selectedLoadType"
@@ -123,10 +117,8 @@ import { SubPortfolio } from '../../models/portfolio.model';
                   <button (click)="toggleDownloadMenu()"
                           #downloadButton
                           class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-all cursor-pointer">
-                    <lucide-angular name="file-text" [size]="16"></lucide-angular>
                     <span class="hidden sm:inline">Descargar Plantilla</span>
                     <span class="sm:hidden">Plantilla</span>
-                    <lucide-angular [name]="downloadMenuOpen() ? 'chevron-up' : 'chevron-down'" [size]="14"></lucide-angular>
                   </button>
                 </div>
 
@@ -141,7 +133,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
 
                 <!-- Botón Importar Configuración -->
                 <label class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-all cursor-pointer">
-                  <lucide-angular name="folder-open" [size]="16"></lucide-angular>
                   <span class="hidden sm:inline">Importar CSV/Excel</span>
                   <span class="sm:hidden">Importar</span>
                   <input type="file"
@@ -153,7 +144,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 <!-- Contador de cabeceras -->
                 @if (previewHeaders().length > 0) {
                   <div class="ml-auto flex items-center gap-2 px-3 py-1.5">
-                    <lucide-angular name="table-2" [size]="14" class="text-indigo-400"></lucide-angular>
                     <span class="text-sm font-semibold text-indigo-400">{{ previewHeaders().length }}</span>
                     <span class="text-xs text-indigo-400">cabecera(s)</span>
                   </div>
@@ -168,12 +158,10 @@ import { SubPortfolio } from '../../models/portfolio.model';
                      [style.left.px]="dropdownPosition().left">
                   <button (click)="downloadCSVTemplate()"
                           class="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors text-left text-gray-300 cursor-pointer">
-                    <lucide-angular name="file-text" [size]="16" class="text-gray-400"></lucide-angular>
                     <span class="text-sm font-medium">Descargar CSV</span>
                   </button>
                   <button (click)="downloadExcelTemplate()"
                           class="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors text-left text-gray-300 cursor-pointer">
-                    <lucide-angular name="table-2" [size]="16" class="text-green-400"></lucide-angular>
                     <span class="text-sm font-medium">Descargar Excel (.xlsx)</span>
                   </button>
                 </div>
@@ -184,13 +172,11 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-700">
                   <button (click)="clearAll()"
                           class="flex items-center gap-1 px-3 py-1.5 bg-slate-800 text-gray-300 rounded-lg text-sm hover:bg-slate-700 hover:text-white transition-all cursor-pointer">
-                    <lucide-angular name="trash-2" [size]="14"></lucide-angular>
                     <span>Limpiar</span>
                   </button>
 
                   <button (click)="confirmConfiguration()"
                           class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all cursor-pointer">
-                    <lucide-angular name="save" [size]="16"></lucide-angular>
                     <span>Guardar</span>
                   </button>
                 </div>
@@ -205,7 +191,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
             @if (previewHeaders().length === 0) {
               <div class="p-6 text-center">
                 <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <lucide-angular name="table-2" [size]="24" class="text-gray-600"></lucide-angular>
                 </div>
                 <p class="text-sm text-gray-400">No hay cabeceras configuradas</p>
               </div>
@@ -230,12 +215,10 @@ import { SubPortfolio } from '../../models/portfolio.model';
                           <div class="flex items-center gap-1">
                             <span class="font-mono text-xs font-semibold text-indigo-400">{{ header.headerName }}</span>
                             @if (header.sourceField && header.regexPattern) {
-                              <lucide-angular
                                 name="sparkles"
                                 [size]="12"
                                 class="text-amber-400 flex-shrink-0"
                                 title="Campo transformado mediante expresión regular desde: {{ header.sourceField }}">
-                              </lucide-angular>
                             }
                           </div>
                         </td>
@@ -260,9 +243,7 @@ import { SubPortfolio } from '../../models/portfolio.model';
                         </td>
                         <td class="px-2 py-1.5 text-center">
                           @if (header.required) {
-                            <lucide-angular name="check-circle" [size]="14" class="text-green-400 inline"></lucide-angular>
                           } @else {
-                            <lucide-angular name="circle" [size]="14" class="text-gray-600 inline"></lucide-angular>
                           }
                         </td>
                         <td class="px-2 py-1.5">
@@ -270,12 +251,10 @@ import { SubPortfolio } from '../../models/portfolio.model';
                             <button (click)="editPreviewHeader($index)"
                                     class="p-1 text-blue-400 hover:bg-slate-800 rounded transition-colors"
                                     title="Editar">
-                              <lucide-angular name="edit" [size]="14"></lucide-angular>
                             </button>
                             <button (click)="removePreviewHeader($index)"
                                     class="p-1 text-red-400 hover:bg-slate-800 rounded transition-colors"
                                     title="Eliminar">
-                              <lucide-angular name="trash-2" [size]="14"></lucide-angular>
                             </button>
                           </div>
                         </td>
@@ -298,7 +277,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <lucide-angular name="plus-circle" [size]="20"></lucide-angular>
                   </div>
                   <div>
                     <h2 class="text-xl font-bold">{{ editingIndex() !== null ? 'Editar' : 'Agregar' }} Cabecera</h2>
@@ -306,7 +284,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                   </div>
                 </div>
                 <button (click)="closeManualDialog()" class="text-white/80 hover:text-white">
-                  <lucide-angular name="x" [size]="20"></lucide-angular>
                 </button>
               </div>
             </div>
@@ -317,7 +294,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 <!-- Campo Base de Datos (Dropdown del Catálogo) -->
                 <div>
                   <label class="block text-sm font-semibold text-gray-300 mb-2">
-                    <lucide-angular name="book-open" [size]="16" class="inline mr-1"></lucide-angular>
                     Campo Base de Datos (Opcional)
                   </label>
                   <select [(ngModel)]="formData.fieldDefinitionId"
@@ -367,7 +343,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 @if (formData.fieldDefinitionId === 0) {
                   <div>
                     <label class="block text-sm font-semibold text-gray-300 mb-2">
-                      <lucide-angular name="type" [size]="16" class="inline mr-1"></lucide-angular>
                       Tipo de Dato *
                     </label>
                     <select [(ngModel)]="formData.dataType"
@@ -385,7 +360,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 <!-- Campo Sistema (Input Texto Libre) -->
                 <div>
                   <label class="block text-sm font-semibold text-gray-300 mb-2">
-                    <lucide-angular name="settings" [size]="16" class="inline mr-1"></lucide-angular>
                     Campo Sistema *
                   </label>
                   <input type="text"
@@ -400,7 +374,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 <!-- Etiqueta Visual (Input Texto) -->
                 <div>
                   <label class="block text-sm font-semibold text-gray-300 mb-2">
-                    <lucide-angular name="eye" [size]="16" class="inline mr-1"></lucide-angular>
                     Etiqueta Visual *
                   </label>
                   <input type="text"
@@ -415,7 +388,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                 <!-- Formato (Input Texto Opcional) -->
                 <div>
                   <label class="block text-sm font-semibold text-gray-300 mb-2">
-                    <lucide-angular name="file-text" [size]="16" class="inline mr-1"></lucide-angular>
                     Formato
                   </label>
                   <input type="text"
@@ -445,13 +417,10 @@ import { SubPortfolio } from '../../models/portfolio.model';
                           (click)="showTransformSection.set(!showTransformSection())"
                           class="w-full flex items-center justify-between text-sm font-bold text-emerald-400 mb-3 hover:text-emerald-300 transition-colors">
                     <div class="flex items-center gap-2">
-                      <lucide-angular name="git-branch" [size]="16"></lucide-angular>
                       Transformación de Campo (Opcional)
                     </div>
-                    <lucide-angular
                       [name]="showTransformSection() ? 'chevron-up' : 'chevron-down'"
                       [size]="16">
-                    </lucide-angular>
                   </button>
 
                   @if (showTransformSection()) {
@@ -464,7 +433,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                       <!-- Campo Origen -->
                       <div>
                         <label class="block text-sm font-semibold text-gray-300 mb-2">
-                          <lucide-angular name="arrow-right" [size]="16" class="inline mr-1"></lucide-angular>
                           Campo Origen
                         </label>
                         <select [(ngModel)]="formData.sourceField"
@@ -484,7 +452,6 @@ import { SubPortfolio } from '../../models/portfolio.model';
                       <!-- Patrón Regex -->
                       <div>
                         <label class="block text-sm font-semibold text-gray-300 mb-2">
-                          <lucide-angular name="code" [size]="16" class="inline mr-1"></lucide-angular>
                           Patrón Regex
                           @if (formData.sourceField && formData.sourceField.trim() !== '') {
                             <span class="text-red-400 ml-1">*</span>

@@ -1,6 +1,5 @@
 import { Component, Input, signal, computed, ViewChild, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LucideAngularModule } from 'lucide-angular';
 import { PaymentScheduleService, PaymentScheduleResource, InstallmentResource, InstallmentStatusHistoryResource } from '../../services/payment-schedule.service';
 import { InstallmentStatusDialogComponent } from '../installment-status-dialog/installment-status-dialog.component';
 
@@ -11,7 +10,7 @@ interface InstallmentWithStatus extends InstallmentResource {
 @Component({
   selector: 'app-payment-schedule-view',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, InstallmentStatusDialogComponent],
+  imports: [CommonModule, InstallmentStatusDialogComponent],
   template: `
     <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
 
@@ -19,7 +18,6 @@ interface InstallmentWithStatus extends InstallmentResource {
       <div class="bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <lucide-angular name="calendar" [size]="24"></lucide-angular>
             <div>
               <h3 class="text-lg font-bold">Cronograma de Pagos</h3>
               <p class="text-sm opacity-90">{{ installmentsWithStatus().length }} cuotas programadas</p>
@@ -36,7 +34,6 @@ interface InstallmentWithStatus extends InstallmentResource {
       @if (isLoading()) {
         <div class="p-8 flex items-center justify-center">
           <div class="flex items-center gap-3 text-slate-600 dark:text-slate-400">
-            <lucide-angular name="loader-2" [size]="20" class="animate-spin"></lucide-angular>
             <span>Cargando estados...</span>
           </div>
         </div>
@@ -114,7 +111,6 @@ interface InstallmentWithStatus extends InstallmentResource {
                         (click)="openStatusDialog(installment)"
                         class="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors"
                         title="Actualizar estado">
-                        <lucide-angular name="edit" [size]="16" class="text-purple-600 dark:text-purple-400"></lucide-angular>
                       </button>
 
                       <!-- Botón ver historial -->
@@ -126,7 +122,6 @@ interface InstallmentWithStatus extends InstallmentResource {
                           : 'hover:bg-slate-100 dark:hover:bg-slate-800'"
                         class="p-1.5 rounded transition-colors"
                         title="Ver historial">
-                        <lucide-angular name="history" [size]="16" class="text-slate-600 dark:text-slate-400"></lucide-angular>
                       </button>
                     </div>
                   </td>
@@ -138,13 +133,11 @@ interface InstallmentWithStatus extends InstallmentResource {
                     <td colspan="6" class="px-4 py-3 bg-slate-50 dark:bg-slate-800/50">
                       <div class="space-y-2">
                         <div class="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
-                          <lucide-angular name="history" [size]="16"></lucide-angular>
                           <span>Historial de Estados</span>
                         </div>
 
                         @if (isLoadingHistory()) {
                           <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 py-2">
-                            <lucide-angular name="loader-2" [size]="14" class="animate-spin"></lucide-angular>
                             <span>Cargando historial...</span>
                           </div>
                         } @else if (installmentHistory() && installmentHistory()!.length > 0) {

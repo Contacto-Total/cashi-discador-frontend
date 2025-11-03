@@ -1,7 +1,6 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { CustomerService, CustomerResource } from '../../services/customer.service';
 import { ApiSystemConfigService } from '../../../collection-management/services/api-system-config.service';
 import { ManagementService, CreateManagementRequest } from '../../../collection-management/services/management.service';
@@ -9,7 +8,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
 @Component({
   selector: 'app-customer-view',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div [class]="customer() ? 'bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex flex-col overflow-hidden' : 'bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex flex-col'" [style.height]="customer() ? 'calc(100vh - 56px)' : 'auto'" [style.min-height]="!customer() ? 'calc(100vh - 56px)' : 'auto'">
 
@@ -20,7 +19,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
           <div class="max-w-7xl mx-auto mb-6">
             <div class="flex items-center gap-3 mb-2">
               <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                <lucide-angular name="search" [size]="24" class="text-white"></lucide-angular>
               </div>
               <div>
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Buscar Cliente</h1>
@@ -47,7 +45,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 @if (searchPerformed() || showMultipleResults()) {
                   <button (click)="clearSearch()"
                           class="px-5 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all font-semibold cursor-pointer flex items-center gap-2">
-                    <lucide-angular name="x" [size]="18"></lucide-angular>
                     <span>Limpiar</span>
                   </button>
                 }
@@ -55,9 +52,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                         [disabled]="loading()"
                         class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   @if (loading()) {
-                    <lucide-angular name="loader" [size]="18" class="animate-spin"></lucide-angular>
                   } @else {
-                    <lucide-angular name="search" [size]="18"></lucide-angular>
                   }
                   <span>{{ loading() ? 'Buscando...' : 'Buscar' }}</span>
                 </button>
@@ -69,7 +64,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
           <div class="max-w-7xl mx-auto">
               @if (searchPerformed() && !customer() && !loading() && !showMultipleResults()) {
                 <div class="p-3 bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700/50 rounded-lg flex items-center gap-2">
-                  <lucide-angular name="alert-circle" [size]="16" class="text-red-600 dark:text-red-400"></lucide-angular>
                   <p class="text-red-600 dark:text-red-400 text-sm">Cliente no encontrado: <strong>{{ searchDocument }}</strong></p>
                 </div>
               }
@@ -77,7 +71,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
               @if (showMultipleResults() && searchResults().length > 0) {
                 <div>
                   <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700/50 rounded-lg flex items-center gap-2">
-                    <lucide-angular name="info" [size]="16" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                     <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} cuentas para este cliente. Seleccione una:</p>
                   </div>
 
@@ -191,7 +184,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
             <!-- Avatar con gradiente según edad -->
             <div class="text-center mb-2">
               <div [class]="getAvatarClass()" class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <lucide-angular [name]="getAgeIcon()" [size]="48" class="text-white"></lucide-angular>
               </div>
               <h2 class="text-base font-bold text-gray-900 dark:text-white mb-1 leading-tight">{{ getFieldValue('nombre_completo') || 'N/A' }}</h2>
               <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">{{ customer()!.documentNumber }}</p>
@@ -199,7 +191,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
               <!-- Código de Identificación con badge -->
               @if (getFieldValue('codigo_identificacion')) {
                 <div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-100 dark:bg-indigo-900/30 border border-indigo-300 dark:border-indigo-600/50 rounded-lg mt-2">
-                  <lucide-angular name="file-text" [size]="12" class="text-indigo-600 dark:text-indigo-400"></lucide-angular>
                   <span class="text-xs font-mono text-indigo-700 dark:text-indigo-300">{{ getFieldValue('codigo_identificacion') }}</span>
                 </div>
               }
@@ -209,7 +200,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
             <div class="space-y-2 mb-2">
               <div class="flex items-center gap-2 p-2.5 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border border-blue-200 dark:border-blue-600/30 rounded-lg">
                 <div class="p-1.5 bg-blue-200 dark:bg-blue-600/30 rounded">
-                  <lucide-angular name="calendar" [size]="14" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                 </div>
                 <div class="flex-1">
                   <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-none">Edad</p>
@@ -222,7 +212,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
 
               <div class="flex items-center gap-2 p-2.5 bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 border border-purple-200 dark:border-purple-600/30 rounded-lg">
                 <div class="p-1.5 bg-purple-200 dark:bg-purple-600/30 rounded">
-                  <lucide-angular name="user" [size]="14" class="text-purple-600 dark:text-purple-400"></lucide-angular>
                 </div>
                 <div class="flex-1">
                   <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-none">Estado Civil</p>
@@ -232,7 +221,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
 
               <div class="flex items-center gap-2 p-2.5 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/20 border border-orange-200 dark:border-orange-600/30 rounded-lg">
                 <div class="p-1.5 bg-orange-200 dark:bg-orange-600/30 rounded">
-                  <lucide-angular name="briefcase" [size]="14" class="text-orange-600 dark:text-orange-400"></lucide-angular>
                 </div>
                 <div class="flex-1">
                   <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-none">Ocupación</p>
@@ -246,13 +234,11 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
               <!-- Botón Nueva Gestión -->
               <button (click)="openNewManagement()"
                       class="w-full px-3 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm shadow-lg hover:shadow-green-600/50">
-                <lucide-angular name="plus-circle" [size]="16"></lucide-angular>
                 <span>Nueva Gestión</span>
               </button>
 
               <button (click)="clearCustomer()"
                       class="w-full px-3 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 text-sm shadow-lg hover:shadow-blue-600/50">
-                <lucide-angular name="search" [size]="16"></lucide-angular>
                 <span>Buscar Otro Cliente</span>
               </button>
             </div>
@@ -267,7 +253,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       [class]="activeTab() === 'personal' ? 'border-b-2 border-blue-500 text-blue-700 dark:text-white bg-blue-100 dark:bg-blue-900/20' : 'text-gray-600 dark:text-gray-400'"
                       class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-blue-700 dark:hover:text-white hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-t-lg">
                 <div class="flex items-center gap-1.5">
-                  <lucide-angular name="user" [size]="14"></lucide-angular>
                   <span>Personal</span>
                 </div>
               </button>
@@ -275,7 +260,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       [class]="activeTab() === 'contacto' ? 'border-b-2 border-green-500 text-green-700 dark:text-white bg-green-100 dark:bg-green-900/20' : 'text-gray-600 dark:text-gray-400'"
                       class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-green-700 dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-900/30 rounded-t-lg">
                 <div class="flex items-center gap-1.5">
-                  <lucide-angular name="phone" [size]="14"></lucide-angular>
                   <span>Contacto</span>
                 </div>
               </button>
@@ -283,7 +267,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       [class]="activeTab() === 'ubicacion' ? 'border-b-2 border-purple-500 text-purple-700 dark:text-white bg-purple-100 dark:bg-purple-900/20' : 'text-gray-600 dark:text-gray-400'"
                       class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-purple-700 dark:hover:text-white hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-t-lg">
                 <div class="flex items-center gap-1.5">
-                  <lucide-angular name="map-pin" [size]="14"></lucide-angular>
                   <span>Ubicación</span>
                 </div>
               </button>
@@ -291,7 +274,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       [class]="activeTab() === 'referencias' ? 'border-b-2 border-indigo-500 text-indigo-700 dark:text-white bg-indigo-100 dark:bg-indigo-900/20' : 'text-gray-600 dark:text-gray-400'"
                       class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-indigo-700 dark:hover:text-white hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-t-lg">
                 <div class="flex items-center gap-1.5">
-                  <lucide-angular name="users" [size]="14"></lucide-angular>
                   <span>Referencias</span>
                 </div>
               </button>
@@ -300,7 +282,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       [class]="activeTab() === 'cuentas' ? 'border-b-2 border-green-500 text-green-700 dark:text-white bg-green-100 dark:bg-green-900/20' : 'text-gray-600 dark:text-gray-400'"
                       class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-green-700 dark:hover:text-white hover:bg-green-50 dark:hover:bg-green-900/30 rounded-t-lg">
                 <div class="flex items-center gap-1.5">
-                  <lucide-angular name="wallet" [size]="14"></lucide-angular>
                   <span>Cuenta</span>
                 </div>
               </button>
@@ -318,7 +299,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-1.5 border border-indigo-200 dark:border-indigo-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-indigo-100 dark:bg-indigo-600/20 rounded">
-                          <lucide-angular name="file-text" [size]="10" class="text-indigo-600 dark:text-indigo-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Identificación</h3>
                       </div>
@@ -336,7 +316,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-1.5 border border-cyan-200 dark:border-cyan-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-cyan-100 dark:bg-cyan-600/20 rounded">
-                          <lucide-angular name="user" [size]="10" class="text-cyan-600 dark:text-cyan-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wide">Información Personal</h3>
                       </div>
@@ -354,7 +333,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-1.5 border border-green-200 dark:border-green-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
-                          <lucide-angular name="calendar" [size]="10" class="text-green-600 dark:text-green-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Datos Demográficos</h3>
                       </div>
@@ -372,7 +350,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-orange-200 dark:border-orange-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-orange-100 dark:bg-orange-600/20 rounded">
-                          <lucide-angular name="briefcase" [size]="10" class="text-orange-600 dark:text-orange-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wide">Información Laboral</h3>
                       </div>
@@ -397,7 +374,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-green-200 dark:border-green-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
-                          <lucide-angular name="phone" [size]="10" class="text-green-600 dark:text-green-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Teléfonos</h3>
                       </div>
@@ -419,7 +395,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-purple-200 dark:border-purple-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-purple-100 dark:bg-purple-600/20 rounded">
-                          <lucide-angular name="mail" [size]="10" class="text-purple-600 dark:text-purple-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Correo Electrónico</h3>
                       </div>
@@ -448,7 +423,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-purple-200 dark:border-purple-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-purple-100 dark:bg-purple-600/20 rounded">
-                          <lucide-angular name="home" [size]="10" class="text-purple-600 dark:text-purple-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Dirección</h3>
                       </div>
@@ -466,7 +440,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-blue-200 dark:border-blue-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
-                          <lucide-angular name="map-pin" [size]="10" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Ubicación Geográfica</h3>
                       </div>
@@ -491,7 +464,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-indigo-200 dark:border-indigo-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-indigo-100 dark:bg-indigo-600/20 rounded">
-                          <lucide-angular name="users" [size]="10" class="text-indigo-600 dark:text-indigo-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Referencia Personal</h3>
                       </div>
@@ -509,7 +481,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-blue-200 dark:border-blue-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
-                          <lucide-angular name="phone" [size]="10" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Teléfonos de Referencia</h3>
                       </div>
@@ -538,7 +509,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-green-200 dark:border-green-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
-                          <lucide-angular name="credit-card" [size]="10" class="text-green-600 dark:text-green-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Número de Cuenta</h3>
                       </div>
@@ -554,7 +524,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-red-200 dark:border-red-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-red-100 dark:bg-red-600/20 rounded">
-                          <lucide-angular name="alert-circle" [size]="10" class="text-red-600 dark:text-red-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-red-700 dark:text-red-300 uppercase tracking-wide">Información de Mora</h3>
                       </div>
@@ -574,7 +543,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                     <div class="bg-white dark:bg-slate-800/50 rounded-lg p-2 border border-blue-200 dark:border-blue-600/20">
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
-                          <lucide-angular name="dollar-sign" [size]="10" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                         </div>
                         <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Monto Capital</h3>
                       </div>
@@ -605,7 +573,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
             <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between border-b border-blue-500">
               <div class="flex items-center gap-3">
                 <div class="p-2 bg-white/20 rounded-lg">
-                  <lucide-angular name="file-text" [size]="24" class="text-white"></lucide-angular>
                 </div>
                 <div>
                   <h2 class="text-xl font-bold text-white">Nueva Gestión</h2>
@@ -613,7 +580,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 </div>
               </div>
               <button (click)="closeManagementModal()" class="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                <lucide-angular name="x" [size]="24" class="text-white"></lucide-angular>
               </button>
             </div>
 
@@ -650,7 +616,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 <!-- Observaciones -->
                 <div class="space-y-1.5">
                   <label class="flex items-center gap-2 text-xs font-semibold text-gray-300">
-                    <lucide-angular name="message-square" [size]="12" class="text-gray-400"></lucide-angular>
                     Observaciones
                   </label>
                   <textarea
@@ -664,7 +629,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 <!-- Notas Privadas -->
                 <div class="space-y-1.5">
                   <label class="flex items-center gap-2 text-xs font-semibold text-gray-300">
-                    <lucide-angular name="lock" [size]="12" class="text-orange-400"></lucide-angular>
                     Notas Privadas
                   </label>
                   <textarea
@@ -685,9 +649,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 [disabled]="!isManagementFormValid() || savingManagement()"
                 class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-600/50 text-sm">
                 @if (savingManagement()) {
-                  <lucide-angular name="loader" [size]="18" class="animate-spin"></lucide-angular>
                 } @else {
-                  <lucide-angular name="save" [size]="18"></lucide-angular>
                 }
                 <span>{{ savingManagement() ? 'Guardando...' : 'Guardar Gestión' }}</span>
               </button>
@@ -695,7 +657,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 (click)="closeManagementModal()"
                 [disabled]="savingManagement()"
                 class="px-4 py-2.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm">
-                <lucide-angular name="x" [size]="18"></lucide-angular>
                 <span>Cancelar</span>
               </button>
             </div>

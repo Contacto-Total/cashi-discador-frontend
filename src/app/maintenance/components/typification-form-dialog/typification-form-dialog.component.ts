@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, Output, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import { TypificationService } from '../../services/typification.service';
 import {
   TypificationCatalog,
@@ -27,7 +26,7 @@ interface ClassificationForm {
 @Component({
   selector: 'app-typification-form-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, FieldConfigDialogComponent],
+  imports: [CommonModule, FormsModule, FieldConfigDialogComponent],
   template: `
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4 transition-opacity duration-300"
@@ -48,7 +47,6 @@ interface ClassificationForm {
           <button
             (click)="onCancel()"
             class="p-2 hover:bg-white/20 rounded-lg transition-colors">
-            <lucide-angular name="x" [size]="24"></lucide-angular>
           </button>
         </div>
 
@@ -146,7 +144,6 @@ interface ClassificationForm {
                     [style.background-color]="color.hex"
                     [title]="color.name">
                     @if (form.colorHex === color.hex) {
-                      <lucide-angular name="check-circle" [size]="20" class="text-white drop-shadow-lg"></lucide-angular>
                     }
                   </button>
                 }
@@ -187,7 +184,6 @@ interface ClassificationForm {
                     [class]="'p-3 rounded-lg border-2 transition-all hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center ' +
                              (form.iconName === icon.name ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-gray-300 dark:border-gray-600')"
                     [title]="icon.label">
-                    <lucide-angular [name]="icon.name" [size]="20" class="text-gray-700 dark:text-gray-200"></lucide-angular>
                   </button>
                 }
               </div>
@@ -195,13 +191,11 @@ interface ClassificationForm {
               <!-- Selected Icon Preview -->
               @if (form.iconName) {
                 <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
-                  <lucide-angular [name]="form.iconName" [size]="28" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                   <span class="text-sm font-semibold text-blue-800 dark:text-blue-200">Icono seleccionado: {{ form.iconName }}</span>
                   <button
                     type="button"
                     (click)="form.iconName = ''"
                     class="ml-auto text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200">
-                    <lucide-angular name="x" [size]="18"></lucide-angular>
                   </button>
                 </div>
               } @else {
@@ -225,7 +219,6 @@ interface ClassificationForm {
               class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 text-sm"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
-              <lucide-angular name="alert-circle" [size]="12"></lucide-angular>
               Tip: Usa múltiplos de 10 (10, 20, 30...) para facilitar inserciones futuras
             </p>
           </div>
@@ -249,7 +242,6 @@ interface ClassificationForm {
           @if (parentClassification) {
             <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg p-4">
               <div class="flex items-center gap-2 text-blue-800 dark:text-blue-200 mb-1">
-                <lucide-angular name="git-branch" [size]="16"></lucide-angular>
                 <span class="font-bold">Tipificación Hijo</span>
               </div>
               <p class="text-sm text-blue-700 dark:text-blue-300">
@@ -269,7 +261,6 @@ interface ClassificationForm {
             type="button"
             (click)="openFieldConfig()"
             class="px-4 py-2.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-800 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 font-semibold transition-colors flex items-center gap-2 text-sm">
-            <lucide-angular name="settings" [size]="18"></lucide-angular>
             Configurar Campos Dinámicos
           </button>
 
@@ -278,7 +269,6 @@ interface ClassificationForm {
             <button
               (click)="onCancel()"
               class="px-6 py-2.5 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-semibold transition-colors flex items-center gap-2 text-sm">
-              <lucide-angular name="x" [size]="18"></lucide-angular>
               Cancelar
             </button>
             <button
@@ -289,7 +279,6 @@ interface ClassificationForm {
                 <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 Guardando...
               } @else {
-                <lucide-angular name="save" [size]="18"></lucide-angular>
                 Guardar
               }
             </button>

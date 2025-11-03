@@ -1,7 +1,6 @@
 import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule } from 'lucide-angular';
 import {
   FieldConfig,
   FieldType,
@@ -15,7 +14,7 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
 @Component({
   selector: 'app-field-config-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DynamicFieldRendererComponent],
+  imports: [CommonModule, FormsModule, DynamicFieldRendererComponent],
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -23,7 +22,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
           <!-- Header -->
           <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <lucide-angular name="settings" [size]="24" class="text-blue-600"></lucide-angular>
               Configurar Campos Personalizados
             </h2>
             <button
@@ -31,7 +29,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
               (click)="handleCancel()"
               class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
-              <lucide-angular name="x" [size]="24"></lucide-angular>
             </button>
           </div>
 
@@ -146,7 +143,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
                                   (click)="removeColumn(field, colIdx)"
                                   class="px-2 text-red-600 hover:text-red-800"
                                 >
-                                  <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                                 </button>
                               </div>
                             </div>
@@ -170,7 +166,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
                       <!-- Vista Previa -->
                       <div class="mt-4 p-4 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 rounded-lg border-2 border-purple-200 dark:border-purple-800">
                         <div class="flex items-center gap-2 mb-3">
-                          <lucide-angular name="eye" [size]="16" class="text-purple-600 dark:text-purple-400"></lucide-angular>
                           <h5 class="text-xs font-bold text-purple-900 dark:text-purple-200 uppercase tracking-wide">Vista Previa</h5>
                         </div>
                         <app-dynamic-field-renderer
@@ -186,7 +181,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
                       (click)="removeField(idx)"
                       class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                     >
-                      <lucide-angular name="trash-2" [size]="20"></lucide-angular>
                     </button>
                   </div>
                 </div>
@@ -207,7 +201,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
               (click)="addField()"
               class="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 transition-colors flex items-center justify-center gap-2"
             >
-              <lucide-angular name="plus" [size]="20"></lucide-angular>
               Agregar Campo
             </button>
           </div>
@@ -226,7 +219,6 @@ import { DynamicFieldRendererComponent } from '../../../collection-management/co
               (click)="handleSave()"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
-              <lucide-angular name="save" [size]="20"></lucide-angular>
               Guardar Configuración
             </button>
           </div>
