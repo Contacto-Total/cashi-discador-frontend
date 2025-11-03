@@ -45,6 +45,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
+  isCargaDatosDropdownOpen = false;
+  isMantenimientoDropdownOpen = false;
 
   constructor(
     public authService: AuthService,
@@ -263,14 +265,38 @@ export class AppComponent implements OnInit, OnDestroy {
   // Navbar methods
   toggleMonitoreoDropdown(): void {
     this.isMonitoreoDropdownOpen = !this.isMonitoreoDropdownOpen;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+  }
+
+  toggleCargaDatosDropdown(): void {
+    this.isCargaDatosDropdownOpen = !this.isCargaDatosDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+  }
+
+  toggleMantenimientoDropdown(): void {
+    this.isMantenimientoDropdownOpen = !this.isMantenimientoDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
   }
 
   closeDropdowns(): void {
     this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
   }
 
   isMonitoreoActive(): boolean {
     return this.router.url.includes('/admin/monitoring') ||
            this.router.url.includes('/admin/campaign-monitoring');
+  }
+
+  isCargaDatosActive(): boolean {
+    return this.router.url.includes('/admin/data-load');
+  }
+
+  isMantenimientoActive(): boolean {
+    return this.router.url.includes('/admin/maintenance');
   }
 }

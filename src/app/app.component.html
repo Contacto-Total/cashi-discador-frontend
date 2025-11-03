@@ -54,6 +54,103 @@
           </div>
         </div>
 
+        <!-- Carga de Datos Dropdown (Solo Admin) -->
+        <div class="nav-item-dropdown" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+          <button
+            class="nav-item"
+            [class.active]="isCargaDatosActive()"
+            (click)="toggleCargaDatosDropdown()"
+            mat-button>
+            <mat-icon>folder_open</mat-icon>
+            <span>Carga de Datos</span>
+            <mat-icon class="dropdown-arrow" [class.rotated]="isCargaDatosDropdownOpen">expand_more</mat-icon>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div class="dropdown-menu" [class.show]="isCargaDatosDropdownOpen">
+            <a routerLink="/admin/data-load/initial" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>cloud_upload</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Carga Inicial de Mes</span>
+                <span class="item-desc">Importación mensual</span>
+              </div>
+            </a>
+            <a routerLink="/admin/data-load/daily" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>today</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Carga Diaria</span>
+                <span class="item-desc">Actualización diaria</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Mantenimiento Dropdown (Solo Admin) -->
+        <div class="nav-item-dropdown" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+          <button
+            class="nav-item"
+            [class.active]="isMantenimientoActive()"
+            (click)="toggleMantenimientoDropdown()"
+            mat-button>
+            <mat-icon>settings</mat-icon>
+            <span>Mantenimiento</span>
+            <mat-icon class="dropdown-arrow" [class.rotated]="isMantenimientoDropdownOpen">expand_more</mat-icon>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div class="dropdown-menu" [class.show]="isMantenimientoDropdownOpen">
+            <a routerLink="/admin/maintenance/tenants" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>business</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Proveedores</span>
+                <span class="item-desc">Gestión de tenants</span>
+              </div>
+            </a>
+            <a routerLink="/admin/maintenance/portfolios" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>work</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Carteras</span>
+                <span class="item-desc">Gestión de portfolios</span>
+              </div>
+            </a>
+            <a routerLink="/admin/maintenance/subportfolios" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>folder</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Subcarteras</span>
+                <span class="item-desc">Gestión de subportfolios</span>
+              </div>
+            </a>
+            <a routerLink="/admin/maintenance/headers" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>view_column</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Config. Cabeceras</span>
+                <span class="item-desc">Configuración de headers</span>
+              </div>
+            </a>
+            <a routerLink="/admin/maintenance/roles" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>assignment_ind</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Roles</span>
+                <span class="item-desc">Gestión de roles</span>
+              </div>
+            </a>
+            <a routerLink="/admin/maintenance/users" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>group</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Usuarios</span>
+                <span class="item-desc">Gestión de usuarios</span>
+              </div>
+            </a>
+            <a routerLink="/admin/maintenance/blacklist" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>block</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Blacklist</span>
+                <span class="item-desc">Lista de bloqueo</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
         <a routerLink="/admin/campaigns" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
           <mat-icon>campaign</mat-icon>
           <span>Campañas</span>
@@ -87,7 +184,7 @@
   </nav>
 
   <!-- Dropdown Backdrop -->
-  <div class="dropdown-backdrop" *ngIf="isMonitoreoDropdownOpen" (click)="closeDropdowns()"></div>
+  <div class="dropdown-backdrop" *ngIf="isMonitoreoDropdownOpen || isCargaDatosDropdownOpen || isMantenimientoDropdownOpen" (click)="closeDropdowns()"></div>
 
   <!-- Main Content -->
   <div class="main-content">
