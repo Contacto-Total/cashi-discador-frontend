@@ -43,6 +43,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private incomingCallDialogRef: any;
   private activeCallDialogRef: any;
 
+  // Navbar dropdown state
+  isMonitoreoDropdownOpen = false;
+
   constructor(
     public authService: AuthService,
     private websocketService: WebsocketService,
@@ -255,5 +258,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
   isLoginPage(): boolean {
     return this.router.url === '/login';
+  }
+
+  // Navbar methods
+  toggleMonitoreoDropdown(): void {
+    this.isMonitoreoDropdownOpen = !this.isMonitoreoDropdownOpen;
+  }
+
+  closeDropdowns(): void {
+    this.isMonitoreoDropdownOpen = false;
+  }
+
+  isMonitoreoActive(): boolean {
+    return this.router.url.includes('/admin/monitoring') ||
+           this.router.url.includes('/admin/campaign-monitoring');
   }
 }

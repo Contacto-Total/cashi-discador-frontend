@@ -12,6 +12,7 @@
 
       <!-- Menu Items -->
       <div class="navbar-menu">
+        <!-- Items para AGENTES -->
         <a routerLink="/agent-dashboard" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
           <mat-icon>phone</mat-icon>
           <span>Cobranza</span>
@@ -20,14 +21,49 @@
           <mat-icon>people</mat-icon>
           <span>Clientes</span>
         </a>
-        <a routerLink="/admin/monitoring" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <mat-icon>supervisor_account</mat-icon>
-          <span>Monitoreo</span>
-        </a>
+
+        <!-- Items para ADMIN -->
+        <!-- Monitoreo Dropdown -->
+        <div class="nav-item-dropdown" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+          <button
+            class="nav-item"
+            [class.active]="isMonitoreoActive()"
+            (click)="toggleMonitoreoDropdown()"
+            mat-button>
+            <mat-icon>supervisor_account</mat-icon>
+            <span>Monitoreo</span>
+            <mat-icon class="dropdown-arrow" [class.rotated]="isMonitoreoDropdownOpen">expand_more</mat-icon>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div class="dropdown-menu" [class.show]="isMonitoreoDropdownOpen">
+            <a routerLink="/admin/monitoring" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>phone_in_talk</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Llamadas Activas</span>
+                <span class="item-desc">Supervisión en vivo</span>
+              </div>
+            </a>
+            <a routerLink="/admin/campaign-monitoring" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
+              <mat-icon>dashboard</mat-icon>
+              <div class="item-content">
+                <span class="item-title">Métricas en Tiempo Real</span>
+                <span class="item-desc">Dashboard y discado</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
         <a routerLink="/admin/campaigns" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
           <mat-icon>campaign</mat-icon>
           <span>Campañas</span>
         </a>
+
+        <a routerLink="/admin/extensions" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+          <mat-icon>dialpad</mat-icon>
+          <span>Extensiones</span>
+        </a>
+
         <a routerLink="/whatsapp" routerLinkActive="active" class="nav-item">
           <mat-icon>chat</mat-icon>
           <span>WhatsApp</span>
@@ -36,31 +72,22 @@
     </div>
 
     <div class="navbar-right">
-      <!-- Carga de Datos -->
-      <button mat-button class="nav-dropdown">
-        <mat-icon>folder_open</mat-icon>
-        <span>Carga de Datos</span>
-        <mat-icon class="dropdown-arrow">expand_more</mat-icon>
-      </button>
-
-      <!-- Mantenimiento -->
-      <button mat-button class="nav-dropdown">
-        <mat-icon>settings</mat-icon>
-        <span>Mantenimiento</span>
-        <mat-icon class="dropdown-arrow">expand_more</mat-icon>
-      </button>
-
-      <!-- Notifications -->
-      <button mat-icon-button class="nav-icon-btn">
-        <mat-icon>notifications</mat-icon>
-      </button>
-
       <!-- User Profile -->
-      <button mat-icon-button class="nav-icon-btn" (click)="logout()">
+      <div class="user-profile">
         <mat-icon>person</mat-icon>
+        <span class="username">{{ (authService.currentUser$ | async)?.username }}</span>
+      </div>
+
+      <!-- Logout Button -->
+      <button mat-button class="btn-logout" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Salir</span>
       </button>
     </div>
   </nav>
+
+  <!-- Dropdown Backdrop -->
+  <div class="dropdown-backdrop" *ngIf="isMonitoreoDropdownOpen" (click)="closeDropdowns()"></div>
 
   <!-- Main Content -->
   <div class="main-content">
