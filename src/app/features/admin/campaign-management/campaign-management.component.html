@@ -3,6 +3,22 @@
   <div class="header">
     <h1>📋 Gestión de Campañas</h1>
     <div class="header-actions">
+      <!-- Auto-Dialer Toggle Button -->
+      <button
+        [class]="'btn-action ' + getAutoDialerButtonClass()"
+        (click)="toggleAutoDialer()"
+        [disabled]="autoDialerLoading"
+        [title]="isAutoDialerActive ? 'Pausar el sistema de discado automático' : 'Iniciar el sistema de discado automático'">
+        <span>{{ getAutoDialerButtonIcon() }}</span>
+        <span>{{ getAutoDialerButtonText() }}</span>
+      </button>
+
+      <!-- Monitoring Button -->
+      <button class="btn-monitoring" (click)="navigateToMonitoring()">
+        <span>📊</span>
+        <span>Monitoreo en Tiempo Real</span>
+      </button>
+
       <!-- New Campaign Button -->
       <button class="btn-create" (click)="openCreateModal()">
         <span>➕</span>
