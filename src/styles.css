@@ -470,676 +470,374 @@ body.dark-theme ::-webkit-scrollbar-thumb:hover {
   background-color: #3b82f6;
 }
 
-
-
-@import "tailwindcss";
-@import '@angular/material/prebuilt-themes/indigo-pink.css';
-@import url('https://fonts.googleapis.com/css2?family=Material+Icons');
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-
-/* Variables de tema claro (por defecto) */
-:root:not(.dark) {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;
-    --bg-tertiary: #f1f5f9;
-    --bg-card: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-tertiary: #94a3b8;
-    --border-color: #cbd5e1;
-    --nav-bg: #1e293b;
-    --nav-text: #f1f5f9;
-    --input-bg: #ffffff;
-    --input-border: #cbd5e1;
-    --table-header: #f1f5f9;
-    --table-row-hover: #f8fafc;
-}
-
-/* Variables de tema oscuro */
-:root.dark {
-    --bg-primary: #020617;
-    --bg-secondary: #0f172a;
-    --bg-tertiary: #1e293b;
-    --bg-card: #0f172a;
-    --text-primary: #f8fafc;
-    --text-secondary: #cbd5e1;
-    --text-tertiary: #64748b;
-    --border-color: #334155;
-    --nav-bg: #0f172a;
-    --nav-text: #f1f5f9;
-    --input-bg: #1e293b;
-    --input-border: #334155;
-    --table-header: #1e293b;
-    --table-row-hover: #1e293b;
-}
-
-body {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: Roboto, "Helvetica Neue", sans-serif;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-html, body {
-    height: 100%;
-    background-color: var(--bg-primary);
-}
-
-* {
-    box-sizing: border-box;
-}
-
-/* Forzar estilos base para modo claro */
-:root {
-    color-scheme: light;
-}
-
-:root.dark {
-    color-scheme: dark;
-}
-
-/* Clases de utilidad que responden al tema */
-/* Fondos */
-.bg-app-primary { background-color: var(--bg-primary); }
-.bg-app-secondary { background-color: var(--bg-secondary); }
-.bg-app-tertiary { background-color: var(--bg-tertiary); }
-
-/* Textos */
-.text-app-primary { color: var(--text-primary); }
-.text-app-secondary { color: var(--text-secondary); }
-.text-app-tertiary { color: var(--text-tertiary); }
-
-/* Bordes */
-.border-app { border-color: var(--border-color); }
-
-/* Clases específicas para componentes comunes */
-.card-bg {
-    background-color: var(--bg-secondary);
-    border-color: var(--border-color);
-}
-
-.input-bg {
-    background-color: var(--bg-tertiary);
-    color: var(--text-primary);
-    border-color: var(--border-color);
-}
-
-/* Navegación */
-.nav-bg {
-    background-color: var(--nav-bg);
-    color: var(--nav-text);
-}
-
 /* ========================================
-   TEMA CLARO - SOBRESCRITURAS GLOBALES
+   GLOBAL COMPONENT OVERRIDES - CASHI THEME
    ======================================== */
 
-/* FONDOS PRINCIPALES */
-:root:not(.dark) .bg-slate-950 {
-    background-color: #f1f5f9 !important; /* Fondo principal gris muy claro */
+/* Asegurar que TODOS los componentes usen el tema oscuro */
+* {
+  box-sizing: border-box;
 }
 
-:root:not(.dark) .bg-slate-900 {
-    background-color: #ffffff !important; /* Cards y paneles en blanco */
+/* Asegurar background oscuro en todos los componentes */
+app-initial-load,
+app-daily-load,
+app-tenant-maintenance,
+app-portfolio-maintenance,
+app-subportfolio-maintenance,
+app-header-configuration,
+app-roles-management,
+app-user-management,
+app-blacklist-maintenance {
+  display: block;
+  background-color: #0A0E27;
+  min-height: 100vh;
+  color: #ffffff;
 }
 
-:root:not(.dark) .bg-slate-800 {
-    background-color: #f8fafc !important; /* Fondos secundarios */
+/* Headers y títulos */
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff;
+  margin: 0 0 16px 0;
 }
 
-:root:not(.dark) .bg-slate-700 {
-    background-color: #e2e8f0 !important; /* Hover states */
+/* Párrafos y labels */
+p, label, span {
+  color: #e2e8f0;
 }
 
-/* Eliminar gradientes oscuros */
-:root:not(.dark) .bg-gradient-to-br,
-:root:not(.dark) .bg-gradient-to-r {
-    background-image: none !important;
+/* Containers y divs comunes */
+.container,
+.page-container,
+.content-wrapper {
+  background-color: #0A0E27;
+  color: #ffffff;
 }
 
-:root:not(.dark) .from-slate-900,
-:root:not(.dark) .via-slate-800,
-:root:not(.dark) .to-slate-900 {
-    background-color: #f1f5f9 !important;
+/* Tables */
+table {
+  background-color: #1E293B;
+  border-collapse: collapse;
+  width: 100%;
+  color: #ffffff;
 }
 
-/* TEXTOS */
-:root:not(.dark) .text-white {
-    color: #0f172a !important; /* Textos principales oscuros */
+thead {
+  background-color: #334155;
 }
 
-:root:not(.dark) .text-gray-400 {
-    color: #64748b !important; /* Textos secundarios */
+thead th {
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 12px;
+  border-bottom: 2px solid #475569;
 }
 
-:root:not(.dark) .text-gray-300 {
-    color: #475569 !important; /* Textos terciarios */
+tbody tr {
+  border-bottom: 1px solid #334155;
 }
 
-:root:not(.dark) .text-gray-500 {
-    color: #64748b !important;
+tbody tr:hover {
+  background-color: #334155;
 }
 
-:root:not(.dark) .text-gray-200 {
-    color: #334155 !important;
+tbody td {
+  color: #e2e8f0;
+  padding: 12px;
 }
 
-/* BORDES */
-:root:not(.dark) .border-slate-800 {
-    border-color: #cbd5e1 !important;
+/* Buttons globales */
+button:not(.mat-mdc-button):not(.mat-mdc-icon-button):not(.mat-mdc-raised-button):not(.nav-item):not(.btn-logout) {
+  background-color: #10B981;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
 }
 
-:root:not(.dark) .border-slate-700 {
-    border-color: #e2e8f0 !important;
+button:not(.mat-mdc-button):not(.mat-mdc-icon-button):not(.mat-mdc-raised-button):not(.nav-item):not(.btn-logout):hover {
+  background-color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-/* INPUTS, SELECTS Y TEXTAREAS */
-:root:not(.dark) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-:root:not(.dark) select,
-:root:not(.dark) textarea {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #cbd5e1 !important;
+button:disabled {
+  background-color: #475569 !important;
+  cursor: not-allowed !important;
+  opacity: 0.5 !important;
 }
 
-:root:not(.dark) input::placeholder,
-:root:not(.dark) textarea::placeholder {
-    color: #94a3b8 !important;
-    opacity: 0.7 !important;
+button.secondary {
+  background-color: #475569;
 }
 
-:root:not(.dark) input:focus,
-:root:not(.dark) select:focus,
-:root:not(.dark) textarea:focus {
-    border-color: #3b82f6 !important;
-    outline: none !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+button.secondary:hover {
+  background-color: #64748b;
 }
 
-:root:not(.dark) input:hover:not(:focus),
-:root:not(.dark) select:hover:not(:focus),
-:root:not(.dark) textarea:hover:not(:focus) {
-    border-color: #94a3b8 !important;
+button.danger {
+  background-color: #ef4444;
 }
 
-:root:not(.dark) input:disabled,
-:root:not(.dark) select:disabled,
-:root:not(.dark) textarea:disabled {
-    background-color: #f1f5f9 !important;
-    color: #94a3b8 !important;
-    cursor: not-allowed !important;
-    opacity: 0.6 !important;
+button.danger:hover {
+  background-color: #dc2626;
 }
 
-/* Select options */
-:root:not(.dark) select option {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
+/* Inputs globales */
+input:not(.mat-mdc-input-element):not([type="checkbox"]):not([type="radio"]),
+textarea:not(.mat-mdc-input-element),
+select:not(.mat-mdc-select) {
+  background-color: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 10px 16px;
+  color: #ffffff;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  width: 100%;
 }
 
-/* TABLAS */
-:root:not(.dark) table {
-    background-color: #ffffff !important;
+input:focus:not(.mat-mdc-input-element),
+textarea:focus:not(.mat-mdc-input-element),
+select:focus:not(.mat-mdc-select) {
+  outline: none;
+  border-color: #10B981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
-:root:not(.dark) table thead {
-    background-color: #f1f5f9 !important;
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
 }
 
-:root:not(.dark) table thead th {
-    color: #334155 !important;
-    border-color: #e2e8f0 !important;
+/* Select globales */
+select option {
+  background-color: #1E293B;
+  color: #ffffff;
 }
 
-:root:not(.dark) table tbody tr {
-    border-color: #e2e8f0 !important;
+/* Checkboxes y radio buttons */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #10B981;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
-:root:not(.dark) table tbody tr:hover {
-    background-color: #f8fafc !important;
+/* Links */
+a:not(.nav-item):not(.dropdown-item):not([routerlink]) {
+  color: #10B981;
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
 
-:root:not(.dark) table tbody td {
-    color: #0f172a !important;
-    border-color: #e2e8f0 !important;
+a:not(.nav-item):not(.dropdown-item):not([routerlink]):hover {
+  color: #059669;
+  text-decoration: underline;
 }
 
-/* BOTONES - Mantener colores originales pero asegurar contraste */
-:root:not(.dark) button.text-white,
-:root:not(.dark) .bg-blue-600 .text-white,
-:root:not(.dark) .bg-green-600 .text-white,
-:root:not(.dark) .bg-red-600 .text-white,
-:root:not(.dark) .bg-purple-600 .text-white,
-:root:not(.dark) .bg-emerald-600 .text-white,
-:root:not(.dark) .bg-indigo-600 .text-white,
-:root:not(.dark) .bg-orange-600 .text-white,
-:root:not(.dark) label.text-white {
-    color: #ffffff !important;
+/* Forms */
+form {
+  background-color: transparent;
 }
 
-/* Botones neutros en modo claro */
-:root:not(.dark) .bg-slate-800.text-gray-300 {
-    background-color: #e2e8f0 !important;
-    color: #334155 !important;
+fieldset {
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 20px;
+  background-color: #1E293B;
 }
 
-:root:not(.dark) .bg-slate-800.text-gray-300:hover {
-    background-color: #cbd5e1 !important;
-    color: #1e293b !important;
+legend {
+  color: #10B981;
+  font-weight: 600;
+  padding: 0 10px;
 }
 
-/* BADGES Y TAGS */
-:root:not(.dark) .bg-blue-900\/30 {
-    background-color: #dbeafe !important;
+/* Modals y Dialogs */
+.modal,
+.dialog,
+.overlay {
+  background-color: #1E293B;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #ffffff;
 }
 
-:root:not(.dark) .bg-emerald-900\/30 {
-    background-color: #d1fae5 !important;
+.modal-header,
+.dialog-header {
+  background-color: #0A0E27;
+  border-bottom: 1px solid #334155;
+  padding: 16px 20px;
+  color: #ffffff;
 }
 
-:root:not(.dark) .bg-amber-900\/30 {
-    background-color: #fef3c7 !important;
+.modal-content,
+.dialog-content {
+  padding: 20px;
+  background-color: #1E293B;
 }
 
-:root:not(.dark) .bg-purple-900\/30 {
-    background-color: #e9d5ff !important;
+.modal-footer,
+.dialog-footer {
+  background-color: #0A0E27;
+  border-top: 1px solid #334155;
+  padding: 16px 20px;
 }
 
-:root:not(.dark) .bg-red-900\/30 {
-    background-color: #fecaca !important;
+/* Alerts y Messages */
+.alert,
+.message,
+.notification {
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  background-color: #1E293B;
 }
 
-:root:not(.dark) .bg-green-900\/30 {
-    background-color: #d1fae5 !important;
+.alert-success,
+.message-success {
+  border-left-color: #10B981;
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10B981;
 }
 
-/* Textos de badges */
-:root:not(.dark) .text-blue-400 {
-    color: #2563eb !important;
+.alert-error,
+.message-error,
+.alert-danger {
+  border-left-color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
-:root:not(.dark) .text-emerald-400 {
-    color: #059669 !important;
+.alert-warning,
+.message-warning {
+  border-left-color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
 }
 
-:root:not(.dark) .text-amber-400 {
-    color: #d97706 !important;
+.alert-info,
+.message-info {
+  border-left-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
 }
 
-:root:not(.dark) .text-purple-400 {
-    color: #7c3aed !important;
+/* Loading States */
+.loading,
+.spinner {
+  color: #10B981;
 }
 
-:root:not(.dark) .text-red-400 {
-    color: #dc2626 !important;
+/* Badges and Tags */
+.badge,
+.tag,
+.chip {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: #10B981;
+  color: #ffffff;
 }
 
-:root:not(.dark) .text-green-400 {
-    color: #059669 !important;
+/* Dividers */
+hr {
+  border: none;
+  border-top: 1px solid #334155;
+  margin: 20px 0;
 }
 
-:root:not(.dark) .text-indigo-400 {
-    color: #4f46e5 !important;
+/* Code blocks */
+code,
+pre {
+  background-color: #0A0E27;
+  color: #10B981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
 }
 
-/* SOMBRAS Y EFECTOS */
-:root:not(.dark) .shadow-sm {
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+pre {
+  padding: 12px;
+  overflow-x: auto;
+  border: 1px solid #334155;
 }
 
-:root:not(.dark) .shadow-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+/* Progress bars */
+progress {
+  accent-color: #10B981;
+  height: 8px;
+  border-radius: 4px;
 }
 
-:root:not(.dark) .shadow-xl {
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+/* Tooltips */
+[title]:hover::after {
+  background-color: #0A0E27;
+  color: #ffffff;
+  border: 1px solid #334155;
 }
 
-/* DIVISORES */
-:root:not(.dark) .divide-slate-800 > * + * {
-    border-color: #e2e8f0 !important;
+/* Breadcrumbs */
+.breadcrumb {
+  background-color: transparent;
+  color: #94a3b8;
 }
 
-/* HOVER STATES */
-:root:not(.dark) .hover\:bg-slate-800:hover {
-    background-color: #f1f5f9 !important;
+.breadcrumb a {
+  color: #10B981;
 }
 
-:root:not(.dark) .hover\:bg-slate-700:hover {
-    background-color: #e2e8f0 !important;
+/* Pagination */
+.pagination {
+  display: flex;
+  gap: 8px;
 }
 
-:root:not(.dark) .hover\:text-white:hover {
-    color: #0f172a !important;
+.pagination button,
+.pagination a {
+  background-color: #1E293B;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-/* Hover para botones de colores */
-:root:not(.dark) .bg-blue-600:hover {
-    background-color: #1d4ed8 !important;
+.pagination button:hover,
+.pagination a:hover {
+  background-color: #334155;
+  border-color: #10B981;
 }
 
-:root:not(.dark) .bg-green-600:hover {
-    background-color: #15803d !important;
+.pagination button.active,
+.pagination a.active {
+  background-color: #10B981;
+  color: #ffffff;
+  border-color: #10B981;
 }
 
-:root:not(.dark) .bg-red-600:hover {
-    background-color: #b91c1c !important;
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
 }
 
-:root:not(.dark) .bg-purple-600:hover {
-    background-color: #7c3aed !important;
+.empty-state h3 {
+  color: #94a3b8;
+  margin-bottom: 12px;
 }
 
-:root:not(.dark) .bg-emerald-600:hover {
-    background-color: #047857 !important;
-}
-
-:root:not(.dark) .bg-indigo-600:hover {
-    background-color: #4338ca !important;
-}
-
-:root:not(.dark) .bg-orange-600:hover {
-    background-color: #c2410c !important;
-}
-
-/* Hover para elementos de lista/menu */
-:root:not(.dark) .hover\:bg-blue-900\/30:hover {
-    background-color: #bfdbfe !important;
-}
-
-:root:not(.dark) .hover\:bg-red-900\/30:hover {
-    background-color: #fca5a5 !important;
-}
-
-/* ICONOS */
-:root:not(.dark) lucide-angular {
-    color: inherit !important;
-}
-
-/* BOTONES GHOST/OUTLINE */
-:root:not(.dark) button:not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not([class*="bg-orange"]) {
-    transition: all 0.2s ease !important;
-}
-
-:root:not(.dark) button:not([class*="bg-blue"]):not([class*="bg-green"]):not([class*="bg-red"]):not([class*="bg-purple"]):not([class*="bg-emerald"]):not([class*="bg-indigo"]):not([class*="bg-orange"]):hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* CARDS Y PANELES */
-:root:not(.dark) .rounded-lg,
-:root:not(.dark) .rounded-xl {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
-}
-
-:root:not(.dark) .shadow-2xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
-}
-
-/* TRANSICIONES SUAVES */
-:root:not(.dark) * {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
-}
-
-/* SCROLLBARS en modo claro */
-:root:not(.dark) ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-:root:not(.dark) ::-webkit-scrollbar-track {
-    background-color: #f1f5f9;
-}
-
-:root:not(.dark) ::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    border-radius: 4px;
-}
-
-:root:not(.dark) ::-webkit-scrollbar-thumb:hover {
-    background-color: #94a3b8;
-}
-
-/* FOCUS VISIBLE para accesibilidad */
-:root:not(.dark) *:focus-visible {
-    outline: 2px solid #3b82f6 !important;
-    outline-offset: 2px !important;
-}
-
-/* CHECKBOXES Y RADIOS personalizados */
-:root:not(.dark) input[type="checkbox"],
-:root:not(.dark) input[type="radio"] {
-    accent-color: #3b82f6 !important;
-}
-
-/* TOGGLES / SWITCHES */
-:root:not(.dark) .peer:checked ~ div {
-    background-color: #3b82f6 !important;
-}
-
-:root:not(.dark) .peer ~ div {
-    background-color: #cbd5e1 !important;
-}
-
-/* TOOLTIP y DROPDOWN menus */
-:root:not(.dark) [class*="absolute"][class*="bg-slate"] {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-    border: 1px solid #e2e8f0 !important;
-}
-
-/* SOLUCIÓN DEFINITIVA: Deshabilitar TODAS las clases dark: cuando NO hay .dark en el HTML */
-/* Esto sobrescribe el comportamiento de Tailwind v4 que usa prefers-color-scheme */
-@media (prefers-color-scheme: dark) {
-    /* Para cada elemento que NO esté dentro de .dark, desactivar las utilidades dark: de Tailwind */
-    :root:not(.dark) {
-        color-scheme: light !important;
-    }
-
-    /* La clave es NO sobrescribir con inherit, sino NO aplicar nada */
-    /* Cuando prefers-color-scheme es dark PERO no hay .dark en HTML */
-    /* Tailwind aplica las reglas dark: automáticamente */
-    /* Necesitamos revertirlas a los valores ORIGINALES del modo claro */
-
-    /* Para fondos: usar tonos beige suaves para evitar cansancio visual */
-    :root:not(.dark) .bg-white { background-color: #fafaf9 !important; } /* Beige muy suave (stone-50) */
-
-    /* Barra de info del cliente en blanco para mejor contraste */
-    :root:not(.dark) .border-blue-400 { background-color: #ffffff !important; } /* Blanco puro */
-    :root:not(.dark) .bg-slate-50 { background-color: #fafaf9 !important; } /* Beige uniforme */
-    :root:not(.dark) .bg-blue-50 { background-color: #eff6ff !important; } /* blue-50 original */
-
-    /* Forzar gradiente azul claro en la barra */
-    :root:not(.dark) .from-blue-50 { --tw-gradient-from: #dbeafe !important; }
-    :root:not(.dark) .bg-gray-50 { background-color: #fafaf8 !important; } /* Beige suave */
-    :root:not(.dark) .bg-green-50 { background-color: #f0fdf4 !important; }
-    :root:not(.dark) .bg-red-50 { background-color: #fef2f2 !important; }
-    :root:not(.dark) .bg-orange-50 { background-color: #fff7ed !important; }
-    :root:not(.dark) .bg-amber-50 { background-color: #fffbeb !important; }
-    :root:not(.dark) .bg-amber-400 { background-color: #fbbf24 !important; }
-    :root:not(.dark) .bg-blue-100 { background-color: #dbeafe !important; }
-
-    /* Desactivar gradientes en modo claro - usar color beige uniforme */
-    :root:not(.dark) .from-slate-50,
-    :root:not(.dark) .from-blue-100,
-    :root:not(.dark) .to-blue-50,
-    :root:not(.dark) .via-blue-50,
-    :root:not(.dark) .to-slate-100 {
-        --tw-gradient-from: #fafaf9 !important;
-        --tw-gradient-via: #fafaf9 !important;
-        --tw-gradient-to: #fafaf9 !important;
-    }
-
-    /* Para gradientes de fondo */
-    :root:not(.dark) .bg-gradient-to-r,
-    :root:not(.dark) .bg-gradient-to-br {
-        /* Mantener el gradiente pero asegurar colores claros */
-    }
-
-    /* Forzar colores de texto claros */
-    :root:not(.dark) .text-gray-800 { color: #1f2937 !important; }
-    :root:not(.dark) .text-gray-900 { color: #111827 !important; }
-    :root:not(.dark) .text-slate-900 { color: #0f172a !important; }
-    :root:not(.dark) .text-slate-800 { color: #1e293b !important; }
-    :root:not(.dark) .text-slate-600 { color: #475569 !important; }
-    :root:not(.dark) .text-gray-700 { color: #374151 !important; }
-    :root:not(.dark) .text-gray-600 { color: #4b5563 !important; }
-    :root:not(.dark) .text-blue-700 { color: #1d4ed8 !important; }
-    :root:not(.dark) .text-blue-800 { color: #1e40af !important; }
-    :root:not(.dark) .text-blue-900 { color: #1e3a8a !important; }
-    :root:not(.dark) .text-green-700 { color: #15803d !important; }
-    :root:not(.dark) .text-green-800 { color: #166534 !important; }
-    :root:not(.dark) .text-green-900 { color: #14532d !important; }
-    :root:not(.dark) .text-red-700 { color: #b91c1c !important; }
-    :root:not(.dark) .text-red-800 { color: #991b1b !important; }
-    :root:not(.dark) .text-red-900 { color: #7f1d1d !important; }
-    :root:not(.dark) .text-red-600 { color: #dc2626 !important; }
-    :root:not(.dark) .text-orange-600 { color: #ea580c !important; }
-    :root:not(.dark) .text-purple-600 { color: #9333ea !important; }
-    :root:not(.dark) .text-amber-600 { color: #d97706 !important; }
-
-    /* Forzar bordes claros */
-    :root:not(.dark) .border-gray-200 { border-color: #e5e7eb !important; }
-    :root:not(.dark) .border-blue-400 { border-color: #60a5fa !important; }
-    :root:not(.dark) .border-blue-200 { border-color: #bfdbfe !important; }
-    :root:not(.dark) .border-gray-300 { border-color: #d1d5db !important; }
-    :root:not(.dark) .border-slate-200 { border-color: #e2e8f0 !important; }
-    :root:not(.dark) .border-green-200 { border-color: #bbf7d0 !important; }
-    :root:not(.dark) .border-red-200 { border-color: #fecaca !important; }
-    :root:not(.dark) .border-red-300 { border-color: #fca5a5 !important; }
-    :root:not(.dark) .border-orange-200 { border-color: #fed7aa !important; }
-    :root:not(.dark) .border-amber-300 { border-color: #fcd34d !important; }
-    :root:not(.dark) .border-purple-300 { border-color: #d8b4fe !important; }
-
-    /* CRÍTICO: Forzar color de texto en inputs, selects y textareas */
-    /* Sobrescribir todas las clases dark:text- en inputs */
-    :root:not(.dark) input,
-    :root:not(.dark) select,
-    :root:not(.dark) textarea,
-    :root:not(.dark) input[type="text"],
-    :root:not(.dark) input[type="number"],
-    :root:not(.dark) input[type="date"],
-    :root:not(.dark) input.text-gray-700,
-    :root:not(.dark) select.text-gray-700,
-    :root:not(.dark) textarea.text-gray-700 {
-        color: #1f2937 !important; /* gray-800 - MÁS OSCURO para mejor contraste */
-    }
-
-    /* Sobrescribir específicamente cuando tienen clases dark: */
-    :root:not(.dark) input[class*="dark:text-"],
-    :root:not(.dark) select[class*="dark:text-"],
-    :root:not(.dark) textarea[class*="dark:text-"] {
-        color: #111827 !important; /* gray-900 - NEGRO casi */
-    }
-
-    /* Forzar color de options en selects */
-    :root:not(.dark) option {
-        color: #111827 !important; /* gray-900 */
-        background-color: #ffffff !important;
-    }
-
-    /* Placeholder también debe ser visible */
-    :root:not(.dark) input::placeholder,
-    :root:not(.dark) textarea::placeholder {
-        color: #6b7280 !important; /* gray-500 - más oscuro */
-        opacity: 1 !important;
-    }
-
-    /* Forzar todos los elementos con text-gray-700 y dark:text-* */
-    :root:not(.dark) .text-gray-700[class*="dark:text-"] {
-        color: #1f2937 !important; /* gray-800 */
-    }
-
-    /* Para cualquier elemento que tenga dark:text-gray-200 u otro */
-    :root:not(.dark) [class*="dark:text-gray-200"],
-    :root:not(.dark) [class*="dark:text-gray-100"],
-    :root:not(.dark) [class*="dark:text-gray-300"] {
-        color: #1f2937 !important; /* Forzar gris oscuro */
-    }
 
-    /* Sobrescribir hover backgrounds oscuros cuando NO hay .dark */
-    :root:not(.dark) .dark\:hover\:bg-gray-800:hover {
-        background-color: #f9fafb !important; /* gray-50 en lugar de gray-800 */
-    }
 
-    :root:not(.dark) .dark\:hover\:bg-gray-700:hover {
-        background-color: #f3f4f6 !important; /* gray-100 en lugar de gray-700 */
-    }
-
-    :root:not(.dark) .dark\:hover\:bg-blue-600:hover {
-        background-color: inherit !important; /* No aplicar hover oscuro */
-    }
-
-    :root:not(.dark) .dark\:hover\:bg-yellow-500\/30:hover {
-        background-color: inherit !important; /* No aplicar hover oscuro */
-    }
-
-    /* Asegurar que los botones tengan el texto en blanco SIEMPRE visible en modo claro */
-    :root:not(.dark) button.text-white,
-    :root:not(.dark) button .text-white {
-        color: #ffffff !important;
-    }
-
-    /* También asegurar que los fondos de botones sean sólidos */
-    :root:not(.dark) button.from-green-600 { background-color: #16a34a !important; }
-    :root:not(.dark) button.from-red-600 { background-color: #dc2626 !important; }
-    :root:not(.dark) button.from-blue-600 { background-color: #2563eb !important; }
-    :root:not(.dark) button.from-gray-400 { background-color: #9ca3af !important; }
-
-    /* Asegurar que el header oscuro mantenga su fondo en modo claro */
-    :root:not(.dark) .from-slate-900 {
-        --tw-gradient-from: #0f172a !important;
-    }
-    :root:not(.dark) .via-blue-900 {
-        --tw-gradient-via: #1e3a8a !important;
-    }
-    :root:not(.dark) .to-slate-900 {
-        --tw-gradient-to: #0f172a !important;
-    }
-
-    /* Asegurar que los textos del header sean claros en modo claro (header tiene fondo oscuro) */
-    :root:not(.dark) .bg-gradient-to-r.from-slate-900 .text-blue-200,
-    :root:not(.dark) .bg-gradient-to-r.from-slate-900 .text-slate-300 {
-        color: #bfdbfe !important;
-    }
-
-    /* Asegurar que dark:text-white NO se aplique en modo claro en elementos que NO son botones */
-    /* Solo en la barra de info del cliente (border-b.border-blue-400) */
-    :root:not(.dark) .border-b.border-blue-400 [class*="dark:text-white"]:not(button):not(button *) {
-        color: inherit !important;
-    }
-
-    /* Forzar fondos claros en modo claro para las tarjetas del historial */
-    :root:not(.dark) .bg-gray-50.dark\:bg-gray-800 {
-        background-color: #f9fafb !important; /* gray-50 */
-    }
-
-    :root:not(.dark) .bg-gray-200.dark\:bg-gray-700 {
-        background-color: #e5e7eb !important; /* gray-200 */
-    }
-
-    :root:not(.dark) .bg-white.dark\:bg-gray-900 {
-        background-color: #ffffff !important; /* white */
-    }
-}
-
-/* Classification Maintenance - Up/Down Buttons UI */
-
-.classification-tree-container {
-    position: relative;
-}
-
-.classification-item-wrapper {
-    position: relative;
-}
-
-.classification-item {
-    box-sizing: border-box;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
