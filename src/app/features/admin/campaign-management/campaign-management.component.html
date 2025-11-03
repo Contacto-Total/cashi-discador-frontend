@@ -3,16 +3,6 @@
   <div class="header">
     <h1>📋 Gestión de Campañas</h1>
     <div class="header-actions">
-      <!-- Auto-Dialer Toggle Button -->
-      <button
-        [class]="'btn-action ' + getAutoDialerButtonClass()"
-        (click)="toggleAutoDialer()"
-        [disabled]="autoDialerLoading"
-        [title]="isAutoDialerActive ? 'Pausar el sistema de discado automático' : 'Iniciar el sistema de discado automático'">
-        <span>{{ getAutoDialerButtonIcon() }}</span>
-        <span>{{ getAutoDialerButtonText() }}</span>
-      </button>
-
       <!-- New Campaign Button -->
       <button class="btn-create" (click)="openCreateModal()">
         <span>➕</span>
@@ -25,252 +15,95 @@
   <div *ngIf="error" class="error-message">❌ {{ error }}</div>
   <div *ngIf="successMessage" class="success-message">✅ {{ successMessage }}</div>
 
-  <!-- Main Content: Two Columns Layout -->
-  <div class="two-column-layout">
-    <!-- LEFT COLUMN: Campaigns List -->
-    <div class="left-column">
-      <h2 class="section-title">📋 Campañas</h2>
+  <!-- Campaigns List Section -->
+  <div class="campaigns-section">
+    <h2 class="section-title">📋 Campañas</h2>
 
-      <!-- Campaigns List -->
-      <div class="campaigns-scrollable" *ngIf="!loading">
-        <div *ngIf="campaigns.length === 0" class="empty-state">
-          <p>📭 No hay campañas creadas todavía</p>
-          <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
+    <!-- Campaigns List -->
+    <div class="campaigns-scrollable" *ngIf="!loading">
+      <div *ngIf="campaigns.length === 0" class="empty-state">
+        <p>📭 No hay campañas creadas todavía</p>
+        <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
+      </div>
+
+      <div *ngFor="let campaign of campaigns" class="campaign-card-compact">
+        <div class="campaign-header-compact">
+          <div class="campaign-title-compact" (click)="viewCampaignDetail(campaign)" style="cursor: pointer;">
+            <h3>{{ campaign.name }}</h3>
+            <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
+              {{ getStatusText(campaign.status) }}
+            </span>
+          </div>
+          <div class="campaign-actions">
+            <button
+              class="btn-action-small btn-view"
+              (click)="viewCampaignDetail(campaign)"
+              title="Ver detalle">
+              👁️
+            </button>
+            <button
+              *ngIf="canActivate(campaign)"
+              class="btn-action-small btn-activate"
+              (click)="activarCampaign(campaign)"
+              title="Activar campaña">
+              ▶️
+            </button>
+            <button
+              *ngIf="canPause(campaign)"
+              class="btn-action-small btn-pause"
+              (click)="pausarCampaign(campaign)"
+              title="Pausar campaña">
+              ⏸️
+            </button>
+            <button
+              class="btn-action-small btn-import"
+              (click)="openImportModal(campaign)"
+              title="Importar contactos">
+              📥
+            </button>
+            <button
+              *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
+              class="btn-action-small btn-delete"
+              (click)="deleteCampaign(campaign)"
+              title="Eliminar campaña">
+              🗑️
+            </button>
+          </div>
         </div>
 
-        <div *ngFor="let campaign of campaigns" class="campaign-card-compact">
-          <div class="campaign-header-compact">
-            <div class="campaign-title-compact" (click)="viewCampaignDetail(campaign)" style="cursor: pointer;">
-              <h3>{{ campaign.name }}</h3>
-              <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
-                {{ getStatusText(campaign.status) }}
-              </span>
+        <div class="campaign-body-compact">
+          <p *ngIf="campaign.description" class="campaign-description-compact">
+            {{ campaign.description }}
+          </p>
+
+          <div class="campaign-stats-compact" *ngIf="campaign.totalContacts !== undefined">
+            <div class="stat-compact">
+              <span class="stat-label-compact">Total:</span>
+              <span class="stat-value-compact">{{ campaign.totalContacts || 0 }}</span>
             </div>
-            <div class="campaign-actions">
-              <button
-                class="btn-action-small btn-view"
-                (click)="viewCampaignDetail(campaign)"
-                title="Ver detalle">
-                👁️
-              </button>
-              <button
-                *ngIf="canActivate(campaign)"
-                class="btn-action-small btn-activate"
-                (click)="activarCampaign(campaign)"
-                title="Activar campaña">
-                ▶️
-              </button>
-              <button
-                *ngIf="canPause(campaign)"
-                class="btn-action-small btn-pause"
-                (click)="pausarCampaign(campaign)"
-                title="Pausar campaña">
-                ⏸️
-              </button>
-              <button
-                class="btn-action-small btn-import"
-                (click)="openImportModal(campaign)"
-                title="Importar contactos">
-                📥
-              </button>
-              <button
-                *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
-                class="btn-action-small btn-delete"
-                (click)="deleteCampaign(campaign)"
-                title="Eliminar campaña">
-                🗑️
-              </button>
+            <div class="stat-compact">
+              <span class="stat-label-compact">Pendientes:</span>
+              <span class="stat-value-compact">{{ campaign.pendingContacts || 0 }}</span>
+            </div>
+            <div class="stat-compact">
+              <span class="stat-label-compact">Contactados:</span>
+              <span class="stat-value-compact">{{ campaign.contactedContacts || 0 }}</span>
             </div>
           </div>
 
-          <div class="campaign-body-compact">
-            <p *ngIf="campaign.description" class="campaign-description-compact">
-              {{ campaign.description }}
-            </p>
-
-            <div class="campaign-stats-compact" *ngIf="campaign.totalContacts !== undefined">
-              <div class="stat-compact">
-                <span class="stat-label-compact">Total:</span>
-                <span class="stat-value-compact">{{ campaign.totalContacts || 0 }}</span>
-              </div>
-              <div class="stat-compact">
-                <span class="stat-label-compact">Pendientes:</span>
-                <span class="stat-value-compact">{{ campaign.pendingContacts || 0 }}</span>
-              </div>
-              <div class="stat-compact">
-                <span class="stat-label-compact">Contactados:</span>
-                <span class="stat-value-compact">{{ campaign.contactedContacts || 0 }}</span>
-              </div>
-            </div>
-
-            <div class="campaign-meta-compact">
-              <span>{{ campaign.dialMode }}</span>
-              <span>Max: {{ campaign.maxAttempts }}</span>
-              <span *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
-            </div>
+          <div class="campaign-meta-compact">
+            <span>{{ campaign.dialMode }}</span>
+            <span>Max: {{ campaign.maxAttempts }}</span>
+            <span *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
           </div>
         </div>
       </div>
-
-      <!-- Loading State -->
-      <div *ngIf="loading" class="loading-state">
-        <div class="spinner"></div>
-        <p>Cargando...</p>
-      </div>
     </div>
 
-    <!-- RIGHT COLUMN: Metrics and Future Content -->
-    <div class="right-column">
-      <!-- Auto-Dialer Metrics -->
-  <div class="metrics-panel" *ngIf="autoDialerStats">
-    <h3>📊 Métricas del Auto-Dialer en Tiempo Real</h3>
-    <div class="metrics-grid">
-      <!-- Total llamadas -->
-      <div class="metric-item">
-        <span class="metric-icon">📊</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.totalLlamadas }}</span>
-          <span class="metric-label">Total llamadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas en cola -->
-      <div class="metric-item">
-        <span class="metric-icon">⏳</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasEnCola }}</span>
-          <span class="metric-label">Llamadas en cola</span>
-        </div>
-      </div>
-
-      <!-- Llamadas conectadas -->
-      <div class="metric-item">
-        <span class="metric-icon">✅</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasConectadas }}</span>
-          <span class="metric-label">Llamadas conectadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas por realizar (contactos pendientes) -->
-      <div class="metric-item">
-        <span class="metric-icon">📋</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
-          <span class="metric-label">Llamadas por realizar</span>
-        </div>
-      </div>
-
-      <!-- Llamadas siendo marcadas -->
-      <div class="metric-item">
-        <span class="metric-icon">📞</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
-          <span class="metric-label">Llamadas siendo marcadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas activas (en curso) -->
-      <div class="metric-item">
-        <span class="metric-icon">🔵</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
-          <span class="metric-label">Llamadas siendo procesadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas fallidas -->
-      <div class="metric-item">
-        <span class="metric-icon">❌</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.contactosFallidos }}</span>
-          <span class="metric-label">Llamadas fallidas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas no contestadas -->
-      <div class="metric-item">
-        <span class="metric-icon">📵</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasNoContestadas }}</span>
-          <span class="metric-label">Llamadas no contestadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas abandonadas -->
-      <div class="metric-item">
-        <span class="metric-icon">🚫</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasAbandonadas }}</span>
-          <span class="metric-label">Llamadas abandonadas</span>
-        </div>
-      </div>
-
-      <!-- Duración promedio -->
-      <div class="metric-item">
-        <span class="metric-icon">⏱️</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.duracionPromedioFormato }}</span>
-          <span class="metric-label">Duración promedio de llamada</span>
-        </div>
-      </div>
-
-      <!-- Duración máxima -->
-      <div class="metric-item">
-        <span class="metric-icon">⏰</span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.duracionMaximaFormato }}</span>
-          <span class="metric-label">Duración máxima de llamada</span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Agentes en Tiempo Real -->
-  <div class="agentes-panel">
-    <div class="agentes-header">
-      <h3>👥 Agentes en Tiempo Real</h3>
-      <button class="btn-view-all" (click)="navigateToExtensions()">
-        📞 Ver Extensiones
-      </button>
-    </div>
-    <div class="agentes-table-container">
-      <table class="agentes-table">
-        <thead>
-          <tr>
-            <th>Agente</th>
-            <th>Estado</th>
-            <th>Teléfono</th>
-            <th>Desde</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let agente of agentesMonitoreo" class="agente-row">
-            <td class="agente-info">
-              <div class="agente-extension">SIP/{{ agente.sipExtension }}</div>
-              <div class="agente-nombre">{{ agente.nombreCompleto }}</div>
-            </td>
-            <td class="agente-estado">
-              <span class="estado-badge" [style.background-color]="getEstadoColor(agente.estadoActual)">
-                {{ getEstadoIcon(agente.estadoActual) }} {{ getEstadoTexto(agente.estadoActual) }}
-              </span>
-            </td>
-            <td class="agente-telefono">
-              {{ agente.telefonoDestino || '-' }}
-            </td>
-            <td class="agente-tiempo">
-              {{ formatTiempo(agente.segundosEnEstado) }}
-            </td>
-          </tr>
-          <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
-            <td colspan="4" style="text-align: center; color: #94a3b8;">
-              No hay agentes registrados
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+    <!-- Loading State -->
+    <div *ngIf="loading" class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando...</p>
     </div>
   </div>
 </div>

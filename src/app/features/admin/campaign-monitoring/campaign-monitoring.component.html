@@ -1,0 +1,219 @@
+<div class="monitoring-container">
+  <!-- Header -->
+  <div class="header">
+    <button class="btn-back" (click)="goBack()">
+      <span>⬅</span>
+      <span>Volver a Campañas</span>
+    </button>
+    <h1>📊 Monitoreo por Campaña</h1>
+  </div>
+
+  <!-- Campaign Selector -->
+  <div class="campaign-selector">
+    <label for="campaignSelect">Seleccionar Campaña:</label>
+    <select
+      id="campaignSelect"
+      [(ngModel)]="selectedCampaignId"
+      (change)="onCampaignChange()"
+      class="campaign-select">
+      <option [value]="null" disabled>-- Seleccione una campaña --</option>
+      <option
+        *ngFor="let campaign of campaigns"
+        [value]="campaign.id">
+        {{ campaign.name }} ({{ campaign.status }})
+      </option>
+    </select>
+  </div>
+
+  <!-- Metrics Panel -->
+  <div class="metrics-panel" *ngIf="autoDialerStats">
+    <h3>📊 Métricas del Auto-Dialer en Tiempo Real</h3>
+    <div class="metrics-grid">
+      <!-- Total llamadas -->
+      <div class="metric-item">
+        <span class="metric-icon">📊</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.totalLlamadas }}</span>
+          <span class="metric-label">Total llamadas</span>
+        </div>
+      </div>
+
+      <!-- Llamadas en cola -->
+      <div class="metric-item">
+        <span class="metric-icon">⏳</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasEnCola }}</span>
+          <span class="metric-label">Llamadas en cola</span>
+        </div>
+      </div>
+
+      <!-- Llamadas conectadas -->
+      <div class="metric-item">
+        <span class="metric-icon">✅</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasConectadas }}</span>
+          <span class="metric-label">Llamadas conectadas</span>
+        </div>
+      </div>
+
+      <!-- Llamadas por realizar (contactos pendientes) -->
+      <div class="metric-item">
+        <span class="metric-icon">📋</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
+          <span class="metric-label">Llamadas por realizar</span>
+        </div>
+      </div>
+
+      <!-- Llamadas siendo marcadas -->
+      <div class="metric-item">
+        <span class="metric-icon">📞</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
+          <span class="metric-label">Llamadas siendo marcadas</span>
+        </div>
+      </div>
+
+      <!-- Llamadas activas (en curso) -->
+      <div class="metric-item">
+        <span class="metric-icon">🔵</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
+          <span class="metric-label">Llamadas siendo procesadas</span>
+        </div>
+      </div>
+
+      <!-- Llamadas fallidas -->
+      <div class="metric-item">
+        <span class="metric-icon">❌</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosFallidos }}</span>
+          <span class="metric-label">Llamadas fallidas</span>
+        </div>
+      </div>
+
+      <!-- Llamadas no contestadas -->
+      <div class="metric-item">
+        <span class="metric-icon">📵</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasNoContestadas }}</span>
+          <span class="metric-label">Llamadas no contestadas</span>
+        </div>
+      </div>
+
+      <!-- Llamadas abandonadas -->
+      <div class="metric-item">
+        <span class="metric-icon">🚫</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasAbandonadas }}</span>
+          <span class="metric-label">Llamadas abandonadas</span>
+        </div>
+      </div>
+
+      <!-- Duración promedio -->
+      <div class="metric-item">
+        <span class="metric-icon">⏱️</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.duracionPromedioFormato }}</span>
+          <span class="metric-label">Duración promedio de llamada</span>
+        </div>
+      </div>
+
+      <!-- Duración máxima -->
+      <div class="metric-item">
+        <span class="metric-icon">⏰</span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.duracionMaximaFormato }}</span>
+          <span class="metric-label">Duración máxima de llamada</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column Layout: Discado en Tiempo Real + Agentes -->
+  <div class="two-column-layout">
+    <!-- LEFT COLUMN: Discado en Tiempo Real -->
+    <div class="left-column">
+      <div class="discado-panel">
+        <h3>📞 Discado en Tiempo Real</h3>
+        <div class="discado-table-container">
+          <table class="discado-table">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Teléfono</th>
+                <th>Agente</th>
+                <th>Estado</th>
+                <th>Duración</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let llamada of llamadasEnTiempoReal" class="llamada-row">
+                <td class="llamada-hora">{{ llamada.hora }}</td>
+                <td class="llamada-telefono">{{ llamada.telefono }}</td>
+                <td class="llamada-agente">{{ llamada.agente }}</td>
+                <td class="llamada-estado">
+                  <span class="estado-badge-mini">{{ llamada.estado }}</span>
+                </td>
+                <td class="llamada-duracion">{{ formatTiempo(llamada.duracion) }}</td>
+              </tr>
+              <tr *ngIf="llamadasEnTiempoReal.length === 0" class="empty-row">
+                <td colspan="5" style="text-align: center; color: #94a3b8;">
+                  No hay llamadas en curso
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Agentes en Tiempo Real -->
+    <div class="right-column">
+      <div class="agentes-panel">
+        <div class="agentes-header">
+          <h3>👥 Agentes en Tiempo Real</h3>
+          <button class="btn-view-all" (click)="navigateToExtensions()">
+            📞 Ver Extensiones
+          </button>
+        </div>
+        <div class="agentes-table-container">
+          <table class="agentes-table">
+            <thead>
+              <tr>
+                <th>Agente</th>
+                <th>Estado</th>
+                <th>Teléfono</th>
+                <th>Desde</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row">
+                <td class="agente-info">
+                  <div class="agente-extension">SIP/{{ agente.sipExtension }}</div>
+                  <div class="agente-nombre">{{ agente.nombreCompleto }}</div>
+                </td>
+                <td class="agente-estado">
+                  <span class="estado-badge" [style.background-color]="getEstadoColor(agente.estadoActual)">
+                    {{ getEstadoIcon(agente.estadoActual) }} {{ getEstadoTexto(agente.estadoActual) }}
+                  </span>
+                </td>
+                <td class="agente-telefono">
+                  {{ agente.telefonoDestino || '-' }}
+                </td>
+                <td class="agente-tiempo">
+                  {{ formatTiempo(agente.segundosEnEstado) }}
+                </td>
+              </tr>
+              <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
+                <td colspan="4" style="text-align: center; color: #94a3b8;">
+                  No hay agentes registrados
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

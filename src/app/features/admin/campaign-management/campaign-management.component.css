@@ -137,23 +137,16 @@
   text-overflow: ellipsis;
 }
 
-/* Two Column Layout */
-.two-column-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  height: calc(100vh - 200px);
-  min-height: 600px;
-}
-
-/* LEFT COLUMN: Campaigns */
-.left-column {
+/* Campaigns Section */
+.campaigns-section {
   display: flex;
   flex-direction: column;
   background: #1E293B;
   border: 1px solid #334155;
   border-radius: 8px;
   overflow: hidden;
+  height: calc(100vh - 200px);
+  min-height: 600px;
 }
 
 .section-title {
@@ -190,171 +183,6 @@
 
 .campaigns-scrollable::-webkit-scrollbar-thumb:hover {
   background: #475569;
-}
-
-/* RIGHT COLUMN: Metrics and Future Content */
-.right-column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-/* Agentes Panel */
-.agentes-panel {
-  flex: 1;
-  background: #1E293B;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.agentes-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #0A0E27;
-  border-bottom: 1px solid #334155;
-}
-
-.agentes-panel h3 {
-  margin: 0;
-  font-size: 0.95rem;
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.btn-view-all {
-  padding: 6px 12px;
-  background: #3B82F6;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.3s;
-}
-
-.btn-view-all:hover {
-  background: #2563EB;
-  transform: translateY(-2px);
-}
-
-.agentes-table-container {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
-}
-
-/* Scrollbar para tabla agentes */
-.agentes-table-container::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.agentes-table-container::-webkit-scrollbar-track {
-  background: #0A0E27;
-}
-
-.agentes-table-container::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 4px;
-}
-
-.agentes-table-container::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-.agentes-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.agentes-table thead {
-  position: sticky;
-  top: 0;
-  background: #0A0E27;
-  z-index: 10;
-}
-
-.agentes-table th {
-  padding: 0.7rem 0.8rem;
-  text-align: left;
-  font-weight: 600;
-  color: #94a3b8;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  border-bottom: 1px solid #334155;
-}
-
-.agentes-table tbody tr {
-  transition: background-color 0.2s;
-}
-
-.agente-row:hover {
-  background: rgba(16, 185, 129, 0.05);
-}
-
-.agentes-table td {
-  padding: 0.7rem 0.8rem;
-  border-bottom: 1px solid #334155;
-  color: #e2e8f0;
-}
-
-.agente-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.agente-extension {
-  font-size: 0.75rem;
-  color: #10B981;
-  font-weight: 600;
-  font-family: monospace;
-}
-
-.agente-nombre {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 180px;
-}
-
-.agente-estado {
-  text-align: center;
-}
-
-.estado-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.3rem 0.6rem;
-  border-radius: 50px;
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.agente-telefono {
-  font-family: monospace;
-  font-size: 0.75rem;
-  color: #e2e8f0;
-}
-
-.agente-tiempo {
-  font-family: monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #10B981;
-  text-align: center;
 }
 
 .empty-row td {
@@ -713,12 +541,7 @@
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .two-column-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-  }
-
-  .left-column {
+  .campaigns-section {
     min-height: 400px;
     max-height: 500px;
   }
@@ -746,10 +569,6 @@
 
   .header-actions button {
     width: 100%;
-  }
-
-  .two-column-layout {
-    gap: 1rem;
   }
 
   .form-row {
