@@ -36,7 +36,6 @@
             <th>Puerto</th>
             <th>Estado</th>
             <th>Respuesta</th>
-            <th>User Agent</th>
           </tr>
         </thead>
         <tbody>
@@ -51,10 +50,9 @@
               </span>
             </td>
             <td class="ping-cell">{{ ext.pingMs }}</td>
-            <td class="user-agent-cell">{{ ext.userAgent || '-' }}</td>
           </tr>
           <tr *ngIf="extensions.length === 0">
-            <td colspan="7" class="empty-row">
+            <td colspan="6" class="empty-row">
               📭 No hay extensiones registradas en este momento
             </td>
           </tr>
