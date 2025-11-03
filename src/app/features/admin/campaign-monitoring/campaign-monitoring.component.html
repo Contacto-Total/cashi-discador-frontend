@@ -149,13 +149,13 @@
             </thead>
             <tbody>
               <tr *ngFor="let llamada of llamadasEnTiempoReal" class="llamada-row">
-                <td class="llamada-hora">{{ llamada.hora }}</td>
-                <td class="llamada-telefono">{{ llamada.telefono }}</td>
-                <td class="llamada-agente">{{ llamada.agente }}</td>
+                <td class="llamada-hora">{{ llamada.fechaInicio | date: 'HH:mm:ss' }}</td>
+                <td class="llamada-telefono">{{ llamada.anexoDestino }}</td>
+                <td class="llamada-agente">{{ llamada.nombreAgente }}</td>
                 <td class="llamada-estado">
-                  <span class="estado-badge-mini">{{ llamada.estado }}</span>
+                  <span class="estado-badge-mini">{{ llamada.estadoLlamada }}</span>
                 </td>
-                <td class="llamada-duracion">{{ formatTiempo(llamada.duracion) }}</td>
+                <td class="llamada-duracion">{{ formatTiempo(llamada.duracionSegundos) }}</td>
               </tr>
               <tr *ngIf="llamadasEnTiempoReal.length === 0" class="empty-row">
                 <td colspan="5" style="text-align: center; color: #94a3b8;">

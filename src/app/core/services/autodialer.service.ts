@@ -42,6 +42,19 @@ export interface AgenteMonitoreo {
   uuidLlamadaActual: string | null;
 }
 
+export interface LlamadaTiempoReal {
+  id: number;
+  anexoDestino: string;        // Teléfono del cliente
+  anexoAgente: string;          // Extensión del agente
+  nombreAgente: string;         // Nombre completo del agente
+  fechaInicio: string;
+  estadoLlamada: string;        // MARCANDO, CONECTADA, EN_CURSO
+  duracionSegundos: number;     // Duración hasta ahora
+  uuidLlamada: string;
+  idContacto: number;
+  idAgente: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -148,6 +161,41 @@ export class AutoDialerService {
     return interval(3000).pipe(
       startWith(0),
       switchMap(() => this.getAgentesMonitoreo())
+    );
+  }
+
+  /**
+   * Obtiene todas las llamadas en tiempo real (MARCANDO, CONECTADA, EN_CURSO)
+   */
+  getLlamadasEnTiempoReal(): Observable<LlamadaTiempoReal[]> {
+    return this.http.get<LlamadaTiempoReal[]>(
+      `${this.apiUrl}/llamadas-tiempo-real`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Obtiene llamadas en tiempo real filtradas por campaña
+   */
+  getLlamadasEnTiempoRealByCampaign(campaignId: number): Observable<LlamadaTiempoReal[]> {
+    return this.http.get<LlamadaTiempoReal[]>(
+      `${this.apiUrl}/llamadas-tiempo-real/${campaignId}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Inicia polling de llamadas en tiempo real cada 2 segundos
+   * Si se proporciona campaignId, filtra por esa campaña
+   */
+  startLlamadasPolling(campaignId?: number): Observable<LlamadaTiempoReal[]> {
+    return interval(2000).pipe(
+      startWith(0),
+      switchMap(() =>
+        campaignId
+          ? this.getLlamadasEnTiempoRealByCampaign(campaignId)
+          : this.getLlamadasEnTiempoReal()
+      )
     );
   }
 }

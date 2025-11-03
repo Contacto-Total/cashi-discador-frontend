@@ -4,15 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
-import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo } from '../../../core/services/autodialer.service';
-
-interface LlamadaEnTiempoReal {
-  hora: string;
-  telefono: string;
-  agente: string;
-  estado: string;
-  duracion: number; // segundos desde que empezó
-}
+import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
 
 @Component({
   selector: 'app-campaign-monitoring',
@@ -36,7 +28,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   private agentesSubscription?: Subscription;
 
   // Llamadas en tiempo real
-  llamadasEnTiempoReal: LlamadaEnTiempoReal[] = [];
+  llamadasEnTiempoReal: LlamadaTiempoReal[] = [];
   private llamadasSubscription?: Subscription;
 
   constructor(
@@ -93,8 +85,11 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   onCampaignChange(): void {
     console.log('Selected campaign changed to:', this.selectedCampaignId);
-    // TODO: Filter metrics by campaign when backend supports it
-    // For now, metrics are global
+    // Restart llamadas polling with new campaign filter
+    if (this.llamadasSubscription) {
+      this.llamadasSubscription.unsubscribe();
+    }
+    this.startLlamadasPolling();
   }
 
   /**
@@ -127,26 +122,16 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   /**
    * Inicia polling de llamadas en tiempo real
-   * TODO: Implement real backend endpoint for real-time calls
+   * Filtra por campaña si hay una seleccionada
    */
   startLlamadasPolling(): void {
-    // For now, we'll simulate with the active agents' calls
-    // In the future, this should call a dedicated endpoint
-    this.llamadasSubscription = this.autoDialerService.startAgentesPolling().subscribe({
-      next: (agentes) => {
-        // Extract calls from agents who are on call
-        this.llamadasEnTiempoReal = agentes
-          .filter(a => a.estadoActual === 'EN_LLAMADA' && a.telefonoDestino)
-          .map(a => ({
-            hora: this.getCurrentTime(),
-            telefono: a.telefonoDestino || '-',
-            agente: a.nombreCompleto,
-            estado: 'En curso',
-            duracion: a.segundosEnEstado
-          }));
+    const campaignId = this.selectedCampaignId || undefined;
+    this.llamadasSubscription = this.autoDialerService.startLlamadasPolling(campaignId).subscribe({
+      next: (llamadas) => {
+        this.llamadasEnTiempoReal = llamadas;
       },
       error: (err) => {
-        console.error('Error polling llamadas:', err);
+        console.error('Error polling llamadas en tiempo real:', err);
       }
     });
   }
