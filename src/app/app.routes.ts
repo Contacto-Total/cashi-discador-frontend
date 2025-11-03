@@ -87,7 +87,7 @@ export const routes: Routes = [
   },
   {
     path: 'admin/maintenance/subportfolios',
-    loadComponent: () => import('./maintenance/components/subportfolio-maintenance/subportfolio-maintenance.component').then(m => m.SubportfolioMaintenanceComponent),
+    loadComponent: () => import('./maintenance/components/subportfolio-maintenance/subportfolio-maintenance.component').then(m => m.SubPortfolioMaintenanceComponent),
     canActivate: [authGuard, adminGuard]
   },
   {
