@@ -46,6 +46,10 @@ export class ThemeService {
     return this.currentThemeSubject.value === 'dark';
   }
 
+  isDarkMode(): boolean {
+    return this.isDarkTheme();
+  }
+
   isLightTheme(): boolean {
     return this.currentThemeSubject.value === 'light';
   }

@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import {
-  ,
 import { catchError, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -31,7 +29,6 @@ import { CustomerService } from '../../customers/services/customer.service';
   imports: [
     CommonModule,
     FormsModule,
-    ,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent
   ],
