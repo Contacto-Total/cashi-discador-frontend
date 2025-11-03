@@ -41,7 +41,7 @@ export interface SaveCustomerOutputConfigRequest {
 })
 export class CustomerOutputConfigService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/customer-outputs`;
+  private apiUrl = `${environment.tipificacionUrl}/customer-outputs`;
 
   /**
    * Guarda o actualiza configuración de outputs

@@ -15,8 +15,8 @@ import {
   providedIn: 'root'
 })
 export class PortfolioService {
-  private apiUrl = `${environment.apiUrl}/system-config`;
-  private subPortfolioUrl = `${environment.apiUrl}/subportfolios`;
+  private apiUrl = `${environment.tipificacionUrl}/system-config`;
+  private subPortfolioUrl = `${environment.tipificacionUrl}/subportfolios`;
 
   constructor(private http: HttpClient) {}
 

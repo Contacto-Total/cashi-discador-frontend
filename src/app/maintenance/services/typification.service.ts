@@ -25,7 +25,7 @@ export interface CsvMappingResource {
   providedIn: 'root'
 })
 export class TypificationService {
-  private baseUrl = environment.apiUrl;
+  private baseUrl = environment.tipificacionUrl;
 
   constructor(private http: HttpClient) {}
 

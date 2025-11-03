@@ -99,8 +99,8 @@ export interface RegisterPaymentRequest {
   providedIn: 'root'
 })
 export class ManagementService {
-  private readonly baseUrl = `${environment.apiUrl}/managements`;
-  private readonly scheduleUrl = `${environment.apiUrl}/payment-schedules`;
+  private readonly baseUrl = `${environment.tipificacionUrl}/managements`;
+  private readonly scheduleUrl = `${environment.tipificacionUrl}/payment-schedules`;
 
   constructor(private http: HttpClient) {}
 

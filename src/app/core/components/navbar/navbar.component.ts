@@ -12,6 +12,8 @@ import { AuthService } from '../../services/auth.service';
 })
 export class NavbarComponent implements OnInit {
   isMonitoreoDropdownOpen = false;
+  isCargaDatosDropdownOpen = false;
+  isMantenimientoDropdownOpen = false;
   currentUser: any = null;
 
   constructor(
@@ -25,10 +27,26 @@ export class NavbarComponent implements OnInit {
 
   toggleMonitoreoDropdown(): void {
     this.isMonitoreoDropdownOpen = !this.isMonitoreoDropdownOpen;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+  }
+
+  toggleCargaDatosDropdown(): void {
+    this.isCargaDatosDropdownOpen = !this.isCargaDatosDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+  }
+
+  toggleMantenimientoDropdown(): void {
+    this.isMantenimientoDropdownOpen = !this.isMantenimientoDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
   }
 
   closeDropdowns(): void {
     this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
   }
 
   navigateTo(path: string): void {

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface RolAsignacionRequest {
   tipoAsignacion: 'INQUILINO' | 'CARTERA' | 'SUBCARTERA';
@@ -40,7 +41,7 @@ export interface RolResponse {
 })
 export class RolService {
   private http = inject(HttpClient);
-  private apiUrl = 'http://localhost:8081/api/roles';
+  private apiUrl = `${environment.apiUrl}/roles`;
 
   obtenerTodos(): Observable<RolResponse[]> {
     return this.http.get<RolResponse[]>(this.apiUrl);

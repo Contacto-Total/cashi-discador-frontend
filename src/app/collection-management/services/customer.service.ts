@@ -49,7 +49,7 @@ export interface DebtInfoResource {
   providedIn: 'root'
 })
 export class CustomerService {
-  private readonly baseUrl = `${environment.apiUrl}/customers`;
+  private readonly baseUrl = `${environment.tipificacionUrl}/customers`;
 
   constructor(private http: HttpClient) {}
 

@@ -8,7 +8,7 @@ import { Blacklist } from '../models/blacklist.model';
   providedIn: 'root'
 })
 export class BlacklistService {
-  private apiUrl = `${environment.apiUrl}/blacklist`;
+  private apiUrl = `${environment.tipificacionUrl}/blacklist`;
 
   constructor(private http: HttpClient) {}
 

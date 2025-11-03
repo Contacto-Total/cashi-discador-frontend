@@ -35,6 +35,95 @@
         </div>
       </div>
 
+      <!-- Carga de Datos Dropdown (Solo Admin) -->
+      <div class="nav-item-dropdown" *ngIf="currentUser?.role === 'ADMIN'" (click)="toggleCargaDatosDropdown()">
+        <button class="nav-item" [class.active]="isActive('/admin/data-load')">
+          <span class="nav-icon">📂</span>
+          <span class="nav-text">Carga de Datos</span>
+          <span class="dropdown-arrow" [class.open]="isCargaDatosDropdownOpen">▼</span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div class="dropdown-menu" [class.show]="isCargaDatosDropdownOpen">
+          <a class="dropdown-item" (click)="navigateTo('/admin/data-load/initial')" [class.active]="isActive('/admin/data-load/initial')">
+            <span class="item-icon">📥</span>
+            <div class="item-content">
+              <span class="item-title">Carga Inicial de Mes</span>
+              <span class="item-desc">Importación mensual</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/data-load/daily')" [class.active]="isActive('/admin/data-load/daily')">
+            <span class="item-icon">📅</span>
+            <div class="item-content">
+              <span class="item-title">Carga Diaria</span>
+              <span class="item-desc">Actualización diaria</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- Mantenimiento Dropdown (Solo Admin) -->
+      <div class="nav-item-dropdown" *ngIf="currentUser?.role === 'ADMIN'" (click)="toggleMantenimientoDropdown()">
+        <button class="nav-item" [class.active]="isActive('/admin/maintenance')">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-text">Mantenimiento</span>
+          <span class="dropdown-arrow" [class.open]="isMantenimientoDropdownOpen">▼</span>
+        </button>
+
+        <!-- Dropdown Menu -->
+        <div class="dropdown-menu" [class.show]="isMantenimientoDropdownOpen">
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/tenants')" [class.active]="isActive('/admin/maintenance/tenants')">
+            <span class="item-icon">🏢</span>
+            <div class="item-content">
+              <span class="item-title">Proveedores</span>
+              <span class="item-desc">Gestión de tenants</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/portfolios')" [class.active]="isActive('/admin/maintenance/portfolios')">
+            <span class="item-icon">💼</span>
+            <div class="item-content">
+              <span class="item-title">Carteras</span>
+              <span class="item-desc">Gestión de portfolios</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/subportfolios')" [class.active]="isActive('/admin/maintenance/subportfolios')">
+            <span class="item-icon">📑</span>
+            <div class="item-content">
+              <span class="item-title">Subcarteras</span>
+              <span class="item-desc">Gestión de subportfolios</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/headers')" [class.active]="isActive('/admin/maintenance/headers')">
+            <span class="item-icon">📋</span>
+            <div class="item-content">
+              <span class="item-title">Config. Cabeceras</span>
+              <span class="item-desc">Configuración de headers</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/roles')" [class.active]="isActive('/admin/maintenance/roles')">
+            <span class="item-icon">🎭</span>
+            <div class="item-content">
+              <span class="item-title">Roles</span>
+              <span class="item-desc">Gestión de roles</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/users')" [class.active]="isActive('/admin/maintenance/users')">
+            <span class="item-icon">👥</span>
+            <div class="item-content">
+              <span class="item-title">Usuarios</span>
+              <span class="item-desc">Gestión de usuarios</span>
+            </div>
+          </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/maintenance/blacklist')" [class.active]="isActive('/admin/maintenance/blacklist')">
+            <span class="item-icon">🚫</span>
+            <div class="item-content">
+              <span class="item-title">Blacklist</span>
+              <span class="item-desc">Lista de bloqueo</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
       <!-- Campañas -->
       <button class="nav-item" (click)="navigateTo('/admin/campaigns')" [class.active]="isActive('/admin/campaigns')">
         <span class="nav-icon">📋</span>
@@ -68,5 +157,5 @@
   </div>
 
   <!-- Backdrop for closing dropdown -->
-  <div class="dropdown-backdrop" *ngIf="isMonitoreoDropdownOpen" (click)="closeDropdowns()"></div>
+  <div class="dropdown-backdrop" *ngIf="isMonitoreoDropdownOpen || isCargaDatosDropdownOpen || isMantenimientoDropdownOpen" (click)="closeDropdowns()"></div>
 </nav>

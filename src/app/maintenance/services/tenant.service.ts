@@ -8,7 +8,7 @@ import { Tenant } from '../models/tenant.model';
   providedIn: 'root'
 })
 export class TenantService {
-  private apiUrl = `${environment.apiUrl}/system-config/tenants`;
+  private apiUrl = `${environment.tipificacionUrl}/system-config/tenants`;
 
   constructor(private http: HttpClient) {}
 

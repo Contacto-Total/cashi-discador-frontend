@@ -63,7 +63,7 @@ export interface InstallmentRequest {
   providedIn: 'root'
 })
 export class PaymentScheduleService {
-  private readonly baseUrl = `${environment.apiUrl}/payment-schedules`;
+  private readonly baseUrl = `${environment.tipificacionUrl}/payment-schedules`;
 
   constructor(private http: HttpClient) {}
 
@@ -71,7 +71,7 @@ export class PaymentScheduleService {
    * Crea un nuevo cronograma de pagos
    */
   createPaymentSchedule(request: CreatePaymentScheduleRequest): Observable<PaymentScheduleResource> {
-    return this.http.post<PaymentScheduleResource>(`${environment.apiUrl}/payments/schedules`, request);
+    return this.http.post<PaymentScheduleResource>(`${environment.tipificacionUrl}/payments/schedules`, request);
   }
 
   /**

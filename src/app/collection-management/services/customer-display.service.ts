@@ -80,7 +80,7 @@ export interface ImportResponse {
 })
 export class CustomerDisplayService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/customers`;
+  private apiUrl = `${environment.tipificacionUrl}/customers`;
 
   /**
    * Obtiene los datos de un cliente por su ID

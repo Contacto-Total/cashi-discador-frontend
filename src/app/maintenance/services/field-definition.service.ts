@@ -8,7 +8,7 @@ import { FieldDefinition } from '../models/field-definition.model';
   providedIn: 'root'
 })
 export class FieldDefinitionService {
-  private baseUrl = `${environment.apiUrl}/system-config/field-definitions`;
+  private baseUrl = `${environment.tipificacionUrl}/system-config/field-definitions`;
 
   constructor(private http: HttpClient) {}
 

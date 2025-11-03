@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -56,6 +57,60 @@ export const routes: Routes = [
     loadComponent: () => import('./features/agent-dashboard/agent-status-dashboard.component').then(m => m.AgentStatusDashboardComponent),
     canActivate: [authGuard]
   },
+
+  // ========================================
+  // CARGA DE DATOS (Solo Admin)
+  // ========================================
+  {
+    path: 'admin/data-load/initial',
+    loadComponent: () => import('./data-load/components/initial-load/initial-load.component').then(m => m.InitialLoadComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/data-load/daily',
+    loadComponent: () => import('./data-load/components/daily-load/daily-load.component').then(m => m.DailyLoadComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+
+  // ========================================
+  // MANTENIMIENTO (Solo Admin)
+  // ========================================
+  {
+    path: 'admin/maintenance/tenants',
+    loadComponent: () => import('./maintenance/components/tenant-maintenance/tenant-maintenance.component').then(m => m.TenantMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/maintenance/portfolios',
+    loadComponent: () => import('./maintenance/components/portfolio-maintenance/portfolio-maintenance.component').then(m => m.PortfolioMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/maintenance/subportfolios',
+    loadComponent: () => import('./maintenance/components/subportfolio-maintenance/subportfolio-maintenance.component').then(m => m.SubportfolioMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/maintenance/headers',
+    loadComponent: () => import('./maintenance/components/header-configuration/header-configuration.component').then(m => m.HeaderConfigurationComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/maintenance/roles',
+    loadComponent: () => import('./maintenance/components/roles-management/roles-management.component').then(m => m.RolesManagementComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/maintenance/users',
+    loadComponent: () => import('./maintenance/components/user-management/user-management.component').then(m => m.UserManagementComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/maintenance/blacklist',
+    loadComponent: () => import('./maintenance/components/blacklist-maintenance/blacklist-maintenance.component').then(m => m.BlacklistMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+
   {
     path: '',
     redirectTo: '/login',

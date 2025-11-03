@@ -14,7 +14,7 @@ import {
   providedIn: 'root'
 })
 export class HeaderConfigurationService {
-  private baseUrl = `${environment.apiUrl}/system-config/header-configurations`;
+  private baseUrl = `${environment.tipificacionUrl}/system-config/header-configurations`;
 
   constructor(private http: HttpClient) {}
 

@@ -73,7 +73,7 @@ export interface CreatePaymentScheduleRequest {
   providedIn: 'root'
 })
 export class PaymentService {
-  private readonly baseUrl = `${environment.apiUrl}/payments`;
+  private readonly baseUrl = `${environment.tipificacionUrl}/payments`;
 
   constructor(private http: HttpClient) {}
 

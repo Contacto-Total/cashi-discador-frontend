@@ -8,6 +8,9 @@ export const environment = {
     gatewayUrl: '/api',
     wsUrl: '/ws',
 
+    // Tipificación Backend (puerto 8085) a través del gateway
+    tipificacionUrl: '/api/tipificacion/v1',
+
     // WhatsApp Backend
     whatsappApiUrl: '/wsp-api',
     whatsappWsUrl: '/wsp-ws',

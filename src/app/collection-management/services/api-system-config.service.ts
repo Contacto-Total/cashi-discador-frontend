@@ -103,8 +103,8 @@ export interface FieldTypeResource {
   providedIn: 'root'
 })
 export class ApiSystemConfigService {
-  private readonly baseUrl = `${environment.apiUrl}/system-config`;
-  private readonly classificationsUrl = `${environment.apiUrl}/typifications`;
+  private readonly baseUrl = `${environment.tipificacionUrl}/system-config`;
+  private readonly classificationsUrl = `${environment.tipificacionUrl}/typifications`;
 
   // Signals para datos reactivos
   contactClassifications = signal<ContactClassificationResource[]>([]);
@@ -169,7 +169,7 @@ export class ApiSystemConfigService {
    */
   private loadTypificationsFromCatalog(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<TypificationCatalogResource[]>(`${environment.apiUrl}/typifications`)
+      this.http.get<TypificationCatalogResource[]>(`${environment.tipificacionUrl}/typifications`)
         .pipe(
           tap(data => {
             console.log('Tipificaciones cargadas desde catálogo:', data);
@@ -230,7 +230,7 @@ export class ApiSystemConfigService {
       return;
 
       /*
-      let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/typifications`;
+      let url = `${environment.tipificacionUrl}/tenants/${this.currentTenantId}/typifications`;
       if (this.currentPortfolioId) {
         url += `?portfolioId=${this.currentPortfolioId}`;
       }
@@ -403,7 +403,7 @@ export class ApiSystemConfigService {
       throw new Error('No hay tenant configurado');
     }
 
-    let url = `${environment.apiUrl}/tenants/${this.currentTenantId}/typifications/${typificationId}/fields`;
+    let url = `${environment.tipificacionUrl}/tenants/${this.currentTenantId}/typifications/${typificationId}/fields`;
     if (this.currentPortfolioId) {
       url += `?portfolioId=${this.currentPortfolioId}`;
     }
@@ -425,7 +425,7 @@ export class ApiSystemConfigService {
    * Obtiene todos los tipos de campo disponibles
    */
   getAllFieldTypes(): Observable<FieldTypeResource[]> {
-    const url = `${environment.apiUrl}/field-types`;
+    const url = `${environment.tipificacionUrl}/field-types`;
     return this.http.get<FieldTypeResource[]>(url).pipe(
       catchError(error => {
         console.error('Error cargando tipos de campo:', error);
@@ -438,7 +438,7 @@ export class ApiSystemConfigService {
    * Obtiene tipos de campo disponibles para campos principales
    */
   getFieldTypesForMainFields(): Observable<FieldTypeResource[]> {
-    const url = `${environment.apiUrl}/field-types/main-fields`;
+    const url = `${environment.tipificacionUrl}/field-types/main-fields`;
     return this.http.get<FieldTypeResource[]>(url).pipe(
       catchError(error => {
         console.error('Error cargando tipos para campos principales:', error);
@@ -451,7 +451,7 @@ export class ApiSystemConfigService {
    * Obtiene tipos de campo disponibles para columnas de tabla
    */
   getFieldTypesForTableColumns(): Observable<FieldTypeResource[]> {
-    const url = `${environment.apiUrl}/field-types/table-columns`;
+    const url = `${environment.tipificacionUrl}/field-types/table-columns`;
     return this.http.get<FieldTypeResource[]>(url).pipe(
       catchError(error => {
         console.error('Error cargando tipos para columnas de tabla:', error);
