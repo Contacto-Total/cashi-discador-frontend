@@ -29,6 +29,8 @@ export class WebsocketService {
   private connectionStatus = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatus.asObservable();
   private messageSubjects: Map<string, Subject<any>> = new Map();
+  private latencyInterval: any = null;
+  private currentExtension: string | null = null;
 
   constructor(private authService: AuthService) {}
 
@@ -121,5 +123,62 @@ export class WebsocketService {
 
   isConnected(): boolean {
     return this.connectionStatus.value;
+  }
+
+  /**
+   * Start measuring latency via WebSocket ping-pong
+   * @param extension The SIP extension (e.g., "1001")
+   */
+  startLatencyMonitoring(extension: string): void {
+    this.currentExtension = extension;
+
+    // Subscribe to PONG responses
+    this.subscribe('/user/queue/latency').subscribe((pongMessage: any) => {
+      if (pongMessage.type === 'PONG' && pongMessage.clientTimestamp) {
+        const now = Date.now();
+        const rtt = now - pongMessage.clientTimestamp; // Round-trip time in milliseconds
+
+        console.log(`📡 Latency for ${extension}: ${rtt} ms`);
+
+        // Send latency update to backend
+        this.send('/app/latency.update', {
+          extension: extension,
+          latency: rtt
+        });
+      }
+    });
+
+    // Send PING every 10 seconds
+    this.latencyInterval = setInterval(() => {
+      if (this.isConnected() && this.currentExtension) {
+        const timestamp = Date.now();
+        this.send('/app/latency.ping', {
+          type: 'PING',
+          timestamp: timestamp,
+          extension: this.currentExtension
+        });
+      }
+    }, 10000); // Every 10 seconds
+
+    // Send first ping immediately
+    if (this.isConnected()) {
+      const timestamp = Date.now();
+      this.send('/app/latency.ping', {
+        type: 'PING',
+        timestamp: timestamp,
+        extension: extension
+      });
+    }
+  }
+
+  /**
+   * Stop latency monitoring
+   */
+  stopLatencyMonitoring(): void {
+    if (this.latencyInterval) {
+      clearInterval(this.latencyInterval);
+      this.latencyInterval = null;
+    }
+    this.currentExtension = null;
   }
 }

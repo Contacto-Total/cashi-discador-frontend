@@ -1,5 +1,6 @@
-import { Injectable, EventEmitter } from '@angular/core';
+import { Injectable, EventEmitter, inject } from '@angular/core';
 import JsSIP from 'jssip';
+import { WebsocketService } from './websocket.service';
 
 export enum CallState {
   IDLE = 'IDLE',
@@ -26,6 +27,9 @@ export class SipService {
   public onError = new EventEmitter<string>();
   public onRegistered = new EventEmitter<boolean>();
   public onIncomingCall = new EventEmitter<{ from: string }>();
+
+  private websocketService = inject(WebsocketService);
+  private currentExtension: string | null = null;
 
   constructor() {
     // Enable JsSIP debug (disable in production)
@@ -62,6 +66,8 @@ export class SipService {
   async register(extension: string, password: string, wsServer: string, domain: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
+        // Store extension for latency monitoring
+        this.currentExtension = extension;
         console.log('🔌 Registering to FreeSWITCH:', { extension, wsServer, domain });
 
         // Detect if page is loaded over HTTPS
@@ -146,6 +152,12 @@ export class SipService {
           console.log('✅ Successfully registered to FreeSWITCH');
           this.onRegistered.emit(true);
 
+          // Start latency monitoring via WebSocket ping-pong
+          if (this.currentExtension) {
+            console.log(`📡 Starting latency monitoring for extension ${this.currentExtension}`);
+            this.websocketService.startLatencyMonitoring(this.currentExtension);
+          }
+
           if (!isResolved) {
             isResolved = true;
             if (registrationTimeout) clearTimeout(registrationTimeout);
@@ -156,6 +168,9 @@ export class SipService {
         this.ua.on('unregistered', () => {
           console.log('❌ Unregistered from FreeSWITCH');
           this.onRegistered.emit(false);
+
+          // Stop latency monitoring
+          this.websocketService.stopLatencyMonitoring();
         });
 
         this.ua.on('registrationFailed', (data: any) => {
