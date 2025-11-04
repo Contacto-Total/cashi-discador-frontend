@@ -152,13 +152,14 @@
 
       <!-- Theme Toggle Button -->
       <button class="btn-theme" (click)="toggleTheme()" title="Cambiar tema">
-        @if (themeService.isDarkMode()) {
+        <ng-container *ngIf="isDarkMode(); else lightMode">
           <lucide-angular name="sun" [size]="20" class="theme-icon"></lucide-angular>
           <span class="theme-text">Claro</span>
-        } @else {
+        </ng-container>
+        <ng-template #lightMode>
           <lucide-angular name="moon" [size]="20" class="theme-icon"></lucide-angular>
           <span class="theme-text">Oscuro</span>
-        }
+        </ng-template>
       </button>
 
       <button class="btn-logout" (click)="logout()">
