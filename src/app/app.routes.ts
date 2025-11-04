@@ -57,6 +57,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/agent-dashboard/agent-status-dashboard.component').then(m => m.AgentStatusDashboardComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'collection-management',
+    loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage),
+    canActivate: [authGuard]
+  },
 
   // ========================================
   // CARGA DE DATOS (Solo Admin)
