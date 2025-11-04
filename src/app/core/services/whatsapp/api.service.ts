@@ -13,15 +13,15 @@ export class ApiService {
   constructor(private http: HttpClient) { }
 
   getContacts(): Observable<Contact[]> {
-    return this.http.get<Contact[]>(`${this.API_BASE}/contacts`);
+    return this.http.get<Contact[]>(`${this.API_BASE}/frontend/contacts`);
   }
 
   getChats(): Observable<Chat[]> {
-    return this.http.get<Chat[]>(`${this.API_BASE}/chats`);
+    return this.http.get<Chat[]>(`${this.API_BASE}/frontend/chats`);
   }
 
   getMessages(chat: string): Observable<Message[]> {
-    return this.http.get<Message[]>(`${this.API_BASE}/chats/${chat}/messages`);
+    return this.http.get<Message[]>(`${this.API_BASE}/frontend/chats/${chat}/messages`);
   }
 
   sendTextMessage(to: string, message: string, quotedMessageId?: string): Observable<any> {
@@ -29,7 +29,7 @@ export class ApiService {
     if (quotedMessageId) {
       payload.quotedMessageId = quotedMessageId;
     }
-    return this.http.post(`${this.API_BASE}/send-text`, payload);
+    return this.http.post(`${this.API_BASE}/frontend/send-text`, payload);
   }
 
   sendMediaMessage(to: string, media: string, mimetype: string, caption?: string): Observable<any> {
@@ -55,21 +55,21 @@ export class ApiService {
     }
 
     console.log('📤 Enviando media:', { to, kind, mime: mimetype, captionLength: caption?.length || 0, mediaLength: media.length });
-    return this.http.post(`${this.API_BASE}/send-media`, payload);
+    return this.http.post(`${this.API_BASE}/frontend/send-media`, payload);
   }
 
   markAsRead(chat: string, upTo?: string): Observable<any> {
-    return this.http.post(`${this.API_BASE}/chats/${chat}/mark-read`, {});
+    return this.http.post(`${this.API_BASE}/frontend/chats/${chat}/mark-read`, {});
   }
 
   // Obtener estado de ventana de respuesta
   getWindowStatus(chatJid: string): Observable<any> {
-    return this.http.get(`${this.API_BASE}/chats/${chatJid}/window-status`);
+    return this.http.get(`${this.API_BASE}/frontend/chats/${chatJid}/window-status`);
   }
 
   // Obtener chats bloqueados
   getBlockedChats(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.API_BASE}/blocked-chats`);
+    return this.http.get<any[]>(`${this.API_BASE}/frontend/blocked-chats`);
   }
 
   // Logout helper
