@@ -6,6 +6,15 @@
   background-color: #0A0E27;
 }
 
+/* Theme Support for App Container */
+body.light-theme .app-container {
+  background-color: #f8fafc;
+}
+
+body.dark-theme .app-container {
+  background-color: #0A0E27;
+}
+
 /* CASHI Navbar */
 .cashi-navbar {
   display: flex;
@@ -90,6 +99,7 @@
   font-size: 20px;
   width: 20px;
   height: 20px;
+  color: inherit;
 }
 
 .nav-item:hover {

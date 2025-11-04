@@ -67,6 +67,104 @@ html, body {
   color-scheme: dark;
 }
 
+/* ========================================
+   TEMA CLARO - SOBRESCRITURAS PARA MÓDULOS ANTIGUOS CON COLORES HARDCODED
+   ======================================== */
+
+/* Cuando body tiene clase light-theme, sobrescribir colores hardcoded */
+body.light-theme {
+  background-color: #f8fafc !important;
+}
+
+/* Contenedores principales oscuros -> claros */
+body.light-theme .monitoring-container,
+body.light-theme .campaign-container,
+body.light-theme .dashboard-container,
+body.light-theme .admin-container,
+body.light-theme .main-content {
+  background-color: #f8fafc !important;
+}
+
+/* Cards y paneles con fondo #1E293B -> blanco */
+body.light-theme .card,
+body.light-theme .panel,
+body.light-theme .campaign-selector,
+body.light-theme .stats-grid,
+body.light-theme .metrics-card,
+body.light-theme .mat-mdc-card {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* Headers y títulos blancos -> oscuros */
+body.light-theme h1,
+body.light-theme h2,
+body.light-theme h3,
+body.light-theme h4,
+body.light-theme .header h1 {
+  color: #0f172a !important;
+}
+
+/* Texto general blanco -> oscuro */
+body.light-theme p,
+body.light-theme span:not(.mat-mdc-button-touch-target),
+body.light-theme label,
+body.light-theme div {
+  color: #475569;
+}
+
+/* Bordes oscuros #334155 -> claros */
+body.light-theme .header,
+body.light-theme .card,
+body.light-theme .panel {
+  border-color: #e2e8f0 !important;
+}
+
+/* Botones oscuros -> claros */
+body.light-theme .btn-back {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Tablas */
+body.light-theme table {
+  background-color: #ffffff !important;
+}
+
+body.light-theme th {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme td {
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Inputs y selects */
+body.light-theme input,
+body.light-theme select,
+body.light-theme textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Material Components en modo claro */
+body.light-theme .mat-mdc-form-field {
+  color: #1e293b !important;
+}
+
+body.light-theme .mat-mdc-select-value,
+body.light-theme .mat-mdc-option {
+  color: #1e293b !important;
+}
+
+body.light-theme .mat-mdc-option {
+  background-color: #ffffff !important;
+}
+
 /* Clases de utilidad que responden al tema */
 /* Fondos */
 .bg-app-primary { background-color: var(--bg-primary); }
