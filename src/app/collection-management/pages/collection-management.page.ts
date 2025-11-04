@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, of } from 'rxjs';
+import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
@@ -22,6 +22,9 @@ import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-conf
 import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
+import { SipService, CallState } from '../../core/services/sip.service';
+import { AgentService } from '../../core/services/agent.service';
+import { AgentState } from '../../core/models/agent-status.model';
 
 @Component({
   selector: 'app-collection-management',
@@ -1039,6 +1042,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   private managementId?: string;
   private callStartTime?: string;
 
+  private callStateSubscription?: Subscription;
+  public callState: CallState = CallState.IDLE;
+  public isMuted = signal(false);
+
   constructor(
     private systemConfigService: SystemConfigService,
     private managementService: ManagementService,
@@ -1049,12 +1056,48 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private customerOutputConfigService: CustomerOutputConfigService,
     private customerService: CustomerService,
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private sipService: SipService,
+    private agentService: AgentService
   ) {}
 
   ngOnInit() {
     this.loadTenants();
     this.loadManagementHistory();
+
+    // Suscribirse a cambios de estado de llamada
+    this.callStateSubscription = this.sipService.onCallStatus.subscribe((state: CallState) => {
+      console.log('📞 [CollectionManagement] Estado de llamada:', state);
+      this.callState = state;
+
+      // Cuando la llamada se activa, cambiar estado a EN_LLAMADA
+      if (state === CallState.ACTIVE && !this.callActive()) {
+        this.callActive.set(true);
+        this.startCall(); // Iniciar timer
+        // Cambiar estado del agente a EN_LLAMADA
+        const agentId = 1; // TODO: Obtener del AuthService
+        this.agentService.changeAgentStatus(agentId, { estado: AgentState.EN_LLAMADA }).subscribe({
+          next: () => console.log('✅ Estado cambiado a EN_LLAMADA'),
+          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+        });
+      }
+
+      // Cuando la llamada termina, cambiar estado a TIPIFICANDO
+      if ((state === CallState.ENDED || state === CallState.IDLE) && this.callActive()) {
+        this.callActive.set(false);
+        // Detener timer
+        if (this.callTimer) {
+          clearInterval(this.callTimer);
+          this.callTimer = undefined;
+        }
+        // Cambiar estado del agente a TIPIFICANDO
+        const agentId = 1; // TODO: Obtener del AuthService
+        this.agentService.changeAgentStatus(agentId, { estado: AgentState.TIPIFICANDO }).subscribe({
+          next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
+          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+        });
+      }
+    });
   }
 
   loadTenants() {
@@ -1352,6 +1395,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.callTimer) {
       clearInterval(this.callTimer);
+    }
+    // Limpiar suscripción de estado de llamada
+    if (this.callStateSubscription) {
+      this.callStateSubscription.unsubscribe();
     }
   }
 
@@ -2196,10 +2243,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.activeTab.set('historial');
 
-    // Ocultar mensaje de éxito
-    setTimeout(() => {
-      this.showSuccess.set(false);
-    }, 3000);
+    // Cambiar estado a DISPONIBLE y volver al dashboard
+    console.log('✅ Gestión guardada, cambiando estado a DISPONIBLE...');
+    const agentId = 1; // TODO: Obtener del AuthService
+    this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+      next: () => {
+        console.log('✅ Estado cambiado a DISPONIBLE');
+        // Esperar 2 segundos para mostrar mensaje de éxito, luego navegar
+        setTimeout(() => {
+          this.showSuccess.set(false);
+          console.log('🔄 Navegando a /agent-dashboard...');
+          this.router.navigate(['/agent-dashboard']);
+        }, 2000);
+      },
+      error: (err: any) => {
+        console.error('❌ Error cambiando estado:', err);
+        // Navegar de todas formas aunque falle el cambio de estado
+        setTimeout(() => {
+          this.showSuccess.set(false);
+          this.router.navigate(['/agent-dashboard']);
+        }, 2000);
+      }
+    });
   }
 
   private validateForm(): boolean {
@@ -2487,5 +2552,53 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.loadManagementHistory();
 
     console.log('[TEST] Cliente cargado exitosamente');
+  }
+
+  // ============================================
+  // MÉTODOS DE CONTROL DE LLAMADA (SIP)
+  // ============================================
+
+  /**
+   * Colgar llamada activa
+   */
+  hangupCall() {
+    console.log('📵 Colgando llamada...');
+    this.sipService.hangup();
+  }
+
+  /**
+   * Alternar mutear/desmutear
+   */
+  toggleMute() {
+    if (this.isMuted()) {
+      console.log('🔊 Desmuteando...');
+      this.sipService.unmute();
+      this.isMuted.set(false);
+    } else {
+      console.log('🔇 Muteando...');
+      this.sipService.mute();
+      this.isMuted.set(true);
+    }
+  }
+
+  /**
+   * Verificar si está en llamada activa
+   */
+  isInActiveCall(): boolean {
+    return this.callState === CallState.ACTIVE;
+  }
+
+  /**
+   * Obtener texto del estado de llamada
+   */
+  getCallStateText(): string {
+    switch (this.callState) {
+      case CallState.IDLE: return 'LISTO';
+      case CallState.CONNECTING: return 'CONECTANDO...';
+      case CallState.RINGING: return 'TIMBRANDO...';
+      case CallState.ACTIVE: return 'EN LLAMADA';
+      case CallState.ENDED: return 'FINALIZADA';
+      default: return 'DESCONOCIDO';
+    }
   }
 }
