@@ -5,6 +5,10 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService } from '../../../core/services/autodialer.service';
+import { TenantService } from '../../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../../maintenance/services/portfolio.service';
+import { Tenant } from '../../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 
 @Component({
   selector: 'app-campaign-management',
@@ -30,8 +34,19 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     status: 'DRAFT',
     dialMode: 'PROGRESSIVE',
     maxAttempts: 3,
-    retryInterval: 60
+    retryInterval: 60,
+    tenantId: undefined,
+    portfolioId: undefined,
+    subPortfolioId: undefined
   };
+
+  // Datos para selectores en cascada
+  tenants: Tenant[] = [];
+  portfolios: Portfolio[] = [];
+  subPortfolios: SubPortfolio[] = [];
+  selectedTenantId: number = 0;
+  selectedPortfolioId: number = 0;
+  selectedSubPortfolioId: number = 0;
 
   importLimit: number = 100;
 
@@ -43,6 +58,8 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   constructor(
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
+    private tenantService: TenantService,
+    private portfolioService: PortfolioService,
     private router: Router
   ) {}
 
@@ -50,6 +67,46 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.loadCampaigns();
     this.loadImportStats();
     this.loadAutoDialerState();
+    this.loadTenants();
+  }
+
+  loadTenants(): void {
+    this.tenantService.getAllTenants().subscribe({
+      next: (tenants) => {
+        this.tenants = tenants.filter(t => t.isActive);
+      },
+      error: (err) => console.error('Error loading tenants:', err)
+    });
+  }
+
+  onTenantChange(): void {
+    this.selectedPortfolioId = 0;
+    this.selectedSubPortfolioId = 0;
+    this.portfolios = [];
+    this.subPortfolios = [];
+
+    if (this.selectedTenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
+        next: (portfolios) => {
+          this.portfolios = portfolios.filter(p => p.isActive);
+        },
+        error: (err) => console.error('Error loading portfolios:', err)
+      });
+    }
+  }
+
+  onPortfolioChange(): void {
+    this.selectedSubPortfolioId = 0;
+    this.subPortfolios = [];
+
+    if (this.selectedPortfolioId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
+        next: (subPortfolios) => {
+          this.subPortfolios = subPortfolios.filter(sp => sp.isActive);
+        },
+        error: (err) => console.error('Error loading sub-portfolios:', err)
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -122,6 +179,16 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       this.error = 'El nombre de la campaña es requerido';
       return;
     }
+
+    if (!this.selectedSubPortfolioId || this.selectedSubPortfolioId === 0) {
+      this.error = 'Debe seleccionar una subcartera';
+      return;
+    }
+
+    // Asignar los IDs seleccionados
+    this.newCampaign.tenantId = this.selectedTenantId;
+    this.newCampaign.portfolioId = this.selectedPortfolioId;
+    this.newCampaign.subPortfolioId = this.selectedSubPortfolioId;
 
     this.loading = true;
     this.error = null;

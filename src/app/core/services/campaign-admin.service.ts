@@ -18,6 +18,11 @@ export interface Campaign {
   createdAt?: string;
   updatedAt?: string;
 
+  // Relaciones con Tenant/Portfolio/SubPortfolio
+  tenantId?: number;
+  portfolioId?: number;
+  subPortfolioId?: number;
+
   // Estadísticas (solo para lectura)
   totalContacts?: number;
   pendingContacts?: number;

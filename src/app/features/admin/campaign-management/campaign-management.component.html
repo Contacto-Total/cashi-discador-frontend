@@ -146,6 +146,41 @@
           rows="3"></textarea>
       </div>
 
+      <!-- Selectores en cascada: Inquilino → Cartera → Subcartera -->
+      <div class="form-row">
+        <div class="form-group">
+          <label>Proveedor (Inquilino) *</label>
+          <select [(ngModel)]="selectedTenantId" (ngModelChange)="onTenantChange()" class="form-select" required>
+            <option [ngValue]="0">Seleccione un proveedor...</option>
+            <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
+              {{ tenant.tenantCode }} - {{ tenant.tenantName }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Cartera *</label>
+          <select [(ngModel)]="selectedPortfolioId" (ngModelChange)="onPortfolioChange()"
+                  [disabled]="selectedTenantId === 0" class="form-select" required>
+            <option [ngValue]="0">Seleccione una cartera...</option>
+            <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
+              {{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Subcartera *</label>
+        <select [(ngModel)]="selectedSubPortfolioId"
+                [disabled]="selectedPortfolioId === 0" class="form-select" required>
+          <option [ngValue]="0">Seleccione una subcartera...</option>
+          <option *ngFor="let sp of subPortfolios" [ngValue]="sp.id">
+            {{ sp.subPortfolioCode }} - {{ sp.subPortfolioName }}
+          </option>
+        </select>
+      </div>
+
       <div class="form-row">
         <div class="form-group">
           <label>Modo de Discado</label>

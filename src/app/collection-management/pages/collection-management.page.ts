@@ -107,50 +107,6 @@ import { AgentState } from '../../core/models/agent-status.model';
         </div>
       </div>
 
-      <!-- TEMPORAL: Filtros de Tenant y Portfolio - ABSOLUTE POSITION FLOTANTE para fácil eliminación -->
-      @if (tenants.length > 0 || portfolios.length > 0) {
-        <div class="fixed top-16 left-4 z-50 flex items-center gap-2 bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-500 dark:border-yellow-600 px-3 py-2 rounded-lg shadow-xl text-[10px]">
-          <span class="text-yellow-800 dark:text-yellow-200 font-bold">⚠️ TEMP - Testing Only:</span>
-
-          @if (tenants.length > 0) {
-            <select
-              [(ngModel)]="selectedTenantId"
-              (change)="onTenantChange()"
-              class="text-[10px] font-semibold text-gray-900 dark:text-white bg-white dark:bg-slate-800 border border-gray-400 dark:border-gray-600 rounded px-2 py-1 cursor-pointer shadow-sm">
-              <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
-                Cliente: {{ tenant.tenantName }}
-              </option>
-            </select>
-          }
-
-          @if (portfolios.length > 0) {
-            <select
-              [(ngModel)]="selectedPortfolioId"
-              (change)="onPortfolioChange()"
-              class="text-[10px] font-semibold text-gray-900 dark:text-white bg-white dark:bg-slate-800 border border-gray-400 dark:border-gray-600 rounded px-2 py-1 cursor-pointer shadow-sm">
-              <option [ngValue]="undefined">Cartera: Todas</option>
-              <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
-                Cartera: {{ portfolio.portfolioName }}
-              </option>
-            </select>
-          }
-
-          <input
-            type="text"
-            [(ngModel)]="testDocument"
-            (keyup.enter)="searchByTestDocument()"
-            placeholder="Documento..."
-            class="text-[10px] font-semibold text-gray-900 bg-white border-2 border-yellow-500 rounded px-2 py-1 w-28 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-
-          <input
-            type="text"
-            [(ngModel)]="testPhone"
-            (keyup.enter)="searchByTestPhone()"
-            placeholder="Teléfono..."
-            class="text-[10px] font-semibold text-gray-900 bg-white border-2 border-yellow-500 rounded px-2 py-1 w-28 shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-        </div>
-      }
-
       <!-- Barra de Info Cliente - ULTRA COMPACTA -->
       <div class="bg-white dark:bg-slate-900 border-b border-blue-400 dark:border-slate-700 shadow-sm relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-blue-50 dark:from-blue-950/50 to-transparent opacity-50"></div>
@@ -1107,10 +1063,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.incomingPhoneNumber = callInfo.from;
 
       // Buscar y cargar automáticamente el cliente por su número de teléfono
-      if (this.selectedTenantId && callInfo.from) {
+      if (callInfo.from) {
         this.autoLoadCustomerByPhone(callInfo.from);
-      } else {
-        console.warn('⚠️ No se puede buscar cliente: tenant no seleccionado');
       }
     });
   }
@@ -1118,16 +1072,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   /**
    * Busca y carga automáticamente un cliente por su número de teléfono
    * Se llama cuando llega una llamada entrante
+   * Busca en todos los tenants/carteras/subcarteras
    */
   private autoLoadCustomerByPhone(phoneNumber: string) {
     console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
 
-    if (!this.selectedTenantId) {
-      console.error('❌ No hay tenant seleccionado');
-      return;
-    }
-
-    this.customerService.searchCustomersByCriteria(this.selectedTenantId, 'telefono', phoneNumber).subscribe({
+    this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber).subscribe({
       next: (customers) => {
         if (customers && customers.length > 0) {
           console.log('✅ [AUTO-LOAD] Cliente encontrado:', customers[0]);
