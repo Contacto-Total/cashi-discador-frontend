@@ -2,6 +2,7 @@ import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import * as XLSX from 'xlsx';
 import { HeaderConfigurationService } from '../../../maintenance/services/header-configuration.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
@@ -444,7 +445,6 @@ export class InitialLoadComponent implements OnInit {
       return;
     }
 
-    const XLSX = (window as any).XLSX;
     const headers = this.previewHeaders().map(h => h.headerName);
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers]);
@@ -461,7 +461,6 @@ export class InitialLoadComponent implements OnInit {
     const file = event.target.files[0];
     if (!file) return;
 
-    const XLSX = (window as any).XLSX;
     const reader = new FileReader();
 
     reader.onload = async (e: any) => {
