@@ -15,8 +15,6 @@ import { SipService } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
-import { IncomingCallModalComponent } from './shared/components/incoming-call-modal/incoming-call-modal.component';
-import { ActiveCallModalComponent } from './shared/components/active-call-modal/active-call-modal.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -41,10 +39,7 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Call Center';
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
-  private incomingCallSubscription?: Subscription;
   private dialogRef: any;
-  private incomingCallDialogRef: any;
-  private activeCallDialogRef: any;
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
@@ -87,7 +82,6 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
-    this.incomingCallSubscription?.unsubscribe();
     this.inactivityService.detener();
   }
 
@@ -171,22 +165,14 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sipService.enableAutoAnswer();
       console.log('🤖 Auto-answer HABILITADO para auto-dialer');
 
-      // Suscribirse a llamadas entrantes (solo para llamadas normales, no auto-answer)
-      this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((data) => {
-        this.mostrarLlamadaEntrante(data.from);
-      });
-
-      // Suscribirse a cambios de estado para detectar llamadas auto-contestadas
+      // Suscribirse a cambios de estado para navegar a tipificación
       this.sipService.onCallStatus.subscribe((state) => {
-        console.log(`📡 [App] Estado de llamada: ${state}, activeDialog=${!!this.activeCallDialogRef}, incomingDialog=${!!this.incomingCallDialogRef}`);
+        console.log(`📡 [App] Estado de llamada: ${state}`);
 
-        if (state === 'ACTIVE' && !this.activeCallDialogRef && !this.incomingCallDialogRef) {
-          // Llamada activa sin popups abiertos = auto-contestada
-          console.log('🤖 [App] Llamada auto-contestada detectada, abriendo popup de control');
-          // Obtener el número desde la sesión actual (no tenemos onIncomingCall event)
-          this.mostrarLlamadaActiva('Auto-dialer');
-        } else if (state === 'ACTIVE') {
-          console.log('✅ [App] Llamada ACTIVE pero popup ya está abierto, no hacer nada');
+        if (state === 'ACTIVE') {
+          // Llamada activa = navegar directo a tipificación
+          console.log('📞 [App] Llamada conectada, navegando a tipificación...');
+          this.router.navigate(['/collection-management']);
         }
       });
 
@@ -196,64 +182,6 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Mostrar popup de llamada entrante
-   */
-  private mostrarLlamadaEntrante(from: string): void {
-    // No mostrar modal si ya está abierto
-    if (this.incomingCallDialogRef) {
-      return;
-    }
-
-    this.incomingCallDialogRef = this.dialog.open(IncomingCallModalComponent, {
-      width: '400px',
-      disableClose: true,
-      hasBackdrop: true,
-      data: { from }
-    });
-
-    this.incomingCallDialogRef.afterClosed().subscribe((result: string) => {
-      this.incomingCallDialogRef = null;
-
-      if (result === 'answer') {
-        // Contestar la llamada
-        this.sipService.answer();
-        console.log('✅ Llamada contestada');
-
-        // Abrir popup de llamada activa
-        this.mostrarLlamadaActiva(from);
-      } else if (result === 'reject') {
-        // Rechazar la llamada
-        this.sipService.hangup();
-        console.log('❌ Llamada rechazada');
-      }
-    });
-  }
-
-  /**
-   * Mostrar popup de llamada activa con controles
-   */
-  private mostrarLlamadaActiva(from: string): void {
-    // No mostrar modal si ya está abierto
-    if (this.activeCallDialogRef) {
-      console.log('⚠️ [App] Popup de llamada activa ya está abierto, no abrir otro');
-      return;
-    }
-
-    console.log('📞 [App] Abriendo popup de llamada activa para:', from);
-
-    this.activeCallDialogRef = this.dialog.open(ActiveCallModalComponent, {
-      width: '400px',
-      disableClose: true,
-      hasBackdrop: false, // Permitir interactuar con la página de fondo
-      data: { from }
-    });
-
-    this.activeCallDialogRef.afterClosed().subscribe(() => {
-      console.log('📞 [App] Popup de llamada activa CERRADO');
-      this.activeCallDialogRef = null;
-    });
-  }
 
   logout(): void {
     this.inactivityService.detener();
