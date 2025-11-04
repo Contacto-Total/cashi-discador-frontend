@@ -205,6 +205,40 @@
   font-size: 0.9rem;
 }
 
+/* Theme Toggle Button */
+.btn-theme {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10B981;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-theme:hover {
+  background: rgba(16, 185, 129, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.theme-icon {
+  transition: transform 0.3s;
+}
+
+.btn-theme:hover .theme-icon {
+  transform: rotate(20deg);
+}
+
+.theme-text {
+  font-size: 0.85rem;
+}
+
 .btn-logout {
   display: flex;
   align-items: center;
@@ -270,6 +304,14 @@
 
   .user-name {
     display: none;
+  }
+
+  .theme-text {
+    display: none;
+  }
+
+  .btn-theme {
+    padding: 0.6rem;
   }
 }
 

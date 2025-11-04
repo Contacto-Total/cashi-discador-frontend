@@ -149,6 +149,18 @@
         <span class="user-icon">👤</span>
         <span class="user-name">{{ currentUser?.username || 'Usuario' }}</span>
       </div>
+
+      <!-- Theme Toggle Button -->
+      <button class="btn-theme" (click)="toggleTheme()" title="Cambiar tema">
+        @if (themeService.isDarkMode()) {
+          <lucide-angular name="sun" [size]="20" class="theme-icon"></lucide-angular>
+          <span class="theme-text">Claro</span>
+        } @else {
+          <lucide-angular name="moon" [size]="20" class="theme-icon"></lucide-angular>
+          <span class="theme-text">Oscuro</span>
+        }
+      </button>
+
       <button class="btn-logout" (click)="logout()">
         <span>🚪</span>
         <span>Salir</span>
