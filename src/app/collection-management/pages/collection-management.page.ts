@@ -1043,8 +1043,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   private callStartTime?: string;
 
   private callStateSubscription?: Subscription;
+  private incomingCallSubscription?: Subscription;
   public callState: CallState = CallState.IDLE;
   public isMuted = signal(false);
+  private incomingPhoneNumber: string | null = null;
 
   constructor(
     private systemConfigService: SystemConfigService,
@@ -1096,6 +1098,47 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
           error: (err: any) => console.error('❌ Error cambiando estado:', err)
         });
+      }
+    });
+
+    // Suscribirse a llamadas entrantes para cargar automáticamente el cliente
+    this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((callInfo: { from: string }) => {
+      console.log('📲 [CollectionManagement] Llamada entrante de:', callInfo.from);
+      this.incomingPhoneNumber = callInfo.from;
+
+      // Buscar y cargar automáticamente el cliente por su número de teléfono
+      if (this.selectedTenantId && callInfo.from) {
+        this.autoLoadCustomerByPhone(callInfo.from);
+      } else {
+        console.warn('⚠️ No se puede buscar cliente: tenant no seleccionado');
+      }
+    });
+  }
+
+  /**
+   * Busca y carga automáticamente un cliente por su número de teléfono
+   * Se llama cuando llega una llamada entrante
+   */
+  private autoLoadCustomerByPhone(phoneNumber: string) {
+    console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
+
+    if (!this.selectedTenantId) {
+      console.error('❌ No hay tenant seleccionado');
+      return;
+    }
+
+    this.customerService.searchCustomersByCriteria(this.selectedTenantId, 'telefono', phoneNumber).subscribe({
+      next: (customers) => {
+        if (customers && customers.length > 0) {
+          console.log('✅ [AUTO-LOAD] Cliente encontrado:', customers[0]);
+          this.loadCustomerFromResource(customers[0]);
+        } else {
+          console.warn('⚠️ [AUTO-LOAD] No se encontró cliente con teléfono:', phoneNumber);
+          // Opcional: mostrar notificación al usuario
+        }
+      },
+      error: (error) => {
+        console.error('❌ [AUTO-LOAD] Error buscando cliente:', error);
       }
     });
   }
@@ -1396,9 +1439,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.callTimer) {
       clearInterval(this.callTimer);
     }
-    // Limpiar suscripción de estado de llamada
+    // Limpiar suscripciones
     if (this.callStateSubscription) {
       this.callStateSubscription.unsubscribe();
+    }
+    if (this.incomingCallSubscription) {
+      this.incomingCallSubscription.unsubscribe();
     }
   }
 
