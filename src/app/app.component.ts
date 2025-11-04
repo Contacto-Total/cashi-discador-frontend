@@ -7,7 +7,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
 import { MatDialog } from '@angular/material/dialog';
+import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from './core/services/auth.service';
+import { ThemeService } from './shared/services/theme.service';
 import { WebsocketService } from './core/services/websocket.service';
 import { SipService } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
@@ -29,7 +31,8 @@ import { Subscription } from 'rxjs';
     MatButtonModule,
     MatIconModule,
     MatSidenavModule,
-    MatListModule
+    MatListModule,
+    LucideAngularModule
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
@@ -50,6 +53,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     public authService: AuthService,
+    public themeService: ThemeService,
     private websocketService: WebsocketService,
     private sipService: SipService,
     private inactivityService: InactivityService,
@@ -298,5 +302,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
   isMantenimientoActive(): boolean {
     return this.router.url.includes('/admin/maintenance');
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
+
+  isDarkMode(): boolean {
+    return this.themeService.isDarkMode();
   }
 }

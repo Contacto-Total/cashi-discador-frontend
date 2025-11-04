@@ -249,6 +249,34 @@
   font-weight: 500;
 }
 
+/* Theme Toggle Button */
+.btn-theme {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: #10B981 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.btn-theme .theme-icon {
+  transition: transform 0.3s ease;
+}
+
+.btn-theme:hover {
+  background: rgba(16, 185, 129, 0.2) !important;
+  transform: translateY(-2px);
+}
+
+.btn-theme:hover .theme-icon {
+  transform: rotate(20deg);
+}
+
 .btn-logout {
   display: flex;
   align-items: center;

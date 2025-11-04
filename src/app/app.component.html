@@ -175,6 +175,18 @@
         <span class="username">{{ (authService.currentUser$ | async)?.username }}</span>
       </div>
 
+      <!-- Theme Toggle Button -->
+      <button mat-button class="btn-theme" (click)="toggleTheme()" title="Cambiar tema">
+        <ng-container *ngIf="isDarkMode(); else lightMode">
+          <lucide-angular name="sun" [size]="20" class="theme-icon"></lucide-angular>
+          <span>Claro</span>
+        </ng-container>
+        <ng-template #lightMode>
+          <lucide-angular name="moon" [size]="20" class="theme-icon"></lucide-angular>
+          <span>Oscuro</span>
+        </ng-template>
+      </button>
+
       <!-- Logout Button -->
       <button mat-button class="btn-logout" (click)="logout()">
         <mat-icon>logout</mat-icon>
