@@ -1,6 +1,7 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { HeaderConfigurationService } from '../../../maintenance/services/header-configuration.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
@@ -11,7 +12,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
 @Component({
   selector: 'app-initial-load',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div class="max-w-7xl mx-auto">
@@ -19,6 +20,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
         <div class="mb-8">
           <div class="flex items-center gap-3 mb-2">
             <div class="p-2 bg-blue-600 rounded-lg">
+              <lucide-angular name="folder" [size]="24" class="text-white"></lucide-angular>
             </div>
             <div>
               <h1 class="text-3xl font-bold text-white">Carga Inicial de Mes</h1>
@@ -33,6 +35,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
             <!-- Proveedor -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1.5">
+                <lucide-angular name="building-2" [size]="16" class="inline mr-1"></lucide-angular>
                 Proveedor
               </label>
               <select [(ngModel)]="selectedTenantId"
@@ -48,6 +51,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
             <!-- Cartera -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1.5">
+                <lucide-angular name="folder" [size]="16" class="inline mr-1"></lucide-angular>
                 Cartera
               </label>
               <select [(ngModel)]="selectedPortfolioId"
@@ -64,6 +68,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
             <!-- Subcartera -->
             <div>
               <label class="block text-xs font-semibold text-gray-300 mb-1.5">
+                <lucide-angular name="folder-tree" [size]="16" class="inline mr-1"></lucide-angular>
                 Subcartera
               </label>
               <select [(ngModel)]="selectedSubPortfolioId"
@@ -94,10 +99,12 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                 <button
                   (click)="downloadDataTemplate()"
                   class="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all font-medium text-sm cursor-pointer">
+                  <lucide-angular name="file-text" [size]="16"></lucide-angular>
                   <span>Descargar Plantilla</span>
                 </button>
 
                 <label class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-medium cursor-pointer text-sm">
+                  <lucide-angular name="folder-open" [size]="16"></lucide-angular>
                   <span>Importar Datos</span>
                   <input
                     type="file"
@@ -113,6 +120,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
               <div class="px-4 py-2 bg-slate-800 border-b border-slate-700">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
+                    <lucide-angular name="table" [size]="16" class="text-blue-400"></lucide-angular>
                     <span class="text-sm font-semibold text-gray-300">
                       Tabla de Datos
                     </span>
@@ -124,9 +132,11 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                         <span class="text-xs font-bold text-white">{{ importedData().length }}</span>
                       </div>
                       <div class="flex items-center gap-2">
+                        <lucide-angular name="check-circle" [size]="12" class="text-green-400"></lucide-angular>
                         <span class="text-xs font-bold text-green-400">{{ validData().length }}</span>
                       </div>
                       <div class="flex items-center gap-2">
+                        <lucide-angular name="x-circle" [size]="12" class="text-red-400"></lucide-angular>
                         <span class="text-xs font-bold text-red-400">{{ invalidData().length }}</span>
                       </div>
                     </div>
@@ -149,10 +159,12 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                             [title]="header.dataType + (header.format ? ' (' + header.format + ')' : '')">
                           <div class="flex items-center gap-1.5">
                             @if (header.sourceField && header.regexPattern) {
+                              <lucide-angular
                                 name="sparkles"
                                 [size]="12"
                                 class="text-amber-400 flex-shrink-0"
                                 [title]="'Campo transformado desde: ' + header.sourceField">
+                              </lucide-angular>
                             }
                             <div class="flex flex-col gap-0.5">
                               <span class="font-semibold">{{ header.headerName }}</span>
@@ -169,6 +181,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                       <tr class="border-b border-slate-700">
                         <td class="px-3 py-8 text-center text-gray-500 bg-slate-800/30" [attr.colspan]="previewHeaders().length + 1">
                           <div class="flex flex-col items-center gap-2">
+                            <lucide-angular name="inbox" [size]="24" class="text-gray-600"></lucide-angular>
                             <span class="text-sm">No hay datos. Importa un archivo Excel para ver los datos aquí.</span>
                           </div>
                         </td>
@@ -180,6 +193,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                           <td class="px-3 py-2 text-gray-400 border-r border-slate-700 bg-slate-800/30">{{ i + 1 }}</td>
                           <td class="px-3 py-2 border-r border-slate-700">
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-green-900/30 text-green-400 rounded text-[10px]">
+                              <lucide-angular name="check" [size]="10"></lucide-angular>
                               Válido
                             </span>
                           </td>
@@ -198,6 +212,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                           <td class="px-3 py-2 border-r border-slate-700">
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-red-900/30 text-red-400 rounded text-[10px]"
                                   [title]="row.error">
+                              <lucide-angular name="x" [size]="10"></lucide-angular>
                               Error
                             </span>
                           </td>
@@ -222,6 +237,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                 @if (backendErrors().length > 0) {
                   <div class="bg-red-900/30 border-2 border-red-700 rounded-xl p-4">
                     <div class="flex items-start gap-3">
+                      <lucide-angular name="x-circle" [size]="24" class="text-red-500 flex-shrink-0 mt-1"></lucide-angular>
                       <div class="flex-1">
                         <h3 class="text-red-500 font-bold text-lg mb-2">Errores al Importar Datos</h3>
                         <p class="text-red-300 text-sm mb-3">
@@ -242,6 +258,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                 @if (invalidData().length > 0) {
                   <div class="bg-red-900/20 border border-red-700/50 rounded-lg p-4">
                     <div class="flex items-start gap-3">
+                      <lucide-angular name="alert-circle" [size]="20" class="text-red-400 mt-0.5"></lucide-angular>
                       <div class="flex-1">
                         <h3 class="text-red-400 font-semibold mb-2">Registros con Errores</h3>
                         <div class="space-y-1">
@@ -289,6 +306,7 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
           <!-- Mensaje de advertencia -->
           <div class="bg-yellow-900/20 border border-yellow-700/50 rounded-xl p-6">
             <div class="flex items-start gap-3">
+              <lucide-angular name="alert-circle" [size]="20" class="text-yellow-500 mt-0.5"></lucide-angular>
               <div>
                 <h3 class="text-yellow-500 font-semibold mb-1">No hay cabeceras configuradas</h3>
                 <p class="text-gray-400 text-sm">

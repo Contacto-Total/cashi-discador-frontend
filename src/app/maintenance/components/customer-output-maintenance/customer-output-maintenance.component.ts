@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../shared/services/theme.service';
 import { Tenant } from '../../models/tenant.model';
 import { Portfolio } from '../../models/portfolio.model';
@@ -56,7 +57,7 @@ interface CustomerOutputConfig {
 @Component({
   selector: 'app-customer-output-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './customer-output-maintenance.component.html',
   styleUrls: ['./customer-output-maintenance.component.scss']
 })

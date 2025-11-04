@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Output, signal, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { ClassificationType } from '../../models/typification.model';
 
 interface CategoryForm {
@@ -19,7 +20,7 @@ interface ClassificationTypeExample {
 @Component({
   selector: 'app-category-form-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4 transition-opacity duration-300"
@@ -40,6 +41,7 @@ interface ClassificationTypeExample {
           <button
             (click)="onCancel()"
             class="p-2 hover:bg-white/20 rounded-lg transition-colors">
+            <lucide-angular name="x" [size]="24"></lucide-angular>
           </button>
         </div>
 
@@ -48,6 +50,7 @@ interface ClassificationTypeExample {
           <!-- Warning Notice -->
           <div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-500 p-4 rounded">
             <div class="flex items-start gap-3">
+              <lucide-angular name="alert-circle" [size]="20" class="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"></lucide-angular>
               <div class="text-sm text-yellow-800 dark:text-yellow-200">
                 <p class="font-bold mb-1">⚠️ Advertencia Importante</p>
                 <p>Las categorías son tipos de clasificación a nivel de sistema. Una vez creadas, no se pueden eliminar fácilmente ya que pueden estar siendo usadas por múltiples tipificaciones.</p>
@@ -72,6 +75,7 @@ interface ClassificationTypeExample {
               <p class="text-red-500 text-xs mt-1">{{ errors()['code'] }}</p>
             }
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+              <lucide-angular name="info" [size]="12"></lucide-angular>
               Usa MAYÚSCULAS y guiones bajos (snake_case). Ejemplo: PAYMENT_METHOD, CALL_RESULT
             </p>
           </div>
@@ -93,6 +97,7 @@ interface ClassificationTypeExample {
               <p class="text-red-500 text-xs mt-1">{{ errors()['name'] }}</p>
             }
             <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+              <lucide-angular name="info" [size]="12"></lucide-angular>
               Este será el nombre que verán los usuarios en la interfaz
             </p>
           </div>
@@ -115,6 +120,7 @@ interface ClassificationTypeExample {
           @if (typeExamples().length > 0) {
             <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-lg p-4">
               <div class="flex items-center gap-2 text-blue-800 dark:text-blue-200 mb-3">
+                <lucide-angular name="settings" [size]="16"></lucide-angular>
                 <span class="font-bold text-sm">Tipos de Clasificación en el Sistema:</span>
               </div>
               <div class="grid grid-cols-1 gap-2 text-xs">
@@ -168,6 +174,7 @@ interface ClassificationTypeExample {
           } @else {
             <div class="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 rounded-lg p-4">
               <div class="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+                <lucide-angular name="info" [size]="16"></lucide-angular>
                 <span class="text-sm">No hay clasificaciones existentes para mostrar como ejemplo.</span>
               </div>
             </div>
@@ -179,6 +186,7 @@ interface ClassificationTypeExample {
           <button
             (click)="onCancel()"
             class="px-6 py-2.5 text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-600 font-semibold transition-colors flex items-center gap-2 text-sm">
+            <lucide-angular name="x" [size]="18"></lucide-angular>
             Cancelar
           </button>
           <button
@@ -189,6 +197,7 @@ interface ClassificationTypeExample {
               <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
               Creando...
             } @else {
+              <lucide-angular name="save" [size]="18"></lucide-angular>
               Crear Categoría
             }
           </button>

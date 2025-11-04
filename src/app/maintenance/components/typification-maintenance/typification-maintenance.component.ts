@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { TypificationService } from '../../services/typification.service';
 import { ThemeService } from '../../../shared/services/theme.service';
 import {
@@ -17,7 +18,7 @@ import { CategoryFormDialogComponent } from '../category-form-dialog/category-fo
 @Component({
   selector: 'app-typification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, TypificationFormDialogComponent, CategoryFormDialogComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TypificationFormDialogComponent, CategoryFormDialogComponent],
   templateUrl: './typification-maintenance.component.html',
   styleUrls: ['./typification-maintenance.component.scss']
 })
