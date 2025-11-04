@@ -1,5 +1,4 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable, signal, effect } from '@angular/core';
 
 export type Theme = 'light' | 'dark';
 
@@ -7,50 +6,69 @@ export type Theme = 'light' | 'dark';
   providedIn: 'root'
 })
 export class ThemeService {
-  private currentThemeSubject: BehaviorSubject<Theme>;
-  public currentTheme$: Observable<Theme>;
+  // Signal para el estado del modo oscuro (compatible con web-app-cashi)
+  isDarkMode = signal<boolean>(false);
 
   constructor() {
-    // Check localStorage for saved theme, default to 'light'
-    const savedTheme = (localStorage.getItem('theme') as Theme) || 'light';
-    this.currentThemeSubject = new BehaviorSubject<Theme>(savedTheme);
-    this.currentTheme$ = this.currentThemeSubject.asObservable();
+    // Cargar preferencia guardada del localStorage
+    const savedTheme = localStorage.getItem('theme');
 
-    // Apply theme on initialization
-    this.applyTheme(savedTheme);
-  }
+    if (savedTheme) {
+      this.isDarkMode.set(savedTheme === 'dark');
+    } else {
+      // Por defecto SIEMPRE modo claro, ignorar preferencia del sistema
+      this.isDarkMode.set(false);
+      localStorage.setItem('theme', 'light');
+    }
 
-  getCurrentTheme(): Theme {
-    return this.currentThemeSubject.value;
-  }
+    // Effect para aplicar tema cuando cambie el signal
+    effect(() => {
+      const isDark = this.isDarkMode(); // Leer el signal para que el effect lo rastree
+      const theme = isDark ? 'dark' : 'light';
 
-  setTheme(theme: Theme): void {
-    this.currentThemeSubject.next(theme);
-    localStorage.setItem('theme', theme);
-    this.applyTheme(theme);
+      // IMPORTANTE: Aplicar clase 'dark' a document.documentElement (HTML tag)
+      // Esto es compatible con el CSS de web-app-cashi que usa :root.dark
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        // Mantener compatibilidad con código legacy que usa body
+        document.body.classList.remove('light-theme');
+        document.body.classList.add('dark-theme');
+      } else {
+        document.documentElement.classList.remove('dark');
+        // Mantener compatibilidad con código legacy que usa body
+        document.body.classList.remove('dark-theme');
+        document.body.classList.add('light-theme');
+      }
+
+      // Actualizar meta tag color-scheme
+      const metaTag = document.querySelector('meta[name="color-scheme"]');
+      if (metaTag) {
+        metaTag.setAttribute('content', theme);
+      }
+
+      // Guardar en localStorage
+      localStorage.setItem('theme', theme);
+    });
   }
 
   toggleTheme(): void {
-    const newTheme = this.currentThemeSubject.value === 'light' ? 'dark' : 'light';
-    this.setTheme(newTheme);
+    this.isDarkMode.update(current => !current);
   }
 
-  private applyTheme(theme: Theme): void {
-    // Remove existing theme class
-    document.body.classList.remove('light-theme', 'dark-theme');
-    // Add new theme class
-    document.body.classList.add(`${theme}-theme`);
+  // Métodos de compatibilidad con código existente
+  getCurrentTheme(): Theme {
+    return this.isDarkMode() ? 'dark' : 'light';
+  }
+
+  setTheme(theme: Theme): void {
+    this.isDarkMode.set(theme === 'dark');
   }
 
   isDarkTheme(): boolean {
-    return this.currentThemeSubject.value === 'dark';
-  }
-
-  isDarkMode(): boolean {
-    return this.isDarkTheme();
+    return this.isDarkMode();
   }
 
   isLightTheme(): boolean {
-    return this.currentThemeSubject.value === 'light';
+    return !this.isDarkMode();
   }
 }
