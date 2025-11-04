@@ -33,9 +33,11 @@ export interface Campaign {
 }
 
 export interface ImportStats {
-  totalTelefonosActivos: number;
-  totalTelefonosPreferidos: number;
+  totalClientes: number;
   fuenteDatos: string;
+  inquilino?: number;
+  cartera?: number;
+  subcartera?: number;
 }
 
 export interface CampaignStatistics {
@@ -165,18 +167,17 @@ export class CampaignAdminService {
   }
 
   /**
-   * Importa contactos desde la tabla externa
+   * Importa contactos desde cashi_db.clientes (ya no usa límite)
    */
-  importarContactos(id: number, limit?: number): Observable<any> {
-    const body = limit ? { limit } : {};
-    return this.http.post(`${this.apiUrl}/${id}/importar-contactos`, body, { headers: this.getHeaders() });
+  importarContactos(id: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/importar-contactos`, {}, { headers: this.getHeaders() });
   }
 
   /**
-   * Obtiene estadísticas de importación disponibles
+   * Obtiene estadísticas de importación disponibles para una campaña
    */
-  getImportStats(): Observable<ImportStats> {
-    return this.http.get<ImportStats>(`${this.apiUrl}/import-stats`, { headers: this.getHeaders() });
+  getImportStats(id: number): Observable<ImportStats> {
+    return this.http.get<ImportStats>(`${this.apiUrl}/${id}/import-stats`, { headers: this.getHeaders() });
   }
 
   /**

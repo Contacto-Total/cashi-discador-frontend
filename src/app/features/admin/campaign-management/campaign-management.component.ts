@@ -48,8 +48,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
 
-  importLimit: number = 100;
-
   // Auto-Dialer state
   isAutoDialerActive: boolean = false;
   autoDialerLoading: boolean = false;
@@ -65,7 +63,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCampaigns();
-    this.loadImportStats();
     this.loadAutoDialerState();
     this.loadTenants();
   }
@@ -136,10 +133,10 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Carga estadísticas de importación
+   * Carga estadísticas de importación para una campaña específica
    */
-  loadImportStats(): void {
-    this.campaignService.getImportStats().subscribe({
+  loadImportStats(campaignId: number): void {
+    this.campaignService.getImportStats(campaignId).subscribe({
       next: (stats) => {
         this.importStats = stats;
       },
@@ -271,8 +268,12 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
    */
   openImportModal(campaign: Campaign): void {
     this.selectedCampaign = campaign;
-    this.importLimit = 100;
     this.showImportModal = true;
+
+    // Cargar stats de esta campaña específica
+    if (campaign.id) {
+      this.loadImportStats(campaign.id);
+    }
   }
 
   /**
@@ -284,7 +285,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Importa contactos a la campaña
+   * Importa contactos a la campaña (ya sin límite, importa todos)
    */
   importarContactos(): void {
     if (!this.selectedCampaign?.id) return;
@@ -292,7 +293,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    this.campaignService.importarContactos(this.selectedCampaign.id, this.importLimit).subscribe({
+    this.campaignService.importarContactos(this.selectedCampaign.id).subscribe({
       next: (response) => {
         this.successMessage = `${response.contactosImportados} contactos importados`;
         this.showImportModal = false;

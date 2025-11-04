@@ -221,21 +221,16 @@
     <div class="modal-body">
       <p><strong>Campaña:</strong> {{ selectedCampaign?.name }}</p>
 
-      <div class="form-group">
-        <label>Límite de Contactos a Importar</label>
-        <input
-          type="number"
-          [(ngModel)]="importLimit"
-          class="form-input"
-          min="1"
-          max="10000"
-          placeholder="100">
-        <small>Se importarán hasta {{ importLimit }} contactos desde la tabla externa</small>
+      <div class="info-box">
+        <p>ℹ️ Los contactos se importarán desde: <strong>{{ importStats?.fuenteDatos || 'cashi_db.clientes' }}</strong></p>
+        <p>📊 Clientes disponibles: <strong>{{ importStats?.totalClientes || 0 }}</strong></p>
+        <p>📍 Inquilino: <strong>{{ importStats?.inquilino }}</strong></p>
+        <p>📂 Cartera: <strong>{{ importStats?.cartera }}</strong></p>
+        <p>📁 Subcartera: <strong>{{ importStats?.subcartera }}</strong></p>
       </div>
 
-      <div class="info-box">
-        <p>ℹ️ Los contactos se importarán desde: <strong>{{ importStats?.fuenteDatos }}</strong></p>
-        <p>📊 Disponibles: <strong>{{ importStats?.totalTelefonosActivos }}</strong> teléfonos activos</p>
+      <div class="alert alert-info">
+        ⚠️ Se importarán <strong>TODOS</strong> los clientes de esta cartera/subcartera automáticamente.
       </div>
     </div>
 
