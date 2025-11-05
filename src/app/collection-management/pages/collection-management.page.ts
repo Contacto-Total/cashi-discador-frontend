@@ -1219,7 +1219,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     console.log(`📋 Cargando datos del cliente para contacto ${contactId}...`);
 
     // Llamar al nuevo endpoint que trae datos completos del cliente
-    this.http.get<any>(`${environment.apiUrl}/contacts/${contactId}/cliente-detalle`).pipe(
+    // IMPORTANTE: Usar gatewayUrl (puerto 8080) en lugar de apiUrl (puerto 8082)
+    this.http.get<any>(`${environment.gatewayUrl}/contacts/${contactId}/cliente-detalle`).pipe(
       catchError((error) => {
         console.error('❌ Error cargando datos del cliente:', error);
         // Mantener datos hardcodeados si falla
