@@ -654,8 +654,8 @@ export class CollectionManagementComponent implements OnInit, OnDestroy {
     });
 
     // TODO: Cargar datos del cliente cuando haya una llamada activa
-    // Por ahora cargamos el contacto de prueba (ID: 446)
-    this.loadClienteDetalle(446);
+    // Por ahora cargamos el contacto de prueba (ID: 475 - RAUL ARRIOLA)
+    this.loadClienteDetalle(475);
   }
 
   /**
