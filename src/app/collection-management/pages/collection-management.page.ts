@@ -1209,82 +1209,66 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Carga el primer cliente disponible de la base de datos
+   * MODIFICADO: Ahora usa el endpoint /api/contacts/{id}/cliente-detalle
    */
   loadFirstCustomer() {
-    if (!this.selectedTenantId) return;
+    // TODO: Cambiar esto para que cargue el contacto de la llamada activa
+    // Por ahora carga el contacto de prueba 475
+    const contactId = 475;
 
-    // Llamar al endpoint del CustomerController para obtener clientes
-    // GET /api/v1/customers?page=0&size=1
-    this.http.get<any[]>(`${environment.apiUrl}/customers`, {
-      params: {
-        page: '0',
-        size: '1'
-      }
-    }).pipe(
+    console.log(`📋 Cargando datos del cliente para contacto ${contactId}...`);
+
+    // Llamar al nuevo endpoint que trae datos completos del cliente
+    this.http.get<any>(`${environment.apiUrl}/contacts/${contactId}/cliente-detalle`).pipe(
       catchError((error) => {
-        console.error('Error cargando primer cliente:', error);
-        return of([]);
+        console.error('❌ Error cargando datos del cliente:', error);
+        // Mantener datos hardcodeados si falla
+        return of(null);
       })
     ).subscribe({
-      next: (customers) => {
-        // El backend devuelve un array directo, no un objeto paginado
-        if (customers && customers.length > 0) {
-          const customer = customers[0];
-          console.log('🔍 [FRONTEND] Primer cliente cargado:', customer);
-          console.log('🔍 [FRONTEND] accountNumber en el customer:', customer.accountNumber);
-          console.log('🔍 [FRONTEND] Campos disponibles:', Object.keys(customer));
+      next: (clienteDetalle) => {
+        if (clienteDetalle) {
+          console.log('✅ Cliente cargado:', clienteDetalle);
 
-          // Buscar teléfono principal - puede ser telefono, phone, o PHONE
-          const phoneContact = customer.contactMethods?.find((c: any) =>
-            c.contactType?.toLowerCase() === 'telefono' ||
-            c.contactType?.toLowerCase() === 'phone'
-          );
-
-          // Buscar email
-          const emailContact = customer.contactMethods?.find((c: any) =>
-            c.contactType?.toLowerCase() === 'email'
-          );
-
-          const accountNumberValue = customer.accountNumber || '';
-          console.log('🔍 [FRONTEND] Valor final de numero_cuenta:', accountNumberValue);
-
-          // Mapear los datos del cliente al formato del signal
+          // Mapear los datos del backend al formato del signal
           this.customerData.set({
-            id: customer.id,  // ID numérico del cliente (PK)
-            id_cliente: customer.customerId || customer.identificationCode || customer.id?.toString(),
-            nombre_completo: customer.fullName || '',
-            tipo_documento: customer.documentType || 'DNI',
-            numero_documento: customer.documentNumber || customer.document || '',
-            fecha_nacimiento: customer.birthDate || '',
-            edad: customer.age || 0,
+            id: clienteDetalle.idCliente,
+            id_cliente: `CLI-${clienteDetalle.idCliente}`,
+            nombre_completo: clienteDetalle.nombreCompleto || '',
+            tipo_documento: clienteDetalle.tipoDocumento || 'DNI',
+            numero_documento: clienteDetalle.documento || '',
+            fecha_nacimiento: clienteDetalle.fechaNacimiento || '',
+            edad: clienteDetalle.edad || 0,
             contacto: {
-              telefono_principal: phoneContact?.value || '',
-              telefono_alternativo: '',
-              telefono_trabajo: '',
-              email: emailContact?.value || '',
-              direccion: customer.address || ''
+              telefono_principal: clienteDetalle.telefonoPrincipal || '',
+              telefono_alternativo: clienteDetalle.telefonoSecundario || '',
+              telefono_trabajo: clienteDetalle.telefonoTrabajo || '',
+              email: clienteDetalle.email || '',
+              direccion: clienteDetalle.direccion || ''
             },
             cuenta: {
-              numero_cuenta: accountNumberValue,
-              tipo_producto: customer.subPortfolioName || '',
+              numero_cuenta: clienteDetalle.cuenta || '',
+              tipo_producto: clienteDetalle.producto || '',
               fecha_desembolso: '',
               monto_original: 0,
               plazo_meses: 0,
               tasa_interes: 0
             },
             deuda: {
-              saldo_capital: 0,
+              saldo_capital: clienteDetalle.deudaCapital || 0,
               intereses_vencidos: 0,
               mora_acumulada: 0,
               gastos_cobranza: 0,
-              saldo_total: 0,
-              dias_mora: 0,
+              saldo_total: clienteDetalle.deudaTotal || 0,
+              dias_mora: clienteDetalle.diasMora || 0,
               fecha_ultimo_pago: '',
               monto_ultimo_pago: 0
             }
           });
+
+          console.log('✅ Datos del cliente actualizados en la UI');
         } else {
-          console.log('No se encontraron clientes en la base de datos');
+          console.log('⚠️ No se pudieron cargar los datos del cliente');
         }
       }
     });
