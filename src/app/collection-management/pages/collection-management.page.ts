@@ -1208,18 +1208,45 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Carga el primer cliente disponible de la base de datos
-   * MODIFICADO: Ahora usa el endpoint /api/contacts/{id}/cliente-detalle
+   * Carga el cliente de la llamada activa del agente
+   * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
   loadFirstCustomer() {
-    // TODO: Cambiar esto para que cargue el contacto de la llamada activa
-    // Por ahora carga el contacto de prueba 475
-    const contactId = 475;
+    // TODO: Obtener el agentId del AuthService cuando esté implementado
+    const agentId = 1;
 
+    console.log(`📋 Buscando llamada activa del agente ${agentId}...`);
+
+    // Primero obtener la llamada activa del agente
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/active-call/${agentId}`).pipe(
+      catchError((error) => {
+        console.warn('⚠️ No hay llamada activa o error consultando:', error);
+        // Si no hay llamada activa, usar contacto de prueba (475)
+        console.log('📋 Usando contacto de prueba 475');
+        return of({ contactId: 475 });
+      })
+    ).subscribe({
+      next: (activeCall) => {
+        const contactId = activeCall?.contactId;
+
+        if (!contactId) {
+          console.warn('⚠️ No se obtuvo contactId de la llamada activa');
+          return;
+        }
+
+        console.log(`✅ Llamada activa encontrada, contactId: ${contactId}`);
+        this.loadClienteDetalle(contactId);
+      }
+    });
+  }
+
+  /**
+   * Carga los datos del cliente desde el backend
+   */
+  private loadClienteDetalle(contactId: number) {
     console.log(`📋 Cargando datos del cliente para contacto ${contactId}...`);
 
-    // Llamar al nuevo endpoint que trae datos completos del cliente
-    // IMPORTANTE: Usar gatewayUrl (puerto 8080) en lugar de apiUrl (puerto 8082)
+    // Llamar al endpoint que trae datos completos del cliente
     this.http.get<any>(`${environment.gatewayUrl}/contacts/${contactId}/cliente-detalle`).pipe(
       catchError((error) => {
         console.error('❌ Error cargando datos del cliente:', error);
