@@ -40,6 +40,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
   private dialogRef: any;
+  private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
@@ -169,10 +170,22 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sipService.onCallStatus.subscribe((state) => {
         console.log(`📡 [App] Estado de llamada: ${state}`);
 
-        if (state === 'ACTIVE') {
+        if (state === 'ACTIVE' && !this.hasNavigatedToTypification) {
           // Llamada activa = navegar directo a tipificación
-          console.log('📞 [App] Llamada conectada, navegando a tipificación...');
-          this.router.navigate(['/collection-management']);
+          console.log('📞 [App] Llamada conectada, esperando 2s para establecer audio...');
+          this.hasNavigatedToTypification = true; // Marcar para prevenir navegaciones múltiples
+
+          // DELAY DE 2 SEGUNDOS: Esperar a que el audio WebRTC se establezca completamente
+          // antes de navegar. Esto evita interrumpir la negociación ICE y los media streams.
+          setTimeout(() => {
+            console.log('📞 [App] Navegando a tipificación...');
+            this.router.navigate(['/collection-management']);
+          }, 2000);
+        }
+
+        // Reset flag cuando la llamada termina
+        if (state === 'ENDED' || state === 'IDLE') {
+          this.hasNavigatedToTypification = false;
         }
       });
 
