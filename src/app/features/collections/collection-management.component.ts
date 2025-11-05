@@ -661,8 +661,8 @@ export class CollectionManagementComponent implements OnInit, OnDestroy {
    * Carga el primer cliente desde la llamada activa del agente
    */
   loadFirstCustomer(): void {
-    if (!this.currentUser || !this.currentUser.id) {
-      console.error('❌ No hay usuario autenticado');
+    if (!this.currentUser || !this.currentUser.sipExtension) {
+      console.error('❌ No hay usuario autenticado o no tiene extensión SIP');
       this.error = 'No hay usuario autenticado';
       return;
     }
@@ -670,19 +670,23 @@ export class CollectionManagementComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.error = null;
 
-    // Obtener llamada activa del agente
-    this.contactService.getActiveCall(this.currentUser.id).subscribe({
+    console.log(`📋 Buscando llamada activa del agente con extensión ${this.currentUser.sipExtension}...`);
+
+    // Obtener llamada activa del agente usando su extensión SIP
+    this.contactService.getActiveCallByExtension(this.currentUser.sipExtension).subscribe({
       next: (activeCall) => {
         if (activeCall && activeCall.contactId) {
-          console.log('📞 Llamada activa encontrada:', activeCall);
+          console.log('✅ Llamada activa encontrada, contactId:', activeCall.contactId);
+          console.log('📋 Cargando datos del cliente para contacto', activeCall.contactId + '...');
           this.loadClienteDetalle(activeCall.contactId);
         } else {
-          console.warn('⚠️ No hay llamada activa, cargando contacto por defecto (475)');
+          console.warn('⚠️ No hay llamada activa, usando contacto de prueba 475');
           this.loadClienteDetalle(475); // Fallback al contacto de prueba
         }
       },
       error: (err) => {
         console.error('⚠️ No hay llamada activa o error consultando:', err);
+        console.warn('📋 Usando contacto de prueba 475');
         // Fallback: cargar contacto de prueba si falla
         this.loadClienteDetalle(475);
       }

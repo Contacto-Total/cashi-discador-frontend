@@ -73,10 +73,17 @@ export class ContactService {
   }
 
   /**
-   * Obtiene la llamada activa de un agente desde el auto-dialer
+   * Obtiene la llamada activa de un agente desde el auto-dialer (por ID de agente)
    */
   getActiveCall(agentId: number): Observable<any> {
     return this.http.get<any>(`${environment.apiUrl}/autodialer/active-call/${agentId}`);
+  }
+
+  /**
+   * Obtiene la llamada activa de un agente por su extensión SIP
+   */
+  getActiveCallByExtension(sipExtension: string): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/autodialer/active-call/extension/${sipExtension}`);
   }
 
   /**
