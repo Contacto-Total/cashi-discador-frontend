@@ -59,7 +59,7 @@ export const routes: Routes = [
   },
   {
     path: 'collection-management',
-    loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage),
+    loadComponent: () => import('./features/collections/collection-management.component').then(m => m.CollectionManagementComponent),
     canActivate: [authGuard]
   },
 
