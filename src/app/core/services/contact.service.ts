@@ -73,6 +73,13 @@ export class ContactService {
   }
 
   /**
+   * Obtiene la llamada activa de un agente desde el auto-dialer
+   */
+  getActiveCall(agentId: number): Observable<any> {
+    return this.http.get<any>(`${environment.apiUrl}/autodialer/active-call/${agentId}`);
+  }
+
+  /**
    * Obtiene los datos completos del cliente para la pantalla de tipificación
    */
   getClienteDetalle(contactId: number): Observable<ClienteDetalle> {

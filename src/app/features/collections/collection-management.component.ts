@@ -653,9 +653,40 @@ export class CollectionManagementComponent implements OnInit, OnDestroy {
       this.elapsedTime++;
     });
 
-    // TODO: Cargar datos del cliente cuando haya una llamada activa
-    // Por ahora cargamos el contacto de prueba (ID: 475 - RAUL ARRIOLA)
-    this.loadClienteDetalle(475);
+    // Cargar datos del cliente desde la llamada activa del agente
+    this.loadFirstCustomer();
+  }
+
+  /**
+   * Carga el primer cliente desde la llamada activa del agente
+   */
+  loadFirstCustomer(): void {
+    if (!this.currentUser || !this.currentUser.id) {
+      console.error('❌ No hay usuario autenticado');
+      this.error = 'No hay usuario autenticado';
+      return;
+    }
+
+    this.loading = true;
+    this.error = null;
+
+    // Obtener llamada activa del agente
+    this.contactService.getActiveCall(this.currentUser.id).subscribe({
+      next: (activeCall) => {
+        if (activeCall && activeCall.contactId) {
+          console.log('📞 Llamada activa encontrada:', activeCall);
+          this.loadClienteDetalle(activeCall.contactId);
+        } else {
+          console.warn('⚠️ No hay llamada activa, cargando contacto por defecto (475)');
+          this.loadClienteDetalle(475); // Fallback al contacto de prueba
+        }
+      },
+      error: (err) => {
+        console.error('⚠️ No hay llamada activa o error consultando:', err);
+        // Fallback: cargar contacto de prueba si falla
+        this.loadClienteDetalle(475);
+      }
+    });
   }
 
   /**
