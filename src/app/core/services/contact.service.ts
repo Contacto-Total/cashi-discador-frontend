@@ -81,6 +81,7 @@ export class ContactService {
 
   /**
    * Obtiene la llamada activa de un agente por su extensión SIP
+   * Este método busca por anexo_destino en lugar de id_agente
    */
   getActiveCallByExtension(sipExtension: string): Observable<any> {
     return this.http.get<any>(`${environment.apiUrl}/autodialer/active-call/extension/${sipExtension}`);
