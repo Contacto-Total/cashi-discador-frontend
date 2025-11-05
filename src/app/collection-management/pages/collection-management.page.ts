@@ -25,6 +25,7 @@ import { CustomerService } from '../../customers/services/customer.service';
 import { SipService, CallState } from '../../core/services/sip.service';
 import { AgentService } from '../../core/services/agent.service';
 import { AgentState } from '../../core/models/agent-status.model';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-collection-management',
@@ -1016,7 +1017,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private router: Router,
     private http: HttpClient,
     private sipService: SipService,
-    private agentService: AgentService
+    private agentService: AgentService,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -1212,8 +1214,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
   loadFirstCustomer() {
-    // TODO: Obtener el agentId del AuthService cuando esté implementado
-    const agentId = 1;
+    // Obtener el ID del usuario logueado
+    const agentId = this.authService.getCurrentUserId();
+
+    if (!agentId) {
+      console.error('❌ No se pudo obtener el ID del agente logueado');
+      // Fallback a contacto de prueba
+      this.loadClienteDetalle(475);
+      return;
+    }
 
     console.log(`📋 Buscando llamada activa del agente ${agentId}...`);
 
