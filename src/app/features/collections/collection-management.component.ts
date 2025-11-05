@@ -9,6 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { ThemeService } from '../../core/services/theme.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ContactService } from '../../core/services/contact.service';
+import { ClienteDetalle } from '../../core/models/cliente-detalle.model';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -66,32 +68,45 @@ import { Subscription, interval } from 'rxjs';
       </header>
 
       <!-- Client Info Bar -->
-      <div class="client-info-bar">
+      <div class="client-info-bar" *ngIf="clienteDetalle">
         <div class="client-data">
           <span class="label">✦ CLIENTE</span>
-          <span class="value">GARCÍA RODRIGUEZ, CARMEN ROSA</span>
+          <span class="value">{{ clienteDetalle.nombreCompleto || 'Sin datos' }}</span>
         </div>
         <div class="client-data">
           <span class="label">Documento</span>
-          <span class="value">DNI: 45621378</span>
+          <span class="value">{{ clienteDetalle.tipoDocumento || 'DNI' }}: {{ clienteDetalle.documento }}</span>
         </div>
         <div class="client-data">
           <span class="label">ID Cliente</span>
-          <span class="value">CLI-2025-0087453</span>
+          <span class="value">CLI-{{ clienteDetalle.idCliente }}</span>
         </div>
         <div class="client-data">
           <span class="label">Cuenta</span>
-          <span class="value">****5678</span>
+          <span class="value">{{ clienteDetalle.cuenta || 'N/A' }}</span>
         </div>
         <div class="financial-info">
           <div class="debt">
             <span class="label">$ Deuda</span>
-            <span class="amount">S/ 9561.78</span>
+            <span class="amount">S/ {{ clienteDetalle.deudaTotal || 0 | number:'1.2-2' }}</span>
           </div>
           <div class="mora">
             <span class="label">⏰ Mora</span>
-            <span class="days">45</span>
+            <span class="days">{{ clienteDetalle.diasMora || 0 }}</span>
           </div>
+        </div>
+      </div>
+
+      <!-- Loading/Error states -->
+      <div class="client-info-bar" *ngIf="!clienteDetalle && loading">
+        <div class="client-data">
+          <span class="label">⏳ Cargando datos del cliente...</span>
+        </div>
+      </div>
+
+      <div class="client-info-bar" *ngIf="!clienteDetalle && error">
+        <div class="client-data">
+          <span class="label">❌ {{ error }}</span>
         </div>
       </div>
 
@@ -101,38 +116,65 @@ import { Subscription, interval } from 'rxjs';
         <aside class="left-panel">
           <mat-tab-group class="detail-tabs">
             <mat-tab label="👤 Cliente">
-              <div class="tab-content">
+              <div class="tab-content" *ngIf="clienteDetalle">
                 <div class="section">
                   <h3 class="section-title">👤 Datos Personales</h3>
-                  <div class="field">
+                  <div class="field" *ngIf="clienteDetalle.edad">
                     <label>Edad:</label>
-                    <span>40 años</span>
+                    <span>{{ clienteDetalle.edad }} años</span>
                   </div>
-                  <div class="field">
+                  <div class="field" *ngIf="clienteDetalle.fechaNacimiento">
                     <label>F. Nac:</label>
-                    <span>15/03/1985</span>
+                    <span>{{ clienteDetalle.fechaNacimiento | date:'dd/MM/yyyy' }}</span>
+                  </div>
+                  <div class="field" *ngIf="clienteDetalle.estadoCivil">
+                    <label>Estado Civil:</label>
+                    <span>{{ clienteDetalle.estadoCivil }}</span>
+                  </div>
+                  <div class="field" *ngIf="clienteDetalle.ocupacion">
+                    <label>Ocupación:</label>
+                    <span>{{ clienteDetalle.ocupacion }}</span>
                   </div>
                 </div>
 
                 <div class="section">
                   <h3 class="section-title">📞 Contacto</h3>
-                  <div class="field">
+                  <div class="field" *ngIf="clienteDetalle.telefonoPrincipal">
                     <label>Tel. Principal</label>
-                    <span class="phone">+51 987 654 321</span>
+                    <span class="phone">{{ clienteDetalle.telefonoPrincipal }}</span>
                   </div>
-                  <div class="field">
-                    <label>Tel. Alt.</label>
-                    <span class="phone">+51 945 123 456</span>
+                  <div class="field" *ngIf="clienteDetalle.telefonoSecundario">
+                    <label>Tel. Secundario</label>
+                    <span class="phone">{{ clienteDetalle.telefonoSecundario }}</span>
                   </div>
-                  <div class="field">
+                  <div class="field" *ngIf="clienteDetalle.telefonoTrabajo">
+                    <label>Tel. Trabajo</label>
+                    <span class="phone">{{ clienteDetalle.telefonoTrabajo }}</span>
+                  </div>
+                  <div class="field" *ngIf="clienteDetalle.telefonoReferencia1">
+                    <label>Tel. Referencia 1</label>
+                    <span class="phone">{{ clienteDetalle.telefonoReferencia1 }}</span>
+                  </div>
+                  <div class="field" *ngIf="clienteDetalle.telefonoReferencia2">
+                    <label>Tel. Referencia 2</label>
+                    <span class="phone">{{ clienteDetalle.telefonoReferencia2 }}</span>
+                  </div>
+                  <div class="field" *ngIf="clienteDetalle.email">
                     <label>Email</label>
-                    <span class="email">carmen.garcia@email.com</span>
+                    <span class="email">{{ clienteDetalle.email }}</span>
                   </div>
-                  <div class="field">
+                  <div class="field" *ngIf="clienteDetalle.direccion">
                     <label>Dirección</label>
-                    <span class="address">Av. Los Alamos 458, Dpto 302, San Borja, Lima</span>
+                    <span class="address">{{ clienteDetalle.direccion }}</span>
+                  </div>
+                  <div class="field" *ngIf="clienteDetalle.distrito || clienteDetalle.provincia || clienteDetalle.departamento">
+                    <label>Ubicación</label>
+                    <span>{{ clienteDetalle.distrito }}, {{ clienteDetalle.provincia }}, {{ clienteDetalle.departamento }}</span>
                   </div>
                 </div>
+              </div>
+              <div class="tab-content" *ngIf="!clienteDetalle">
+                <p>Cargando información del cliente...</p>
               </div>
             </mat-tab>
 
@@ -583,12 +625,18 @@ export class CollectionManagementComponent implements OnInit, OnDestroy {
   callInProgress = false;
   elapsedTime = 0;
 
+  // Datos del cliente (reemplaza los datos hardcoded)
+  clienteDetalle: ClienteDetalle | null = null;
+  loading = false;
+  error: string | null = null;
+
   private themeSubscription?: Subscription;
   private timerSubscription?: Subscription;
 
   constructor(
     private themeService: ThemeService,
-    private authService: AuthService
+    private authService: AuthService,
+    private contactService: ContactService
   ) {}
 
   async ngOnInit() {
@@ -603,6 +651,31 @@ export class CollectionManagementComponent implements OnInit, OnDestroy {
     // Start timer
     this.timerSubscription = interval(1000).subscribe(() => {
       this.elapsedTime++;
+    });
+
+    // TODO: Cargar datos del cliente cuando haya una llamada activa
+    // Por ahora cargamos el contacto de prueba (ID: 446)
+    this.loadClienteDetalle(446);
+  }
+
+  /**
+   * Carga los datos completos del cliente
+   */
+  loadClienteDetalle(contactId: number): void {
+    this.loading = true;
+    this.error = null;
+
+    this.contactService.getClienteDetalle(contactId).subscribe({
+      next: (data) => {
+        this.clienteDetalle = data;
+        this.loading = false;
+        console.log('📋 Cliente cargado:', data);
+      },
+      error: (err) => {
+        console.error('❌ Error cargando cliente:', err);
+        this.error = 'Error al cargar datos del cliente';
+        this.loading = false;
+      }
     });
   }
 

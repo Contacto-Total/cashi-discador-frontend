@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Contact, ImportResult } from '../models/contact.model';
+import { ClienteDetalle } from '../models/cliente-detalle.model';
 
 @Injectable({
   providedIn: 'root'
@@ -69,5 +70,12 @@ export class ContactService {
     return this.http.get<Contact | null>(
       `${this.apiUrl}/next?campaignId=${campaignId}&agentId=${agentId}`
     );
+  }
+
+  /**
+   * Obtiene los datos completos del cliente para la pantalla de tipificación
+   */
+  getClienteDetalle(contactId: number): Observable<ClienteDetalle> {
+    return this.http.get<ClienteDetalle>(`${this.apiUrl}/${contactId}/cliente-detalle`);
   }
 }
