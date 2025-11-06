@@ -11,7 +11,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from './core/services/auth.service';
 import { ThemeService } from './shared/services/theme.service';
 import { WebsocketService } from './core/services/websocket.service';
-import { SipService } from './core/services/sip.service';
+import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
@@ -41,6 +41,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private timeoutSubscription?: Subscription;
   private dialogRef: any;
   private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
+  private callActivatedTimestamp: number | null = null; // Timestamp de cuando la llamada se activó
+  private navigationTimeout: any = null; // Timeout para navegación retrasada
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
@@ -84,6 +86,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
     this.inactivityService.detener();
+
+    // Limpiar timeout de navegación si existe
+    if (this.navigationTimeout) {
+      clearTimeout(this.navigationTimeout);
+      this.navigationTimeout = null;
+    }
   }
 
   private iniciarMonitoreoInactividad(): void {
@@ -170,22 +178,44 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sipService.onCallStatus.subscribe((state) => {
         console.log(`📡 [App] Estado de llamada: ${state}`);
 
-        if (state === 'ACTIVE' && !this.hasNavigatedToTypification) {
-          // Llamada activa = navegar directo a tipificación
-          console.log('📞 [App] Llamada conectada, esperando 2s para establecer audio...');
-          this.hasNavigatedToTypification = true; // Marcar para prevenir navegaciones múltiples
+        if (state === CallState.ACTIVE && !this.hasNavigatedToTypification) {
+          // Marcar timestamp cuando la llamada se activa
+          this.callActivatedTimestamp = Date.now();
+          console.log('📞 [App] Llamada ACTIVA, esperando 2s para confirmar conexión estable...');
 
           // DELAY DE 2 SEGUNDOS: Esperar a que el audio WebRTC se establezca completamente
-          // antes de navegar. Esto evita interrumpir la negociación ICE y los media streams.
-          setTimeout(() => {
-            console.log('📞 [App] Navegando a tipificación...');
-            this.router.navigate(['/collection-management']);
+          // Y verificar que la llamada sigue activa (no se cortó inmediatamente)
+          this.navigationTimeout = setTimeout(() => {
+            // Verificar que la llamada sigue activa y lleva al menos 2 segundos
+            const callDuration = this.callActivatedTimestamp
+              ? Date.now() - this.callActivatedTimestamp
+              : 0;
+
+            // Obtener el estado actual de la llamada del servicio
+            const currentState = this.sipService.getCallState();
+
+            if (callDuration >= 2000 && currentState === CallState.ACTIVE && !this.hasNavigatedToTypification) {
+              console.log(`📞 [App] Llamada estable (${callDuration}ms), navegando a tipificación...`);
+              this.hasNavigatedToTypification = true;
+              this.router.navigate(['/collection-management']);
+            } else {
+              console.log(`⚠️ [App] Llamada terminó antes de establecerse (${callDuration}ms, estado: ${currentState}), NO navegando`);
+            }
           }, 2000);
         }
 
-        // Reset flag cuando la llamada termina
-        if (state === 'ENDED' || state === 'IDLE') {
+        // Cuando la llamada termina, cancelar navegación y resetear flags
+        if (state === CallState.ENDED || state === CallState.IDLE) {
+          // Cancelar navegación pendiente si la llamada termina antes del delay
+          if (this.navigationTimeout && !this.hasNavigatedToTypification) {
+            clearTimeout(this.navigationTimeout);
+            this.navigationTimeout = null;
+            console.log('🚫 [App] Navegación cancelada - llamada terminó sin establecerse');
+          }
+
+          // Reset flags
           this.hasNavigatedToTypification = false;
+          this.callActivatedTimestamp = null;
         }
       });
 

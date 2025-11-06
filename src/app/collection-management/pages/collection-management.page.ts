@@ -1054,21 +1054,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       }
 
-      // Cuando la llamada termina, cambiar estado a TIPIFICANDO
+      // Cuando la llamada termina, cambiar estado a TIPIFICANDO SOLO si fue una llamada real
       if ((state === CallState.ENDED || state === CallState.IDLE) && this.callActive()) {
         this.callActive.set(false);
+
+        // Obtener la duración de la llamada antes de detener el timer
+        const finalDuration = this.callDuration();
+
         // Detener timer
         if (this.callTimer) {
           clearInterval(this.callTimer);
           this.callTimer = undefined;
         }
-        // Cambiar estado del agente a TIPIFICANDO
-        const currentUser = this.authService.getCurrentUser();
-        if (currentUser?.id) {
-          this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
-            next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
-            error: (err: any) => console.error('❌ Error cambiando estado:', err)
-          });
+
+        // Solo cambiar a TIPIFICANDO si la llamada duró al menos 3 segundos
+        // Si la llamada terminó antes, fue un SUBSCRIBER_ABSENT u otro error de conexión
+        if (finalDuration >= 3) {
+          console.log(`📝 Llamada real detectada (${finalDuration}s), cambiando a TIPIFICANDO`);
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser?.id) {
+            this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+              next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
+              error: (err: any) => console.error('❌ Error cambiando estado:', err)
+            });
+          }
+        } else {
+          console.log(`⚠️ Llamada muy corta (${finalDuration}s), NO cambiando a TIPIFICANDO - retornando a DISPONIBLE`);
+          // Cambiar directamente a DISPONIBLE si la llamada no se estableció realmente
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser?.id) {
+            this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.DISPONIBLE }).subscribe({
+              next: () => console.log('✅ Estado cambiado a DISPONIBLE (llamada no establecida)'),
+              error: (err: any) => console.error('❌ Error cambiando estado:', err)
+            });
+          }
         }
       }
     });
