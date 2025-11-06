@@ -1063,11 +1063,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.callTimer = undefined;
         }
         // Cambiar estado del agente a TIPIFICANDO
-        const agentId = 1; // TODO: Obtener del AuthService
-        this.agentService.changeAgentStatus(agentId, { estado: AgentState.TIPIFICANDO }).subscribe({
-          next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
-          error: (err: any) => console.error('❌ Error cambiando estado:', err)
-        });
+        const currentUser = this.authService.getCurrentUser();
+        if (currentUser?.id) {
+          this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+            next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
+            error: (err: any) => console.error('❌ Error cambiando estado:', err)
+          });
+        }
       }
     });
 
