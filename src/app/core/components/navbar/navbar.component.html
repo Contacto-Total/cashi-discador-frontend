@@ -121,6 +121,13 @@
               <span class="item-desc">Lista de bloqueo</span>
             </div>
           </a>
+          <a class="dropdown-item" (click)="navigateTo('/admin/autodialer')" [class.active]="isActive('/admin/autodialer')">
+            <span class="item-icon">🤖</span>
+            <div class="item-content">
+              <span class="item-title">Auto-Dialer</span>
+              <span class="item-desc">Configuración de marcado automático</span>
+            </div>
+          </a>
         </div>
       </div>
 
