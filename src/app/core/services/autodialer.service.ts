@@ -55,6 +55,11 @@ export interface LlamadaTiempoReal {
   idAgente: number;
 }
 
+export interface AutoDialerConfiguracion {
+  intensidadMarcacion: number;
+  intervaloMarcacionSegundos: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -201,6 +206,27 @@ export class AutoDialerService {
           ? this.getLlamadasEnTiempoRealByCampaign(campaignId)
           : this.getLlamadasEnTiempoReal()
       )
+    );
+  }
+
+  /**
+   * Obtiene la configuración actual del autodialer
+   */
+  getConfiguracion(): Observable<AutoDialerConfiguracion> {
+    return this.http.get<AutoDialerConfiguracion>(
+      `${this.apiUrl}/configuracion`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Actualiza la configuración del autodialer
+   */
+  updateConfiguracion(config: AutoDialerConfiguracion): Observable<void> {
+    return this.http.put<void>(
+      `${this.apiUrl}/configuracion`,
+      config,
+      { headers: this.getHeaders() }
     );
   }
 }

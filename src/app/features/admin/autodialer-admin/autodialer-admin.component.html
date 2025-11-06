@@ -42,6 +42,81 @@
     </div>
   </div>
 
+  <!-- Configuración Avanzada -->
+  <div class="control-panel config-panel">
+    <div class="control-section">
+      <h2>⚙️ Configuración Avanzada</h2>
+      <p class="subtitle">Ajusta los parámetros de marcación automática</p>
+
+      <!-- Success Message Config -->
+      <div *ngIf="configSuccessMessage" class="success-message">
+        ✅ {{ configSuccessMessage }}
+      </div>
+
+      <div class="config-grid">
+        <!-- Intensidad de Marcación -->
+        <div class="config-item">
+          <label for="intensidad">
+            <strong>📊 Intensidad de Marcación</strong>
+            <span class="config-description">Llamadas por agente disponible</span>
+          </label>
+          <div class="input-with-info">
+            <input
+              type="number"
+              id="intensidad"
+              [(ngModel)]="intensidadMarcacion"
+              min="1.0"
+              max="5.0"
+              step="0.1"
+              class="config-input"
+              [disabled]="loadingConfig"
+            />
+            <span class="input-info">{{ intensidadMarcacion }} llamadas/agente</span>
+          </div>
+          <small class="help-text">
+            Ejemplo: 1.5 = Con 2 agentes disponibles, marca 3 llamadas simultáneamente
+          </small>
+        </div>
+
+        <!-- Intervalo de Marcación -->
+        <div class="config-item">
+          <label for="intervalo">
+            <strong>⏱️ Intervalo de Marcación</strong>
+            <span class="config-description">Tiempo entre ciclos de marcación</span>
+          </label>
+          <div class="input-with-info">
+            <input
+              type="number"
+              id="intervalo"
+              [(ngModel)]="intervaloMarcacionSegundos"
+              min="10"
+              max="300"
+              step="5"
+              class="config-input"
+              [disabled]="loadingConfig"
+            />
+            <span class="input-info">{{ intervaloMarcacionSegundos }} segundos</span>
+          </div>
+          <small class="help-text">
+            Recomendado: 30 segundos para dar tiempo a que los contactos contesten
+          </small>
+        </div>
+      </div>
+
+      <button
+        class="save-config-btn"
+        [disabled]="loadingConfig"
+        (click)="guardarConfiguracion()">
+        <span *ngIf="!loadingConfig">💾 Guardar Configuración</span>
+        <span *ngIf="loadingConfig">⏳ Guardando...</span>
+      </button>
+
+      <div class="info-box">
+        <p><strong>ℹ️ Nota:</strong> Los cambios se aplicarán en el próximo ciclo de marcación del autodialer.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Estadísticas en tiempo real -->
   <div class="statistics-panel" *ngIf="estadisticas">
     <h2>📊 Estadísticas en Tiempo Real</h2>
