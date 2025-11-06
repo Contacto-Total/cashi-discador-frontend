@@ -1,7 +1,7 @@
 <div class="autodialer-container">
   <!-- Header -->
   <div class="header">
-    <h1>🤖 Panel de Auto-Dialer</h1>
+    <h1>⚙️ Configuración de Discado Automático</h1>
     <div class="status-badge" [style.background-color]="getStatusColor()">
       {{ getStatusText() }}
     </div>
@@ -17,102 +17,93 @@
     ✅ {{ successMessage }}
   </div>
 
-  <!-- Control Panel -->
-  <div class="control-panel">
-    <div class="control-section">
-      <h2>Control del Sistema</h2>
-      <p class="subtitle">Activar o desactivar el sistema de discado automático</p>
-
-      <button
-        class="toggle-btn"
-        [class.active]="isActivo"
-        [disabled]="loading"
-        (click)="toggleAutoDialer()">
-        <span class="btn-icon">{{ getButtonIcon() }}</span>
-        <span>{{ getButtonText() }}</span>
-      </button>
-
-      <div class="info-box" *ngIf="!isActivo">
-        <p>ℹ️ El auto-dialer está inactivo. Cuando lo actives, el sistema comenzará a asignar llamadas automáticamente a los agentes disponibles.</p>
-      </div>
-
-      <div class="info-box active" *ngIf="isActivo">
-        <p>🟢 El auto-dialer está activo. Las llamadas se están asignando automáticamente a los agentes disponibles.</p>
-      </div>
-    </div>
+  <!-- Success Message Config -->
+  <div *ngIf="configSuccessMessage" class="success-message">
+    ✅ {{ configSuccessMessage }}
   </div>
 
-  <!-- Configuración Avanzada -->
-  <div class="control-panel config-panel">
-    <div class="control-section">
-      <h2>⚙️ Configuración Avanzada</h2>
-      <p class="subtitle">Ajusta los parámetros de marcación automática</p>
+  <!-- Main Content Grid -->
+  <div class="main-grid">
+    <!-- Control Panel -->
+    <div class="control-panel">
+      <div class="control-section">
+        <h2>Control del Sistema</h2>
 
-      <!-- Success Message Config -->
-      <div *ngIf="configSuccessMessage" class="success-message">
-        ✅ {{ configSuccessMessage }}
-      </div>
+        <button
+          class="toggle-btn"
+          [class.active]="isActivo"
+          [disabled]="loading"
+          (click)="toggleAutoDialer()">
+          <span class="btn-icon">{{ getButtonIcon() }}</span>
+          <span>{{ getButtonText() }}</span>
+        </button>
 
-      <div class="config-grid">
-        <!-- Intensidad de Marcación -->
-        <div class="config-item">
-          <label for="intensidad">
-            <strong>📊 Intensidad de Marcación</strong>
-            <span class="config-description">Llamadas por agente disponible</span>
-          </label>
-          <div class="input-with-info">
-            <input
-              type="number"
-              id="intensidad"
-              [(ngModel)]="intensidadMarcacion"
-              min="1.0"
-              max="5.0"
-              step="0.1"
-              class="config-input"
-              [disabled]="loadingConfig"
-            />
-            <span class="input-info">{{ intensidadMarcacion }} llamadas/agente</span>
-          </div>
-          <small class="help-text">
-            Ejemplo: 1.5 = Con 2 agentes disponibles, marca 3 llamadas simultáneamente
-          </small>
+        <div class="info-box" *ngIf="!isActivo">
+          <p>ℹ️ El auto-dialer está inactivo. Actívalo para comenzar a asignar llamadas.</p>
         </div>
 
-        <!-- Intervalo de Marcación -->
-        <div class="config-item">
-          <label for="intervalo">
-            <strong>⏱️ Intervalo de Marcación</strong>
-            <span class="config-description">Tiempo entre ciclos de marcación</span>
-          </label>
-          <div class="input-with-info">
-            <input
-              type="number"
-              id="intervalo"
-              [(ngModel)]="intervaloMarcacionSegundos"
-              min="10"
-              max="300"
-              step="5"
-              class="config-input"
-              [disabled]="loadingConfig"
-            />
-            <span class="input-info">{{ intervaloMarcacionSegundos }} segundos</span>
-          </div>
-          <small class="help-text">
-            Recomendado: 30 segundos para dar tiempo a que los contactos contesten
-          </small>
+        <div class="info-box active" *ngIf="isActivo">
+          <p>🟢 Sistema activo. Las llamadas se asignan automáticamente.</p>
         </div>
       </div>
+    </div>
 
-      <button
-        class="save-config-btn"
-        [disabled]="loadingConfig"
-        (click)="guardarConfiguracion()">
-        <span *ngIf="!loadingConfig">💾 Guardar Configuración</span>
-        <span *ngIf="loadingConfig">⏳ Guardando...</span>
-      </button>
+    <!-- Configuración Avanzada -->
+    <div class="control-panel">
+      <div class="control-section">
+        <h2>Parámetros de Marcación</h2>
 
-      <div class="info-box">
-        <p><strong>ℹ️ Nota:</strong> Los cambios se aplicarán en el próximo ciclo de marcación del autodialer.</p>
+        <div class="config-grid">
+          <!-- Intensidad de Marcación -->
+          <div class="config-item">
+            <label for="intensidad">
+              <strong>📊 Intensidad</strong>
+              <span class="config-description">Llamadas por agente</span>
+            </label>
+            <div class="input-with-info">
+              <input
+                type="number"
+                id="intensidad"
+                [(ngModel)]="intensidadMarcacion"
+                min="1.0"
+                max="5.0"
+                step="0.1"
+                class="config-input"
+                [disabled]="loadingConfig"
+              />
+              <span class="input-info">{{ intensidadMarcacion }}x</span>
+            </div>
+          </div>
+
+          <!-- Intervalo de Marcación -->
+          <div class="config-item">
+            <label for="intervalo">
+              <strong>⏱️ Intervalo</strong>
+              <span class="config-description">Segundos entre ciclos</span>
+            </label>
+            <div class="input-with-info">
+              <input
+                type="number"
+                id="intervalo"
+                [(ngModel)]="intervaloMarcacionSegundos"
+                min="10"
+                max="300"
+                step="5"
+                class="config-input"
+                [disabled]="loadingConfig"
+              />
+              <span class="input-info">{{ intervaloMarcacionSegundos }}s</span>
+            </div>
+          </div>
+        </div>
+
+        <button
+          class="save-config-btn"
+          [disabled]="loadingConfig"
+          (click)="guardarConfiguracion()">
+          <span *ngIf="!loadingConfig">💾 Guardar</span>
+          <span *ngIf="loadingConfig">⏳ Guardando...</span>
+        </button>
       </div>
     </div>
   </div>
@@ -120,7 +111,6 @@
   <!-- Estadísticas en tiempo real -->
   <div class="statistics-panel" *ngIf="estadisticas">
     <h2>📊 Estadísticas en Tiempo Real</h2>
-    <p class="subtitle">Actualización automática cada 5 segundos</p>
 
     <div class="stats-grid">
       <!-- Agentes Disponibles -->
@@ -177,17 +167,5 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Información Técnica -->
-  <div class="technical-info">
-    <h3>ℹ️ Información Técnica</h3>
-    <ul>
-      <li><strong>Frecuencia de Procesamiento:</strong> Cada 10 segundos</li>
-      <li><strong>Auto-Respuesta de Agentes:</strong> Activada (sin botón contestar)</li>
-      <li><strong>Llamadas a Destinos:</strong> Normal (con botón contestar)</li>
-      <li><strong>Asignación:</strong> 1 agente → 1 contacto por ciclo</li>
-      <li><strong>Condición:</strong> Solo agentes en estado DISPONIBLE</li>
-    </ul>
   </div>
 </div>
