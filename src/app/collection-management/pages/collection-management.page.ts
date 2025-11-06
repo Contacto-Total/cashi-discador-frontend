@@ -1045,11 +1045,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.callActive.set(true);
         this.startCall(); // Iniciar timer
         // Cambiar estado del agente a EN_LLAMADA
-        const agentId = 1; // TODO: Obtener del AuthService
-        this.agentService.changeAgentStatus(agentId, { estado: AgentState.EN_LLAMADA }).subscribe({
-          next: () => console.log('✅ Estado cambiado a EN_LLAMADA'),
-          error: (err: any) => console.error('❌ Error cambiando estado:', err)
-        });
+        const currentUser = this.authService.getCurrentUser();
+        if (currentUser?.id) {
+          this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.EN_LLAMADA }).subscribe({
+            next: () => console.log('✅ Estado cambiado a EN_LLAMADA'),
+            error: (err: any) => console.error('❌ Error cambiando estado:', err)
+          });
+        }
       }
 
       // Cuando la llamada termina, cambiar estado a TIPIFICANDO
@@ -1457,7 +1459,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  endCall() {
+  endCall(navigate: boolean = true) {
     console.log('📵 Finalizando llamada...');
 
     // Colgar la llamada SIP
@@ -1470,8 +1472,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.callTimer = undefined;
     }
 
-    // Navegar a la pantalla principal del agente
-    this.router.navigate(['/agent-dashboard']);
+    // Navegar a la pantalla principal del agente (opcional)
+    if (navigate) {
+      this.router.navigate(['/agent-dashboard']);
+    }
   }
 
   formatTime(seconds: number): string {
@@ -2252,6 +2256,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.saving.set(false);
     this.showSuccess.set(true);
 
+    // Colgar la llamada SIP y detener timer (sin navegar todavía)
+    this.endCall(false);
+
     this.loadManagementHistory();
 
     this.managementForm = {
@@ -2278,7 +2285,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // Cambiar estado a DISPONIBLE y volver al dashboard
     console.log('✅ Gestión guardada, cambiando estado a DISPONIBLE...');
-    const agentId = 1; // TODO: Obtener del AuthService
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id || 1; // Fallback a 1 si no se obtiene
     this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
       next: () => {
         console.log('✅ Estado cambiado a DISPONIBLE');
