@@ -1025,6 +1025,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.loadTenants();
     this.loadManagementHistory();
 
+    // Verificar estado inicial de la llamada
+    const initialCallState = this.sipService.getCallState();
+    console.log('📞 [CollectionManagement] Estado inicial de llamada:', initialCallState);
+
+    if (initialCallState === CallState.ACTIVE && !this.callActive()) {
+      console.log('⏱️ Llamada ya está activa, iniciando timer automáticamente...');
+      this.callActive.set(true);
+      this.startCall(); // Iniciar timer automáticamente
+    }
+
     // Suscribirse a cambios de estado de llamada
     this.callStateSubscription = this.sipService.onCallStatus.subscribe((state: CallState) => {
       console.log('📞 [CollectionManagement] Estado de llamada:', state);
@@ -1448,14 +1458,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   endCall() {
-    if (!this.managementForm.resultadoContacto) {
-      alert('⚠️ Debe seleccionar un resultado de contacto antes de finalizar');
-      return;
-    }
+    console.log('📵 Finalizando llamada...');
+
+    // Colgar la llamada SIP
+    this.sipService.hangup();
+
+    // Detener el timer
     this.callActive.set(false);
     if (this.callTimer) {
       clearInterval(this.callTimer);
+      this.callTimer = undefined;
     }
+
+    // Navegar a la pantalla principal del agente
+    this.router.navigate(['/agent-dashboard']);
   }
 
   formatTime(seconds: number): string {
