@@ -1214,20 +1214,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
   loadFirstCustomer() {
-    // Obtener el ID del usuario logueado
-    const agentId = this.authService.getCurrentUserId();
+    // Obtener el usuario actual con su extensión SIP
+    const currentUser = this.authService.getCurrentUser();
 
-    if (!agentId) {
-      console.error('❌ No se pudo obtener el ID del agente logueado');
+    if (!currentUser || !currentUser.sipExtension) {
+      console.error('❌ No se pudo obtener la extensión SIP del agente logueado');
       // Fallback a contacto de prueba
       this.loadClienteDetalle(475);
       return;
     }
 
-    console.log(`📋 Buscando llamada activa del agente ${agentId}...`);
+    console.log(`📋 Buscando llamada activa del agente con extensión SIP ${currentUser.sipExtension}...`);
 
-    // Primero obtener la llamada activa del agente
-    this.http.get<any>(`${environment.gatewayUrl}/autodialer/active-call/${agentId}`).pipe(
+    // Primero obtener la llamada activa del agente usando su extensión SIP
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/active-call/extension/${currentUser.sipExtension}`).pipe(
       catchError((error) => {
         console.warn('⚠️ No hay llamada activa o error consultando:', error);
         // Si no hay llamada activa, usar contacto de prueba (475)
