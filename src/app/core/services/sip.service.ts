@@ -564,6 +564,30 @@ export class SipService {
         }
       });
 
+      // ========== CRITICAL: Monitor ICE CONNECTION state ==========
+      pc.addEventListener('iceconnectionstatechange', () => {
+        console.log(`🔌 ICE Connection State: ${pc.iceConnectionState}`);
+
+        if (pc.iceConnectionState === 'connected') {
+          console.log('✅ ICE CONNECTION ESTABLISHED - Audio should flow now!');
+        } else if (pc.iceConnectionState === 'failed') {
+          console.error('❌ ICE CONNECTION FAILED - No audio will flow!');
+        } else if (pc.iceConnectionState === 'disconnected') {
+          console.warn('⚠️ ICE CONNECTION DISCONNECTED');
+        }
+      });
+
+      // Monitor connection state (higher level)
+      pc.addEventListener('connectionstatechange', () => {
+        console.log(`🔗 PeerConnection State: ${pc.connectionState}`);
+
+        if (pc.connectionState === 'connected') {
+          console.log('✅ PEER CONNECTION ESTABLISHED');
+        } else if (pc.connectionState === 'failed') {
+          console.error('❌ PEER CONNECTION FAILED');
+        }
+      });
+
       // Monitor and filter ICE candidates as they are gathered
       pc.addEventListener('icecandidate', (event) => {
         if (event.candidate) {
