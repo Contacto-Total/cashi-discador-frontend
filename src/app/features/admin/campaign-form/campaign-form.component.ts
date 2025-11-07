@@ -107,13 +107,21 @@ export class CampaignFormComponent implements OnInit {
     this.loading = true;
     this.campaignService.getCampaignById(id).subscribe({
       next: (campaign) => {
+        console.log('✅ Campaign loaded:', campaign);
         this.campaign = campaign;
+
+        // Asignar valores inmediatamente
+        this.selectedTenantId = campaign.tenantId || 0;
+        this.selectedPortfolioId = campaign.portfolioId || 0;
+        this.selectedSubPortfolioId = campaign.subPortfolioId || 0;
 
         // Cargar los selectores en cascada con los valores existentes
         if (campaign.tenantId && campaign.portfolioId && campaign.subPortfolioId) {
-          this.selectedTenantId = campaign.tenantId;
-          this.selectedPortfolioId = campaign.portfolioId;
-          this.selectedSubPortfolioId = campaign.subPortfolioId;
+          console.log('📋 Loading portfolios and subportfolios...', {
+            tenantId: campaign.tenantId,
+            portfolioId: campaign.portfolioId,
+            subPortfolioId: campaign.subPortfolioId
+          });
 
           // Cargar portfolios y subportfolios en paralelo
           forkJoin({
@@ -123,19 +131,25 @@ export class CampaignFormComponent implements OnInit {
             next: (result) => {
               this.portfolios = result.portfolios.filter(p => p.isActive);
               this.subPortfolios = result.subPortfolios.filter(sp => sp.isActive);
+              console.log('✅ Loaded:', {
+                portfolios: this.portfolios.length,
+                subPortfolios: this.subPortfolios.length
+              });
               this.loading = false;
             },
             error: (err) => {
-              console.error('Error loading portfolios/subportfolios:', err);
+              console.error('❌ Error loading portfolios/subportfolios:', err);
+              this.error = 'Error al cargar portfolios/subportfolios';
               this.loading = false;
             }
           });
         } else {
+          console.warn('⚠️ Missing tenant/portfolio/subportfolio IDs');
           this.loading = false;
         }
       },
       error: (err) => {
-        console.error('Error loading campaign:', err);
+        console.error('❌ Error loading campaign:', err);
         this.error = 'Error al cargar la campaña';
         this.loading = false;
       }

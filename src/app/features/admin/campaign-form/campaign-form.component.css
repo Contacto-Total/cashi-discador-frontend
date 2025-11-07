@@ -14,7 +14,7 @@
 
 .form-header h1 {
   font-size: 1.8rem;
-  color: var(--text-primary, #1e293b);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -23,17 +23,17 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.9rem;
-  color: #475569;
+  color: var(--text-secondary);
   transition: all 0.2s;
 }
 
 .btn-back:hover {
-  background: #e2e8f0;
+  background: var(--bg-secondary);
 }
 
 .error-message {
@@ -66,14 +66,14 @@
 }
 
 .form-content {
-  background: var(--card-background, white);
+  background: var(--bg-card);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .form-section {
   padding: 1.5rem;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .form-section:last-of-type {
@@ -82,7 +82,7 @@
 
 .form-section h2 {
   font-size: 1.2rem;
-  color: var(--text-primary, #1e293b);
+  color: var(--text-primary);
   margin: 0 0 1.5rem 0;
   font-weight: 600;
 }
@@ -98,7 +98,7 @@
 .form-group label {
   display: block;
   font-weight: 500;
-  color: var(--text-secondary, #374151);
+  color: var(--text-secondary);
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
@@ -108,9 +108,9 @@
 .form-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--input-border, #d1d5db);
-  background: var(--input-background, white);
-  color: var(--text-primary, #1e293b);
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
   border-radius: 6px;
   font-size: 0.95rem;
   transition: border-color 0.2s;
@@ -126,9 +126,10 @@
 
 .form-input:disabled,
 .form-select:disabled {
-  background: var(--input-disabled-bg, #f9fafb);
-  color: var(--input-disabled-text, #9ca3af);
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .form-textarea {
@@ -139,7 +140,7 @@
 .form-group small {
   display: block;
   margin-top: 0.5rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--text-tertiary);
   font-size: 0.85rem;
 }
 
@@ -160,8 +161,8 @@
   justify-content: flex-end;
   gap: 1rem;
   padding: 1.5rem;
-  background: var(--card-footer-bg, #f9fafb);
-  border-top: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
 }
 
 .btn-cancel,
