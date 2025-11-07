@@ -116,7 +116,7 @@ export class CampaignAdminService {
    * Obtiene todas las campañas
    */
   getAllCampaigns(): Observable<Campaign[]> {
-    return this.http.get<Campaign[]>(this.apiUrl, { headers: this.getHeaders() });
+    return this.http.get<Campaign[]>(`${this.apiUrl}/list`, { headers: this.getHeaders() });
   }
 
   /**
