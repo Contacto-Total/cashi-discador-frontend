@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
@@ -109,25 +110,29 @@ export class CampaignFormComponent implements OnInit {
         this.campaign = campaign;
 
         // Cargar los selectores en cascada con los valores existentes
-        if (campaign.tenantId) {
+        if (campaign.tenantId && campaign.portfolioId && campaign.subPortfolioId) {
           this.selectedTenantId = campaign.tenantId;
-          this.onTenantChange();
+          this.selectedPortfolioId = campaign.portfolioId;
+          this.selectedSubPortfolioId = campaign.subPortfolioId;
 
-          setTimeout(() => {
-            if (campaign.portfolioId) {
-              this.selectedPortfolioId = campaign.portfolioId;
-              this.onPortfolioChange();
-
-              setTimeout(() => {
-                if (campaign.subPortfolioId) {
-                  this.selectedSubPortfolioId = campaign.subPortfolioId;
-                }
-              }, 500);
+          // Cargar portfolios y subportfolios en paralelo
+          forkJoin({
+            portfolios: this.portfolioService.getPortfoliosByTenant(campaign.tenantId),
+            subPortfolios: this.portfolioService.getSubPortfoliosByPortfolio(campaign.portfolioId)
+          }).subscribe({
+            next: (result) => {
+              this.portfolios = result.portfolios.filter(p => p.isActive);
+              this.subPortfolios = result.subPortfolios.filter(sp => sp.isActive);
+              this.loading = false;
+            },
+            error: (err) => {
+              console.error('Error loading portfolios/subportfolios:', err);
+              this.loading = false;
             }
-          }, 500);
+          });
+        } else {
+          this.loading = false;
         }
-
-        this.loading = false;
       },
       error: (err) => {
         console.error('Error loading campaign:', err);

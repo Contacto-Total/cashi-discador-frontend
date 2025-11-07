@@ -2,6 +2,7 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  min-height: 100vh;
 }
 
 .form-header {
@@ -13,7 +14,7 @@
 
 .form-header h1 {
   font-size: 1.8rem;
-  color: #1e293b;
+  color: var(--text-primary, #1e293b);
   margin: 0;
 }
 
@@ -65,14 +66,14 @@
 }
 
 .form-content {
-  background: white;
+  background: var(--card-background, white);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .form-section {
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
 }
 
 .form-section:last-of-type {
@@ -81,7 +82,7 @@
 
 .form-section h2 {
   font-size: 1.2rem;
-  color: #1e293b;
+  color: var(--text-primary, #1e293b);
   margin: 0 0 1.5rem 0;
   font-weight: 600;
 }
@@ -97,7 +98,7 @@
 .form-group label {
   display: block;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary, #374151);
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
 }
@@ -107,7 +108,9 @@
 .form-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border, #d1d5db);
+  background: var(--input-background, white);
+  color: var(--text-primary, #1e293b);
   border-radius: 6px;
   font-size: 0.95rem;
   transition: border-color 0.2s;
@@ -123,8 +126,8 @@
 
 .form-input:disabled,
 .form-select:disabled {
-  background: #f9fafb;
-  color: #9ca3af;
+  background: var(--input-disabled-bg, #f9fafb);
+  color: var(--input-disabled-text, #9ca3af);
   cursor: not-allowed;
 }
 
@@ -136,7 +139,7 @@
 .form-group small {
   display: block;
   margin-top: 0.5rem;
-  color: #6b7280;
+  color: var(--text-muted, #6b7280);
   font-size: 0.85rem;
 }
 
@@ -157,8 +160,8 @@
   justify-content: flex-end;
   gap: 1rem;
   padding: 1.5rem;
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
+  background: var(--card-footer-bg, #f9fafb);
+  border-top: 1px solid var(--border-color, #e5e7eb);
 }
 
 .btn-cancel,
