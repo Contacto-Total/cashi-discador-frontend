@@ -35,6 +35,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     dialMode: 'PROGRESSIVE',
     maxAttempts: 3,
     retryInterval: 60,
+    intensidad: 50,
     tenantId: undefined,
     portfolioId: undefined,
     subPortfolioId: undefined
@@ -156,7 +157,8 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       status: 'DRAFT',
       dialMode: 'PROGRESSIVE',
       maxAttempts: 3,
-      retryInterval: 60
+      retryInterval: 60,
+      intensidad: 50
     };
     this.showCreateModal = true;
   }
@@ -372,7 +374,90 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   // ========================================
-  // AUTO-DIALER METHODS
+  // PER-CAMPAIGN DIALING METHODS
+  // ========================================
+
+  /**
+   * Alterna el estado de discado de una campaña
+   */
+  toggleDialing(campaign: Campaign): void {
+    if (campaign.estaDiscando) {
+      this.stopDialing(campaign);
+    } else {
+      this.startDialing(campaign);
+    }
+  }
+
+  /**
+   * Inicia el discado automático para una campaña específica
+   */
+  startDialing(campaign: Campaign): void {
+    if (!campaign.id) return;
+
+    this.loading = true;
+    this.error = null;
+
+    this.campaignService.startDialing(campaign.id).subscribe({
+      next: () => {
+        this.successMessage = `Discado iniciado para "${campaign.name}"`;
+        this.loadCampaigns();
+        this.loading = false;
+
+        setTimeout(() => {
+          this.successMessage = null;
+        }, 3000);
+      },
+      error: (err) => {
+        console.error('Error starting dialing:', err);
+        this.error = err.error?.message || 'Error al iniciar el discado';
+        this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Detiene el discado automático para una campaña específica
+   */
+  stopDialing(campaign: Campaign): void {
+    if (!campaign.id) return;
+
+    this.loading = true;
+    this.error = null;
+
+    this.campaignService.stopDialing(campaign.id).subscribe({
+      next: () => {
+        this.successMessage = `Discado detenido para "${campaign.name}"`;
+        this.loadCampaigns();
+        this.loading = false;
+
+        setTimeout(() => {
+          this.successMessage = null;
+        }, 3000);
+      },
+      error: (err) => {
+        console.error('Error stopping dialing:', err);
+        this.error = 'Error al detener el discado';
+        this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Verifica si puede iniciar el discado
+   */
+  canStartDialing(campaign: Campaign): boolean {
+    return campaign.status === 'ACTIVE' && !campaign.estaDiscando;
+  }
+
+  /**
+   * Verifica si puede detener el discado
+   */
+  canStopDialing(campaign: Campaign): boolean {
+    return campaign.estaDiscando === true;
+  }
+
+  // ========================================
+  // AUTO-DIALER METHODS (DEPRECATED)
   // ========================================
 
   /**

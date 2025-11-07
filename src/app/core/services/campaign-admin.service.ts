@@ -15,6 +15,8 @@ export interface Campaign {
   retryInterval?: number;
   callerId?: string;
   aggressiveness?: number;
+  intensidad?: number; // 1-100, default 50
+  estaDiscando?: boolean; // Control de discado automático
   createdAt?: string;
   updatedAt?: string;
 
@@ -164,6 +166,20 @@ export class CampaignAdminService {
    */
   detenerCampaign(id: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/${id}/detener`, {}, { headers: this.getHeaders() });
+  }
+
+  /**
+   * Inicia el discado automático para una campaña específica
+   */
+  startDialing(id: number): Observable<Campaign> {
+    return this.http.post<Campaign>(`${this.apiUrl}/${id}/start-dialing`, {}, { headers: this.getHeaders() });
+  }
+
+  /**
+   * Detiene el discado automático para una campaña específica
+   */
+  stopDialing(id: number): Observable<Campaign> {
+    return this.http.post<Campaign>(`${this.apiUrl}/${id}/stop-dialing`, {}, { headers: this.getHeaders() });
   }
 
   /**

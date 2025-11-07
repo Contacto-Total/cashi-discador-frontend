@@ -72,6 +72,13 @@
               📥
             </button>
             <button
+              *ngIf="campaign.status === 'ACTIVE'"
+              [class]="campaign.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
+              (click)="toggleDialing(campaign)"
+              [title]="campaign.estaDiscando ? 'Detener Discado' : 'Iniciar Discado'">
+              {{ campaign.estaDiscando ? '⏹️' : '📞' }}
+            </button>
+            <button
               *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
               class="btn-action-small btn-delete"
               (click)="deleteCampaign(campaign)"
@@ -104,6 +111,8 @@
           <div class="campaign-meta-compact">
             <span>{{ campaign.dialMode }}</span>
             <span>Max: {{ campaign.maxAttempts }}</span>
+            <span>Intensidad: {{ campaign.intensidad || 50 }}</span>
+            <span *ngIf="campaign.estaDiscando" style="color: green; font-weight: bold;">🟢 Discando</span>
             <span *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
           </div>
         </div>
@@ -200,6 +209,18 @@
             min="1"
             max="10">
         </div>
+      </div>
+
+      <div class="form-group">
+        <label>Intensidad de Discado (1-100)</label>
+        <input
+          type="number"
+          [(ngModel)]="newCampaign.intensidad"
+          class="form-input"
+          min="1"
+          max="100"
+          placeholder="50">
+        <small style="color: #666;">Número de llamadas simultáneas por agente. Ejemplo: 50 con 10 agentes = 5 llamadas por agente.</small>
       </div>
     </div>
 
