@@ -100,7 +100,7 @@ export interface CampaignCallsResponse {
   providedIn: 'root'
 })
 export class CampaignAdminService {
-  private apiUrl = `${environment.gatewayUrl}/admin/campaigns`;
+  private apiUrl = `${environment.gatewayUrl}/campaigns`;
 
   constructor(private http: HttpClient) {}
 
