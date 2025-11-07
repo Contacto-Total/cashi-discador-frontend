@@ -39,6 +39,7 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'Call Center';
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
+  private callStatusSubscription?: Subscription; // ✅ CRITICAL FIX: Guardar subscription para evitar duplicados
   private dialogRef: any;
   private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
   private callActivatedTimestamp: number | null = null; // Timestamp de cuando la llamada se activó
@@ -85,6 +86,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
+    this.callStatusSubscription?.unsubscribe(); // ✅ Limpiar subscription de call status
     this.inactivityService.detener();
 
     // Limpiar timeout de navegación si existe
@@ -174,11 +176,25 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sipService.enableAutoAnswer();
       console.log('🤖 Auto-answer HABILITADO para auto-dialer');
 
+      // ✅ CRITICAL FIX: Cancelar subscription anterior antes de crear una nueva
+      // Esto evita múltiples subscriptions que causan comportamiento duplicado
+      if (this.callStatusSubscription) {
+        console.log('🧹 Limpiando subscription anterior de call status');
+        this.callStatusSubscription.unsubscribe();
+      }
+
       // Suscribirse a cambios de estado para navegar a tipificación
-      this.sipService.onCallStatus.subscribe((state) => {
+      this.callStatusSubscription = this.sipService.onCallStatus.subscribe((state) => {
         console.log(`📡 [App] Estado de llamada: ${state}`);
 
         if (state === CallState.ACTIVE && !this.hasNavigatedToTypification) {
+          // ✅ CRITICAL FIX: Cancelar timeout anterior si existe
+          // Evita múltiples timeouts cuando ACTIVE se emite múltiples veces (por ACK, etc)
+          if (this.navigationTimeout) {
+            console.log('⚠️ [App] Cancelando timeout de navegación anterior');
+            clearTimeout(this.navigationTimeout);
+          }
+
           // Marcar timestamp cuando la llamada se activa
           this.callActivatedTimestamp = Date.now();
           console.log('📞 [App] Llamada ACTIVA, esperando 2s para confirmar conexión estable...');
