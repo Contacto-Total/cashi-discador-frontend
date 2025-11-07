@@ -10,6 +10,8 @@ export interface Campaign {
   retryInterval: number;
   callerId?: string;
   aggressiveness: number;
+  intensidad: number;
+  estaDiscando: boolean;
   createdBy?: number;
   createdAt?: Date;
   updatedAt?: Date;

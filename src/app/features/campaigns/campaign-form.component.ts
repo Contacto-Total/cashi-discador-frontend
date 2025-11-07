@@ -63,7 +63,8 @@ export class CampaignFormComponent implements OnInit {
       maxAttempts: [3, [Validators.required, Validators.min(1), Validators.max(10)]],
       retryInterval: [60, [Validators.required, Validators.min(1)]],
       callerId: [''],
-      aggressiveness: [1.2, [Validators.min(1.0), Validators.max(2.0)]]
+      aggressiveness: [1.2, [Validators.min(1.0), Validators.max(2.0)]],
+      intensidad: [50, [Validators.required, Validators.min(1), Validators.max(100)]]
     });
 
     // Show aggressiveness only for predictive mode
@@ -102,7 +103,8 @@ export class CampaignFormComponent implements OnInit {
           maxAttempts: campaign.maxAttempts,
           retryInterval: campaign.retryInterval,
           callerId: campaign.callerId,
-          aggressiveness: campaign.aggressiveness
+          aggressiveness: campaign.aggressiveness,
+          intensidad: campaign.intensidad || 50
         });
         this.loading = false;
       },
@@ -143,5 +145,9 @@ export class CampaignFormComponent implements OnInit {
 
   formatAggressiveness(value: number): string {
     return value.toFixed(2);
+  }
+
+  formatIntensidad(value: number): string {
+    return `${value}`;
   }
 }

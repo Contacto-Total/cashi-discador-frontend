@@ -92,6 +92,16 @@
           </div>
         </div>
 
+        <div class="form-row">
+          <div class="slider-container">
+            <label>Intensidad de Discado: {{ formatIntensidad(campaignForm.get('intensidad')?.value) }}</label>
+            <mat-slider min="1" max="100" step="1" showTickMarks discrete>
+              <input matSliderThumb formControlName="intensidad">
+            </mat-slider>
+            <mat-hint>Número de llamadas simultáneas por agente (1-100). Ejemplo: 50 con 10 agentes = 5 llamadas por agente.</mat-hint>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button mat-button type="button" (click)="onCancel()">Cancel</button>
           <button mat-raised-button color="primary" type="submit" [disabled]="loading || campaignForm.invalid">

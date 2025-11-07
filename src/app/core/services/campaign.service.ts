@@ -48,6 +48,14 @@ export class CampaignService {
     return this.http.post<Campaign>(`${this.apiUrl}/${id}/stop`, {});
   }
 
+  startDialing(id: number): Observable<Campaign> {
+    return this.http.post<Campaign>(`${this.apiUrl}/${id}/start-dialing`, {});
+  }
+
+  stopDialing(id: number): Observable<Campaign> {
+    return this.http.post<Campaign>(`${this.apiUrl}/${id}/stop-dialing`, {});
+  }
+
   getCampaignStatistics(id: number): Observable<CampaignStatistics> {
     return this.http.get<CampaignStatistics>(`${this.apiUrl}/${id}/statistics`);
   }

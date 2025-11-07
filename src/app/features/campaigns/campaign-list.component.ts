@@ -35,7 +35,7 @@ import { AutoDialerService } from '../../core/services/autodialer.service';
 export class CampaignListComponent implements OnInit, OnDestroy {
   campaigns: Campaign[] = [];
   loading = true;
-  displayedColumns: string[] = ['name', 'status', 'dialMode', 'startDate', 'contacts', 'actions'];
+  displayedColumns: string[] = ['name', 'status', 'dialMode', 'intensidad', 'dialing', 'startDate', 'contacts', 'actions'];
 
   // Auto-Dialer state
   isAutoDialerActive: boolean = false;
@@ -141,7 +141,54 @@ export class CampaignListComponent implements OnInit, OnDestroy {
   }
 
   // ========================================
-  // AUTO-DIALER METHODS
+  // PER-CAMPAIGN DIALING METHODS
+  // ========================================
+
+  toggleDialing(campaign: Campaign, event: Event): void {
+    event.stopPropagation(); // Prevent row click
+
+    if (campaign.estaDiscando) {
+      this.stopDialing(campaign);
+    } else {
+      this.startDialing(campaign);
+    }
+  }
+
+  startDialing(campaign: Campaign): void {
+    this.campaignService.startDialing(campaign.id).subscribe({
+      next: () => {
+        console.log(`✅ Discado iniciado para campaña: ${campaign.name}`);
+        this.loadCampaigns();
+      },
+      error: (error) => {
+        console.error('Error iniciando discado:', error);
+        alert(error.error?.message || 'Error al iniciar el discado');
+      }
+    });
+  }
+
+  stopDialing(campaign: Campaign): void {
+    this.campaignService.stopDialing(campaign.id).subscribe({
+      next: () => {
+        console.log(`⏸️ Discado detenido para campaña: ${campaign.name}`);
+        this.loadCampaigns();
+      },
+      error: (error) => {
+        console.error('Error deteniendo discado:', error);
+      }
+    });
+  }
+
+  canStartDialing(campaign: Campaign): boolean {
+    return campaign.status === CampaignStatus.ACTIVE && !campaign.estaDiscando;
+  }
+
+  canStopDialing(campaign: Campaign): boolean {
+    return campaign.estaDiscando;
+  }
+
+  // ========================================
+  // AUTO-DIALER METHODS (DEPRECATED - will be removed)
   // ========================================
 
   /**
