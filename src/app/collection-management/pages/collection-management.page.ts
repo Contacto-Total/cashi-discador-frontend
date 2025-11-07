@@ -1494,20 +1494,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
-  toggleMute() {
-    if (this.isMuted()) {
-      this.sipService.unmute();
-      console.log('🔊 Micrófono activado');
-    } else {
-      this.sipService.mute();
-      console.log('🔇 Micrófono silenciado');
-    }
-  }
-
-  isMuted(): boolean {
-    return this.sipService.isMuted();
-  }
-
   formatTime(seconds: number): string {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
