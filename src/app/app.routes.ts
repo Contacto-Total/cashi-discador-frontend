@@ -58,11 +58,6 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'admin/autodialer',
-    loadComponent: () => import('./features/admin/autodialer-admin/autodialer-admin.component').then(m => m.AutodialerAdminComponent),
-    canActivate: [authGuard, adminGuard]
-  },
-  {
     path: 'whatsapp',
     loadComponent: () => import('./features/whatsapp/components/main/main.component').then(m => m.MainComponent),
     canActivate: [authGuard]
