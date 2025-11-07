@@ -9,7 +9,8 @@ import { AgentStatus, ChangeStatusRequest } from '../models/agent-status.model';
   providedIn: 'root'
 })
 export class AgentService {
-  private readonly apiUrl = `${environment.apiUrl}/agents`;
+  // FIX: Cambiar de auth-api a gateway (/api) para acceder al discador-backend
+  private readonly apiUrl = `${environment.gatewayUrl}/agent-status`;
 
   constructor(private http: HttpClient) {}
 
