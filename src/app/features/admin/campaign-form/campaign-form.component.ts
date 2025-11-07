@@ -110,20 +110,15 @@ export class CampaignFormComponent implements OnInit {
         console.log('✅ Campaign loaded:', campaign);
         this.campaign = campaign;
 
-        // Asignar valores inmediatamente
-        this.selectedTenantId = campaign.tenantId || 0;
-        this.selectedPortfolioId = campaign.portfolioId || 0;
-        this.selectedSubPortfolioId = campaign.subPortfolioId || 0;
-
         // Cargar los selectores en cascada con los valores existentes
         if (campaign.tenantId && campaign.portfolioId && campaign.subPortfolioId) {
-          console.log('📋 Loading portfolios and subportfolios...', {
+          console.log('📋 Loading cascading data for edit mode...', {
             tenantId: campaign.tenantId,
             portfolioId: campaign.portfolioId,
             subPortfolioId: campaign.subPortfolioId
           });
 
-          // Cargar portfolios y subportfolios en paralelo
+          // Cargar portfolios y subportfolios PRIMERO, luego asignar los valores seleccionados
           forkJoin({
             portfolios: this.portfolioService.getPortfoliosByTenant(campaign.tenantId),
             subPortfolios: this.portfolioService.getSubPortfoliosByPortfolio(campaign.portfolioId)
@@ -131,10 +126,26 @@ export class CampaignFormComponent implements OnInit {
             next: (result) => {
               this.portfolios = result.portfolios.filter(p => p.isActive);
               this.subPortfolios = result.subPortfolios.filter(sp => sp.isActive);
-              console.log('✅ Loaded:', {
+
+              console.log('✅ Data loaded, now setting selected values:', {
                 portfolios: this.portfolios.length,
-                subPortfolios: this.subPortfolios.length
+                subPortfolios: this.subPortfolios.length,
+                selectedTenant: campaign.tenantId,
+                selectedPortfolio: campaign.portfolioId,
+                selectedSubPortfolio: campaign.subPortfolioId
               });
+
+              // AHORA SÍ asignar los valores después de cargar las opciones
+              this.selectedTenantId = campaign.tenantId || 0;
+              this.selectedPortfolioId = campaign.portfolioId || 0;
+              this.selectedSubPortfolioId = campaign.subPortfolioId || 0;
+
+              console.log('✅ Selected values assigned:', {
+                selectedTenantId: this.selectedTenantId,
+                selectedPortfolioId: this.selectedPortfolioId,
+                selectedSubPortfolioId: this.selectedSubPortfolioId
+              });
+
               this.loading = false;
             },
             error: (err) => {
