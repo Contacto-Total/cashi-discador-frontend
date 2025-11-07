@@ -151,14 +151,14 @@ export class CampaignAdminService {
    * Activa una campaña (inicia discado automático)
    */
   activarCampaign(id: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${id}/activar`, {}, { headers: this.getHeaders() });
+    return this.http.post(`${this.apiUrl}/${id}/start`, {}, { headers: this.getHeaders() });
   }
 
   /**
    * Pausa una campaña
    */
   pausarCampaign(id: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/${id}/pausar`, {}, { headers: this.getHeaders() });
+    return this.http.post(`${this.apiUrl}/${id}/pause`, {}, { headers: this.getHeaders() });
   }
 
   /**
