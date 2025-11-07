@@ -944,7 +944,9 @@ export class TestSoftphoneComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.stopCallTimer();
     this.themeSubscription?.unsubscribe();
-    this.sipService.unregister();
+    // ❌ NO unregister here! SIP debe mantenerse activo durante toda la sesión
+    // El unregister solo debe ocurrir en logout (app.component.ts:232)
+    // this.sipService.unregister();
   }
 
   toggleTheme() {
