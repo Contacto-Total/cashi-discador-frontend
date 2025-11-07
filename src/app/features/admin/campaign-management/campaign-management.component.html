@@ -1,28 +1,28 @@
 <div class="campaign-container">
   <!-- Header -->
   <div class="header">
-    <h1>📋 Gestión de Campañas</h1>
+    <h1><lucide-angular name="clipboard-list" [size]="24"></lucide-angular> Gestión de Campañas</h1>
     <div class="header-actions">
       <!-- New Campaign Button -->
       <button class="btn-create" routerLink="/admin/campaigns/new">
-        <span>➕</span>
+        <lucide-angular name="plus-circle" [size]="18"></lucide-angular>
         <span>Nueva Campaña</span>
       </button>
     </div>
   </div>
 
   <!-- Error / Success Messages -->
-  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
-  <div *ngIf="successMessage" class="success-message">✅ {{ successMessage }}</div>
+  <div *ngIf="error" class="error-message"><lucide-angular name="x-circle" [size]="18"></lucide-angular> {{ error }}</div>
+  <div *ngIf="successMessage" class="success-message"><lucide-angular name="check-circle" [size]="18"></lucide-angular> {{ successMessage }}</div>
 
   <!-- Campaigns List Section -->
   <div class="campaigns-section">
-    <h2 class="section-title">📋 Campañas</h2>
+    <h2 class="section-title"><lucide-angular name="clipboard-list" [size]="20"></lucide-angular> Campañas</h2>
 
     <!-- Campaigns List -->
     <div class="campaigns-scrollable" *ngIf="!loading">
       <div *ngIf="campaigns.length === 0" class="empty-state">
-        <p>📭 No hay campañas creadas todavía</p>
+        <p><lucide-angular name="inbox" [size]="20"></lucide-angular> No hay campañas creadas todavía</p>
         <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
       </div>
 
@@ -39,47 +39,48 @@
               class="btn-action-small btn-view"
               (click)="viewCampaignDetail(campaign)"
               title="Ver detalle">
-              👁️
+              <lucide-angular name="eye" [size]="16"></lucide-angular>
             </button>
             <button
               class="btn-action-small btn-edit"
               [routerLink]="['/admin/campaigns', campaign.id, 'edit']"
               title="Editar campaña">
-              ✏️
+              <lucide-angular name="pencil" [size]="16"></lucide-angular>
             </button>
             <button
               *ngIf="canActivate(campaign)"
               class="btn-action-small btn-activate"
               (click)="activarCampaign(campaign)"
               title="Activar campaña">
-              ▶️
+              <lucide-angular name="play" [size]="16"></lucide-angular>
             </button>
             <button
               *ngIf="canPause(campaign)"
               class="btn-action-small btn-pause"
               (click)="pausarCampaign(campaign)"
               title="Pausar campaña">
-              ⏸️
+              <lucide-angular name="pause" [size]="16"></lucide-angular>
             </button>
             <button
               class="btn-action-small btn-import"
               (click)="openImportModal(campaign)"
               title="Importar contactos">
-              📥
+              <lucide-angular name="download" [size]="16"></lucide-angular>
             </button>
             <button
               *ngIf="campaign.status === 'ACTIVE'"
               [class]="campaign.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
               (click)="toggleDialing(campaign)"
               [title]="campaign.estaDiscando ? 'Detener Discado' : 'Iniciar Discado'">
-              {{ campaign.estaDiscando ? '⏹️' : '📞' }}
+              <lucide-angular *ngIf="campaign.estaDiscando" name="square" [size]="16"></lucide-angular>
+              <lucide-angular *ngIf="!campaign.estaDiscando" name="phone-call" [size]="16"></lucide-angular>
             </button>
             <button
               *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
               class="btn-action-small btn-delete"
               (click)="deleteCampaign(campaign)"
               title="Eliminar campaña">
-              🗑️
+              <lucide-angular name="trash-2" [size]="16"></lucide-angular>
             </button>
           </div>
         </div>
@@ -108,7 +109,9 @@
             <span>{{ campaign.dialMode }}</span>
             <span>Max: {{ campaign.maxAttempts }}</span>
             <span>Intensidad: {{ campaign.intensidad || 50 }}</span>
-            <span *ngIf="campaign.estaDiscando" style="color: green; font-weight: bold;">🟢 Discando</span>
+            <span *ngIf="campaign.estaDiscando" style="color: green; font-weight: bold;">
+              <lucide-angular name="activity" [size]="14" style="vertical-align: middle;"></lucide-angular> Discando
+            </span>
             <span *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
           </div>
         </div>
@@ -127,8 +130,8 @@
 <div *ngIf="showCreateModal" class="modal-overlay" (click)="closeCreateModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>➕ Nueva Campaña</h2>
-      <button class="btn-close" (click)="closeCreateModal()">✖</button>
+      <h2><lucide-angular name="plus-circle" [size]="20"></lucide-angular> Nueva Campaña</h2>
+      <button class="btn-close" (click)="closeCreateModal()"><lucide-angular name="x" [size]="18"></lucide-angular></button>
     </div>
 
     <div class="modal-body">
@@ -231,23 +234,23 @@
 <div *ngIf="showImportModal" class="modal-overlay" (click)="closeImportModal()">
   <div class="modal-content" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>📥 Importar Contactos</h2>
-      <button class="btn-close" (click)="closeImportModal()">✖</button>
+      <h2><lucide-angular name="download" [size]="20"></lucide-angular> Importar Contactos</h2>
+      <button class="btn-close" (click)="closeImportModal()"><lucide-angular name="x" [size]="18"></lucide-angular></button>
     </div>
 
     <div class="modal-body">
       <p><strong>Campaña:</strong> {{ selectedCampaign?.name }}</p>
 
       <div class="info-box">
-        <p>ℹ️ Los contactos se importarán desde: <strong>{{ importStats?.fuenteDatos || 'cashi_db.clientes' }}</strong></p>
-        <p>📊 Clientes disponibles: <strong>{{ importStats?.totalClientes || 0 }}</strong></p>
-        <p>📍 Inquilino: <strong>{{ importStats?.inquilino }}</strong></p>
-        <p>📂 Cartera: <strong>{{ importStats?.cartera }}</strong></p>
-        <p>📁 Subcartera: <strong>{{ importStats?.subcartera }}</strong></p>
+        <p><lucide-angular name="info" [size]="16"></lucide-angular> Los contactos se importarán desde: <strong>{{ importStats?.fuenteDatos || 'cashi_db.clientes' }}</strong></p>
+        <p><lucide-angular name="bar-chart-2" [size]="16"></lucide-angular> Clientes disponibles: <strong>{{ importStats?.totalClientes || 0 }}</strong></p>
+        <p><lucide-angular name="building-2" [size]="16"></lucide-angular> Inquilino: <strong>{{ importStats?.inquilino }}</strong></p>
+        <p><lucide-angular name="folder" [size]="16"></lucide-angular> Cartera: <strong>{{ importStats?.cartera }}</strong></p>
+        <p><lucide-angular name="folder-open" [size]="16"></lucide-angular> Subcartera: <strong>{{ importStats?.subcartera }}</strong></p>
       </div>
 
       <div class="alert alert-info">
-        ⚠️ Se importarán <strong>TODOS</strong> los clientes de esta cartera/subcartera automáticamente.
+        <lucide-angular name="alert-triangle" [size]="16"></lucide-angular> Se importarán <strong>TODOS</strong> los clientes de esta cartera/subcartera automáticamente.
       </div>
     </div>
 

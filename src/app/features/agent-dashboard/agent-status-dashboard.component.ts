@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { LucideAngularModule } from 'lucide-angular';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
@@ -14,7 +15,7 @@ import {
 @Component({
   selector: 'app-agent-status-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './agent-status-dashboard.component.html',
   styleUrls: ['./agent-status-dashboard.component.css']
 })

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
@@ -12,7 +13,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.css']
 })

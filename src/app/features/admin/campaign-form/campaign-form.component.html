@@ -1,15 +1,21 @@
 <div class="campaign-form-container">
   <!-- Header -->
   <div class="form-header">
-    <h1>{{ isEditMode ? '✏️ Editar Campaña' : '➕ Nueva Campaña' }}</h1>
+    <h1>
+      <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="24" class="header-icon"></lucide-angular>
+      {{ isEditMode ? 'Editar Campaña' : 'Nueva Campaña' }}
+    </h1>
     <button class="btn-back" (click)="onCancel()">
-      <span>←</span>
+      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
       <span>Volver</span>
     </button>
   </div>
 
   <!-- Error Message -->
-  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+  <div *ngIf="error" class="error-message">
+    <lucide-angular name="x-circle" [size]="20"></lucide-angular>
+    {{ error }}
+  </div>
 
   <!-- Loading State -->
   <div *ngIf="loading" class="loading-state">
@@ -22,7 +28,10 @@
     <form (ngSubmit)="onSubmit()">
       <!-- Información Básica -->
       <div class="form-section">
-        <h2>📋 Información Básica</h2>
+        <h2>
+          <lucide-angular name="file-text" [size]="20"></lucide-angular>
+          Información Básica
+        </h2>
 
         <div class="form-group">
           <label for="name">Nombre de la Campaña *</label>
@@ -50,7 +59,10 @@
 
       <!-- Asignación -->
       <div class="form-section">
-        <h2>🏢 Asignación</h2>
+        <h2>
+          <lucide-angular name="building-2" [size]="20"></lucide-angular>
+          Asignación
+        </h2>
 
         <div class="form-row">
           <div class="form-group">
@@ -106,7 +118,10 @@
 
       <!-- Configuración de Discado -->
       <div class="form-section">
-        <h2>📞 Configuración de Discado</h2>
+        <h2>
+          <lucide-angular name="phone-call" [size]="20"></lucide-angular>
+          Configuración de Discado
+        </h2>
 
         <div class="form-row">
           <div class="form-group">

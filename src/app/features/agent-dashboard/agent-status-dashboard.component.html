@@ -45,7 +45,7 @@
 
         <!-- Info Card -->
         <div class="info-card">
-          <h3>ℹ️ Información</h3>
+          <h3><lucide-angular name="info" [size]="20"></lucide-angular> Información</h3>
           <ul>
             <li><strong>Disponible:</strong> Recibirás llamadas automáticas</li>
             <li><strong>En Reunión/Refrigerio/Baño:</strong> No recibirás llamadas</li>
@@ -85,7 +85,7 @@
             class="manual-call-btn"
             [disabled]="loading || currentStatus.estadoActual === AgentState.EN_LLAMADA || currentStatus.estadoActual === AgentState.TIPIFICANDO"
             (click)="enterManualMode()">
-            <span class="btn-icon">📞</span>
+            <span class="btn-icon"><lucide-angular name="phone-call" [size]="20"></lucide-angular></span>
             <span>LLAMAR MANUAL</span>
           </button>
 

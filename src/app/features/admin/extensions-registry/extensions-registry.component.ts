@@ -3,12 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
+import { LucideAngularModule } from 'lucide-angular';
 import { AdminMonitoringService, ExtensionRegistration } from '../../../core/services/admin-monitoring.service';
 
 @Component({
   selector: 'app-extensions-registry',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, LucideAngularModule],
   templateUrl: './extensions-registry.component.html',
   styleUrls: ['./extensions-registry.component.css']
 })

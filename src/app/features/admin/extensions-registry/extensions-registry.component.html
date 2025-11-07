@@ -2,14 +2,14 @@
   <!-- Header -->
   <div class="header">
     <button class="btn-back" (click)="goBack()">
-      <span>⬅</span>
+      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
       <span>Volver a Campañas</span>
     </button>
-    <h1>📞 Registro de Extensiones</h1>
+    <h1><lucide-angular name="phone" [size]="24"></lucide-angular> Registro de Extensiones</h1>
   </div>
 
   <!-- Error Message -->
-  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+  <div *ngIf="error" class="error-message"><lucide-angular name="x-circle" [size]="18"></lucide-angular> {{ error }}</div>
 
   <!-- Loading State -->
   <div *ngIf="loading && extensions.length === 0" class="loading-state">
@@ -20,7 +20,7 @@
   <!-- Extensions Table -->
   <div *ngIf="!loading || extensions.length > 0" class="extensions-section">
     <div class="table-header">
-      <h3>📋 Extensiones Registradas</h3>
+      <h3><lucide-angular name="clipboard-list" [size]="20"></lucide-angular> Extensiones Registradas</h3>
       <div class="info-badge">
         Total: {{ extensions.length }}
       </div>
@@ -53,7 +53,7 @@
           </tr>
           <tr *ngIf="extensions.length === 0">
             <td colspan="6" class="empty-row">
-              📭 No hay extensiones registradas en este momento
+              <lucide-angular name="inbox" [size]="20"></lucide-angular> No hay extensiones registradas en este momento
             </td>
           </tr>
         </tbody>

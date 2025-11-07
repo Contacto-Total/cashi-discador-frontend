@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
 
 @Component({
   selector: 'app-campaign-monitoring',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-monitoring.component.html',
   styleUrls: ['./campaign-monitoring.component.css']
 })
@@ -175,15 +176,15 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   getEstadoIcon(estado: string): string {
     switch (estado) {
-      case 'DISPONIBLE': return '🟢';
-      case 'EN_LLAMADA': return '📞';
-      case 'DESCONECTADO': return '🔴';
-      case 'PAUSADO': return '⏸️';
-      case 'EN_REUNION': return '👥';
-      case 'REFRIGERIO': return '☕';
-      case 'SSHH': return '🚻';
-      case 'TIPIFICANDO': return '📝';
-      default: return '⚫';
+      case 'DISPONIBLE': return 'circle';
+      case 'EN_LLAMADA': return 'phone-call';
+      case 'DESCONECTADO': return 'circle';
+      case 'PAUSADO': return 'pause';
+      case 'EN_REUNION': return 'users';
+      case 'REFRIGERIO': return 'coffee';
+      case 'SSHH': return 'user';
+      case 'TIPIFICANDO': return 'edit';
+      default: return 'circle';
     }
   }
 

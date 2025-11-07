@@ -2,14 +2,14 @@
   <!-- Header with back button -->
   <div class="header">
     <button class="btn-back" (click)="goBack()">
-      <span>⬅</span>
+      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
       <span>Volver a Campañas</span>
     </button>
-    <h1>📋 Detalle de Campaña</h1>
+    <h1><lucide-angular name="clipboard-list" [size]="24"></lucide-angular> Detalle de Campaña</h1>
   </div>
 
   <!-- Error Message -->
-  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+  <div *ngIf="error" class="error-message"><lucide-angular name="x-circle" [size]="18"></lucide-angular> {{ error }}</div>
 
   <!-- Loading State -->
   <div *ngIf="loading && !statistics" class="loading-state">
@@ -30,7 +30,9 @@
         </span>
         <!-- Toggle Button -->
         <button class="btn-toggle-chart" (click)="toggleChart()" title="Ver gráfico de distribución">
-          {{ showChart ? '📊 Ver Métricas' : '📈 Ver Gráfico' }}
+          <lucide-angular *ngIf="showChart" name="bar-chart-2" [size]="18"></lucide-angular>
+          <lucide-angular *ngIf="!showChart" name="trending-up" [size]="18"></lucide-angular>
+          {{ showChart ? 'Ver Métricas' : 'Ver Gráfico' }}
         </button>
       </div>
       <p *ngIf="statistics.descripcion" class="campaign-description">
@@ -45,7 +47,7 @@
         <div class="metrics-grid">
       <!-- Estado Actual -->
       <div class="metric-card">
-        <span class="metric-icon">📊</span>
+        <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Estado Actual</span>
           <span class="metric-value">{{ getEstadoCampanaTexto(statistics.estadoActual) }}</span>
@@ -54,7 +56,7 @@
 
       <!-- Fecha Inicio -->
       <div class="metric-card">
-        <span class="metric-icon">📅</span>
+        <span class="metric-icon"><lucide-angular name="calendar" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Fecha Inicio</span>
           <span class="metric-value">
@@ -65,7 +67,7 @@
 
       <!-- Fecha Final -->
       <div class="metric-card">
-        <span class="metric-icon">🏁</span>
+        <span class="metric-icon"><lucide-angular name="flag" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Fecha Final</span>
           <span class="metric-value">
@@ -76,7 +78,7 @@
 
       <!-- Total de Registros -->
       <div class="metric-card">
-        <span class="metric-icon">📋</span>
+        <span class="metric-icon"><lucide-angular name="file-text" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Total de Registros</span>
           <span class="metric-value">{{ statistics.totalRegistros | number }}</span>
@@ -85,7 +87,7 @@
 
       <!-- Falta Reintentar -->
       <div class="metric-card">
-        <span class="metric-icon">🔄</span>
+        <span class="metric-icon"><lucide-angular name="refresh-cw" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Falta Reintentar</span>
           <span class="metric-value">{{ statistics.faltaReintentar | number }}</span>
@@ -94,7 +96,7 @@
 
       <!-- Reintentos Completados -->
       <div class="metric-card">
-        <span class="metric-icon">✅</span>
+        <span class="metric-icon"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Reintentos Completados</span>
           <span class="metric-value">{{ statistics.reintentosCompletados | number }}</span>
@@ -103,7 +105,7 @@
 
       <!-- Falta Llamar -->
       <div class="metric-card">
-        <span class="metric-icon">📞</span>
+        <span class="metric-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Falta Llamar</span>
           <span class="metric-value">{{ statistics.faltaLlamar | number }}</span>
@@ -112,7 +114,7 @@
 
       <!-- Duración Promedio Llamada -->
       <div class="metric-card">
-        <span class="metric-icon">⏱️</span>
+        <span class="metric-icon"><lucide-angular name="clock" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Duración Promedio Llamada</span>
           <span class="metric-value">{{ statistics.duracionPromedioLlamada }}</span>
@@ -121,7 +123,7 @@
 
       <!-- Duración Máxima Llamada -->
       <div class="metric-card">
-        <span class="metric-icon">⏰</span>
+        <span class="metric-icon"><lucide-angular name="timer" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Duración Máxima Llamada</span>
           <span class="metric-value">{{ statistics.duracionMaximaLlamada }}</span>
@@ -207,7 +209,7 @@
   <!-- Calls History Table -->
   <div *ngIf="statistics" class="calls-section">
     <div class="table-header">
-      <h3>📞 Registro de Llamadas</h3>
+      <h3><lucide-angular name="phone-call" [size]="20"></lucide-angular> Registro de Llamadas</h3>
 
       <div class="table-controls">
         <!-- Page Size Selector -->
@@ -228,7 +230,7 @@
             (keyup.enter)="onSearch()"
             placeholder="Buscar..."
             class="search-input">
-          <button (click)="onSearch()" class="btn-search">🔍</button>
+          <button (click)="onSearch()" class="btn-search"><lucide-angular name="search" [size]="16"></lucide-angular></button>
         </div>
       </div>
     </div>
@@ -263,7 +265,7 @@
           </tr>
           <tr *ngIf="calls.length === 0">
             <td colspan="7" class="empty-row">
-              📭 No hay llamadas registradas para esta campaña
+              <lucide-angular name="inbox" [size]="20"></lucide-angular> No hay llamadas registradas para esta campaña
             </td>
           </tr>
         </tbody>
@@ -283,7 +285,7 @@
           class="btn-page"
           [disabled]="currentPage === 0"
           (click)="onPageChange(currentPage - 1)">
-          ⬅ Anterior
+          <lucide-angular name="arrow-left" [size]="16"></lucide-angular> Anterior
         </button>
 
         <button
@@ -298,7 +300,7 @@
           class="btn-page"
           [disabled]="currentPage === totalPages - 1"
           (click)="onPageChange(currentPage + 1)">
-          Siguiente ➡
+          Siguiente <lucide-angular name="arrow-right" [size]="16"></lucide-angular>
         </button>
       </div>
     </div>

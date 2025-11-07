@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService } from '../../../core/services/autodialer.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
@@ -13,7 +14,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 @Component({
   selector: 'app-campaign-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule],
   templateUrl: './campaign-management.component.html',
   styleUrls: ['./campaign-management.component.css']
 })
@@ -505,7 +506,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
    * Obtiene el ícono del botón del auto-dialer
    */
   getAutoDialerButtonIcon(): string {
-    return this.isAutoDialerActive ? '⏸️' : '▶️';
+    return this.isAutoDialerActive ? 'pause' : 'play';
   }
 
   /**
