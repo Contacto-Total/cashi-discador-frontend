@@ -1,0 +1,191 @@
+<div class="campaign-form-container">
+  <!-- Header -->
+  <div class="form-header">
+    <h1>{{ isEditMode ? '✏️ Editar Campaña' : '➕ Nueva Campaña' }}</h1>
+    <button class="btn-back" (click)="onCancel()">
+      <span>←</span>
+      <span>Volver</span>
+    </button>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-message">❌ {{ error }}</div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>{{ isEditMode ? 'Cargando campaña...' : 'Guardando...' }}</p>
+  </div>
+
+  <!-- Form -->
+  <div *ngIf="!loading" class="form-content">
+    <form (ngSubmit)="onSubmit()">
+      <!-- Información Básica -->
+      <div class="form-section">
+        <h2>📋 Información Básica</h2>
+
+        <div class="form-group">
+          <label for="name">Nombre de la Campaña *</label>
+          <input
+            type="text"
+            id="name"
+            [(ngModel)]="campaign.name"
+            name="name"
+            placeholder="Ej: Campaña Cobranza Enero 2025"
+            class="form-input"
+            required>
+        </div>
+
+        <div class="form-group">
+          <label for="description">Descripción</label>
+          <textarea
+            id="description"
+            [(ngModel)]="campaign.description"
+            name="description"
+            placeholder="Descripción de la campaña..."
+            class="form-textarea"
+            rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- Asignación -->
+      <div class="form-section">
+        <h2>🏢 Asignación</h2>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="tenant">Proveedor (Inquilino) *</label>
+            <select
+              id="tenant"
+              [(ngModel)]="selectedTenantId"
+              name="tenant"
+              (ngModelChange)="onTenantChange()"
+              class="form-select"
+              required>
+              <option [ngValue]="0">Seleccione un proveedor...</option>
+              <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
+                {{ tenant.tenantCode }} - {{ tenant.tenantName }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="portfolio">Cartera *</label>
+            <select
+              id="portfolio"
+              [(ngModel)]="selectedPortfolioId"
+              name="portfolio"
+              (ngModelChange)="onPortfolioChange()"
+              [disabled]="selectedTenantId === 0"
+              class="form-select"
+              required>
+              <option [ngValue]="0">Seleccione una cartera...</option>
+              <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
+                {{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="subportfolio">Subcartera *</label>
+          <select
+            id="subportfolio"
+            [(ngModel)]="selectedSubPortfolioId"
+            name="subportfolio"
+            [disabled]="selectedPortfolioId === 0"
+            class="form-select"
+            required>
+            <option [ngValue]="0">Seleccione una subcartera...</option>
+            <option *ngFor="let sp of subPortfolios" [ngValue]="sp.id">
+              {{ sp.subPortfolioCode }} - {{ sp.subPortfolioName }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Configuración de Discado -->
+      <div class="form-section">
+        <h2>📞 Configuración de Discado</h2>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="dialMode">Modo de Discado</label>
+            <select
+              id="dialMode"
+              [(ngModel)]="campaign.dialMode"
+              name="dialMode"
+              class="form-select">
+              <option value="MANUAL">Manual</option>
+              <option value="PROGRESSIVE">Progresivo</option>
+              <option value="PREDICTIVE">Predictivo</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="maxAttempts">Intentos Máximos</label>
+            <input
+              type="number"
+              id="maxAttempts"
+              [(ngModel)]="campaign.maxAttempts"
+              name="maxAttempts"
+              class="form-input"
+              min="1"
+              max="10">
+            <small>Número máximo de intentos por contacto (1-10)</small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="retryInterval">Intervalo de Reintento (minutos)</label>
+            <input
+              type="number"
+              id="retryInterval"
+              [(ngModel)]="campaign.retryInterval"
+              name="retryInterval"
+              class="form-input"
+              min="1">
+            <small>Tiempo de espera entre reintentos</small>
+          </div>
+
+          <div class="form-group">
+            <label for="intensidad">Intensidad de Discado</label>
+            <input
+              type="number"
+              id="intensidad"
+              [(ngModel)]="campaign.intensidad"
+              name="intensidad"
+              class="form-input"
+              min="1"
+              max="100"
+              placeholder="50">
+            <small>Llamadas simultáneas por agente (1-100). Ej: 50 con 10 agentes = 5 llamadas/agente</small>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="callerId">Caller ID</label>
+          <input
+            type="text"
+            id="callerId"
+            [(ngModel)]="campaign.callerId"
+            name="callerId"
+            placeholder="Número telefónico a mostrar"
+            class="form-input">
+          <small>Número que se mostrará a los contactos</small>
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="form-actions">
+        <button type="button" class="btn-cancel" (click)="onCancel()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn-submit" [disabled]="loading">
+          {{ isEditMode ? 'Actualizar Campaña' : 'Crear Campaña' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

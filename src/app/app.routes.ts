@@ -28,6 +28,16 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'admin/campaigns/new',
+    loadComponent: () => import('./features/admin/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'admin/campaigns/:id/edit',
+    loadComponent: () => import('./features/admin/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin/campaigns/:id',
     loadComponent: () => import('./features/admin/campaign-detail/campaign-detail.component').then(m => m.CampaignDetailComponent),
     canActivate: [authGuard]

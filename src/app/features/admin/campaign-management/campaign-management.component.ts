@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService } from '../../../core/services/autodialer.service';
@@ -13,7 +13,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 @Component({
   selector: 'app-campaign-management',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './campaign-management.component.html',
   styleUrls: ['./campaign-management.component.css']
 })

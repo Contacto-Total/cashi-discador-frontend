@@ -3,18 +3,8 @@
   <div class="header">
     <h1>📋 Gestión de Campañas</h1>
     <div class="header-actions">
-      <!-- Auto-Dialer Toggle Button -->
-      <button
-        [class]="'btn-action ' + getAutoDialerButtonClass()"
-        (click)="toggleAutoDialer()"
-        [disabled]="autoDialerLoading"
-        [title]="isAutoDialerActive ? 'Pausar el sistema de discado automático' : 'Iniciar el sistema de discado automático'">
-        <span>{{ getAutoDialerButtonIcon() }}</span>
-        <span>{{ getAutoDialerButtonText() }}</span>
-      </button>
-
       <!-- New Campaign Button -->
-      <button class="btn-create" (click)="openCreateModal()">
+      <button class="btn-create" routerLink="/admin/campaigns/new">
         <span>➕</span>
         <span>Nueva Campaña</span>
       </button>
@@ -50,6 +40,12 @@
               (click)="viewCampaignDetail(campaign)"
               title="Ver detalle">
               👁️
+            </button>
+            <button
+              class="btn-action-small btn-edit"
+              [routerLink]="['/admin/campaigns', campaign.id, 'edit']"
+              title="Editar campaña">
+              ✏️
             </button>
             <button
               *ngIf="canActivate(campaign)"
