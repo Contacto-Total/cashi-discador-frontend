@@ -378,11 +378,16 @@ import { AuthService } from '../../core/services/auth.service';
                 </h3>
                 <div class="flex gap-2">
                   <button
-                    (click)="startCall()"
-                    [disabled]="callActive()"
-                    class="px-4 py-1.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                    (click)="toggleMute()"
+                    [disabled]="!callActive()"
+                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                      (callActive()
+                        ? (isMuted()
+                          ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white'
+                          : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white')
+                        : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
                   >
-                    Iniciar
+                    {{ isMuted() ? '🔇 Activar' : '🔊 Silenciar' }}
                   </button>
                   <button
                     (click)="endCall()"
@@ -1054,7 +1059,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       }
 
-      // Cuando la llamada termina, cambiar estado a TIPIFICANDO SOLO si fue una llamada real
+      // Cuando la llamada termina, SIEMPRE cambiar estado a TIPIFICANDO
+      // El agente debe quedarse en la pantalla para completar la tipificación
       if ((state === CallState.ENDED || state === CallState.IDLE) && this.callActive()) {
         this.callActive.set(false);
 
@@ -1067,27 +1073,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.callTimer = undefined;
         }
 
-        // Solo cambiar a TIPIFICANDO si la llamada duró al menos 3 segundos
-        // Si la llamada terminó antes, fue un SUBSCRIBER_ABSENT u otro error de conexión
-        if (finalDuration >= 3) {
-          console.log(`📝 Llamada real detectada (${finalDuration}s), cambiando a TIPIFICANDO`);
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser?.id) {
-            this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
-              next: () => console.log('✅ Estado cambiado a TIPIFICANDO'),
-              error: (err: any) => console.error('❌ Error cambiando estado:', err)
-            });
-          }
-        } else {
-          console.log(`⚠️ Llamada muy corta (${finalDuration}s), NO cambiando a TIPIFICANDO - retornando a DISPONIBLE`);
-          // Cambiar directamente a DISPONIBLE si la llamada no se estableció realmente
-          const currentUser = this.authService.getCurrentUser();
-          if (currentUser?.id) {
-            this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.DISPONIBLE }).subscribe({
-              next: () => console.log('✅ Estado cambiado a DISPONIBLE (llamada no establecida)'),
-              error: (err: any) => console.error('❌ Error cambiando estado:', err)
-            });
-          }
+        // SIEMPRE cambiar a TIPIFICANDO cuando termina una llamada
+        // El agente debe completar el formulario antes de volver a DISPONIBLE
+        console.log(`📝 Llamada terminada (${finalDuration}s), cambiando a TIPIFICANDO`);
+        const currentUser = this.authService.getCurrentUser();
+        if (currentUser?.id) {
+          this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+            next: () => console.log('✅ Estado cambiado a TIPIFICANDO - agente debe completar formulario'),
+            error: (err: any) => console.error('❌ Error cambiando estado:', err)
+          });
         }
       }
     });
@@ -1480,7 +1474,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }, 1000);
   }
 
-  endCall(navigate: boolean = true) {
+  endCall(navigate: boolean = false) {
     console.log('📵 Finalizando llamada...');
 
     // Colgar la llamada SIP
@@ -1493,10 +1487,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.callTimer = undefined;
     }
 
-    // Navegar a la pantalla principal del agente (opcional)
+    // NO navegar - el agente debe quedarse en tipificación
+    // Solo navegará cuando guarde la gestión (onSaveSuccess)
     if (navigate) {
       this.router.navigate(['/agent-dashboard']);
     }
+  }
+
+  toggleMute() {
+    if (this.isMuted()) {
+      this.sipService.unmute();
+      console.log('🔊 Micrófono activado');
+    } else {
+      this.sipService.mute();
+      console.log('🔇 Micrófono silenciado');
+    }
+  }
+
+  isMuted(): boolean {
+    return this.sipService.isMuted();
   }
 
   formatTime(seconds: number): string {
