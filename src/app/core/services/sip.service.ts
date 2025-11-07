@@ -22,6 +22,7 @@ export class SipService {
   private ringtoneAudio: HTMLAudioElement | null = null;
   private localStream: MediaStream | null = null;
   private autoAnswerEnabled: boolean = false;  // For admin supervision mode
+  private blockIncomingCalls: boolean = false;  // Block incoming calls during ACW/tipification
 
   public onCallStatus = new EventEmitter<CallState>();
   public onError = new EventEmitter<string>();
@@ -58,6 +59,14 @@ export class SipService {
   disableAutoAnswer(): void {
     this.autoAnswerEnabled = false;
     console.log('🤖 Auto-answer disabled');
+  }
+
+  /**
+   * Block incoming calls (for ACW/tipification period)
+   */
+  blockIncomingCallsMode(block: boolean): void {
+    this.blockIncomingCalls = block;
+    console.log(block ? '🚫 Incoming calls BLOCKED (agent tipifying)' : '✅ Incoming calls UNBLOCKED (agent available)');
   }
 
   /**
@@ -191,6 +200,16 @@ export class SipService {
 
           if (session.direction === 'incoming') {
             console.log('📲 Incoming call from:', session.remote_identity.uri.user);
+
+            // CHECK: If calls are blocked (agent is tipifying), reject the call immediately
+            if (this.blockIncomingCalls) {
+              console.warn('🚫 REJECTING incoming call - agent is tipifying (ACW period)');
+              session.terminate({
+                status_code: 486,
+                reason_phrase: 'Busy Here - Agent Tipifying'
+              });
+              return;
+            }
 
             this.currentSession = session;
 

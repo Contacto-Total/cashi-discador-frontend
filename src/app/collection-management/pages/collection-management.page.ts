@@ -96,8 +96,8 @@ import { AuthService } from '../../core/services/auth.service';
 
               <div class="text-right">
                 <div class="text-blue-200 dark:text-blue-300 text-[9px]">Estado</div>
-                <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : 'text-slate-300 dark:text-slate-200')">
-                  {{ callActive() ? '● EN LLAMADA' : '○ DISPONIBLE' }}
+                <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-200')">
+                  {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
               </div>
               <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-slate-800/50 dark:bg-gray-900/80')">
@@ -724,6 +724,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected showSuccess = signal(false);
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
+  protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
   protected historialGestiones = signal<Array<{
     id: number;
     fecha: string;
@@ -1063,6 +1064,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // El agente debe quedarse en la pantalla para completar la tipificación
       if ((state === CallState.ENDED || state === CallState.IDLE) && this.callActive()) {
         this.callActive.set(false);
+
+        // INMEDIATAMENTE bloquear llamadas entrantes ANTES de cambiar estado en backend
+        // Esto previene la race condition con el auto-dialer
+        this.isTipifying.set(true);
+        this.sipService.blockIncomingCallsMode(true);
+        console.log('🚫 Bloqueando llamadas entrantes - agente en tipificación');
 
         // Obtener la duración de la llamada antes de detener el timer
         const finalDuration = this.callDuration();
@@ -2301,6 +2308,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // Cambiar estado a DISPONIBLE y volver al dashboard
     console.log('✅ Gestión guardada, cambiando estado a DISPONIBLE...');
+
+    // Desbloquear llamadas entrantes - tipificación completada
+    this.isTipifying.set(false);
+    this.sipService.blockIncomingCallsMode(false);
+    console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id || 1; // Fallback a 1 si no se obtiene
     this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
