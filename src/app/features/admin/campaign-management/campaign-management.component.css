@@ -1,7 +1,7 @@
 /* CASHI Design - Campaign Management Panel */
 .campaign-container {
   min-height: 100vh;
-  background: #0A0E27;
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
   padding: 1.5rem;
   max-width: 1400px;
   margin: 0 auto;

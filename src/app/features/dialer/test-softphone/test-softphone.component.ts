@@ -296,7 +296,7 @@ import { Subscription, interval } from 'rxjs';
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      background-color: var(--secondary-bg);
+      background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
     }
 
     /* Header */

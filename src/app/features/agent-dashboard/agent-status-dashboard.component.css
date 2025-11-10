@@ -1,7 +1,7 @@
 /* CASHI Design - Dashboard de Agente */
 .dashboard-container {
   min-height: 100vh;
-  background: #0A0E27;
+  background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
   display: flex;
   flex-direction: column;
 }
