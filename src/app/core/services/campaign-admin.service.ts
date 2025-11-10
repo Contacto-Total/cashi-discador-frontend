@@ -226,14 +226,14 @@ export class CampaignAdminService {
    * Obtiene estadísticas detalladas de una campaña
    */
   getCampaignStatistics(id: number): Observable<CampaignStatistics> {
-    return this.http.get<CampaignStatistics>(`${this.apiUrl}/${id}/statistics`, { headers: this.getHeaders() });
+    return this.http.get<CampaignStatistics>(`${environment.gatewayUrl}/admin/campaigns/${id}/statistics`, { headers: this.getHeaders() });
   }
 
   /**
    * Obtiene el historial de llamadas de una campaña con paginación y búsqueda
    */
   getCampaignCalls(id: number, page: number = 0, size: number = 10, search?: string): Observable<CampaignCallsResponse> {
-    let url = `${this.apiUrl}/${id}/calls?page=${page}&size=${size}`;
+    let url = `${environment.gatewayUrl}/admin/campaigns/${id}/calls?page=${page}&size=${size}`;
     if (search) {
       url += `&search=${encodeURIComponent(search)}`;
     }
