@@ -14,7 +14,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
 
       @if (!customer()) {
         <!-- Search Screen -->
-        <div class="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 p-6">
+        <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
           <!-- Header -->
           <div class="max-w-7xl mx-auto mb-6">
             <div class="flex items-center gap-3 mb-2">

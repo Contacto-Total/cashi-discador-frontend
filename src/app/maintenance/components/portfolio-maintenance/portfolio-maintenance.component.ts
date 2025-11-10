@@ -12,7 +12,7 @@ import { Tenant } from '../../models/tenant.model';
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    <div class="min-h-screen bg-slate-950 p-6">
+    <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <!-- Header -->
       <div class="max-w-7xl mx-auto mb-6">
         <div class="flex items-center justify-between">
