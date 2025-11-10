@@ -44,6 +44,10 @@ export class CampaignFormComponent implements OnInit {
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
 
+  // Strings para los campos de fecha (datetime-local requiere formato específico)
+  startDateString: string = '';
+  endDateString: string = '';
+
   constructor(
     private campaignService: CampaignAdminService,
     private tenantService: TenantService,
@@ -110,6 +114,14 @@ export class CampaignFormComponent implements OnInit {
       next: (campaign) => {
         console.log('✅ Campaign loaded:', campaign);
         this.campaign = campaign;
+
+        // Convertir fechas para datetime-local
+        if (campaign.startDate) {
+          this.startDateString = this.toDateTimeLocal(campaign.startDate);
+        }
+        if (campaign.endDate) {
+          this.endDateString = this.toDateTimeLocal(campaign.endDate);
+        }
 
         // Cargar los selectores en cascada con los valores existentes
         if (campaign.tenantId && campaign.portfolioId && campaign.subPortfolioId) {
@@ -184,6 +196,14 @@ export class CampaignFormComponent implements OnInit {
     this.campaign.portfolioId = this.selectedPortfolioId;
     this.campaign.subPortfolioId = this.selectedSubPortfolioId;
 
+    // Convertir fechas de string a formato ISO
+    if (this.startDateString) {
+      this.campaign.startDate = this.startDateString;
+    }
+    if (this.endDateString) {
+      this.campaign.endDate = this.endDateString;
+    }
+
     this.loading = true;
     this.error = null;
 
@@ -216,5 +236,18 @@ export class CampaignFormComponent implements OnInit {
 
   onCancel(): void {
     this.router.navigate(['/admin/campaigns']);
+  }
+
+  /**
+   * Convierte una fecha ISO string a formato datetime-local (YYYY-MM-DDTHH:mm)
+   */
+  private toDateTimeLocal(dateString: string): string {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 }
