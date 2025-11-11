@@ -39,6 +39,7 @@ export class ChatList implements OnInit {
   searchText: string = '';
   selectedChatJid: string | null = null;
   isDarkMode: boolean = false;
+  filterMode: 'all' | 'unread' = 'all';
 
   constructor(
     private messageService: MessageService,
@@ -83,15 +84,27 @@ export class ChatList implements OnInit {
     return fullName || user.username || 'Usuario';
   }
 
+  setFilter(mode: 'all' | 'unread'): void {
+    this.filterMode = mode;
+    this.filterChats();
+  }
+
   filterChats(): void {
+    let chatsToShow = this.allItems;
+
+    // Aplicar filtro de no leídos primero
+    if (this.filterMode === 'unread') {
+      chatsToShow = this.allItems.filter(chat => chat.unreadCount && chat.unreadCount > 0);
+    }
+
     if (!this.searchText.trim()) {
-      // Sin búsqueda: mostrar solo chats activos
-      this.filteredChats = this.allItems;
+      // Sin búsqueda: mostrar chats según filtro
+      this.filteredChats = chatsToShow;
     } else {
       const search = this.searchText.toLowerCase().trim();
 
-      // Buscar en chats activos
-      const chatsMatched = this.allItems.filter(chat => {
+      // Buscar en chats según filtro aplicado
+      const chatsMatched = chatsToShow.filter(chat => {
         const name = chat.name?.toLowerCase() || '';
         const jid = chat.jid?.toLowerCase() || '';
         const lastMessage = chat.lastMsgText?.toLowerCase() || '';
@@ -101,29 +114,34 @@ export class ChatList implements OnInit {
                lastMessage.includes(search);
       });
 
-      // Buscar en TODOS los contactos (incluye los que no tienen chat)
-      const chatJids = new Set(this.allItems.map(c => c.jid));
-      const contactsMatched = this.allContacts
-        .filter(contact => {
-          // No duplicar contactos que ya tienen chat
-          if (chatJids.has(contact.jid)) return false;
+      // Buscar en TODOS los contactos solo si estamos en modo "todos" (no en "no leídos")
+      if (this.filterMode === 'all') {
+        const chatJids = new Set(this.allItems.map(c => c.jid));
+        const contactsMatched = this.allContacts
+          .filter(contact => {
+            // No duplicar contactos que ya tienen chat
+            if (chatJids.has(contact.jid)) return false;
 
-          const name = contact.name?.toLowerCase() || '';
-          const jid = contact.jid?.toLowerCase() || '';
+            const name = contact.name?.toLowerCase() || '';
+            const jid = contact.jid?.toLowerCase() || '';
 
-          return name.includes(search) || jid.includes(search);
-        })
-        .map(contact => ({
-          jid: contact.jid,
-          name: contact.name || contact.pushName || contact.jid,
-          lastMsgText: '',
-          lastMsgTs: 0,
-          unreadCount: 0
-        } as Chat));
+            return name.includes(search) || jid.includes(search);
+          })
+          .map(contact => ({
+            jid: contact.jid,
+            name: contact.name || contact.pushName || contact.jid,
+            lastMsgText: '',
+            lastMsgTs: 0,
+            unreadCount: 0
+          } as Chat));
 
-      // Combinar resultados: chats primero, luego contactos
-      this.filteredChats = [...chatsMatched, ...contactsMatched];
-      console.log(`🔍 Búsqueda: "${this.searchText}" - Chats: ${chatsMatched.length}, Contactos: ${contactsMatched.length}`);
+        // Combinar resultados: chats primero, luego contactos
+        this.filteredChats = [...chatsMatched, ...contactsMatched];
+        console.log(`🔍 Búsqueda: "${this.searchText}" - Chats: ${chatsMatched.length}, Contactos: ${contactsMatched.length}`);
+      } else {
+        // En modo "no leídos" solo mostrar chats, no contactos
+        this.filteredChats = chatsMatched;
+      }
     }
   }
 

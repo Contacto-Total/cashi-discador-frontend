@@ -32,8 +32,8 @@
 
   <!-- Filter tabs -->
   <div class="filter-tabs">
-    <button class="filter-tab active">Todos</button>
-    <button class="filter-tab">No leídos</button>
+    <button class="filter-tab" [class.active]="filterMode === 'all'" (click)="setFilter('all')">Todos</button>
+    <button class="filter-tab" [class.active]="filterMode === 'unread'" (click)="setFilter('unread')">No leídos</button>
   </div>
 
   <!-- Chat list -->
