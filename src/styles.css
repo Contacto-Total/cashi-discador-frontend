@@ -2292,5 +2292,215 @@ body.light-theme .bg-gradient-to-br .bg-green-500 {
   background-color: #10B981 !important;
 }
 
+/* ========================================
+   EXTENSIONS REGISTRY LIGHT THEME OVERRIDES
+   ======================================== */
+
+/* Container principal */
+body.light-theme .extensions-container {
+  background: linear-gradient(to bottom right, #f5f3f0, #faf8f5, #f5f3f0) !important;
+  color: #475569 !important;
+}
+
+/* Header */
+body.light-theme .extensions-container .header h1 {
+  color: #0f172a !important;
+}
+
+body.light-theme .extensions-container .btn-back {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: #d4cfc5 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .extensions-container .btn-back:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: #c9c3b9 !important;
+}
+
+/* Loading state */
+body.light-theme .extensions-container .loading-state {
+  color: #6b6560 !important;
+}
+
+body.light-theme .extensions-container .spinner {
+  border-color: #e7e3dc !important;
+  border-top-color: #3B82F6 !important;
+}
+
+/* Extensions Section */
+body.light-theme .extensions-section {
+  background: #fefdfb !important;
+  border-color: #e7e3dc !important;
+}
+
+body.light-theme .extensions-section .table-header h3 {
+  color: #0f172a !important;
+}
+
+/* Table */
+body.light-theme .extensions-table thead {
+  background: #f5f3f0 !important;
+}
+
+body.light-theme .extensions-table th {
+  color: #6b6560 !important;
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .extensions-table tbody tr {
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .extensions-table tbody tr:hover {
+  background: #f5f3f0 !important;
+}
+
+body.light-theme .extensions-table td {
+  color: #475569 !important;
+}
+
+body.light-theme .extensions-table .user-agent-cell {
+  color: #6b6560 !important;
+}
+
+body.light-theme .extensions-table .empty-row {
+  color: #6b6560 !important;
+}
+
+/* ========================================
+   GLOBAL BUTTON TEXT CONTRAST FIX
+   Fix light text on light backgrounds across entire app
+   ======================================== */
+
+/* All buttons with colored backgrounds - ensure white text */
+body.light-theme button.bg-blue-500,
+body.light-theme button.bg-blue-600,
+body.light-theme button.bg-blue-700,
+body.light-theme .bg-blue-500,
+body.light-theme .bg-blue-600,
+body.light-theme .bg-blue-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-green-500,
+body.light-theme button.bg-green-600,
+body.light-theme button.bg-green-700,
+body.light-theme .bg-green-500,
+body.light-theme .bg-green-600,
+body.light-theme .bg-green-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-red-500,
+body.light-theme button.bg-red-600,
+body.light-theme button.bg-red-700,
+body.light-theme .bg-red-500,
+body.light-theme .bg-red-600,
+body.light-theme .bg-red-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-gray-500,
+body.light-theme button.bg-gray-600,
+body.light-theme button.bg-gray-700,
+body.light-theme .bg-gray-500,
+body.light-theme .bg-gray-600,
+body.light-theme .bg-gray-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-indigo-500,
+body.light-theme button.bg-indigo-600,
+body.light-theme button.bg-indigo-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-purple-500,
+body.light-theme button.bg-purple-600,
+body.light-theme button.bg-purple-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-yellow-500,
+body.light-theme button.bg-yellow-600,
+body.light-theme button.bg-yellow-700 {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-orange-500,
+body.light-theme button.bg-orange-600,
+body.light-theme button.bg-orange-700 {
+  color: #ffffff !important;
+}
+
+/* Material buttons with primary/accent/warn colors */
+body.light-theme button.mat-mdc-button.mat-primary,
+body.light-theme button.mat-mdc-raised-button.mat-primary,
+body.light-theme button.mat-mdc-unelevated-button.mat-primary {
+  color: #ffffff !important;
+}
+
+body.light-theme button.mat-mdc-button.mat-accent,
+body.light-theme button.mat-mdc-raised-button.mat-accent,
+body.light-theme button.mat-mdc-unelevated-button.mat-accent {
+  color: #ffffff !important;
+}
+
+body.light-theme button.mat-mdc-button.mat-warn,
+body.light-theme button.mat-mdc-raised-button.mat-warn,
+body.light-theme button.mat-mdc-unelevated-button.mat-warn {
+  color: #ffffff !important;
+}
+
+/* Text inside buttons with Tailwind bg classes */
+body.light-theme button span,
+body.light-theme button lucide-angular,
+body.light-theme button mat-icon {
+  color: inherit !important;
+}
+
+/* Ensure ALL text in colored buttons is white */
+body.light-theme .bg-blue-500 span,
+body.light-theme .bg-blue-600 span,
+body.light-theme .bg-blue-700 span,
+body.light-theme .bg-green-500 span,
+body.light-theme .bg-green-600 span,
+body.light-theme .bg-green-700 span,
+body.light-theme .bg-red-500 span,
+body.light-theme .bg-red-600 span,
+body.light-theme .bg-red-700 span,
+body.light-theme .bg-gray-500 span,
+body.light-theme .bg-gray-600 span,
+body.light-theme .bg-gray-700 span {
+  color: #ffffff !important;
+}
+
+/* Icons in colored buttons */
+body.light-theme .bg-blue-500 lucide-angular,
+body.light-theme .bg-blue-600 lucide-angular,
+body.light-theme .bg-blue-700 lucide-angular,
+body.light-theme .bg-green-500 lucide-angular,
+body.light-theme .bg-green-600 lucide-angular,
+body.light-theme .bg-green-700 lucide-angular,
+body.light-theme .bg-red-500 lucide-angular,
+body.light-theme .bg-red-600 lucide-angular,
+body.light-theme .bg-red-700 lucide-angular {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+body.light-theme .bg-blue-500 mat-icon,
+body.light-theme .bg-blue-600 mat-icon,
+body.light-theme .bg-blue-700 mat-icon,
+body.light-theme .bg-green-500 mat-icon,
+body.light-theme .bg-green-600 mat-icon,
+body.light-theme .bg-green-700 mat-icon,
+body.light-theme .bg-red-500 mat-icon,
+body.light-theme .bg-red-600 mat-icon,
+body.light-theme .bg-red-700 mat-icon {
+  color: #ffffff !important;
+}
+
 
 
