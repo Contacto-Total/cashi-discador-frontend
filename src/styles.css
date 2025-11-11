@@ -1286,70 +1286,158 @@ progress {
 }
 
 /* ========================================
-   AGGRESSIVE LIGHT THEME OVERRIDES
-   Force light colors on ALL components
+   ULTRA AGGRESSIVE LIGHT THEME OVERRIDES
+   Force light colors on EVERYTHING
    ======================================== */
 
-/* Background overrides */
+/* NUCLEAR OPTION - Override ALL backgrounds */
+body.light-theme,
 body.light-theme * {
-  color: inherit;
+  /* Don't set background here, let it cascade */
 }
 
-body.light-theme div:not([class*="bg-"]):not([style*="background"]),
-body.light-theme section:not([class*="bg-"]):not([style*="background"]),
-body.light-theme article:not([class*="bg-"]):not([style*="background"]) {
-  background-color: transparent;
+/* Force page background */
+body.light-theme {
+  background-color: #f8fafc !important;
 }
 
-/* Force light backgrounds on containers */
-body.light-theme .container:not(.mat-mdc-card),
-body.light-theme .card:not(.mat-mdc-card),
+/* Override ALL dark backgrounds to light */
+body.light-theme [style*="background-color: #0A0E27"],
+body.light-theme [style*="background-color: #0a0e27"],
+body.light-theme [style*="background-color: #1E293B"],
+body.light-theme [style*="background-color: #1e293b"],
+body.light-theme [style*="background-color: rgb(10, 14, 39)"],
+body.light-theme [style*="background-color: rgb(30, 41, 59)"],
+body.light-theme [style*="background: #0A0E27"],
+body.light-theme [style*="background: #1E293B"] {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+}
+
+/* Override dark text colors */
+body.light-theme [style*="color: #ffffff"],
+body.light-theme [style*="color: white"],
+body.light-theme [style*="color: #fff"],
+body.light-theme [style*="color: rgb(255, 255, 255)"] {
+  color: #1e293b !important;
+}
+
+/* All major container classes */
+body.light-theme .container,
+body.light-theme .card,
 body.light-theme .panel,
 body.light-theme .box,
-body.light-theme .section {
+body.light-theme .section,
+body.light-theme .content,
+body.light-theme .wrapper,
+body.light-theme .page,
+body.light-theme .view,
+body.light-theme .component {
   background-color: #ffffff !important;
   color: #1e293b !important;
-  border-color: #e2e8f0 !important;
 }
 
-/* Headers in light mode */
+/* Campaign and admin specific containers */
+body.light-theme .campaign-container,
+body.light-theme .campaign-list,
+body.light-theme .campaign-card,
+body.light-theme .admin-container,
+body.light-theme .dashboard-container,
+body.light-theme .monitoring-container,
+body.light-theme .dialer-container {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+/* All headers */
 body.light-theme .header,
-body.light-theme header:not(.cashi-navbar) {
+body.light-theme header,
+body.light-theme .page-header,
+body.light-theme .section-header {
   background-color: #ffffff !important;
   color: #1e293b !important;
   border-color: #e2e8f0 !important;
 }
 
-/* All headings */
-body.light-theme h1:not(.mat-mdc-card h1),
-body.light-theme h2:not(.mat-mdc-card h2),
-body.light-theme h3:not(.mat-mdc-card h3),
-body.light-theme h4:not(.mat-mdc-card h4),
-body.light-theme h5:not(.mat-mdc-card h5),
-body.light-theme h6:not(.mat-mdc-card h6) {
+/* All headings - FORCE dark color */
+body.light-theme h1,
+body.light-theme h2,
+body.light-theme h3,
+body.light-theme h4,
+body.light-theme h5,
+body.light-theme h6 {
   color: #0f172a !important;
 }
 
-/* All text elements */
-body.light-theme p:not(.mat-mdc-card p),
-body.light-theme span:not(.mat-mdc-button-touch-target):not(.mat-mdc-card span),
-body.light-theme label:not(.mat-mdc-card label),
-body.light-theme div:not(.mat-mdc-card div):not([class*="btn"]):not([class*="button"]) {
+/* All text elements - FORCE dark color */
+body.light-theme p,
+body.light-theme span:not(.mat-mdc-button-touch-target),
+body.light-theme label,
+body.light-theme div:not([class*="btn"]):not([class*="button"]):not(.logo-icon):not(.badge):not(.status) {
   color: #475569 !important;
 }
 
-/* Stats cards and metrics */
+/* Tables - complete override */
+body.light-theme table,
+body.light-theme .table,
+body.light-theme .mat-table {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+body.light-theme th,
+body.light-theme thead,
+body.light-theme .table-header {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme td,
+body.light-theme tbody,
+body.light-theme .table-cell {
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme tr:hover,
+body.light-theme .table-row:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Stats and metric cards */
 body.light-theme .stats-card,
+body.light-theme .stat-card,
 body.light-theme .metric-card,
-body.light-theme .info-card {
+body.light-theme .info-card,
+body.light-theme .stats-grid {
   background-color: #ffffff !important;
   color: #1e293b !important;
   border: 1px solid #e2e8f0 !important;
 }
 
+/* All sidebars */
+body.light-theme .sidebar,
+body.light-theme aside,
+body.light-theme .navigation {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
 /* List items */
-body.light-theme li {
+body.light-theme li,
+body.light-theme ul,
+body.light-theme ol {
   color: #475569 !important;
+}
+
+/* Links */
+body.light-theme a:not(.nav-item):not(.btn) {
+  color: #10B981 !important;
+}
+
+body.light-theme a:not(.nav-item):not(.btn):hover {
+  color: #059669 !important;
 }
 
 /* Strong/bold text */
@@ -1358,42 +1446,31 @@ body.light-theme b {
   color: #1e293b !important;
 }
 
-/* Nav items in sidebars or menus */
-body.light-theme .nav-link,
-body.light-theme .menu-item,
-body.light-theme .sidebar-item {
-  color: #64748b !important;
-}
-
-body.light-theme .nav-link:hover,
-body.light-theme .menu-item:hover,
-body.light-theme .sidebar-item:hover {
-  background-color: rgba(16, 185, 129, 0.1) !important;
-  color: #10B981 !important;
-}
-
-/* Grid and flex containers */
-body.light-theme .grid,
-body.light-theme .flex,
-body.light-theme .row,
-body.light-theme .col {
-  background-color: transparent !important;
-}
-
-/* Status badges */
-body.light-theme .status,
-body.light-theme .badge:not(.cashi-badge),
-body.light-theme .tag:not(.cashi-badge),
-body.light-theme .chip:not(.cashi-badge) {
-  color: #ffffff !important;
-}
-
-/* Code and pre blocks */
-body.light-theme code,
-body.light-theme pre {
-  background-color: #f1f5f9 !important;
+/* Any element with specific dark bg classes */
+body.light-theme .bg-slate-950,
+body.light-theme .bg-slate-900,
+body.light-theme .bg-slate-800,
+body.light-theme .bg-gray-900,
+body.light-theme .bg-gray-800,
+body.light-theme .bg-dark {
+  background-color: #ffffff !important;
   color: #1e293b !important;
-  border-color: #e2e8f0 !important;
+}
+
+/* Text color overrides */
+body.light-theme .text-white,
+body.light-theme .text-gray-100,
+body.light-theme .text-gray-200,
+body.light-theme .text-slate-100,
+body.light-theme .text-slate-200 {
+  color: #1e293b !important;
+}
+
+body.light-theme .text-gray-400,
+body.light-theme .text-gray-500,
+body.light-theme .text-slate-400,
+body.light-theme .text-slate-500 {
+  color: #64748b !important;
 }
 
 
