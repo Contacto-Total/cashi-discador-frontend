@@ -8,7 +8,7 @@
 
 /* Theme Support for App Container */
 body.light-theme .app-container {
-  background-color: #f8fafc;
+  background-color: #f5f3f0;
 }
 
 body.dark-theme .app-container {
@@ -401,13 +401,13 @@ body.dark-theme .app-container {
 }
 
 /* ========================================
-   LIGHT THEME OVERRIDES ONLY - HIGH CONTRAST
+   LIGHT THEME OVERRIDES - WARM CREAM PALETTE
    ======================================== */
 
-/* Navbar Light Theme - Much more visible */
+/* Navbar Light Theme - Warm cream colors */
 body.light-theme .cashi-navbar {
-  background-color: #ffffff !important;
-  border-bottom: 2px solid #cbd5e1 !important;
+  background-color: #fefdfb !important;
+  border-bottom: 2px solid #d4cfc5 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
 
@@ -422,7 +422,7 @@ body.light-theme .nav-item {
 }
 
 body.light-theme .nav-item:hover {
-  background-color: #f1f5f9 !important;
+  background-color: #f0ede8 !important;
   color: #10B981 !important;
 }
 
@@ -433,23 +433,23 @@ body.light-theme .nav-item.active {
 }
 
 body.light-theme .dropdown-menu {
-  background: #ffffff !important;
-  border: 2px solid #cbd5e1 !important;
+  background: #fefdfb !important;
+  border: 2px solid #d4cfc5 !important;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
 }
 
 body.light-theme .dropdown-item {
   color: #1e293b !important;
-  border-bottom-color: #e2e8f0 !important;
+  border-bottom-color: #e7e3dc !important;
   font-weight: 500 !important;
 }
 
 body.light-theme .dropdown-item mat-icon {
-  color: #475569 !important;
+  color: #6b6560 !important;
 }
 
 body.light-theme .dropdown-item:hover {
-  background-color: #f1f5f9 !important;
+  background-color: #f0ede8 !important;
 }
 
 body.light-theme .dropdown-item:hover mat-icon,
@@ -473,9 +473,9 @@ body.light-theme .item-desc {
 }
 
 body.light-theme .user-profile {
-  background: #f1f5f9 !important;
+  background: #f0ede8 !important;
   color: #1e293b !important;
-  border: 1px solid #e2e8f0 !important;
+  border: 1px solid #d4cfc5 !important;
   font-weight: 600 !important;
 }
 
@@ -489,9 +489,9 @@ body.light-theme .nav-icon-btn {
 }
 
 body.light-theme .nav-icon-btn:hover {
-  background-color: #f1f5f9 !important;
+  background-color: #f0ede8 !important;
 }
 
 body.light-theme .main-content {
-  background-color: #f8fafc !important;
+  background-color: #f5f3f0 !important;
 }
