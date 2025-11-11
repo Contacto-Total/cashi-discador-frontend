@@ -1473,5 +1473,228 @@ body.light-theme .text-slate-500 {
   color: #64748b !important;
 }
 
+/* ========================================
+   COMPONENT-SPECIFIC CLASS OVERRIDES
+   Override hardcoded dark colors in component CSS files
+   ======================================== */
+
+/* Campaign Management Component */
+body.light-theme .campaign-container {
+  background: linear-gradient(to bottom right, #f8fafc, #ffffff, #f8fafc) !important;
+}
+
+body.light-theme .header h1 {
+  color: #0f172a !important;
+}
+
+body.light-theme .metrics-panel {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .metrics-panel h3 {
+  color: #0f172a !important;
+}
+
+body.light-theme .metric-item {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .metric-label {
+  color: #64748b !important;
+}
+
+body.light-theme .campaigns-section {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .section-title {
+  color: #0f172a !important;
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .campaigns-scrollable::-webkit-scrollbar-track {
+  background: #f8fafc !important;
+}
+
+body.light-theme .campaigns-scrollable::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+}
+
+body.light-theme .campaigns-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+body.light-theme .campaign-card-compact {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .campaign-header-compact {
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .campaign-title-compact h3 {
+  color: #0f172a !important;
+}
+
+body.light-theme .campaign-description-compact {
+  color: #64748b !important;
+}
+
+body.light-theme .campaign-stats-compact {
+  background: #ffffff !important;
+}
+
+body.light-theme .stat-label-compact {
+  color: #64748b !important;
+}
+
+body.light-theme .campaign-meta-compact {
+  color: #64748b !important;
+}
+
+body.light-theme .empty-state {
+  color: #64748b !important;
+}
+
+body.light-theme .loading-state {
+  color: #64748b !important;
+}
+
+body.light-theme .spinner {
+  border-color: #e2e8f0 !important;
+  border-top-color: #10B981 !important;
+}
+
+/* Modal overrides */
+body.light-theme .modal-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+body.light-theme .modal-content {
+  background: #ffffff !important;
+}
+
+body.light-theme .modal-header {
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .modal-header h2 {
+  color: #0f172a !important;
+}
+
+body.light-theme .btn-close {
+  color: #64748b !important;
+}
+
+body.light-theme .btn-close:hover {
+  color: #ef4444 !important;
+}
+
+body.light-theme .modal-footer {
+  border-color: #e2e8f0 !important;
+}
+
+/* Form Elements in components */
+body.light-theme .form-group label {
+  color: #1e293b !important;
+}
+
+body.light-theme .form-group small {
+  color: #64748b !important;
+}
+
+body.light-theme .form-input,
+body.light-theme .form-textarea,
+body.light-theme .form-select {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .form-input:focus,
+body.light-theme .form-textarea:focus,
+body.light-theme .form-select:focus {
+  border-color: #10B981 !important;
+}
+
+/* Campaign Form Component */
+body.light-theme .campaign-form-container {
+  background: linear-gradient(to bottom right, #f8fafc, #ffffff, #f8fafc) !important;
+}
+
+body.light-theme .form-header h1 {
+  color: #0f172a !important;
+}
+
+body.light-theme .form-content {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .form-section {
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .form-section h2 {
+  color: #0f172a !important;
+}
+
+body.light-theme .form-actions {
+  background: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Info boxes and messages */
+body.light-theme .info-box {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-left-color: #3B82F6 !important;
+}
+
+body.light-theme .info-box p {
+  color: #475569 !important;
+}
+
+/* Admin Monitoring Component */
+body.light-theme .admin-monitoring-container,
+body.light-theme .monitoring-container,
+body.light-theme .admin-container {
+  background: #f8fafc !important;
+}
+
+/* Agent Dashboard Component */
+body.light-theme .agent-dashboard-container,
+body.light-theme .agent-status-dashboard {
+  background: #f8fafc !important;
+}
+
+/* Campaign Detail Component */
+body.light-theme .campaign-detail-container,
+body.light-theme .detail-container {
+  background: #f8fafc !important;
+}
+
+/* Dialer Components */
+body.light-theme .dialer-container,
+body.light-theme .softphone-container,
+body.light-theme .contact-card-container {
+  background: #f8fafc !important;
+}
+
+/* Extensions Registry */
+body.light-theme .extensions-container,
+body.light-theme .registry-container {
+  background: #f8fafc !important;
+}
+
+/* All gradients to light gradients */
+body.light-theme *[style*="linear-gradient"] {
+  background: linear-gradient(to bottom right, #f8fafc, #ffffff, #f8fafc) !important;
+}
+
 
 
