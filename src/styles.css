@@ -1704,7 +1704,7 @@ body.light-theme *[style*="linear-gradient"] {
 
 /* Navbar background and borders */
 body.light-theme nav.cashi-navbar {
-  background-color: #fefdfb !important;
+  background-color: #f0ede8 !important;
   border-bottom-color: #d4cfc5 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
 }
@@ -1738,7 +1738,7 @@ body.light-theme .cashi-navbar .nav-item mat-icon {
 
 /* Nav items - hover state */
 body.light-theme .cashi-navbar .nav-item:hover {
-  background-color: #f0ede8 !important;
+  background-color: #e7e3dc !important;
   color: #10B981 !important;
 }
 
@@ -1779,7 +1779,7 @@ body.light-theme .cashi-navbar .nav-item.active .dropdown-arrow {
 
 /* Dropdown menus */
 body.light-theme .cashi-navbar .dropdown-menu {
-  background-color: #fefdfb !important;
+  background-color: #f5f3f0 !important;
   border-color: #d4cfc5 !important;
 }
 
@@ -1801,7 +1801,7 @@ body.light-theme .cashi-navbar .dropdown-item .item-desc {
 }
 
 body.light-theme .cashi-navbar .dropdown-item:hover {
-  background-color: #f0ede8 !important;
+  background-color: #e7e3dc !important;
 }
 
 body.light-theme .cashi-navbar .dropdown-item:hover mat-icon {
@@ -1814,8 +1814,8 @@ body.light-theme .cashi-navbar .dropdown-item:hover .item-title {
 
 /* User profile */
 body.light-theme .cashi-navbar .user-profile {
-  background-color: #f0ede8 !important;
-  border-color: #d4cfc5 !important;
+  background-color: #e7e3dc !important;
+  border-color: #c9c3b9 !important;
   color: #1e293b !important;
 }
 
@@ -1873,7 +1873,7 @@ body.light-theme .cashi-navbar .nav-icon-btn mat-icon {
 }
 
 body.light-theme .cashi-navbar .nav-icon-btn:hover {
-  background-color: #f0ede8 !important;
+  background-color: #e7e3dc !important;
   color: #10B981 !important;
 }
 
