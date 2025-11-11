@@ -1881,5 +1881,184 @@ body.light-theme .cashi-navbar .nav-icon-btn:hover mat-icon {
   color: #10B981 !important;
 }
 
+/* ========================================
+   CAMPAIGN MONITORING LIGHT THEME OVERRIDES
+   ======================================== */
+
+/* Container principal */
+body.light-theme .monitoring-container {
+  background: linear-gradient(to bottom right, #f5f3f0, #faf8f5, #f5f3f0) !important;
+}
+
+/* Header */
+body.light-theme .monitoring-container .header {
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .monitoring-container .header h1 {
+  color: #0f172a !important;
+}
+
+body.light-theme .monitoring-container .btn-back {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: #d4cfc5 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .monitoring-container .btn-back:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Campaign Selector */
+body.light-theme .campaign-selector {
+  background: #fefdfb !important;
+  border-color: #e7e3dc !important;
+}
+
+body.light-theme .campaign-selector label {
+  color: #0f172a !important;
+}
+
+body.light-theme .campaign-select {
+  background: #f5f3f0 !important;
+  border-color: #d4cfc5 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .campaign-select option {
+  background: #f5f3f0 !important;
+  color: #1e293b !important;
+}
+
+/* Metrics Panel */
+body.light-theme .metrics-panel {
+  background: #fefdfb !important;
+  border-color: #e7e3dc !important;
+}
+
+body.light-theme .metrics-panel h3 {
+  color: #0f172a !important;
+}
+
+body.light-theme .metric-item {
+  background: #f5f3f0 !important;
+  border-color: #ddd9d0 !important;
+}
+
+body.light-theme .metric-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+body.light-theme .metric-label {
+  color: #6b6560 !important;
+}
+
+/* LEFT COLUMN: Discado en Tiempo Real */
+body.light-theme .left-column {
+  background: #fefdfb !important;
+  border-color: #e7e3dc !important;
+}
+
+body.light-theme .discado-panel h3 {
+  color: #0f172a !important;
+  background: #f5f3f0 !important;
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .discado-table-container::-webkit-scrollbar-track {
+  background: #f5f3f0 !important;
+}
+
+body.light-theme .discado-table-container::-webkit-scrollbar-thumb {
+  background: #c9c3b9 !important;
+}
+
+body.light-theme .discado-table-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a099 !important;
+}
+
+body.light-theme .discado-table thead {
+  background: #f5f3f0 !important;
+}
+
+body.light-theme .discado-table th {
+  color: #6b6560 !important;
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .discado-table td {
+  border-bottom-color: #e7e3dc !important;
+  color: #475569 !important;
+}
+
+body.light-theme .llamada-row:hover {
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+
+body.light-theme .llamada-hora {
+  color: #6b6560 !important;
+}
+
+body.light-theme .llamada-agente {
+  color: #475569 !important;
+}
+
+/* RIGHT COLUMN: Agentes en Tiempo Real */
+body.light-theme .right-column {
+  background: transparent !important;
+}
+
+body.light-theme .agentes-panel {
+  background: #fefdfb !important;
+  border-color: #e7e3dc !important;
+}
+
+body.light-theme .agentes-header {
+  background: #f5f3f0 !important;
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .agentes-panel h3 {
+  color: #0f172a !important;
+}
+
+body.light-theme .agentes-table-container::-webkit-scrollbar-track {
+  background: #f5f3f0 !important;
+}
+
+body.light-theme .agentes-table-container::-webkit-scrollbar-thumb {
+  background: #c9c3b9 !important;
+}
+
+body.light-theme .agentes-table-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a099 !important;
+}
+
+body.light-theme .agentes-table thead {
+  background: #f5f3f0 !important;
+}
+
+body.light-theme .agentes-table th {
+  color: #6b6560 !important;
+  border-bottom-color: #e7e3dc !important;
+}
+
+body.light-theme .agentes-table td {
+  border-bottom-color: #e7e3dc !important;
+  color: #475569 !important;
+}
+
+body.light-theme .agente-row:hover {
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+
+body.light-theme .agente-nombre {
+  color: #6b6560 !important;
+}
+
+body.light-theme .agente-telefono {
+  color: #475569 !important;
+}
+
 
 
