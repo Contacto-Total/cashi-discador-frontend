@@ -2453,11 +2453,95 @@ body.light-theme button.mat-mdc-unelevated-button.mat-warn {
   color: #ffffff !important;
 }
 
-/* Text inside buttons with Tailwind bg classes */
-body.light-theme button span,
-body.light-theme button lucide-angular,
-body.light-theme button mat-icon {
-  color: inherit !important;
+/* Text inside buttons with Tailwind bg classes - FORCE white text in colored buttons */
+body.light-theme button.bg-blue-500 span,
+body.light-theme button.bg-blue-600 span,
+body.light-theme button.bg-blue-700 span,
+body.light-theme button.bg-green-500 span,
+body.light-theme button.bg-green-600 span,
+body.light-theme button.bg-green-700 span,
+body.light-theme button.bg-red-500 span,
+body.light-theme button.bg-red-600 span,
+body.light-theme button.bg-red-700 span,
+body.light-theme button.bg-gray-500 span,
+body.light-theme button.bg-gray-600 span,
+body.light-theme button.bg-gray-700 span,
+body.light-theme button.bg-indigo-500 span,
+body.light-theme button.bg-indigo-600 span,
+body.light-theme button.bg-indigo-700 span,
+body.light-theme button.bg-purple-500 span,
+body.light-theme button.bg-purple-600 span,
+body.light-theme button.bg-purple-700 span,
+body.light-theme button.bg-yellow-500 span,
+body.light-theme button.bg-yellow-600 span,
+body.light-theme button.bg-yellow-700 span,
+body.light-theme button.bg-orange-500 span,
+body.light-theme button.bg-orange-600 span,
+body.light-theme button.bg-orange-700 span {
+  color: #ffffff !important;
+}
+
+body.light-theme button.bg-blue-500 lucide-angular,
+body.light-theme button.bg-blue-600 lucide-angular,
+body.light-theme button.bg-blue-700 lucide-angular,
+body.light-theme button.bg-green-500 lucide-angular,
+body.light-theme button.bg-green-600 lucide-angular,
+body.light-theme button.bg-green-700 lucide-angular,
+body.light-theme button.bg-red-500 lucide-angular,
+body.light-theme button.bg-red-600 lucide-angular,
+body.light-theme button.bg-red-700 lucide-angular {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+body.light-theme button.bg-blue-500 lucide-angular svg,
+body.light-theme button.bg-blue-600 lucide-angular svg,
+body.light-theme button.bg-blue-700 lucide-angular svg,
+body.light-theme button.bg-green-500 lucide-angular svg,
+body.light-theme button.bg-green-600 lucide-angular svg,
+body.light-theme button.bg-green-700 lucide-angular svg,
+body.light-theme button.bg-red-500 lucide-angular svg,
+body.light-theme button.bg-red-600 lucide-angular svg,
+body.light-theme button.bg-red-700 lucide-angular svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+body.light-theme button.bg-blue-500 mat-icon,
+body.light-theme button.bg-blue-600 mat-icon,
+body.light-theme button.bg-blue-700 mat-icon,
+body.light-theme button.bg-green-500 mat-icon,
+body.light-theme button.bg-green-600 mat-icon,
+body.light-theme button.bg-green-700 mat-icon,
+body.light-theme button.bg-red-500 mat-icon,
+body.light-theme button.bg-red-600 mat-icon,
+body.light-theme button.bg-red-700 mat-icon {
+  color: #ffffff !important;
+}
+
+/* Material buttons - force white text */
+body.light-theme button.mat-mdc-button.mat-primary span,
+body.light-theme button.mat-mdc-raised-button.mat-primary span,
+body.light-theme button.mat-mdc-unelevated-button.mat-primary span,
+body.light-theme button.mat-mdc-button.mat-accent span,
+body.light-theme button.mat-mdc-raised-button.mat-accent span,
+body.light-theme button.mat-mdc-unelevated-button.mat-accent span,
+body.light-theme button.mat-mdc-button.mat-warn span,
+body.light-theme button.mat-mdc-raised-button.mat-warn span,
+body.light-theme button.mat-mdc-unelevated-button.mat-warn span {
+  color: #ffffff !important;
+}
+
+body.light-theme button.mat-mdc-button.mat-primary mat-icon,
+body.light-theme button.mat-mdc-raised-button.mat-primary mat-icon,
+body.light-theme button.mat-mdc-unelevated-button.mat-primary mat-icon,
+body.light-theme button.mat-mdc-button.mat-accent mat-icon,
+body.light-theme button.mat-mdc-raised-button.mat-accent mat-icon,
+body.light-theme button.mat-mdc-unelevated-button.mat-accent mat-icon,
+body.light-theme button.mat-mdc-button.mat-warn mat-icon,
+body.light-theme button.mat-mdc-raised-button.mat-warn mat-icon,
+body.light-theme button.mat-mdc-unelevated-button.mat-warn mat-icon {
+  color: #ffffff !important;
 }
 
 /* Ensure ALL text in colored buttons is white */
@@ -2499,6 +2583,47 @@ body.light-theme .bg-green-700 mat-icon,
 body.light-theme .bg-red-500 mat-icon,
 body.light-theme .bg-red-600 mat-icon,
 body.light-theme .bg-red-700 mat-icon {
+  color: #ffffff !important;
+}
+
+/* Additional button text fixes - custom button classes */
+body.light-theme button[class*="bg-"],
+body.light-theme .btn-primary,
+body.light-theme .btn-success,
+body.light-theme .btn-danger,
+body.light-theme .btn-info,
+body.light-theme .btn-warning {
+  color: #ffffff !important;
+}
+
+body.light-theme button[class*="bg-"] span,
+body.light-theme .btn-primary span,
+body.light-theme .btn-success span,
+body.light-theme .btn-danger span,
+body.light-theme .btn-info span,
+body.light-theme .btn-warning span {
+  color: #ffffff !important;
+}
+
+/* Force white text in ANY button with colored background */
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]) {
+  color: #ffffff;
+}
+
+/* Ensure text nodes and all child elements inherit white color in colored buttons */
+body.light-theme button.bg-blue-500 *,
+body.light-theme button.bg-blue-600 *,
+body.light-theme button.bg-blue-700 *,
+body.light-theme button.bg-green-500 *,
+body.light-theme button.bg-green-600 *,
+body.light-theme button.bg-green-700 *,
+body.light-theme button.bg-red-500 *,
+body.light-theme button.bg-red-600 *,
+body.light-theme button.bg-red-700 *,
+body.light-theme button.bg-emerald-500 *,
+body.light-theme button.bg-emerald-600 *,
+body.light-theme button.bg-teal-500 *,
+body.light-theme button.bg-teal-600 * {
   color: #ffffff !important;
 }
 
