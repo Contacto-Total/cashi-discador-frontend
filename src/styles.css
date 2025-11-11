@@ -2606,24 +2606,70 @@ body.light-theme .btn-warning span {
 }
 
 /* Force white text in ANY button with colored background */
-body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]) {
-  color: #ffffff;
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button) {
+  color: #ffffff !important;
+}
+
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button) * {
+  color: #ffffff !important;
 }
 
 /* Ensure text nodes and all child elements inherit white color in colored buttons */
 body.light-theme button.bg-blue-500 *,
 body.light-theme button.bg-blue-600 *,
 body.light-theme button.bg-blue-700 *,
+body.light-theme button.bg-blue-800 *,
 body.light-theme button.bg-green-500 *,
 body.light-theme button.bg-green-600 *,
 body.light-theme button.bg-green-700 *,
+body.light-theme button.bg-green-800 *,
 body.light-theme button.bg-red-500 *,
 body.light-theme button.bg-red-600 *,
 body.light-theme button.bg-red-700 *,
+body.light-theme button.bg-red-800 *,
 body.light-theme button.bg-emerald-500 *,
 body.light-theme button.bg-emerald-600 *,
+body.light-theme button.bg-emerald-700 *,
 body.light-theme button.bg-teal-500 *,
-body.light-theme button.bg-teal-600 * {
+body.light-theme button.bg-teal-600 *,
+body.light-theme button.bg-teal-700 *,
+body.light-theme button.bg-indigo-500 *,
+body.light-theme button.bg-indigo-600 *,
+body.light-theme button.bg-indigo-700 *,
+body.light-theme button.bg-purple-500 *,
+body.light-theme button.bg-purple-600 *,
+body.light-theme button.bg-purple-700 *,
+body.light-theme button.bg-orange-500 *,
+body.light-theme button.bg-orange-600 *,
+body.light-theme button.bg-orange-700 *,
+body.light-theme button.bg-yellow-500 *,
+body.light-theme button.bg-yellow-600 *,
+body.light-theme button.bg-yellow-700 * {
+  color: #ffffff !important;
+}
+
+/* Aggressive rule: ANY div or element with bg-* classes containing buttons */
+body.light-theme .bg-blue-500 button *,
+body.light-theme .bg-blue-600 button *,
+body.light-theme .bg-blue-700 button *,
+body.light-theme .bg-green-500 button *,
+body.light-theme .bg-green-600 button *,
+body.light-theme .bg-green-700 button *,
+body.light-theme .bg-red-500 button *,
+body.light-theme .bg-red-600 button *,
+body.light-theme .bg-red-700 button * {
+  color: #ffffff !important;
+}
+
+/* Class-based buttons */
+body.light-theme .btn-submit,
+body.light-theme .btn-submit *,
+body.light-theme .submit-btn,
+body.light-theme .submit-btn *,
+body.light-theme .action-btn,
+body.light-theme .action-btn *,
+body.light-theme .primary-btn,
+body.light-theme .primary-btn * {
   color: #ffffff !important;
 }
 
