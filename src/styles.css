@@ -68,31 +68,31 @@ html, body {
 }
 
 /* ========================================
-   TEMA CLARO - SOBRESCRITURAS PARA MÓDULOS ANTIGUOS CON COLORES HARDCODED
+   TEMA CLARO - SOBRESCRITURAS CON PALETA CREMA CÁLIDA
    ======================================== */
 
 /* Cuando body tiene clase light-theme, sobrescribir colores hardcoded */
 body.light-theme {
-  background-color: #f8fafc !important;
+  background-color: #f5f3f0 !important;
 }
 
-/* Contenedores principales oscuros -> claros */
+/* Contenedores principales oscuros -> crema */
 body.light-theme .monitoring-container,
 body.light-theme .campaign-container,
 body.light-theme .dashboard-container,
 body.light-theme .admin-container,
 body.light-theme .main-content {
-  background-color: #f8fafc !important;
+  background-color: #f5f3f0 !important;
 }
 
-/* Cards y paneles con fondo #1E293B -> blanco */
+/* Cards y paneles con fondo #1E293B -> crema suave */
 body.light-theme .card,
 body.light-theme .panel,
 body.light-theme .campaign-selector,
 body.light-theme .stats-grid,
 body.light-theme .metrics-card,
 body.light-theme .mat-mdc-card {
-  background-color: #ffffff !important;
+  background-color: #fefdfb !important;
   color: #1e293b !important;
 }
 
@@ -113,42 +113,42 @@ body.light-theme div {
   color: #475569;
 }
 
-/* Bordes oscuros #334155 -> claros */
+/* Bordes oscuros #334155 -> crema */
 body.light-theme .header,
 body.light-theme .card,
 body.light-theme .panel {
-  border-color: #e2e8f0 !important;
+  border-color: #e7e3dc !important;
 }
 
 /* Botones oscuros -> claros */
 body.light-theme .btn-back {
   background: rgba(0, 0, 0, 0.05) !important;
-  border-color: #cbd5e1 !important;
+  border-color: #d4cfc5 !important;
   color: #0f172a !important;
 }
 
 /* Tablas */
 body.light-theme table {
-  background-color: #ffffff !important;
+  background-color: #fefdfb !important;
 }
 
 body.light-theme th {
-  background-color: #f1f5f9 !important;
+  background-color: #f0ede8 !important;
   color: #0f172a !important;
 }
 
 body.light-theme td {
   color: #475569 !important;
-  border-color: #e2e8f0 !important;
+  border-color: #e7e3dc !important;
 }
 
 /* Inputs y selects */
 body.light-theme input,
 body.light-theme select,
 body.light-theme textarea {
-  background-color: #ffffff !important;
+  background-color: #fefdfb !important;
   color: #0f172a !important;
-  border-color: #cbd5e1 !important;
+  border-color: #d4cfc5 !important;
 }
 
 /* Material Components en modo claro */
@@ -162,7 +162,7 @@ body.light-theme .mat-mdc-option {
 }
 
 body.light-theme .mat-mdc-option {
-  background-color: #ffffff !important;
+  background-color: #fefdfb !important;
 }
 
 /* Clases de utilidad que responden al tema */
@@ -198,24 +198,24 @@ body.light-theme .mat-mdc-option {
 }
 
 /* ========================================
-   TEMA CLARO - SOBRESCRITURAS GLOBALES
+   TEMA CLARO - SOBRESCRITURAS GLOBALES CON PALETA CREMA
    ======================================== */
 
 /* FONDOS PRINCIPALES */
 :root:not(.dark) .bg-slate-950 {
-  background-color: #f1f5f9 !important; /* Fondo principal gris muy claro */
+  background-color: #f0ede8 !important; /* Fondo principal crema */
 }
 
 :root:not(.dark) .bg-slate-900 {
-  background-color: #ffffff !important; /* Cards y paneles en blanco */
+  background-color: #fefdfb !important; /* Cards y paneles en crema suave */
 }
 
 :root:not(.dark) .bg-slate-800 {
-  background-color: #f8fafc !important; /* Fondos secundarios */
+  background-color: #f5f3f0 !important; /* Fondos secundarios crema */
 }
 
 :root:not(.dark) .bg-slate-700 {
-  background-color: #e2e8f0 !important; /* Hover states */
+  background-color: #e7e3dc !important; /* Hover states */
 }
 
 /* TEXTOS */
@@ -224,28 +224,28 @@ body.light-theme .mat-mdc-option {
 }
 
 :root:not(.dark) .text-gray-400 {
-  color: #64748b !important; /* Textos secundarios */
+  color: #6b6560 !important; /* Textos secundarios cálidos */
 }
 
 :root:not(.dark) .text-gray-300 {
-  color: #475569 !important; /* Textos terciarios */
+  color: #6b6560 !important; /* Textos terciarios cálidos */
 }
 
 :root:not(.dark) .text-slate-400 {
-  color: #64748b !important;
+  color: #6b6560 !important;
 }
 
 :root:not(.dark) .text-slate-300 {
-  color: #475569 !important;
+  color: #6b6560 !important;
 }
 
 /* BORDES */
 :root:not(.dark) .border-slate-800 {
-  border-color: #cbd5e1 !important;
+  border-color: #d4cfc5 !important;
 }
 
 :root:not(.dark) .border-slate-700 {
-  border-color: #e2e8f0 !important;
+  border-color: #e7e3dc !important;
 }
 
 /* SOLUCIÓN DEFINITIVA: Deshabilitar TODAS las clases dark: cuando NO hay .dark en el HTML */
@@ -254,9 +254,9 @@ body.light-theme .mat-mdc-option {
     color-scheme: light !important;
   }
 
-  /* Forzar fondos claros */
-  :root:not(.dark) .bg-white { background-color: #ffffff !important; }
-  :root:not(.dark) .bg-slate-50 { background-color: #f8fafc !important; }
+  /* Forzar fondos crema */
+  :root:not(.dark) .bg-white { background-color: #fefdfb !important; }
+  :root:not(.dark) .bg-slate-50 { background-color: #f5f3f0 !important; }
   :root:not(.dark) .bg-blue-50 { background-color: #eff6ff !important; }
   :root:not(.dark) .bg-green-50 { background-color: #f0fdf4 !important; }
   :root:not(.dark) .bg-red-50 { background-color: #fef2f2 !important; }
@@ -270,10 +270,10 @@ body.light-theme .mat-mdc-option {
   :root:not(.dark) .text-slate-800 { color: #1e293b !important; }
   :root:not(.dark) .text-slate-600 { color: #475569 !important; }
 
-  /* Forzar bordes claros */
-  :root:not(.dark) .border-gray-200 { border-color: #e5e7eb !important; }
-  :root:not(.dark) .border-slate-200 { border-color: #e2e8f0 !important; }
-  :root:not(.dark) .border-slate-300 { border-color: #cbd5e1 !important; }
+  /* Forzar bordes crema */
+  :root:not(.dark) .border-gray-200 { border-color: #e7e3dc !important; }
+  :root:not(.dark) .border-slate-200 { border-color: #e7e3dc !important; }
+  :root:not(.dark) .border-slate-300 { border-color: #d4cfc5 !important; }
 }
 
 /* Material Design Overrides */
@@ -823,7 +823,7 @@ body.dark-theme span {
 body.light-theme .container,
 body.light-theme .page-container,
 body.light-theme .content-wrapper {
-  background-color: #ffffff;
+  background-color: #fefdfb;
   color: #1e293b;
 }
 
@@ -837,14 +837,14 @@ body.dark-theme .content-wrapper {
 
 /* Light Theme - Tables */
 body.light-theme table {
-  background-color: #ffffff;
+  background-color: #fefdfb;
   border-collapse: collapse;
   width: 100%;
   color: #1e293b;
 }
 
 body.light-theme thead {
-  background-color: #f1f5f9;
+  background-color: #f0ede8;
 }
 
 body.light-theme thead th {
@@ -854,15 +854,15 @@ body.light-theme thead th {
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   padding: 12px;
-  border-bottom: 2px solid #cbd5e1;
+  border-bottom: 2px solid #d4cfc5;
 }
 
 body.light-theme tbody tr {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e7e3dc;
 }
 
 body.light-theme tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: #f5f3f0;
 }
 
 body.light-theme tbody td {
@@ -1040,10 +1040,10 @@ a:not(.nav-item):not(.dropdown-item):not([routerlink]):hover {
 
 /* Light Theme - Forms */
 body.light-theme fieldset {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e7e3dc;
   border-radius: 8px;
   padding: 20px;
-  background-color: #ffffff;
+  background-color: #fefdfb;
 }
 
 body.light-theme legend {
@@ -1070,16 +1070,16 @@ body.dark-theme legend {
 body.light-theme .modal,
 body.light-theme .dialog,
 body.light-theme .overlay {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
+  background-color: #fefdfb;
+  border: 1px solid #e7e3dc;
   border-radius: 8px;
   color: #1e293b;
 }
 
 body.light-theme .modal-header,
 body.light-theme .dialog-header {
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: #f5f3f0;
+  border-bottom: 1px solid #e7e3dc;
   padding: 16px 20px;
   color: #1e293b;
 }
@@ -1087,13 +1087,13 @@ body.light-theme .dialog-header {
 body.light-theme .modal-content,
 body.light-theme .dialog-content {
   padding: 20px;
-  background-color: #ffffff;
+  background-color: #fefdfb;
 }
 
 body.light-theme .modal-footer,
 body.light-theme .dialog-footer {
-  background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background-color: #f5f3f0;
+  border-top: 1px solid #e7e3dc;
   padding: 16px 20px;
 }
 
