@@ -15,8 +15,8 @@ body.dark-theme .app-container {
   background-color: #0A0E27;
 }
 
-/* CASHI Navbar */
-.cashi-navbar {
+/* CASHI Navbar - Dark Theme */
+body.dark-theme .cashi-navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -29,6 +29,23 @@ body.dark-theme .app-container {
   left: 0;
   right: 0;
   z-index: 1000;
+}
+
+/* CASHI Navbar - Light Theme */
+body.light-theme .cashi-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  height: 64px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-left {
@@ -68,10 +85,19 @@ body.dark-theme .app-container {
   height: 24px;
 }
 
-.logo-text {
+/* Logo Text - Dark Theme */
+body.dark-theme .logo-text {
   font-size: 24px;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: 1px;
+}
+
+/* Logo Text - Light Theme */
+body.light-theme .logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
   letter-spacing: 1px;
 }
 
@@ -82,12 +108,27 @@ body.dark-theme .app-container {
   gap: 8px;
 }
 
-.nav-item {
+/* Nav Item - Dark Theme */
+body.dark-theme .nav-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
   color: #94a3b8;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Nav Item - Light Theme */
+body.light-theme .nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: #64748b;
   text-decoration: none;
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -136,7 +177,8 @@ body.dark-theme .app-container {
   transform: rotate(180deg);
 }
 
-.dropdown-menu {
+/* Dropdown Menu - Dark Theme */
+body.dark-theme .dropdown-menu {
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
@@ -153,13 +195,32 @@ body.dark-theme .app-container {
   z-index: 1001;
 }
 
+/* Dropdown Menu - Light Theme */
+body.light-theme .dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  min-width: 280px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s;
+  overflow: hidden;
+  z-index: 1001;
+}
+
 .dropdown-menu.show {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-.dropdown-item {
+/* Dropdown Item - Dark Theme */
+body.dark-theme .dropdown-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -169,6 +230,19 @@ body.dark-theme .app-container {
   cursor: pointer;
   transition: all 0.2s;
   border-bottom: 1px solid #334155;
+}
+
+/* Dropdown Item - Light Theme */
+body.light-theme .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  color: #475569;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .dropdown-item:last-child {
@@ -183,8 +257,12 @@ body.dark-theme .app-container {
   color: #10B981;
 }
 
-.dropdown-item:hover .item-title {
+body.dark-theme .dropdown-item:hover .item-title {
   color: #ffffff;
+}
+
+body.light-theme .dropdown-item:hover .item-title {
+  color: #1e293b;
 }
 
 .dropdown-item.active {
@@ -196,16 +274,29 @@ body.dark-theme .app-container {
   color: #10B981;
 }
 
-.dropdown-item.active .item-title {
+body.dark-theme .dropdown-item.active .item-title {
   color: #ffffff;
 }
 
-.dropdown-item mat-icon {
+body.light-theme .dropdown-item.active .item-title {
+  color: #1e293b;
+}
+
+body.dark-theme .dropdown-item mat-icon {
   font-size: 20px !important;
   width: 20px !important;
   height: 20px !important;
   flex-shrink: 0;
   color: #94a3b8;
+  transition: color 0.2s;
+}
+
+body.light-theme .dropdown-item mat-icon {
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0;
+  color: #64748b;
   transition: color 0.2s;
 }
 
@@ -215,10 +306,19 @@ body.dark-theme .app-container {
   gap: 4px;
 }
 
-.item-title {
+/* Item Title - Dark Theme */
+body.dark-theme .item-title {
   font-weight: 600;
   font-size: 14px;
   color: #e2e8f0;
+  transition: color 0.2s;
+}
+
+/* Item Title - Light Theme */
+body.light-theme .item-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #475569;
   transition: color 0.2s;
 }
 
@@ -237,8 +337,8 @@ body.dark-theme .app-container {
   background: transparent;
 }
 
-/* User Profile & Logout */
-.user-profile {
+/* User Profile - Dark Theme */
+body.dark-theme .user-profile {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -246,6 +346,17 @@ body.dark-theme .app-container {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 6px;
   color: #e2e8f0;
+}
+
+/* User Profile - Light Theme */
+body.light-theme .user-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 6px;
+  color: #475569;
 }
 
 .user-profile mat-icon {
@@ -311,9 +422,22 @@ body.dark-theme .app-container {
   background: rgba(239, 68, 68, 0.2) !important;
 }
 
-/* Dropdown Buttons */
-.nav-dropdown {
+/* Dropdown Buttons - Dark Theme */
+body.dark-theme .nav-dropdown {
   color: #94a3b8 !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* Dropdown Buttons - Light Theme */
+body.light-theme .nav-dropdown {
+  color: #64748b !important;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -339,9 +463,17 @@ body.dark-theme .app-container {
   color: #10B981 !important;
 }
 
-/* Icon Buttons */
-.nav-icon-btn {
+/* Icon Buttons - Dark Theme */
+body.dark-theme .nav-icon-btn {
   color: #94a3b8 !important;
+  width: 40px !important;
+  height: 40px !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Icon Buttons - Light Theme */
+body.light-theme .nav-icon-btn {
+  color: #64748b !important;
   width: 40px !important;
   height: 40px !important;
   transition: all 0.2s ease !important;
@@ -358,11 +490,20 @@ body.dark-theme .app-container {
   color: #10B981 !important;
 }
 
-/* Main Content */
-.main-content {
+/* Main Content - Dark Theme */
+body.dark-theme .main-content {
   margin-top: 64px;
   padding: 0;
   background-color: #0A0E27;
+  min-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+/* Main Content - Light Theme */
+body.light-theme .main-content {
+  margin-top: 64px;
+  padding: 0;
+  background-color: #f8fafc;
   min-height: calc(100vh - 64px);
   overflow-y: auto;
 }
