@@ -2135,27 +2135,75 @@ body.light-theme .bg-gradient-to-br .border-slate-700 {
 /* Buttons */
 body.light-theme .bg-gradient-to-br button {
   background-color: #3B82F6 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .bg-gradient-to-br button span {
+  color: #ffffff !important;
+}
+
+body.light-theme .bg-gradient-to-br button lucide-angular,
+body.light-theme .bg-gradient-to-br button lucide-angular svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 body.light-theme .bg-gradient-to-br button.bg-blue-600 {
   background-color: #3B82F6 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .bg-gradient-to-br button.bg-blue-600 span,
+body.light-theme .bg-gradient-to-br button.bg-blue-600 lucide-angular {
+  color: #ffffff !important;
 }
 
 body.light-theme .bg-gradient-to-br button.bg-green-600 {
   background-color: #10B981 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .bg-gradient-to-br button.bg-green-600 span,
+body.light-theme .bg-gradient-to-br button.bg-green-600 lucide-angular {
+  color: #ffffff !important;
 }
 
 body.light-theme .bg-gradient-to-br button.bg-red-600 {
   background-color: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .bg-gradient-to-br button.bg-red-600 span,
+body.light-theme .bg-gradient-to-br button.bg-red-600 lucide-angular {
+  color: #ffffff !important;
 }
 
 body.light-theme .bg-gradient-to-br button.bg-gray-600 {
   background-color: #6b7280 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .bg-gradient-to-br button.bg-gray-600 span,
+body.light-theme .bg-gradient-to-br button.bg-gray-600 lucide-angular {
+  color: #ffffff !important;
 }
 
 /* Icon containers */
 body.light-theme .bg-gradient-to-br .p-2.bg-blue-600 {
   background-color: #3B82F6 !important;
+}
+
+body.light-theme .bg-gradient-to-br .p-2.bg-blue-600 lucide-angular,
+body.light-theme .bg-gradient-to-br .p-2.bg-blue-600 lucide-angular svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Lucide icons in labels */
+body.light-theme .bg-gradient-to-br label lucide-angular,
+body.light-theme .bg-gradient-to-br label lucide-angular svg {
+  color: #1e293b !important;
+  stroke: #1e293b !important;
 }
 
 /* Tables */
