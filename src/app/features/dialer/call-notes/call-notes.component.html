@@ -6,6 +6,65 @@
   <mat-card-content>
     <form [formGroup]="notesForm" (ngSubmit)="onSubmit()">
       <div class="form-section">
+        <!-- Tipificaciones V2 en cascada -->
+        <div class="typification-section">
+          <h3 class="section-title">Tipificación (4 Niveles)</h3>
+
+          @if (loadingTypifications) {
+            <p class="loading-text">Cargando tipificaciones...</p>
+          } @else {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Nivel 1 - Resultado de Contacto</mat-label>
+              <mat-select formControlName="nivel1">
+                <mat-option [value]="null">-- Seleccione --</mat-option>
+                <mat-option *ngFor="let tip of nivel1Options" [value]="tip.id">
+                  {{ tip.name }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            @if (nivel2Options.length > 0) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nivel 2 - Tipo de Gestión</mat-label>
+                <mat-select formControlName="nivel2">
+                  <mat-option [value]="null">-- Seleccione --</mat-option>
+                  <mat-option *ngFor="let tip of nivel2Options" [value]="tip.id">
+                    {{ tip.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            }
+
+            @if (nivel3Options.length > 0) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nivel 3 - Modalidad de Pago</mat-label>
+                <mat-select formControlName="nivel3">
+                  <mat-option [value]="null">-- Seleccione --</mat-option>
+                  <mat-option *ngFor="let tip of nivel3Options" [value]="tip.id">
+                    {{ tip.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            }
+
+            @if (nivel4Options.length > 0) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Nivel 4 - Tipo de Fraccionamiento</mat-label>
+                <mat-select formControlName="nivel4">
+                  <mat-option [value]="null">-- Seleccione --</mat-option>
+                  <mat-option *ngFor="let tip of nivel4Options" [value]="tip.id">
+                    {{ tip.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            }
+          }
+        </div>
+
+        <!-- Separador -->
+        <hr class="section-divider">
+
+        <!-- Campos originales -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Disposition</mat-label>
           <mat-select formControlName="disposition">
