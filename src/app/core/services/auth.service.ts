@@ -58,7 +58,10 @@ export class AuthService {
           lastName: lastName,
           role: (response.roles?.[0] || 'AGENT') as UserRole,
           sipExtension: response.extensionSip,
-          active: true
+          active: true,
+          tenantId: response.tenantId,
+          portfolioId: response.portfolioId,
+          subPortfolioId: response.subPortfolioId
         };
 
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));

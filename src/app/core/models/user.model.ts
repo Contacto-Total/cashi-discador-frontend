@@ -9,6 +9,10 @@ export interface User {
   active: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  // Asignación del rol
+  tenantId?: number;
+  portfolioId?: number;
+  subPortfolioId?: number;
 }
 
 export enum UserRole {
@@ -36,4 +40,8 @@ export interface LoginResponse {
   roles: string[];
   permisos: string[];
   mensaje: string;
+  // Asignación del rol
+  tenantId?: number;
+  portfolioId?: number;
+  subPortfolioId?: number;
 }
