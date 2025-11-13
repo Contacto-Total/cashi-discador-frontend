@@ -188,7 +188,7 @@
         } @else {
           <!-- Tree Nodes -->
           <div class="space-y-1">
-            @for (node of treeNodes; track node.tipificacion.id; let idx = $index) {
+            @for (node of treeNodes; track node.typification.id; let idx = $index) {
               <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0, index: idx, siblings: treeNodes, parent: null}"></ng-container>
             }
           </div>
@@ -204,18 +204,18 @@
     <!-- Node Content -->
     <div
       class="typification-item flex items-center justify-between px-2 py-1.5 rounded border-l-3 transition-colors mb-1"
-      [class.bg-green-50]="node.configuracion?.estaHabilitada"
-      [class.dark:bg-green-950/40]="node.configuracion?.estaHabilitada"
-      [class.hover:bg-green-100]="node.configuracion?.estaHabilitada"
-      [class.dark:hover:bg-green-900/50]="node.configuracion?.estaHabilitada"
-      [class.bg-slate-100]="!node.configuracion?.estaHabilitada"
-      [class.dark:bg-slate-800/50]="!node.configuracion?.estaHabilitada"
-      [class.hover:bg-slate-200]="!node.configuracion?.estaHabilitada"
-      [class.dark:hover:bg-slate-700/50]="!node.configuracion?.estaHabilitada"
-      [class.border-l-green-500]="node.configuracion?.estaHabilitada"
-      [class.dark:border-l-green-600]="node.configuracion?.estaHabilitada"
-      [class.border-l-slate-400]="!node.configuracion?.estaHabilitada"
-      [class.dark:border-l-slate-600]="!node.configuracion?.estaHabilitada">
+      [class.bg-green-50]="node.config?.isEnabled"
+      [class.dark:bg-green-950/40]="node.config?.isEnabled"
+      [class.hover:bg-green-100]="node.config?.isEnabled"
+      [class.dark:hover:bg-green-900/50]="node.config?.isEnabled"
+      [class.bg-slate-100]="!node.config?.isEnabled"
+      [class.dark:bg-slate-800/50]="!node.config?.isEnabled"
+      [class.hover:bg-slate-200]="!node.config?.isEnabled"
+      [class.dark:hover:bg-slate-700/50]="!node.config?.isEnabled"
+      [class.border-l-green-500]="node.config?.isEnabled"
+      [class.dark:border-l-green-600]="node.config?.isEnabled"
+      [class.border-l-slate-400]="!node.config?.isEnabled"
+      [class.dark:border-l-slate-600]="!node.config?.isEnabled">
 
       <div class="flex items-center gap-2 flex-1 min-w-0">
         <!-- Botones de Reordenamiento -->
@@ -241,14 +241,14 @@
         </div>
 
         <!-- Expand/Collapse Button -->
-        @if (node.hijos && node.hijos.length > 0) {
+        @if (node.children && node.children.length > 0) {
           <button
-            (click)="toggleNode(node.tipificacion.id); $event.stopPropagation()"
+            (click)="toggleNode(node.typification.id); $event.stopPropagation()"
             class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
-            @if (isExpanded(node.tipificacion.id)) {
-
+            @if (isExpanded(node.typification.id)) {
+              
             } @else {
-
+              
             }
           </button>
         } @else {
@@ -258,26 +258,26 @@
         <!-- Icon con color de fondo -->
         <div
           class="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
-          [style.background-color]="node.tipificacion.colorSugerido || '#6B7280'">
-          {{ node.tipificacion.codigo?.substring(0, 2) || 'NA' }}
+          [style.background-color]="node.typification.colorHex || '#6B7280'">
+          {{ node.typification.code?.substring(0, 2) || 'NA' }}
         </div>
 
         <!-- Name and Type -->
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate">
-            {{ node.configuracion?.nombrePersonalizado || node.tipificacion.nombre }}
+            {{ node.config?.effectiveName || node.typification.name }}
           </div>
           <div class="text-[9px] text-slate-500 dark:text-slate-400 truncate">
-            {{ getTypeLabel(node.tipificacion.tipoClasificacion) }}
+            {{ getTypeLabel(node.typification.classificationType) }}
           </div>
         </div>
 
         <!-- Level Badge -->
         <div class="flex-shrink-0 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-[9px] font-bold">
-          N{{ node.nivel }}
+          N{{ node.level }}
         </div>
 
-        @if (node.configuracion?.nombrePersonalizado) {
+        @if (node.config?.customName) {
           <div class="flex-shrink-0 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded text-[9px] font-bold">
             Cust
           </div>
@@ -289,10 +289,10 @@
         <!-- Enable/Disable Toggle -->
         <label class="relative inline-flex items-center cursor-pointer"
                (click)="$event.stopPropagation()"
-               [title]="node.configuracion?.estaHabilitada ? 'Desactivar visualización' : 'Activar visualización'">
+               [title]="node.config?.isEnabled ? 'Desactivar visualización' : 'Activar visualización'">
           <input
             type="checkbox"
-            [checked]="node.configuracion?.estaHabilitada === true"
+            [checked]="node.config?.isEnabled === true"
             (change)="toggleTypification(node, $event); $event.stopPropagation()"
             class="sr-only peer">
           <div class="w-8 h-4 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>
@@ -300,36 +300,36 @@
 
         <!-- Action Buttons -->
         <button
-          (click)="openCreateChildDialog(node.tipificacion); $event.stopPropagation()"
+          (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
           title="Agregar hijo"
           class="w-5 h-5 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-
+          
         </button>
 
         <button
-          (click)="openEditDialog(node.tipificacion); $event.stopPropagation()"
+          (click)="openEditDialog(node.typification); $event.stopPropagation()"
           title="Editar"
           class="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-
+          
         </button>
 
         <button
-          (click)="deleteTypification(node.tipificacion); $event.stopPropagation()"
+          (click)="deleteTypification(node.typification); $event.stopPropagation()"
           title="Eliminar"
-          [disabled]="node.tipificacion.esSistema"
-          [class.opacity-30]="node.tipificacion.esSistema"
-          [class.cursor-not-allowed]="node.tipificacion.esSistema"
+          [disabled]="node.typification.isSystem"
+          [class.opacity-30]="node.typification.isSystem"
+          [class.cursor-not-allowed]="node.typification.isSystem"
           class="w-5 h-5 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-
+          
         </button>
       </div>
     </div>
 
     <!-- Children Nodes (Recursive) -->
-    @if (isExpanded(node.tipificacion.id) && node.hijos && node.hijos.length > 0) {
+    @if (isExpanded(node.typification.id) && node.children && node.children.length > 0) {
       <div class="mt-1 space-y-1">
-        @for (child of node.hijos; track child.tipificacion.id; let childIdx = $index) {
-          <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: child, depth: depth + 1, index: childIdx, siblings: node.hijos, parent: node}"></ng-container>
+        @for (child of node.children; track child.typification.id; let childIdx = $index) {
+          <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: child, depth: depth + 1, index: childIdx, siblings: node.children, parent: node}"></ng-container>
         }
       </div>
     }

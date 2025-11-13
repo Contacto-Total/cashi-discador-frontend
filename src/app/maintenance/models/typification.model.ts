@@ -1,91 +1,93 @@
 export enum ClassificationType {
-  RESULTADO_CONTACTO = 'RESULTADO_CONTACTO',
-  TIPO_GESTION = 'TIPO_GESTION',
-  MODALIDAD_PAGO = 'MODALIDAD_PAGO',
-  TIPO_FRACCIONAMIENTO = 'TIPO_FRACCIONAMIENTO'
+  CONTACT_RESULT = 'CONTACT_RESULT',
+  MANAGEMENT_TYPE = 'MANAGEMENT_TYPE',
+  PAYMENT_TYPE = 'PAYMENT_TYPE',
+  COMPLAINT_TYPE = 'COMPLAINT_TYPE',
+  PAYMENT_SCHEDULE = 'PAYMENT_SCHEDULE',
+  CUSTOM = 'CUSTOM'
 }
 
 export interface TypificationCatalog {
   id: number;
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  tipoClasificacion: ClassificationType;
-  tipificacionPadre?: TypificationCatalog;
-  tipificacionesHijas?: TypificationCatalog[];
-  nivelJerarquia: number;
-  ordenVisualizacion: number;
-  esEstadoFinal: boolean;
-  requiereObservaciones: boolean;
-  estaActiva: boolean;
-  colorSugerido?: string;
-  iconoSugerido?: string;
-  esSistema: boolean;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  fechaEliminacion?: string;
+  code: string;
+  name: string;
+  classificationType: ClassificationType;
+  parentTypificationId?: number;
+  hierarchyLevel: number;
+  hierarchyPath: string;
+  description?: string;
+  displayOrder?: number;
+  iconName?: string;
+  colorHex?: string;
+  isSystem: boolean;
+  metadataSchema?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  // Campos del tipo de clasificación
+  suggestsFullAmount?: boolean | null;
+  allowsInstallmentSelection?: boolean | null;
+  requiresManualAmount?: boolean | null;
 }
 
 export interface TenantTypificationConfig {
   id: number;
-  idTenant: number;
-  idCartera?: number;
-  idSubcartera?: number;
-  tipificacion: TypificationCatalog;
-  heredaDePadre: boolean;
-  estaHabilitada: boolean;
-  nombrePersonalizado?: string;
-  descripcionPersonalizada?: string;
-  colorPersonalizado?: string;
-  iconoPersonalizado?: string;
-  ordenVisualizacionPersonalizado?: number;
-  requiereObservacionesPersonalizado?: boolean;
-  creadoPor?: number;
-  modificadoPor?: number;
-  fechaCreacion: string;
-  fechaActualizacion: string;
-  fechaEliminacion?: string;
+  tenantId: number;
+  portfolioId?: number;
+  typificationId: number;
+  typification: TypificationCatalog;
+  isEnabled: boolean;
+  customName?: string;
+  customIcon?: string;
+  customColor?: string;
+  displayOrder?: number;
+  requiresComment: boolean;
+  minCommentLength?: number;
+  maxCommentLength?: number;
+  validationRules?: string;
+  effectiveName: string;
+  effectiveIcon?: string;
+  effectiveColor?: string;
 }
 
 export interface CreateTypificationCommand {
-  codigo: string;
-  nombre: string;
-  descripcion?: string;
-  tipoClasificacion: ClassificationType;
-  tipificacionPadre?: TypificationCatalog;
-  nivelJerarquia?: number;
-  ordenVisualizacion?: number;
-  esEstadoFinal?: boolean;
-  requiereObservaciones?: boolean;
-  colorSugerido?: string;
-  iconoSugerido?: string;
-  esSistema?: boolean;
+  code: string;
+  name: string;
+  classificationType: ClassificationType;
+  parentTypificationId?: number;
+  description?: string;
+  displayOrder?: number;
+  iconName?: string;
+  colorHex?: string;
+  isSystem?: boolean;
+  metadataSchema?: string;
 }
 
 export interface UpdateTypificationCommand {
-  nombre?: string;
-  descripcion?: string;
-  colorSugerido?: string;
-  iconoSugerido?: string;
-  ordenVisualizacion?: number;
-  requiereObservaciones?: boolean;
+  name?: string;
+  description?: string;
+  displayOrder?: number;
+  iconName?: string;
+  colorHex?: string;
+  isActive?: boolean;
+  metadataSchema?: string;
 }
 
 export interface UpdateTypificationConfigCommand {
-  estaHabilitada?: boolean;
-  heredaDePadre?: boolean;
-  nombrePersonalizado?: string;
-  descripcionPersonalizada?: string;
-  colorPersonalizado?: string;
-  iconoPersonalizado?: string;
-  ordenVisualizacionPersonalizado?: number;
-  requiereObservacionesPersonalizado?: boolean;
-  modificadoPor?: number;
+  isEnabled?: boolean;
+  customName?: string;
+  customIcon?: string;
+  customColor?: string;
+  displayOrder?: number;
+  requiresComment?: boolean;
+  minCommentLength?: number;
+  maxCommentLength?: number;
+  validationRules?: string;
 }
 
 export interface TypificationTreeNode {
-  tipificacion: TypificationCatalog;
-  configuracion?: TenantTypificationConfig;
-  hijos: TypificationTreeNode[];
-  nivel: number;
+  typification: TypificationCatalog;
+  config?: TenantTypificationConfig;
+  children: TypificationTreeNode[];
+  level: number;
 }

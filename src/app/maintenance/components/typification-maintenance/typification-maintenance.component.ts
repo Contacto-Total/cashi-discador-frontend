@@ -97,32 +97,26 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     this.loading.set(true);
 
-    // Load catalog and configurations
-    this.classificationService.getActiveClassifications().subscribe({
-      next: (tipificaciones) => {
-        this.typifications = tipificaciones;
+    // Load ALL tenant configurations (including disabled) for maintenance view
+    const request$ = this.selectedType
+      ? this.classificationService.getTenantClassificationsByType(
+          this.selectedTenantId,
+          this.selectedType,
+          this.selectedPortfolioId
+        )
+      : this.classificationService.getTenantClassifications(
+          this.selectedTenantId,
+          this.selectedPortfolioId,
+          true // includeDisabled = true for maintenance view
+        );
 
-        // Load configurations if tenant is selected
-        if (this.selectedTenantId) {
-          this.classificationService.getTenantClassifications(
-            this.selectedTenantId,
-            this.selectedPortfolioId
-          ).subscribe({
-            next: (configs) => {
-              this.tenantConfigs = configs;
-              this.buildTree();
-              this.loading.set(false);
-            },
-            error: (error) => {
-              console.error('Error loading configs:', error);
-              this.buildTree();
-              this.loading.set(false);
-            }
-          });
-        } else {
-          this.buildTree();
-          this.loading.set(false);
-        }
+    request$.subscribe({
+      next: (configs) => {
+        this.tenantConfigs = configs;
+        // Extract typifications from tenant configs
+        this.typifications = configs.map(config => config.typification);
+        this.buildTree();
+        this.loading.set(false);
       },
       error: (error) => {
         this.loading.set(false);
@@ -164,29 +158,29 @@ export class TypificationMaintenanceComponent implements OnInit {
   buildTree() {
     const configMap = new Map<number, TenantTypificationConfig>();
     this.tenantConfigs.forEach(config => {
-      configMap.set(config.tipificacion.id, config);
+      configMap.set(config.typificationId, config);
     });
 
     const nodeMap = new Map<number, TypificationTreeNode>();
 
-    this.typifications.forEach(tipificacion => {
+    this.typifications.forEach(typification => {
       const node: TypificationTreeNode = {
-        tipificacion,
-        configuracion: configMap.get(tipificacion.id),
-        hijos: [],
-        nivel: tipificacion.nivelJerarquia
+        typification,
+        config: configMap.get(typification.id),
+        children: [],
+        level: typification.hierarchyLevel
       };
-      nodeMap.set(tipificacion.id, node);
+      nodeMap.set(typification.id, node);
     });
 
     const roots: TypificationTreeNode[] = [];
 
-    this.typifications.forEach(tipificacion => {
-      const node = nodeMap.get(tipificacion.id)!;
-      if (tipificacion.tipificacionPadre?.id) {
-        const parent = nodeMap.get(tipificacion.tipificacionPadre.id);
+    this.typifications.forEach(typification => {
+      const node = nodeMap.get(typification.id)!;
+      if (typification.parentTypificationId) {
+        const parent = nodeMap.get(typification.parentTypificationId);
         if (parent) {
-          parent.hijos.push(node);
+          parent.children.push(node);
         }
       } else {
         roots.push(node);
@@ -195,13 +189,13 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     const sortNodes = (nodes: TypificationTreeNode[]) => {
       nodes.sort((a, b) => {
-        const orderA = a.tipificacion.ordenVisualizacion || 0;
-        const orderB = b.tipificacion.ordenVisualizacion || 0;
+        const orderA = a.typification.displayOrder || 0;
+        const orderB = b.typification.displayOrder || 0;
         return orderA - orderB;
       });
       nodes.forEach(node => {
-        if (node.hijos.length > 0) {
-          sortNodes(node.hijos);
+        if (node.children.length > 0) {
+          sortNodes(node.children);
         }
       });
     };
@@ -240,33 +234,21 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   toggleTypification(node: TypificationTreeNode, event: Event) {
-    if (!this.selectedTenantId || !this.selectedPortfolioId) {
-      alert('Por favor seleccione un tenant y una cartera');
-      return;
-    }
+    if (!this.selectedTenantId) return;
 
     const target = event.target as HTMLInputElement;
     const enabled = target.checked;
 
-    // For now, use first subportfolio or 1 as default
-    // TODO: Add subportfolio selector
-    const subPortfolioId = 1;
-    const userId = 1; // TODO: Get from auth service
-
     const action$ = enabled
       ? this.classificationService.enableClassification(
           this.selectedTenantId,
-          node.tipificacion.id,
-          this.selectedPortfolioId,
-          subPortfolioId,
-          userId
+          node.typification.id,
+          this.selectedPortfolioId
         )
       : this.classificationService.disableClassification(
           this.selectedTenantId,
-          node.tipificacion.id,
-          this.selectedPortfolioId,
-          subPortfolioId,
-          userId
+          node.typification.id,
+          this.selectedPortfolioId
         );
 
     action$.subscribe({
@@ -321,17 +303,17 @@ export class TypificationMaintenanceComponent implements OnInit {
     this.loadTypifications();
   }
 
-  deleteTypification(tipificacion: TypificationCatalog) {
-    if (tipificacion.esSistema) {
+  deleteTypification(typification: TypificationCatalog) {
+    if (typification.isSystem) {
       alert('No se pueden eliminar tipificaciones del sistema');
       return;
     }
 
-    if (!confirm(`¿Está seguro de eliminar la tipificación "${tipificacion.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Está seguro de eliminar la tipificación "${typification.name}"?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
 
-    this.classificationService.deleteTypification(tipificacion.id).subscribe({
+    this.classificationService.deleteTypification(typification.id).subscribe({
       next: () => {
         this.showSuccessMessage();
         this.loadTypifications();
@@ -366,10 +348,12 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   getTypeLabel(type: ClassificationType): string {
     const labels: Record<ClassificationType, string> = {
-      [ClassificationType.RESULTADO_CONTACTO]: 'Resultado de Contacto (Nivel 1)',
-      [ClassificationType.TIPO_GESTION]: 'Tipo de Gestión (Nivel 2)',
-      [ClassificationType.MODALIDAD_PAGO]: 'Modalidad de Pago (Nivel 3)',
-      [ClassificationType.TIPO_FRACCIONAMIENTO]: 'Tipo de Fraccionamiento (Nivel 4)'
+      [ClassificationType.CONTACT_RESULT]: 'Resultado de Contacto',
+      [ClassificationType.MANAGEMENT_TYPE]: 'Tipo de Gestión',
+      [ClassificationType.PAYMENT_TYPE]: 'Tipo de Pago',
+      [ClassificationType.COMPLAINT_TYPE]: 'Tipo de Reclamo',
+      [ClassificationType.PAYMENT_SCHEDULE]: 'Cronograma de Pagos',
+      [ClassificationType.CUSTOM]: 'Personalizado'
     };
     return labels[type];
   }
@@ -383,7 +367,7 @@ export class TypificationMaintenanceComponent implements OnInit {
     // Intercambiar posiciones en el array
     [siblings[index - 1], siblings[index]] = [siblings[index], siblings[index - 1]];
 
-    // Actualizar ordenVisualizacion en el backend
+    // Actualizar displayOrder en el backend
     this.updateOrder(siblings);
   }
 
@@ -396,34 +380,30 @@ export class TypificationMaintenanceComponent implements OnInit {
     // Intercambiar posiciones en el array
     [siblings[index], siblings[index + 1]] = [siblings[index + 1], siblings[index]];
 
-    // Actualizar ordenVisualizacion en el backend
+    // Actualizar displayOrder en el backend
     this.updateOrder(siblings);
   }
 
   /**
    * Actualiza el orden de los nodos en el backend
-   * TODO: Implement batch update endpoint in backend
    */
   private updateOrder(siblings: TypificationTreeNode[]) {
-    // Update each node individually
-    siblings.forEach((node, index) => {
-      const ordenVisualizacion = index * 10;
-      if (node.tipificacion.ordenVisualizacion !== ordenVisualizacion) {
-        this.classificationService.updateTypification(node.tipificacion.id, {
-          ordenVisualizacion: ordenVisualizacion
-        }).subscribe({
-          next: () => {
-            console.log(`Updated order for ${node.tipificacion.nombre}`);
-          },
-          error: (error) => {
-            console.error('Error al actualizar orden:', error);
-          }
-        });
+    // Actualizar displayOrder (espaciado de 10 para permitir inserciones futuras)
+    const updates = siblings.map((node, index) => ({
+      id: node.typification.id,
+      displayOrder: index * 10
+    }));
+
+    // Guardar en el backend
+    this.classificationService.updateDisplayOrder(updates).subscribe({
+      next: () => {
+        this.showSuccessMessage();
+      },
+      error: (error) => {
+        console.error('Error al actualizar orden:', error);
+        // Recargar para revertir cambios visuales
+        this.loadTypifications();
       }
     });
-
-    this.showSuccessMessage();
-    // Reload to reflect changes
-    setTimeout(() => this.loadTypifications(), 500);
   }
 }
