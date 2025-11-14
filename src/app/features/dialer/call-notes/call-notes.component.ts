@@ -136,6 +136,7 @@ export class CallNotesComponent implements OnInit {
     this.nivel2Options = [];
     this.nivel3Options = [];
     this.nivel4Options = [];
+    this.clearAdditionalFields();
 
     if (!selectedId) return;
 
@@ -147,6 +148,9 @@ export class CallNotesComponent implements OnInit {
         t => t.parentTypificationId === selectedId && t.hierarchyLevel === 2
       );
     }
+
+    // Cargar campos adicionales para nivel 1
+    this.loadAdditionalFields(selectedId);
   }
 
   onNivel2Change(selectedId: number | null): void {
@@ -157,6 +161,7 @@ export class CallNotesComponent implements OnInit {
     });
     this.nivel3Options = [];
     this.nivel4Options = [];
+    this.clearAdditionalFields();
 
     if (!selectedId) return;
 
@@ -164,6 +169,9 @@ export class CallNotesComponent implements OnInit {
     this.nivel3Options = this.allTypifications.filter(
       t => t.parentTypificationId === selectedId && t.hierarchyLevel === 3
     );
+
+    // Cargar campos adicionales para nivel 2
+    this.loadAdditionalFields(selectedId);
   }
 
   onNivel3Change(selectedId: number | null): void {
