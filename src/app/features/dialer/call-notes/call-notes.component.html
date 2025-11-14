@@ -90,8 +90,8 @@
                       type="number"
                       [formControlName]="'campo_' + field.id"
                       [placeholder]="field.labelCampo"
-                      [min]="field.valorMinimo"
-                      [max]="field.valorMaximo">
+                      [min]="field.valorMinimo ?? null"
+                      [max]="field.valorMaximo ?? null">
                     @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
                       <mat-error>Este campo es requerido</mat-error>
                     }
@@ -109,7 +109,7 @@
                       matInput
                       [formControlName]="'campo_' + field.id"
                       [placeholder]="field.labelCampo"
-                      [maxlength]="field.longitudMaxima"
+                      [maxlength]="field.longitudMaxima ?? null"
                       rows="3"></textarea>
                     @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
                       <mat-error>Este campo es requerido</mat-error>
@@ -126,7 +126,7 @@
                       type="text"
                       [formControlName]="'campo_' + field.id"
                       [placeholder]="field.labelCampo"
-                      [maxlength]="field.longitudMaxima">
+                      [maxlength]="field.longitudMaxima ?? null">
                     @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
                       <mat-error>Este campo es requerido</mat-error>
                     }

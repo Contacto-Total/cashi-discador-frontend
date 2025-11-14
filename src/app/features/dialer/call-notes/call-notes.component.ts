@@ -275,7 +275,7 @@ export class CallNotesComponent implements OnInit {
       idTenant: user.tenantId,
       idCartera: user.portfolioId,
       idSubcartera: user.subPortfolioId,
-      idCliente: this.contact.clientId,
+      idCliente: this.contact.id,
       idAgente: user.id,
       idCampana: null, // TODO: Obtener de la campaña activa si existe
       observaciones: this.notesForm.value.notes,
