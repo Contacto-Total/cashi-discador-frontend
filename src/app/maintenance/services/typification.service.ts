@@ -8,7 +8,8 @@ import {
   CreateTypificationCommand,
   UpdateTypificationCommand,
   UpdateTypificationConfigCommand,
-  ClassificationType
+  ClassificationType,
+  AdditionalField
 } from '../models/typification.model';
 import { Portfolio } from '../models/portfolio.model';
 import { Tenant } from '../models/tenant.model';
@@ -260,6 +261,30 @@ export class TypificationService {
   deleteCsvMappings(portfolioId: number): Observable<void> {
     return this.http.delete<void>(
       `${this.baseUrl}/portfolios/${portfolioId}/csv-mappings`
+    );
+  }
+
+  // V2 API Methods
+  getEffectiveTypifications(
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number
+  ): Observable<TypificationCatalog[]> {
+    return this.http.get<TypificationCatalog[]>(
+      `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}`
+    );
+  }
+
+  getAdditionalFields(typificationId: number): Observable<AdditionalField[]> {
+    return this.http.get<AdditionalField[]>(
+      `${environment.gatewayUrl}/v2/typifications/catalog/${typificationId}/additional-fields`
+    );
+  }
+
+  saveManagementRecord(record: any): Observable<any> {
+    return this.http.post(
+      `${environment.gatewayUrl}/v2/management-records`,
+      record
     );
   }
 

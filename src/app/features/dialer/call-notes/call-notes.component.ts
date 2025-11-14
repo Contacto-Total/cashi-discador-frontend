@@ -13,7 +13,7 @@ import { Call, CallDisposition, CompleteCallRequest } from '../../../core/models
 import { Contact } from '../../../core/models/contact.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { TypificationService } from '../../../maintenance/services/typification.service';
-import { TypificationCatalog } from '../../../maintenance/models/typification.model';
+import { TypificationCatalog, AdditionalField, FieldType } from '../../../maintenance/models/typification.model';
 
 @Component({
   selector: 'app-call-notes',
@@ -51,6 +51,11 @@ export class CallNotesComponent implements OnInit {
   nivel4Options: TypificationCatalog[] = [];
   loadingTypifications = false;
 
+  // Campos adicionales dinámicos
+  additionalFields: AdditionalField[] = [];
+  loadingAdditionalFields = false;
+  FieldType = FieldType; // Para usar en el template
+
   constructor(
     private fb: FormBuilder,
     private callService: CallService,
@@ -86,6 +91,10 @@ export class CallNotesComponent implements OnInit {
 
     this.notesForm.get('nivel3')?.valueChanges.subscribe(value => {
       this.onNivel3Change(value);
+    });
+
+    this.notesForm.get('nivel4')?.valueChanges.subscribe(value => {
+      this.onNivel4Change(value);
     });
   }
 
@@ -163,6 +172,7 @@ export class CallNotesComponent implements OnInit {
       nivel4: null
     });
     this.nivel4Options = [];
+    this.clearAdditionalFields();
 
     if (!selectedId) return;
 
@@ -170,40 +180,163 @@ export class CallNotesComponent implements OnInit {
     this.nivel4Options = this.allTypifications.filter(
       t => t.parentTypificationId === selectedId && t.hierarchyLevel === 4
     );
+
+    // Cargar campos adicionales para nivel 3
+    this.loadAdditionalFields(selectedId);
+  }
+
+  onNivel4Change(selectedId: number | null): void {
+    this.clearAdditionalFields();
+
+    if (!selectedId) return;
+
+    // Cargar campos adicionales para nivel 4
+    this.loadAdditionalFields(selectedId);
+  }
+
+  loadAdditionalFields(typificationId: number): void {
+    this.loadingAdditionalFields = true;
+
+    this.typificationService.getAdditionalFields(typificationId).subscribe({
+      next: (fields) => {
+        this.additionalFields = fields;
+        this.addDynamicFieldsToForm(fields);
+        this.loadingAdditionalFields = false;
+      },
+      error: (error) => {
+        console.error('Error loading additional fields:', error);
+        this.additionalFields = [];
+        this.loadingAdditionalFields = false;
+      }
+    });
+  }
+
+  clearAdditionalFields(): void {
+    // Remover controles dinámicos del formulario
+    this.additionalFields.forEach(field => {
+      this.notesForm.removeControl(`campo_${field.id}`);
+    });
+    this.additionalFields = [];
+  }
+
+  addDynamicFieldsToForm(fields: AdditionalField[]): void {
+    fields.forEach(field => {
+      const validators = field.esRequerido ? [Validators.required] : [];
+
+      // Agregar validadores según el tipo de campo
+      if (field.tipoCampo === FieldType.NUMBER) {
+        if (field.valorMinimo !== null && field.valorMinimo !== undefined) {
+          validators.push(Validators.min(field.valorMinimo));
+        }
+        if (field.valorMaximo !== null && field.valorMaximo !== undefined) {
+          validators.push(Validators.max(field.valorMaximo));
+        }
+      } else if (field.tipoCampo === FieldType.TEXT || field.tipoCampo === FieldType.TEXTAREA) {
+        if (field.longitudMaxima) {
+          validators.push(Validators.maxLength(field.longitudMaxima));
+        }
+      }
+
+      this.notesForm.addControl(`campo_${field.id}`, this.fb.control('', validators));
+    });
   }
 
   onSubmit(): void {
-    if (this.notesForm.invalid || !this.call) {
+    if (this.notesForm.invalid || !this.call || !this.contact) {
       return;
     }
 
     this.loading = true;
+    const user = this.authService.getCurrentUser();
 
-    const request: CompleteCallRequest = {
+    if (!user) {
+      console.error('No user logged in');
+      this.loading = false;
+      return;
+    }
+
+    // Primero, completar la llamada con el sistema existente
+    const callRequest: CompleteCallRequest = {
       disposition: this.notesForm.value.disposition,
       notes: this.notesForm.value.notes,
       scheduleCallback: this.notesForm.value.scheduleCallback || undefined
     };
 
-    // TODO: Aquí podrías también guardar las tipificaciones seleccionadas
-    // en un endpoint V2 si es necesario, o incluirlas en el request
-    console.log('Tipificaciones seleccionadas:', {
-      nivel1: this.notesForm.value.nivel1,
-      nivel2: this.notesForm.value.nivel2,
-      nivel3: this.notesForm.value.nivel3,
-      nivel4: this.notesForm.value.nivel4
-    });
+    // Guardar tipificaciones V2 y campos adicionales
+    const managementRecord = {
+      idTenant: user.tenantId,
+      idCartera: user.portfolioId,
+      idSubcartera: user.subPortfolioId,
+      idCliente: this.contact.clientId,
+      idAgente: user.id,
+      idCampana: null, // TODO: Obtener de la campaña activa si existe
+      observaciones: this.notesForm.value.notes,
+      metodoContacto: 'LLAMADA_SALIENTE',
+      canalContacto: this.call.phoneNumber,
+      duracionSegundos: this.call.duration,
+      fechaSeguimiento: this.notesForm.value.scheduleCallback || null,
+      estadoGestion: 'COMPLETADA',
+      tipificacion: {
+        id: this.getSelectedTipificacionId()
+      },
+      tipificacionNivel1: this.notesForm.value.nivel1 ? { id: this.notesForm.value.nivel1 } : null,
+      tipificacionNivel2: this.notesForm.value.nivel2 ? { id: this.notesForm.value.nivel2 } : null,
+      tipificacionNivel3: this.notesForm.value.nivel3 ? { id: this.notesForm.value.nivel3 } : null,
+      tipificacionNivel4: this.notesForm.value.nivel4 ? { id: this.notesForm.value.nivel4 } : null,
+      valoresCamposAdicionales: this.getAdditionalFieldValues()
+    };
 
-    this.callService.completeCall(this.call.callId, request).subscribe({
+    // Primero completar la llamada
+    this.callService.completeCall(this.call.callId, callRequest).subscribe({
       next: () => {
-        this.loading = false;
-        this.notesComplete.emit();
+        // Luego guardar el registro de gestión V2 con tipificaciones
+        this.typificationService.saveManagementRecord(managementRecord).subscribe({
+          next: () => {
+            this.loading = false;
+            this.notesComplete.emit();
+          },
+          error: (error) => {
+            console.error('Error saving management record:', error);
+            // Incluso si falla el registro V2, la llamada ya se completó
+            this.loading = false;
+            this.notesComplete.emit();
+          }
+        });
       },
       error: (error) => {
-        console.error('Error saving call notes:', error);
+        console.error('Error completing call:', error);
         this.loading = false;
       }
     });
+  }
+
+  private getSelectedTipificacionId(): number | null {
+    // Retorna el ID de la tipificación de mayor nivel seleccionada
+    if (this.notesForm.value.nivel4) return this.notesForm.value.nivel4;
+    if (this.notesForm.value.nivel3) return this.notesForm.value.nivel3;
+    if (this.notesForm.value.nivel2) return this.notesForm.value.nivel2;
+    if (this.notesForm.value.nivel1) return this.notesForm.value.nivel1;
+    return null;
+  }
+
+  private getAdditionalFieldValues(): any[] {
+    const valores: any[] = [];
+
+    this.additionalFields.forEach(field => {
+      const controlName = `campo_${field.id}`;
+      const valor = this.notesForm.get(controlName)?.value;
+
+      if (valor !== null && valor !== undefined && valor !== '') {
+        valores.push({
+          campo: { id: field.id },
+          valorTexto: field.tipoCampo === FieldType.TEXT || field.tipoCampo === FieldType.TEXTAREA ? valor : null,
+          valorNumero: field.tipoCampo === FieldType.NUMBER ? valor : null,
+          valorFecha: field.tipoCampo === FieldType.DATE ? valor : null
+        });
+      }
+    });
+
+    return valores;
   }
 
   onSkip(): void {

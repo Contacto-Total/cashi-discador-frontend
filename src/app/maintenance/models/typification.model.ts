@@ -91,3 +91,22 @@ export interface TypificationTreeNode {
   children: TypificationTreeNode[];
   level: number;
 }
+
+export enum FieldType {
+  DATE = 'DATE',
+  NUMBER = 'NUMBER',
+  TEXT = 'TEXT',
+  TEXTAREA = 'TEXTAREA'
+}
+
+export interface AdditionalField {
+  id: number;
+  nombreCampo: string;
+  tipoCampo: FieldType;
+  labelCampo: string;
+  esRequerido: boolean;
+  ordenVisualizacion: number;
+  valorMinimo?: number;
+  valorMaximo?: number;
+  longitudMaxima?: number;
+}
