@@ -50,11 +50,18 @@ export class ThemeService {
    */
   private applyTheme(theme: Theme): void {
     const body = document.body;
+    const html = document.documentElement;
 
-    // Remove both classes first
+    // Remove both classes first from body
     body.classList.remove('light-theme', 'dark-theme');
 
-    // Add the new theme class
+    // Remove both classes from html element
+    html.classList.remove('light', 'dark');
+
+    // Add the new theme class to body (for legacy support)
     body.classList.add(`${theme}-theme`);
+
+    // Add the new theme class to html element (for modern components)
+    html.classList.add(theme);
   }
 }

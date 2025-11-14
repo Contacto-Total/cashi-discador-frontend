@@ -1,17 +1,13 @@
-/* CASHI Design System */
+/* CASHI Design System - Theme-Aware Navigation */
+
+/* ========================================
+   DARK THEME (Default)
+   ======================================== */
+
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #0A0E27;
-}
-
-/* Theme Support for App Container */
-body.light-theme .app-container {
-  background-color: #f5f3f0;
-}
-
-body.dark-theme .app-container {
   background-color: #0A0E27;
 }
 
@@ -29,6 +25,7 @@ body.dark-theme .app-container {
   left: 0;
   right: 0;
   z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .navbar-left {
@@ -49,6 +46,7 @@ body.dark-theme .app-container {
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  user-select: none;
 }
 
 .logo-icon {
@@ -59,6 +57,7 @@ body.dark-theme .app-container {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .logo-icon mat-icon {
@@ -93,6 +92,7 @@ body.dark-theme .app-container {
   transition: all 0.2s ease;
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
 }
 
 .nav-item mat-icon {
@@ -110,6 +110,7 @@ body.dark-theme .app-container {
 .nav-item.active {
   background-color: rgba(16, 185, 129, 0.15);
   color: #10B981;
+  font-weight: 600;
 }
 
 /* Nav Item Dropdown */
@@ -126,9 +127,9 @@ body.dark-theme .app-container {
 
 .dropdown-arrow {
   transition: transform 0.3s;
-  font-size: 16px !important;
-  width: 16px !important;
-  height: 16px !important;
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
   margin-left: 4px;
 }
 
@@ -201,9 +202,9 @@ body.dark-theme .app-container {
 }
 
 .dropdown-item mat-icon {
-  font-size: 20px !important;
-  width: 20px !important;
-  height: 20px !important;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   color: #94a3b8;
   transition: color 0.2s;
@@ -237,7 +238,7 @@ body.dark-theme .app-container {
   background: transparent;
 }
 
-/* User Profile & Logout */
+/* User Profile */
 .user-profile {
   display: flex;
   align-items: center;
@@ -261,17 +262,18 @@ body.dark-theme .app-container {
 
 /* Theme Toggle Button */
 .btn-theme {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 8px 16px !important;
-  background: rgba(16, 185, 129, 0.1) !important;
-  border: 1px solid rgba(16, 185, 129, 0.3) !important;
-  color: #10B981 !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  transition: all 0.3s ease !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10B981;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .btn-theme .theme-icon {
@@ -279,7 +281,7 @@ body.dark-theme .app-container {
 }
 
 .btn-theme:hover {
-  background: rgba(16, 185, 129, 0.2) !important;
+  background: rgba(16, 185, 129, 0.2);
   transform: translateY(-2px);
 }
 
@@ -287,18 +289,20 @@ body.dark-theme .app-container {
   transform: rotate(20deg);
 }
 
+/* Logout Button */
 .btn-logout {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px !important;
-  background: rgba(239, 68, 68, 0.1) !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
-  color: #ef4444 !important;
-  border-radius: 6px !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  transition: all 0.2s ease !important;
+  padding: 8px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
 .btn-logout mat-icon {
@@ -308,54 +312,7 @@ body.dark-theme .app-container {
 }
 
 .btn-logout:hover {
-  background: rgba(239, 68, 68, 0.2) !important;
-}
-
-/* Dropdown Buttons */
-.nav-dropdown {
-  color: #94a3b8 !important;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px !important;
-  border-radius: 6px !important;
-  transition: all 0.2s ease !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-}
-
-.nav-dropdown mat-icon {
-  font-size: 20px;
-  width: 20px;
-  height: 20px;
-}
-
-.nav-dropdown .dropdown-arrow {
-  margin-left: 4px;
-}
-
-.nav-dropdown:hover {
-  background-color: rgba(16, 185, 129, 0.1) !important;
-  color: #10B981 !important;
-}
-
-/* Icon Buttons */
-.nav-icon-btn {
-  color: #94a3b8 !important;
-  width: 40px !important;
-  height: 40px !important;
-  transition: all 0.2s ease !important;
-}
-
-.nav-icon-btn mat-icon {
-  font-size: 24px;
-  width: 24px;
-  height: 24px;
-}
-
-.nav-icon-btn:hover {
-  background-color: rgba(16, 185, 129, 0.1) !important;
-  color: #10B981 !important;
+  background: rgba(239, 68, 68, 0.2);
 }
 
 /* Main Content */
@@ -367,18 +324,185 @@ body.dark-theme .app-container {
   overflow-y: auto;
 }
 
-/* Responsive */
+/* ========================================
+   LIGHT THEME
+   ======================================== */
+
+:root.light .app-container,
+body.light-theme .app-container {
+  background-color: #f8fafc;
+}
+
+:root.light .cashi-navbar,
+body.light-theme .cashi-navbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+:root.light .logo-text,
+body.light-theme .logo-text {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+/* Nav items - Light Mode */
+:root.light .nav-item,
+body.light-theme .nav-item {
+  color: #475569;
+  font-weight: 600;
+}
+
+:root.light .nav-item mat-icon,
+body.light-theme .nav-item mat-icon {
+  color: #475569;
+}
+
+:root.light .nav-item:hover,
+body.light-theme .nav-item:hover {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+:root.light .nav-item:hover mat-icon,
+body.light-theme .nav-item:hover mat-icon {
+  color: #16a34a;
+}
+
+:root.light .nav-item.active,
+body.light-theme .nav-item.active {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+:root.light .nav-item.active mat-icon,
+body.light-theme .nav-item.active mat-icon {
+  color: #15803d;
+}
+
+/* Dropdown Menu - Light Mode */
+:root.light .dropdown-menu,
+body.light-theme .dropdown-menu {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
+:root.light .dropdown-item,
+body.light-theme .dropdown-item {
+  color: #0f172a;
+  border-bottom-color: #e2e8f0;
+}
+
+:root.light .dropdown-item mat-icon,
+body.light-theme .dropdown-item mat-icon {
+  color: #64748b;
+}
+
+:root.light .dropdown-item:hover,
+body.light-theme .dropdown-item:hover {
+  background-color: #f0fdf4;
+}
+
+:root.light .dropdown-item:hover mat-icon,
+:root.light .dropdown-item.active mat-icon,
+body.light-theme .dropdown-item:hover mat-icon,
+body.light-theme .dropdown-item.active mat-icon {
+  color: #16a34a;
+}
+
+:root.light .dropdown-item:hover .item-title,
+:root.light .dropdown-item.active .item-title,
+body.light-theme .dropdown-item:hover .item-title,
+body.light-theme .dropdown-item.active .item-title {
+  color: #0f172a;
+}
+
+:root.light .item-title,
+body.light-theme .item-title {
+  color: #0f172a;
+}
+
+:root.light .item-desc,
+body.light-theme .item-desc {
+  color: #64748b;
+}
+
+/* User Profile - Light Mode */
+:root.light .user-profile,
+body.light-theme .user-profile {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+:root.light .user-profile mat-icon,
+body.light-theme .user-profile mat-icon {
+  color: #0f172a;
+}
+
+/* Theme Toggle - Light Mode */
+:root.light .btn-theme,
+body.light-theme .btn-theme {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #16a34a;
+}
+
+:root.light .btn-theme .theme-icon,
+body.light-theme .btn-theme .theme-icon {
+  color: #16a34a;
+}
+
+:root.light .btn-theme:hover,
+body.light-theme .btn-theme:hover {
+  background: rgba(16, 185, 129, 0.15);
+}
+
+/* Logout Button - Light Mode */
+:root.light .btn-logout,
+body.light-theme .btn-logout {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #dc2626;
+}
+
+:root.light .btn-logout mat-icon,
+body.light-theme .btn-logout mat-icon {
+  color: #dc2626;
+}
+
+:root.light .btn-logout:hover,
+body.light-theme .btn-logout:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* Main Content - Light Mode */
+:root.light .main-content,
+body.light-theme .main-content {
+  background-color: #f8fafc;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
 @media (max-width: 1024px) {
   .navbar-menu {
     display: none;
   }
 
-  .nav-dropdown span {
+  .cashi-logo .logo-text {
     display: none;
   }
 
-  .cashi-logo .logo-text {
+  .navbar-right button span {
     display: none;
+  }
+
+  .btn-theme,
+  .btn-logout {
+    padding: 8px 12px;
   }
 }
 
@@ -395,194 +519,86 @@ body.dark-theme .app-container {
     gap: 4px;
   }
 
-  .nav-dropdown {
-    padding: 8px !important;
+  .user-profile span {
+    display: none;
+  }
+
+  .user-profile {
+    padding: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cashi-navbar {
+    padding: 0 12px;
+    height: 56px;
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logo-icon mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .main-content {
+    margin-top: 56px;
+    min-height: calc(100vh - 56px);
+  }
+
+  .btn-theme,
+  .btn-logout {
+    padding: 6px 8px;
+  }
+
+  .btn-theme mat-icon,
+  .btn-logout mat-icon,
+  .btn-theme .theme-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
   }
 }
 
 /* ========================================
-   LIGHT THEME OVERRIDES - WARM CREAM PALETTE
+   ACCESSIBILITY
    ======================================== */
 
-/* Navbar Light Theme - Warm cream colors */
-body.light-theme .cashi-navbar {
-  background-color: #fefdfb !important;
-  border-bottom: 2px solid #d4cfc5 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+.nav-item:focus-visible,
+.dropdown-item:focus-visible,
+.btn-theme:focus-visible,
+.btn-logout:focus-visible {
+  outline: 3px solid #10B981;
+  outline-offset: 2px;
 }
 
-/* Logo icon background */
-body.light-theme .logo-icon {
-  background-color: #10B981 !important;
+@media (prefers-contrast: high) {
+  .cashi-navbar {
+    border-bottom-width: 2px;
+  }
+
+  .dropdown-menu {
+    border-width: 2px;
+  }
 }
 
-body.light-theme .logo-icon mat-icon {
-  color: #ffffff !important;
-}
+@media (prefers-reduced-motion: reduce) {
+  .nav-item,
+  .dropdown-item,
+  .btn-theme,
+  .btn-logout,
+  .dropdown-menu,
+  .dropdown-arrow,
+  .theme-icon {
+    transition: none;
+  }
 
-body.light-theme .logo-text {
-  color: #0f172a !important;
-  font-weight: 800 !important;
-}
-
-/* Nav items - texto e iconos */
-body.light-theme .nav-item {
-  color: #334155 !important;
-  font-weight: 600 !important;
-}
-
-body.light-theme .nav-item span {
-  color: #334155 !important;
-}
-
-body.light-theme .nav-item mat-icon {
-  color: #334155 !important;
-}
-
-body.light-theme .nav-item:hover {
-  background-color: #f0ede8 !important;
-  color: #10B981 !important;
-}
-
-body.light-theme .nav-item:hover span {
-  color: #10B981 !important;
-}
-
-body.light-theme .nav-item:hover mat-icon {
-  color: #10B981 !important;
-}
-
-body.light-theme .nav-item.active {
-  background-color: #e0f2e9 !important;
-  color: #059669 !important;
-  font-weight: 700 !important;
-}
-
-body.light-theme .nav-item.active span {
-  color: #059669 !important;
-}
-
-body.light-theme .nav-item.active mat-icon {
-  color: #059669 !important;
-}
-
-/* Dropdown arrow */
-body.light-theme .dropdown-arrow {
-  color: #334155 !important;
-}
-
-body.light-theme .nav-item:hover .dropdown-arrow {
-  color: #10B981 !important;
-}
-
-body.light-theme .nav-item.active .dropdown-arrow {
-  color: #059669 !important;
-}
-
-body.light-theme .dropdown-menu {
-  background: #fefdfb !important;
-  border: 2px solid #d4cfc5 !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12) !important;
-}
-
-body.light-theme .dropdown-item {
-  color: #1e293b !important;
-  border-bottom-color: #e7e3dc !important;
-  font-weight: 500 !important;
-}
-
-body.light-theme .dropdown-item mat-icon {
-  color: #6b6560 !important;
-}
-
-body.light-theme .dropdown-item:hover {
-  background-color: #f0ede8 !important;
-}
-
-body.light-theme .dropdown-item:hover mat-icon,
-body.light-theme .dropdown-item.active mat-icon {
-  color: #10B981 !important;
-}
-
-body.light-theme .dropdown-item:hover .item-title,
-body.light-theme .dropdown-item.active .item-title {
-  color: #0f172a !important;
-  font-weight: 600 !important;
-}
-
-body.light-theme .item-title {
-  color: #1e293b !important;
-  font-weight: 600 !important;
-}
-
-body.light-theme .item-desc {
-  color: #64748b !important;
-}
-
-body.light-theme .user-profile {
-  background: #f0ede8 !important;
-  color: #1e293b !important;
-  border: 1px solid #d4cfc5 !important;
-  font-weight: 600 !important;
-}
-
-body.light-theme .user-profile mat-icon {
-  color: #1e293b !important;
-}
-
-body.light-theme .user-profile .username {
-  color: #1e293b !important;
-}
-
-body.light-theme .nav-dropdown {
-  color: #334155 !important;
-  font-weight: 600 !important;
-}
-
-body.light-theme .nav-dropdown mat-icon {
-  color: #334155 !important;
-}
-
-body.light-theme .nav-icon-btn {
-  color: #334155 !important;
-}
-
-body.light-theme .nav-icon-btn mat-icon {
-  color: #334155 !important;
-}
-
-body.light-theme .nav-icon-btn:hover {
-  background-color: #f0ede8 !important;
-  color: #10B981 !important;
-}
-
-body.light-theme .nav-icon-btn:hover mat-icon {
-  color: #10B981 !important;
-}
-
-/* Theme toggle button */
-body.light-theme .btn-theme {
-  background: rgba(16, 185, 129, 0.1) !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-  color: #10B981 !important;
-}
-
-body.light-theme .btn-theme mat-icon,
-body.light-theme .btn-theme .theme-icon {
-  color: #10B981 !important;
-}
-
-/* Logout button */
-body.light-theme .btn-logout {
-  background: rgba(239, 68, 68, 0.1) !important;
-  border-color: rgba(239, 68, 68, 0.3) !important;
-  color: #ef4444 !important;
-}
-
-body.light-theme .btn-logout mat-icon {
-  color: #ef4444 !important;
-}
-
-body.light-theme .main-content {
-  background-color: #f5f3f0 !important;
+  .btn-theme:hover,
+  .btn-theme:hover .theme-icon {
+    transform: none;
+  }
 }

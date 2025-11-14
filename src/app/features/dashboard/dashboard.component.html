@@ -23,8 +23,8 @@
 
       <mat-card class="stat-card">
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon style="color: #4caf50;">phone_in_talk</mat-icon>
+          <div class="stat-icon stat-icon-success">
+            <mat-icon>phone_in_talk</mat-icon>
           </div>
           <div class="stat-info">
             <h3>{{ stats.answeredCallsToday }}</h3>
@@ -35,8 +35,8 @@
 
       <mat-card class="stat-card">
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon style="color: #ff9800;">timer</mat-icon>
+          <div class="stat-icon stat-icon-warning">
+            <mat-icon>timer</mat-icon>
           </div>
           <div class="stat-info">
             <h3>{{ formatDuration(stats.averageDuration) }}</h3>
@@ -47,8 +47,8 @@
 
       <mat-card class="stat-card">
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon style="color: #2196f3;">person</mat-icon>
+          <div class="stat-icon stat-icon-info">
+            <mat-icon>person</mat-icon>
           </div>
           <div class="stat-info">
             <h3>{{ stats.availableAgents }} / {{ stats.availableAgents + stats.busyAgents }}</h3>
@@ -59,8 +59,8 @@
 
       <mat-card class="stat-card">
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon style="color: #4caf50;">trending_up</mat-icon>
+          <div class="stat-icon stat-icon-success">
+            <mat-icon>trending_up</mat-icon>
           </div>
           <div class="stat-info">
             <h3>{{ (stats.contactRate * 100).toFixed(1) }}%</h3>
@@ -71,8 +71,8 @@
 
       <mat-card class="stat-card">
         <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon style="color: #f44336;">trending_down</mat-icon>
+          <div class="stat-icon stat-icon-danger">
+            <mat-icon>trending_down</mat-icon>
           </div>
           <div class="stat-info">
             <h3>{{ (stats.abandonRate * 100).toFixed(1) }}%</h3>

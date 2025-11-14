@@ -1,22 +1,20 @@
 export const environment = {
   production: true,
 
-    // Auth Backend (puerto 8082)
-    apiUrl: '/auth-api',
+  // API Gateway - URLs absolutas para producción
+  apiUrl: 'https://cobranza.contactototal.com.pe/api',
+  gatewayUrl: 'https://cobranza.contactototal.com.pe/api',
+  wsUrl: 'https://cobranza.contactototal.com.pe/ws',
 
-    // API Gateway (puerto 8000) - para otras APIs
-    gatewayUrl: '/api',
-    wsUrl: '/ws',
+  // Tipificación Backend
+  tipificacionUrl: 'https://cobranza.contactototal.com.pe/api/tipificacion/v1',
 
-    // Tipificación Backend (puerto 8085) a través del gateway
-    tipificacionUrl: '/api/tipificacion/v1',
+  // WhatsApp Backend
+  whatsappApiUrl: 'https://cobranza.contactototal.com.pe/wsp-api',
+  whatsappWsUrl: 'https://cobranza.contactototal.com.pe/wsp-ws',
 
-    // WhatsApp Backend
-    whatsappApiUrl: '/wsp-api',
-    whatsappWsUrl: '/wsp-ws',
-
-    // FreeSWITCH on AWS - WebSocket SIP over SSL (port 7443)
-    freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
-    freeswitchDomain: 'cobranza.contactototal.com.pe'
+  // FreeSWITCH on AWS - WebSocket SIP over SSL (port 7443)
+  freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
+  freeswitchDomain: 'cobranza.contactototal.com.pe'
 };
 
