@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -11,19 +11,20 @@ import { Tenant } from '../../models/tenant.model';
   selector: 'app-portfolio-maintenance',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <!-- Header -->
       <div class="max-w-7xl mx-auto mb-6">
         <div class="flex items-center justify-between">
           <div>
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
-                <lucide-angular name="folder" [size]="24" class="text-white"></lucide-angular>
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
+                <lucide-angular name="briefcase" [size]="16" class="text-white"></lucide-angular>
               </div>
               <div>
-                <h1 class="text-2xl font-bold text-white">Gestión de Carteras</h1>
-                <p class="text-sm text-gray-400">Administra las carteras por proveedor</p>
+                <h1 class="text-lg font-bold text-white">Carteras</h1>
+                <p class="text-xs text-gray-400">Administración de carteras de cobranza</p>
               </div>
             </div>
           </div>
@@ -158,17 +159,17 @@ import { Tenant } from '../../models/tenant.model';
                         </label>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-3">
                           <button (click)="openEditDialog(portfolio)"
-                                  class="p-2 text-blue-400 hover:bg-blue-900/30 rounded-lg transition-colors cursor-pointer">
-                            <lucide-angular name="edit" [size]="16"></lucide-angular>
+                                  class="text-blue-400 hover:text-blue-500 transition-colors cursor-pointer">
+                            <lucide-angular name="edit" [size]="18"></lucide-angular>
                           </button>
                           <button (click)="deletePortfolio(portfolio)"
                                   [disabled]="portfolio.hasSubPortfolios"
-                                  [class]="portfolio.hasSubPortfolios ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-red-900/30 cursor-pointer'"
-                                  class="p-2 rounded-lg transition-colors disabled:opacity-50"
+                                  [class]="portfolio.hasSubPortfolios ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:text-red-500 cursor-pointer'"
+                                  class="transition-colors disabled:opacity-50"
                                   [title]="portfolio.hasSubPortfolios ? 'No se puede eliminar: tiene subcarteras asociadas' : 'Eliminar'">
-                            <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                            <lucide-angular name="trash-2" [size]="18"></lucide-angular>
                           </button>
                         </div>
                       </td>
@@ -281,8 +282,7 @@ import { Tenant } from '../../models/tenant.model';
         </div>
       </div>
     }
-  `,
-  styles: []
+  `
 })
 export class PortfolioMaintenanceComponent implements OnInit {
   tenants = signal<Tenant[]>([]);

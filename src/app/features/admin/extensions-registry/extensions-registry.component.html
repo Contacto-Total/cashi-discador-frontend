@@ -1,11 +1,13 @@
 <div class="extensions-container">
   <!-- Header -->
-  <div class="header">
-    <button class="btn-back" (click)="goBack()">
-      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
-      <span>Volver a Campañas</span>
-    </button>
-    <h1><lucide-angular name="phone" [size]="24"></lucide-angular> Registro de Extensiones</h1>
+  <div class="flex items-center gap-2 mb-2">
+    <div class="w-8 h-8 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center">
+      <lucide-angular name="phone" [size]="16" class="text-white"></lucide-angular>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold text-white">Registro de Extensiones</h1>
+      <p class="text-xs text-gray-400">Gestión de extensiones telefónicas registradas</p>
+    </div>
   </div>
 
   <!-- Error Message -->

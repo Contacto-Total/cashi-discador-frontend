@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,7 +12,8 @@ import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiem
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-monitoring.component.html',
-  styleUrls: ['./campaign-monitoring.component.css']
+  styleUrls: ['./campaign-monitoring.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   // Campaigns

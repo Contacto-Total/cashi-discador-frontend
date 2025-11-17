@@ -4,6 +4,8 @@
   height: 100%;
   background: #0A0E27;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 // Chat header
@@ -727,4 +729,66 @@
 .error-snackbar {
   background-color: #f44336 !important;
   color: white !important;
+}
+
+/* Light Theme Support */
+body.light-theme {
+  .chat-window-container {
+    background: #f1f5f9 !important;
+  }
+
+  .chat-header {
+    background: #ffffff !important;
+    border-bottom-color: #e2e8f0 !important;
+  }
+
+  .contact-name {
+    color: #0f172a !important;
+  }
+
+  .contact-number {
+    color: #64748b !important;
+  }
+
+  .messages-area {
+    background: #f1f5f9 !important;
+  }
+
+  .message-bubble {
+    &.sent {
+      background: #dcfce7 !important;
+      color: #0f172a !important;
+    }
+
+    &.received {
+      background: #ffffff !important;
+      color: #0f172a !important;
+    }
+  }
+
+  .message-time {
+    color: #64748b !important;
+  }
+
+  .input-area {
+    background: #ffffff !important;
+    border-top-color: #e2e8f0 !important;
+  }
+
+  .input-container {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  .message-input {
+    color: #0f172a !important;
+
+    &::placeholder {
+      color: #94a3b8 !important;
+    }
+  }
+
+  .empty-state-text {
+    color: #64748b !important;
+  }
 }

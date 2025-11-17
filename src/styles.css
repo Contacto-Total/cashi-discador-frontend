@@ -49,6 +49,18 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Fix: Headings with Lucide icons - display inline */
+h1 lucide-angular,
+h2 lucide-angular,
+h3 lucide-angular,
+h4 lucide-angular,
+h5 lucide-angular,
+h6 lucide-angular {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
 html, body {
   height: 100%;
   background-color: var(--bg-primary);
@@ -891,7 +903,7 @@ body.light-theme h4,
 body.light-theme h5,
 body.light-theme h6 {
   color: #0f172a;
-  margin: 0 0 16px 0;
+  margin: 0 0 2px 0;
 }
 
 /* Dark Theme - Headers */
@@ -902,7 +914,7 @@ body.dark-theme h4,
 body.dark-theme h5,
 body.dark-theme h6 {
   color: #ffffff;
-  margin: 0 0 16px 0;
+  margin: 0 0 2px 0;
 }
 
 /* Light Theme - Text */
@@ -2706,11 +2718,11 @@ body.light-theme .btn-warning span {
 }
 
 /* Force white text in ANY button with colored background */
-body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button) {
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button):not(.sidebar-item):not(.sidebar-toggle):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="purple"]):not([class*="emerald"]) {
   color: #ffffff !important;
 }
 
-body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button) * {
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button):not(.sidebar-item):not(.sidebar-toggle):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="purple"]):not([class*="emerald"]) * {
   color: #ffffff !important;
 }
 
@@ -3278,5 +3290,171 @@ body.light-theme .new-chat-banner {
   color: #0c5460 !important;
 }
 
+/* Light Theme - Maintenance Components Action Buttons */
+body.light-theme {
+  /* Action buttons in tables - MUY ESPECÍFICO */
+  button.text-blue-400,
+  button.text-blue-400 *,
+  button.text-blue-400 lucide-angular,
+  button.text-blue-400 lucide-angular svg {
+    color: #3b82f6 !important;
+    stroke: #3b82f6 !important;
+  }
+
+  button.text-blue-400:hover,
+  button.hover\:text-blue-500:hover,
+  button.hover\:text-blue-500:hover *,
+  button.hover\:text-blue-500:hover lucide-angular,
+  button.hover\:text-blue-500:hover lucide-angular svg {
+    color: #2563eb !important;
+    stroke: #2563eb !important;
+  }
+
+  button.text-red-400,
+  button.text-red-400 *,
+  button.text-red-400 lucide-angular,
+  button.text-red-400 lucide-angular svg {
+    color: #ef4444 !important;
+    stroke: #ef4444 !important;
+  }
+
+  button.text-red-400:hover,
+  button.hover\:text-red-500:hover,
+  button.hover\:text-red-500:hover *,
+  button.hover\:text-red-500:hover lucide-angular,
+  button.hover\:text-red-500:hover lucide-angular svg {
+    color: #dc2626 !important;
+    stroke: #dc2626 !important;
+  }
+
+  button.text-green-400,
+  button.text-green-400 *,
+  button.text-green-400 lucide-angular,
+  button.text-green-400 lucide-angular svg {
+    color: #16a34a !important;
+    stroke: #16a34a !important;
+  }
+
+  button.text-emerald-400,
+  button.text-emerald-400 *,
+  button.text-emerald-400 lucide-angular,
+  button.text-emerald-400 lucide-angular svg {
+    color: #10b981 !important;
+    stroke: #10b981 !important;
+  }
+
+  button.text-emerald-400:hover,
+  button.hover\:text-emerald-500:hover,
+  button.hover\:text-emerald-500:hover *,
+  button.hover\:text-emerald-500:hover lucide-angular,
+  button.hover\:text-emerald-500:hover lucide-angular svg {
+    color: #059669 !important;
+    stroke: #059669 !important;
+  }
+
+  button.text-yellow-400,
+  button.text-yellow-400 *,
+  button.text-yellow-400 lucide-angular,
+  button.text-yellow-400 lucide-angular svg {
+    color: #ca8a04 !important;
+    stroke: #ca8a04 !important;
+  }
+
+  button.text-purple-400,
+  button.text-purple-400 *,
+  button.text-purple-400 lucide-angular,
+  button.text-purple-400 lucide-angular svg {
+    color: #9333ea !important;
+    stroke: #9333ea !important;
+  }
+
+  button.text-gray-600,
+  button.text-gray-600 *,
+  button.text-gray-600 lucide-angular,
+  button.text-gray-600 lucide-angular svg {
+    color: #6b7280 !important;
+    stroke: #6b7280 !important;
+  }
+
+  /* Hover states for action buttons */
+  button.hover\:bg-slate-800:hover {
+    background-color: #f1f5f9 !important;
+  }
+
+  /* Toggle switch styles */
+  .bg-slate-700 {
+    background-color: #cbd5e1 !important;
+  }
+
+  input.peer:checked ~ .peer-checked\:bg-blue-600 {
+    background-color: #2563eb !important;
+  }
+
+  input.peer:checked ~ .peer-checked\:bg-purple-600 {
+    background-color: #9333ea !important;
+  }
+
+  input.peer:checked ~ .peer-checked\:bg-emerald-600 {
+    background-color: #059669 !important;
+  }
+
+  input.peer:focus ~ .peer-focus\:ring-blue-800 {
+    --tw-ring-color: rgba(37, 99, 235, 0.5) !important;
+  }
+
+  input.peer:focus ~ .peer-focus\:ring-purple-800 {
+    --tw-ring-color: rgba(147, 51, 234, 0.5) !important;
+  }
+
+  input.peer:focus ~ .peer-focus\:ring-emerald-800 {
+    --tw-ring-color: rgba(5, 150, 105, 0.5) !important;
+  }
+
+  /* Table styling */
+  .bg-slate-900 {
+    background-color: #ffffff !important;
+  }
+
+  .bg-slate-800 {
+    background-color: #f8fafc !important;
+  }
+
+  .bg-slate-950 {
+    background-color: #f1f5f9 !important;
+  }
+
+  .border-slate-800 {
+    border-color: #e2e8f0 !important;
+  }
+
+  .border-slate-700 {
+    border-color: #cbd5e1 !important;
+  }
+
+  .text-gray-300 {
+    color: #374151 !important;
+  }
+
+  .text-gray-400 {
+    color: #6b7280 !important;
+  }
+
+  .text-gray-500 {
+    color: #9ca3af !important;
+  }
+
+  /* Table headers and text */
+  thead th {
+    color: #0f172a !important;
+  }
+
+  tbody td {
+    color: #1e293b !important;
+  }
+
+  .placeholder-gray-500::placeholder {
+    color: #9ca3af !important;
+  }
+}
 
 

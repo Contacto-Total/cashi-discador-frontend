@@ -2,6 +2,13 @@
   <div class="login-card">
     <div class="login-header">
       <div class="mascot-container">
+        <div class="speech-bubble" [class.visible]="showBubble">
+          <div class="typing-text">
+            <span *ngFor="let char of displayedChars; let i = index"
+                  class="typing-char"
+                  [style.animation-delay]="(i * 0.05) + 's'">{{ char }}</span>
+          </div>
+        </div>
         <div class="mascot-body">
           <div class="mascot-antenna"></div>
           <div class="mascot-head">
@@ -17,15 +24,15 @@
               <div class="hand left-hand"></div>
               <div class="hand right-hand"></div>
             </div>
-            <div class="mascot-mouth" [class.happy]="isGreeting || loginForm.valid"></div>
+            <div class="mascot-mouth" [class.closed]="!isGreeting && !loginForm.valid"></div>
           </div>
           <div class="mascot-headset">
             <div class="headset-right"></div>
           </div>
         </div>
       </div>
-      <h1>Call Center Login</h1>
-      <p>Ingresa tus credenciales para continuar</p>
+      <h1>¡Bienvenido de vuelta!</h1>
+      <p>Inicia sesión para continuar</p>
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
@@ -44,10 +51,10 @@
             [class.error]="username?.invalid && username?.touched">
         </div>
         <span class="error-text" *ngIf="username?.hasError('required') && username?.touched">
-          El usuario es requerido
+          Por favor ingresa tu usuario
         </span>
         <span class="error-text" *ngIf="username?.hasError('minlength') && username?.touched">
-          Mínimo 3 caracteres
+          El usuario debe tener al menos 3 caracteres
         </span>
       </div>
 
@@ -73,10 +80,10 @@
           </button>
         </div>
         <span class="error-text" *ngIf="password?.hasError('required') && password?.touched">
-          La contraseña es requerida
+          Por favor ingresa tu contraseña
         </span>
         <span class="error-text" *ngIf="password?.hasError('minlength') && password?.touched">
-          Mínimo 6 caracteres
+          La contraseña debe tener al menos 6 caracteres
         </span>
       </div>
 

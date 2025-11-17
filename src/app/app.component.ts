@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -33,9 +33,10 @@ import { Subscription } from 'rxjs';
     LucideAngularModule
   ],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
+  styleUrls: ['./app.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   title = 'Call Center';
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
@@ -44,6 +45,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
   private callActivatedTimestamp: number | null = null; // Timestamp de cuando la llamada se activó
   private navigationTimeout: any = null; // Timeout para navegación retrasada
+
+  // Sidebar state
+  isSidebarCollapsed = false;
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
@@ -83,6 +87,13 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Detectar texto que se desborda y necesita scroll animation
+    setTimeout(() => {
+      this.checkTextOverflow();
+    }, 100);
+  }
+
   ngOnDestroy(): void {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
@@ -94,6 +105,37 @@ export class AppComponent implements OnInit, OnDestroy {
       clearTimeout(this.navigationTimeout);
       this.navigationTimeout = null;
     }
+  }
+
+  @HostListener('window:resize')
+  onResize(): void {
+    // Re-detectar overflow cuando cambia el tamaño de la ventana
+    this.checkTextOverflow();
+  }
+
+  private checkTextOverflow(): void {
+    // Seleccionar todos los elementos de texto en el sidebar (nav, submenu y footer)
+    const textElements = document.querySelectorAll('.item-text');
+
+    textElements.forEach((el) => {
+      const element = el as HTMLElement;
+
+      // Solo detectar overflow en elementos visibles (no ocultos por *ngIf o display:none)
+      if (element.offsetParent === null) {
+        return; // Skip invisible elements
+      }
+
+      // Verificar si el contenido desborda el contenedor
+      const isOverflowing = element.scrollWidth > element.clientWidth;
+
+      // Si el ancho del contenido (scrollWidth) es mayor que el ancho visible (clientWidth),
+      // significa que el texto está truncado
+      if (isOverflowing) {
+        element.classList.add('text-overflowing');
+      } else {
+        element.classList.remove('text-overflowing');
+      }
+    });
   }
 
   private iniciarMonitoreoInactividad(): void {
@@ -253,23 +295,44 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.router.url === '/login';
   }
 
+  // Sidebar methods
+  toggleSidebar(): void {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    // Re-detectar overflow después de colapsar/expandir sidebar
+    setTimeout(() => {
+      this.checkTextOverflow();
+    }, 350); // Esperar a que termine la transición CSS (0.3s)
+  }
+
   // Navbar methods
   toggleMonitoreoDropdown(): void {
     this.isMonitoreoDropdownOpen = !this.isMonitoreoDropdownOpen;
     this.isCargaDatosDropdownOpen = false;
     this.isMantenimientoDropdownOpen = false;
+    // Re-detectar overflow después de abrir dropdown
+    setTimeout(() => {
+      this.checkTextOverflow();
+    }, 50);
   }
 
   toggleCargaDatosDropdown(): void {
     this.isCargaDatosDropdownOpen = !this.isCargaDatosDropdownOpen;
     this.isMonitoreoDropdownOpen = false;
     this.isMantenimientoDropdownOpen = false;
+    // Re-detectar overflow después de abrir dropdown
+    setTimeout(() => {
+      this.checkTextOverflow();
+    }, 50);
   }
 
   toggleMantenimientoDropdown(): void {
     this.isMantenimientoDropdownOpen = !this.isMantenimientoDropdownOpen;
     this.isMonitoreoDropdownOpen = false;
     this.isCargaDatosDropdownOpen = false;
+    // Re-detectar overflow después de abrir dropdown
+    setTimeout(() => {
+      this.checkTextOverflow();
+    }, 50);
   }
 
   closeDropdowns(): void {

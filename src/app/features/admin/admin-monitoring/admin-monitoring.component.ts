@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -8,6 +8,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
+import { LucideAngularModule } from 'lucide-angular';
 import { Subscription, interval } from 'rxjs';
 import { AdminMonitoringService, ActiveCall } from '../../../core/services/admin-monitoring.service';
 import { WebsocketService } from '../../../core/services/websocket.service';
@@ -24,10 +25,12 @@ import { AuthService } from '../../../core/services/auth.service';
     MatTableModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    MatBadgeModule
+    MatBadgeModule,
+    LucideAngularModule
   ],
   templateUrl: './admin-monitoring.component.html',
-  styleUrls: ['./admin-monitoring.component.css']
+  styleUrls: ['./admin-monitoring.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class AdminMonitoringComponent implements OnInit, OnDestroy {
   activeCalls: ActiveCall[] = [];

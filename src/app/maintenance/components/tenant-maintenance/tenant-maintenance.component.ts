@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -9,19 +9,20 @@ import { Tenant } from '../../models/tenant.model';
   selector: 'app-tenant-maintenance',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <!-- Header -->
       <div class="max-w-7xl mx-auto mb-6">
         <div class="flex items-center justify-between">
           <div>
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                <lucide-angular name="building-2" [size]="24" class="text-white"></lucide-angular>
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 bg-cyan-600 rounded-lg flex items-center justify-center">
+                <lucide-angular name="building-2" [size]="16" class="text-white"></lucide-angular>
               </div>
               <div>
-                <h1 class="text-2xl font-bold text-white">Gestión de Proveedores</h1>
-                <p class="text-sm text-gray-400">Administra los clientes y proveedores del sistema</p>
+                <h1 class="text-lg font-bold text-white">Proveedores</h1>
+                <p class="text-xs text-gray-400">Gestión de proveedores de telefonía</p>
               </div>
             </div>
           </div>
@@ -145,18 +146,18 @@ import { Tenant } from '../../models/tenant.model';
                         </label>
                       </td>
                       <td class="px-6 py-3">
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-3">
                           <button (click)="editTenant(tenant)"
-                                  class="p-2 text-blue-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                  class="text-blue-400 hover:text-blue-500 transition-colors cursor-pointer"
                                   title="Editar">
-                            <lucide-angular name="edit" [size]="16"></lucide-angular>
+                            <lucide-angular name="edit" [size]="18"></lucide-angular>
                           </button>
                           <button (click)="deleteTenant(tenant)"
                                   [disabled]="tenant.hasPortfolios"
-                                  [class]="tenant.hasPortfolios ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:bg-slate-800 cursor-pointer'"
-                                  class="p-2 rounded-lg transition-colors disabled:opacity-50"
+                                  [class]="tenant.hasPortfolios ? 'text-gray-600 cursor-not-allowed' : 'text-red-400 hover:text-red-500 cursor-pointer'"
+                                  class="transition-colors disabled:opacity-50"
                                   [title]="tenant.hasPortfolios ? 'No se puede eliminar: tiene carteras asociadas' : 'Eliminar'">
-                            <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                            <lucide-angular name="trash-2" [size]="18"></lucide-angular>
                           </button>
                         </div>
                       </td>
@@ -260,12 +261,7 @@ import { Tenant } from '../../models/tenant.model';
         </div>
       }
     </div>
-  `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  `
 })
 export class TenantMaintenanceComponent implements OnInit {
   tenants = signal<Tenant[]>([]);

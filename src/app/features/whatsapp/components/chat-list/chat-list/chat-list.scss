@@ -5,6 +5,8 @@
   height: 100%;
   background: #1E293B;
   overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 // Header
@@ -333,5 +335,68 @@
   }
   50% {
     transform: scale(1.05);
+  }
+}
+
+/* Light Theme Support */
+body.light-theme {
+  .search-container {
+    background: #f8fafc !important;
+  }
+
+  .search-wrapper {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  .chat-list-container {
+    background: #f8fafc !important;
+  }
+
+  .sidebar-header {
+    background: #ffffff !important;
+    border-bottom-color: #e2e8f0 !important;
+  }
+
+  .username-display {
+    color: #0f172a !important;
+  }
+
+  .chat-item {
+    background: #ffffff !important;
+    border-bottom-color: #f1f5f9 !important;
+
+    &:hover {
+      background: #f8fafc !important;
+    }
+
+    &.active {
+      background: #e0f2fe !important;
+    }
+  }
+
+  .chat-name {
+    color: #0f172a !important;
+  }
+
+  .last-message {
+    color: #64748b !important;
+  }
+
+  .chat-time {
+    color: #94a3b8 !important;
+  }
+
+  .unread-badge {
+    background: #10B981 !important;
+    color: white !important;
+  }
+
+  .search-input {
+    color: #0f172a !important;
+
+    &::placeholder {
+      color: #94a3b8 !important;
+    }
   }
 }

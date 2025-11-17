@@ -1,207 +1,158 @@
 <div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()">
-  <!-- CASHI Navbar -->
-  <nav class="cashi-navbar">
-    <div class="navbar-left">
-      <!-- Logo CASHI -->
-      <div class="cashi-logo">
-        <div class="logo-icon">
-          <mat-icon>account_balance_wallet</mat-icon>
-        </div>
-        <span class="logo-text">CASHI</span>
+  <!-- Toggle Button (fuera del sidebar para evitar overflow) -->
+  <button type="button" class="sidebar-toggle" [class.collapsed]="isSidebarCollapsed" (click)="toggleSidebar()" [title]="isSidebarCollapsed ? 'Expandir' : 'Colapsar'">
+    <lucide-angular [name]="isSidebarCollapsed ? 'chevron-right' : 'chevron-left'" [size]="16"></lucide-angular>
+  </button>
+
+  <!-- CASHI Sidebar -->
+  <aside class="cashi-sidebar" [class.collapsed]="isSidebarCollapsed">
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <lucide-angular name="wallet" [size]="20"></lucide-angular>
       </div>
-
-      <!-- Menu Items -->
-      <div class="navbar-menu">
-        <!-- Items para AGENTES -->
-        <a routerLink="/agent-dashboard" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
-          <mat-icon>phone</mat-icon>
-          <span>Cobranza</span>
-        </a>
-        <a routerLink="/contacts" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'">
-          <mat-icon>people</mat-icon>
-          <span>Clientes</span>
-        </a>
-
-        <!-- Items para ADMIN -->
-        <!-- Monitoreo Dropdown -->
-        <div class="nav-item-dropdown" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <button
-            class="nav-item"
-            [class.active]="isMonitoreoActive()"
-            (click)="toggleMonitoreoDropdown()"
-            mat-button>
-            <mat-icon>supervisor_account</mat-icon>
-            <span>Monitoreo</span>
-            <mat-icon class="dropdown-arrow" [class.rotated]="isMonitoreoDropdownOpen">expand_more</mat-icon>
-          </button>
-
-          <!-- Dropdown Menu -->
-          <div class="dropdown-menu" [class.show]="isMonitoreoDropdownOpen">
-            <a routerLink="/admin/monitoring" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>phone_in_talk</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Llamadas Activas</span>
-                <span class="item-desc">Supervisión en vivo</span>
-              </div>
-            </a>
-            <a routerLink="/admin/campaign-monitoring" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>dashboard</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Métricas en Tiempo Real</span>
-                <span class="item-desc">Dashboard y discado</span>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        <!-- Carga de Datos Dropdown (Solo Admin) -->
-        <div class="nav-item-dropdown" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <button
-            class="nav-item"
-            [class.active]="isCargaDatosActive()"
-            (click)="toggleCargaDatosDropdown()"
-            mat-button>
-            <mat-icon>folder_open</mat-icon>
-            <span>Carga de Datos</span>
-            <mat-icon class="dropdown-arrow" [class.rotated]="isCargaDatosDropdownOpen">expand_more</mat-icon>
-          </button>
-
-          <!-- Dropdown Menu -->
-          <div class="dropdown-menu" [class.show]="isCargaDatosDropdownOpen">
-            <a routerLink="/admin/data-load/initial" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>cloud_upload</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Carga Inicial de Mes</span>
-                <span class="item-desc">Importación mensual</span>
-              </div>
-            </a>
-            <a routerLink="/admin/data-load/daily" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>today</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Carga Diaria</span>
-                <span class="item-desc">Actualización diaria</span>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        <!-- Mantenimiento Dropdown (Solo Admin) -->
-        <div class="nav-item-dropdown" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <button
-            class="nav-item"
-            [class.active]="isMantenimientoActive()"
-            (click)="toggleMantenimientoDropdown()"
-            mat-button>
-            <mat-icon>settings</mat-icon>
-            <span>Mantenimiento</span>
-            <mat-icon class="dropdown-arrow" [class.rotated]="isMantenimientoDropdownOpen">expand_more</mat-icon>
-          </button>
-
-          <!-- Dropdown Menu -->
-          <div class="dropdown-menu" [class.show]="isMantenimientoDropdownOpen">
-            <a routerLink="/admin/maintenance/tenants" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>business</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Proveedores</span>
-                <span class="item-desc">Gestión de tenants</span>
-              </div>
-            </a>
-            <a routerLink="/admin/maintenance/portfolios" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>work</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Carteras</span>
-                <span class="item-desc">Gestión de portfolios</span>
-              </div>
-            </a>
-            <a routerLink="/admin/maintenance/subportfolios" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>folder</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Subcarteras</span>
-                <span class="item-desc">Gestión de subportfolios</span>
-              </div>
-            </a>
-            <a routerLink="/admin/maintenance/headers" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>view_column</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Config. Cabeceras</span>
-                <span class="item-desc">Configuración de headers</span>
-              </div>
-            </a>
-            <a routerLink="/admin/maintenance/roles" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>assignment_ind</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Roles</span>
-                <span class="item-desc">Gestión de roles</span>
-              </div>
-            </a>
-            <a routerLink="/admin/maintenance/users" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>group</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Usuarios</span>
-                <span class="item-desc">Gestión de usuarios</span>
-              </div>
-            </a>
-            <a routerLink="/admin/maintenance/blacklist" routerLinkActive="active" class="dropdown-item" (click)="closeDropdowns()">
-              <mat-icon>block</mat-icon>
-              <div class="item-content">
-                <span class="item-title">Blacklist</span>
-                <span class="item-desc">Lista de bloqueo</span>
-              </div>
-            </a>
-          </div>
-        </div>
-
-        <a routerLink="/admin/campaigns" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <mat-icon>campaign</mat-icon>
-          <span>Campañas</span>
-        </a>
-
-        <a routerLink="/admin/extensions" routerLinkActive="active" class="nav-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
-          <mat-icon>dialpad</mat-icon>
-          <span>Extensiones</span>
-        </a>
-
-        <a routerLink="/whatsapp" routerLinkActive="active" class="nav-item">
-          <mat-icon>chat</mat-icon>
-          <span>WhatsApp</span>
-        </a>
-      </div>
+      <span class="logo-text" *ngIf="!isSidebarCollapsed">CASHI</span>
     </div>
 
-    <div class="navbar-right">
+    <!-- Navigation Menu -->
+    <nav class="sidebar-nav">
+      <!-- Items para AGENTES -->
+      <a routerLink="/agent-dashboard" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'" [title]="isSidebarCollapsed ? 'Cobranza' : ''">
+        <lucide-angular name="phone" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Cobranza</span>
+      </a>
+
+      <a routerLink="/contacts" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'" [title]="isSidebarCollapsed ? 'Clientes' : ''">
+        <lucide-angular name="users" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Clientes</span>
+      </a>
+
+      <!-- Items para ADMIN -->
+      <!-- Monitoreo Dropdown -->
+      <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" [class.active]="isMonitoreoActive()" (click)="toggleMonitoreoDropdown()" [title]="isSidebarCollapsed ? 'Monitoreo' : ''">
+          <lucide-angular name="eye" [size]="20"></lucide-angular>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Monitoreo</span>
+          <lucide-angular class="dropdown-arrow" *ngIf="!isSidebarCollapsed" [class.rotated]="isMonitoreoDropdownOpen" name="chevron-down" [size]="18"></lucide-angular>
+        </button>
+
+        <div class="sidebar-submenu" [class.show]="isMonitoreoDropdownOpen && !isSidebarCollapsed">
+          <a routerLink="/admin/monitoring" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="phone-call" [size]="18"></lucide-angular>
+            <span class="item-text" title="Llamadas Activas">Llamadas Activas</span>
+          </a>
+          <a routerLink="/admin/campaign-monitoring" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="bar-chart-2" [size]="18"></lucide-angular>
+            <span class="item-text" title="Métricas en Tiempo Real">Métricas en Tiempo Real</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Carga de Datos Dropdown -->
+      <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" [class.active]="isCargaDatosActive()" (click)="toggleCargaDatosDropdown()" [title]="isSidebarCollapsed ? 'Carga de Datos' : ''">
+          <lucide-angular name="folder-open" [size]="20"></lucide-angular>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Carga de Datos</span>
+          <lucide-angular class="dropdown-arrow" *ngIf="!isSidebarCollapsed" [class.rotated]="isCargaDatosDropdownOpen" name="chevron-down" [size]="18"></lucide-angular>
+        </button>
+
+        <div class="sidebar-submenu" [class.show]="isCargaDatosDropdownOpen && !isSidebarCollapsed">
+          <a routerLink="/admin/data-load/initial" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="cloud-upload" [size]="18"></lucide-angular>
+            <span class="item-text" title="Carga Inicial de Mes">Carga Inicial de Mes</span>
+          </a>
+          <a routerLink="/admin/data-load/daily" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="calendar" [size]="18"></lucide-angular>
+            <span class="item-text" title="Carga Diaria">Carga Diaria</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Mantenimiento Dropdown -->
+      <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" [class.active]="isMantenimientoActive()" (click)="toggleMantenimientoDropdown()" [title]="isSidebarCollapsed ? 'Mantenimiento' : ''">
+          <lucide-angular name="settings" [size]="20"></lucide-angular>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Mantenimiento</span>
+          <lucide-angular class="dropdown-arrow" *ngIf="!isSidebarCollapsed" [class.rotated]="isMantenimientoDropdownOpen" name="chevron-down" [size]="18"></lucide-angular>
+        </button>
+
+        <div class="sidebar-submenu" [class.show]="isMantenimientoDropdownOpen && !isSidebarCollapsed">
+          <a routerLink="/admin/maintenance/tenants" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="building-2" [size]="18"></lucide-angular>
+            <span class="item-text" title="Proveedores">Proveedores</span>
+          </a>
+          <a routerLink="/admin/maintenance/portfolios" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="briefcase" [size]="18"></lucide-angular>
+            <span class="item-text" title="Carteras">Carteras</span>
+          </a>
+          <a routerLink="/admin/maintenance/subportfolios" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="folder" [size]="18"></lucide-angular>
+            <span class="item-text" title="Subcarteras">Subcarteras</span>
+          </a>
+          <a routerLink="/admin/maintenance/headers" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="columns" [size]="18"></lucide-angular>
+            <span class="item-text" title="Config. Cabeceras">Config. Cabeceras</span>
+          </a>
+          <a routerLink="/admin/maintenance/roles" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="shield" [size]="18"></lucide-angular>
+            <span class="item-text" title="Roles">Roles</span>
+          </a>
+          <a routerLink="/admin/maintenance/users" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="users" [size]="18"></lucide-angular>
+            <span class="item-text" title="Usuarios">Usuarios</span>
+          </a>
+          <a routerLink="/admin/maintenance/blacklist" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="ban" [size]="18"></lucide-angular>
+            <span class="item-text" title="Blacklist">Blacklist</span>
+          </a>
+        </div>
+      </div>
+
+      <a routerLink="/admin/campaigns" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'" [title]="isSidebarCollapsed ? 'Campañas' : ''">
+        <lucide-angular name="megaphone" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Campañas</span>
+      </a>
+
+      <a routerLink="/admin/extensions" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'" [title]="isSidebarCollapsed ? 'Extensiones' : ''">
+        <lucide-angular name="phone-forwarded" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Extensiones</span>
+      </a>
+
+      <a routerLink="/whatsapp" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'WhatsApp' : ''">
+        <lucide-angular name="message-square" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">WhatsApp</span>
+      </a>
+    </nav>
+
+    <!-- Bottom Actions -->
+    <div class="sidebar-footer">
       <!-- User Profile -->
-      <div class="user-profile">
-        <mat-icon>person</mat-icon>
-        <span class="username">{{ (authService.currentUser$ | async)?.username }}</span>
+      <div class="sidebar-item user-profile" [title]="isSidebarCollapsed ? (authService.currentUser$ | async)?.username : ''">
+        <lucide-angular name="user" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">{{ (authService.currentUser$ | async)?.username }}</span>
       </div>
 
-      <!-- Theme Toggle Button -->
-      <button mat-button class="btn-theme" (click)="toggleTheme()" title="Cambiar tema">
-        <ng-container *ngIf="isDarkMode(); else lightMode">
-          <lucide-angular name="sun" [size]="20" class="theme-icon"></lucide-angular>
-          <span>Claro</span>
-        </ng-container>
+      <!-- Theme Toggle -->
+      <button type="button" class="sidebar-item" (click)="toggleTheme()" [title]="isSidebarCollapsed ? (isDarkMode() ? 'Modo Claro' : 'Modo Oscuro') : ''">
+        <lucide-angular *ngIf="isDarkMode(); else lightMode" name="sun" [size]="20"></lucide-angular>
         <ng-template #lightMode>
-          <lucide-angular name="moon" [size]="20" class="theme-icon"></lucide-angular>
-          <span>Oscuro</span>
+          <lucide-angular name="moon" [size]="20"></lucide-angular>
         </ng-template>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">{{ isDarkMode() ? 'Modo Claro' : 'Modo Oscuro' }}</span>
       </button>
 
-      <!-- Logout Button -->
-      <button mat-button class="btn-logout" (click)="logout()">
-        <mat-icon>logout</mat-icon>
-        <span>Salir</span>
+      <!-- Logout -->
+      <button type="button" class="sidebar-item logout-btn" (click)="logout()" [title]="isSidebarCollapsed ? 'Cerrar Sesión' : ''">
+        <lucide-angular name="log-out" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Cerrar Sesión</span>
       </button>
     </div>
-  </nav>
-
-  <!-- Dropdown Backdrop -->
-  <div class="dropdown-backdrop" *ngIf="isMonitoreoDropdownOpen || isCargaDatosDropdownOpen || isMantenimientoDropdownOpen" (click)="closeDropdowns()"></div>
+  </aside>
 
   <!-- Main Content -->
-  <div class="main-content">
+  <main class="main-content">
     <router-outlet></router-outlet>
-  </div>
+  </main>
 </div>
 
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">

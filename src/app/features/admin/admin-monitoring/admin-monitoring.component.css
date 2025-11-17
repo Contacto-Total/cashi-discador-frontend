@@ -1,42 +1,53 @@
-/* Admin Monitoring - Theme-Aware Styling */
+/* ========================================
+   ADMIN MONITORING - THEME-AWARE STYLING
+   ======================================== */
 
 /* ========================================
-   LIGHT THEME (Default)
+   BASE STYLES
    ======================================== */
 
 .monitoring-container {
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
-  background-color: var(--bg-primary, #f8fafc);
+  background-color: #f8fafc;
   min-height: 100vh;
 }
 
-mat-card {
+app-admin-monitoring mat-card {
   margin-bottom: 20px;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
 }
 
-mat-card-header {
+app-admin-monitoring mat-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 16px;
+  background-color: transparent !important;
 }
 
-mat-card-title {
+app-admin-monitoring mat-card-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 24px;
-  font-weight: 600;
-  color: #0f172a;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
 }
 
-mat-card-title mat-icon {
-  color: #10B981;
+app-admin-monitoring mat-card-title mat-icon {
+  color: #10B981 !important;
+}
+
+app-admin-monitoring mat-card-content {
+  padding: 16px !important;
+  color: #0f172a !important;
 }
 
 .header-actions {
@@ -54,7 +65,7 @@ mat-card-title mat-icon {
 
 .loading-container p {
   margin-top: 20px;
-  color: #64748b;
+  color: #64748b !important;
   font-size: 16px;
 }
 
@@ -71,16 +82,17 @@ mat-card-title mat-icon {
 }
 
 .no-calls mat-icon {
-  font-size: 64px;
-  width: 64px;
-  height: 64px;
+  font-size: 64px !important;
+  width: 64px !important;
+  height: 64px !important;
   margin-bottom: 20px;
-  color: #cbd5e1;
+  color: #cbd5e1 !important;
 }
 
 .no-calls p {
   font-size: 16px;
-  color: #64748b;
+  color: #64748b !important;
+  margin: 0;
 }
 
 .table-container {
@@ -91,49 +103,67 @@ mat-card-title mat-icon {
 
 .calls-table {
   width: 100%;
+  background-color: #ffffff !important;
 }
 
 .calls-table th {
-  background-color: #f8fafc;
-  font-weight: 600;
-  color: #0f172a;
-  font-size: 13px;
+  background-color: #f8fafc !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+  font-size: 13px !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-}
-
-.calls-table td, .calls-table th {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
 .calls-table td {
-  color: #475569;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+  font-weight: 500 !important;
 }
 
 .calls-table tr:last-child td {
-  border-bottom: none;
+  border-bottom: none !important;
 }
 
-.agent-info, .client-info, .duration, .call-state {
+.calls-table tr:hover td {
+  background-color: #f8fafc !important;
+}
+
+.agent-info,
+.client-info,
+.duration,
+.call-state {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.agent-info mat-icon, .client-info mat-icon, .duration mat-icon {
-  color: #64748b;
-  font-size: 20px;
+.agent-info mat-icon,
+.client-info mat-icon,
+.duration mat-icon {
+  color: #64748b !important;
+  font-size: 20px !important;
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .agent-name {
-  font-weight: 600;
-  color: #0f172a;
+  font-weight: 600 !important;
+  color: #0f172a !important;
 }
 
 .agent-ext {
   font-size: 12px;
-  color: #94a3b8;
+  color: #64748b !important;
+}
+
+.client-info span,
+.duration span {
+  color: #1e293b !important;
+  font-weight: 500 !important;
 }
 
 .call-state {
@@ -146,99 +176,49 @@ mat-card-title mat-icon {
 }
 
 .call-state mat-icon {
-  font-size: 18px;
-  width: 18px;
-  height: 18px;
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
 }
 
 .call-state.state-ringing {
-  background-color: #fff7ed;
-  color: #ea580c;
+  background-color: #fff7ed !important;
+  color: #ea580c !important;
 }
 
 .call-state.state-ringing mat-icon {
-  color: #ea580c;
+  color: #ea580c !important;
 }
 
 .call-state.state-answered,
 .call-state.state-active {
-  background-color: #f0fdf4;
-  color: #16a34a;
+  background-color: #f0fdf4 !important;
+  color: #16a34a !important;
 }
 
 .call-state.state-answered mat-icon,
 .call-state.state-active mat-icon {
-  color: #16a34a;
+  color: #16a34a !important;
 }
 
 .campaign-name {
   font-size: 13px;
-  color: #475569;
-  font-weight: 500;
-}
-
-.action-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.action-buttons button {
-  min-width: auto;
-}
-
-.spy-btn:hover {
-  background-color: rgba(59, 130, 246, 0.1);
-}
-
-.whisper-btn:hover {
-  background-color: rgba(236, 72, 153, 0.1);
-}
-
-.barge-btn:hover {
-  background-color: rgba(239, 68, 68, 0.1);
-}
-
-.stop-btn {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-.monitoring-indicator {
-  color: #ef4444;
-  animation: blink 1s infinite;
-}
-
-@keyframes blink {
-  0%, 50%, 100% {
-    opacity: 1;
-  }
-  25%, 75% {
-    opacity: 0.3;
-  }
+  color: #334155 !important;
+  font-weight: 500 !important;
 }
 
 .legend {
   margin-top: 30px;
   padding: 20px;
-  background-color: #f8fafc;
+  background-color: #f8fafc !important;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e2e8f0 !important;
 }
 
 .legend h4 {
   margin: 0 0 16px 0;
-  color: #0f172a;
-  font-weight: 600;
+  color: #0f172a !important;
+  font-weight: 600 !important;
   font-size: 16px;
 }
 
@@ -255,16 +235,16 @@ mat-card-title mat-icon {
 }
 
 .legend-item mat-icon {
-  color: #64748b;
+  color: #64748b !important;
 }
 
 .legend-item span {
   font-size: 14px;
-  color: #475569;
+  color: #334155 !important;
 }
 
 .legend-item strong {
-  color: #0f172a;
+  color: #0f172a !important;
   font-weight: 600;
 }
 
@@ -274,67 +254,79 @@ mat-card-title mat-icon {
 
 :root.dark .monitoring-container,
 body.dark-theme .monitoring-container {
-  background-color: #0f172a;
+  background-color: #0f172a !important;
 }
 
-:root.dark mat-card,
-body.dark-theme mat-card {
-  background-color: #1e293b;
-  border: 1px solid #334155;
+:root.dark app-admin-monitoring mat-card,
+body.dark-theme app-admin-monitoring mat-card {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
-:root.dark mat-card-title,
-body.dark-theme mat-card-title {
-  color: #f8fafc;
+:root.dark app-admin-monitoring mat-card-title,
+body.dark-theme app-admin-monitoring mat-card-title {
+  color: #f8fafc !important;
 }
 
-:root.dark mat-card-title mat-icon,
-body.dark-theme mat-card-title mat-icon {
-  color: #10B981;
+:root.dark app-admin-monitoring mat-card-title mat-icon,
+body.dark-theme app-admin-monitoring mat-card-title mat-icon {
+  color: #10B981 !important;
+}
+
+:root.dark app-admin-monitoring mat-card-content,
+body.dark-theme app-admin-monitoring mat-card-content {
+  color: #e2e8f0 !important;
 }
 
 :root.dark .loading-container p,
 body.dark-theme .loading-container p {
-  color: #94a3b8;
+  color: #94a3b8 !important;
 }
 
 :root.dark .no-calls,
 body.dark-theme .no-calls {
-  background-color: #0f172a;
-  border: 1px dashed #334155;
-  color: #64748b;
+  background-color: #0f172a !important;
+  border: 1px dashed #334155 !important;
+  color: #64748b !important;
 }
 
 :root.dark .no-calls mat-icon,
 body.dark-theme .no-calls mat-icon {
-  color: #334155;
+  color: #334155 !important;
 }
 
 :root.dark .no-calls p,
 body.dark-theme .no-calls p {
-  color: #94a3b8;
+  color: #94a3b8 !important;
 }
 
 :root.dark .table-container,
 body.dark-theme .table-container {
-  background-color: #1e293b;
+  background-color: #1e293b !important;
+}
+
+:root.dark .calls-table,
+body.dark-theme .calls-table {
+  background-color: #1e293b !important;
 }
 
 :root.dark .calls-table th,
 body.dark-theme .calls-table th {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid #334155 !important;
 }
 
 :root.dark .calls-table td,
 body.dark-theme .calls-table td {
-  color: #cbd5e1;
-  border-bottom: 1px solid #334155;
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid #334155 !important;
 }
 
-:root.dark .calls-table th,
-body.dark-theme .calls-table th {
-  border-bottom: 1px solid #334155;
+:root.dark .calls-table tr:hover td,
+body.dark-theme .calls-table tr:hover td {
+  background-color: #0f172a !important;
 }
 
 :root.dark .agent-info mat-icon,
@@ -343,89 +335,93 @@ body.dark-theme .calls-table th {
 body.dark-theme .agent-info mat-icon,
 body.dark-theme .client-info mat-icon,
 body.dark-theme .duration mat-icon {
-  color: #94a3b8;
+  color: #94a3b8 !important;
 }
 
 :root.dark .agent-name,
 body.dark-theme .agent-name {
-  color: #f8fafc;
+  color: #ffffff !important;
 }
 
 :root.dark .agent-ext,
 body.dark-theme .agent-ext {
-  color: #64748b;
+  color: #64748b !important;
+}
+
+:root.dark .client-info span,
+:root.dark .duration span,
+body.dark-theme .client-info span,
+body.dark-theme .duration span {
+  color: #e2e8f0 !important;
 }
 
 :root.dark .call-state.state-ringing,
 body.dark-theme .call-state.state-ringing {
-  background-color: rgba(251, 146, 60, 0.15);
-  color: #fb923c;
+  background-color: rgba(251, 146, 60, 0.15) !important;
+  color: #fb923c !important;
 }
 
 :root.dark .call-state.state-ringing mat-icon,
 body.dark-theme .call-state.state-ringing mat-icon {
-  color: #fb923c;
+  color: #fb923c !important;
 }
 
 :root.dark .call-state.state-answered,
 :root.dark .call-state.state-active,
 body.dark-theme .call-state.state-answered,
 body.dark-theme .call-state.state-active {
-  background-color: rgba(16, 185, 129, 0.15);
-  color: #10B981;
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #10B981 !important;
 }
 
 :root.dark .call-state.state-answered mat-icon,
 :root.dark .call-state.state-active mat-icon,
 body.dark-theme .call-state.state-answered mat-icon,
 body.dark-theme .call-state.state-active mat-icon {
-  color: #10B981;
+  color: #10B981 !important;
 }
 
 :root.dark .campaign-name,
 body.dark-theme .campaign-name {
-  color: #cbd5e1;
+  color: #e2e8f0 !important;
 }
 
 :root.dark .legend,
 body.dark-theme .legend {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
 }
 
 :root.dark .legend h4,
 body.dark-theme .legend h4 {
-  color: #f8fafc;
+  color: #f8fafc !important;
 }
 
 :root.dark .legend-item mat-icon,
 body.dark-theme .legend-item mat-icon {
-  color: #94a3b8;
+  color: #94a3b8 !important;
 }
 
 :root.dark .legend-item span,
 body.dark-theme .legend-item span {
-  color: #cbd5e1;
+  color: #e2e8f0 !important;
 }
 
 :root.dark .legend-item strong,
 body.dark-theme .legend-item strong {
-  color: #f8fafc;
+  color: #f8fafc !important;
 }
 
-:root.dark .spy-btn:hover,
-body.dark-theme .spy-btn:hover {
-  background-color: rgba(59, 130, 246, 0.2);
+/* Material buttons */
+:root.dark app-admin-monitoring button[mat-raised-button],
+body.dark-theme app-admin-monitoring button[mat-raised-button] {
+  background-color: #10B981 !important;
+  color: #ffffff !important;
 }
 
-:root.dark .whisper-btn:hover,
-body.dark-theme .whisper-btn:hover {
-  background-color: rgba(236, 72, 153, 0.2);
-}
-
-:root.dark .barge-btn:hover,
-body.dark-theme .barge-btn:hover {
-  background-color: rgba(239, 68, 68, 0.2);
+:root.dark app-admin-monitoring button[mat-raised-button]:hover,
+body.dark-theme app-admin-monitoring button[mat-raised-button]:hover {
+  background-color: #059669 !important;
 }
 
 /* ========================================
@@ -437,32 +433,20 @@ body.dark-theme .barge-btn:hover {
     padding: 10px;
   }
 
-  mat-card-title {
-    font-size: 18px;
+  app-admin-monitoring mat-card-title {
+    font-size: 18px !important;
   }
 
-  mat-card-header {
+  app-admin-monitoring mat-card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
 
-  .action-buttons {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .action-buttons button {
-    width: 100%;
-  }
-
-  .legend-items {
-    gap: 8px;
-  }
-
-  .calls-table td, .calls-table th {
-    padding: 8px 12px;
-    font-size: 13px;
+  .calls-table td,
+  .calls-table th {
+    padding: 8px 12px !important;
+    font-size: 13px !important;
   }
 }
 
@@ -471,17 +455,14 @@ body.dark-theme .barge-btn:hover {
     padding: 8px;
   }
 
-  mat-card {
-    padding: 12px;
+  app-admin-monitoring mat-card-title {
+    font-size: 16px !important;
   }
 
-  mat-card-title {
-    font-size: 16px;
-  }
-
-  .calls-table td, .calls-table th {
-    padding: 6px 8px;
-    font-size: 12px;
+  .calls-table td,
+  .calls-table th {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
   }
 
   .call-state {
@@ -494,33 +475,24 @@ body.dark-theme .barge-btn:hover {
    ACCESSIBILITY
    ======================================== */
 
-.calls-table tr:hover td {
-  background-color: #f8fafc;
-}
-
-:root.dark .calls-table tr:hover td,
-body.dark-theme .calls-table tr:hover td {
-  background-color: #0f172a;
-}
-
 .action-buttons button:focus-visible {
-  outline: 3px solid #10B981;
+  outline: 3px solid #10B981 !important;
   outline-offset: 2px;
 }
 
 @media (prefers-contrast: high) {
-  mat-card {
-    border-width: 2px;
+  app-admin-monitoring mat-card {
+    border-width: 2px !important;
   }
 
   .call-state {
-    border: 2px solid currentColor;
+    border: 2px solid currentColor !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stop-btn,
-  .monitoring-indicator {
-    animation: none;
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -11,19 +11,20 @@ import { Tenant } from '../../models/tenant.model';
   selector: 'app-subportfolio-maintenance',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
+  encapsulation: ViewEncapsulation.None,
   template: `
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <!-- Header -->
       <div class="max-w-7xl mx-auto mb-6">
         <div class="flex items-center justify-between">
           <div>
-            <div class="flex items-center gap-3 mb-2">
-              <div class="w-12 h-12 bg-gradient-to-br from-emerald-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg">
-                <lucide-angular name="folder-tree" [size]="24" class="text-white"></lucide-angular>
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                <lucide-angular name="folder" [size]="16" class="text-white"></lucide-angular>
               </div>
               <div>
-                <h1 class="text-2xl font-bold text-white">Gestión de Subcarteras</h1>
-                <p class="text-sm text-gray-400">Administra las subcarteras dentro de cada cartera</p>
+                <h1 class="text-lg font-bold text-white">Subcarteras</h1>
+                <p class="text-xs text-gray-400">Configuración de subcarteras por cartera</p>
               </div>
             </div>
           </div>
@@ -191,16 +192,16 @@ import { Tenant } from '../../models/tenant.model';
                           </label>
                         </td>
                         <td class="px-6 py-3">
-                          <div class="flex items-center gap-2">
+                          <div class="flex items-center gap-3">
                             <button (click)="editSubPortfolio(subPortfolio)"
-                                    class="p-2 text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                    class="text-emerald-400 hover:text-emerald-500 transition-colors cursor-pointer"
                                     title="Editar">
-                              <lucide-angular name="edit" [size]="16"></lucide-angular>
+                              <lucide-angular name="edit" [size]="18"></lucide-angular>
                             </button>
                             <button (click)="deleteSubPortfolio(subPortfolio)"
-                                    class="p-2 text-red-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                    class="text-red-400 hover:text-red-500 transition-colors cursor-pointer"
                                     title="Eliminar">
-                              <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                              <lucide-angular name="trash-2" [size]="18"></lucide-angular>
                             </button>
                           </div>
                         </td>
@@ -318,12 +319,7 @@ import { Tenant } from '../../models/tenant.model';
         </div>
       </div>
     }
-  `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `]
+  `
 })
 export class SubPortfolioMaintenanceComponent implements OnInit {
   tenants = signal<Tenant[]>([]);

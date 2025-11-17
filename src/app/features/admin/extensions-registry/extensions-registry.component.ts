@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
@@ -11,7 +11,8 @@ import { AdminMonitoringService, ExtensionRegistration } from '../../../core/ser
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
   templateUrl: './extensions-registry.component.html',
-  styleUrls: ['./extensions-registry.component.css']
+  styleUrls: ['./extensions-registry.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class ExtensionsRegistryComponent implements OnInit, OnDestroy {
   extensions: ExtensionRegistration[] = [];

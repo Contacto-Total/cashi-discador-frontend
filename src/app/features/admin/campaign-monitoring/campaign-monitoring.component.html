@@ -1,11 +1,20 @@
 <div class="monitoring-container">
   <!-- Header -->
+  <div class="flex items-center gap-2 mb-2">
+    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
+      <lucide-angular name="bar-chart-2" [size]="16" class="text-white"></lucide-angular>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold text-white">Monitoreo por Campaña</h1>
+      <p class="text-xs text-gray-400">Métricas del auto-dialer en tiempo real</p>
+    </div>
+  </div>
+
   <div class="header">
     <button class="btn-back" (click)="goBack()">
       <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
       <span>Volver a Campañas</span>
     </button>
-    <h1><lucide-angular name="bar-chart-2" [size]="24"></lucide-angular> Monitoreo por Campaña</h1>
   </div>
 
   <!-- Campaign Selector -->

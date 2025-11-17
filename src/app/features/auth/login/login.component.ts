@@ -38,6 +38,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
   pupilY = 0;
   isWaving = false;
   isGreeting = true; // Estado especial de saludo que tiene prioridad
+  robotMessage = '¡Hola! Bienvenido';
+  displayedMessage = '';
+  displayedChars: string[] = [];
+  showBubble = false;
+  private typingTimeout: any;
 
   constructor(
     private fb: FormBuilder,
@@ -60,8 +65,18 @@ export class LoginComponent implements OnInit, AfterViewInit {
       return;
     }
 
+    // Resetear estados al iniciar
+    this.showBubble = false;
+    this.isGreeting = true;
+    this.isWaving = false;
+    this.robotMessage = '¡Hola! Bienvenido';
+    this.displayedMessage = '';
+    this.displayedChars = [];
+
     // Iniciar animación de saludo después de que aparece el robot
     setTimeout(() => {
+      this.showBubble = true;
+      this.typeMessage(this.robotMessage); // Animar el mensaje inicial
       this.isWaving = true;
       // Terminar el saludo después de 2.5 segundos
       setTimeout(() => {
@@ -69,9 +84,72 @@ export class LoginComponent implements OnInit, AfterViewInit {
         // Finalizar el estado de saludo para permitir que el robot reaccione al formulario
         setTimeout(() => {
           this.isGreeting = false;
+          this.updateRobotMessage();
         }, 500); // Pequeño delay para transición suave
       }, 2500);
     }, 1000);
+
+    // Escuchar cambios en el formulario para actualizar el mensaje del robot
+    this.loginForm.valueChanges.subscribe(() => {
+      if (!this.isGreeting) {
+        this.updateRobotMessage();
+      }
+    });
+  }
+
+  private updateRobotMessage(): void {
+    const username = this.loginForm.get('username')?.value;
+    const password = this.loginForm.get('password')?.value;
+
+    let newMessage = '';
+
+    if (this.loginForm.valid) {
+      newMessage = '¡Perfecto! Todo listo';
+    } else if (!username && !password) {
+      newMessage = 'Ingresa tus credenciales';
+    } else if (!username) {
+      newMessage = 'Falta tu usuario';
+    } else if (username.length < 3) {
+      newMessage = 'Usuario muy corto';
+    } else if (!password) {
+      newMessage = 'Falta tu contraseña';
+    } else if (password.length < 6) {
+      newMessage = 'Contraseña muy corta';
+    } else {
+      newMessage = 'Revisa los campos';
+    }
+
+    // Solo animar si el mensaje cambió
+    if (newMessage !== this.robotMessage) {
+      this.robotMessage = newMessage;
+      this.typeMessage(newMessage);
+    }
+  }
+
+  private typeMessage(message: string): void {
+    // Cancelar cualquier animación en progreso
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
+
+    // Limpiar el array
+    this.displayedChars = [];
+
+    // Convertir el mensaje en array de caracteres
+    const chars = message.split('');
+    let index = 0;
+
+    const typeNextChar = () => {
+      if (index < chars.length) {
+        // Crear un nuevo array con el siguiente carácter
+        this.displayedChars = chars.slice(0, index + 1);
+        index++;
+        this.typingTimeout = setTimeout(typeNextChar, 50); // 50ms por letra
+      }
+    };
+
+    // Iniciar inmediatamente
+    typeNextChar();
   }
 
   ngAfterViewInit(): void {

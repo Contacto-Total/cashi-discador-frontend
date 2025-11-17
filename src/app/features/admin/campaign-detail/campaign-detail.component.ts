@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -17,7 +17,8 @@ Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
   standalone: true,
   imports: [CommonModule, FormsModule, BaseChartDirective, LucideAngularModule],
   templateUrl: './campaign-detail.component.html',
-  styleUrls: ['./campaign-detail.component.css']
+  styleUrls: ['./campaign-detail.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class CampaignDetailComponent implements OnInit, OnDestroy {
   campaignId: number | null = null;

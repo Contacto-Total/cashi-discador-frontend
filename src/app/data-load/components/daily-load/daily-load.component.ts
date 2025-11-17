@@ -19,13 +19,13 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
       <div class="max-w-7xl mx-auto">
         <!-- Header -->
         <div class="mb-8">
-          <div class="flex items-center gap-3 mb-2">
-            <div class="p-2 bg-green-600 rounded-lg">
-              <lucide-angular name="folder-tree" [size]="24" class="text-white"></lucide-angular>
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+              <lucide-angular name="calendar" [size]="16" class="text-white"></lucide-angular>
             </div>
             <div>
-              <h1 class="text-3xl font-bold text-white">Carga Diaria</h1>
-              <p class="text-gray-400 text-sm mt-1">Actualización diaria de datos</p>
+              <h1 class="text-lg font-bold text-white">Carga Diaria</h1>
+              <p class="text-xs text-gray-400">Importación diaria de actualizaciones</p>
             </div>
           </div>
         </div>

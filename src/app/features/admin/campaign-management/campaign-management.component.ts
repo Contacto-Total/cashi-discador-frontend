@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -16,7 +16,8 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule],
   templateUrl: './campaign-management.component.html',
-  styleUrls: ['./campaign-management.component.css']
+  styleUrls: ['./campaign-management.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class CampaignManagementComponent implements OnInit, OnDestroy {
   campaigns: Campaign[] = [];
