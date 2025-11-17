@@ -6,14 +6,14 @@ import { ClassificationFieldsResponse } from '../models/dynamic-field.model';
 
 export interface ContactClassificationResource {
   id: number;
-  code: string;
+  codigo: string;
   label: string; // Cambiado de 'description' a 'label' para coincidir con el backend
   isSuccessful: boolean;
 }
 
 export interface ManagementClassificationResource {
   id: number;
-  code: string;
+  codigo: string;
   label: string;
   requiresPayment: boolean;
   requiresSchedule: boolean;
@@ -29,18 +29,18 @@ export interface ManagementClassificationResource {
 export interface CampaignResource {
   id: number;
   campaignId: string;
-  name: string;
+  nombre: string;
   campaignType: string;
   isActive: boolean;
 }
 
 export interface TypificationCatalogResource {
   id: number;
-  code: string;
-  name: string;
-  classificationType: string;
+  codigo: string;
+  nombre: string;
+  tipoClasificacion: string;
   parentTypificationId?: number;
-  hierarchyLevel: number;
+  nivelJerarquia: number;
   hierarchyPath: string;
   description?: string;
   displayOrder?: number;
@@ -187,13 +187,13 @@ export class ApiSystemConfigService {
             console.log('[V2] Tipificaciones efectivas cargadas:', data);
             const managementClasses: ManagementClassificationResource[] = data.map(t => ({
               id: t.id,
-              code: t.code,
-              label: t.name,
+              code: t.codigo,
+              label: t.nombre,
               requiresPayment: false,
               requiresSchedule: false,
               requiresFollowUp: false,
               parentId: t.parentTypificationId,
-              hierarchyLevel: t.hierarchyLevel,
+              hierarchyLevel: t.nivelJerarquia,
               suggestsFullAmount: t.suggestsFullAmount ?? null,
               allowsInstallmentSelection: t.allowsInstallmentSelection ?? null,
               requiresManualAmount: t.requiresManualAmount ?? null
