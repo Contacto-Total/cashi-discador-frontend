@@ -1629,10 +1629,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           required: false,
           placeholder: 'Ingrese observaciones adicionales',
           helpText: 'Comentarios o notas sobre la gestión',
-          validations: {
-            minLength: 0,
-            maxLength: 500
-          }
+          minLength: 0,
+          maxLength: 500
         }
       ]
     };
