@@ -630,6 +630,7 @@ import { AuthService } from '../../core/services/auth.service';
                 }
               </button>
               <button
+                (click)="cancelarTipificacion()"
                 class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
               >
                 Cancelar
@@ -1444,6 +1445,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.callTimer) {
       clearInterval(this.callTimer);
     }
+
+    // IMPORTANTE: Desbloquear llamadas si el componente se destruye
+    // Esto cubre el caso cuando el usuario navega fuera sin guardar
+    if (this.isTipifying()) {
+      this.isTipifying.set(false);
+      this.sipService.blockIncomingCallsMode(false);
+      console.log('🔓 [ngOnDestroy] Desbloqueando llamadas entrantes al salir del componente');
+    }
+
     // Limpiar suscripciones
     if (this.callStateSubscription) {
       this.callStateSubscription.unsubscribe();
@@ -1451,6 +1461,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.incomingCallSubscription) {
       this.incomingCallSubscription.unsubscribe();
     }
+  }
+
+  cancelarTipificacion() {
+    console.log('❌ Cancelando tipificación...');
+    
+    // Desbloquear llamadas entrantes
+    this.isTipifying.set(false);
+    this.sipService.blockIncomingCallsMode(false);
+    console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
+
+    // Cambiar estado a DISPONIBLE
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id || 1;
+    this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+      next: () => {
+        console.log('✅ Estado cambiado a DISPONIBLE');
+      },
+      error: (error) => {
+        console.error('❌ Error al cambiar estado:', error);
+      }
+    });
+
+    // Navegar al dashboard
+    this.router.navigate(['/dashboard']);
   }
 
   protected openScheduleDetail(managementId: number) {
