@@ -1471,20 +1471,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.sipService.blockIncomingCallsMode(false);
     console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
 
-    // Cambiar estado a DISPONIBLE
+    // Cambiar estado a DISPONIBLE y LUEGO navegar
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id || 1;
     this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
       next: () => {
-        console.log('✅ Estado cambiado a DISPONIBLE');
+        console.log('✅ Estado cambiado a DISPONIBLE, navegando al dashboard...');
+        // Navegar DESPUÉS de cambiar el estado exitosamente
+        this.router.navigate(['/dashboard']);
       },
       error: (error) => {
         console.error('❌ Error al cambiar estado:', error);
+        // Navegar igual aunque falle el cambio de estado
+        this.router.navigate(['/dashboard']);
       }
     });
-
-    // Navegar al dashboard
-    this.router.navigate(['/dashboard']);
   }
 
   protected openScheduleDetail(managementId: number) {
