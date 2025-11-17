@@ -1606,12 +1606,39 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private loadDynamicFields(typificationId: number) {
-    // TEMPORAL: Endpoint no implementado aún, deshabilitar para evitar errores 500
-    console.log('[TEMPORAL] loadDynamicFields deshabilitado - endpoint /tenants/.../typifications/.../fields no existe');
+    // TEMPORAL: Usar campos básicos hardcodeados (fecha y observación) mientras el endpoint no está implementado
+    console.log('[TEMPORAL] Usando campos básicos temporales (fecha y observación)');
     this.isLoadingDynamicFields.set(false);
-    this.isLeafClassification.set(false);
-    this.dynamicFields.set([]);
-    this.dynamicFieldsSchema.set(null);
+    this.isLeafClassification.set(true);
+
+    // Schema temporal con campos básicos
+    const schema: MetadataSchema = {
+      fields: [
+        {
+          id: 'fecha_compromiso',
+          label: 'Fecha de Compromiso',
+          type: 'date',
+          required: false,
+          placeholder: 'Seleccione fecha',
+          helpText: 'Fecha en la que el cliente se compromete a realizar la acción'
+        },
+        {
+          id: 'observaciones',
+          label: 'Observaciones',
+          type: 'textarea',
+          required: false,
+          placeholder: 'Ingrese observaciones adicionales',
+          helpText: 'Comentarios o notas sobre la gestión',
+          validations: {
+            minLength: 0,
+            maxLength: 500
+          }
+        }
+      ]
+    };
+
+    this.dynamicFields.set(schema.fields);
+    this.dynamicFieldsSchema.set(schema);
     return;
 
     /* CÓDIGO ORIGINAL - Rehabilitar cuando se implemente el endpoint
