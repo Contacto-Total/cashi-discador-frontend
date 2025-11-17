@@ -7,6 +7,8 @@ export interface User {
   role: UserRole;
   sipExtension: string;
   active: boolean;
+  tenantId?: number;
+  portfolioId?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
