@@ -1676,7 +1676,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.dynamicFieldsSchema.set(null);
       }
     });
-    */
   }
 
   /**
