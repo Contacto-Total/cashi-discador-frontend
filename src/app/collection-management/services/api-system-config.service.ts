@@ -187,7 +187,7 @@ export class ApiSystemConfigService {
             console.log('[V2] Tipificaciones efectivas cargadas:', data);
             const managementClasses: ManagementClassificationResource[] = data.map(t => ({
               id: t.id,
-              code: t.codigo,
+              codigo: t.codigo,
               label: t.nombre,
               requiresPayment: false,
               requiresSchedule: false,
@@ -200,10 +200,10 @@ export class ApiSystemConfigService {
             }));
 
             this.managementClassifications.set(managementClasses);
-            console.log('[V2] Nivel 1:', managementClasses.filter(c => c.hierarchyLevel === 1).map(c => `${c.code} (${c.label})`));
-            console.log('[V2] Nivel 2:', managementClasses.filter(c => c.hierarchyLevel === 2).map(c => `${c.code} -> parent:${c.parentId}`));
-            console.log('[V2] Nivel 3:', managementClasses.filter(c => c.hierarchyLevel === 3).map(c => `${c.code} -> parent:${c.parentId}`));
-            console.log('[V2] Nivel 4:', managementClasses.filter(c => c.hierarchyLevel === 4).map(c => `${c.code} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 1:', managementClasses.filter(c => c.hierarchyLevel === 1).map(c => `${c.codigo} (${c.label})`));
+            console.log('[V2] Nivel 2:', managementClasses.filter(c => c.hierarchyLevel === 2).map(c => `${c.codigo} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 3:', managementClasses.filter(c => c.hierarchyLevel === 3).map(c => `${c.codigo} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 4:', managementClasses.filter(c => c.hierarchyLevel === 4).map(c => `${c.codigo} -> parent:${c.parentId}`));
           }),
           catchError(error => {
             console.error('[V2] Error cargando tipificaciones efectivas:', error);
@@ -363,8 +363,8 @@ export class ApiSystemConfigService {
    */
   getContactClassificationsForUI() {
     return this.contactClassifications().map(item => ({
-      id: item.code,
-      codigo: item.code,
+      id: item.codigo,
+      codigo: item.codigo,
       label: item.label, // Ahora coincide con la interfaz
       isSuccessful: item.isSuccessful
     }));
@@ -376,7 +376,7 @@ export class ApiSystemConfigService {
   getManagementClassificationsForUI() {
     return this.managementClassifications().map(item => ({
       id: String(item.id),  // Usar el ID numérico como string para que funcione la jerarquía
-      codigo: item.code,
+      codigo: item.codigo,
       label: item.label,
       requiere_pago: item.requiresPayment,
       requiere_cronograma: item.requiresSchedule,
@@ -397,7 +397,7 @@ export class ApiSystemConfigService {
     const campaigns = this.campaigns();
     return campaigns.length > 0 ? {
       id: campaigns[0].campaignId,
-      nombre: campaigns[0].name,
+      nombre: campaigns[0].nombre,
       tipo: campaigns[0].campaignType
     } : null;
   }
