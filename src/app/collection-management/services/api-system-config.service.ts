@@ -411,14 +411,20 @@ export class ApiSystemConfigService {
       throw new Error('No hay tenant configurado');
     }
 
-    let url = `${environment.tipificacionUrl}/tenants/${this.currentTenantId}/typifications/${typificationId}/fields`;
+    // Llamar al endpoint V2 del backend discador a través del gateway
+    let url = `${environment.gatewayUrl}/v2/typifications/config/tenant/${this.currentTenantId}/typifications/${typificationId}/fields`;
     if (this.currentPortfolioId) {
       url += `?portfolioId=${this.currentPortfolioId}`;
     }
 
+    console.log('[V2] Cargando campos dinámicos desde:', url);
+
     return this.http.get<ClassificationFieldsResponse>(url).pipe(
+      tap(response => {
+        console.log('[V2] Campos dinámicos cargados:', response);
+      }),
       catchError(error => {
-        console.error('Error cargando campos dinámicos:', error);
+        console.error('[V2] Error cargando campos dinámicos:', error);
         // Retornar respuesta vacía en caso de error
         return of({
           typificationId,

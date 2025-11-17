@@ -1606,40 +1606,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private loadDynamicFields(typificationId: number) {
-    // TEMPORAL: Usar campos básicos hardcodeados (fecha y observación) mientras el endpoint no está implementado
-    console.log('[TEMPORAL] Usando campos básicos temporales (fecha y observación)');
-    this.isLoadingDynamicFields.set(false);
-    this.isLeafClassification.set(true);
-
-    // Schema temporal con campos básicos
-    const schema: MetadataSchema = {
-      fields: [
-        {
-          id: 'fecha_compromiso',
-          label: 'Fecha de Compromiso',
-          type: 'date',
-          required: false,
-          placeholder: 'Seleccione fecha',
-          helpText: 'Fecha en la que el cliente se compromete a realizar la acción'
-        },
-        {
-          id: 'observaciones',
-          label: 'Observaciones',
-          type: 'textarea',
-          required: false,
-          placeholder: 'Ingrese observaciones adicionales',
-          helpText: 'Comentarios o notas sobre la gestión',
-          minLength: 0,
-          maxLength: 500
-        }
-      ]
-    };
-
-    this.dynamicFields.set(schema.fields);
-    this.dynamicFieldsSchema.set(schema);
-    return;
-
-    /* CÓDIGO ORIGINAL - Rehabilitar cuando se implemente el endpoint
+    // Cargar campos dinámicos desde el backend
     this.isLoadingDynamicFields.set(true);
     this.apiSystemConfigService.getClassificationFields(typificationId).subscribe({
       next: (response) => {
