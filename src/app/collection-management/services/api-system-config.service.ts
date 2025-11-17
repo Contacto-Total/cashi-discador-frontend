@@ -169,16 +169,23 @@ export class ApiSystemConfigService {
    */
   private loadTypificationsFromCatalog(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<TypificationCatalogResource[]>(`${environment.tipificacionUrl}/typifications`)
+      if (!this.currentTenantId) {
+        console.warn('[V2] No se puede cargar tipificaciones sin tenant configurado');
+        resolve();
+        return;
+      }
+
+      const subportfolioParam = 'null';
+      const portfolioParam = this.currentPortfolioId || 0;
+      const url = `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${this.currentTenantId}/portfolio/${portfolioParam}/subportfolio/${subportfolioParam}`;
+
+      console.log('[V2] Cargando tipificaciones efectivas desde:', url);
+
+      this.http.get<TypificationCatalogResource[]>(url)
         .pipe(
           tap(data => {
-            console.log('Tipificaciones cargadas desde catálogo:', data);
-
-            // Filtrar solo tipificaciones CUSTOM (FinancieraOH, etc)
-            const customTypifications = data.filter(t => t.classificationType === 'CUSTOM');
-
-            // Convertir a formato de gestión para el frontend
-            const managementClasses: ManagementClassificationResource[] = customTypifications.map(t => ({
+            console.log('[V2] Tipificaciones efectivas cargadas:', data);
+            const managementClasses: ManagementClassificationResource[] = data.map(t => ({
               id: t.id,
               code: t.code,
               label: t.name,
@@ -187,19 +194,20 @@ export class ApiSystemConfigService {
               requiresFollowUp: false,
               parentId: t.parentTypificationId,
               hierarchyLevel: t.hierarchyLevel,
-              suggestsFullAmount: null,
-              allowsInstallmentSelection: null,
-              requiresManualAmount: null
+              suggestsFullAmount: t.suggestsFullAmount ?? null,
+              allowsInstallmentSelection: t.allowsInstallmentSelection ?? null,
+              requiresManualAmount: t.requiresManualAmount ?? null
             }));
 
             this.managementClassifications.set(managementClasses);
-            console.log('Clasificaciones de gestión cargadas:', managementClasses.length);
-            console.log('Nivel 1 (sin parentId):', managementClasses.filter(c => !c.parentId).map(c => `${c.code} (${c.label})`));
-            console.log('Nivel 2 (con parentId):', managementClasses.filter(c => c.parentId && c.hierarchyLevel === 2).map(c => `${c.code} -> parent:${c.parentId}`));
-            console.log('Nivel 3 (con parentId):', managementClasses.filter(c => c.parentId && c.hierarchyLevel === 3).map(c => `${c.code} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 1:', managementClasses.filter(c => c.hierarchyLevel === 1).map(c => `${c.code} (${c.label})`));
+            console.log('[V2] Nivel 2:', managementClasses.filter(c => c.hierarchyLevel === 2).map(c => `${c.code} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 3:', managementClasses.filter(c => c.hierarchyLevel === 3).map(c => `${c.code} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 4:', managementClasses.filter(c => c.hierarchyLevel === 4).map(c => `${c.code} -> parent:${c.parentId}`));
           }),
           catchError(error => {
-            console.error('Error cargando tipificaciones del catálogo:', error);
+            console.error('[V2] Error cargando tipificaciones efectivas:', error);
+            this.managementClassifications.set([]);
             return of([]);
           })
         )

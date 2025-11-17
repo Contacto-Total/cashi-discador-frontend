@@ -1131,18 +1131,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   loadTenants() {
-    this.classificationService.getAllTenants().subscribe({
-      next: (data) => {
-        this.tenants = data;
-        if (data.length > 0) {
-          this.selectedTenantId = data[1].id;
-          this.onTenantChange();
-        }
-      },
-      error: (error) => {
-        console.error('Error loading tenants:', error);
-      }
-    });
+    const currentUser = this.authService.getCurrentUser();
+    console.log('[V2] Usuario actual:', currentUser);
+
+    if (currentUser?.tenantId && currentUser?.portfolioId) {
+      this.selectedTenantId = currentUser.tenantId;
+      this.selectedPortfolioId = currentUser.portfolioId;
+      console.log(`[V2] Usando asignación del usuario: tenant=${this.selectedTenantId}, portfolio=${this.selectedPortfolioId}`);
+
+      // Cargar datos SIN llamar a onTenantChange (que resetea portfolioId)
+      this.reloadTypifications();
+      this.loadCustomerOutputConfig();
+      this.loadFirstCustomer();
+    } else {
+      console.error('[V2] Usuario no tiene asignación de tenant/portfolio');
+      console.error('[V2] Valores recibidos:', { tenantId: currentUser?.tenantId, portfolioId: currentUser?.portfolioId });
+    }
   }
 
   onTenantChange() {
