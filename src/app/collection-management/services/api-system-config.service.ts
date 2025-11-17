@@ -175,7 +175,7 @@ export class ApiSystemConfigService {
         return;
       }
 
-      const subportfolioParam = 'null';
+      const subportfolioParam = 0;
       const portfolioParam = this.currentPortfolioId || 0;
       const url = `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${this.currentTenantId}/portfolio/${portfolioParam}/subportfolio/${subportfolioParam}`;
 
