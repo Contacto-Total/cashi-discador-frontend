@@ -1,61 +1,58 @@
-<div class="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-4 transition-colors duration-300">
-  <!-- Status Display - COMPACTO -->
-  <div class="bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg p-4 mb-4 text-center">
-    <div class="flex items-center justify-center gap-2 mb-2">
-      <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+<!-- Retro Phone Design -->
+<div class="phone-body">
+  <!-- Screen Display -->
+  <div class="phone-screen">
+    <div class="screen-content">
+      <div class="flex items-center justify-center gap-2 mb-1">
         <lucide-angular
           [name]="callState === CallState.ACTIVE ? 'phone-call' : 'phone'"
-          [size]="20"
-          class="text-white">
+          [size]="16"
+          class="text-green-600">
         </lucide-angular>
+        <span class="text-xs font-medium text-gray-800">{{ getStatusText() }}</span>
       </div>
-      <div>
-        <div class="text-white font-semibold text-sm">{{ getStatusText() }}</div>
-        <div class="text-white/80 text-xs" *ngIf="phoneNumber">{{ phoneNumber }}</div>
+      <div class="text-sm text-gray-700 font-mono" *ngIf="phoneNumber">{{ phoneNumber }}</div>
+      <div class="text-xl font-bold font-mono text-gray-900" *ngIf="isActive()">
+        {{ formatDuration(duration) }}
       </div>
-    </div>
-    <div class="text-white text-2xl font-bold font-mono" *ngIf="isActive()">
-      {{ formatDuration(duration) }}
     </div>
   </div>
 
-  <!-- Control Buttons - COMPACTO -->
-  <div class="flex justify-center gap-3 mb-4" *ngIf="isActive()">
+  <!-- Control Buttons Row -->
+  <div class="control-row" *ngIf="isActive()">
     <button
       *ngIf="canHangup"
       (click)="onHangup()"
-      class="w-12 h-12 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-full flex items-center justify-center transition-colors duration-200 shadow-md disabled:cursor-not-allowed"
+      class="retro-btn retro-btn-red"
       [disabled]="!canHangup">
-      <lucide-angular name="phone-off" [size]="20" class="text-white"></lucide-angular>
+      <lucide-angular name="phone-off" [size]="16" class="text-white"></lucide-angular>
     </button>
 
     <button
       (click)="onMute()"
-      [class]="isMuted ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'"
-      class="w-12 h-12 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-full flex items-center justify-center transition-colors duration-200 shadow-md disabled:cursor-not-allowed"
+      [class.retro-btn-yellow]="isMuted"
+      [class.retro-btn-blue]="!isMuted"
+      class="retro-btn"
       [disabled]="!isActive()">
-      <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="20" class="text-white"></lucide-angular>
+      <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="16" class="text-white"></lucide-angular>
     </button>
 
     <button
       (click)="onHold()"
-      class="w-12 h-12 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 dark:disabled:bg-gray-700 rounded-full flex items-center justify-center transition-colors duration-200 shadow-md disabled:cursor-not-allowed"
+      class="retro-btn retro-btn-gray"
       [disabled]="!isActive()">
-      <lucide-angular name="pause" [size]="20" class="text-white"></lucide-angular>
+      <lucide-angular name="pause" [size]="16" class="text-white"></lucide-angular>
     </button>
   </div>
 
-  <!-- DTMF Keypad - COMPACTO -->
-  <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-    <div class="text-center text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Teclado</div>
-    <div class="grid grid-cols-3 gap-2">
-      <button
-        *ngFor="let key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']"
-        (click)="onDTMF(key)"
-        class="h-12 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-gray-600 rounded-lg flex flex-col items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 cursor-pointer">
-        <span class="text-lg font-semibold text-gray-900 dark:text-white">{{ key }}</span>
-        <span class="text-[8px] text-gray-500 dark:text-gray-400" *ngIf="getLetters(key)">{{ getLetters(key) }}</span>
-      </button>
-    </div>
+  <!-- DTMF Keypad - Retro Style -->
+  <div class="keypad-container">
+    <button
+      *ngFor="let key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']"
+      (click)="onDTMF(key)"
+      class="retro-key">
+      <span class="key-digit">{{ key }}</span>
+      <span class="key-letters" *ngIf="getLetters(key)">{{ getLetters(key) }}</span>
+    </button>
   </div>
 </div>

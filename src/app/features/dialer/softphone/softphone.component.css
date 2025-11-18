@@ -1,1 +1,227 @@
-/* Using Tailwind classes - minimal custom CSS */
+/* Retro Phone Body - 3D Effect */
+.phone-body {
+  background: linear-gradient(145deg, #e6e9f0, #eef1f5);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow:
+    12px 12px 24px rgba(174, 174, 192, 0.4),
+    -12px -12px 24px rgba(255, 255, 255, 0.8),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.5);
+  max-width: 320px;
+  margin: 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Dark mode */
+:host-context(.dark) .phone-body {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  box-shadow:
+    12px 12px 24px rgba(0, 0, 0, 0.5),
+    -12px -12px 24px rgba(51, 65, 85, 0.3),
+    inset 2px 2px 4px rgba(51, 65, 85, 0.5);
+  border-color: rgba(51, 65, 85, 0.5);
+}
+
+/* Phone Screen - LCD Display Style */
+.phone-screen {
+  background: linear-gradient(135deg, #c7d2e0, #dae3ed);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.15),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.7);
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:host-context(.dark) .phone-screen {
+  background: linear-gradient(135deg, #1e3a4c, #2d4a5c);
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 6px rgba(51, 85, 102, 0.3);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.screen-content {
+  text-align: center;
+  width: 100%;
+}
+
+/* Control Buttons Row */
+.control-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.retro-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow:
+    4px 4px 8px rgba(0, 0, 0, 0.2),
+    -2px -2px 6px rgba(255, 255, 255, 0.7),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.retro-btn:active:not(:disabled) {
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.2),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.3);
+  transform: scale(0.95);
+}
+
+.retro-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.1),
+    -1px -1px 3px rgba(255, 255, 255, 0.5);
+}
+
+.retro-btn-red {
+  background: linear-gradient(145deg, #f87171, #dc2626);
+}
+
+.retro-btn-blue {
+  background: linear-gradient(145deg, #60a5fa, #2563eb);
+}
+
+.retro-btn-yellow {
+  background: linear-gradient(145deg, #fbbf24, #f59e0b);
+}
+
+.retro-btn-gray {
+  background: linear-gradient(145deg, #9ca3af, #6b7280);
+}
+
+/* Keypad Container */
+.keypad-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 12px;
+  background: linear-gradient(145deg, #dce4ed, #f0f4f8);
+  border-radius: 16px;
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.1),
+    inset -2px -2px 4px rgba(255, 255, 255, 0.8);
+}
+
+:host-context(.dark) .keypad-container {
+  background: linear-gradient(145deg, #0f172a, #1e293b);
+  box-shadow:
+    inset 3px 3px 6px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 4px rgba(51, 65, 85, 0.3);
+}
+
+/* Retro Keys - 3D Buttons */
+.retro-key {
+  height: 52px;
+  background: linear-gradient(145deg, #f8fafc, #e2e8f0);
+  border: none;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  box-shadow:
+    5px 5px 10px rgba(148, 163, 184, 0.4),
+    -3px -3px 8px rgba(255, 255, 255, 0.9),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.7);
+  position: relative;
+  overflow: hidden;
+}
+
+:host-context(.dark) .retro-key {
+  background: linear-gradient(145deg, #334155, #475569);
+  box-shadow:
+    5px 5px 10px rgba(0, 0, 0, 0.4),
+    -3px -3px 8px rgba(71, 85, 105, 0.3),
+    inset 1px 1px 2px rgba(100, 116, 139, 0.5);
+}
+
+.retro-key:hover {
+  background: linear-gradient(145deg, #e0e7ff, #c7d2fe);
+  box-shadow:
+    5px 5px 12px rgba(148, 163, 184, 0.5),
+    -3px -3px 10px rgba(255, 255, 255, 1),
+    inset 1px 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+:host-context(.dark) .retro-key:hover {
+  background: linear-gradient(145deg, #475569, #64748b);
+  box-shadow:
+    5px 5px 12px rgba(0, 0, 0, 0.5),
+    -3px -3px 10px rgba(100, 116, 139, 0.4),
+    inset 1px 1px 3px rgba(148, 163, 184, 0.3);
+}
+
+.retro-key:active {
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.15),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.5);
+  transform: scale(0.96);
+}
+
+:host-context(.dark) .retro-key:active {
+  box-shadow:
+    inset 4px 4px 8px rgba(0, 0, 0, 0.5),
+    inset -2px -2px 6px rgba(100, 116, 139, 0.3);
+}
+
+/* Key Content */
+.key-digit {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+  line-height: 1;
+}
+
+:host-context(.dark) .key-digit {
+  color: #f1f5f9;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.key-letters {
+  font-size: 8px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
+}
+
+:host-context(.dark) .key-letters {
+  color: #94a3b8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .phone-body {
+    max-width: 100%;
+    padding: 16px;
+  }
+
+  .retro-key {
+    height: 48px;
+  }
+
+  .key-digit {
+    font-size: 18px;
+  }
+}
