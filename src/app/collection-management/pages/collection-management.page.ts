@@ -587,34 +587,6 @@ import { AuthService } from '../../core/services/auth.service';
               </div>
             }
 
-            <!-- Observaciones - COMPACTAS -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300">
-              <label class="font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                Observaciones
-              </label>
-              <textarea
-                [(ngModel)]="managementForm.observaciones"
-                placeholder="Detalles de la conversación..."
-                rows="2"
-                class="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded focus:border-purple-500 dark:focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 resize-none bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              ></textarea>
-            </div>
-
-            <!-- Notas Privadas - COMPACTAS -->
-            <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-900/50 rounded-lg p-2">
-              <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                <div class="p-0.5 bg-amber-400 dark:bg-amber-600 rounded">
-                </div>
-                Notas Privadas
-              </label>
-              <textarea
-                [(ngModel)]="managementForm.notasPrivadas"
-                placeholder="Notas internas..."
-                rows="2"
-                class="w-full p-1.5 border border-amber-300 dark:border-amber-800 rounded focus:border-amber-500 dark:focus:border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-900 resize-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              ></textarea>
-            </div>
-
             <!-- Botones de Acción - COMPACTOS -->
             <div class="flex gap-2 pt-2">
               <button
@@ -630,6 +602,7 @@ import { AuthService } from '../../core/services/auth.service';
                 }
               </button>
               <button
+                (click)="cancelarTipificacion()"
                 class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
               >
                 Cancelar
@@ -1130,18 +1103,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   loadTenants() {
-    this.classificationService.getAllTenants().subscribe({
-      next: (data) => {
-        this.tenants = data;
-        if (data.length > 0) {
-          this.selectedTenantId = data[1].id;
-          this.onTenantChange();
-        }
-      },
-      error: (error) => {
-        console.error('Error loading tenants:', error);
-      }
-    });
+    const currentUser = this.authService.getCurrentUser();
+    console.log('[V2] Usuario actual:', currentUser);
+
+    if (currentUser?.tenantId && currentUser?.portfolioId) {
+      this.selectedTenantId = currentUser.tenantId;
+      this.selectedPortfolioId = currentUser.portfolioId;
+      console.log(`[V2] Usando asignación del usuario: tenant=${this.selectedTenantId}, portfolio=${this.selectedPortfolioId}`);
+
+      // Cargar datos SIN llamar a onTenantChange (que resetea portfolioId)
+      this.reloadTypifications();
+      this.loadCustomerOutputConfig();
+      this.loadFirstCustomer();
+    } else {
+      console.error('[V2] Usuario no tiene asignación de tenant/portfolio');
+      console.error('[V2] Valores recibidos:', { tenantId: currentUser?.tenantId, portfolioId: currentUser?.portfolioId });
+    }
   }
 
   onTenantChange() {
@@ -1444,6 +1421,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.callTimer) {
       clearInterval(this.callTimer);
     }
+
+    // IMPORTANTE: Desbloquear llamadas si el componente se destruye
+    // Esto cubre el caso cuando el usuario navega fuera sin guardar
+    if (this.isTipifying()) {
+      this.isTipifying.set(false);
+      this.sipService.blockIncomingCallsMode(false);
+      console.log('🔓 [ngOnDestroy] Desbloqueando llamadas entrantes al salir del componente');
+    }
+
     // Limpiar suscripciones
     if (this.callStateSubscription) {
       this.callStateSubscription.unsubscribe();
@@ -1451,6 +1437,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.incomingCallSubscription) {
       this.incomingCallSubscription.unsubscribe();
     }
+  }
+
+  cancelarTipificacion() {
+    console.log('❌ Cancelando tipificación...');
+    
+    // Desbloquear llamadas entrantes
+    this.isTipifying.set(false);
+    this.sipService.blockIncomingCallsMode(false);
+    console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
+
+    // Cambiar estado a DISPONIBLE y LUEGO navegar
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id || 1;
+    this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+      next: () => {
+        console.log('✅ Estado cambiado a DISPONIBLE, navegando al dashboard...');
+        // Navegar DESPUÉS de cambiar el estado exitosamente
+        this.router.navigate(['/dashboard']);
+      },
+      error: (error) => {
+        console.error('❌ Error al cambiar estado:', error);
+        // Navegar igual aunque falle el cambio de estado
+        this.router.navigate(['/dashboard']);
+      }
+    });
   }
 
   protected openScheduleDetail(managementId: number) {
@@ -1567,15 +1578,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private loadDynamicFields(typificationId: number) {
-    // TEMPORAL: Endpoint no implementado aún, deshabilitar para evitar errores 500
-    console.log('[TEMPORAL] loadDynamicFields deshabilitado - endpoint /tenants/.../typifications/.../fields no existe');
-    this.isLoadingDynamicFields.set(false);
-    this.isLeafClassification.set(false);
-    this.dynamicFields.set([]);
-    this.dynamicFieldsSchema.set(null);
-    return;
-
-    /* CÓDIGO ORIGINAL - Rehabilitar cuando se implemente el endpoint
+    // Cargar campos dinámicos desde el backend
     this.isLoadingDynamicFields.set(true);
     this.apiSystemConfigService.getClassificationFields(typificationId).subscribe({
       next: (response) => {
@@ -1645,7 +1648,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.dynamicFieldsSchema.set(null);
       }
     });
-    */
   }
 
   /**

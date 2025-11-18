@@ -25,4 +25,6 @@ export interface User {
   username: string;
   fullName?: string;  // Nombre completo para mostrar
   role: string;
+  tenantId?: number;
+  portfolioId?: number;
 }

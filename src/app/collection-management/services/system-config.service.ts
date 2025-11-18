@@ -161,11 +161,11 @@ export class SystemConfigService {
 
     if (tenantData.length > 0) {
       const contactClassifications = tenantData
-        .filter(c => c.typification.classificationType === 'CONTACT_RESULT' && c.isEnabled)
+        .filter(c => c.typification.tipoClasificacion === 'CONTACT_RESULT' && c.isEnabled)
         .map(c => ({
           id: c.typification.id, // Usar ID numérico para comparaciones
-          codigo: c.typification.code,
-          label: c.customName || c.typification.name
+          codigo: c.typification.codigo,
+          label: c.customName || c.typification.nombre
         }));
 
       if (contactClassifications.length > 0) {
@@ -193,13 +193,13 @@ export class SystemConfigService {
 
           return {
             id: String(c.typification.id), // Convertir a string para el tipo ManagementClassification
-            codigo: c.typification.code,
-            label: c.customName || c.typification.name,
+            codigo: c.typification.codigo,
+            label: c.customName || c.typification.nombre,
             requiere_pago: metadata.requiresPayment || false,
             requiere_cronograma: metadata.requiresSchedule || false,
             requiere_seguimiento: metadata.requiresFollowUp || false,
             parentId: c.typification.parentTypificationId,
-            hierarchyLevel: c.typification.hierarchyLevel,
+            hierarchyLevel: c.typification.nivelJerarquia,
             // Campos del tipo de clasificación
             suggestsFullAmount: c.typification.suggestsFullAmount,
             allowsInstallmentSelection: c.typification.allowsInstallmentSelection,

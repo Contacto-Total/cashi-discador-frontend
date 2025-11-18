@@ -6,14 +6,14 @@ import { ClassificationFieldsResponse } from '../models/dynamic-field.model';
 
 export interface ContactClassificationResource {
   id: number;
-  code: string;
+  codigo: string;
   label: string; // Cambiado de 'description' a 'label' para coincidir con el backend
   isSuccessful: boolean;
 }
 
 export interface ManagementClassificationResource {
   id: number;
-  code: string;
+  codigo: string;
   label: string;
   requiresPayment: boolean;
   requiresSchedule: boolean;
@@ -29,18 +29,18 @@ export interface ManagementClassificationResource {
 export interface CampaignResource {
   id: number;
   campaignId: string;
-  name: string;
+  nombre: string;
   campaignType: string;
   isActive: boolean;
 }
 
 export interface TypificationCatalogResource {
   id: number;
-  code: string;
-  name: string;
-  classificationType: string;
+  codigo: string;
+  nombre: string;
+  tipoClasificacion: string;
   parentTypificationId?: number;
-  hierarchyLevel: number;
+  nivelJerarquia: number;
   hierarchyPath: string;
   description?: string;
   displayOrder?: number;
@@ -169,37 +169,45 @@ export class ApiSystemConfigService {
    */
   private loadTypificationsFromCatalog(): Promise<void> {
     return new Promise((resolve) => {
-      this.http.get<TypificationCatalogResource[]>(`${environment.tipificacionUrl}/typifications`)
+      if (!this.currentTenantId) {
+        console.warn('[V2] No se puede cargar tipificaciones sin tenant configurado');
+        resolve();
+        return;
+      }
+
+      const subportfolioParam = 0;
+      const portfolioParam = this.currentPortfolioId || 0;
+      const url = `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${this.currentTenantId}/portfolio/${portfolioParam}/subportfolio/${subportfolioParam}`;
+
+      console.log('[V2] Cargando tipificaciones efectivas desde:', url);
+
+      this.http.get<TypificationCatalogResource[]>(url)
         .pipe(
           tap(data => {
-            console.log('Tipificaciones cargadas desde catálogo:', data);
-
-            // Filtrar solo tipificaciones CUSTOM (FinancieraOH, etc)
-            const customTypifications = data.filter(t => t.classificationType === 'CUSTOM');
-
-            // Convertir a formato de gestión para el frontend
-            const managementClasses: ManagementClassificationResource[] = customTypifications.map(t => ({
+            console.log('[V2] Tipificaciones efectivas cargadas:', data);
+            const managementClasses: ManagementClassificationResource[] = data.map(t => ({
               id: t.id,
-              code: t.code,
-              label: t.name,
+              codigo: t.codigo,
+              label: t.nombre,
               requiresPayment: false,
               requiresSchedule: false,
               requiresFollowUp: false,
               parentId: t.parentTypificationId,
-              hierarchyLevel: t.hierarchyLevel,
-              suggestsFullAmount: null,
-              allowsInstallmentSelection: null,
-              requiresManualAmount: null
+              hierarchyLevel: t.nivelJerarquia,
+              suggestsFullAmount: t.suggestsFullAmount ?? null,
+              allowsInstallmentSelection: t.allowsInstallmentSelection ?? null,
+              requiresManualAmount: t.requiresManualAmount ?? null
             }));
 
             this.managementClassifications.set(managementClasses);
-            console.log('Clasificaciones de gestión cargadas:', managementClasses.length);
-            console.log('Nivel 1 (sin parentId):', managementClasses.filter(c => !c.parentId).map(c => `${c.code} (${c.label})`));
-            console.log('Nivel 2 (con parentId):', managementClasses.filter(c => c.parentId && c.hierarchyLevel === 2).map(c => `${c.code} -> parent:${c.parentId}`));
-            console.log('Nivel 3 (con parentId):', managementClasses.filter(c => c.parentId && c.hierarchyLevel === 3).map(c => `${c.code} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 1:', managementClasses.filter(c => c.hierarchyLevel === 1).map(c => `${c.codigo} (${c.label})`));
+            console.log('[V2] Nivel 2:', managementClasses.filter(c => c.hierarchyLevel === 2).map(c => `${c.codigo} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 3:', managementClasses.filter(c => c.hierarchyLevel === 3).map(c => `${c.codigo} -> parent:${c.parentId}`));
+            console.log('[V2] Nivel 4:', managementClasses.filter(c => c.hierarchyLevel === 4).map(c => `${c.codigo} -> parent:${c.parentId}`));
           }),
           catchError(error => {
-            console.error('Error cargando tipificaciones del catálogo:', error);
+            console.error('[V2] Error cargando tipificaciones efectivas:', error);
+            this.managementClassifications.set([]);
             return of([]);
           })
         )
@@ -355,8 +363,8 @@ export class ApiSystemConfigService {
    */
   getContactClassificationsForUI() {
     return this.contactClassifications().map(item => ({
-      id: item.code,
-      codigo: item.code,
+      id: item.codigo,
+      codigo: item.codigo,
       label: item.label, // Ahora coincide con la interfaz
       isSuccessful: item.isSuccessful
     }));
@@ -368,7 +376,7 @@ export class ApiSystemConfigService {
   getManagementClassificationsForUI() {
     return this.managementClassifications().map(item => ({
       id: String(item.id),  // Usar el ID numérico como string para que funcione la jerarquía
-      codigo: item.code,
+      codigo: item.codigo,
       label: item.label,
       requiere_pago: item.requiresPayment,
       requiere_cronograma: item.requiresSchedule,
@@ -389,7 +397,7 @@ export class ApiSystemConfigService {
     const campaigns = this.campaigns();
     return campaigns.length > 0 ? {
       id: campaigns[0].campaignId,
-      nombre: campaigns[0].name,
+      nombre: campaigns[0].nombre,
       tipo: campaigns[0].campaignType
     } : null;
   }
@@ -403,14 +411,20 @@ export class ApiSystemConfigService {
       throw new Error('No hay tenant configurado');
     }
 
-    let url = `${environment.tipificacionUrl}/tenants/${this.currentTenantId}/typifications/${typificationId}/fields`;
+    // Llamar al endpoint V2 del backend discador a través del gateway
+    let url = `${environment.gatewayUrl}/v2/typifications/config/tenant/${this.currentTenantId}/typifications/${typificationId}/fields`;
     if (this.currentPortfolioId) {
       url += `?portfolioId=${this.currentPortfolioId}`;
     }
 
+    console.log('[V2] Cargando campos dinámicos desde:', url);
+
     return this.http.get<ClassificationFieldsResponse>(url).pipe(
+      tap(response => {
+        console.log('[V2] Campos dinámicos cargados:', response);
+      }),
       catchError(error => {
-        console.error('Error cargando campos dinámicos:', error);
+        console.error('[V2] Error cargando campos dinámicos:', error);
         // Retornar respuesta vacía en caso de error
         return of({
           typificationId,
