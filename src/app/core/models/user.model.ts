@@ -9,12 +9,9 @@ export interface User {
   active: boolean;
   tenantId?: number;
   portfolioId?: number;
+  subPortfolioId?: number;
   createdAt?: Date;
   updatedAt?: Date;
-  // Asignación del rol
-  tenantId?: number;
-  portfolioId?: number;
-  subPortfolioId?: number;
 }
 
 export enum UserRole {
