@@ -52,8 +52,7 @@
       <button
         *ngFor="let key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']"
         (click)="onDTMF(key)"
-        [disabled]="!isActive()"
-        class="h-12 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-gray-600 disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:cursor-not-allowed rounded-lg flex flex-col items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:active:scale-100">
+        class="h-12 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-gray-600 rounded-lg flex flex-col items-center justify-center transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 cursor-pointer">
         <span class="text-lg font-semibold text-gray-900 dark:text-white">{{ key }}</span>
         <span class="text-[8px] text-gray-500 dark:text-gray-400" *ngIf="getLetters(key)">{{ getLetters(key) }}</span>
       </button>
