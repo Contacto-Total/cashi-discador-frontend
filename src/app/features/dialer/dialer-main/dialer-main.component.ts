@@ -36,7 +36,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   currentContact: Contact | null = null;
   currentCall: Call | null = null;
   agentStatus: AgentState = AgentState.DISPONIBLE;
-  campaignId: number | null = null;
+  campaignId: number | null = 1; // Default campaign ID for manual dialing
 
   callState: CallState = CallState.IDLE;
   callDuration = 0;
@@ -205,13 +205,19 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   }
 
   async makeCallWithNumber(phoneNumber: string): Promise<void> {
+    // Validar que haya un campaignId configurado
+    if (!this.campaignId) {
+      alert('No hay campaña configurada. Por favor configure una campaña primero.');
+      return;
+    }
+
     this.loading = true;
 
     const request: MakeCallRequest = {
       agentId: this.agentId,
       phoneNumber: phoneNumber,
       contactId: undefined,
-      campaignId: this.campaignId || undefined
+      campaignId: this.campaignId
     };
 
     try {
