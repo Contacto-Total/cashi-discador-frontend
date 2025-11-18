@@ -76,4 +76,18 @@ export class SoftphoneComponent {
   isActive(): boolean {
     return this.callState === CallState.ACTIVE || this.callState === CallState.HELD;
   }
+
+  getLetters(key: string): string {
+    const letters: { [key: string]: string } = {
+      '2': 'ABC',
+      '3': 'DEF',
+      '4': 'GHI',
+      '5': 'JKL',
+      '6': 'MNO',
+      '7': 'PQRS',
+      '8': 'TUV',
+      '9': 'WXYZ'
+    };
+    return letters[key] || '';
+  }
 }
