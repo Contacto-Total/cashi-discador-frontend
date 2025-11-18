@@ -46,7 +46,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   showNotesForm = false;
 
   private subscriptions: Subscription[] = [];
-  public agentId: number;
+  public agentId: number = 0;
 
   constructor(
       public  authService: AuthService,
@@ -55,11 +55,17 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     private websocketService: WebsocketService,
     private webrtcService: WebrtcService,
     private agentService: AgentService
-  ) {
-    this.agentId = this.authService.getCurrentUserId() || 0;
-  }
+  ) {}
 
   ngOnInit(): void {
+    // Get agentId from currentUser$ Observable
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.agentId = user.id;
+        console.log('Agent ID loaded:', this.agentId);
+      }
+    });
+
     this.initializeDialer();
     this.subscribeToWebSocket();
     this.subscribeToWebRTC();
