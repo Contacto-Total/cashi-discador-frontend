@@ -15,9 +15,6 @@ import { Contact } from '../../../core/models/contact.model';
 import { Call, CallEvent, CallEventType, CallStatus, MakeCallRequest } from '../../../core/models/call.model';
 import { AgentState } from '../../../core/models/agent-status.model';
 import { SoftphoneComponent } from '../softphone/softphone.component';
-import { ContactCardComponent } from '../contact-card/contact-card.component';
-import { CallNotesComponent } from '../call-notes/call-notes.component';
-import { CallHistoryComponent } from '../call-history/call-history.component';
 
 @Component({
   selector: 'app-dialer-main',
@@ -28,10 +25,7 @@ import { CallHistoryComponent } from '../call-history/call-history.component';
     MatButtonModule,
     LucideAngularModule,
     MatChipsModule,
-    SoftphoneComponent,
-    ContactCardComponent,
-    CallNotesComponent,
-    CallHistoryComponent
+    SoftphoneComponent
   ],
   templateUrl: './dialer-main.component.html',
   styleUrls: ['./dialer-main.component.css']
