@@ -204,6 +204,54 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     }
   }
 
+  async makeCallWithNumber(phoneNumber: string): Promise<void> {
+    this.loading = true;
+
+    const request: MakeCallRequest = {
+      agentId: this.agentId,
+      phoneNumber: phoneNumber,
+      contactId: undefined,
+      campaignId: this.campaignId || undefined
+    };
+
+    try {
+      // Make call via backend
+      this.callService.makeCall(request).subscribe({
+        next: (call) => {
+          this.currentCall = call;
+          this.callState = CallState.CONNECTING;
+
+          // Create a temporary contact for display
+          this.currentContact = {
+            id: 0,
+            phoneNumber: phoneNumber,
+            firstName: '',
+            lastName: '',
+            campaignId: 0,
+            status: 'PENDING'
+          } as Contact;
+
+          // Initiate WebRTC call
+          this.webrtcService.makeCall(phoneNumber).then(() => {
+            console.log('WebRTC call initiated');
+            this.loading = false;
+          }).catch((error) => {
+            console.error('WebRTC call failed:', error);
+            this.loading = false;
+          });
+        },
+        error: (error) => {
+          console.error('Error making call:', error);
+          alert('Failed to make call: ' + (error.error?.message || 'Unknown error'));
+          this.loading = false;
+        }
+      });
+    } catch (error) {
+      console.error('Error in makeCall:', error);
+      this.loading = false;
+    }
+  }
+
   hangupCall(): void {
     if (!this.currentCall) {
       return;

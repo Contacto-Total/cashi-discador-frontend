@@ -17,9 +17,10 @@
         [callState]="callState"
         [duration]="callDuration"
         [isMuted]="isMuted()"
-        [phoneNumber]="''"
+        [phoneNumber]="currentContact?.phoneNumber || ''"
         [canHangup]="false"
-        (muteClicked)="toggleMute()">
+        (muteClicked)="toggleMute()"
+        (callClicked)="makeCallWithNumber($event)">
       </app-softphone>
     </div>
   </div>

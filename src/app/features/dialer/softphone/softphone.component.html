@@ -1,18 +1,36 @@
 <!-- Retro Phone Design -->
 <div class="phone-body">
-  <!-- Screen Display -->
+  <!-- Screen Display - Interactive -->
   <div class="phone-screen">
     <div class="screen-content">
-      <div class="flex items-center justify-center gap-2 mb-1">
+      <!-- Status Icon -->
+      <div class="flex items-center justify-center gap-1 mb-2">
         <lucide-angular
           [name]="callState === CallState.ACTIVE ? 'phone-call' : 'phone'"
-          [size]="16"
-          class="text-green-600">
+          [size]="14"
+          class="text-green-600 animate-pulse">
         </lucide-angular>
-        <span class="text-xs font-medium text-gray-800">{{ getStatusText() }}</span>
+        <span class="screen-status">{{ getStatusText() }}</span>
       </div>
-      <div class="text-sm text-gray-700 font-mono" *ngIf="phoneNumber">{{ phoneNumber }}</div>
-      <div class="text-xl font-bold font-mono text-gray-900" *ngIf="isActive()">
+
+      <!-- Dialed Number Display with Animation -->
+      <div class="screen-number" *ngIf="callState === CallState.IDLE && dialedNumber">
+        <span class="number-display">{{ dialedNumber }}</span>
+        <span class="cursor-blink">|</span>
+      </div>
+
+      <!-- Placeholder when empty -->
+      <div class="screen-placeholder" *ngIf="callState === CallState.IDLE && !dialedNumber">
+        Marque un número
+      </div>
+
+      <!-- Active Call Info -->
+      <div *ngIf="phoneNumber && callState !== CallState.IDLE" class="screen-call-info">
+        <div class="screen-number-small">{{ phoneNumber }}</div>
+      </div>
+
+      <!-- Call Duration -->
+      <div class="screen-duration" *ngIf="isActive()">
         {{ formatDuration(duration) }}
       </div>
     </div>
@@ -53,6 +71,33 @@
       class="retro-key">
       <span class="key-digit">{{ key }}</span>
       <span class="key-letters" *ngIf="getLetters(key)">{{ getLetters(key) }}</span>
+    </button>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="action-buttons" *ngIf="callState === CallState.IDLE">
+    <button
+      (click)="onBackspace()"
+      class="action-btn action-btn-secondary"
+      [disabled]="!dialedNumber">
+      <lucide-angular name="delete" [size]="18"></lucide-angular>
+      <span class="action-label">Borrar</span>
+    </button>
+
+    <button
+      (click)="onCall()"
+      class="action-btn action-btn-call"
+      [disabled]="!dialedNumber">
+      <lucide-angular name="phone" [size]="20" class="text-white"></lucide-angular>
+      <span class="action-label-white">Llamar</span>
+    </button>
+
+    <button
+      (click)="onClear()"
+      class="action-btn action-btn-secondary"
+      [disabled]="!dialedNumber">
+      <lucide-angular name="x" [size]="18"></lucide-angular>
+      <span class="action-label">Limpiar</span>
     </button>
   </div>
 </div>

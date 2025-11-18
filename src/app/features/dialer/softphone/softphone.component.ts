@@ -24,8 +24,10 @@ export class SoftphoneComponent {
   @Output() muteClicked = new EventEmitter<void>();
   @Output() holdClicked = new EventEmitter<void>();
   @Output() dtmfClicked = new EventEmitter<string>();
+  @Output() callClicked = new EventEmitter<string>();
 
   CallState = CallState;
+  dialedNumber = '';
 
   getStatusText(): string {
     switch (this.callState) {
@@ -70,7 +72,29 @@ export class SoftphoneComponent {
   }
 
   onDTMF(digit: string): void {
-    this.dtmfClicked.emit(digit);
+    if (this.callState === CallState.IDLE) {
+      // En modo idle, agregar al número marcado
+      this.dialedNumber += digit;
+    } else {
+      // En llamada, enviar DTMF
+      this.dtmfClicked.emit(digit);
+    }
+  }
+
+  onCall(): void {
+    if (this.dialedNumber.trim()) {
+      this.callClicked.emit(this.dialedNumber);
+    }
+  }
+
+  onBackspace(): void {
+    if (this.dialedNumber.length > 0) {
+      this.dialedNumber = this.dialedNumber.slice(0, -1);
+    }
+  }
+
+  onClear(): void {
+    this.dialedNumber = '';
   }
 
   isActive(): boolean {
