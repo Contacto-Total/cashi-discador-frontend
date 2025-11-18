@@ -2,7 +2,7 @@
   <mat-card class="login-card">
     <mat-card-header>
       <mat-card-title class="login-title">
-        <mat-icon class="whatsapp-icon">chat</mat-icon>
+        <lucide-angular name="message-circle" [size]="32" class="whatsapp-icon"></lucide-angular>
         WhatsApp Manager
       </mat-card-title>
       <mat-card-subtitle>Inicia sesión para continuar</mat-card-subtitle>
@@ -20,7 +20,7 @@
             required
             autocomplete="username"
             [disabled]="loading">
-          <mat-icon matPrefix>person</mat-icon>
+          <lucide-angular name="user" [size]="20" matPrefix></lucide-angular>
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="full-width">
@@ -33,14 +33,14 @@
             required
             autocomplete="current-password"
             [disabled]="loading">
-          <mat-icon matPrefix>lock</mat-icon>
+          <lucide-angular name="lock" [size]="20" matPrefix></lucide-angular>
           <button
             mat-icon-button
             matSuffix
             type="button"
             (click)="hidePassword = !hidePassword"
             [disabled]="loading">
-            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+            <lucide-angular [name]="hidePassword ? 'eye-off' : 'eye'" [size]="20"></lucide-angular>
           </button>
         </mat-form-field>
 
@@ -50,7 +50,7 @@
           type="submit"
           class="login-button full-width"
           [disabled]="loading">
-          <mat-spinner *ngIf="loading" diameter="20" class="button-spinner"></mat-spinner>
+          <div *ngIf="loading" class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin button-spinner"></div>
           <span *ngIf="!loading">Iniciar Sesión</span>
         </button>
       </form>

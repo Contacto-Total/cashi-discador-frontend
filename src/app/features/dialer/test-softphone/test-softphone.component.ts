@@ -2,13 +2,13 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { SipService, CallState } from '../../../core/services/sip.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { environment } from '../../../../environments/environment';
 import { Subscription, interval } from 'rxjs';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-test-softphone',
@@ -17,8 +17,8 @@ import { Subscription, interval } from 'rxjs';
     CommonModule,
     FormsModule,
     MatButtonModule,
-    MatIconModule,
-    MatTabsModule
+    MatTabsModule,
+    LucideAngularModule
   ],
   template: `
     <div class="softphone-container">
@@ -26,7 +26,7 @@ import { Subscription, interval } from 'rxjs';
       <header class="header">
         <div class="header-left">
           <div class="app-icon">
-            <mat-icon>account_balance</mat-icon>
+            <lucide-angular name="landmark" [size]="28"></lucide-angular>
           </div>
           <div class="header-info">
             <h1>Gestión de Cobranza</h1>
@@ -44,7 +44,7 @@ import { Subscription, interval } from 'rxjs';
             mat-raised-button
             class="theme-toggle"
             (click)="toggleTheme()">
-            <mat-icon>{{ isDarkTheme ? 'wb_sunny' : 'nightlight' }}</mat-icon>
+            <lucide-angular [name]="isDarkTheme ? 'sun' : 'moon'" [size]="20"></lucide-angular>
             {{ isDarkTheme ? 'OSCURO' : 'CLARO' }}
           </button>
 
@@ -190,7 +190,7 @@ import { Subscription, interval } from 'rxjs';
           <!-- Incoming Call Alert -->
           <div class="incoming-call-alert" *ngIf="hasIncomingCall">
             <div class="alert-content">
-              <mat-icon class="phone-icon">phone_in_talk</mat-icon>
+              <lucide-angular name="phone-call" class="phone-icon" [size]="48"></lucide-angular>
               <div class="alert-text">
                 <h3>📞 Llamada Entrante</h3>
                 <p class="incoming-number">De: {{ incomingCallNumber }}</p>
@@ -198,11 +198,11 @@ import { Subscription, interval } from 'rxjs';
             </div>
             <div class="alert-actions">
               <button mat-raised-button class="btn-answer" (click)="answerCall()">
-                <mat-icon>call</mat-icon>
+                <lucide-angular name="phone" [size]="20"></lucide-angular>
                 Contestar
               </button>
               <button mat-raised-button class="btn-reject" (click)="rejectCall()">
-                <mat-icon>call_end</mat-icon>
+                <lucide-angular name="phone-off" [size]="20"></lucide-angular>
                 Rechazar
               </button>
             </div>
@@ -211,7 +211,7 @@ import { Subscription, interval } from 'rxjs';
           <!-- Softphone Controls -->
           <div class="control-section">
             <div class="section-header">
-              <mat-icon>phone_in_talk</mat-icon>
+              <lucide-angular name="phone-call" [size]="20"></lucide-angular>
               <h3>Control de Llamada</h3>
             </div>
 
@@ -229,7 +229,7 @@ import { Subscription, interval } from 'rxjs';
                   (click)="deleteLastDigit()"
                   *ngIf="phoneNumber.length > 0 && !isInCall()"
                   class="backspace-btn">
-                  <mat-icon>backspace</mat-icon>
+                  <lucide-angular name="delete" [size]="20"></lucide-angular>
                 </button>
               </div>
 
@@ -247,7 +247,7 @@ import { Subscription, interval } from 'rxjs';
 
               <!-- Call Duration Display -->
               <div class="call-duration" *ngIf="callDuration > 0">
-                <mat-icon>timer</mat-icon>
+                <lucide-angular name="timer" [size]="20"></lucide-angular>
                 <span>{{ formatDuration(callDuration) }}</span>
               </div>
 
@@ -265,7 +265,7 @@ import { Subscription, interval } from 'rxjs';
                   *ngIf="!isInCall()"
                   (click)="makeCall()"
                   [disabled]="!canMakeCall()">
-                  <mat-icon>call</mat-icon>
+                  <lucide-angular name="phone" [size]="32"></lucide-angular>
                 </button>
 
                 <button
@@ -273,7 +273,7 @@ import { Subscription, interval } from 'rxjs';
                   class="btn-hangup"
                   *ngIf="isInCall()"
                   (click)="hangupCall()">
-                  <mat-icon>call_end</mat-icon>
+                  <lucide-angular name="phone-off" [size]="32"></lucide-angular>
                 </button>
 
                 <button
@@ -282,7 +282,7 @@ import { Subscription, interval } from 'rxjs';
                   *ngIf="isInCall()"
                   [class.muted]="isMuted"
                   (click)="toggleMute()">
-                  <mat-icon>{{ isMuted ? 'mic_off' : 'mic' }}</mat-icon>
+                  <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="32"></lucide-angular>
                 </button>
               </div>
             </div>
@@ -325,10 +325,7 @@ import { Subscription, interval } from 'rxjs';
       justify-content: center;
     }
 
-    .app-icon mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+    .app-icon lucide-angular {
       color: white;
     }
 
@@ -375,7 +372,7 @@ import { Subscription, interval } from 'rxjs';
       height: 36px;
     }
 
-    .theme-toggle mat-icon {
+    .theme-toggle lucide-angular {
       margin-right: 8px;
     }
 
@@ -621,7 +618,7 @@ import { Subscription, interval } from 'rxjs';
       color: var(--text-primary);
     }
 
-    .section-header mat-icon {
+    .section-header lucide-angular {
       color: var(--accent-info);
     }
 
@@ -776,23 +773,11 @@ import { Subscription, interval } from 'rxjs';
       opacity: 0.5;
     }
 
-    .btn-call mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-    }
-
     .btn-hangup {
       background-color: var(--button-danger) !important;
       color: white !important;
       width: 64px;
       height: 64px;
-    }
-
-    .btn-hangup mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
     }
 
     .btn-mute {
@@ -804,12 +789,6 @@ import { Subscription, interval } from 'rxjs';
 
     .btn-mute.muted {
       background-color: var(--accent-warning) !important;
-    }
-
-    .btn-mute mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
     }
 
     /* Responsive */

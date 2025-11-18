@@ -14,13 +14,13 @@
     <mat-card-content>
       <!-- Loading spinner -->
       <div *ngIf="loading" class="loading-container">
-        <mat-spinner></mat-spinner>
+        <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         <p>Cargando llamadas activas...</p>
       </div>
 
       <!-- No active calls message -->
       <div *ngIf="!loading && activeCalls.length === 0" class="no-calls">
-        <mat-icon>phone_disabled</mat-icon>
+        <lucide-angular name="phone-off" [size]="48"></lucide-angular>
         <p>No hay llamadas activas en este momento</p>
       </div>
 
@@ -33,7 +33,7 @@
             <th mat-header-cell *matHeaderCellDef>Agente</th>
             <td mat-cell *matCellDef="let call">
               <div class="agent-info">
-                <mat-icon>person</mat-icon>
+                <lucide-angular name="user" [size]="20"></lucide-angular>
                 <div>
                   <div class="agent-name">{{call.agentName}}</div>
                   <div class="agent-ext">Ext: {{call.agentExtension}}</div>
@@ -47,7 +47,7 @@
             <th mat-header-cell *matHeaderCellDef>Cliente</th>
             <td mat-cell *matCellDef="let call">
               <div class="client-info">
-                <mat-icon>phone</mat-icon>
+                <lucide-angular name="phone" [size]="20"></lucide-angular>
                 <span>{{call.clientNumber}}</span>
               </div>
             </td>
@@ -58,7 +58,7 @@
             <th mat-header-cell *matHeaderCellDef>Duración</th>
             <td mat-cell *matCellDef="let call">
               <div class="duration">
-                <mat-icon>timer</mat-icon>
+                <lucide-angular name="clock" [size]="20"></lucide-angular>
                 <span>{{formatDuration(call.duration)}}</span>
               </div>
             </td>
@@ -69,9 +69,7 @@
             <th mat-header-cell *matHeaderCellDef>Estado</th>
             <td mat-cell *matCellDef="let call">
               <div class="call-state" [class]="'state-' + call.callState.toLowerCase()">
-                <mat-icon [color]="getStateColor(call.callState)">
-                  {{getStateIcon(call.callState)}}
-                </mat-icon>
+                <lucide-angular name="phone-call" [size]="20"></lucide-angular>
                 <span>{{call.callState}}</span>
               </div>
             </td>
@@ -94,7 +92,7 @@
                 color="primary"
                 (click)="superviseCall(call)"
                 matTooltip="Abrir pantalla de supervisión">
-                <mat-icon>supervisor_account</mat-icon>
+                <lucide-angular name="eye" [size]="20"></lucide-angular>
                 Supervisar
               </button>
             </td>
@@ -110,15 +108,15 @@
         <h4>Modos de Monitoreo:</h4>
         <div class="legend-items">
           <div class="legend-item">
-            <mat-icon color="primary">visibility</mat-icon>
+            <lucide-angular name="eye" [size]="20" class="text-blue-500"></lucide-angular>
             <span><strong>VIGÍA:</strong> Escuchas la llamada, pero nadie te escucha</span>
           </div>
           <div class="legend-item">
-            <mat-icon color="accent">hearing</mat-icon>
+            <lucide-angular name="mic" [size]="20" class="text-green-500"></lucide-angular>
             <span><strong>SUSURRO:</strong> Solo el agente puede escucharte, el cliente no</span>
           </div>
           <div class="legend-item">
-            <mat-icon color="warn">group_add</mat-icon>
+            <lucide-angular name="users" [size]="20" class="text-red-500"></lucide-angular>
             <span><strong>TRIPARTITA:</strong> Todos te escuchan (agente y cliente)</span>
           </div>
         </div>

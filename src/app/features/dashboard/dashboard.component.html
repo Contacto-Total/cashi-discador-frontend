@@ -1,165 +1,176 @@
-<div class="dashboard-container">
-  <h1 class="dashboard-title">Dashboard</h1>
+<div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+  <h1 class="text-3xl font-bold text-white mb-6">Dashboard</h1>
 
-  <div *ngIf="loading" class="loading-container">
-    <mat-spinner></mat-spinner>
-    <p>Loading dashboard...</p>
+  <div *ngIf="loading" class="flex flex-col items-center justify-center py-12">
+    <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    <p class="mt-4 text-gray-400">Loading dashboard...</p>
   </div>
 
-  <div *ngIf="!loading && stats" class="dashboard-content">
+  <div *ngIf="!loading && stats" class="space-y-6">
     <!-- Statistics Cards -->
-    <div class="stats-grid">
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon">
-            <mat-icon color="primary">call</mat-icon>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400 mb-1">Total Calls Today</p>
+            <h3 class="text-3xl font-bold text-white">{{ stats.totalCallsToday }}</h3>
           </div>
-          <div class="stat-info">
-            <h3>{{ stats.totalCallsToday }}</h3>
-            <p>Total Calls Today</p>
+          <div class="w-12 h-12 bg-blue-900/30 rounded-lg flex items-center justify-center">
+            <lucide-angular name="phone" [size]="24" class="text-blue-400"></lucide-angular>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon stat-icon-success">
-            <mat-icon>phone_in_talk</mat-icon>
+      <div class="bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400 mb-1">Answered Calls</p>
+            <h3 class="text-3xl font-bold text-green-400">{{ stats.answeredCallsToday }}</h3>
           </div>
-          <div class="stat-info">
-            <h3>{{ stats.answeredCallsToday }}</h3>
-            <p>Answered Calls</p>
+          <div class="w-12 h-12 bg-green-900/30 rounded-lg flex items-center justify-center">
+            <lucide-angular name="phone-call" [size]="24" class="text-green-400"></lucide-angular>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon stat-icon-warning">
-            <mat-icon>timer</mat-icon>
+      <div class="bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400 mb-1">Average Duration</p>
+            <h3 class="text-3xl font-bold text-yellow-400">{{ formatDuration(stats.averageDuration) }}</h3>
           </div>
-          <div class="stat-info">
-            <h3>{{ formatDuration(stats.averageDuration) }}</h3>
-            <p>Average Duration</p>
+          <div class="w-12 h-12 bg-yellow-900/30 rounded-lg flex items-center justify-center">
+            <lucide-angular name="timer" [size]="24" class="text-yellow-400"></lucide-angular>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon stat-icon-info">
-            <mat-icon>person</mat-icon>
+      <div class="bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400 mb-1">Available Agents</p>
+            <h3 class="text-3xl font-bold text-white">{{ stats.availableAgents }} / {{ stats.availableAgents + stats.busyAgents }}</h3>
           </div>
-          <div class="stat-info">
-            <h3>{{ stats.availableAgents }} / {{ stats.availableAgents + stats.busyAgents }}</h3>
-            <p>Available Agents</p>
+          <div class="w-12 h-12 bg-cyan-900/30 rounded-lg flex items-center justify-center">
+            <lucide-angular name="users" [size]="24" class="text-cyan-400"></lucide-angular>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon stat-icon-success">
-            <mat-icon>trending_up</mat-icon>
+      <div class="bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400 mb-1">Contact Rate</p>
+            <h3 class="text-3xl font-bold text-green-400">{{ (stats.contactRate * 100).toFixed(1) }}%</h3>
           </div>
-          <div class="stat-info">
-            <h3>{{ (stats.contactRate * 100).toFixed(1) }}%</h3>
-            <p>Contact Rate</p>
+          <div class="w-12 h-12 bg-green-900/30 rounded-lg flex items-center justify-center">
+            <lucide-angular name="trending-up" [size]="24" class="text-green-400"></lucide-angular>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
 
-      <mat-card class="stat-card">
-        <mat-card-content>
-          <div class="stat-icon stat-icon-danger">
-            <mat-icon>trending_down</mat-icon>
+      <div class="bg-slate-900 rounded-xl p-5 shadow-sm border border-slate-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-400 mb-1">Abandon Rate</p>
+            <h3 class="text-3xl font-bold text-red-400">{{ (stats.abandonRate * 100).toFixed(1) }}%</h3>
           </div>
-          <div class="stat-info">
-            <h3>{{ (stats.abandonRate * 100).toFixed(1) }}%</h3>
-            <p>Abandon Rate</p>
+          <div class="w-12 h-12 bg-red-900/30 rounded-lg flex items-center justify-center">
+            <lucide-angular name="trending-down" [size]="24" class="text-red-400"></lucide-angular>
           </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
     </div>
 
     <!-- Chart Section -->
-    <mat-card class="chart-card">
-      <mat-card-header>
-        <mat-card-title>Calls Activity</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="chart-container">
+    <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+      <div class="p-5 border-b border-slate-800">
+        <h2 class="text-xl font-bold text-white">Calls Activity</h2>
+      </div>
+      <div class="p-5">
+        <div class="h-80">
           <canvas id="callsChart"></canvas>
         </div>
-      </mat-card-content>
-    </mat-card>
+      </div>
+    </div>
 
     <!-- Active Campaigns -->
-    <mat-card class="campaigns-card">
-      <mat-card-header>
-        <mat-card-title>Active Campaigns</mat-card-title>
-        <button mat-raised-button color="primary" routerLink="/campaigns/new">
-          <mat-icon>add</mat-icon>
-          New Campaign
+    <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+      <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="text-xl font-bold text-white">Active Campaigns</h2>
+        <button routerLink="/campaigns/new" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+          <lucide-angular name="plus" [size]="18"></lucide-angular>
+          <span>New Campaign</span>
         </button>
-      </mat-card-header>
-      <mat-card-content>
-        <table mat-table [dataSource]="activeCampaigns" class="campaigns-table">
-          <ng-container matColumnDef="name">
-            <th mat-header-cell *matHeaderCellDef>Campaign Name</th>
-            <td mat-cell *matCellDef="let campaign">{{ campaign.name }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let campaign">
-              <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
-                {{ campaign.status }}
-              </span>
-            </td>
-          </ng-container>
-
-          <ng-container matColumnDef="dialMode">
-            <th mat-header-cell *matHeaderCellDef>Dial Mode</th>
-            <td mat-cell *matCellDef="let campaign">{{ campaign.dialMode }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let campaign">
-              <button mat-icon-button [routerLink]="['/campaigns', campaign.id]">
-                <mat-icon>visibility</mat-icon>
-              </button>
-              <button mat-icon-button [routerLink]="['/campaigns', campaign.id, 'edit']">
-                <mat-icon>edit</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full" *ngIf="activeCampaigns.length > 0">
+          <thead class="bg-slate-800 border-b border-slate-700">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Campaign Name</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Dial Mode</th>
+              <th class="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800">
+            <tr *ngFor="let campaign of activeCampaigns" class="hover:bg-slate-800 transition-colors">
+              <td class="px-6 py-4">
+                <span class="font-medium text-white">{{ campaign.name }}</span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full"
+                      [ngClass]="{
+                        'bg-green-900/30 text-green-400': campaign.status === 'ACTIVE',
+                        'bg-yellow-900/30 text-yellow-400': campaign.status === 'PAUSED',
+                        'bg-gray-700 text-gray-400': campaign.status === 'DRAFT'
+                      }">
+                  {{ campaign.status }}
+                </span>
+              </td>
+              <td class="px-6 py-4">
+                <span class="text-sm text-gray-400">{{ campaign.dialMode }}</span>
+              </td>
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <button [routerLink]="['/campaigns', campaign.id]"
+                          class="text-blue-400 hover:text-blue-500 transition-colors"
+                          title="View">
+                    <lucide-angular name="eye" [size]="18"></lucide-angular>
+                  </button>
+                  <button [routerLink]="['/campaigns', campaign.id, 'edit']"
+                          class="text-emerald-400 hover:text-emerald-500 transition-colors"
+                          title="Edit">
+                    <lucide-angular name="edit" [size]="18"></lucide-angular>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
         </table>
 
-        <div *ngIf="activeCampaigns.length === 0" class="no-data">
-          <mat-icon>info</mat-icon>
-          <p>No active campaigns</p>
+        <div *ngIf="activeCampaigns.length === 0" class="p-12 text-center">
+          <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <lucide-angular name="info" [size]="32" class="text-gray-600"></lucide-angular>
+          </div>
+          <p class="text-gray-300">No active campaigns</p>
         </div>
-      </mat-card-content>
-    </mat-card>
+      </div>
+    </div>
 
     <!-- Quick Actions -->
-    <div class="quick-actions">
-      <button mat-raised-button color="primary" routerLink="/dialer">
-        <mat-icon>phone</mat-icon>
-        Go to Dialer
+    <div class="flex flex-wrap gap-3">
+      <button routerLink="/dialer" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+        <lucide-angular name="phone" [size]="18"></lucide-angular>
+        <span>Go to Dialer</span>
       </button>
-      <button mat-raised-button routerLink="/contacts">
-        <mat-icon>contacts</mat-icon>
-        Manage Contacts
+      <button routerLink="/contacts" class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors">
+        <lucide-angular name="users" [size]="18"></lucide-angular>
+        <span>Manage Contacts</span>
       </button>
-      <button mat-raised-button routerLink="/reports">
-        <mat-icon>assessment</mat-icon>
-        View Reports
+      <button routerLink="/reports" class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-colors">
+        <lucide-angular name="bar-chart-2" [size]="18"></lucide-angular>
+        <span>View Reports</span>
       </button>
     </div>
   </div>

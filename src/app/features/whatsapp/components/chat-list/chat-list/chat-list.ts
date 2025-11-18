@@ -2,7 +2,6 @@ import { Component, OnInit, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatBadgeModule } from '@angular/material/badge';
-import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
@@ -11,7 +10,8 @@ import { Chat } from '../../../../../core/models/message.model';
 import { MessageService } from '../../../../../core/services/whatsapp/message.service';
 import { ThemeService } from '../../../../../core/services/whatsapp/theme.service';
 import { AuthService } from '../../../../../core/services/whatsapp/auth.service';
-import {MatIconButton} from '@angular/material/button';
+import { MatIconButton } from '@angular/material/button';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-chat-list',
@@ -20,12 +20,12 @@ import {MatIconButton} from '@angular/material/button';
     CommonModule,
     MatListModule,
     MatBadgeModule,
-    MatIconModule,
     MatFormFieldModule,
     MatInputModule,
     FormsModule,
     MatIconButton,
-    MatMenuModule
+    MatMenuModule,
+    LucideAngularModule
   ],
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss'
@@ -87,6 +87,10 @@ export class ChatList implements OnInit {
   setFilter(mode: 'all' | 'unread'): void {
     this.filterMode = mode;
     this.filterChats();
+  }
+
+  trackByChatJid(index: number, chat: Chat): string {
+    return chat.jid;
   }
 
   filterChats(): void {

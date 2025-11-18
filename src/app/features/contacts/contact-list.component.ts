@@ -2,10 +2,10 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
+import { LucideAngularModule } from 'lucide-angular';
 import { ContactService } from '../../core/services/contact.service';
 import { Contact } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
@@ -19,10 +19,10 @@ import { Subscription, interval } from 'rxjs';
     CommonModule,
     RouterModule,
     MatButtonModule,
-    MatIconModule,
     MatTableModule,
     MatTabsModule,
-    MatChipsModule
+    MatChipsModule,
+    LucideAngularModule
   ],
   template: `
     <div class="contacts-container">
@@ -30,7 +30,7 @@ import { Subscription, interval } from 'rxjs';
       <header class="header">
         <div class="header-left">
           <div class="app-icon">
-            <mat-icon>contacts</mat-icon>
+            <lucide-angular name="user" [size]="28"></lucide-angular>
           </div>
           <div class="header-info">
             <h1>Gestión de Cobranza</h1>
@@ -48,7 +48,7 @@ import { Subscription, interval } from 'rxjs';
             mat-raised-button
             class="theme-toggle"
             (click)="toggleTheme()">
-            <mat-icon>{{ isDarkTheme ? 'wb_sunny' : 'nightlight' }}</mat-icon>
+            <lucide-angular [name]="isDarkTheme ? 'sun' : 'moon'" [size]="20"></lucide-angular>
             {{ isDarkTheme ? 'OSCURO' : 'CLARO' }}
           </button>
 
@@ -85,11 +85,11 @@ import { Subscription, interval } from 'rxjs';
         </div>
         <div class="action-buttons">
           <button mat-raised-button class="btn-add" routerLink="/contacts/new">
-            <mat-icon>add</mat-icon>
+            <lucide-angular name="plus" [size]="20"></lucide-angular>
             Nuevo Contacto
           </button>
           <button mat-raised-button class="btn-back" routerLink="/dialer">
-            <mat-icon>arrow_back</mat-icon>
+            <lucide-angular name="arrow-left" [size]="20"></lucide-angular>
             Volver a Softphone
           </button>
         </div>
@@ -137,7 +137,7 @@ import { Subscription, interval } from 'rxjs';
         <main class="right-panel">
           <div class="list-section">
             <div class="section-header">
-              <mat-icon>list</mat-icon>
+              <lucide-angular name="list" [size]="20"></lucide-angular>
               <h3>Lista de Contactos</h3>
             </div>
 
@@ -184,10 +184,10 @@ import { Subscription, interval } from 'rxjs';
                   <th mat-header-cell *matHeaderCellDef>Acciones</th>
                   <td mat-cell *matCellDef="let contact">
                     <button mat-icon-button [routerLink]="['/contacts', contact.id, 'edit']" class="action-btn">
-                      <mat-icon>edit</mat-icon>
+                      <lucide-angular name="edit" [size]="18"></lucide-angular>
                     </button>
                     <button mat-icon-button (click)="callContact(contact)" class="action-btn call-btn">
-                      <mat-icon>call</mat-icon>
+                      <lucide-angular name="phone-call" [size]="18"></lucide-angular>
                     </button>
                   </td>
                 </ng-container>
@@ -197,10 +197,10 @@ import { Subscription, interval } from 'rxjs';
               </table>
 
               <div class="no-data" *ngIf="contacts.length === 0">
-                <mat-icon>contacts</mat-icon>
+                <lucide-angular name="user" [size]="64"></lucide-angular>
                 <p>No hay contactos registrados</p>
                 <button mat-raised-button color="primary" routerLink="/contacts/new">
-                  <mat-icon>add</mat-icon>
+                  <lucide-angular name="plus" [size]="20"></lucide-angular>
                   Agregar Primer Contacto
                 </button>
               </div>

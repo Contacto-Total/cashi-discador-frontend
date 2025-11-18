@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import '@angular/material/prebuilt-themes/indigo-pink.css';
-@import url('https://fonts.googleapis.com/css2?family=Material+Icons');
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 /* Variables de tema claro (por defecto) */
@@ -2699,7 +2698,8 @@ body.light-theme .bg-red-700 mat-icon {
 }
 
 /* Additional button text fixes - custom button classes */
-body.light-theme button[class*="bg-"],
+/* EXCLUIR botones de Material y botones con text-* de las reglas globales */
+body.light-theme button[class*="bg-"]:not([class*="mat-"]):not(.mat-mdc-button):not(.mat-icon-button):not([class*="text-blue"]):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-emerald"]):not([class*="text-yellow"]):not([class*="text-purple"]),
 body.light-theme .btn-primary,
 body.light-theme .btn-success,
 body.light-theme .btn-danger,
@@ -2708,7 +2708,7 @@ body.light-theme .btn-warning {
   color: #ffffff !important;
 }
 
-body.light-theme button[class*="bg-"] span,
+body.light-theme button[class*="bg-"]:not([class*="mat-"]):not(.mat-mdc-button):not(.mat-icon-button):not([class*="text-blue"]):not([class*="text-red"]):not([class*="text-green"]):not([class*="text-emerald"]):not([class*="text-yellow"]):not([class*="text-purple"]) span,
 body.light-theme .btn-primary span,
 body.light-theme .btn-success span,
 body.light-theme .btn-danger span,
@@ -2718,11 +2718,12 @@ body.light-theme .btn-warning span {
 }
 
 /* Force white text in ANY button with colored background */
-body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button):not(.sidebar-item):not(.sidebar-toggle):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="purple"]):not([class*="emerald"]) {
+/* Excluir Material buttons completamente */
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not([class*="mat-"]):not(.mat-icon-button):not(.mat-mdc-button):not(.sidebar-item):not(.sidebar-toggle):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="purple"]):not([class*="emerald"]):not([class*="text-"]) {
   color: #ffffff !important;
 }
 
-body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not(.mat-icon-button):not(.sidebar-item):not(.sidebar-toggle):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="purple"]):not([class*="emerald"]) * {
+body.light-theme button:not(.btn-cancel):not(.btn-back):not([class*="gray"]):not([class*="white"]):not([class*="mat-"]):not(.mat-icon-button):not(.mat-mdc-button):not(.sidebar-item):not(.sidebar-toggle):not([class*="blue"]):not([class*="red"]):not([class*="green"]):not([class*="yellow"]):not([class*="purple"]):not([class*="emerald"]):not([class*="text-"]) * {
   color: #ffffff !important;
 }
 

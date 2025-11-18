@@ -1,12 +1,18 @@
 /* CASHI WhatsApp Design */
 .app-container {
   display: flex;
+  position: fixed;
+  top: 0;
+  left: 240px; /* Offset del sidebar global */
+  right: 0;
+  bottom: 0;
   height: 100vh;
-  width: 100%;
+  width: calc(100% - 240px); /* Descontar el sidebar global */
   overflow: hidden;
   background: #0A0E27;
   margin: 0;
   padding: 0;
+  transition: left 0.3s ease, width 0.3s ease;
 }
 
 .sidebar {
@@ -27,4 +33,10 @@
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+/* Ajuste cuando el sidebar global está colapsado */
+:host-context(.cashi-sidebar.collapsed) .app-container {
+  left: 64px;
+  width: calc(100% - 64px);
 }

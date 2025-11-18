@@ -2,14 +2,14 @@
   <!-- Header Section -->
   <div class="dialer-header">
     <div class="agent-info">
-      <mat-icon>person</mat-icon>
+      <lucide-angular name="user" class="icon"></lucide-angular>
       <span class="agent-name">{{ (authService.currentUser$ | async)?.firstName }} {{ (authService.currentUser$ | async)?.lastName }}</span>
       <mat-chip [style.background-color]="getAgentStatusColor()" class="status-chip">
         {{ getAgentStatusLabel() }}
       </mat-chip>
     </div>
     <div class="call-timer">
-      <mat-icon>timer</mat-icon>
+      <lucide-angular name="clock" class="icon"></lucide-angular>
       <span class="timer-text">{{ formatTimer(callDuration) }}</span>
     </div>
   </div>

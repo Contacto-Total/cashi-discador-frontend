@@ -3,9 +3,8 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { LucideAngularModule } from 'lucide-angular';
 import { AdminMonitoringService } from '../../../core/services/admin-monitoring.service';
 import { SipService } from '../../../core/services/sip.service';
 import { Subscription, interval } from 'rxjs';
@@ -28,9 +27,8 @@ type SupervisionMode = 'none' | 'spy' | 'whisper' | 'barge';
     CommonModule,
     MatCardModule,
     MatButtonModule,
-    MatIconModule,
     MatChipsModule,
-    MatProgressSpinnerModule
+    LucideAngularModule
   ],
   templateUrl: './admin-call-supervision.html',
   styleUrl: './admin-call-supervision.css'

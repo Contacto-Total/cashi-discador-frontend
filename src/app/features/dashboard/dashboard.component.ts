@@ -1,10 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatTableModule } from '@angular/material/table';
+import { LucideAngularModule } from 'lucide-angular';
 import { RouterModule } from '@angular/router';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { Subscription } from 'rxjs';
@@ -20,11 +16,7 @@ Chart.register(...registerables);
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatTableModule,
+    LucideAngularModule,
     RouterModule
   ],
   templateUrl: './dashboard.component.html',
@@ -36,8 +28,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loading = true;
   chart: Chart | null = null;
   private subscriptions: Subscription[] = [];
-
-  displayedColumns: string[] = ['name', 'status', 'dialMode', 'actions'];
 
   constructor(
     private reportService: ReportService,

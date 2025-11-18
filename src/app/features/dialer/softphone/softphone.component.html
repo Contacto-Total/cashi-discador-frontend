@@ -6,7 +6,7 @@
   <mat-card-content>
     <div class="phone-display">
       <div class="status-indicator" [style.background-color]="getStatusColor()">
-        <mat-icon class="status-icon">{{ callState === CallState.ACTIVE ? 'phone_in_talk' : 'phone' }}</mat-icon>
+        <lucide-angular [name]="callState === CallState.ACTIVE ? 'phone-call' : 'phone'" class="status-icon"></lucide-angular>
       </div>
 
       <div class="status-text" [style.color]="getStatusColor()">
@@ -29,7 +29,7 @@
         (click)="onHangup()"
         [disabled]="!canHangup"
         matTooltip="Hang up">
-        <mat-icon>call_end</mat-icon>
+        <lucide-angular name="phone-off" class="icon"></lucide-angular>
       </button>
 
       <button
@@ -38,7 +38,7 @@
         (click)="onMute()"
         [disabled]="!isActive()"
         matTooltip="{{ isMuted ? 'Unmute' : 'Mute' }}">
-        <mat-icon>{{ isMuted ? 'mic_off' : 'mic' }}</mat-icon>
+        <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" class="icon"></lucide-angular>
       </button>
 
       <button
@@ -46,7 +46,7 @@
         (click)="onHold()"
         [disabled]="!isActive()"
         matTooltip="Hold">
-        <mat-icon>pause</mat-icon>
+        <lucide-angular name="pause" class="icon"></lucide-angular>
       </button>
     </div>
 

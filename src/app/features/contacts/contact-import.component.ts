@@ -3,20 +3,20 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { LucideAngularModule } from 'lucide-angular';
 import { ContactService } from '../../core/services/contact.service';
 
 @Component({
   selector: 'app-contact-import',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressBarModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatProgressBarModule, LucideAngularModule],
   template: `
     <div class="container">
       <h1>Import Contacts from CSV</h1>
       <mat-card>
         <div class="upload-area" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
-          <mat-icon>cloud_upload</mat-icon>
+          <lucide-angular name="upload-cloud" [size]="48"></lucide-angular>
           <p>Drag and drop CSV file here</p>
           <p>or</p>
           <button mat-raised-button color="primary" (click)="fileInput.click()">

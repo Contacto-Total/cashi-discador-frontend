@@ -2,14 +2,14 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
-import { MatIconModule } from '@angular/material/icon';
+import { LucideAngularModule } from 'lucide-angular';
 import { CallService } from '../../../core/services/call.service';
 import { Call } from '../../../core/models/call.model';
 
 @Component({
   selector: 'app-call-history',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatIconModule],
+  imports: [CommonModule, MatCardModule, MatTableModule, LucideAngularModule],
   templateUrl: './call-history.component.html',
   styleUrls: ['./call-history.component.css']
 })

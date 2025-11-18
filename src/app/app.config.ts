@@ -2,7 +2,7 @@ import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } fr
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, Ban, BarChart2, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clipboard, ClipboardList, Clock, CloudUpload, Code, Coffee, Columns, Copy, CreditCard, Database, DollarSign, Download, Edit, Edit2, Eye, EyeOff, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, HandMetal, History, Home, Inbox, Info, Key, LayoutDashboard, List, Loader, LogOut, Mail, Map, MapPin, Megaphone, Menu, MessageSquare, Moon, Package, Pause, Pencil, Phone, PhoneCall, PhoneForwarded, PhoneIncoming, PhoneMissed, PhoneOff, Play, Plus, PlusCircle, RefreshCw, Rocket, Save, Search, SearchX, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Square, Star, Sun, Table, Table2, Tag, Timer, Trash2, TrendingUp, Type, User, UserCircle, UserCog, Users, UserX, Wallet, X, XCircle, Zap } from 'lucide-angular';
+import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, ArrowLeft, ArrowRight, ArrowUp, Ban, BarChart2, BarChart3, Bell, BookOpen, Briefcase, Building, Building2, Calendar, Check, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clipboard, ClipboardList, Clock, CloudUpload, Code, Coffee, Columns, Copy, CornerUpLeft, CreditCard, Database, DollarSign, Download, Edit, Edit2, Eye, EyeOff, FilePlus, FileText, Filter, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, HandMetal, History, Home, Inbox, Info, Key, LayoutDashboard, List, Loader, LogOut, Mail, Map, MapPin, Megaphone, Menu, MessageSquare, Mic, Moon, MoreVertical, Package, Pause, Pencil, Phone, PhoneCall, PhoneForwarded, PhoneIncoming, PhoneMissed, PhoneOff, Play, Plus, PlusCircle, RefreshCw, Rocket, Save, Search, SearchX, Send, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Square, Star, Sun, Table, Table2, Tag, Timer, Trash2, TrendingUp, Type, User, UserCircle, UserCog, Users, UserX, Wallet, X, XCircle, Zap } from 'lucide-angular';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { tokenRefreshInterceptor } from './core/interceptors/token-refresh.interceptor';
@@ -31,6 +31,7 @@ export const appConfig: ApplicationConfig = {
         Building2,
         Calendar,
         Check,
+        CheckCheck,
         CheckCircle,
         ChevronDown,
         ChevronLeft,
@@ -45,6 +46,7 @@ export const appConfig: ApplicationConfig = {
         Coffee,
         Columns,
         Copy,
+        CornerUpLeft,
         CreditCard,
         Database,
         DollarSign,
@@ -79,7 +81,9 @@ export const appConfig: ApplicationConfig = {
         Megaphone,
         Menu,
         MessageSquare,
+        Mic,
         Moon,
+        MoreVertical,
         Package,
         Pause,
         Pencil,
@@ -97,6 +101,7 @@ export const appConfig: ApplicationConfig = {
         Save,
         Search,
         SearchX,
+        Send,
         Settings,
         Shield,
         ShieldBan,

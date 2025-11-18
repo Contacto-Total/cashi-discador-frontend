@@ -1,19 +1,19 @@
 import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 import { SipService, CallState } from '../../../core/services/sip.service';
 import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-active-call-modal',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, LucideAngularModule],
   template: `
     <div class="active-call-modal">
       <h2 mat-dialog-title>
-        <mat-icon class="call-icon">phone_in_talk</mat-icon>
+        <lucide-angular name="phone-call" [size]="24" class="call-icon"></lucide-angular>
         En Llamada
       </h2>
       <mat-dialog-content>
@@ -23,11 +23,11 @@ import { interval, Subscription } from 'rxjs';
       </mat-dialog-content>
       <mat-dialog-actions align="center">
         <button mat-raised-button [color]="isMuted ? 'accent' : 'primary'" (click)="toggleMute()">
-          <mat-icon>{{ isMuted ? 'mic_off' : 'mic' }}</mat-icon>
+          <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="20"></lucide-angular>
           {{ isMuted ? 'Activar Mic' : 'Silenciar' }}
         </button>
         <button mat-raised-button color="warn" (click)="hangup()">
-          <mat-icon>call_end</mat-icon>
+          <lucide-angular name="phone-off" [size]="20"></lucide-angular>
           Colgar
         </button>
       </mat-dialog-actions>

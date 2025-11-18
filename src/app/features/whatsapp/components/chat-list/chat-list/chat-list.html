@@ -6,11 +6,11 @@
     </div>
     <div class="header-right">
       <button mat-icon-button class="header-icon" [matMenuTriggerFor]="menu">
-        <mat-icon>more_vert</mat-icon>
+        <lucide-angular name="more-vertical" [size]="20"></lucide-angular>
       </button>
       <mat-menu #menu="matMenu">
         <button mat-menu-item (click)="logout()">
-          <mat-icon>logout</mat-icon>
+          <lucide-angular name="log-out" [size]="20"></lucide-angular>
           <span>Cerrar sesión</span>
         </button>
       </mat-menu>
@@ -20,7 +20,7 @@
   <!-- Search -->
   <div class="search-container">
     <div class="search-wrapper">
-      <mat-icon class="search-icon">search</mat-icon>
+      <lucide-angular name="search" [size]="20" class="search-icon"></lucide-angular>
       <input
         type="text"
         placeholder="Buscar o empezar un chat"
@@ -39,14 +39,14 @@
   <!-- Chat list -->
   <div class="chat-list">
     <div
-      *ngFor="let chat of filteredChats"
+      *ngFor="let chat of filteredChats; trackBy: trackByChatJid"
       (click)="selectChat(chat)"
       [class.selected]="selectedChatJid === chat.jid"
       class="chat-item">
 
       <div class="chat-avatar">
         <img *ngIf="chat.profilePictureUrl" [src]="chat.profilePictureUrl" class="profile-pic" alt="Profile">
-        <mat-icon *ngIf="!chat.profilePictureUrl">account_circle</mat-icon>
+        <lucide-angular *ngIf="!chat.profilePictureUrl" name="user" [size]="40"></lucide-angular>
       </div>
 
       <div class="chat-content">

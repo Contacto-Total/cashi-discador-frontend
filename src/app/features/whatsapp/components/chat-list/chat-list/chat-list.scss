@@ -55,11 +55,12 @@
       height: 40px;
       border-radius: 50%;
       transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-      mat-icon {
-        font-size: 24px;
-        width: 24px;
-        height: 24px;
+      lucide-angular {
+        color: inherit;
       }
 
       &:hover {
@@ -235,10 +236,7 @@
       margin-right: 15px;
       transition: transform 0.3s ease;
 
-      mat-icon {
-        font-size: 49px;
-        width: 49px;
-        height: 49px;
+      lucide-angular {
         color: #ffffff;
         background: linear-gradient(135deg, #10B981, #059669);
         border-radius: 50%;
@@ -339,7 +337,7 @@
 }
 
 /* Light Theme Support */
-body.light-theme {
+:host-context(body.light-theme) {
   .search-container {
     background: #f8fafc !important;
   }
@@ -347,6 +345,10 @@ body.light-theme {
   .search-wrapper {
     background: #ffffff !important;
     border-color: #e2e8f0 !important;
+
+    .search-icon {
+      color: #64748b !important;
+    }
   }
 
   .chat-list-container {

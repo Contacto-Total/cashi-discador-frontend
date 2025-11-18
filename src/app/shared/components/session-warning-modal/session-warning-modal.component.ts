@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { LucideAngularModule } from 'lucide-angular';
 import { interval, Subscription } from 'rxjs';
 import { InactivityService } from '../../../core/services/inactivity.service';
 import { SessionConfigService } from '../../../core/services/session-config.service';
@@ -15,13 +15,13 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
     CommonModule,
     MatDialogModule,
     MatButtonModule,
-    MatIconModule,
-    MatProgressBarModule
+    MatProgressBarModule,
+    LucideAngularModule
   ],
   template: `
     <div class="session-warning-dialog">
       <div class="warning-header">
-        <mat-icon class="warning-icon">warning</mat-icon>
+        <lucide-angular name="alert-circle" [size]="48" class="warning-icon"></lucide-angular>
         <h2 mat-dialog-title>Sesión por expirar</h2>
       </div>
 
@@ -41,7 +41,7 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
 
       <mat-dialog-actions align="end">
         <button mat-raised-button color="primary" (click)="continuarSesion()">
-          <mat-icon>refresh</mat-icon>
+          <lucide-angular name="refresh-cw" [size]="20"></lucide-angular>
           Continuar sesión
         </button>
         <button mat-button (click)="cerrarSesion()">

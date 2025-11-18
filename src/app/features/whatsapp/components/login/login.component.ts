@@ -6,11 +6,10 @@ import { MatCardModule } from '@angular/material/card';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { AuthService } from '../../../../core/services/whatsapp/auth.service';
 import { LoginRequest } from '../../../../core/models/auth.model';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-login',
@@ -22,9 +21,8 @@ import { LoginRequest } from '../../../../core/models/auth.model';
     MatInputModule,
     MatButtonModule,
     MatFormFieldModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    LucideAngularModule
   ],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']

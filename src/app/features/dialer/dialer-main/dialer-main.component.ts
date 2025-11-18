@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/co
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
+import { LucideAngularModule } from 'lucide-angular';
 import { MatChipsModule } from '@angular/material/chips';
 import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
@@ -26,7 +26,7 @@ import { CallHistoryComponent } from '../call-history/call-history.component';
     CommonModule,
     MatCardModule,
     MatButtonModule,
-    MatIconModule,
+    LucideAngularModule,
     MatChipsModule,
     SoftphoneComponent,
     ContactCardComponent,

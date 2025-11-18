@@ -3,19 +3,42 @@
   <div *ngIf="currentChat" class="chat-header">
     <div class="header-left">
       <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
-      <mat-icon *ngIf="!currentChat.profilePictureUrl" class="avatar-icon">account_circle</mat-icon>
+      <lucide-angular *ngIf="!currentChat.profilePictureUrl" name="user" [size]="40" class="avatar-icon"></lucide-angular>
       <div class="chat-info">
         <span class="chat-name">{{ getChatDisplayName() }}</span>
       </div>
     </div>
     <div class="header-right">
-      <button mat-icon-button class="header-icon">
-        <mat-icon>search</mat-icon>
+      <button mat-icon-button class="header-icon" (click)="toggleSearchBar()">
+        <lucide-angular name="search" [size]="20"></lucide-angular>
       </button>
       <button mat-icon-button class="header-icon">
-        <mat-icon>more_vert</mat-icon>
+        <lucide-angular name="more-vertical" [size]="20"></lucide-angular>
       </button>
     </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div *ngIf="currentChat && showSearchBar" class="search-bar">
+    <button mat-icon-button class="search-back-button" (click)="toggleSearchBar()">
+      <lucide-angular name="arrow-left" [size]="20"></lucide-angular>
+    </button>
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Buscar mensajes..."
+      [(ngModel)]="searchQuery"
+      (ngModelChange)="searchMessages()"
+      autocomplete="off">
+    <div class="search-results-info" *ngIf="searchResults.length > 0">
+      {{ currentSearchIndex + 1 }} de {{ searchResults.length }}
+    </div>
+    <button mat-icon-button class="search-nav-button" (click)="previousSearchResult()" [disabled]="searchResults.length === 0">
+      <lucide-angular name="chevron-up" [size]="20"></lucide-angular>
+    </button>
+    <button mat-icon-button class="search-nav-button" (click)="nextSearchResult()" [disabled]="searchResults.length === 0">
+      <lucide-angular name="chevron-down" [size]="20"></lucide-angular>
+    </button>
   </div>
 
   <!-- Empty state -->
@@ -33,16 +56,26 @@
 
   <!-- Messages container -->
   <div class="messages-container" #messagesContainer *ngIf="currentChat">
-    <div
-      *ngFor="let message of messages"
-      class="message-wrapper"
-      [class.from-me]="message.fromMe"
-      [class.from-them]="!message.fromMe">
+    <!-- Loading overlay - oculta TODO mientras carga -->
+    <div *ngIf="messagesLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <p>Cargando mensajes...</p>
+    </div>
+
+    <!-- Messages - ocultos completamente mientras cargan -->
+    <ng-container *ngIf="!messagesLoading">
+      <div
+        *ngFor="let message of reversedMessages; trackBy: trackByMessageId"
+        [id]="'msg-' + message.msgId"
+        class="message-wrapper"
+        [class.from-me]="message.fromMe"
+        [class.from-them]="!message.fromMe"
+        [class.search-highlighted]="isMessageHighlighted(message.msgId)">
 
       <div class="message-bubble">
         <!-- Botón de reply (aparece al hover) -->
         <button mat-icon-button class="reply-button" (click)="replyToMessage(message)" title="Responder">
-          <mat-icon>reply</mat-icon>
+          <lucide-angular name="corner-up-left" [size]="20"></lucide-angular>
         </button>
 
         <!-- Mensaje citado -->
@@ -66,31 +99,36 @@
                  controls
                  class="media-video">
           </video>
-          <div *ngIf="isAudioMedia(message.media.mime)" class="media-audio">
-            <button mat-icon-button class="audio-play-button" (click)="toggleAudio($event, message.msgId)">
-              <mat-icon>{{ isAudioPlaying(message.msgId) ? 'pause' : 'play_arrow' }}</mat-icon>
+          <div *ngIf="isAudioMedia(message.media.mime)" class="media-audio-whatsapp">
+            <button mat-icon-button class="audio-play-btn" (click)="toggleAudio($event, message.msgId)">
+              <lucide-angular [name]="isAudioPlaying(message.msgId) ? 'pause' : 'play'" [size]="18"></lucide-angular>
             </button>
-            <div class="audio-controls">
-              <div class="audio-waveform">
-                <div class="audio-progress-bg">
-                  <div class="audio-progress-fill" [style.width.%]="getAudioProgress(message.msgId)"></div>
+
+            <div class="audio-content">
+              <div class="audio-waveform-container">
+                <div class="audio-waveform-bars">
+                  <div class="waveform-bar" *ngFor="let bar of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30]; let i = index"
+                       [style.height.%]="getWaveformBarHeight(i)"
+                       [class.played]="getAudioProgress(message.msgId) > (i * 100 / 30)"></div>
                 </div>
                 <input
                   type="range"
-                  class="audio-slider"
+                  class="audio-progress-slider"
                   min="0"
                   max="100"
                   [value]="getAudioProgress(message.msgId)"
                   (input)="seekAudio($event, message.msgId)">
               </div>
-              <div class="audio-time">
-                <span>{{ getAudioCurrentTime(message.msgId) }}</span>
-                <span class="audio-duration">{{ getAudioDuration(message.msgId) }}</span>
+
+              <div class="audio-info">
+                <span class="audio-duration-text">{{ getAudioDuration(message.msgId) }}</span>
               </div>
             </div>
-            <button mat-icon-button class="audio-speed-button" (click)="changeSpeed($event, message.msgId)">
-              <span class="speed-text">{{ getAudioSpeed(message.msgId) }}x</span>
+
+            <button mat-icon-button class="audio-speed-btn" (click)="changeSpeed($event, message.msgId)">
+              <span class="speed-value">{{ getAudioSpeed(message.msgId) }}x</span>
             </button>
+
             <audio
               #audioElement
               [src]="getMediaSrc(message.media)"
@@ -109,15 +147,23 @@
         <div class="message-text" *ngIf="message.text">{{ message.text }}</div>
         <div class="message-footer">
           <span class="message-time">{{ formatTime(message.timestamp) }}</span>
-          <mat-icon
-            *ngIf="message.fromMe"
+          <lucide-angular
+            *ngIf="message.fromMe && (message.status === 'delivered' || message.status === 'read')"
+            name="check-check"
+            [size]="16"
             class="message-status"
-            [class]="getMessageStatusClass(message.status)">
-            {{ getMessageStatusIcon(message.status) }}
-          </mat-icon>
+            [class.status-read]="message.status === 'read'">
+          </lucide-angular>
+          <lucide-angular
+            *ngIf="message.fromMe && (message.status === 'sent' || !message.status)"
+            name="check"
+            [size]="16"
+            class="message-status">
+          </lucide-angular>
         </div>
       </div>
     </div>
+    </ng-container>
   </div>
 
   <!-- Input container -->
@@ -126,13 +172,13 @@
     <div *ngIf="replyingTo" class="reply-preview">
       <div class="reply-preview-content">
         <div class="reply-preview-header">
-          <mat-icon class="reply-icon">reply</mat-icon>
+          <lucide-angular name="corner-up-left" [size]="20" class="reply-icon"></lucide-angular>
           <span class="reply-preview-title">Respondiendo a {{ replyingTo.fromMe ? 'ti mismo' : (replyingTo.chatTitle || 'Usuario') }}</span>
         </div>
         <div class="reply-preview-text">{{ replyingTo.text || 'Archivo adjunto' }}</div>
       </div>
       <button mat-icon-button class="reply-close-button" (click)="cancelReply()">
-        <mat-icon>close</mat-icon>
+        <lucide-angular name="x" [size]="20"></lucide-angular>
       </button>
     </div>
 
@@ -150,7 +196,8 @@
       🚫 Chat bloqueado. Espera a que {{ getChatDisplayName() }} te escriba de nuevo.
     </div>
 
-    <div class="input-row">
+    <!-- Normal input row -->
+    <div class="input-row" *ngIf="!isRecording">
       <input
         type="file"
         #fileInput
@@ -159,23 +206,43 @@
         style="display: none">
 
       <button mat-icon-button class="input-icon" (click)="openFileSelector()" [disabled]="isChatBlocked || isNewChat">
-        <mat-icon>add</mat-icon>
+        <lucide-angular name="plus" [size]="20"></lucide-angular>
       </button>
 
-      <div class="message-input-wrapper">
-        <input
-          type="text"
-          class="message-input"
-          [placeholder]="getInputPlaceholder()"
-          [(ngModel)]="messageText"
-          (keypress)="onKeyPress($event)"
-          [disabled]="isChatBlocked || isNewChat"
-          autocomplete="off">
+      <input
+        type="text"
+        class="message-input"
+        [placeholder]="getInputPlaceholder()"
+        [(ngModel)]="messageText"
+        (keypress)="onKeyPress($event)"
+        (click)="closeEmojiPicker()"
+        [disabled]="isChatBlocked || isNewChat"
+        autocomplete="off">
+
+      <div class="emoji-picker-container">
+        <button mat-icon-button class="input-icon" (click)="toggleEmojiPicker($event)" [disabled]="isChatBlocked || isNewChat">
+          <lucide-angular name="smile" [size]="20"></lucide-angular>
+        </button>
+
+        <!-- Emoji Picker -->
+        <div *ngIf="showEmojiPicker" class="emoji-picker-wrapper" (click)="$event.stopPropagation()">
+          <emoji-mart
+            [darkMode]="true"
+            [showPreview]="false"
+            [perLine]="9"
+            [emojiSize]="28"
+            [sheetSize]="32"
+            [showSingleCategory]="false"
+            [enableSearch]="true"
+            [i18n]="emojiPickerI18n"
+            [hideRecent]="false"
+            [autoFocus]="false"
+            [enableFrequentEmojiSort]="true"
+            (emojiClick)="addEmoji($event)"
+            title="Selecciona un emoji">
+          </emoji-mart>
+        </div>
       </div>
-
-      <button mat-icon-button class="input-icon" [disabled]="isChatBlocked || isNewChat">
-        <mat-icon>sentiment_satisfied_alt</mat-icon>
-      </button>
 
       <button
         *ngIf="messageText.trim()"
@@ -183,15 +250,37 @@
         class="send-button"
         (click)="sendMessage()"
         [disabled]="isChatBlocked || isNewChat">
-        <mat-icon>send</mat-icon>
+        <lucide-angular name="send" [size]="20"></lucide-angular>
       </button>
 
       <button
-        *ngIf="!messageText.trim()"
+        *ngIf="!messageText.trim() && !isRecording"
         mat-icon-button
-        class="input-icon"
-        [disabled]="isChatBlocked || isNewChat">
-        <mat-icon>mic</mat-icon>
+        class="input-icon mic-button"
+        (mousedown)="startRecording()"
+        (touchstart)="startRecording()"
+        [disabled]="isChatBlocked || isNewChat"
+        title="Mantén presionado para grabar audio">
+        <lucide-angular name="mic" [size]="20"></lucide-angular>
+      </button>
+    </div>
+
+    <!-- Recording UI -->
+    <div class="recording-row" *ngIf="isRecording">
+      <button mat-icon-button class="recording-delete-button" (click)="cancelRecording()">
+        <lucide-angular name="trash-2" [size]="20"></lucide-angular>
+      </button>
+
+      <div class="recording-info">
+        <div class="recording-indicator">
+          <span class="recording-dot"></span>
+          <span class="recording-text">Grabando</span>
+        </div>
+        <span class="recording-time">{{ getRecordingTime() }}</span>
+      </div>
+
+      <button mat-icon-button class="recording-send-button" (click)="stopRecording()">
+        <lucide-angular name="send" [size]="20"></lucide-angular>
       </button>
     </div>
   </div>

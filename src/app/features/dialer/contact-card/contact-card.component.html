@@ -5,12 +5,14 @@
 
   <mat-card-content>
     <div *ngIf="loading" class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
+      <div class="inline-flex items-center justify-center">
+        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+      </div>
       <p>Loading contact...</p>
     </div>
 
     <div *ngIf="!loading && !contact" class="no-contact">
-      <mat-icon>person_off</mat-icon>
+      <lucide-angular name="user-x" class="icon"></lucide-angular>
       <p>No contact available</p>
     </div>
 
@@ -23,17 +25,17 @@
         <h2 class="contact-name">{{ getFullName() }}</h2>
 
         <div class="contact-item">
-          <mat-icon>phone</mat-icon>
+          <lucide-angular name="phone" class="icon"></lucide-angular>
           <span>{{ contact.phoneNumber }}</span>
         </div>
 
         <div class="contact-item" *ngIf="contact.email">
-          <mat-icon>email</mat-icon>
+          <lucide-angular name="mail" class="icon"></lucide-angular>
           <span>{{ contact.email }}</span>
         </div>
 
         <div class="contact-item" *ngIf="contact.campaignId">
-          <mat-icon>campaign</mat-icon>
+          <lucide-angular name="megaphone" class="icon"></lucide-angular>
           <span>Campaign ID: {{ contact.campaignId }}</span>
         </div>
       </div>
@@ -41,15 +43,15 @@
       <div class="contact-history" *ngIf="contact.attempts > 0">
         <h3>Previous Attempts</h3>
         <div class="history-item">
-          <mat-icon>history</mat-icon>
+          <lucide-angular name="clock" class="icon"></lucide-angular>
           <span>Attempts: {{ contact.attempts }}</span>
         </div>
         <div class="history-item" *ngIf="contact.lastCallDate">
-          <mat-icon>event</mat-icon>
+          <lucide-angular name="calendar" class="icon"></lucide-angular>
           <span>Last call: {{ contact.lastCallDate | date:'short' }}</span>
         </div>
         <div class="history-item" *ngIf="contact.status">
-          <mat-icon>info</mat-icon>
+          <lucide-angular name="info" class="icon"></lucide-angular>
           <span>Status: {{ contact.status }}</span>
         </div>
       </div>
@@ -66,7 +68,7 @@
           (click)="onCall()"
           [disabled]="!canCall"
           class="call-button">
-          <mat-icon>phone</mat-icon>
+          <lucide-angular name="phone" class="icon"></lucide-angular>
           Call
         </button>
 
@@ -75,7 +77,7 @@
           (click)="onSkip()"
           [disabled]="!canCall"
           class="skip-button">
-          <mat-icon>skip_next</mat-icon>
+          <lucide-angular name="skip-forward" class="icon"></lucide-angular>
           Skip
         </button>
       </div>

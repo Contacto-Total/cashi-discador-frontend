@@ -1,17 +1,17 @@
 import { Component, Inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-incoming-call-modal',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, LucideAngularModule],
   template: `
     <div class="incoming-call-modal">
       <h2 mat-dialog-title>
-        <mat-icon>phone_in_talk</mat-icon>
+        <lucide-angular name="phone-incoming" [size]="24"></lucide-angular>
         Llamada Entrante
       </h2>
       <mat-dialog-content>
@@ -19,11 +19,11 @@ import { CommonModule } from '@angular/common';
       </mat-dialog-content>
       <mat-dialog-actions align="center">
         <button mat-raised-button color="warn" (click)="reject()">
-          <mat-icon>call_end</mat-icon>
+          <lucide-angular name="phone-off" [size]="20"></lucide-angular>
           Rechazar
         </button>
         <button mat-raised-button color="primary" (click)="answer()">
-          <mat-icon>call</mat-icon>
+          <lucide-angular name="phone-call" [size]="20"></lucide-angular>
           Contestar
         </button>
       </mat-dialog-actions>
