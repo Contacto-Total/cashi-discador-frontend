@@ -587,34 +587,6 @@ import { AuthService } from '../../core/services/auth.service';
               </div>
             }
 
-            <!-- Observaciones - COMPACTAS -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-purple-300 dark:hover:border-purple-600 transition-all duration-300">
-              <label class="font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                Observaciones
-              </label>
-              <textarea
-                [(ngModel)]="managementForm.observaciones"
-                placeholder="Detalles de la conversación..."
-                rows="2"
-                class="w-full p-1.5 border border-gray-300 dark:border-gray-600 rounded focus:border-purple-500 dark:focus:border-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-200 dark:focus:ring-purple-900 resize-none bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              ></textarea>
-            </div>
-
-            <!-- Notas Privadas - COMPACTAS -->
-            <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-900/50 rounded-lg p-2">
-              <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                <div class="p-0.5 bg-amber-400 dark:bg-amber-600 rounded">
-                </div>
-                Notas Privadas
-              </label>
-              <textarea
-                [(ngModel)]="managementForm.notasPrivadas"
-                placeholder="Notas internas..."
-                rows="2"
-                class="w-full p-1.5 border border-amber-300 dark:border-amber-800 rounded focus:border-amber-500 dark:focus:border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:focus:ring-amber-900 resize-none bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs placeholder:text-gray-400 dark:placeholder:text-gray-500"
-              ></textarea>
-            </div>
-
             <!-- Botones de Acción - COMPACTOS -->
             <div class="flex gap-2 pt-2">
               <button
