@@ -1,59 +1,50 @@
-<div class="dialer-container">
-  <!-- Header Section -->
-  <div class="dialer-header">
-    <div class="agent-info">
-      <lucide-angular name="user" class="icon"></lucide-angular>
-      <span class="agent-name">{{ (authService.currentUser$ | async)?.firstName }} {{ (authService.currentUser$ | async)?.lastName }}</span>
-      <mat-chip [style.background-color]="getAgentStatusColor()" class="status-chip">
-        {{ getAgentStatusLabel() }}
-      </mat-chip>
-    </div>
-    <div class="call-timer">
-      <lucide-angular name="clock" class="icon"></lucide-angular>
-      <span class="timer-text">{{ formatTimer(callDuration) }}</span>
+<div class="manual-dialer-container">
+  <!-- Animated Background -->
+  <div class="animated-bg">
+    <div class="bg-gradient"></div>
+    <div class="bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
     </div>
   </div>
 
-  <!-- Main Dialer Content -->
-  <div class="dialer-content">
-    <!-- Left Column: Contact Card -->
-    <div class="left-column">
-      <app-contact-card
-        [contact]="currentContact"
-        [loading]="loading"
-        [canCall]="canMakeCall()"
-        (callClicked)="makeCall()"
-        (skipClicked)="skipContact()">
-      </app-contact-card>
-
-      <!-- Call History -->
-      <app-call-history
-        [agentId]="agentId"
-        [refreshTrigger]="currentCall?.id">
-      </app-call-history>
+  <!-- Main Content -->
+  <div class="dialer-wrapper">
+    <!-- Header with smooth fade-in -->
+    <div class="dialer-header">
+      <div class="header-content">
+        <div class="brand">
+          <lucide-angular name="phone" class="brand-icon"></lucide-angular>
+          <h1 class="brand-title">Marcación Manual</h1>
+        </div>
+        <div class="agent-badge">
+          <lucide-angular name="user-circle" class="agent-icon"></lucide-angular>
+          <span class="agent-name">{{ (authService.currentUser$ | async)?.firstName || 'Agente' }}</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Right Column: Softphone -->
-    <div class="right-column">
+    <!-- Softphone Card with scale animation -->
+    <div class="softphone-card">
+      <div class="card-glow"></div>
       <app-softphone
         [callState]="callState"
         [duration]="callDuration"
         [isMuted]="isMuted()"
-        [phoneNumber]="currentContact?.phoneNumber || ''"
+        [phoneNumber]="''"
         [canHangup]="isInCall()"
         (hangupClicked)="hangupCall()"
         (muteClicked)="toggleMute()">
       </app-softphone>
     </div>
-  </div>
 
-  <!-- Call Notes Section (shown after call ends) -->
-  <div class="notes-section" *ngIf="showNotesForm && currentCall">
-    <app-call-notes
-      [call]="currentCall"
-      [contact]="currentContact"
-      (notesComplete)="onNotesComplete()">
-    </app-call-notes>
+    <!-- Floating Status Indicator -->
+    <div class="status-indicator" [class.active]="isInCall()">
+      <div class="status-pulse"></div>
+      <lucide-angular [name]="isInCall() ? 'phone-call' : 'phone'" class="status-icon"></lucide-angular>
+      <span class="status-text">{{ isInCall() ? 'En Llamada' : 'Listo para marcar' }}</span>
+    </div>
   </div>
 
   <!-- Hidden audio element for remote stream -->
