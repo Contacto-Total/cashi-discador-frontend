@@ -69,7 +69,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     this.initializeDialer();
     this.subscribeToWebSocket();
     this.subscribeToWebRTC();
-    this.loadNextContact();
+    // Don't load next contact in manual dialer - user enters number manually
   }
 
   ngOnDestroy(): void {
