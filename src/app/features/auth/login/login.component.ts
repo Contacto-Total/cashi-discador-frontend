@@ -209,6 +209,8 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
         if (user?.role === 'ADMIN') {
           this.router.navigate(['/admin/monitoring']);
+        } else if (user?.role === 'SUPERVISOR') {
+          this.router.navigate(['/reports/contact']);
         } else if (user?.role === 'AGENT') {
           // Primero ir al dashboard de estados, desde ahí puede acceder a WhatsApp o Softphone
           this.router.navigate(['/agent-dashboard']);

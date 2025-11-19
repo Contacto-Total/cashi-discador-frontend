@@ -17,12 +17,12 @@
     <!-- Navigation Menu -->
     <nav class="sidebar-nav">
       <!-- Items para AGENTES -->
-      <a routerLink="/agent-dashboard" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'" [title]="isSidebarCollapsed ? 'Cobranza' : ''">
+      <a routerLink="/agent-dashboard" routerLinkActive="active" class="sidebar-item" *ngIf="isAgent()" [title]="isSidebarCollapsed ? 'Cobranza' : ''">
         <lucide-angular name="phone" [size]="20"></lucide-angular>
         <span class="item-text" *ngIf="!isSidebarCollapsed">Cobranza</span>
       </a>
 
-      <a routerLink="/contacts" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role !== 'ADMIN'" [title]="isSidebarCollapsed ? 'Clientes' : ''">
+      <a routerLink="/contacts" routerLinkActive="active" class="sidebar-item" *ngIf="isAgent()" [title]="isSidebarCollapsed ? 'Clientes' : ''">
         <lucide-angular name="users" [size]="20"></lucide-angular>
         <span class="item-text" *ngIf="!isSidebarCollapsed">Clientes</span>
       </a>
@@ -205,7 +205,7 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Extensiones</span>
       </a>
 
-      <a routerLink="/whatsapp" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'WhatsApp' : ''">
+      <a routerLink="/whatsapp" routerLinkActive="active" class="sidebar-item" *ngIf="isAgent()" [title]="isSidebarCollapsed ? 'WhatsApp' : ''">
         <lucide-angular name="message-square" [size]="20"></lucide-angular>
         <span class="item-text" *ngIf="!isSidebarCollapsed">WhatsApp</span>
       </a>

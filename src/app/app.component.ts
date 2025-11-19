@@ -472,4 +472,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     const currentUser = this.authService.getCurrentUser();
     return currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR';
   }
+
+  isAgent(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    return currentUser?.role === 'AGENT';
+  }
 }
