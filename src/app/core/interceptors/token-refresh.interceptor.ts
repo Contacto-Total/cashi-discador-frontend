@@ -10,8 +10,10 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const sessionConfig = inject(SessionConfigService);
 
-  // No intentar renovar en las rutas de auth
-  if (req.url.includes('/auth/login') || req.url.includes('/auth/refresh-token')) {
+  // No intentar renovar en las rutas de auth o web-service
+  if (req.url.includes('/auth/login') ||
+      req.url.includes('/auth/refresh-token') ||
+      req.url.includes('/web-service/')) {
     return next(req);
   }
 
