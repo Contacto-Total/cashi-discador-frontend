@@ -1,0 +1,106 @@
+<div class="carta-cesion-container">
+  <!-- Header -->
+  <div class="flex items-center gap-2 mb-2">
+    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
+      <lucide-angular name="file-text" [size]="16" class="text-white"></lucide-angular>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold text-white">Cartas de Cesión</h1>
+      <p class="text-xs text-gray-400">Buscar y visualizar cartas de cesión por DNI</p>
+    </div>
+  </div>
+
+  <!-- Search Card -->
+  <mat-card class="search-card">
+    <mat-card-content>
+      <div class="search-section">
+        <!-- Search Input -->
+        <mat-form-field appearance="outline" class="dni-input">
+          <mat-label>DNI del Cliente</mat-label>
+          <input
+            matInput
+            [(ngModel)]="dni"
+            placeholder="Ej: 12345678"
+            maxlength="8"
+            (keyup.enter)="onEnter()"
+            [disabled]="searching">
+          <lucide-angular matPrefix name="hash" [size]="20"></lucide-angular>
+        </mat-form-field>
+
+        <!-- Search Button -->
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="searchCarta()"
+          [disabled]="searching || !dni || dni.length !== 8"
+          class="search-button">
+          <lucide-angular name="search" [size]="20"></lucide-angular>
+          <span>{{ searching ? 'Buscando...' : 'Buscar' }}</span>
+        </button>
+
+        <!-- Clear Button -->
+        <button
+          *ngIf="cartaFound"
+          mat-stroked-button
+          (click)="clearSearch()"
+          class="clear-button">
+          <lucide-angular name="x" [size]="20"></lucide-angular>
+          <span>Limpiar</span>
+        </button>
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="error-message">
+        <lucide-angular name="alert-circle" [size]="20"></lucide-angular>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <!-- Info Message -->
+      <div *ngIf="!cartaFound && !searching && !errorMessage" class="info-message">
+        <lucide-angular name="info" [size]="20"></lucide-angular>
+        <span>Ingrese el DNI del cliente (8 dígitos) para buscar su carta de cesión</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- PDF Viewer Card -->
+  <mat-card *ngIf="cartaFound" class="pdf-viewer-card">
+    <mat-card-content>
+      <!-- PDF Info Header -->
+      <div class="pdf-info-header">
+        <div class="pdf-info">
+          <lucide-angular name="file-check" [size]="24" class="text-green-500"></lucide-angular>
+          <div>
+            <h3 class="text-base font-semibold text-white">Carta Encontrada</h3>
+            <p class="text-sm text-gray-400">DNI: {{ cartaData?.dni }} - {{ cartaData?.filename }}</p>
+          </div>
+        </div>
+
+        <!-- Download Button -->
+        <button
+          mat-raised-button
+          color="accent"
+          (click)="downloadPdf()"
+          class="download-button">
+          <lucide-angular name="download" [size]="20"></lucide-angular>
+          <span>Descargar PDF</span>
+        </button>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Cargando PDF...</p>
+      </div>
+
+      <!-- PDF Iframe -->
+      <div *ngIf="!loading && pdfUrl" class="pdf-container">
+        <iframe
+          [src]="pdfUrl"
+          class="pdf-iframe"
+          frameborder="0">
+        </iframe>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

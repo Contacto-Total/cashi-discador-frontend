@@ -125,6 +125,11 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/blacklist-maintenance/blacklist-maintenance.component').then(m => m.BlacklistMaintenanceComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/cartas-cesion',
+    loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   {
     path: '',
