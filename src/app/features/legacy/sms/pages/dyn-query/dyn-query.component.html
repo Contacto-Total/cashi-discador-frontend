@@ -1,0 +1,376 @@
+<div class="bg-gray-50 dark:bg-gray-900 min-h-screen pt-24 px-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Consulta Dinámica SMS</h1>
+    <select formControlName="tramo" [formGroup]="form" class="px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm">
+      <option value="3">Tramo 3</option>
+      <option value="5">Tramo 5</option>
+      <option value="CONTACTO_TOTAL">Cartera Propia</option>
+    </select>
+  </div>
+
+  <div class="grid grid-cols-[1fr_380px] gap-3 items-start">
+    <!-- Columna principal (izquierda) -->
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <form [formGroup]="form">
+
+        <!-- Tabs de navegación -->
+        <div class="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <button type="button" class="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium transition-all cursor-pointer border-b-2"
+            [class]="activeTab === 'variables'
+              ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            (click)="activeTab = 'variables'">
+            <lucide-angular [img]="Settings" [size]="16"></lucide-angular>
+            Variables
+          </button>
+          <button type="button" class="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium transition-all cursor-pointer border-b-2"
+            [class]="activeTab === 'rangos'
+              ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            (click)="activeTab = 'rangos'">
+            <lucide-angular [img]="Filter" [size]="16"></lucide-angular>
+            Rangos
+          </button>
+          <button type="button" class="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium transition-all cursor-pointer border-b-2"
+            [class]="activeTab === 'condiciones'
+              ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            (click)="activeTab = 'condiciones'">
+            <lucide-angular [img]="ListChecks" [size]="16"></lucide-angular>
+            Condiciones
+          </button>
+          <button type="button" class="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-medium transition-all cursor-pointer border-b-2"
+            [class]="activeTab === 'restricciones'
+              ? 'border-blue-600 dark:border-blue-400 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800'
+              : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'"
+            (click)="activeTab = 'restricciones'">
+            <lucide-angular [img]="Ban" [size]="16"></lucide-angular>
+            Restricciones
+          </button>
+        </div>
+
+        <!-- Tab Content: Variables -->
+        <div *ngIf="activeTab === 'variables'" class="p-4 animate-fade-in">
+          <div class="space-y-3">
+            <ng-container *ngFor="let g of chipGroups">
+              <div class="border-b border-gray-200 dark:border-gray-700 pb-3 last:border-0 last:pb-0">
+                <div class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">{{ g.title }}</div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    *ngFor="let c of g.items"
+                    type="button"
+                    [class]="isActive(c.key)
+                      ? 'px-3.5 py-2 rounded-lg text-white text-xs font-bold bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 transition-all cursor-pointer'
+                      : 'px-3.5 py-2 rounded-lg text-gray-700 dark:text-gray-300 text-xs font-semibold bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-gray-600 hover:text-blue-700 dark:hover:text-blue-300 border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed'"
+                    (click)="toggleChip(c.key, c.affectsSelects !== false)"
+                    [disabled]="isChipDisabled(c.key)">
+                    {{ c.label }}
+                  </button>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- Importe Extra (inline) -->
+          <div *ngIf="selectedChips.has('LTD') || selectedChips.has('LTDE') || selectedChips.has('LTD_LTDE')" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+              <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Sumar importe:</label>
+              <input type="number" min="0" step="1" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm w-32" formControlName="importeExtra" placeholder="0">
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Rangos -->
+        <div *ngIf="activeTab === 'rangos'" class="p-4 animate-fade-in">
+          <button type="button" class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer mb-4" (click)="addRange()">
+            <lucide-angular [img]="Plus" [size]="16"></lucide-angular>
+            Añadir rango
+          </button>
+
+          <div class="space-y-3">
+            <div class="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 shadow-sm hover:shadow-md transition-all" *ngFor="let rg of rangosFA.controls; let i = index" [formGroup]="$any(rg)">
+              <div class="flex items-center justify-between mb-3">
+                <select class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm" formControlName="field">
+                  <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+                </select>
+                <button type="button" class="ml-2 p-2 bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 hover:border-red-400 dark:hover:border-red-600 transition-all cursor-pointer" (click)="removeRange(i)" title="Eliminar">
+                  <lucide-angular [img]="Trash2" [size]="14"></lucide-angular>
+                </button>
+              </div>
+
+              <!-- Modo intervalo -->
+              <div *ngIf="$any(rg).get('useMin')?.value && $any(rg).get('useMax')?.value" class="flex items-center gap-2 flex-wrap">
+                <input type="number" class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm" formControlName="min" placeholder="mín">
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="inclusiveMin">
+                  <span class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ $any(rg).get('inclusiveMin')?.value ? '≤' : '<' }}</span>
+                </label>
+                <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-800/50 text-blue-700 dark:text-blue-300 rounded-md text-sm font-bold">{{ fieldLabel($any(rg).get('field')?.value) }}</span>
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="inclusiveMax">
+                  <span class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ $any(rg).get('inclusiveMax')?.value ? '≤' : '<' }}</span>
+                </label>
+                <input type="number" class="w-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm" formControlName="max" placeholder="máx">
+              </div>
+
+              <!-- Modo simple -->
+              <div *ngIf="!($any(rg).get('useMin')?.value && $any(rg).get('useMax')?.value)">
+                <div class="flex gap-2 mb-3">
+                  <button type="button"
+                          [class]="$any(rg).get('mode')?.value === 'gt'
+                            ? 'flex-1 px-3 py-2 rounded-lg text-white text-sm font-bold bg-gradient-to-r from-blue-600 to-violet-600 shadow-md shadow-blue-500/25 transition-all cursor-pointer'
+                            : 'flex-1 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-semibold bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all cursor-pointer shadow-sm'"
+                          (click)="changeOperator(i, 'gt')">
+                    Mayor que
+                  </button>
+                  <button type="button"
+                          [class]="$any(rg).get('mode')?.value === 'lt'
+                            ? 'flex-1 px-3 py-2 rounded-lg text-white text-sm font-bold bg-gradient-to-r from-blue-600 to-violet-600 shadow-md shadow-blue-500/25 transition-all cursor-pointer'
+                            : 'flex-1 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-semibold bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all cursor-pointer shadow-sm'"
+                          (click)="changeOperator(i, 'lt')">
+                    Menor que
+                  </button>
+                </div>
+
+                <div class="space-y-2 mb-3">
+                  <div class="flex items-center gap-2 flex-wrap" *ngIf="$any(rg).get('useMin')?.value">
+                    <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-800/50 text-blue-700 dark:text-blue-300 rounded-md text-sm font-bold">{{ fieldLabel($any(rg).get('field')?.value) }}</span>
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="inclusiveMin">
+                      <span class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ $any(rg).get('inclusiveMin')?.value ? '≥' : '>' }}</span>
+                    </label>
+                    <input type="number" class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm" formControlName="min" placeholder="valor">
+                  </div>
+
+                  <div class="flex items-center gap-2 flex-wrap" *ngIf="$any(rg).get('useMax')?.value">
+                    <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-800/50 text-blue-700 dark:text-blue-300 rounded-md text-sm font-bold">{{ fieldLabel($any(rg).get('field')?.value) }}</span>
+                    <label class="flex items-center gap-1 cursor-pointer">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="inclusiveMax">
+                      <span class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ $any(rg).get('inclusiveMax')?.value ? '≤' : '<' }}</span>
+                    </label>
+                    <input type="number" class="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm" formControlName="max" placeholder="valor">
+                  </div>
+                </div>
+
+                <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                  <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                         [checked]="$any(rg).get('useMin')?.value && $any(rg).get('useMax')?.value"
+                         (change)="toggleInterval(i, $any($event.target).checked)">
+                  <span>Usar como intervalo</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Content: Condiciones -->
+        <div *ngIf="activeTab === 'condiciones'" class="p-4 animate-fade-in">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" (change)="toggleCond($event, 'PROMESAS_HOY')">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Promesas para hoy</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" (change)="toggleCond($event, 'PROMESAS_MANANA')">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Promesas para mañana</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" (change)="toggleCond($event, 'PROMESAS_MANANA2')">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Promesas para pasado mañana</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" (change)="toggleCond($event, 'PROMESAS_ROTAS')">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Promesas rotas</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Tab Content: Restricciones -->
+        <div *ngIf="activeTab === 'restricciones'" class="p-4 animate-fade-in">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="noContenido">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sin contenido</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="excluirPromesasPeriodoActual">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Excluir promesas periodo actual</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="excluirCompromisos">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Excluir compromisos</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-600 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm">
+              <input type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" formControlName="excluirBlacklist">
+              <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Excluir blacklist</span>
+            </label>
+          </div>
+
+          <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+              <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Límite de filas:</label>
+              <input type="number" min="1" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm w-32" formControlName="limit" placeholder="1000">
+            </div>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Panel derecho (Preview + Acciones) -->
+    <div class="space-y-3">
+      <!-- Plantilla SMS -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="flex items-center gap-2 p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <lucide-angular [img]="FileText" [size]="18" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+          <span class="text-sm font-bold text-gray-900 dark:text-white">Plantilla SMS</span>
+        </div>
+
+        <div class="p-4">
+          <textarea
+            #tplArea
+            formControlName="plantillaTexto"
+            [formGroup]="form"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm resize-none"
+            placeholder="Escribe tu mensaje SMS aquí. Usa los chips para insertar variables como {NOMBRE}, {LTD}, etc."
+            rows="6"></textarea>
+
+          <div class="flex items-center justify-between mt-2">
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Caracteres:</span>
+            <span class="text-xs font-bold" [class]="(form.get('plantillaTexto')?.value?.length || 0) > 160 ? 'text-red-600 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'">
+              {{ form.get('plantillaTexto')?.value?.length || 0 }}/160
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vista Previa -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+          <div class="flex items-center gap-2">
+            <lucide-angular [img]="Eye" [size]="18" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+            <span class="text-sm font-bold text-gray-900 dark:text-white">Vista Previa</span>
+          </div>
+          <div class="flex gap-1 bg-gray-200 dark:bg-gray-700 rounded-lg p-1">
+            <button type="button"
+                    [class]="previewMode() === 'manual'
+                      ? 'px-3 py-1 rounded-md text-xs font-bold bg-white dark:bg-gray-600 text-blue-700 dark:text-blue-300 shadow-sm transition-all'
+                      : 'px-3 py-1 rounded-md text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-all'"
+                    (click)="setMode('manual')">
+              Manual
+            </button>
+            <button type="button"
+                    [class]="previewMode() === 'auto'
+                      ? 'px-3 py-1 rounded-md text-xs font-bold bg-white dark:bg-gray-600 text-blue-700 dark:text-blue-300 shadow-sm transition-all'
+                      : 'px-3 py-1 rounded-md text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-all'"
+                    (click)="setMode('auto')">
+              Auto
+            </button>
+          </div>
+        </div>
+
+        <div class="p-4">
+          <div *ngIf="previewText(); else noPreview" class="p-3 bg-gradient-to-r from-blue-600 to-violet-600 text-white rounded-lg text-sm leading-relaxed shadow-lg min-h-[80px]">
+            {{ previewText() }}
+          </div>
+          <ng-template #noPreview>
+            <div class="p-8 text-center text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700 border-dashed min-h-[80px] flex items-center justify-center">
+              Configura tu consulta para ver una vista previa
+            </div>
+          </ng-template>
+
+          <button type="button"
+                  class="w-full mt-3 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  (click)="refreshPreview()"
+                  [disabled]="previewMode() !== 'manual' || loadingPreview()"
+                  *ngIf="previewMode() === 'manual'">
+            Actualizar preview
+          </button>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+        <button type="button" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer" (click)="generarGuiado()">
+          <lucide-angular [img]="Send" [size]="18"></lucide-angular>
+          Generar Guiado
+        </button>
+
+        <button type="button" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer shadow-sm" (click)="exportar()">
+          <lucide-angular [img]="Table" [size]="18"></lucide-angular>
+          Exportar Excel
+        </button>
+
+        <div class="pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+          <input type="text"
+                 formControlName="nombre"
+                 [formGroup]="form"
+                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm"
+                 placeholder="Nombre del combo">
+          <textarea
+            formControlName="descripcion"
+            [formGroup]="form"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm resize-none"
+            placeholder="Descripción (opcional)"
+            rows="2"></textarea>
+          <button type="button" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30 cursor-pointer" (click)="guardarCombo()">
+            <lucide-angular [img]="Save" [size]="18"></lucide-angular>
+            Guardar Combo
+          </button>
+        </div>
+
+        <button type="button" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer shadow-sm" (click)="Cancel()">
+          <lucide-angular [img]="XCircle" [size]="18"></lucide-angular>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Modal -->
+<div *ngIf="loadingPreview() || loadingExport() || loadingSave()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
+    <div class="w-10 h-10 border-3 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
+    <p class="text-base font-bold text-gray-900 dark:text-gray-100">{{ loadingPreview() ? 'Cargando previsualización...' : loadingExport() ? 'Generando Excel...' : 'Guardando combo...' }}</p>
+  </div>
+</div>
+
+<!-- Alert Modal -->
+<div *ngIf="alertMessage()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
+    <div class="text-4xl mb-3">⚠️</div>
+    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Atención</h3>
+    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{{ alertMessage() }}</p>
+    <button type="button" class="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg" (click)="closeAlert()">Entendido</button>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div *ngIf="successMessage()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
+    <div class="text-4xl mb-3">✓</div>
+    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Éxito</h3>
+    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{{ successMessage() }}</p>
+    <button type="button" class="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg" (click)="closeSuccess()">Aceptar</button>
+  </div>
+</div>
+
+<!-- Round Wizard Modal -->
+<div *ngIf="showRoundWizard()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
+  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl animate-scale-in border border-gray-200 dark:border-gray-700">
+    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Generación Guiada</h3>
+    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">¿Cuántas rondas deseas generar?</p>
+    <input type="number"
+           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm mb-4"
+           [(ngModel)]="roundCount"
+           min="1"
+           max="10"
+           placeholder="Número de rondas">
+    <div class="flex gap-3">
+      <button type="button" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer shadow-sm" (click)="closeRoundWizard()">Cancelar</button>
+      <button type="button" class="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer" (click)="confirmGenerate()">Generar</button>
+    </div>
+  </div>
+</div>

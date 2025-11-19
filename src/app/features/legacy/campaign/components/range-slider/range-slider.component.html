@@ -1,0 +1,315 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black p-4 transition-colors duration-300">
+  <!-- Header -->
+  <div class="flex items-center gap-2 mb-3">
+    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg flex items-center justify-center">
+      <lucide-angular name="megaphone" [size]="16" class="text-white"></lucide-angular>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold text-slate-900 dark:text-white">Generación de Campañas</h1>
+      <p class="text-xs text-slate-600 dark:text-slate-400">Configuración de rangos y filtros para generar archivos de campaña</p>
+    </div>
+  </div>
+
+  <!-- Barra de Controles -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm p-3 mb-3">
+    <div class="flex flex-wrap justify-between items-center gap-3">
+      <!-- Filtros a la izquierda -->
+      <div class="flex flex-wrap gap-2 items-center flex-1">
+        <app-custom-select
+          [(ngModel)]="campaignName"
+          [options]="tramoOptions"
+          placeholder="Seleccionar tramo"
+          (selectionChange)="onTramoChange()">
+        </app-custom-select>
+
+        <app-custom-select
+          *ngIf="campaignName === 'Tramo 3'"
+          [(ngModel)]="filterType"
+          [options]="filterTypeOptions"
+          placeholder="Tipo de filtro">
+        </app-custom-select>
+
+        <app-custom-multiselect
+          *ngIf="campaignName === 'Tramo 3'"
+          [(ngModel)]="dueDatesSelected"
+          [options]="dueDatesOptions"
+          [placeholder]="getSelectedDatesLabel()"
+          [disabled]="isDatesDisabled()">
+        </app-custom-multiselect>
+
+        <app-custom-checkbox
+          *ngIf="campaignName === 'Tramo 3'"
+          label="No contenidos"
+          [(ngModel)]="contenido">
+        </app-custom-checkbox>
+      </div>
+
+      <!-- Botones a la derecha -->
+      <div class="flex gap-2 flex-shrink-0">
+        <button
+          class="flex items-center gap-2 px-4 py-2 border-2 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg font-medium text-sm transition-all"
+          (click)="addRange()">
+          <lucide-angular name="plus" [size]="18"></lucide-angular>
+          <span>Añadir Rango</span>
+        </button>
+        <button
+          class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-medium text-sm transition-all shadow-md"
+          (click)="printRanges()">
+          <lucide-angular name="send" [size]="18"></lucide-angular>
+          <span>Generar Campaña</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido Principal con Tabs -->
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm">
+    <app-custom-tabs
+      [tabs]="tabs"
+      [(activeIndex)]="activeIndex"
+      (tabChange)="onTabChange($event)"
+      class="w-full">
+
+        <!-- Tab Panel: Contacto Directo -->
+        <div class="p-3 w-full" *ngIf="activeIndex === 0">
+        <div class="mb-3 pb-3 border-b-2 border-gray-200 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Contacto Directo</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">Define los rangos capitales para contacto directo</p>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <div *ngFor="let range of contactoDirectoRanges; let i = index" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-3 transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md">
+            <div class="flex items-center gap-3 w-full">
+              <span class="font-semibold text-slate-900 dark:text-slate-100 text-sm px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 flex-shrink-0 min-w-[90px] text-center">Rango {{ i + 1 }}</span>
+              <div class="flex items-center gap-3 flex-1 flex-wrap">
+                <div class="flex items-center gap-3 flex-1 min-w-[300px]">
+                  <div class="flex flex-col min-w-[100px] flex-1">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Desde</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.min"
+                      [min]="0"
+                      [hasError]="contactoDirectoMinErrors[i]"
+                      (ngModelChange)="onMinInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+
+                  <div class="flex flex-col min-w-[100px] flex-1" *ngIf="!range.isChecked">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Hasta</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.max"
+                      [min]="0"
+                      [disabled]="range.isChecked"
+                      [hasError]="contactoDirectoMaxErrors[i]"
+                      (ngModelChange)="onMaxInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+                </div>
+
+                <div class="flex items-center flex-shrink-0">
+                  <app-custom-checkbox
+                    *ngIf="i === contactoDirectoRanges.length - 1"
+                    label="Sin límite superior"
+                    [(ngModel)]="range.isChecked"
+                    [disabled]="isAnyChecked() && !range.isChecked"
+                    (checkedChange)="toggleCheck(i)">
+                  </app-custom-checkbox>
+                </div>
+              </div>
+
+              <button class="flex items-center justify-center p-2 rounded-md bg-transparent border-none cursor-pointer transition-all text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400" (click)="deleteRange(i)">
+                <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="contactoDirectoRanges.length === 0" class="text-center p-12 text-slate-400 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+            <lucide-angular name="inbox" [size]="48" class="mx-auto text-slate-300 dark:text-slate-600"></lucide-angular>
+            <p class="mt-3 text-base font-medium text-slate-600 dark:text-slate-400">No hay rangos configurados</p>
+            <p class="text-sm text-slate-500 dark:text-slate-500">Haz clic en "Añadir Rango" para comenzar</p>
+          </div>
+        </div>
+        </div>
+
+        <!-- Tab Panel: Contacto Indirecto -->
+        <div class="p-3 w-full" *ngIf="activeIndex === 1">
+        <div class="mb-3 pb-3 border-b-2 border-gray-200 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Contacto Indirecto</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">Define los rangos capitales para contacto indirecto</p>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <div *ngFor="let range of contactoIndirectoRanges; let i = index" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-3 transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md">
+            <div class="flex items-center gap-3 w-full">
+              <span class="font-semibold text-slate-900 dark:text-slate-100 text-sm px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 flex-shrink-0 min-w-[90px] text-center">Rango {{ i + 1 }}</span>
+              <div class="flex items-center gap-3 flex-1 flex-wrap">
+                <div class="flex items-center gap-3 flex-1 min-w-[300px]">
+                  <div class="flex flex-col min-w-[100px] flex-1">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Desde</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.min"
+                      [min]="0"
+                      [hasError]="contactoIndirectoMinErrors[i]"
+                      (ngModelChange)="onMinInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+
+                  <div class="flex flex-col min-w-[100px] flex-1" *ngIf="!range.isChecked">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Hasta</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.max"
+                      [min]="0"
+                      [disabled]="range.isChecked"
+                      [hasError]="contactoIndirectoMaxErrors[i]"
+                      (ngModelChange)="onMaxInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+                </div>
+
+                <div class="flex items-center flex-shrink-0">
+                  <app-custom-checkbox
+                    *ngIf="i === contactoIndirectoRanges.length - 1"
+                    label="Sin límite superior"
+                    [(ngModel)]="range.isChecked"
+                    [disabled]="isAnyChecked() && !range.isChecked"
+                    (checkedChange)="toggleCheck(i)">
+                  </app-custom-checkbox>
+                </div>
+              </div>
+
+              <button class="flex items-center justify-center p-2 rounded-md bg-transparent border-none cursor-pointer transition-all text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400" (click)="deleteRange(i)">
+                <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="contactoIndirectoRanges.length === 0" class="text-center p-12 text-slate-400 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+            <lucide-angular name="inbox" [size]="48" class="mx-auto text-slate-300 dark:text-slate-600"></lucide-angular>
+            <p class="mt-3 text-base font-medium text-slate-600 dark:text-slate-400">No hay rangos configurados</p>
+            <p class="text-sm text-slate-500 dark:text-slate-500">Haz clic en "Añadir Rango" para comenzar</p>
+          </div>
+        </div>
+        </div>
+
+        <!-- Tab Panel: Promesas Rotas -->
+        <div class="p-3 w-full" *ngIf="activeIndex === 2">
+        <div class="mb-3 pb-3 border-b-2 border-gray-200 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Promesas Rotas</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">Define los rangos capitales para promesas rotas</p>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <div *ngFor="let range of promesasRotasRanges; let i = index" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-3 transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md">
+            <div class="flex items-center gap-3 w-full">
+              <span class="font-semibold text-slate-900 dark:text-slate-100 text-sm px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 flex-shrink-0 min-w-[90px] text-center">Rango {{ i + 1 }}</span>
+              <div class="flex items-center gap-3 flex-1 flex-wrap">
+                <div class="flex items-center gap-3 flex-1 min-w-[300px]">
+                  <div class="flex flex-col min-w-[100px] flex-1">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Desde</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.min"
+                      [min]="0"
+                      [hasError]="promesasRotasMinErrors[i]"
+                      (ngModelChange)="onMinInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+
+                  <div class="flex flex-col min-w-[100px] flex-1" *ngIf="!range.isChecked">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Hasta</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.max"
+                      [min]="0"
+                      [disabled]="range.isChecked"
+                      [hasError]="promesasRotasMaxErrors[i]"
+                      (ngModelChange)="onMaxInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+                </div>
+
+                <div class="flex items-center flex-shrink-0">
+                  <app-custom-checkbox
+                    *ngIf="i === promesasRotasRanges.length - 1"
+                    label="Sin límite superior"
+                    [(ngModel)]="range.isChecked"
+                    [disabled]="isAnyChecked() && !range.isChecked"
+                    (checkedChange)="toggleCheck(i)">
+                  </app-custom-checkbox>
+                </div>
+              </div>
+
+              <button class="flex items-center justify-center p-2 rounded-md bg-transparent border-none cursor-pointer transition-all text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400" (click)="deleteRange(i)">
+                <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="promesasRotasRanges.length === 0" class="text-center p-12 text-slate-400 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+            <lucide-angular name="inbox" [size]="48" class="mx-auto text-slate-300 dark:text-slate-600"></lucide-angular>
+            <p class="mt-3 text-base font-medium text-slate-600 dark:text-slate-400">No hay rangos configurados</p>
+            <p class="text-sm text-slate-500 dark:text-slate-500">Haz clic en "Añadir Rango" para comenzar</p>
+          </div>
+        </div>
+        </div>
+
+        <!-- Tab Panel: No Contactado -->
+        <div class="p-3 w-full" *ngIf="activeIndex === 3">
+        <div class="mb-3 pb-3 border-b-2 border-gray-200 dark:border-slate-700">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">No Contactado</h3>
+          <p class="text-sm text-slate-600 dark:text-slate-400">Define los rangos capitales para no contactados</p>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <div *ngFor="let range of noContactadoRanges; let i = index" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-3 transition-all hover:border-slate-300 dark:hover:border-slate-600 hover:shadow-md">
+            <div class="flex items-center gap-3 w-full">
+              <span class="font-semibold text-slate-900 dark:text-slate-100 text-sm px-3 py-2 bg-slate-200 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 flex-shrink-0 min-w-[90px] text-center">Rango {{ i + 1 }}</span>
+              <div class="flex items-center gap-3 flex-1 flex-wrap">
+                <div class="flex items-center gap-3 flex-1 min-w-[300px]">
+                  <div class="flex flex-col min-w-[100px] flex-1">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Desde</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.min"
+                      [min]="0"
+                      [hasError]="noContactadoMinErrors[i]"
+                      (ngModelChange)="onMinInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+
+                  <div class="flex flex-col min-w-[100px] flex-1" *ngIf="!range.isChecked">
+                    <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Hasta</label>
+                    <app-custom-input-number
+                      [(ngModel)]="range.max"
+                      [min]="0"
+                      [disabled]="range.isChecked"
+                      [hasError]="noContactadoMaxErrors[i]"
+                      (ngModelChange)="onMaxInputChange(i)">
+                    </app-custom-input-number>
+                  </div>
+                </div>
+
+                <div class="flex items-center flex-shrink-0">
+                  <app-custom-checkbox
+                    *ngIf="i === noContactadoRanges.length - 1"
+                    label="Sin límite superior"
+                    [(ngModel)]="range.isChecked"
+                    [disabled]="isAnyChecked() && !range.isChecked"
+                    (checkedChange)="toggleCheck(i)">
+                  </app-custom-checkbox>
+                </div>
+              </div>
+
+              <button class="flex items-center justify-center p-2 rounded-md bg-transparent border-none cursor-pointer transition-all text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400" (click)="deleteRange(i)">
+                <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="noContactadoRanges.length === 0" class="text-center p-12 text-slate-400 bg-slate-50 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-lg">
+            <lucide-angular name="inbox" [size]="48" class="mx-auto text-slate-300 dark:text-slate-600"></lucide-angular>
+            <p class="mt-3 text-base font-medium text-slate-600 dark:text-slate-400">No hay rangos configurados</p>
+            <p class="text-sm text-slate-500 dark:text-slate-500">Haz clic en "Añadir Rango" para comenzar</p>
+          </div>
+        </div>
+        </div>
+
+      </app-custom-tabs>
+  </div>
+</div>

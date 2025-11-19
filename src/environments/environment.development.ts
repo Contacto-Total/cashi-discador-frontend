@@ -8,6 +8,9 @@ export const environment = {
    apiUrl: 'https://cobranza.contactototal.com.pe/api',
   wsUrl: 'https://cobranza.contactototal.com.pe/ws',
 
+  // Legacy API - Módulos antiguos (campaña, reportes, SMS, etc.)
+  legacyApiUrl: 'https://huge-only-marmoset.ngrok-free.app/api',
+
   // FreeSWITCH on AWS - WebSocket SIP (puerto 5066 para WS no seguro)
     freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
     freeswitchDomain: 'cobranza.contactototal.com.pe'

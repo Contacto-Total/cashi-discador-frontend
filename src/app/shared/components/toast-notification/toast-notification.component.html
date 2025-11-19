@@ -1,0 +1,18 @@
+<div class="toast-container">
+  <div
+    *ngFor="let toast of toasts"
+    class="toast"
+    [class.toast-success]="toast.type === 'success'"
+    [class.toast-error]="toast.type === 'error'"
+    [class.toast-warning]="toast.type === 'warning'"
+    [class.toast-info]="toast.type === 'info'">
+
+    <lucide-angular [name]="getIcon(toast.type)" [size]="20" class="toast-icon"></lucide-angular>
+
+    <span class="toast-message">{{ toast.message }}</span>
+
+    <button class="toast-close" (click)="remove(toast.id)">
+      <lucide-angular name="x" [size]="16"></lucide-angular>
+    </button>
+  </div>
+</div>

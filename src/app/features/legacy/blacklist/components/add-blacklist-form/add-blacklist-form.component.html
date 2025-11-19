@@ -1,0 +1,51 @@
+<form [formGroup]="formGroup" class="form-container">
+  <div class="form-group">
+    <label for="proveedor" class="form-label">Proveedor *</label>
+    <app-custom-select
+      formControlName="selectedProveedor"
+      [options]="proveedores"
+      placeholder="Selecciona un proveedor"
+      id="proveedor">
+    </app-custom-select>
+    <span *ngIf="isFieldInvalid('selectedProveedor')" class="error-message">
+      {{ getFieldError('selectedProveedor') }}
+    </span>
+  </div>
+
+  <div class="form-group">
+    <label for="documento" class="form-label">Documento *</label>
+    <input
+      type="text"
+      id="documento"
+      formControlName="documento"
+      class="form-input"
+      [class.invalid]="isFieldInvalid('documento')"
+      placeholder="Ingresa el documento"
+      maxlength="20" />
+    <span *ngIf="isFieldInvalid('documento')" class="error-message">
+      {{ getFieldError('documento') }}
+    </span>
+  </div>
+
+  <div class="form-group">
+    <label for="fechaFin" class="form-label">Fecha de Fin *</label>
+    <input
+      type="date"
+      id="fechaFin"
+      formControlName="fechaFin"
+      class="form-input"
+      [class.invalid]="isFieldInvalid('fechaFin')" />
+    <span *ngIf="isFieldInvalid('fechaFin')" class="error-message">
+      {{ getFieldError('fechaFin') }}
+    </span>
+  </div>
+
+  <button
+    type="button"
+    class="btn btn-submit"
+    [disabled]="!formGroup.valid || isLoading"
+    (click)="insertarBlacklist()">
+    <span *ngIf="!isLoading">Guardar</span>
+    <span *ngIf="isLoading">Guardando...</span>
+  </button>
+</form>

@@ -1,0 +1,9 @@
+.campaign-page-container {
+  padding: 0;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.section {
+  width: 100%;
+}

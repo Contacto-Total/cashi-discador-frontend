@@ -1,0 +1,173 @@
+:host-context(body.light-theme) {
+  --bg-primary: #ffffff;
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --border-color: #ddd;
+  --hover-bg: #f8f9fa;
+  --header-bg: #f5f5f5;
+  --button-hover: #e0e0e0;
+}
+
+:host-context(body.dark-theme) {
+  --bg-primary: #1e1e1e;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a8a8a8;
+  --border-color: #444;
+  --hover-bg: #2d2d2d;
+  --header-bg: #2a2a2a;
+  --button-hover: #3a3a3a;
+}
+
+.table-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: var(--bg-primary);
+}
+
+.blacklist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  overflow: hidden;
+
+  thead {
+    background-color: var(--header-bg);
+    border-bottom: 2px solid var(--border-color);
+  }
+
+  th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--border-color);
+      transition: background-color 0.2s ease;
+
+      &.data-row:hover {
+        background-color: var(--hover-bg);
+      }
+    }
+
+    td {
+      padding: 0.75rem 1rem;
+      color: var(--text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.empty-row {
+  .empty-cell {
+    padding: 3rem 1rem !important;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+
+    lucide-icon {
+      width: 48px;
+      height: 48px;
+      opacity: 0.5;
+    }
+
+    span {
+      font-style: italic;
+      font-size: 0.95rem;
+    }
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-color: var(--header-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) {
+    background-color: var(--button-hover);
+    transform: translateY(-1px);
+    border-color: var(--text-primary);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  lucide-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.pagination-info {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  min-width: 150px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    padding: 1rem;
+  }
+
+  .blacklist-table {
+    font-size: 0.85rem;
+
+    th,
+    td {
+      padding: 0.5rem;
+    }
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pagination-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .pagination-info {
+    min-width: 120px;
+  }
+}

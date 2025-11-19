@@ -43,6 +43,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   isMonitoreoDropdownOpen = false;
   isCargaDatosDropdownOpen = false;
   isMantenimientoDropdownOpen = false;
+  isCampanasDropdownOpen = false;
+  isReportesDropdownOpen = false;
+  isBlacklistDropdownOpen = false;
+  isCartasDropdownOpen = false;
 
   constructor(
     public authService: AuthService,
@@ -296,9 +300,18 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Navbar methods
   toggleMonitoreoDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
     this.isMonitoreoDropdownOpen = !this.isMonitoreoDropdownOpen;
     this.isCargaDatosDropdownOpen = false;
     this.isMantenimientoDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
     // Re-detectar overflow después de abrir dropdown
     setTimeout(() => {
       this.checkTextOverflow();
@@ -306,9 +319,18 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   toggleCargaDatosDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
     this.isCargaDatosDropdownOpen = !this.isCargaDatosDropdownOpen;
     this.isMonitoreoDropdownOpen = false;
     this.isMantenimientoDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
     // Re-detectar overflow después de abrir dropdown
     setTimeout(() => {
       this.checkTextOverflow();
@@ -316,19 +338,96 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   toggleMantenimientoDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
     this.isMantenimientoDropdownOpen = !this.isMantenimientoDropdownOpen;
     this.isMonitoreoDropdownOpen = false;
     this.isCargaDatosDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
     // Re-detectar overflow después de abrir dropdown
     setTimeout(() => {
       this.checkTextOverflow();
     }, 50);
   }
 
+  toggleCampanasDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
+    this.isCampanasDropdownOpen = !this.isCampanasDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
+    setTimeout(() => this.checkTextOverflow(), 50);
+  }
+
+  toggleReportesDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
+    this.isReportesDropdownOpen = !this.isReportesDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
+    setTimeout(() => this.checkTextOverflow(), 50);
+  }
+
+  toggleBlacklistDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
+    this.isBlacklistDropdownOpen = !this.isBlacklistDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
+    setTimeout(() => this.checkTextOverflow(), 50);
+  }
+
+  toggleCartasDropdown(): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
+    this.isCartasDropdownOpen = !this.isCartasDropdownOpen;
+    this.isMonitoreoDropdownOpen = false;
+    this.isCargaDatosDropdownOpen = false;
+    this.isMantenimientoDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    setTimeout(() => this.checkTextOverflow(), 50);
+  }
+
   closeDropdowns(): void {
     this.isMonitoreoDropdownOpen = false;
     this.isCargaDatosDropdownOpen = false;
     this.isMantenimientoDropdownOpen = false;
+    this.isCampanasDropdownOpen = false;
+    this.isReportesDropdownOpen = false;
+    this.isBlacklistDropdownOpen = false;
+    this.isCartasDropdownOpen = false;
   }
 
   isMonitoreoActive(): boolean {
@@ -342,6 +441,22 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   isMantenimientoActive(): boolean {
     return this.router.url.includes('/admin/maintenance');
+  }
+
+  isCampanasActive(): boolean {
+    return this.router.url.includes('/admin/campaigns');
+  }
+
+  isReportesActive(): boolean {
+    return this.router.url.includes('/reports');
+  }
+
+  isBlacklistActive(): boolean {
+    return this.router.url.includes('/blacklist');
+  }
+
+  isCartasActive(): boolean {
+    return this.router.url.includes('/agreements');
   }
 
   toggleTheme(): void {

@@ -1,0 +1,14 @@
+<div class="custom-input-number" [class.disabled]="disabled" [class.error]="hasError">
+  <input
+    type="number"
+    class="number-input"
+    [value]="value ?? ''"
+    [min]="min ?? undefined"
+    [max]="max ?? undefined"
+    [step]="step"
+    [placeholder]="placeholder"
+    [disabled]="disabled"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+  />
+</div>

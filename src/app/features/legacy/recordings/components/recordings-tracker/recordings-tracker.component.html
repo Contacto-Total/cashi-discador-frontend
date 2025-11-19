@@ -1,0 +1,355 @@
+<div class="p-3">
+  <!-- Loading Overlay -->
+  <div *ngIf="isLoading" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="w-12 h-12 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Search Form -->
+  <div class="bg-slate-800 p-3 rounded-lg mb-3">
+    <div class="flex gap-2 overflow-x-auto">
+      <!-- Tramo Filter -->
+      <div class="flex flex-col gap-1 w-[140px] flex-shrink-0">
+        <label class="text-slate-400 text-xs font-medium">Tramo</label>
+        <app-custom-select
+          [options]="tramos"
+          [(ngModel)]="selectedTramo"
+          placeholder="Seleccionar tramo">
+        </app-custom-select>
+      </div>
+
+      <!-- Type Search -->
+      <div class="flex flex-col gap-1 w-[160px] flex-shrink-0">
+        <label class="text-slate-400 text-xs font-medium">Tipo de Búsqueda</label>
+        <app-custom-select
+          [options]="tipoBusqueda"
+          [(ngModel)]="selectedTipoBusqueda"
+          (selectionChange)="changeTypeSearch()"
+          placeholder="Tipo de búsqueda">
+        </app-custom-select>
+      </div>
+
+      <!-- Search by Dates -->
+      <div *ngIf="selectedTipoBusqueda === 'fechas'" class="flex gap-2 items-end flex-shrink-0">
+        <div class="flex flex-col gap-1 w-[150px]">
+          <label class="text-slate-400 text-xs font-medium">Fecha Inicio</label>
+          <div class="relative">
+            <input
+              type="date"
+              [(ngModel)]="startDate"
+              (change)="validateDates()"
+              class="w-full h-10 pl-3 pr-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-1 w-[150px]">
+          <label class="text-slate-400 text-xs font-medium">Fecha Fin</label>
+          <div class="relative">
+            <input
+              type="date"
+              [(ngModel)]="endDate"
+              (change)="validateDates()"
+              class="w-full h-10 pl-3 pr-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+        </div>
+
+        <button
+          (click)="searchByDates()"
+          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
+          <lucide-angular [img]="Search" [size]="16"></lucide-angular>
+          Buscar
+        </button>
+      </div>
+
+      <!-- Search by Document -->
+      <div *ngIf="selectedTipoBusqueda === 'documento'" class="flex gap-2 items-end flex-shrink-0">
+        <div class="flex flex-col gap-1 w-[180px]">
+          <label class="text-slate-400 text-xs font-medium">Documento</label>
+          <input
+            type="text"
+            [(ngModel)]="documento"
+            placeholder="Ingrese documento"
+            class="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+
+        <button
+          (click)="searchByDocumento()"
+          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
+          <lucide-angular [img]="Search" [size]="16"></lucide-angular>
+          Buscar
+        </button>
+      </div>
+
+      <!-- Search by Phone -->
+      <div *ngIf="selectedTipoBusqueda === 'telefono'" class="flex gap-2 items-end flex-shrink-0">
+        <div class="flex flex-col gap-1 w-[180px]">
+          <label class="text-slate-400 text-xs font-medium">Teléfono</label>
+          <input
+            type="text"
+            [(ngModel)]="telefono"
+            placeholder="Ingrese teléfono"
+            class="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+
+        <button
+          (click)="searchByTelefono()"
+          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
+          <lucide-angular [img]="Search" [size]="16"></lucide-angular>
+          Buscar
+        </button>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-px bg-slate-700 self-stretch flex-shrink-0"></div>
+
+      <!-- Massive Actions -->
+      <div class="flex gap-2 items-end flex-shrink-0">
+        <div class="flex flex-col gap-1">
+          <label class="text-slate-400 text-xs font-medium">Descargar de forma masiva</label>
+          <div class="flex gap-2 items-end flex-shrink-0">
+             <button
+              (click)="massiveDownloadAudios()"
+              [disabled]="isDownloadingMassive || gestiones.length === 0"
+              class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
+              <lucide-angular [img]="Volume2" [size]="16"></lucide-angular>
+              Audios
+            </button>
+
+            <button
+              (click)="massiveDownloadReports()"
+              [disabled]="isDownloadingMassive || gestiones.length === 0"
+              class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
+              <lucide-angular [img]="FileSpreadsheet" [size]="16"></lucide-angular>
+              Reportes
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded text-xs">
+      {{ errorMessage }}
+    </div>
+  </div>
+
+  <!-- Table Section -->
+  <div class="bg-slate-800 p-3 rounded-lg" *ngIf="gestiones.length > 0">
+    <!-- Custom Table -->
+    <div class="overflow-x-auto rounded border border-slate-700">
+      <table class="w-full border-collapse text-xs">
+        <thead class="bg-slate-900">
+          <!-- Filter Row -->
+          <tr class="border-b border-slate-700">
+            <th class="px-2 py-2">
+              <div class="relative">
+                <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
+                <input
+                  type="text"
+                  [(ngModel)]="filterDocumento"
+                  (input)="applyFilters()"
+                  placeholder="DNI..."
+                  class="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+            </th>
+            <th class="px-2 py-2">
+              <app-custom-select
+                [options]="tramos"
+                [(ngModel)]="filterCartera"
+                (selectionChange)="applyFilters()"
+                [compact]="true"
+                placeholder="Filtrar...">
+              </app-custom-select>
+            </th>
+            <th class="px-2 py-2">
+              <div class="relative">
+                <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
+                <input
+                  type="text"
+                  [(ngModel)]="filterTelefono"
+                  (input)="applyFilters()"
+                  placeholder="Teléfono..."
+                  class="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
+              </div>
+            </th>
+            <th class="px-2 py-2"></th>
+            <th class="px-2 py-2"></th>
+            <th class="px-2 py-2">
+              <app-custom-select
+                [options]="resultados"
+                [(ngModel)]="filterResultado"
+                (selectionChange)="applyFilters()"
+                [compact]="true"
+                placeholder="Filtrar...">
+              </app-custom-select>
+            </th>
+            <th class="px-2 py-2"></th>
+            <th class="px-2 py-2 text-center">
+              <button
+                (click)="clearFilters()"
+                class="inline-flex items-center justify-center w-full px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors cursor-pointer"
+                title="Limpiar filtros">
+                <lucide-angular [img]="X" [size]="14"></lucide-angular>
+              </button>
+            </th>
+            <th class="px-2 py-2"></th>
+          </tr>
+
+          <!-- Header Row -->
+          <tr>
+            <th
+              (click)="sort('documento')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              DNI
+              <span *ngIf="sortField === 'documento'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              (click)="sort('cartera')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              Tramo
+              <span *ngIf="sortField === 'cartera'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              (click)="sort('telefono')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              Teléfono
+              <span *ngIf="sortField === 'telefono'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              (click)="sort('fechagestion')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              Fecha
+              <span *ngIf="sortField === 'fechagestion'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              (click)="sort('horagestion')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              Hora
+              <span *ngIf="sortField === 'horagestion'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th
+              (click)="sort('resultado')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              Resultado
+              <span *ngIf="sortField === 'resultado'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap">Solución</th>
+            <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Audio</th>
+            <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Reporte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let gestion of paginatedGestiones" class="transition-colors even:bg-slate-900/30 hover:bg-blue-500/10">
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.documento }}</td>
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.cartera }}</td>
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.telefono }}</td>
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.fechagestion }}</td>
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.horagestion }}</td>
+            <td class="px-2 py-2 border-b border-slate-700">
+              <span class="inline-block px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-[10px] font-medium whitespace-nowrap">
+                {{ gestion.resultado }}
+              </span>
+            </td>
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.solucion }}</td>
+            <td class="px-2 py-2 text-center border-b border-slate-700">
+              <button
+                (click)="downloadAudio(gestion)"
+                class="inline-flex items-center justify-center w-7 h-7 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
+                title="Descargar audio">
+                <lucide-angular [img]="Volume2" [size]="14"></lucide-angular>
+              </button>
+            </td>
+            <td class="px-2 py-2 text-center border-b border-slate-700">
+              <button
+                *ngIf="canDownloadReport(gestion.resultado)"
+                (click)="downloadReport(gestion)"
+                class="inline-flex items-center justify-center w-7 h-7 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/30 cursor-pointer"
+                title="Descargar reporte">
+                <lucide-angular [img]="FileSpreadsheet" [size]="14"></lucide-angular>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-between items-center mt-3 gap-3 overflow-x-auto">
+      <div class="text-slate-400 text-xs whitespace-nowrap flex-shrink-0">
+        Mostrando {{ (currentPage - 1) * pageSize + 1 }} a
+        {{ Math.min(currentPage * pageSize, filteredGestiones.length) }} de
+        {{ filteredGestiones.length }} registros
+      </div>
+
+      <div class="flex gap-1.5 flex-shrink-0">
+        <button
+          (click)="goToPage(1)"
+          [disabled]="currentPage === 1"
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          «
+        </button>
+
+        <button
+          (click)="goToPage(currentPage - 1)"
+          [disabled]="currentPage === 1"
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          ‹
+        </button>
+
+        <button
+          *ngFor="let page of getPageNumbers()"
+          (click)="goToPage(page)"
+          [class.bg-blue-600]="page === currentPage"
+          [class.border-blue-600]="page === currentPage"
+          [class.bg-slate-700]="page !== currentPage"
+          [class.border-slate-600]="page !== currentPage"
+          [class.hover:bg-slate-600]="page !== currentPage"
+          class="min-w-[28px] px-2 py-1 border text-white text-xs rounded transition-colors cursor-pointer">
+          {{ page }}
+        </button>
+
+        <button
+          (click)="goToPage(currentPage + 1)"
+          [disabled]="currentPage === totalPages"
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          ›
+        </button>
+
+        <button
+          (click)="goToPage(totalPages)"
+          [disabled]="currentPage === totalPages"
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          »
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <label class="text-slate-400 text-xs whitespace-nowrap">Filas por página:</label>
+        <div class="w-16">
+          <app-custom-select
+            [options]="pageSizeOptions"
+            [(ngModel)]="pageSize"
+            (selectionChange)="onPageSizeChange($event)">
+          </app-custom-select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="gestiones.length === 0 && !isLoading" class="bg-slate-800 p-8 rounded-lg text-center">
+    <p class="text-slate-400 text-sm">No hay grabaciones para mostrar. Realiza una búsqueda para ver resultados.</p>
+  </div>
+</div>

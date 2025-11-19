@@ -13,6 +13,9 @@ export const environment = {
   whatsappApiUrl: 'https://cobranza.contactototal.com.pe/wsp-api',
   whatsappWsUrl: 'https://cobranza.contactototal.com.pe/wsp-ws',
 
+  // Legacy API - Módulos antiguos (campaña, reportes, SMS, etc.)
+  legacyApiUrl: 'https://huge-only-marmoset.ngrok-free.app/api',
+
   // FreeSWITCH on AWS - WebSocket SIP over SSL (port 7443)
   freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
   freeswitchDomain: 'cobranza.contactototal.com.pe'

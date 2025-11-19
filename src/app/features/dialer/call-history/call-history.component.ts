@@ -54,10 +54,10 @@ export class CallHistoryComponent implements OnChanges {
 
   getStatusIcon(status: string): string {
     switch (status) {
-      case 'COMPLETED': return 'check_circle';
-      case 'FAILED': return 'error';
-      case 'ABANDONED': return 'block';
-      default: return 'help';
+      case 'COMPLETED': return 'check-circle';
+      case 'FAILED': return 'x-circle';
+      case 'ABANDONED': return 'ban';
+      default: return 'alert-circle';
     }
   }
 

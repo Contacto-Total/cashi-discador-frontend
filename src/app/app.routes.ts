@@ -33,6 +33,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'admin/campaigns/generation',
+    loadComponent: () => import('./features/legacy/campaign/pages/campaign-page/campaign-page.component').then(m => m.CampaignPageComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'admin/campaigns/:id/edit',
     loadComponent: () => import('./features/admin/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
     canActivate: [authGuard]
@@ -52,6 +57,79 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/campaign-monitoring/campaign-monitoring.component').then(m => m.CampaignMonitoringComponent),
     canActivate: [authGuard]
   },
+
+  // ========================================
+  // REPORTES LEGACY
+  // ========================================
+  {
+    path: 'reports/contact',
+    loadComponent: () => import('./features/legacy/reports/pages/contact-report/contact-report.component').then(m => m.ContactReportComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'reports/ranking',
+    loadComponent: () => import('./features/legacy/reports/pages/ranking-report/ranking-report.component').then(m => m.RankingReportComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'reports/speech',
+    loadComponent: () => import('./features/legacy/reports/pages/speech-report/speech-report.component').then(m => m.SpeechReportComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'reports/monitoring',
+    loadComponent: () => import('./features/legacy/reports/pages/monitoring-report/monitoring-report.component').then(m => m.MonitoringReportComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'reports/powerbi',
+    loadComponent: () => import('./features/legacy/reports/pages/powerbi-report/powerbi-report.component').then(m => m.PowerbiReportComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'reports/cartera-propia',
+    loadComponent: () => import('./features/legacy/reports/pages/cartera-propia-report/cartera-propia-report.component').then(m => m.CarteraPropiaReportComponent),
+    canActivate: [authGuard]
+  },
+
+  // ========================================
+  // SMS LEGACY
+  // ========================================
+  {
+    path: 'sms/combos',
+    loadComponent: () => import('./features/legacy/sms/pages/combo-list/combo-list.component').then(m => m.ComboListComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'sms/dynamic',
+    loadComponent: () => import('./features/legacy/sms/pages/dyn-query/dyn-query.component').then(m => m.DynQueryComponent),
+    canActivate: [authGuard]
+  },
+
+  // ========================================
+  // OTROS MÓDULOS LEGACY
+  // ========================================
+  {
+    path: 'recordings',
+    loadComponent: () => import('./features/legacy/recordings/pages/recordings-page/recordings-page.component').then(m => m.RecordingsPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'blacklist',
+    loadComponent: () => import('./features/legacy/blacklist/blacklist.component').then(m => m.BlacklistComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'blacklist-main',
+    loadComponent: () => import('./features/blacklist-main/blacklist/pages/blacklist-page/blacklist-page.component').then(m => m.BlacklistMainPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'agreements',
+    loadComponent: () => import('./features/legacy/agreements/agreements.component').then(m => m.AgreementsComponent),
+    canActivate: [authGuard]
+  },
+
   {
     path: 'admin/extensions',
     loadComponent: () => import('./features/admin/extensions-registry/extensions-registry.component').then(m => m.ExtensionsRegistryComponent),

@@ -1,0 +1,6 @@
+<div class="custom-checkbox" [class.disabled]="disabled" (click)="toggle()">
+  <div class="checkbox-box" [class.checked]="checked">
+    <lucide-angular *ngIf="checked" name="check" [size]="16" class="check-icon"></lucide-angular>
+  </div>
+  <span class="checkbox-label" *ngIf="label">{{ label }}</span>
+</div>

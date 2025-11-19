@@ -108,10 +108,93 @@
         </div>
       </div>
 
-      <a routerLink="/admin/campaigns" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'" [title]="isSidebarCollapsed ? 'Campañas' : ''">
+      <!-- Campañas Dropdown -->
+      <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" [class.active]="isCampanasActive()" (click)="toggleCampanasDropdown()" [title]="isSidebarCollapsed ? 'Campañas' : ''">
+          <lucide-angular name="megaphone" [size]="20"></lucide-angular>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Campañas</span>
+          <lucide-angular class="dropdown-arrow" *ngIf="!isSidebarCollapsed" [class.rotated]="isCampanasDropdownOpen" name="chevron-down" [size]="18"></lucide-angular>
+        </button>
+
+        <div class="sidebar-submenu" [class.show]="isCampanasDropdownOpen && !isSidebarCollapsed">
+          <a routerLink="/admin/campaigns" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="list" [size]="18"></lucide-angular>
+            <span class="item-text" title="Gestión de Campañas">Gestión de Campañas</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Reportes Dropdown -->
+      <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" [class.active]="isReportesActive()" (click)="toggleReportesDropdown()" [title]="isSidebarCollapsed ? 'Reportes' : ''">
+          <lucide-angular name="bar-chart-3" [size]="20"></lucide-angular>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Reportes</span>
+          <lucide-angular class="dropdown-arrow" *ngIf="!isSidebarCollapsed" [class.rotated]="isReportesDropdownOpen" name="chevron-down" [size]="18"></lucide-angular>
+        </button>
+
+        <div class="sidebar-submenu" [class.show]="isReportesDropdownOpen && !isSidebarCollapsed">
+          <a routerLink="/reports/contact" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="user-circle" [size]="18"></lucide-angular>
+            <span class="item-text" title="Reporte de Contacto">Reporte de Contacto</span>
+          </a>
+          <a routerLink="/reports/ranking" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="trophy" [size]="18"></lucide-angular>
+            <span class="item-text" title="Reporte de Ranking">Reporte de Ranking</span>
+          </a>
+          <a routerLink="/reports/speech" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="mic" [size]="18"></lucide-angular>
+            <span class="item-text" title="Reporte de Speech">Reporte de Speech</span>
+          </a>
+          <a routerLink="/reports/monitoring" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="activity" [size]="18"></lucide-angular>
+            <span class="item-text" title="Reporte de Monitoreo">Reporte de Monitoreo</span>
+          </a>
+          <a routerLink="/reports/powerbi" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="zap" [size]="18"></lucide-angular>
+            <span class="item-text" title="Reporte PowerBI">Reporte PowerBI</span>
+          </a>
+          <a routerLink="/reports/cartera-propia" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="wallet" [size]="18"></lucide-angular>
+            <span class="item-text" title="PowerBI Cartera Propia">PowerBI Cartera Propia</span>
+          </a>
+        </div>
+      </div>
+
+      <a routerLink="/admin/campaigns/generation" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'" [title]="isSidebarCollapsed ? 'Generación de Campañas' : ''">
         <lucide-angular name="megaphone" [size]="20"></lucide-angular>
-        <span class="item-text" *ngIf="!isSidebarCollapsed">Campañas</span>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Generación de Campañas</span>
       </a>
+
+      <a routerLink="/sms/combos" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Gestión de Tenores' : ''">
+        <lucide-angular name="mail" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Gestión de Tenores</span>
+      </a>
+
+      <a routerLink="/recordings" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Grabaciones' : ''">
+        <lucide-angular name="mic" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Grabaciones</span>
+      </a>
+
+      <a routerLink="/blacklist-main" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Blacklist' : ''">
+        <lucide-angular name="shield-ban" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Blacklist</span>
+      </a>
+
+      <!-- Cartas Dropdown -->
+      <div class="sidebar-group">
+        <button type="button" class="sidebar-item" [class.active]="isCartasActive()" (click)="toggleCartasDropdown()" [title]="isSidebarCollapsed ? 'Cartas' : ''">
+          <lucide-angular name="folder-open" [size]="20"></lucide-angular>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Cartas</span>
+          <lucide-angular class="dropdown-arrow" *ngIf="!isSidebarCollapsed" [class.rotated]="isCartasDropdownOpen" name="chevron-down" [size]="18"></lucide-angular>
+        </button>
+
+        <div class="sidebar-submenu" [class.show]="isCartasDropdownOpen && !isSidebarCollapsed">
+          <a routerLink="/agreements" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="file-text" [size]="18"></lucide-angular>
+            <span class="item-text" title="Acuerdos de Pago">Acuerdos de Pago</span>
+          </a>
+        </div>
+      </div>
 
       <a routerLink="/admin/extensions" routerLinkActive="active" class="sidebar-item" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'" [title]="isSidebarCollapsed ? 'Extensiones' : ''">
         <lucide-angular name="phone-forwarded" [size]="20"></lucide-angular>
@@ -158,3 +241,4 @@
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">
   <router-outlet></router-outlet>
 </div>
+

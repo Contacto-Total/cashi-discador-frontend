@@ -1,0 +1,8 @@
+/* Todos los estilos están ahora en Tailwind CSS (clases en el HTML) */
+
+/* No-scroll global cuando el modal está abierto */
+:global(body.no-scroll) {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}

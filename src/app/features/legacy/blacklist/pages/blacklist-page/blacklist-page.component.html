@@ -1,0 +1,15 @@
+<div class="blacklist-container">
+  <div class="header-section">
+    <h1>Gestión de Blacklist</h1>
+  </div>
+
+  <div class="content-section">
+    <div class="form-wrapper">
+      <app-add-blacklist-form (blacklistAdded)="loadBlacklistRows()"></app-add-blacklist-form>
+    </div>
+
+    <div class="table-wrapper">
+      <app-blacklist-table [blacklistRows]="blacklistRows"></app-blacklist-table>
+    </div>
+  </div>
+</div>

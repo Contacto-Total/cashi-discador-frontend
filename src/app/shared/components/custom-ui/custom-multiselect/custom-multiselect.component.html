@@ -1,0 +1,27 @@
+<div class="custom-multiselect" [class.disabled]="disabled">
+  <div class="multiselect-trigger" (click)="toggleDropdown()">
+    <span class="multiselect-value" [class.placeholder]="selectedValues.length === 0">
+      {{ getDisplayText() }}
+    </span>
+    <lucide-angular name="chevron-down" [size]="20" class="multiselect-icon" [class.open]="isOpen"></lucide-angular>
+  </div>
+
+  <div class="multiselect-dropdown" *ngIf="isOpen">
+    <div class="multiselect-actions" *ngIf="showToggleAll || showClear">
+      <button class="action-btn" *ngIf="showToggleAll" (click)="selectAll()">Seleccionar todos</button>
+      <button class="action-btn" *ngIf="showClear" (click)="clearAll()">Limpiar</button>
+    </div>
+
+    <div class="multiselect-options">
+      <div
+        *ngFor="let option of options"
+        class="multiselect-option"
+        (click)="toggleOption(option)">
+        <div class="option-checkbox" [class.checked]="isSelected(option.value)">
+          <lucide-angular *ngIf="isSelected(option.value)" name="check" [size]="14" class="check-icon"></lucide-angular>
+        </div>
+        <span class="option-label">{{ option.label }}</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,22 @@
+<div class="min-h-screen bg-slate-950 p-4">
+    <!-- Header -->
+    <div class="flex items-center gap-2 mb-3">
+        <div class="w-8 h-8 bg-gradient-to-br from-red-600 to-red-700 rounded-lg flex items-center justify-center">
+            <lucide-angular name="shield-ban" [size]="16" class="text-white"></lucide-angular>
+        </div>
+        <div>
+            <h1 class="text-lg font-bold text-white">Blacklist Principal</h1>
+            <p class="text-xs text-gray-400">Gestión de contactos bloqueados</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <div>
+            <app-add-to-blacklist-form (blacklistAdded)="loadBlacklistRows()"></app-add-to-blacklist-form>
+        </div>
+
+        <div class="table-container">
+            <app-blacklist-table [blacklistRows]="blacklistRows"></app-blacklist-table>
+        </div>
+    </div>
+</div>

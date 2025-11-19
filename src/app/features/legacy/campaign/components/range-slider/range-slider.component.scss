@@ -1,0 +1,18 @@
+// Solo media queries para responsive que no pueden hacerse con Tailwind directamente
+
+@media screen and (max-width: 1400px) {
+  .min-w-\[300px\] {
+    min-width: 200px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .min-w-\[300px\] {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .min-w-\[100px\] {
+    width: 100%;
+  }
+}

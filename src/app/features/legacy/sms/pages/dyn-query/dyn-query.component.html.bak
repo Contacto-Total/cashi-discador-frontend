@@ -1,0 +1,426 @@
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1 class="page-title">Consulta Din�mica</h1>
+  </div>
+
+  <div class="layout">
+    <!-- Main Form -->
+    <div class="main-card">
+      <form [formGroup]="form" class="dynamic-form">
+        <!-- Tramo Section -->
+        <div class="form-field">
+          <label class="form-label">Tramo</label>
+          <select formControlName="tramo" class="form-select">
+            <option value="3">Tramo 3</option>
+            <option value="5">Tramo 5</option>
+            <option value="CONTACTO_TOTAL">Cartera Propia</option>
+          </select>
+        </div>
+
+        <!-- Variables Section -->
+        <h2 class="section-title">
+          <lucide-angular name="settings" [size]="20"></lucide-angular>
+          Variables
+        </h2>
+
+        <div class="chip-groups">
+          <ng-container *ngFor="let g of chipGroups">
+            <!-- wrapper con clase por grupo -->
+            <div class="chip-group" [ngClass]="'chip-group--' + g.key">
+              <h3 class="chip-group-title">{{ g.title }}</h3>
+
+              <div class="chip-container">
+                <button
+                  *ngFor="let c of g.items"
+                  type="button"
+                  class="chip"
+                  [class.active]="isActive(c.key)"
+                  (click)="toggleChip(c.key, c.affectsSelects !== false)"
+                  [attr.aria-pressed]="isActive(c.key)"
+                  [disabled]="isChipDisabled(c.key)"
+                >
+                  {{ c.label }}
+                </button>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+
+
+        <!-- Importe Extra -->
+        <div *ngIf="selectedChips.has('LTD') || selectedChips.has('LTDE') || selectedChips.has('LTD_LTDE')" class="form-field">
+          <label class="form-label">Sumar importe</label>
+          <input type="number" min="0" step="1" class="form-input" formControlName="importeExtra" placeholder="0">
+        </div>
+
+        <!-- Rangos Section -->
+        <h2 class="section-title">
+          <lucide-angular name="filter" [size]="20"></lucide-angular>
+          Rangos
+        </h2>
+
+        <div class="form-field">
+          <button type="button" class="btn btn-secondary" (click)="addRange()">
+            <lucide-angular name="plus" [size]="18"></lucide-angular>
+            A�adir rango
+          </button>
+        </div>
+
+        <div class="range-item"
+             *ngFor="let rg of rangosFA.controls; let i = index"
+             [formGroup]="$any(rg)">
+
+          <!-- Modo intervalo: cuando ambos l�mites est�n activos -->
+          <div *ngIf="$any(rg).get('useMin')?.value && $any(rg).get('useMax')?.value; else singleMode"
+               class="interval-mode">
+
+            <div class="interval-header">
+              <select class="form-select slim interval-field" formControlName="field" title="Campo">
+                <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+              </select>
+
+              <button type="button" class="btn btn-danger btn-small" (click)="removeRange(i)">
+                <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                Borrar
+              </button>
+            </div>
+
+            <div class="interval-expression">
+              <!-- MIN -->
+              <input type="number" class="form-input slim interval-input" formControlName="min" placeholder="m�n">
+
+              <!-- S�mbolo < o d con checkbox -->
+              <label class="interval-check">
+                <input type="checkbox" formControlName="inclusiveMin">
+                <span class="interval-symbol">{{ $any(rg).get('inclusiveMin')?.value ? 'd' : '<' }}</span>
+              </label>
+
+              <!-- VARIABLE -->
+              <div class="interval-variable">
+                {{ fieldLabel($any(rg).get('field')?.value) || 'Variable' }}
+              </div>
+
+              <!-- S�mbolo < o d con checkbox -->
+              <label class="interval-check">
+                <input type="checkbox" formControlName="inclusiveMax">
+                <span class="interval-symbol">{{ $any(rg).get('inclusiveMax')?.value ? 'd' : '<' }}</span>
+              </label>
+
+              <!-- MAX -->
+              <input type="number" class="form-input slim interval-input" formControlName="max" placeholder="m�x">
+            </div>
+
+            <!-- Checkbox para desactivar intervalo -->
+            <div class="interval-footer">
+              <label class="tiny-check">
+                <input type="checkbox"
+                       checked
+                       (change)="$any(rg).get('mode')?.value === 'gt' ? toggleUseMax(i, false) : toggleUseMin(i, false)">
+                <span>Desactivar intervalo</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Modo simple: un solo l�mite -->
+          <ng-template #singleMode>
+            <div class="range-row">
+              <!-- 1) Campo -->
+              <select class="form-select slim col-field" formControlName="field" title="Campo">
+                <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+              </select>
+
+              <!-- 2) Operador -->
+              <select class="form-select slim col-op"
+                      [value]="$any(rg).get('mode')?.value"
+                      (change)="changeOperator(i, $any($event.target).value)"
+                      title="Operador">
+                <option value="gt">&gt;</option>
+                <option value="lt">&lt;</option>
+              </select>
+
+              <!-- 3) Valor �nico -->
+              <div class="value-box col-value">
+                <ng-container [ngSwitch]="$any(rg).get('mode')?.value">
+                  <ng-container *ngSwitchCase="'gt'">
+                    <input type="number" class="form-input slim" formControlName="min" placeholder="valor m�nimo">
+                    <label class="tiny-check">
+                      <input type="checkbox" formControlName="inclusiveMin">
+                      <span>{{ $any(rg).get('inclusiveMin')?.value ? 'e' : '>' }}</span>
+                    </label>
+                  </ng-container>
+                  <ng-container *ngSwitchCase="'lt'">
+                    <input type="number" class="form-input slim" formControlName="max" placeholder="valor m�ximo">
+                    <label class="tiny-check">
+                      <input type="checkbox" formControlName="inclusiveMax">
+                      <span>{{ $any(rg).get('inclusiveMax')?.value ? 'd' : '<' }}</span>
+                    </label>
+                  </ng-container>
+                </ng-container>
+              </div>
+
+              <!-- 4) Borrar -->
+              <button type="button" class="btn btn-danger btn-small col-del" (click)="removeRange(i)">
+                <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                Borrar
+              </button>
+            </div>
+
+            <!-- Checkbox para activar el segundo l�mite -->
+            <div class="hint" style="margin:8px 0 0 0;">
+              <label class="tiny-check">
+                <ng-container *ngIf="$any(rg).get('mode')?.value === 'gt'">
+                  <input type="checkbox"
+                         [checked]="$any(rg).get('useMax')?.value"
+                         (change)="toggleUseMax(i, $any($event.target).checked)">
+                  <span>a�adir l�mite superior</span>
+                </ng-container>
+                <ng-container *ngIf="$any(rg).get('mode')?.value === 'lt'">
+                  <input type="checkbox"
+                         [checked]="$any(rg).get('useMin')?.value"
+                         (change)="toggleUseMin(i, $any($event.target).checked)">
+                  <span>a�adir l�mite inferior</span>
+                </ng-container>
+              </label>
+            </div>
+          </ng-template>
+
+          <!-- Error de orden -->
+          <div *ngIf="$any(rg).errors?.['rangeOrder']" class="hint error-inline">
+            � El valor m�nimo no puede ser mayor que el m�ximo.
+          </div>
+        </div>
+
+
+
+        <!-- Condiciones Section -->
+        <h2 class="section-title">
+          <lucide-angular name="list-checks" [size]="20"></lucide-angular>
+          Condiciones
+        </h2>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_HOY')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS HOY
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_MANANA')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS MA�ANA
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_MANANA2')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS HOY Y MA�ANA
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_ROTAS')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS ROTAS
+          </label>
+        </div>
+
+        <!-- Restricciones Section -->
+        <h2 class="section-title">
+          <lucide-angular name="ban" [size]="20"></lucide-angular>
+          Restricciones
+        </h2>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="noContenido">
+              <span class="checkmark"></span>
+            </div>
+            No Contenido
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="excluirPromesasPeriodoActual">
+              <span class="checkmark"></span>
+            </div>
+            Excluir Promesas periodo actual
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="excluirCompromisos">
+              <span class="checkmark"></span>
+            </div>
+            Excluir Compromisos
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="excluirBlacklist">
+              <span class="checkmark"></span>
+            </div>
+            Excluir Blacklist
+          </label>
+        </div>
+
+        <!-- Plantilla Section -->
+        <h2 class="section-title">
+          <lucide-angular name="file-text" [size]="20"></lucide-angular>
+          Plantilla
+        </h2>
+        <div class="form-field">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" formControlName="nombre" placeholder="Nombre del combo/plantilla">
+        </div>
+
+        <div class="form-field">
+          <label class="form-label label-with-count">
+            <span>Texto de SMS</span>
+          </label>
+          <textarea #tplArea class="form-textarea" formControlName="plantillaTexto" placeholder="Escribe el mensaje y usa las variables"></textarea>
+        </div>
+      </form>
+
+      <!-- Results Table -->
+      <div *ngIf="rows().length" class="results-card">
+        <h2 class="section-title">
+          <lucide-angular name="table" [size]="20"></lucide-angular>
+          Resultado
+        </h2>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th *ngFor="let c of cols()">{{ c }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of rows()">
+                <td *ngFor="let c of cols()">{{ $any(r)[c] }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="aside-card">
+
+      <!-- Controles de vista previa (toggle a la derecha) -->
+      <div class="preview-controls">
+        <span class="mode-label">Manual</span>
+
+        <label class="switch" aria-label="Cambiar modo de previsualizaci�n">
+          <input type="checkbox"
+                 [checked]="previewMode() === 'auto'"
+                 (change)="setMode($any($event.target).checked ? 'auto' : 'manual')">
+          <span class="slider"></span>
+        </label>
+
+        <span class="mode-label">Auto</span>
+
+      </div>
+
+
+
+      <!-- Header de previsualizaci�n con bot�n a la derecha -->
+      <div class="preview-header">
+        <h3 class="preview-title">
+          <lucide-angular name="eye" [size]="18"></lucide-angular>
+          Previsualizaci�n
+        </h3>
+
+        <button type="button"
+                class="btn btn-small btn-ghost"
+                (click)="refreshPreview()"
+                [disabled]="previewMode() !== 'manual' || loadingPreview()">
+          Actualizar
+        </button>
+      </div>
+
+      <div class="preview-box">
+        {{ previewText() || 'Tu SMS aparecer� aqu�&' }}
+      </div>
+
+      <div class="character-meter">
+        <div class="character-bar"
+             [class.warning]="previewText().length > 120"
+             [class.danger]="previewText().length > 160"
+             [style.width.%]="Math.min((previewText().length / 160) * 100, 100)">
+        </div>
+      </div>
+      <div class="character-count">
+        {{ previewText().length }} / 160
+      </div>
+
+
+
+
+      <p class="hint">
+        =� Consejo: mant�n el mensaje bajo 160 caracteres o usa variables cortas.
+      </p>
+
+      <div class="button-group">
+        <button type="button" class="btn btn-primary" (click)="generarGuiado()">
+          <lucide-angular name="send" [size]="18"></lucide-angular>
+          Generar
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="guardarCombo()">
+          <lucide-angular name="save" [size]="18"></lucide-angular>
+          Guardar
+        </button>
+        <button type="button" class="btn btn-danger" (click)="Cancel()">
+          <lucide-angular name="x-circle" [size]="18"></lucide-angular>
+          Cancelar
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal-backdrop" *ngIf="loadingPreview() || loadingModal().isOpen">
+  <div class="modal-dialog loading">
+    <div class="spinner"></div>
+    <p>{{ loadingPreview() ? 'Cargando previsualización...' : loadingModal().data?.title || 'Cargando...' }}</p>
+  </div>
+</div>
+
+<!-- Alert Modal -->
+<div class="modal-backdrop" *ngIf="alertMessage()">
+  <div class="modal-dialog alert">
+    <div class="alert-icon">�</div>
+    <p class="alert-text">{{ alertMessage() }}</p>
+    <button type="button" class="btn btn-primary" (click)="closeAlert()">Entendido</button>
+  </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal-backdrop" *ngIf="successMessage()">
+  <div class="modal-dialog success">
+    <div class="success-icon"></div>
+    <p class="success-text">{{ successMessage() }}</p>
+    <button type="button" class="btn btn-primary" (click)="closeSuccess()">Aceptar</button>
+  </div>
+</div>
+
+<!-- Round Wizard Modal -->
+<div class="modal-backdrop" *ngIf="showRoundWizard()">
+  <div class="modal-dialog wizard">
+    <h3 class="wizard-title">Generaci�n Guiada</h3>
+    <p class="wizard-description">�Cu�ntas rondas deseas generar?</p>
+    <input type="number"
+           class="form-input"
+           [(ngModel)]="roundCount"
+           min="1"
+           max="10"
+           placeholder="N�mero de rondas">
+    <div class="wizard-actions">
+      <button type="button" class="btn btn-secondary" (click)="closeRoundWizard()">Cancelar</button>
+      <button type="button" class="btn btn-primary" (click)="confirmGenerate()">Generar</button>
+    </div>
+  </div>
+</div>

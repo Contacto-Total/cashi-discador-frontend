@@ -765,6 +765,11 @@ body.light-theme .app-container {
     margin-left: 64px;
     width: calc(100% - 64px);
   }
+
+  /* Hide toggle button at same breakpoint as auto-collapse */
+  .sidebar-toggle {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {

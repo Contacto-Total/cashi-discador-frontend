@@ -1,0 +1,54 @@
+<div class="table-container">
+  <table class="blacklist-table">
+    <thead>
+      <tr>
+        <th>Empresa</th>
+        <th>Documento</th>
+        <th>Email</th>
+        <th>Teléfono</th>
+        <th>Fecha de Inicio</th>
+        <th>Fecha de Fin</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngIf="blacklistRows.length === 0" class="empty-row">
+        <td colspan="6" class="empty-cell">
+          <div class="empty-state">
+            <lucide-icon name="inbox"></lucide-icon>
+            <span>No hay registros en la blacklist</span>
+          </div>
+        </td>
+      </tr>
+      <tr *ngFor="let row of paginatedRows" class="data-row">
+        <td>{{ row.empresa }}</td>
+        <td>{{ row.documento }}</td>
+        <td>{{ row.email }}</td>
+        <td>{{ row.telefono }}</td>
+        <td>{{ row.fechaInicio }}</td>
+        <td>{{ row.fechaFin }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="blacklistRows.length > 0" class="pagination">
+    <button
+      class="pagination-btn"
+      (click)="previousPage()"
+      [disabled]="currentPage === 1">
+      <lucide-icon name="chevron-left" size="18"></lucide-icon>
+      Anterior
+    </button>
+
+    <span class="pagination-info">
+      Página {{ currentPage }} de {{ totalPages }}
+    </span>
+
+    <button
+      class="pagination-btn"
+      (click)="nextPage()"
+      [disabled]="currentPage === totalPages">
+      Siguiente
+      <lucide-icon name="chevron-right" size="18"></lucide-icon>
+    </button>
+  </div>
+</div>

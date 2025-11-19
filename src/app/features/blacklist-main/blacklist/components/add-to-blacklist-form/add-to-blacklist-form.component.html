@@ -1,0 +1,56 @@
+<form [formGroup]="formGroup" class="space-y-3">
+  <!-- Inputs en una fila -->
+  <div class="flex gap-3 items-start">
+    <div class="flex-1">
+      <label for="proveedor" class="block text-xs text-slate-400 mb-1.5">Proveedor *</label>
+      <app-custom-select
+        formControlName="selectedProveedor"
+        [options]="proveedores"
+        placeholder="Selecciona un proveedor"
+        id="proveedor">
+      </app-custom-select>
+      <span *ngIf="isFieldInvalid('selectedProveedor')" class="text-xs text-red-400 mt-1 block">
+        {{ getFieldError('selectedProveedor') }}
+      </span>
+    </div>
+
+    <div class="flex-1">
+      <label for="documento" class="block text-xs text-slate-400 mb-1.5">Documento *</label>
+      <input
+        type="text"
+        id="documento"
+        formControlName="documento"
+        class="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        [class.border-red-500]="isFieldInvalid('documento')"
+        placeholder="Ingresa el documento"
+        maxlength="20" />
+      <span *ngIf="isFieldInvalid('documento')" class="text-xs text-red-400 mt-1 block">
+        {{ getFieldError('documento') }}
+      </span>
+    </div>
+
+    <div class="flex-1">
+      <label for="fechaFin" class="block text-xs text-slate-400 mb-1.5">Fecha de Fin *</label>
+      <input
+        type="date"
+        id="fechaFin"
+        formControlName="fechaFin"
+        class="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        [class.border-red-500]="isFieldInvalid('fechaFin')" />
+      <span *ngIf="isFieldInvalid('fechaFin')" class="text-xs text-red-400 mt-1 block">
+        {{ getFieldError('fechaFin') }}
+      </span>
+    </div>
+
+    <div class="pt-6">
+      <button
+        type="button"
+        class="h-10 inline-flex items-center gap-1.5 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white text-sm font-medium rounded transition-all shadow-lg hover:shadow-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        [disabled]="!formGroup.valid || isLoading"
+        (click)="insertarBlacklist()">
+        <span *ngIf="!isLoading">Agregar</span>
+        <span *ngIf="isLoading">Guardando...</span>
+      </button>
+    </div>
+  </div>
+</form>
