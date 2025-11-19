@@ -11,14 +11,13 @@ import { HistoricalRecordingsByTractRequest } from '../models/historical-recordi
   providedIn: 'root'
 })
 export class HistoricalRecordingsService {
-  baseUrl = environment.legacyApiUrl + '/gestion/historica/audios';
+  baseUrl = environment.webServiceUrl + '/gestion/historica/audios';
 
   constructor(private http: HttpClient) { }
 
   httpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     })
   }
 

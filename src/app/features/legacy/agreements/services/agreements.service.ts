@@ -10,21 +10,19 @@ import { AgreementDataResponse } from '../models/agreement-data.response';
 })
 export class AgreementsService {
 
-  baseUrl = environment.legacyApiUrl + '/cartas';
+  baseUrl = environment.webServiceUrl + '/cartas';
 
   constructor(private http: HttpClient) { }
 
   httpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     })
   };
 
   fileHttpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     }),
     responseType: 'blob' as 'json'
   };

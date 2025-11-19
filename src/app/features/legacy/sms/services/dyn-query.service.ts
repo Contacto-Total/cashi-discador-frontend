@@ -13,7 +13,7 @@ export interface PreviewInitReq {
   providedIn: 'root'
 })
 export class DynQueryService {
-  private root = `${environment.legacyApiUrl}/plantillas/sms`;
+  private root = `${environment.webServiceUrl}/plantillas/sms`;
   private dynamicQueryUrl = `${this.root}/dynamic-query`;
   private exportUrl = `${this.root}/export`;
   private precheckUrl = `${this.root}/precheck`;

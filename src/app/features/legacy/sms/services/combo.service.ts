@@ -9,12 +9,11 @@ import { Row, SmsPrecheckResult } from '../models/dyn-query.model';
   providedIn: 'root'
 })
 export class ComboService {
-  private baseUrl = `${environment.legacyApiUrl}/combos`;
+  private baseUrl = `${environment.webServiceUrl}/combos`;
 
   private httpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     })
   };
 

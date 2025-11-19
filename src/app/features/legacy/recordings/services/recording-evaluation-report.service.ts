@@ -8,14 +8,13 @@ import { CreateRecordingEvaluationReportRequest } from '../models/create-recordi
   providedIn: 'root'
 })
 export class RecordingEvaluationReportService {
-  baseUrl = environment.legacyApiUrl + '/audio/evaluation';
+  baseUrl = environment.webServiceUrl + '/audio/evaluation';
 
   constructor(private http: HttpClient) { }
 
   fileHttpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     }),
     responseType: 'blob' as 'json'
   }

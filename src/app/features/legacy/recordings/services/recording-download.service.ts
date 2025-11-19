@@ -8,14 +8,13 @@ import { RecordingDownloadRequest } from '../models/recording-download.request';
   providedIn: 'root'
 })
 export class RecordingDownloadService {
-  baseUrl = environment.legacyApiUrl + '/recording';
+  baseUrl = environment.webServiceUrl + '/recording';
 
   constructor(private http: HttpClient) { }
 
   fileHttpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     }),
     responseType: 'blob' as 'json'
   }

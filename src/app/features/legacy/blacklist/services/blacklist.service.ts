@@ -9,14 +9,13 @@ import { BlacklistResponse } from '../models/blacklist.response';
   providedIn: 'root'
 })
 export class BlacklistService {
-  private baseUrl = environment.legacyApiUrl + '/blacklist';
+  private baseUrl = environment.webServiceUrl + '/blacklist';
 
   constructor(private http: HttpClient) {}
 
   private httpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420'
+      'Content-Type': 'application/json'
     })
   };
 

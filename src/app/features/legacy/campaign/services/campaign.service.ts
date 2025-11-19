@@ -8,12 +8,11 @@ import { CampaignReportRequest } from '../models/campaign-report.request';
   providedIn: 'root'
 })
 export class CampaignService {
-  private apiUrl = environment.legacyApiUrl;
+  private apiUrl = environment.webServiceUrl;
 
   private httpOptions = {
     headers: new HttpHeaders({
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     })
   };
 
@@ -25,7 +24,7 @@ export class CampaignService {
 
   getFileToCampaña(request: CampaignReportRequest): Observable<Blob> {
     const headers = new HttpHeaders({
-      'ngrok-skip-browser-warning': '69420',
+      'Content-Type': 'application/json'
     });
 
     return this.http.post(`${this.apiUrl}/campaign/generate`, request, {
