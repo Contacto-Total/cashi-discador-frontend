@@ -6,6 +6,9 @@ export const environment = {
   gatewayUrl: 'https://cobranza.contactototal.com.pe/api',
   wsUrl: 'https://cobranza.contactototal.com.pe/ws',
 
+  // Web Service Backend (catch-all route)
+  webServiceUrl: 'https://cobranza.contactototal.com.pe/web-service',
+
   // Tipificación Backend
   tipificacionUrl: 'https://cobranza.contactototal.com.pe/api/tipificacion/v1',
 

@@ -13,7 +13,7 @@ export interface CartaCesionResponse {
   providedIn: 'root'
 })
 export class CartaCesionService {
-  private apiUrl = `${environment.gatewayUrl}/web-service/cartas-cesion`;
+  private apiUrl = `${environment.webServiceUrl}/cartas-cesion`;
 
   constructor(private http: HttpClient) {}
 
