@@ -456,7 +456,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   isCartasActive(): boolean {
-    return this.router.url.includes('/agreements');
+    return this.router.url.includes('/agreements') ||
+           this.router.url.includes('/admin/cartas-cesion');
   }
 
   toggleTheme(): void {
