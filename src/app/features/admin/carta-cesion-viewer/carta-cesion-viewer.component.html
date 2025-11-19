@@ -10,96 +10,114 @@
     </div>
   </div>
 
-  <!-- Search Card -->
-  <mat-card class="search-card">
-    <mat-card-content>
-      <div class="search-section">
-        <!-- Search Input -->
-        <mat-form-field appearance="outline" class="dni-input">
-          <mat-label>DNI del Cliente</mat-label>
-          <input
-            matInput
-            [(ngModel)]="dni"
-            placeholder="Ej: 12345678"
-            maxlength="8"
-            (keyup.enter)="onEnter()"
-            [disabled]="searching">
-          <lucide-angular matPrefix name="hash" [size]="18"></lucide-angular>
-        </mat-form-field>
+  <!-- Two Column Layout -->
+  <div class="two-column-layout">
+    <!-- Left Column: Search -->
+    <div class="left-column">
+      <mat-card class="search-card">
+        <mat-card-content>
+          <div class="search-section">
+            <!-- Search Input -->
+            <mat-form-field appearance="outline" class="dni-input">
+              <mat-label>DNI del Cliente</mat-label>
+              <input
+                matInput
+                [(ngModel)]="dni"
+                placeholder="Ej: 12345678"
+                maxlength="8"
+                (keyup.enter)="onEnter()"
+                [disabled]="searching">
+              <lucide-angular matPrefix name="hash" [size]="18"></lucide-angular>
+            </mat-form-field>
 
-        <!-- Search Button -->
-        <button
-          mat-raised-button
-          color="primary"
-          (click)="searchCarta()"
-          [disabled]="searching || !dni || dni.length !== 8"
-          class="search-button">
-          <lucide-angular name="search" [size]="18"></lucide-angular>
-          <span>{{ searching ? 'Buscando...' : 'Buscar' }}</span>
-        </button>
+            <!-- Search Button -->
+            <button
+              mat-raised-button
+              color="primary"
+              (click)="searchCarta()"
+              [disabled]="searching || !dni || dni.length !== 8"
+              class="search-button">
+              <lucide-angular name="search" [size]="18"></lucide-angular>
+              <span>{{ searching ? 'Buscando...' : 'Buscar' }}</span>
+            </button>
 
-        <!-- Clear Button -->
-        <button
-          *ngIf="cartaFound"
-          mat-stroked-button
-          (click)="clearSearch()"
-          class="clear-button">
-          <lucide-angular name="x" [size]="18"></lucide-angular>
-          <span>Limpiar</span>
-        </button>
-      </div>
-
-      <!-- Error Message -->
-      <div *ngIf="errorMessage" class="error-message">
-        <lucide-angular name="alert-circle" [size]="18"></lucide-angular>
-        <span>{{ errorMessage }}</span>
-      </div>
-
-      <!-- Info Message -->
-      <div *ngIf="!cartaFound && !searching && !errorMessage" class="info-message">
-        <lucide-angular name="info" [size]="18"></lucide-angular>
-        <span>Ingrese el DNI del cliente (8 dígitos) para buscar su carta de cesión</span>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- PDF Viewer Card -->
-  <mat-card *ngIf="cartaFound" class="pdf-viewer-card">
-    <mat-card-content>
-      <!-- PDF Info Header -->
-      <div class="pdf-info-header">
-        <div class="pdf-info">
-          <lucide-angular name="file-check" [size]="20" style="color: #10b981;"></lucide-angular>
-          <div class="pdf-info-text">
-            <h3>Carta Encontrada</h3>
-            <p>DNI: {{ cartaData?.dni }} - {{ cartaData?.filename }}</p>
+            <!-- Clear Button -->
+            <button
+              *ngIf="cartaFound"
+              mat-stroked-button
+              (click)="clearSearch()"
+              class="clear-button">
+              <lucide-angular name="x" [size]="18"></lucide-angular>
+              <span>Limpiar</span>
+            </button>
           </div>
-        </div>
 
-        <!-- Download Button -->
-        <button
-          mat-raised-button
-          (click)="downloadPdf()"
-          class="download-button">
-          <lucide-angular name="download" [size]="18"></lucide-angular>
-          <span>Descargar PDF</span>
-        </button>
-      </div>
+          <!-- Error Message -->
+          <div *ngIf="errorMessage" class="error-message">
+            <lucide-angular name="alert-circle" [size]="18"></lucide-angular>
+            <span>{{ errorMessage }}</span>
+          </div>
 
-      <!-- Loading Spinner -->
-      <div *ngIf="loading" class="loading-container">
-        <mat-spinner diameter="40"></mat-spinner>
-        <p>Cargando PDF...</p>
-      </div>
+          <!-- Info Message -->
+          <div *ngIf="!cartaFound && !searching && !errorMessage" class="info-message">
+            <lucide-angular name="info" [size]="18"></lucide-angular>
+            <span>Ingrese el DNI del cliente (8 dígitos) para buscar su carta de cesión</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
 
-      <!-- PDF Iframe -->
-      <div *ngIf="!loading && pdfUrl" class="pdf-container">
-        <iframe
-          [src]="pdfUrl"
-          class="pdf-iframe"
-          frameborder="0">
-        </iframe>
-      </div>
-    </mat-card-content>
-  </mat-card>
+    <!-- Right Column: PDF Viewer -->
+    <div class="right-column">
+      <mat-card class="pdf-viewer-card" *ngIf="cartaFound">
+        <mat-card-content>
+          <!-- PDF Info Header -->
+          <div class="pdf-info-header">
+            <div class="pdf-info">
+              <lucide-angular name="file-check" [size]="20" style="color: #10b981;"></lucide-angular>
+              <div class="pdf-info-text">
+                <h3>Carta Encontrada</h3>
+                <p>DNI: {{ cartaData?.dni }} - {{ cartaData?.filename }}</p>
+              </div>
+            </div>
+
+            <!-- Download Button -->
+            <button
+              mat-raised-button
+              (click)="downloadPdf()"
+              class="download-button">
+              <lucide-angular name="download" [size]="18"></lucide-angular>
+              <span>Descargar PDF</span>
+            </button>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div *ngIf="loading" class="loading-container">
+            <mat-spinner diameter="40"></mat-spinner>
+            <p>Cargando PDF...</p>
+          </div>
+
+          <!-- PDF Iframe -->
+          <div *ngIf="!loading && pdfUrl" class="pdf-container">
+            <iframe
+              [src]="pdfUrl"
+              class="pdf-iframe"
+              frameborder="0">
+            </iframe>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Placeholder when no PDF -->
+      <mat-card class="pdf-placeholder-card" *ngIf="!cartaFound">
+        <mat-card-content>
+          <div class="placeholder-content">
+            <lucide-angular name="file-search" [size]="64"></lucide-angular>
+            <h3>Vista Previa del PDF</h3>
+            <p>Busque una carta de cesión para visualizarla aquí</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
 </div>

@@ -63,24 +63,99 @@ body.dark-theme .header-text p {
 }
 
 /* ========================================
+   TWO COLUMN LAYOUT
+   ======================================== */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.left-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 120px);
+}
+
+/* ========================================
    CARDS
    ======================================== */
 .search-card,
-.pdf-viewer-card {
-  margin-bottom: 16px;
+.pdf-viewer-card,
+.pdf-placeholder-card {
+  margin-bottom: 0;
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 12px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  height: 100%;
 }
 
 :root.dark .search-card,
 :root.dark .pdf-viewer-card,
+:root.dark .pdf-placeholder-card,
 body.dark-theme .search-card,
-body.dark-theme .pdf-viewer-card {
+body.dark-theme .pdf-viewer-card,
+body.dark-theme .pdf-placeholder-card {
   background-color: #1e293b !important;
   border: 1px solid #334155 !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* PDF Placeholder */
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+  color: #94a3b8;
+}
+
+:root.dark .placeholder-content,
+body.dark-theme .placeholder-content {
+  color: #64748b;
+}
+
+.placeholder-content lucide-icon {
+  color: #cbd5e1;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+:root.dark .placeholder-content lucide-icon,
+body.dark-theme .placeholder-content lucide-icon {
+  color: #334155;
+}
+
+.placeholder-content h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 8px 0;
+}
+
+:root.dark .placeholder-content h3,
+body.dark-theme .placeholder-content h3 {
+  color: #94a3b8;
+}
+
+.placeholder-content p {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+:root.dark .placeholder-content p,
+body.dark-theme .placeholder-content p {
+  color: #64748b;
 }
 
 /* ========================================
@@ -88,14 +163,12 @@ body.dark-theme .pdf-viewer-card {
    ======================================== */
 .search-section {
   display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: flex-start;
-  flex-wrap: wrap;
 }
 
 .dni-input {
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
 }
 
 /* Login-style input wrapper for DNI */
@@ -156,9 +229,11 @@ body.dark-theme ::ng-deep .carta-cesion-container .mat-mdc-form-field.mat-focuse
 
 .search-button,
 .clear-button {
-  height: 56px;
+  height: 48px;
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   font-weight: 500;
   font-size: 14px;
@@ -319,7 +394,8 @@ body.dark-theme .loading-container p {
    ======================================== */
 .pdf-container {
   width: 100%;
-  height: 550px;
+  height: calc(100vh - 280px);
+  min-height: 600px;
   background: #f3f4f6;
   border-radius: 8px;
   overflow: hidden;
@@ -395,22 +471,24 @@ body.dark-theme ::ng-deep .carta-cesion-container .mat-mdc-form-field-icon-prefi
 /* ========================================
    RESPONSIVE
    ======================================== */
+@media (max-width: 1024px) {
+  .two-column-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .right-column {
+    min-height: 500px;
+  }
+
+  .pdf-container {
+    height: 500px;
+    min-height: 500px;
+  }
+}
+
 @media (max-width: 768px) {
   .carta-cesion-container {
     padding: 12px;
-  }
-
-  .search-section {
-    flex-direction: column;
-  }
-
-  .dni-input {
-    width: 100%;
-  }
-
-  .search-button,
-  .clear-button {
-    width: 100%;
   }
 
   .pdf-info-header {
@@ -424,6 +502,7 @@ body.dark-theme ::ng-deep .carta-cesion-container .mat-mdc-form-field-icon-prefi
 
   .pdf-container {
     height: 450px;
+    min-height: 450px;
   }
 
   .header-text h1 {
@@ -432,5 +511,9 @@ body.dark-theme ::ng-deep .carta-cesion-container .mat-mdc-form-field-icon-prefi
 
   .header-text p {
     font-size: 11px;
+  }
+
+  .placeholder-content {
+    padding: 60px 20px;
   }
 }
