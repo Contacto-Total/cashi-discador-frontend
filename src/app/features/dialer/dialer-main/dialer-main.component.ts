@@ -15,9 +15,6 @@ import { Contact } from '../../../core/models/contact.model';
 import { Call, CallEvent, CallEventType, CallStatus, MakeCallRequest } from '../../../core/models/call.model';
 import { AgentState } from '../../../core/models/agent-status.model';
 import { SoftphoneComponent } from '../softphone/softphone.component';
-import { ContactCardComponent } from '../contact-card/contact-card.component';
-import { CallNotesComponent } from '../call-notes/call-notes.component';
-import { CallHistoryComponent } from '../call-history/call-history.component';
 
 @Component({
   selector: 'app-dialer-main',
@@ -28,10 +25,7 @@ import { CallHistoryComponent } from '../call-history/call-history.component';
     MatButtonModule,
     LucideAngularModule,
     MatChipsModule,
-    SoftphoneComponent,
-    ContactCardComponent,
-    CallNotesComponent,
-    CallHistoryComponent
+    SoftphoneComponent
   ],
   templateUrl: './dialer-main.component.html',
   styleUrls: ['./dialer-main.component.css']
@@ -42,7 +36,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   currentContact: Contact | null = null;
   currentCall: Call | null = null;
   agentStatus: AgentState = AgentState.DISPONIBLE;
-  campaignId: number | null = null;
+  campaignId: number | null = null; // No campaign required for manual dialing
 
   callState: CallState = CallState.IDLE;
   callDuration = 0;
@@ -52,7 +46,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   showNotesForm = false;
 
   private subscriptions: Subscription[] = [];
-  public agentId: number;
+  public agentId: number = 0;
 
   constructor(
       public  authService: AuthService,
@@ -61,15 +55,21 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     private websocketService: WebsocketService,
     private webrtcService: WebrtcService,
     private agentService: AgentService
-  ) {
-    this.agentId = this.authService.getCurrentUserId() || 0;
-  }
+  ) {}
 
   ngOnInit(): void {
+    // Get agentId from currentUser$ Observable
+    this.authService.currentUser$.subscribe(user => {
+      if (user) {
+        this.agentId = user.id;
+        console.log('Agent ID loaded:', this.agentId);
+      }
+    });
+
     this.initializeDialer();
     this.subscribeToWebSocket();
     this.subscribeToWebRTC();
-    this.loadNextContact();
+    // Don't load next contact in manual dialer - user enters number manually
   }
 
   ngOnDestroy(): void {
@@ -191,6 +191,54 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
           // Initiate WebRTC call
           this.webrtcService.makeCall(this.currentContact!.phoneNumber).then(() => {
+            console.log('WebRTC call initiated');
+            this.loading = false;
+          }).catch((error) => {
+            console.error('WebRTC call failed:', error);
+            this.loading = false;
+          });
+        },
+        error: (error) => {
+          console.error('Error making call:', error);
+          alert('Failed to make call: ' + (error.error?.message || 'Unknown error'));
+          this.loading = false;
+        }
+      });
+    } catch (error) {
+      console.error('Error in makeCall:', error);
+      this.loading = false;
+    }
+  }
+
+  async makeCallWithNumber(phoneNumber: string): Promise<void> {
+    this.loading = true;
+
+    const request: MakeCallRequest = {
+      agentId: this.agentId,
+      phoneNumber: phoneNumber,
+      contactId: undefined,
+      campaignId: this.campaignId || undefined
+    };
+
+    try {
+      // Make call via backend
+      this.callService.makeCall(request).subscribe({
+        next: (call) => {
+          this.currentCall = call;
+          this.callState = CallState.CONNECTING;
+
+          // Create a temporary contact for display
+          this.currentContact = {
+            id: 0,
+            phoneNumber: phoneNumber,
+            firstName: '',
+            lastName: '',
+            campaignId: 0,
+            status: 'PENDING'
+          } as Contact;
+
+          // Initiate WebRTC call
+          this.webrtcService.makeCall(phoneNumber).then(() => {
             console.log('WebRTC call initiated');
             this.loading = false;
           }).catch((error) => {

@@ -1,59 +1,28 @@
-<div class="dialer-container">
-  <!-- Header Section -->
-  <div class="dialer-header">
-    <div class="agent-info">
-      <lucide-angular name="user" class="icon"></lucide-angular>
-      <span class="agent-name">{{ (authService.currentUser$ | async)?.firstName }} {{ (authService.currentUser$ | async)?.lastName }}</span>
-      <mat-chip [style.background-color]="getAgentStatusColor()" class="status-chip">
-        {{ getAgentStatusLabel() }}
-      </mat-chip>
+<div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
+  <!-- Header -->
+  <div class="flex items-center gap-2 p-4">
+    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
+      <lucide-angular name="phone" [size]="16" class="text-white"></lucide-angular>
     </div>
-    <div class="call-timer">
-      <lucide-angular name="clock" class="icon"></lucide-angular>
-      <span class="timer-text">{{ formatTimer(callDuration) }}</span>
+    <div>
+      <h1 class="text-lg font-bold text-gray-900 dark:text-white">Marcación Manual</h1>
+      <p class="text-xs text-gray-500 dark:text-gray-400">{{ (authService.currentUser$ | async)?.firstName || 'Agente' }}</p>
     </div>
   </div>
 
-  <!-- Main Dialer Content -->
-  <div class="dialer-content">
-    <!-- Left Column: Contact Card -->
-    <div class="left-column">
-      <app-contact-card
-        [contact]="currentContact"
-        [loading]="loading"
-        [canCall]="canMakeCall()"
-        (callClicked)="makeCall()"
-        (skipClicked)="skipContact()">
-      </app-contact-card>
-
-      <!-- Call History -->
-      <app-call-history
-        [agentId]="agentId"
-        [refreshTrigger]="currentCall?.id">
-      </app-call-history>
-    </div>
-
-    <!-- Right Column: Softphone -->
-    <div class="right-column">
+  <!-- Main Content -->
+  <div class="flex-1 flex items-center justify-center p-4">
+    <div class="w-full max-w-md">
       <app-softphone
         [callState]="callState"
         [duration]="callDuration"
         [isMuted]="isMuted()"
         [phoneNumber]="currentContact?.phoneNumber || ''"
-        [canHangup]="isInCall()"
-        (hangupClicked)="hangupCall()"
-        (muteClicked)="toggleMute()">
+        [canHangup]="false"
+        (muteClicked)="toggleMute()"
+        (callClicked)="makeCallWithNumber($event)">
       </app-softphone>
     </div>
-  </div>
-
-  <!-- Call Notes Section (shown after call ends) -->
-  <div class="notes-section" *ngIf="showNotesForm && currentCall">
-    <app-call-notes
-      [call]="currentCall"
-      [contact]="currentContact"
-      (notesComplete)="onNotesComplete()">
-    </app-call-notes>
   </div>
 
   <!-- Hidden audio element for remote stream -->

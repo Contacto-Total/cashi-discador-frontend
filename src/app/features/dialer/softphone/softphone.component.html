@@ -1,106 +1,103 @@
-<mat-card class="softphone-card">
-  <mat-card-header>
-    <mat-card-title>Softphone</mat-card-title>
-  </mat-card-header>
-
-  <mat-card-content>
-    <div class="phone-display">
-      <div class="status-indicator" [style.background-color]="getStatusColor()">
-        <lucide-angular [name]="callState === CallState.ACTIVE ? 'phone-call' : 'phone'" class="status-icon"></lucide-angular>
+<!-- Retro Phone Design -->
+<div class="phone-body">
+  <!-- Screen Display - Interactive -->
+  <div class="phone-screen">
+    <div class="screen-content">
+      <!-- Status Icon -->
+      <div class="flex items-center justify-center gap-1 mb-2">
+        <lucide-angular
+          [name]="callState === CallState.ACTIVE ? 'phone-call' : 'phone'"
+          [size]="14"
+          class="text-green-600 animate-pulse">
+        </lucide-angular>
+        <span class="screen-status">{{ getStatusText() }}</span>
       </div>
 
-      <div class="status-text" [style.color]="getStatusColor()">
-        {{ getStatusText() }}
+      <!-- Dialed Number Display with Animation -->
+      <div class="screen-number" *ngIf="callState === CallState.IDLE && dialedNumber">
+        <span class="number-display">{{ dialedNumber }}</span>
+        <span class="cursor-blink">|</span>
       </div>
 
-      <div class="phone-number" *ngIf="phoneNumber">
-        {{ phoneNumber }}
+      <!-- Placeholder when empty -->
+      <div class="screen-placeholder" *ngIf="callState === CallState.IDLE && !dialedNumber">
+        Marque un número
       </div>
 
-      <div class="call-duration" *ngIf="isActive()">
+      <!-- Active Call Info -->
+      <div *ngIf="phoneNumber && callState !== CallState.IDLE" class="screen-call-info">
+        <div class="screen-number-small">{{ phoneNumber }}</div>
+      </div>
+
+      <!-- Call Duration -->
+      <div class="screen-duration" *ngIf="isActive()">
         {{ formatDuration(duration) }}
       </div>
     </div>
+  </div>
 
-    <div class="control-buttons">
-      <button
-        mat-mini-fab
-        color="warn"
-        (click)="onHangup()"
-        [disabled]="!canHangup"
-        matTooltip="Hang up">
-        <lucide-angular name="phone-off" class="icon"></lucide-angular>
-      </button>
+  <!-- Control Buttons Row -->
+  <div class="control-row" *ngIf="isActive()">
+    <button
+      *ngIf="canHangup"
+      (click)="onHangup()"
+      class="retro-btn retro-btn-red"
+      [disabled]="!canHangup">
+      <lucide-angular name="phone-off" [size]="16" class="text-white"></lucide-angular>
+    </button>
 
-      <button
-        mat-mini-fab
-        [color]="isMuted ? 'accent' : 'primary'"
-        (click)="onMute()"
-        [disabled]="!isActive()"
-        matTooltip="{{ isMuted ? 'Unmute' : 'Mute' }}">
-        <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" class="icon"></lucide-angular>
-      </button>
+    <button
+      (click)="onMute()"
+      [class.retro-btn-yellow]="isMuted"
+      [class.retro-btn-blue]="!isMuted"
+      class="retro-btn"
+      [disabled]="!isActive()">
+      <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="16" class="text-white"></lucide-angular>
+    </button>
 
-      <button
-        mat-mini-fab
-        (click)="onHold()"
-        [disabled]="!isActive()"
-        matTooltip="Hold">
-        <lucide-angular name="pause" class="icon"></lucide-angular>
-      </button>
-    </div>
+    <button
+      (click)="onHold()"
+      class="retro-btn retro-btn-gray"
+      [disabled]="!isActive()">
+      <lucide-angular name="pause" [size]="16" class="text-white"></lucide-angular>
+    </button>
+  </div>
 
-    <div class="dtmf-keypad">
-      <div class="keypad-title">Dialpad</div>
-      <div class="keypad-grid">
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('1')" [disabled]="!isActive()">
-          <span class="digit">1</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('2')" [disabled]="!isActive()">
-          <span class="digit">2</span>
-          <span class="letters">ABC</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('3')" [disabled]="!isActive()">
-          <span class="digit">3</span>
-          <span class="letters">DEF</span>
-        </button>
+  <!-- DTMF Keypad - Retro Style -->
+  <div class="keypad-container">
+    <button
+      *ngFor="let key of ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']"
+      (click)="onDTMF(key)"
+      class="retro-key">
+      <span class="key-digit">{{ key }}</span>
+      <span class="key-letters" *ngIf="getLetters(key)">{{ getLetters(key) }}</span>
+    </button>
+  </div>
 
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('4')" [disabled]="!isActive()">
-          <span class="digit">4</span>
-          <span class="letters">GHI</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('5')" [disabled]="!isActive()">
-          <span class="digit">5</span>
-          <span class="letters">JKL</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('6')" [disabled]="!isActive()">
-          <span class="digit">6</span>
-          <span class="letters">MNO</span>
-        </button>
+  <!-- Action Buttons -->
+  <div class="action-buttons" *ngIf="callState === CallState.IDLE">
+    <button
+      (click)="onBackspace()"
+      class="action-btn action-btn-secondary"
+      [disabled]="!dialedNumber">
+      <lucide-angular name="delete-back" [size]="18"></lucide-angular>
+      <span class="action-label">Borrar</span>
+    </button>
 
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('7')" [disabled]="!isActive()">
-          <span class="digit">7</span>
-          <span class="letters">PQRS</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('8')" [disabled]="!isActive()">
-          <span class="digit">8</span>
-          <span class="letters">TUV</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('9')" [disabled]="!isActive()">
-          <span class="digit">9</span>
-          <span class="letters">WXYZ</span>
-        </button>
+    <button
+      (click)="onCall()"
+      class="action-btn action-btn-call"
+      [disabled]="!dialedNumber">
+      <lucide-angular name="phone" [size]="20" class="text-white"></lucide-angular>
+      <span class="action-label-white">Llamar</span>
+    </button>
 
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('*')" [disabled]="!isActive()">
-          <span class="digit">*</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('0')" [disabled]="!isActive()">
-          <span class="digit">0</span>
-        </button>
-        <button mat-raised-button class="dtmf-key" (click)="onDTMF('#')" [disabled]="!isActive()">
-          <span class="digit">#</span>
-        </button>
-      </div>
-    </div>
-  </mat-card-content>
-</mat-card>
+    <button
+      (click)="onClear()"
+      class="action-btn action-btn-secondary"
+      [disabled]="!dialedNumber">
+      <lucide-angular name="x-circle" [size]="18"></lucide-angular>
+      <span class="action-label">Limpiar</span>
+    </button>
+  </div>
+</div>

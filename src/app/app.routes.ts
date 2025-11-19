@@ -9,7 +9,7 @@ export const routes: Routes = [
   },
   {
     path: 'dialer',
-    loadComponent: () => import('./features/dialer/test-softphone/test-softphone.component').then(m => m.TestSoftphoneComponent),
+    loadComponent: () => import('./features/dialer/dialer-main/dialer-main.component').then(m => m.DialerMainComponent),
     canActivate: [authGuard]
   },
   {
@@ -201,6 +201,11 @@ export const routes: Routes = [
   {
     path: 'admin/maintenance/blacklist',
     loadComponent: () => import('./maintenance/components/blacklist-maintenance/blacklist-maintenance.component').then(m => m.BlacklistMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/cartas-cesion',
+    loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
     canActivate: [authGuard, adminGuard]
   },
 
