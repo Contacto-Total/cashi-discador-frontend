@@ -467,4 +467,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   isDarkMode(): boolean {
     return this.themeService.isDarkMode();
   }
+
+  isAdminOrSupervisor(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    return currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERVISOR';
+  }
 }

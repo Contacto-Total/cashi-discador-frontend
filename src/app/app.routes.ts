@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { adminOrSupervisorGuard } from './core/guards/admin-or-supervisor.guard';
 
 export const routes: Routes = [
   {
@@ -35,7 +36,7 @@ export const routes: Routes = [
   {
     path: 'admin/campaigns/generation',
     loadComponent: () => import('./features/legacy/campaign/pages/campaign-page/campaign-page.component').then(m => m.CampaignPageComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
     path: 'admin/campaigns/:id/edit',
@@ -206,7 +207,7 @@ export const routes: Routes = [
   {
     path: 'admin/cartas-cesion',
     loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
-    canActivate: [authGuard, adminGuard]
+    canActivate: [authGuard, adminOrSupervisorGuard]
   },
 
   {
