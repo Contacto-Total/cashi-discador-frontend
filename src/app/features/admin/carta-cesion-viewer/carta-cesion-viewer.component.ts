@@ -94,12 +94,22 @@ export class CartaCesionViewerComponent implements OnInit {
   }
 
   /**
-   * Cargar PDF para visualización
+   * Cargar PDF para visualización (usando blob con autenticación)
    */
   loadPdf(filename: string): void {
-    const url = this.cartaCesionService.getViewUrl(filename);
-    this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
-    this.loading = false;
+    this.cartaCesionService.downloadPdf(filename).subscribe({
+      next: (blob) => {
+        // Crear URL temporal del blob para mostrarlo en el iframe
+        const url = window.URL.createObjectURL(blob);
+        this.pdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+        this.loading = false;
+      },
+      error: (error) => {
+        console.error('Error cargando PDF:', error);
+        this.loading = false;
+        this.errorMessage = 'Error al cargar el PDF para visualización';
+      }
+    });
   }
 
   /**
