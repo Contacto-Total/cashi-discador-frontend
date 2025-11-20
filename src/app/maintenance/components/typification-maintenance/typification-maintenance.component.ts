@@ -14,11 +14,13 @@ import { Portfolio } from '../../models/portfolio.model';
 import { Tenant } from '../../models/tenant.model';
 import { TypificationFormDialogComponent } from '../typification-form-dialog/typification-form-dialog.component';
 import { CategoryFormDialogComponent } from '../category-form-dialog/category-form-dialog.component';
+import { TypificationAdditionalFieldsDialogComponent } from '../typification-additional-fields-dialog/typification-additional-fields-dialog.component';
+import { AdditionalFieldV2 } from '../../models/typification-v2.model';
 
 @Component({
   selector: 'app-typification-maintenance',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, TypificationFormDialogComponent, CategoryFormDialogComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, TypificationFormDialogComponent, CategoryFormDialogComponent, TypificationAdditionalFieldsDialogComponent],
   templateUrl: './typification-maintenance.component.html',
   styleUrls: ['./typification-maintenance.component.scss']
 })
@@ -31,8 +33,11 @@ export class TypificationMaintenanceComponent implements OnInit {
   showSuccess = signal(false);
   showClassificationDialog = signal(false);
   showCategoryDialog = signal(false);
+  showAdditionalFieldsDialog = signal(false);
   classificationDialogMode = signal<'create' | 'edit'>('create');
   selectedClassificationForEdit = signal<TypificationCatalogV2 | undefined>(undefined);
+  selectedTypificationForFields = signal<TypificationCatalogV2 | undefined>(undefined);
+  additionalFieldsForEdit = signal<AdditionalFieldV2[]>([]);
   parentClassificationForCreate = signal<TypificationCatalogV2 | undefined>(undefined);
 
   classificationTypes = Object.values(ClassificationTypeV2);
@@ -334,6 +339,59 @@ export class TypificationMaintenanceComponent implements OnInit {
     this.parentClassificationForCreate.set(undefined);
     this.showSuccessMessage();
     this.loadTypifications();
+  }
+
+  // Additional Fields dialog methods
+  openAdditionalFieldsDialog(typification: TypificationCatalogV2) {
+    this.selectedTypificationForFields.set(typification);
+    this.loading.set(true);
+
+    // Cargar campos adicionales existentes
+    this.classificationService.getAdditionalFields(typification.id).subscribe({
+      next: (fields) => {
+        this.additionalFieldsForEdit.set(fields);
+        this.showAdditionalFieldsDialog.set(true);
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading additional fields:', error);
+        this.additionalFieldsForEdit.set([]);
+        this.showAdditionalFieldsDialog.set(true);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  closeAdditionalFieldsDialog() {
+    this.showAdditionalFieldsDialog.set(false);
+    this.selectedTypificationForFields.set(undefined);
+    this.additionalFieldsForEdit.set([]);
+  }
+
+  onAdditionalFieldsSaved(fields: AdditionalFieldV2[]) {
+    const typificationId = this.selectedTypificationForFields()?.id;
+    if (!typificationId) return;
+
+    console.log('Guardando campos adicionales:', fields);
+
+    // TODO: Implementar endpoint para guardar campos adicionales
+    // Por ahora solo cerramos el diálogo
+    this.showAdditionalFieldsDialog.set(false);
+    this.selectedTypificationForFields.set(undefined);
+    this.additionalFieldsForEdit.set([]);
+    this.showSuccessMessage();
+
+    // Aquí deberías llamar al servicio para guardar:
+    // this.classificationService.saveAdditionalFields(typificationId, fields).subscribe({
+    //   next: () => {
+    //     this.showSuccessMessage();
+    //     this.closeAdditionalFieldsDialog();
+    //   },
+    //   error: (error) => {
+    //     console.error('Error saving additional fields:', error);
+    //     alert('Error al guardar los campos adicionales');
+    //   }
+    // });
   }
 
   deleteTypification(typification: TypificationCatalogV2) {

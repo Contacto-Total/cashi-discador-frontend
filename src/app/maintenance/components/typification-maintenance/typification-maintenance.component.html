@@ -164,6 +164,17 @@
     </app-category-form-dialog>
   }
 
+  <!-- Additional Fields Dialog -->
+  @if (showAdditionalFieldsDialog()) {
+    <app-typification-additional-fields-dialog
+      [isOpen]="showAdditionalFieldsDialog()"
+      [typificationName]="selectedTypificationForFields()?.nombre || ''"
+      [fields]="additionalFieldsForEdit()"
+      (save)="onAdditionalFieldsSaved($event)"
+      (close)="closeAdditionalFieldsDialog()">
+    </app-typification-additional-fields-dialog>
+  }
+
   <!-- Loading State -->
   @if (loading()) {
     <div class="flex-1 flex items-center justify-center">
@@ -335,6 +346,13 @@
               title="Agregar hijo"
               class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
 
+            </button>
+
+            <button
+              (click)="openAdditionalFieldsDialog(node.typification); $event.stopPropagation()"
+              title="Configurar Campos Adicionales"
+              class="w-6 h-6 flex items-center justify-center text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors">
+              <lucide-angular name="settings" [size]="14"></lucide-angular>
             </button>
 
             <button
@@ -541,6 +559,13 @@
             title="Agregar hijo"
             class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
 
+          </button>
+
+          <button
+            (click)="openAdditionalFieldsDialog(node.typification); $event.stopPropagation()"
+            title="Configurar Campos Adicionales"
+            class="w-6 h-6 flex items-center justify-center text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded transition-colors">
+            <lucide-angular name="settings" [size]="14"></lucide-angular>
           </button>
 
           <button
