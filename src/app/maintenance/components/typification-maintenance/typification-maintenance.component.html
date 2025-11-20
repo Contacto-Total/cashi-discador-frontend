@@ -187,11 +187,21 @@
           </div>
         } @else {
           <!-- Tree Nodes -->
-          <div class="space-y-1">
-            @for (node of treeNodes; track node.typification.id; let idx = $index) {
-              <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0, index: idx, siblings: treeNodes, parent: null}"></ng-container>
-            }
-          </div>
+          @if (!selectedType) {
+            <!-- Vista completa con jerarquía (sin filtro) -->
+            <div class="space-y-1">
+              @for (node of treeNodes; track node.typification.id; let idx = $index) {
+                <ng-container [ngTemplateOutlet]="treeNodeTemplate" [ngTemplateOutletContext]="{node: node, depth: 0, index: idx, siblings: treeNodes, parent: null}"></ng-container>
+              }
+            </div>
+          } @else {
+            <!-- Vista filtrada plana (con breadcrumb) -->
+            <div class="space-y-1">
+              @for (node of getFilteredNodes(treeNodes); track node.typification.id) {
+                <ng-container [ngTemplateOutlet]="flatNodeTemplate" [ngTemplateOutletContext]="{node: node}"></ng-container>
+              }
+            </div>
+          }
         }
       </div>
     </div>
@@ -201,129 +211,230 @@
 <!-- Tree Node Template (Recursive) -->
 <ng-template #treeNodeTemplate let-node="node" let-depth="depth" let-index="index" let-siblings="siblings" let-parent="parent">
   <div class="typification-item-wrapper" [style.margin-left.px]="depth * 16">
-    <!-- Node Content -->
-    <div
-      class="typification-item flex items-center justify-between px-2 py-1.5 rounded border-l-3 transition-colors mb-1"
-      [class.bg-green-50]="node.config?.isEnabled"
-      [class.dark:bg-green-950/40]="node.config?.isEnabled"
-      [class.hover:bg-green-100]="node.config?.isEnabled"
-      [class.dark:hover:bg-green-900/50]="node.config?.isEnabled"
-      [class.bg-slate-100]="!node.config?.isEnabled"
-      [class.dark:bg-slate-800/50]="!node.config?.isEnabled"
-      [class.hover:bg-slate-200]="!node.config?.isEnabled"
-      [class.dark:hover:bg-slate-700/50]="!node.config?.isEnabled"
-      [class.border-l-green-500]="node.config?.isEnabled"
-      [class.dark:border-l-green-600]="node.config?.isEnabled"
-      [class.border-l-slate-400]="!node.config?.isEnabled"
-      [class.dark:border-l-slate-600]="!node.config?.isEnabled">
 
-      <div class="flex items-center gap-2 flex-1 min-w-0">
-        <!-- Botones de Reordenamiento -->
-        <div class="flex-shrink-0 flex flex-col gap-0.5">
-          <button
-            (click)="moveUp(node, siblings, index, parent); $event.stopPropagation()"
-            [disabled]="index === 0"
-            [class.opacity-30]="index === 0"
-            [class.cursor-not-allowed]="index === 0"
-            title="Subir"
-            class="w-5 h-5 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:hover:bg-transparent disabled:hover:text-slate-500 font-bold text-xs">
-            ▲
-          </button>
-          <button
-            (click)="moveDown(node, siblings, index, parent); $event.stopPropagation()"
-            [disabled]="index === siblings.length - 1"
-            [class.opacity-30]="index === siblings.length - 1"
-            [class.cursor-not-allowed]="index === siblings.length - 1"
-            title="Bajar"
-            class="w-5 h-5 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors disabled:hover:bg-transparent disabled:hover:text-slate-500 font-bold text-xs">
-            ▼
-          </button>
-        </div>
+    <!-- MODO NORMAL (No editando) -->
+    @if (!isEditing(node.config?.id)) {
+      <div
+        class="typification-item flex items-center justify-between px-2 rounded border-l-3 mb-1 transition-all duration-300"
+        [class.py-1.5]="matchesTypeFilter(node.typification)"
+        [class.py-0.5]="!matchesTypeFilter(node.typification)"
+        [class.opacity-40]="!matchesTypeFilter(node.typification)"
+        [class.scale-95]="!matchesTypeFilter(node.typification)"
+        [class.bg-green-50]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.dark:bg-green-950/40]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.hover:bg-green-100]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.dark:hover:bg-green-900/50]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.bg-slate-100]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.dark:bg-slate-800/50]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.hover:bg-slate-200]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.dark:hover:bg-slate-700/50]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.bg-gray-50]="!matchesTypeFilter(node.typification)"
+        [class.dark:bg-gray-900/20]="!matchesTypeFilter(node.typification)"
+        [class.border-l-green-500]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.dark:border-l-green-600]="node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.border-l-slate-400]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.dark:border-l-slate-600]="!node.config?.estaHabilitada && matchesTypeFilter(node.typification)"
+        [class.border-l-gray-300]="!matchesTypeFilter(node.typification)"
+        [class.dark:border-l-gray-700]="!matchesTypeFilter(node.typification)"
+        [class.ring-2]="hasCustomizations(node.config) && matchesTypeFilter(node.typification)"
+        [class.ring-purple-400]="hasCustomizations(node.config) && matchesTypeFilter(node.typification)"
+        [class.dark:ring-purple-600]="hasCustomizations(node.config) && matchesTypeFilter(node.typification)">
 
-        <!-- Expand/Collapse Button -->
-        @if (node.children && node.children.length > 0) {
-          <button
-            (click)="toggleNode(node.typification.id); $event.stopPropagation()"
-            class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
-            @if (isExpanded(node.typification.id)) {
-              
-            } @else {
-              
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <!-- Expand/Collapse Button -->
+          @if (node.children && node.children.length > 0) {
+            <button
+              (click)="toggleNode(node.typification.id); $event.stopPropagation()"
+              class="flex-shrink-0 w-5 h-5 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors">
+              @if (isExpanded(node.typification.id)) {
+
+              } @else {
+
+              }
+            </button>
+          } @else {
+            <div class="w-5 flex-shrink-0"></div>
+          }
+
+          <!-- Icon con color -->
+          <div
+            class="flex-shrink-0 rounded flex items-center justify-center text-white font-bold shadow-sm transition-all"
+            [class.w-8]="matchesTypeFilter(node.typification)"
+            [class.h-8]="matchesTypeFilter(node.typification)"
+            [class.text-xs]="matchesTypeFilter(node.typification)"
+            [class.w-6]="!matchesTypeFilter(node.typification)"
+            [class.h-6]="!matchesTypeFilter(node.typification)"
+            [class.text-[9px]]="!matchesTypeFilter(node.typification)"
+            [style.background-color]="getEffectiveValue(node.config, node.typification, 'color') || '#6B7280'">
+            {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
+          </div>
+
+          <!-- Name and Type -->
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold truncate transition-all"
+                 [class.text-sm]="matchesTypeFilter(node.typification)"
+                 [class.text-slate-800]="matchesTypeFilter(node.typification)"
+                 [class.dark:text-slate-100]="matchesTypeFilter(node.typification)"
+                 [class.text-xs]="!matchesTypeFilter(node.typification)"
+                 [class.text-gray-500]="!matchesTypeFilter(node.typification)"
+                 [class.dark:text-gray-500]="!matchesTypeFilter(node.typification)">
+              {{ getEffectiveValue(node.config, node.typification, 'nombre') }}
+            </div>
+            @if (matchesTypeFilter(node.typification)) {
+              <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                {{ getTypeLabel(node.typification.tipoClasificacion) }}
+                @if (hasCustomizations(node.config)) {
+                  <span class="ml-1 px-1 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded text-[9px] font-bold">PERSONALIZADO</span>
+                }
+              </div>
             }
-          </button>
-        } @else {
-          <div class="w-5 flex-shrink-0"></div>
-        }
-
-        <!-- Icon con color de fondo -->
-        <div
-          class="flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-white text-[10px] font-bold"
-          [style.background-color]="node.typification.colorHex || '#6B7280'">
-          {{ node.typification.code?.substring(0, 2) || 'NA' }}
-        </div>
-
-        <!-- Name and Type -->
-        <div class="flex-1 min-w-0">
-          <div class="font-semibold text-slate-800 dark:text-slate-100 text-xs truncate">
-            {{ node.config?.effectiveName || node.typification.name }}
           </div>
-          <div class="text-[9px] text-slate-500 dark:text-slate-400 truncate">
-            {{ getTypeLabel(node.typification.classificationType) }}
+
+          <!-- Level Badge -->
+          <div class="flex-shrink-0 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded font-bold transition-all"
+               [class.text-[10px]]="matchesTypeFilter(node.typification)"
+               [class.text-[8px]]="!matchesTypeFilter(node.typification)">
+            N{{ node.level }}
           </div>
         </div>
 
-        <!-- Level Badge -->
-        <div class="flex-shrink-0 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-[9px] font-bold">
-          N{{ node.level }}
-        </div>
+        <!-- Actions -->
+        @if (matchesTypeFilter(node.typification)) {
+          <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
+            <!-- Enable/Disable Toggle -->
+            <label class="relative inline-flex items-center cursor-pointer"
+                   (click)="$event.stopPropagation()"
+                   [title]="node.config?.estaHabilitada ? 'Desactivar' : 'Activar'">
+              <input
+                type="checkbox"
+                [checked]="node.config?.estaHabilitada === true"
+                (change)="toggleTypification(node, $event); $event.stopPropagation()"
+                class="sr-only peer">
+              <div class="w-9 h-5 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
 
-        @if (node.config?.customName) {
-          <div class="flex-shrink-0 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 rounded text-[9px] font-bold">
-            Cust
+            <!-- Personalizar Button -->
+            <button
+              (click)="startEdit(node, $event)"
+              title="Personalizar para esta cartera"
+              class="px-2 py-1 text-[10px] bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition-colors">
+              EDITAR
+            </button>
+
+            @if (hasCustomizations(node.config)) {
+              <button
+                (click)="resetCustomization(node, $event)"
+                title="Resetear a valores del catálogo"
+                class="w-6 h-6 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors">
+
+              </button>
+            }
+
+            <button
+              (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
+              title="Agregar hijo"
+              class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
+
+            </button>
+
+            <button
+              (click)="openEditDialog(node.typification); $event.stopPropagation()"
+              title="Editar catálogo global"
+              class="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
+
+            </button>
+
+            <button
+              (click)="deleteTypification(node.typification); $event.stopPropagation()"
+              title="Eliminar"
+              [disabled]="node.typification.esSistema"
+              [class.opacity-30]="node.typification.esSistema"
+              [class.cursor-not-allowed]="node.typification.esSistema"
+              class="w-6 h-6 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
+
+            </button>
           </div>
         }
       </div>
+    }
 
-      <!-- Actions -->
-      <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
-        <!-- Enable/Disable Toggle -->
-        <label class="relative inline-flex items-center cursor-pointer"
-               (click)="$event.stopPropagation()"
-               [title]="node.config?.isEnabled ? 'Desactivar visualización' : 'Activar visualización'">
-          <input
-            type="checkbox"
-            [checked]="node.config?.isEnabled === true"
-            (change)="toggleTypification(node, $event); $event.stopPropagation()"
-            class="sr-only peer">
-          <div class="w-8 h-4 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-green-500"></div>
-        </label>
+    <!-- MODO EDICIÓN INLINE -->
+    @if (isEditing(node.config?.id) && editingForm()) {
+      <div class="bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-lg p-3 mb-2 shadow-lg">
+        <div class="flex items-start gap-3">
+          <!-- Color Picker -->
+          <div class="flex-shrink-0">
+            <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Color</label>
+            <div class="flex gap-1 flex-wrap max-w-[120px]">
+              @for (color of presetColors; track color.hex) {
+                <button
+                  type="button"
+                  (click)="editingForm()!.colorPersonalizado = color.hex"
+                  [class]="'w-6 h-6 rounded border-2 transition-all ' +
+                           (editingForm()!.colorPersonalizado === color.hex ? 'border-gray-900 dark:border-white ring-2 ring-purple-500' : 'border-gray-300')"
+                  [style.background-color]="color.hex"
+                  [title]="color.name">
+                </button>
+              }
+            </div>
+          </div>
 
-        <!-- Action Buttons -->
-        <button
-          (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
-          title="Agregar hijo"
-          class="w-5 h-5 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-          
-        </button>
+          <!-- Form Fields -->
+          <div class="flex-1 space-y-2">
+            <!-- Nombre -->
+            <div>
+              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Nombre Personalizado</label>
+              <input
+                type="text"
+                [(ngModel)]="editingForm()!.nombrePersonalizado"
+                placeholder="Nombre"
+                class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
+            </div>
 
-        <button
-          (click)="openEditDialog(node.typification); $event.stopPropagation()"
-          title="Editar"
-          class="w-5 h-5 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-          
-        </button>
+            <!-- Descripción -->
+            <div>
+              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Descripción (Opcional)</label>
+              <textarea
+                [(ngModel)]="editingForm()!.descripcionPersonalizada"
+                rows="2"
+                placeholder="Descripción"
+                class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
+              </textarea>
+            </div>
 
-        <button
-          (click)="deleteTypification(node.typification); $event.stopPropagation()"
-          title="Eliminar"
-          [disabled]="node.typification.isSystem"
-          [class.opacity-30]="node.typification.isSystem"
-          [class.cursor-not-allowed]="node.typification.isSystem"
-          class="w-5 h-5 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-          
-        </button>
+            <!-- Orden -->
+            <div>
+              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Orden</label>
+              <input
+                type="number"
+                [(ngModel)]="editingForm()!.ordenVisualizacionPersonalizado"
+                min="0"
+                step="10"
+                class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex-shrink-0 flex flex-col gap-1">
+            <button
+              (click)="saveEdit(node)"
+              [disabled]="savingEdit()"
+              class="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors flex items-center gap-1">
+              @if (savingEdit()) {
+                <div class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              }
+              GUARDAR
+            </button>
+            <button
+              (click)="cancelEdit()"
+              [disabled]="savingEdit()"
+              class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors">
+              CANCELAR
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    }
 
     <!-- Children Nodes (Recursive) -->
     @if (isExpanded(node.typification.id) && node.children && node.children.length > 0) {
@@ -333,5 +444,202 @@
         }
       </div>
     }
+  </div>
+</ng-template>
+
+<!-- Flat Node Template (para vista filtrada con breadcrumb) -->
+<ng-template #flatNodeTemplate let-node="node">
+  <div class="typification-item-wrapper">
+
+    <!-- MODO NORMAL (No editando) -->
+    @if (!isEditing(node.config?.id)) {
+      <div
+        class="typification-item flex items-center justify-between px-3 py-2 rounded border-l-3 mb-1 transition-all duration-300"
+        [class.bg-green-50]="node.config?.estaHabilitada"
+        [class.dark:bg-green-950/40]="node.config?.estaHabilitada"
+        [class.hover:bg-green-100]="node.config?.estaHabilitada"
+        [class.dark:hover:bg-green-900/50]="node.config?.estaHabilitada"
+        [class.bg-slate-100]="!node.config?.estaHabilitada"
+        [class.dark:bg-slate-800/50]="!node.config?.estaHabilitada"
+        [class.hover:bg-slate-200]="!node.config?.estaHabilitada"
+        [class.dark:hover:bg-slate-700/50]="!node.config?.estaHabilitada"
+        [class.border-l-green-500]="node.config?.estaHabilitada"
+        [class.dark:border-l-green-600]="node.config?.estaHabilitada"
+        [class.border-l-slate-400]="!node.config?.estaHabilitada"
+        [class.dark:border-l-slate-600]="!node.config?.estaHabilitada"
+        [class.ring-2]="hasCustomizations(node.config)"
+        [class.ring-purple-400]="hasCustomizations(node.config)"
+        [class.dark:ring-purple-600]="hasCustomizations(node.config)">
+
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <!-- Icon con color -->
+          <div
+            class="flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white text-sm font-bold shadow-sm"
+            [style.background-color]="getEffectiveValue(node.config, node.typification, 'color') || '#6B7280'">
+            {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
+          </div>
+
+          <!-- Name with Breadcrumb -->
+          <div class="flex-1 min-w-0">
+            <!-- Breadcrumb del padre (si existe) -->
+            @if (getParentBreadcrumb(node)) {
+              <div class="text-[10px] text-gray-500 dark:text-gray-400 truncate mb-0.5">
+                {{ getParentBreadcrumb(node) }}
+              </div>
+            }
+
+            <!-- Nombre principal -->
+            <div class="font-semibold text-slate-800 dark:text-slate-100 text-base truncate">
+              {{ getEffectiveValue(node.config, node.typification, 'nombre') }}
+            </div>
+
+            <!-- Badge de personalización -->
+            @if (hasCustomizations(node.config)) {
+              <span class="inline-block mt-0.5 px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 rounded text-[9px] font-bold">PERSONALIZADO</span>
+            }
+          </div>
+
+          <!-- Level Badge -->
+          <div class="flex-shrink-0 px-2 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded text-xs font-bold">
+            N{{ node.level }}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-1.5 ml-3 flex-shrink-0">
+          <!-- Enable/Disable Toggle -->
+          <label class="relative inline-flex items-center cursor-pointer"
+                 (click)="$event.stopPropagation()"
+                 [title]="node.config?.estaHabilitada ? 'Desactivar' : 'Activar'">
+            <input
+              type="checkbox"
+              [checked]="node.config?.estaHabilitada === true"
+              (change)="toggleTypification(node, $event); $event.stopPropagation()"
+              class="sr-only peer">
+            <div class="w-9 h-5 bg-gray-300 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+          </label>
+
+          <!-- Personalizar Button -->
+          <button
+            (click)="startEdit(node, $event)"
+            title="Personalizar para esta cartera"
+            class="px-2 py-1 text-[10px] bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition-colors">
+            EDITAR
+          </button>
+
+          @if (hasCustomizations(node.config)) {
+            <button
+              (click)="resetCustomization(node, $event)"
+              title="Resetear a valores del catálogo"
+              class="w-6 h-6 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors">
+
+            </button>
+          }
+
+          <button
+            (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
+            title="Agregar hijo"
+            class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
+
+          </button>
+
+          <button
+            (click)="openEditDialog(node.typification); $event.stopPropagation()"
+            title="Editar catálogo global"
+            class="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
+
+          </button>
+
+          <button
+            (click)="deleteTypification(node.typification); $event.stopPropagation()"
+            title="Eliminar"
+            [disabled]="node.typification.esSistema"
+            [class.opacity-30]="node.typification.esSistema"
+            [class.cursor-not-allowed]="node.typification.esSistema"
+            class="w-6 h-6 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
+
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- MODO EDICIÓN INLINE (mismo que el tree template) -->
+    @if (isEditing(node.config?.id) && editingForm()) {
+      <div class="bg-purple-50 dark:bg-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-lg p-3 mb-2 shadow-lg">
+        <div class="flex items-start gap-3">
+          <!-- Color Picker -->
+          <div class="flex-shrink-0">
+            <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Color</label>
+            <div class="flex gap-1 flex-wrap max-w-[120px]">
+              @for (color of presetColors; track color.hex) {
+                <button
+                  type="button"
+                  (click)="editingForm()!.colorPersonalizado = color.hex"
+                  [class]="'w-6 h-6 rounded border-2 transition-all ' +
+                           (editingForm()!.colorPersonalizado === color.hex ? 'border-gray-900 dark:border-white ring-2 ring-purple-500' : 'border-gray-300')"
+                  [style.background-color]="color.hex"
+                  [title]="color.name">
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Form Fields -->
+          <div class="flex-1 space-y-2">
+            <!-- Nombre -->
+            <div>
+              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Nombre Personalizado</label>
+              <input
+                type="text"
+                [(ngModel)]="editingForm()!.nombrePersonalizado"
+                placeholder="Nombre"
+                class="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
+            </div>
+
+            <!-- Descripción -->
+            <div>
+              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Descripción (Opcional)</label>
+              <textarea
+                [(ngModel)]="editingForm()!.descripcionPersonalizada"
+                rows="2"
+                placeholder="Descripción"
+                class="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100">
+              </textarea>
+            </div>
+
+            <!-- Orden -->
+            <div>
+              <label class="block text-[10px] font-bold text-gray-700 dark:text-gray-200 mb-1">Orden</label>
+              <input
+                type="number"
+                [(ngModel)]="editingForm()!.ordenVisualizacionPersonalizado"
+                min="0"
+                step="10"
+                class="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100" />
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex-shrink-0 flex flex-col gap-1">
+            <button
+              (click)="saveEdit(node)"
+              [disabled]="savingEdit()"
+              class="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors flex items-center gap-1">
+              @if (savingEdit()) {
+                <div class="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              }
+              GUARDAR
+            </button>
+            <button
+              (click)="cancelEdit()"
+              [disabled]="savingEdit()"
+              class="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-400 text-white rounded font-semibold text-xs transition-colors">
+              CANCELAR
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
   </div>
 </ng-template>

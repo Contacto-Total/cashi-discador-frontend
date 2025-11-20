@@ -399,14 +399,20 @@ export class RangeSliderComponent implements OnInit {
   }
 
   printRanges() {
+    console.log('🚀 printRanges() llamado');
+
     if (this.isGenerating) {
+      console.log('⏸️ Ya se está generando, saliendo...');
       return;
     }
 
+    console.log('✅ Validando rangos...');
     if (!this.validateRanges()) {
+      console.log('❌ Validación falló');
       return;
     }
 
+    console.log('✅ Validación exitosa, iniciando generación...');
     this.isGenerating = true;
 
     const contactoDirectoRangesToConsult = this.contactoDirectoRanges.map(range => ({

@@ -143,20 +143,23 @@ export class TypificationV2Service {
     const params = new HttpParams().set('userId', userId?.toString() || '1');
 
     if (subPortfolioId && portfolioId) {
+      // Subportfolio level
       return this.http.post<TenantTypificationConfigV2>(
         `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}/typification/${typificationId}/enable`,
         {},
         { params }
       );
     } else if (portfolioId) {
+      // Portfolio level (no subportfolio)
       return this.http.post<TenantTypificationConfigV2>(
-        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/0/typification/${typificationId}/enable`,
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/typification/${typificationId}/enable`,
         {},
         { params }
       );
     } else {
+      // Tenant level (no portfolio/subportfolio)
       return this.http.post<TenantTypificationConfigV2>(
-        `${this.configUrl}/tenant/${tenantId}/portfolio/0/subportfolio/0/typification/${typificationId}/enable`,
+        `${this.configUrl}/tenant/${tenantId}/typification/${typificationId}/enable`,
         {},
         { params }
       );
@@ -173,20 +176,23 @@ export class TypificationV2Service {
     const params = new HttpParams().set('userId', userId?.toString() || '1');
 
     if (subPortfolioId && portfolioId) {
+      // Subportfolio level
       return this.http.post<TenantTypificationConfigV2>(
         `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}/typification/${typificationId}/disable`,
         {},
         { params }
       );
     } else if (portfolioId) {
+      // Portfolio level (no subportfolio)
       return this.http.post<TenantTypificationConfigV2>(
-        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/0/typification/${typificationId}/disable`,
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/typification/${typificationId}/disable`,
         {},
         { params }
       );
     } else {
+      // Tenant level (no portfolio/subportfolio)
       return this.http.post<TenantTypificationConfigV2>(
-        `${this.configUrl}/tenant/${tenantId}/portfolio/0/subportfolio/0/typification/${typificationId}/disable`,
+        `${this.configUrl}/tenant/${tenantId}/typification/${typificationId}/disable`,
         {},
         { params }
       );
@@ -198,11 +204,11 @@ export class TypificationV2Service {
   // ========================================
 
   getAllTenants(): Observable<Tenant[]> {
-    return this.http.get<Tenant[]>(`${environment.gatewayUrl}/tenants`);
+    return this.http.get<Tenant[]>(`${environment.webServiceUrl}/v1/system-config/tenants`);
   }
 
   getPortfoliosByTenant(tenantId: number): Observable<Portfolio[]> {
-    return this.http.get<Portfolio[]>(`${environment.gatewayUrl}/tenants/${tenantId}/carteras`);
+    return this.http.get<Portfolio[]>(`${environment.webServiceUrl}/v1/system-config/tenants/${tenantId}/portfolios`);
   }
 
   getSubPortfoliosByPortfolio(portfolioId: number): Observable<any[]> {
