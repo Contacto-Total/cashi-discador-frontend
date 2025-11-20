@@ -205,11 +205,15 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     this.typifications.forEach(typification => {
       const node = nodeMap.get(typification.id)!;
-      const parentId = typification.tipificacionPadre?.id;
+      // Usar idTipificacionPadre si está disponible, sino tipificacionPadre?.id
+      const parentId = typification.idTipificacionPadre || typification.tipificacionPadre?.id;
       if (parentId) {
         const parent = nodeMap.get(parentId);
         if (parent) {
           parent.children.push(node);
+        } else {
+          // Si no encuentra el padre, lo agrega como raíz (fallback)
+          roots.push(node);
         }
       } else {
         roots.push(node);
