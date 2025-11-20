@@ -114,7 +114,7 @@ export class TypificationMaintenanceComponent implements OnInit {
       next: (configs) => {
         this.tenantConfigs = configs;
         // Extract typifications from tenant configs
-        this.typifications = configs.map(config => config.typification);
+        this.typifications = configs.map(config => config.tipificacion);
         this.buildTree();
         this.loading.set(false);
       },

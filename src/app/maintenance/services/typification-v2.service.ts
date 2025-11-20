@@ -79,20 +79,38 @@ export class TypificationV2Service {
   // Tenant Configuration Management (V2)
   // ========================================
 
-  getTenantClassifications(tenantId: number, portfolioId?: number, subPortfolioId?: number): Observable<TenantTypificationConfigV2[]> {
-    if (subPortfolioId && portfolioId) {
+  getTenantClassifications(tenantId: number, portfolioId?: number, includeDisabled?: boolean): Observable<TenantTypificationConfigV2[]> {
+    let params = new HttpParams();
+    if (includeDisabled) {
+      params = params.set('includeDisabled', 'true');
+    }
+
+    if (portfolioId) {
       return this.http.get<TenantTypificationConfigV2[]>(
-        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}`
-      );
-    } else if (portfolioId) {
-      return this.http.get<TenantTypificationConfigV2[]>(
-        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}`
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}`,
+        { params }
       );
     } else {
       return this.http.get<TenantTypificationConfigV2[]>(
-        `${this.configUrl}/tenant/${tenantId}`
+        `${this.configUrl}/tenant/${tenantId}`,
+        { params }
       );
     }
+  }
+
+  getTenantClassificationsByType(
+    tenantId: number,
+    type: ClassificationTypeV2,
+    portfolioId?: number
+  ): Observable<TenantTypificationConfigV2[]> {
+    let params = new HttpParams();
+    if (portfolioId) {
+      params = params.set('portfolioId', portfolioId.toString());
+    }
+    return this.http.get<TenantTypificationConfigV2[]>(
+      `${this.configUrl}/tenant/${tenantId}/type/${type}`,
+      { params }
+    );
   }
 
   getEffectiveTypifications(

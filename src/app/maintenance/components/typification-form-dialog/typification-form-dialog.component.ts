@@ -2,25 +2,25 @@ import { Component, EventEmitter, Input, Output, signal, OnInit } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { TypificationService } from '../../services/typification.service';
+import { TypificationV2Service } from '../../services/typification-v2.service';
 import {
-  TypificationCatalog,
-  ClassificationType,
-  CreateTypificationCommand,
-  UpdateTypificationCommand
-} from '../../models/typification.model';
+  TypificationCatalogV2,
+  ClassificationTypeV2,
+  CreateTypificationCommandV2,
+  UpdateTypificationCommandV2
+} from '../../models/typification-v2.model';
 import { FieldConfigDialogComponent } from '../field-config-dialog/field-config-dialog.component';
 import { MetadataSchema } from '../../models/field-config.model';
 
-interface ClassificationForm {
-  code: string;
-  name: string;
-  classificationType: ClassificationType | '';
-  description: string;
-  displayOrder: number;
-  iconName: string;
-  colorHex: string;
-  isActive: boolean;
+interface ClassificationFormV2 {
+  codigo: string;
+  nombre: string;
+  tipoClasificacion: ClassificationTypeV2 | '';
+  descripcion: string;
+  ordenVisualizacion: number;
+  iconoSugerido: string;
+  colorSugerido: string;
+  estaActiva: boolean;
   metadataSchema?: MetadataSchema | null;
 }
 
@@ -62,15 +62,15 @@ interface ClassificationForm {
               </label>
               <input
                 type="text"
-                [(ngModel)]="form.code"
+                [(ngModel)]="form.codigo"
                 [disabled]="isEditMode"
                 placeholder="Ej: CPC, ACP, PPR"
                 maxlength="20"
                 class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-sm"
-                [class.border-red-500]="errors()['code']"
+                [class.border-red-500]="errors()['codigo']"
               />
-              @if (errors()['code']) {
-                <p class="text-red-500 text-xs mt-1">{{ errors()['code'] }}</p>
+              @if (errors()['codigo']) {
+                <p class="text-red-500 text-xs mt-1">{{ errors()['codigo'] }}</p>
               }
             </div>
 
@@ -80,14 +80,14 @@ interface ClassificationForm {
               </label>
               <input
                 type="text"
-                [(ngModel)]="form.name"
+                [(ngModel)]="form.nombre"
                 placeholder="Ej: Contacto con Cliente, Promesa de Pago"
                 maxlength="255"
                 class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm"
-                [class.border-red-500]="errors()['name']"
+                [class.border-red-500]="errors()['nombre']"
               />
-              @if (errors()['name']) {
-                <p class="text-red-500 text-xs mt-1">{{ errors()['name'] }}</p>
+              @if (errors()['nombre']) {
+                <p class="text-red-500 text-xs mt-1">{{ errors()['nombre'] }}</p>
               }
             </div>
           </div>
@@ -98,19 +98,18 @@ interface ClassificationForm {
               Tipo de Clasificación <span class="text-red-500">*</span>
             </label>
             <select
-              [(ngModel)]="form.classificationType"
+              [(ngModel)]="form.tipoClasificacion"
               [disabled]="isEditMode || !!defaultType"
               class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-sm"
-              [class.border-red-500]="errors()['classificationType']">
+              [class.border-red-500]="errors()['tipoClasificacion']">
               <option value="">-- Seleccionar --</option>
-              <option [value]="ClassificationType.CONTACT_RESULT">Resultado de Contacto</option>
-              <option [value]="ClassificationType.MANAGEMENT_TYPE">Tipo de Gestión</option>
-              <option [value]="ClassificationType.PAYMENT_TYPE">Tipo de Pago</option>
-              <option [value]="ClassificationType.COMPLAINT_TYPE">Tipo de Reclamo</option>
-              <option [value]="ClassificationType.CUSTOM">Personalizado</option>
+              <option [value]="ClassificationTypeV2.RESULTADO_CONTACTO">Resultado de Contacto</option>
+              <option [value]="ClassificationTypeV2.TIPO_GESTION">Tipo de Gestión</option>
+              <option [value]="ClassificationTypeV2.MODALIDAD_PAGO">Modalidad de Pago</option>
+              <option [value]="ClassificationTypeV2.TIPO_FRACCIONAMIENTO">Tipo de Fraccionamiento</option>
             </select>
-            @if (errors()['classificationType']) {
-              <p class="text-red-500 text-xs mt-1">{{ errors()['classificationType'] }}</p>
+            @if (errors()['tipoClasificacion']) {
+              <p class="text-red-500 text-xs mt-1">{{ errors()['tipoClasificacion'] }}</p>
             }
           </div>
 
@@ -121,7 +120,7 @@ interface ClassificationForm {
               <span class="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Opcional)</span>
             </label>
             <textarea
-              [(ngModel)]="form.description"
+              [(ngModel)]="form.descripcion"
               rows="3"
               placeholder="Descripción detallada de la tipificación..."
               class="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 text-sm"
@@ -140,12 +139,12 @@ interface ClassificationForm {
                 @for (color of presetColors; track color.hex) {
                   <button
                     type="button"
-                    (click)="form.colorHex = color.hex"
+                    (click)="form.colorSugerido = color.hex"
                     [class]="'w-12 h-12 rounded-lg border-2 transition-all hover:scale-110 flex items-center justify-center ' +
-                             (form.colorHex === color.hex ? 'border-gray-900 dark:border-white ring-2 ring-offset-2 ring-gray-900 dark:ring-white' : 'border-gray-300 dark:border-gray-600')"
+                             (form.colorSugerido === color.hex ? 'border-gray-900 dark:border-white ring-2 ring-offset-2 ring-gray-900 dark:ring-white' : 'border-gray-300 dark:border-gray-600')"
                     [style.background-color]="color.hex"
                     [title]="color.name">
-                    @if (form.colorHex === color.hex) {
+                    @if (form.colorSugerido === color.hex) {
                       <lucide-angular name="check-circle" [size]="20" class="text-white drop-shadow-lg"></lucide-angular>
                     }
                   </button>
@@ -157,15 +156,15 @@ interface ClassificationForm {
                 <label class="text-sm font-semibold text-gray-700 dark:text-gray-200">Color personalizado:</label>
                 <input
                   type="color"
-                  [(ngModel)]="form.colorHex"
+                  [(ngModel)]="form.colorSugerido"
                   class="h-12 w-24 border-2 border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer"
                 />
                 <div class="flex-1 flex items-center gap-3">
                   <div
                     class="w-10 h-10 rounded-lg border-2 border-gray-300 dark:border-gray-600"
-                    [style.background-color]="form.colorHex">
+                    [style.background-color]="form.colorSugerido">
                   </div>
-                  <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-300">{{ form.colorHex }}</span>
+                  <span class="text-sm font-mono font-bold text-gray-700 dark:text-gray-300">{{ form.colorSugerido }}</span>
                 </div>
               </div>
             </div>
@@ -183,9 +182,9 @@ interface ClassificationForm {
                 @for (icon of commonIcons; track icon.name) {
                   <button
                     type="button"
-                    (click)="form.iconName = icon.name"
+                    (click)="form.iconoSugerido = icon.name"
                     [class]="'p-3 rounded-lg border-2 transition-all hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center ' +
-                             (form.iconName === icon.name ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-gray-300 dark:border-gray-600')"
+                             (form.iconoSugerido === icon.name ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-gray-300 dark:border-gray-600')"
                     [title]="icon.label">
                     <lucide-angular [name]="icon.name" [size]="20" class="text-gray-700 dark:text-gray-200"></lucide-angular>
                   </button>
@@ -193,13 +192,13 @@ interface ClassificationForm {
               </div>
 
               <!-- Selected Icon Preview -->
-              @if (form.iconName) {
+              @if (form.iconoSugerido) {
                 <div class="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-900">
-                  <lucide-angular [name]="form.iconName" [size]="28" class="text-blue-600 dark:text-blue-400"></lucide-angular>
-                  <span class="text-sm font-semibold text-blue-800 dark:text-blue-200">Icono seleccionado: {{ form.iconName }}</span>
+                  <lucide-angular [name]="form.iconoSugerido" [size]="28" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+                  <span class="text-sm font-semibold text-blue-800 dark:text-blue-200">Icono seleccionado: {{ form.iconoSugerido }}</span>
                   <button
                     type="button"
-                    (click)="form.iconName = ''"
+                    (click)="form.iconoSugerido = ''"
                     class="ml-auto text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200">
                     <lucide-angular name="x" [size]="18"></lucide-angular>
                   </button>
@@ -218,7 +217,7 @@ interface ClassificationForm {
             </label>
             <input
               type="number"
-              [(ngModel)]="form.displayOrder"
+              [(ngModel)]="form.ordenVisualizacion"
               min="0"
               step="10"
               placeholder="0, 10, 20, 30..."
@@ -235,11 +234,11 @@ interface ClassificationForm {
             <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <input
                 type="checkbox"
-                id="isActive"
-                [(ngModel)]="form.isActive"
+                id="estaActiva"
+                [(ngModel)]="form.estaActiva"
                 class="w-5 h-5 text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
               />
-              <label for="isActive" class="text-sm font-bold text-gray-700 dark:text-gray-200 cursor-pointer flex-1">
+              <label for="estaActiva" class="text-sm font-bold text-gray-700 dark:text-gray-200 cursor-pointer flex-1">
                 Tipificación Activa
                 <span class="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-0.5">Desmarca para desactivar temporalmente esta tipificación</span>
               </label>
@@ -253,10 +252,10 @@ interface ClassificationForm {
                 <span class="font-bold">Tipificación Hijo</span>
               </div>
               <p class="text-sm text-blue-700 dark:text-blue-300">
-                <span class="font-semibold">Padre:</span> {{ parentClassification.name }} <span class="text-xs opacity-75">({{ parentClassification.code }})</span>
+                <span class="font-semibold">Padre:</span> {{ parentClassification.nombre }} <span class="text-xs opacity-75">({{ parentClassification.codigo }})</span>
               </p>
               <p class="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                Esta tipificación será nivel {{ parentClassification.hierarchyLevel + 1 }} en la jerarquía
+                Esta tipificación será nivel {{ parentClassification.nivelJerarquia + 1 }} en la jerarquía
               </p>
             </div>
           }
@@ -311,26 +310,26 @@ interface ClassificationForm {
 })
 export class TypificationFormDialogComponent implements OnInit {
   @Input() mode: 'create' | 'edit' = 'create';
-  @Input() typification?: TypificationCatalog;
-  @Input() parentClassification?: TypificationCatalog;
-  @Input() defaultType?: ClassificationType;
+  @Input() typification?: TypificationCatalogV2;
+  @Input() parentClassification?: TypificationCatalogV2;
+  @Input() defaultType?: ClassificationTypeV2;
   @Input() tenantId?: number;
   @Input() portfolioId?: number;
-  @Output() save = new EventEmitter<TypificationCatalog>();
+  @Output() save = new EventEmitter<TypificationCatalogV2>();
   @Output() cancel = new EventEmitter<void>();
 
-  ClassificationType = ClassificationType;
+  ClassificationTypeV2 = ClassificationTypeV2;
   isEditMode = false;
 
-  form: ClassificationForm = {
-    code: '',
-    name: '',
-    classificationType: '',
-    description: '',
-    displayOrder: 0,
-    iconName: '',
-    colorHex: '#3B82F6',
-    isActive: true
+  form: ClassificationFormV2 = {
+    codigo: '',
+    nombre: '',
+    tipoClasificacion: '',
+    descripcion: '',
+    ordenVisualizacion: 0,
+    iconoSugerido: '',
+    colorSugerido: '#3B82F6',
+    estaActiva: true
   };
 
   showFieldConfig = signal(false);
@@ -377,28 +376,25 @@ export class TypificationFormDialogComponent implements OnInit {
   saving = signal(false);
   errors = signal<Record<string, string>>({});
 
-  constructor(private classificationService: TypificationService) {}
+  constructor(private classificationService: TypificationV2Service) {}
 
   ngOnInit() {
     this.isEditMode = this.mode === 'edit';
 
     if (this.defaultType) {
-      this.form.classificationType = this.defaultType;
+      this.form.tipoClasificacion = this.defaultType;
     }
 
     if (this.isEditMode && this.typification) {
       this.form = {
-        code: this.typification.code,
-        name: this.typification.name,
-        classificationType: this.typification.classificationType,
-        description: this.typification.description || '',
-        displayOrder: this.typification.displayOrder || 0,
-        iconName: this.typification.iconName || '',
-        colorHex: this.typification.colorHex || '#3B82F6',
-        isActive: this.typification.isActive,
-        metadataSchema: this.typification.metadataSchema
-          ? JSON.parse(this.typification.metadataSchema)
-          : null
+        codigo: this.typification.codigo,
+        nombre: this.typification.nombre,
+        tipoClasificacion: this.typification.tipoClasificacion,
+        descripcion: this.typification.descripcion || '',
+        ordenVisualizacion: this.typification.ordenVisualizacion || 0,
+        iconoSugerido: this.typification.iconoSugerido || '',
+        colorSugerido: this.typification.colorSugerido || '#3B82F6',
+        estaActiva: this.typification.estaActiva
       };
     }
   }
@@ -406,16 +402,16 @@ export class TypificationFormDialogComponent implements OnInit {
   validate(): boolean {
     const newErrors: Record<string, string> = {};
 
-    if (!this.form.code.trim()) {
-      newErrors['code'] = 'El código es requerido';
+    if (!this.form.codigo.trim()) {
+      newErrors['codigo'] = 'El código es requerido';
     }
 
-    if (!this.form.name.trim()) {
-      newErrors['name'] = 'El nombre es requerido';
+    if (!this.form.nombre.trim()) {
+      newErrors['nombre'] = 'El nombre es requerido';
     }
 
-    if (!this.form.classificationType) {
-      newErrors['classificationType'] = 'El tipo de clasificación es requerido';
+    if (!this.form.tipoClasificacion) {
+      newErrors['tipoClasificacion'] = 'El tipo de clasificación es requerido';
     }
 
     this.errors.set(newErrors);
@@ -435,20 +431,19 @@ export class TypificationFormDialogComponent implements OnInit {
   }
 
   createTypification() {
-    const command: CreateTypificationCommand = {
-      code: this.form.code.trim(),
-      name: this.form.name.trim(),
-      classificationType: this.form.classificationType as ClassificationType,
-      parentTypificationId: this.parentClassification?.id,
-      description: this.form.description.trim() || undefined,
-      displayOrder: this.form.displayOrder,
-      iconName: this.form.iconName.trim() || undefined,
-      colorHex: this.form.colorHex || undefined,
-      metadataSchema: this.form.metadataSchema ? JSON.stringify(this.form.metadataSchema) : undefined
+    const command: CreateTypificationCommandV2 = {
+      codigo: this.form.codigo.trim(),
+      nombre: this.form.nombre.trim(),
+      tipoClasificacion: this.form.tipoClasificacion as ClassificationTypeV2,
+      tipificacionPadre: this.parentClassification ? { id: this.parentClassification.id } : undefined,
+      descripcion: this.form.descripcion.trim() || undefined,
+      ordenVisualizacion: this.form.ordenVisualizacion,
+      iconoSugerido: this.form.iconoSugerido.trim() || undefined,
+      colorSugerido: this.form.colorSugerido || undefined
     };
 
     this.classificationService.createTypification(command).subscribe({
-      next: (created) => {
+      next: (created: TypificationCatalogV2) => {
         console.log('✅ Clasificación creada:', created);
 
         // Auto-habilitar para el tenant actual
@@ -464,7 +459,7 @@ export class TypificationFormDialogComponent implements OnInit {
               this.saving.set(false);
               this.save.emit(created);
             },
-            error: (error) => {
+            error: (error: any) => {
               console.error('⚠️ Error al auto-habilitar (pero la clasificación se creó):', error);
               // Aunque falle el enable, la clasificación se creó exitosamente
               this.saving.set(false);
@@ -477,7 +472,7 @@ export class TypificationFormDialogComponent implements OnInit {
           this.save.emit(created);
         }
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error al crear tipificación:', error);
         this.saving.set(false);
         alert('Error al crear la tipificación. Verifique que el código no esté duplicado.');
@@ -488,22 +483,21 @@ export class TypificationFormDialogComponent implements OnInit {
   updateTypification() {
     if (!this.typification) return;
 
-    const command: UpdateTypificationCommand = {
-      name: this.form.name.trim(),
-      description: this.form.description.trim() || undefined,
-      displayOrder: this.form.displayOrder,
-      iconName: this.form.iconName.trim() || undefined,
-      colorHex: this.form.colorHex || undefined,
-      isActive: this.form.isActive,
-      metadataSchema: this.form.metadataSchema ? JSON.stringify(this.form.metadataSchema) : undefined
+    const command: UpdateTypificationCommandV2 = {
+      nombre: this.form.nombre.trim(),
+      descripcion: this.form.descripcion.trim() || undefined,
+      ordenVisualizacion: this.form.ordenVisualizacion,
+      iconoSugerido: this.form.iconoSugerido.trim() || undefined,
+      colorSugerido: this.form.colorSugerido || undefined,
+      estaActiva: this.form.estaActiva
     };
 
     this.classificationService.updateTypification(this.typification.id, command).subscribe({
-      next: (updated) => {
+      next: (updated: TypificationCatalogV2) => {
         this.saving.set(false);
         this.save.emit(updated);
       },
-      error: (error) => {
+      error: (error: any) => {
         console.error('Error al actualizar tipificación:', error);
         this.saving.set(false);
         alert('Error al actualizar la tipificación.');
@@ -520,7 +514,7 @@ export class TypificationFormDialogComponent implements OnInit {
       return 'Editar Tipificación';
     }
     if (this.parentClassification) {
-      return `Nueva Tipificación - Nivel ${this.parentClassification.hierarchyLevel + 1}`;
+      return `Nueva Tipificación - Nivel ${this.parentClassification.nivelJerarquia + 1}`;
     }
     return 'Nueva Tipificación - Nivel 1';
   }
