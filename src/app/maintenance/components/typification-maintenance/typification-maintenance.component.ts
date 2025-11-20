@@ -158,7 +158,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   buildTree() {
     const configMap = new Map<number, TenantTypificationConfig>();
     this.tenantConfigs.forEach(config => {
-      configMap.set(config.typificationId, config);
+      configMap.set(config.tipificacion.id, config);
     });
 
     const nodeMap = new Map<number, TypificationTreeNode>();
@@ -168,7 +168,7 @@ export class TypificationMaintenanceComponent implements OnInit {
         typification,
         config: configMap.get(typification.id),
         children: [],
-        level: typification.hierarchyLevel
+        level: typification.nivelJerarquia
       };
       nodeMap.set(typification.id, node);
     });
@@ -177,8 +177,9 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     this.typifications.forEach(typification => {
       const node = nodeMap.get(typification.id)!;
-      if (typification.parentTypificationId) {
-        const parent = nodeMap.get(typification.parentTypificationId);
+      const parentId = typification.tipificacionPadre?.id;
+      if (parentId) {
+        const parent = nodeMap.get(parentId);
         if (parent) {
           parent.children.push(node);
         }
@@ -189,8 +190,8 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     const sortNodes = (nodes: TypificationTreeNode[]) => {
       nodes.sort((a, b) => {
-        const orderA = a.typification.displayOrder || 0;
-        const orderB = b.typification.displayOrder || 0;
+        const orderA = a.typification.ordenVisualizacion || 0;
+        const orderB = b.typification.ordenVisualizacion || 0;
         return orderA - orderB;
       });
       nodes.forEach(node => {
@@ -304,12 +305,12 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   deleteTypification(typification: TypificationCatalog) {
-    if (typification.isSystem) {
+    if (typification.esSistema) {
       alert('No se pueden eliminar tipificaciones del sistema');
       return;
     }
 
-    if (!confirm(`¿Está seguro de eliminar la tipificación "${typification.name}"?\n\nEsta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Está seguro de eliminar la tipificación "${typification.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
 
@@ -348,12 +349,10 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   getTypeLabel(type: ClassificationType): string {
     const labels: Record<ClassificationType, string> = {
-      [ClassificationType.CONTACT_RESULT]: 'Resultado de Contacto',
-      [ClassificationType.MANAGEMENT_TYPE]: 'Tipo de Gestión',
-      [ClassificationType.PAYMENT_TYPE]: 'Tipo de Pago',
-      [ClassificationType.COMPLAINT_TYPE]: 'Tipo de Reclamo',
-      [ClassificationType.PAYMENT_SCHEDULE]: 'Cronograma de Pagos',
-      [ClassificationType.CUSTOM]: 'Personalizado'
+      [ClassificationType.RESULTADO_CONTACTO]: 'Resultado de Contacto',
+      [ClassificationType.TIPO_GESTION]: 'Tipo de Gestión',
+      [ClassificationType.MODALIDAD_PAGO]: 'Modalidad de Pago',
+      [ClassificationType.TIPO_FRACCIONAMIENTO]: 'Tipo de Fraccionamiento'
     };
     return labels[type];
   }

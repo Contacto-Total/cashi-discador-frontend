@@ -26,60 +26,76 @@ export interface CsvMappingResource {
   providedIn: 'root'
 })
 export class TypificationService {
-  private baseUrl = environment.tipificacionUrl;
+  private catalogUrl = `${environment.gatewayUrl}/v2/typifications/catalog`;
+  private configUrl = `${environment.gatewayUrl}/v2/typifications/config`;
 
   constructor(private http: HttpClient) {}
 
-  // Catalog Management
+  // Catalog Management (V2)
   getAllClassifications(): Observable<TypificationCatalog[]> {
-    return this.http.get<TypificationCatalog[]>(`${this.baseUrl}/typifications`);
+    return this.http.get<TypificationCatalog[]>(`${this.catalogUrl}`);
   }
 
   getTypificationsByType(type: ClassificationType): Observable<TypificationCatalog[]> {
-    return this.http.get<TypificationCatalog[]>(`${this.baseUrl}/typifications/type/${type}`);
+    return this.http.get<TypificationCatalog[]>(`${this.catalogUrl}/type/${type}`);
   }
 
   getTypificationsByLevel(level: number): Observable<TypificationCatalog[]> {
-    return this.http.get<TypificationCatalog[]>(`${this.baseUrl}/typifications/level/${level}`);
+    return this.http.get<TypificationCatalog[]>(`${this.catalogUrl}/level/${level}`);
   }
 
   getTypificationsByParent(parentId: number): Observable<TypificationCatalog[]> {
-    return this.http.get<TypificationCatalog[]>(`${this.baseUrl}/typifications/${parentId}/children`);
+    return this.http.get<TypificationCatalog[]>(`${this.catalogUrl}/${parentId}/children`);
   }
 
   getClassificationById(id: number): Observable<TypificationCatalog> {
-    return this.http.get<TypificationCatalog>(`${this.baseUrl}/typifications/${id}`);
+    return this.http.get<TypificationCatalog>(`${this.catalogUrl}/${id}`);
+  }
+
+  getRootTypifications(): Observable<TypificationCatalog[]> {
+    return this.http.get<TypificationCatalog[]>(`${this.catalogUrl}/roots`);
   }
 
   createTypification(command: CreateTypificationCommand): Observable<TypificationCatalog> {
-    return this.http.post<TypificationCatalog>(`${this.baseUrl}/typifications`, command);
+    return this.http.post<TypificationCatalog>(`${this.catalogUrl}`, command);
   }
 
   updateTypification(id: number, command: UpdateTypificationCommand): Observable<TypificationCatalog> {
-    return this.http.put<TypificationCatalog>(`${this.baseUrl}/typifications/${id}`, command);
+    return this.http.put<TypificationCatalog>(`${this.catalogUrl}/${id}`, command);
   }
 
   deleteTypification(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/typifications/${id}`);
+    return this.http.delete<void>(`${this.catalogUrl}/${id}`);
+  }
+
+  activateTypification(id: number): Observable<TypificationCatalog> {
+    return this.http.put<TypificationCatalog>(`${this.catalogUrl}/${id}/activate`, {});
+  }
+
+  deactivateTypification(id: number): Observable<TypificationCatalog> {
+    return this.http.put<TypificationCatalog>(`${this.catalogUrl}/${id}/deactivate`, {});
   }
 
   updateDisplayOrder(updates: Array<{id: number, displayOrder: number}>): Observable<void> {
-    return this.http.patch<void>(`${this.baseUrl}/typifications/display-order`, updates);
+    // Este endpoint necesita ser implementado en el backend V2
+    return this.http.patch<void>(`${this.catalogUrl}/display-order`, updates);
   }
 
-  // Tenant Configuration Management
-  getTenantClassifications(tenantId: number, portfolioId?: number, includeDisabled?: boolean): Observable<TenantTypificationConfig[]> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
+  // Tenant Configuration Management (V2)
+  getTenantClassifications(tenantId: number, portfolioId?: number, subPortfolioId?: number): Observable<TenantTypificationConfig[]> {
+    if (subPortfolioId && portfolioId) {
+      return this.http.get<TenantTypificationConfig[]>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}`
+      );
+    } else if (portfolioId) {
+      return this.http.get<TenantTypificationConfig[]>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}`
+      );
+    } else {
+      return this.http.get<TenantTypificationConfig[]>(
+        `${this.configUrl}/tenant/${tenantId}`
+      );
     }
-    if (includeDisabled) {
-      params = params.set('includeDisabled', 'true');
-    }
-    return this.http.get<TenantTypificationConfig[]>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications`,
-      { params }
-    );
   }
 
   getTenantClassificationsByType(
@@ -87,14 +103,9 @@ export class TypificationService {
     type: ClassificationType,
     portfolioId?: number
   ): Observable<TenantTypificationConfig[]> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
-    }
-    return this.http.get<TenantTypificationConfig[]>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications/type/${type}`,
-      { params }
-    );
+    // Este método necesita ser implementado en el backend V2 si es necesario
+    // Por ahora, obtenemos todas y filtramos en el frontend
+    return this.getTenantClassifications(tenantId, portfolioId);
   }
 
   getTenantClassificationsByLevel(
@@ -102,189 +113,119 @@ export class TypificationService {
     level: number,
     portfolioId?: number
   ): Observable<TenantTypificationConfig[]> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
-    }
-    return this.http.get<TenantTypificationConfig[]>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications/level/${level}`,
-      { params }
-    );
+    // Este método necesita ser implementado en el backend V2 si es necesario
+    return this.getTenantClassifications(tenantId, portfolioId);
   }
 
   getEnabledClassifications(
     tenantId: number,
     portfolioId?: number
   ): Observable<TenantTypificationConfig[]> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
-    }
-    return this.http.get<TenantTypificationConfig[]>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications/enabled`,
-      { params }
-    );
+    // Filtrar en el frontend las que están habilitadas
+    return this.getTenantClassifications(tenantId, portfolioId);
   }
 
-  updateTenantTypificationConfig(
-    tenantId: number,
-    typificationId: number,
-    command: UpdateTypificationConfigCommand,
-    portfolioId?: number
-  ): Observable<TenantTypificationConfig> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
-    }
-    return this.http.put<TenantTypificationConfig>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications/${typificationId}/config`,
-      command,
-      { params }
-    );
-  }
-
-  enableClassification(
-    tenantId: number,
-    typificationId: number,
-    portfolioId?: number
-  ): Observable<TenantTypificationConfig> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
-    }
-    return this.http.post<TenantTypificationConfig>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications/${typificationId}/enable`,
-      {},
-      { params }
-    );
-  }
-
-  disableClassification(
-    tenantId: number,
-    typificationId: number,
-    portfolioId?: number
-  ): Observable<TenantTypificationConfig> {
-    let params = new HttpParams();
-    if (portfolioId) {
-      params = params.set('portfolioId', portfolioId.toString());
-    }
-    return this.http.post<TenantTypificationConfig>(
-      `${this.baseUrl}/tenants/${tenantId}/typifications/${typificationId}/disable`,
-      {},
-      { params }
-    );
-  }
-
-  // Tenant Management
-  getAllTenants(): Observable<Tenant[]> {
-    return this.http.get<Tenant[]>(`${this.baseUrl}/system-config/tenants`);
-  }
-
-  createTenant(data: {
-    tenantCode: string;
-    tenantName: string;
-    businessName?: string;
-    taxId?: string;
-    countryCode?: string;
-    timezone?: string;
-    maxUsers?: number;
-    maxConcurrentSessions?: number;
-    subscriptionTier?: string;
-  }): Observable<Tenant> {
-    return this.http.post<Tenant>(`${this.baseUrl}/system-config/tenants`, data);
-  }
-
-  updateTenant(tenantId: number, data: {
-    tenantName?: string;
-    businessName?: string;
-    taxId?: string;
-    countryCode?: string;
-    timezone?: string;
-    maxUsers?: number;
-    maxConcurrentSessions?: number;
-    subscriptionTier?: string;
-    isActive?: boolean;
-  }): Observable<Tenant> {
-    return this.http.put<Tenant>(`${this.baseUrl}/system-config/tenants/${tenantId}`, data);
-  }
-
-  deleteTenant(tenantId: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/system-config/tenants/${tenantId}`);
-  }
-
-  // Portfolio Management
-  getPortfoliosByTenant(tenantId: number): Observable<Portfolio[]> {
-    return this.http.get<Portfolio[]>(`${this.baseUrl}/system-config/tenants/${tenantId}/portfolios`);
-  }
-
-  createPortfolio(data: {
-    tenantId: number;
-    portfolioCode: string;
-    portfolioName: string;
-    parentPortfolioId?: number;
-    description?: string;
-  }): Observable<Portfolio> {
-    return this.http.post<Portfolio>(`${this.baseUrl}/system-config/portfolios`, data);
-  }
-
-  updatePortfolio(portfolioId: number, data: {
-    portfolioName?: string;
-    description?: string;
-    isActive?: boolean;
-  }): Observable<Portfolio> {
-    return this.http.put<Portfolio>(`${this.baseUrl}/system-config/portfolios/${portfolioId}`, data);
-  }
-
-  deletePortfolio(portfolioId: number): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/system-config/portfolios/${portfolioId}`);
-  }
-
-  // SubPortfolio Management
-  getSubPortfoliosByPortfolio(portfolioId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.baseUrl}/system-config/portfolios/${portfolioId}/subportfolios`);
-  }
-
-  // CSV Column Mapping Management
-  saveCsvMappings(portfolioId: number, csvHeaders: string[]): Observable<CsvMappingResource[]> {
-    return this.http.post<CsvMappingResource[]>(
-      `${this.baseUrl}/portfolios/${portfolioId}/csv-mappings`,
-      { csvHeaders }
-    );
-  }
-
-  getCsvMappings(portfolioId: number): Observable<CsvMappingResource[]> {
-    return this.http.get<CsvMappingResource[]>(
-      `${this.baseUrl}/portfolios/${portfolioId}/csv-mappings`
-    );
-  }
-
-  deleteCsvMappings(portfolioId: number): Observable<void> {
-    return this.http.delete<void>(
-      `${this.baseUrl}/portfolios/${portfolioId}/csv-mappings`
-    );
-  }
-
-  // V2 API Methods
   getEffectiveTypifications(
     tenantId: number,
     portfolioId: number,
     subPortfolioId: number
   ): Observable<TypificationCatalog[]> {
     return this.http.get<TypificationCatalog[]>(
-      `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}`
+      `${this.configUrl}/effective/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}`
     );
   }
 
+  updateTenantTypificationConfig(
+    configId: number,
+    command: UpdateTypificationConfigCommand
+  ): Observable<TenantTypificationConfig> {
+    return this.http.put<TenantTypificationConfig>(
+      `${this.configUrl}/${configId}`,
+      command
+    );
+  }
+
+  enableClassification(
+    tenantId: number,
+    typificationId: number,
+    portfolioId?: number,
+    subPortfolioId?: number,
+    userId?: number
+  ): Observable<TenantTypificationConfig> {
+    const params = new HttpParams().set('userId', userId?.toString() || '1');
+
+    if (subPortfolioId && portfolioId) {
+      return this.http.post<TenantTypificationConfig>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}/typification/${typificationId}/enable`,
+        {},
+        { params }
+      );
+    } else if (portfolioId) {
+      // Necesitaría un endpoint sin subportfolio en el backend
+      return this.http.post<TenantTypificationConfig>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/0/typification/${typificationId}/enable`,
+        {},
+        { params }
+      );
+    } else {
+      // Necesitaría un endpoint solo con tenant
+      return this.http.post<TenantTypificationConfig>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/0/subportfolio/0/typification/${typificationId}/enable`,
+        {},
+        { params }
+      );
+    }
+  }
+
+  disableClassification(
+    tenantId: number,
+    typificationId: number,
+    portfolioId?: number,
+    subPortfolioId?: number,
+    userId?: number
+  ): Observable<TenantTypificationConfig> {
+    const params = new HttpParams().set('userId', userId?.toString() || '1');
+
+    if (subPortfolioId && portfolioId) {
+      return this.http.post<TenantTypificationConfig>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}/typification/${typificationId}/disable`,
+        {},
+        { params }
+      );
+    } else if (portfolioId) {
+      return this.http.post<TenantTypificationConfig>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/0/typification/${typificationId}/disable`,
+        {},
+        { params }
+      );
+    } else {
+      return this.http.post<TenantTypificationConfig>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/0/subportfolio/0/typification/${typificationId}/disable`,
+        {},
+        { params }
+      );
+    }
+  }
+
+  // Tenant Management (usar API Gateway)
+  getAllTenants(): Observable<Tenant[]> {
+    return this.http.get<Tenant[]>(`${environment.gatewayUrl}/tenants`);
+  }
+
+  // Portfolio Management (usar API Gateway)
+  getPortfoliosByTenant(tenantId: number): Observable<Portfolio[]> {
+    return this.http.get<Portfolio[]>(`${environment.gatewayUrl}/tenants/${tenantId}/carteras`);
+  }
+
+  // SubPortfolio Management
+  getSubPortfoliosByPortfolio(portfolioId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.gatewayUrl}/carteras/${portfolioId}/subcarteras`);
+  }
+
+  // Additional Fields
   getAdditionalFields(typificationId: number): Observable<AdditionalField[]> {
     return this.http.get<AdditionalField[]>(
-      `${environment.gatewayUrl}/v2/typifications/catalog/${typificationId}/additional-fields`
-    );
-  }
-
-  saveManagementRecord(record: any): Observable<any> {
-    return this.http.post(
-      `${environment.gatewayUrl}/v2/management-records`,
-      record
+      `${this.catalogUrl}/${typificationId}/additional-fields`
     );
   }
 
@@ -298,15 +239,16 @@ export class TypificationService {
       map.set(typification.id, {
         typification,
         children: [],
-        level: typification.hierarchyLevel
+        level: typification.nivelJerarquia
       });
     });
 
     // Build tree
     typifications.forEach(typification => {
       const node = map.get(typification.id);
-      if (typification.parentTypificationId) {
-        const parent = map.get(typification.parentTypificationId);
+      const parentId = typification.tipificacionPadre?.id;
+      if (parentId) {
+        const parent = map.get(parentId);
         if (parent) {
           parent.children.push(node);
         }
@@ -315,12 +257,12 @@ export class TypificationService {
       }
     });
 
-    // Sort children by displayOrder
+    // Sort children by ordenVisualizacion
     const sortChildren = (node: any) => {
       if (node.children.length > 0) {
         node.children.sort((a: any, b: any) => {
-          const orderA = a.typification.displayOrder || 0;
-          const orderB = b.typification.displayOrder || 0;
+          const orderA = a.typification.ordenVisualizacion || 0;
+          const orderB = b.typification.ordenVisualizacion || 0;
           return orderA - orderB;
         });
         node.children.forEach((child: any) => sortChildren(child));
