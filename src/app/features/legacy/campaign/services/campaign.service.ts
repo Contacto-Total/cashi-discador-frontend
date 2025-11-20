@@ -27,7 +27,7 @@ export class CampaignService {
       'Content-Type': 'application/json'
     });
 
-    return this.http.post(`${this.apiUrl}/campaign/generate`, request, {
+    return this.http.post(`${this.apiUrl}/campania/generar-zip-reportes`, request, {
       headers: headers,
       responseType: 'blob'
     });
