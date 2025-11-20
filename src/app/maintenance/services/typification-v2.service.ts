@@ -225,6 +225,33 @@ export class TypificationV2Service {
     );
   }
 
+  /**
+   * Obtiene los campos adicionales de una tipificación con valores dinámicos desde la tabla del cliente
+   * @param tenantId ID del tenant
+   * @param typificationId ID de la tipificación
+   * @param portfolioId ID del portfolio (opcional)
+   * @param clientId ID del cliente (opcional, para cargar valores dinámicos)
+   */
+  getTypificationFieldsWithValues(
+    tenantId: number,
+    typificationId: number,
+    portfolioId?: number,
+    clientId?: number
+  ): Observable<{ typificationId: number; isLeaf: boolean; fields: AdditionalFieldV2[] }> {
+    let params = new HttpParams();
+    if (portfolioId) {
+      params = params.set('portfolioId', portfolioId.toString());
+    }
+    if (clientId) {
+      params = params.set('clientId', clientId.toString());
+    }
+
+    return this.http.get<{ typificationId: number; isLeaf: boolean; fields: AdditionalFieldV2[] }>(
+      `${this.configUrl}/tenant/${tenantId}/typifications/${typificationId}/fields`,
+      { params }
+    );
+  }
+
   // ========================================
   // Helper Methods
   // ========================================

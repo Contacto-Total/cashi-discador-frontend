@@ -108,7 +108,13 @@ export enum FieldTypeV2 {
   DATE = 'DATE',
   NUMBER = 'NUMBER',
   TEXT = 'TEXT',
-  TEXTAREA = 'TEXTAREA'
+  TEXTAREA = 'TEXTAREA',
+  CHIP_SELECT = 'CHIP_SELECT'
+}
+
+export enum FieldDataSourceV2 {
+  MANUAL = 'MANUAL',
+  DYNAMIC_TABLE = 'DYNAMIC_TABLE'
 }
 
 export interface AdditionalFieldV2 {
@@ -121,4 +127,11 @@ export interface AdditionalFieldV2 {
   valorMinimo?: number;
   valorMaximo?: number;
   longitudMaxima?: number;
+  fuenteValor?: FieldDataSourceV2;
+  campoTablaDinamica?: string;
+  // Campos para respuesta con valores dinámicos
+  dataSource?: string;
+  sourceField?: string;
+  value?: any;
+  options?: Array<{label: string, value: any}>;
 }
