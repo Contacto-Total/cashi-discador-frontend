@@ -1,0 +1,123 @@
+/**
+ * Modelos V2 para el sistema de mantenimiento de tipificaciones
+ * Estos modelos corresponden a las tablas V2 del backend:
+ * - catalogo_tipificaciones_v2
+ * - configuracion_tenant_tipificacion_v2
+ */
+
+export enum ClassificationTypeV2 {
+  RESULTADO_CONTACTO = 'RESULTADO_CONTACTO',
+  TIPO_GESTION = 'TIPO_GESTION',
+  MODALIDAD_PAGO = 'MODALIDAD_PAGO',
+  TIPO_FRACCIONAMIENTO = 'TIPO_FRACCIONAMIENTO'
+}
+
+export interface TypificationCatalogV2 {
+  id: number;
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  tipoClasificacion: ClassificationTypeV2;
+  tipificacionPadre?: {
+    id: number;
+  };
+  nivelJerarquia: number;
+  ordenVisualizacion?: number;
+  esEstadoFinal?: boolean;
+  requiereObservaciones?: boolean;
+  estaActiva: boolean;
+  colorSugerido?: string;
+  iconoSugerido?: string;
+  esSistema: boolean;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  fechaEliminacion?: string;
+}
+
+export interface TenantTypificationConfigV2 {
+  id: number;
+  idTenant: number;
+  idCartera?: number;
+  idSubcartera?: number;
+  tipificacion: TypificationCatalogV2;
+  heredaDePadre?: boolean;
+  estaHabilitada: boolean;
+  nombrePersonalizado?: string;
+  descripcionPersonalizada?: string;
+  colorPersonalizado?: string;
+  iconoPersonalizado?: string;
+  ordenVisualizacionPersonalizado?: number;
+  requiereObservacionesPersonalizado?: boolean;
+  creadoPor?: number;
+  modificadoPor?: number;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+  fechaEliminacion?: string;
+  // Computed fields
+  nombreEfectivo?: string;
+  colorEfectivo?: string;
+  iconoEfectivo?: string;
+}
+
+export interface CreateTypificationCommandV2 {
+  codigo: string;
+  nombre: string;
+  descripcion?: string;
+  tipoClasificacion: ClassificationTypeV2;
+  tipificacionPadre?: {
+    id: number;
+  };
+  ordenVisualizacion?: number;
+  esEstadoFinal?: boolean;
+  requiereObservaciones?: boolean;
+  colorSugerido?: string;
+  iconoSugerido?: string;
+  esSistema?: boolean;
+}
+
+export interface UpdateTypificationCommandV2 {
+  nombre?: string;
+  descripcion?: string;
+  ordenVisualizacion?: number;
+  esEstadoFinal?: boolean;
+  requiereObservaciones?: boolean;
+  estaActiva?: boolean;
+  colorSugerido?: string;
+  iconoSugerido?: string;
+}
+
+export interface UpdateTypificationConfigCommandV2 {
+  estaHabilitada?: boolean;
+  nombrePersonalizado?: string;
+  descripcionPersonalizada?: string;
+  colorPersonalizado?: string;
+  iconoPersonalizado?: string;
+  ordenVisualizacionPersonalizado?: number;
+  requiereObservacionesPersonalizado?: boolean;
+}
+
+export interface TypificationTreeNodeV2 {
+  typification: TypificationCatalogV2;
+  config?: TenantTypificationConfigV2;
+  children: TypificationTreeNodeV2[];
+  level: number;
+}
+
+export enum FieldTypeV2 {
+  DATE = 'DATE',
+  NUMBER = 'NUMBER',
+  TEXT = 'TEXT',
+  TEXTAREA = 'TEXTAREA'
+}
+
+export interface AdditionalFieldV2 {
+  id: number;
+  nombreCampo: string;
+  tipoCampo: FieldTypeV2;
+  labelCampo: string;
+  esRequerido: boolean;
+  ordenVisualizacion: number;
+  valorMinimo?: number;
+  valorMaximo?: number;
+  longitudMaxima?: number;
+}
