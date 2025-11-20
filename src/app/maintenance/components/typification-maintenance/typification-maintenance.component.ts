@@ -565,4 +565,23 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     return config?.[customField] || typification[catalogField] || '';
   }
+
+  /**
+   * Verifica si un nodo coincide con el filtro de tipo actual
+   */
+  matchesTypeFilter(typification: TypificationCatalogV2): boolean {
+    if (!this.selectedType) return true; // Sin filtro = todos coinciden
+    return typification.tipoClasificacion === this.selectedType;
+  }
+
+  /**
+   * Obtiene el icono según el nivel jerárquico
+   */
+  getLevelIcon(level: number): string {
+    switch(level) {
+      case 1: return '📁';
+      case 2: return '📄';
+      default: return '📝';
+    }
+  }
 }
