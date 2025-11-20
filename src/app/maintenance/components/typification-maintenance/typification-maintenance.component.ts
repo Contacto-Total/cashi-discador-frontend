@@ -579,13 +579,78 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   /**
-   * Obtiene el icono según el nivel jerárquico
+   * Verifica si un nodo o alguno de sus descendientes coincide con el filtro
    */
-  getLevelIcon(level: number): string {
-    switch(level) {
-      case 1: return '📁';
-      case 2: return '📄';
-      default: return '📝';
+  nodeOrChildrenMatch(node: TypificationTreeNodeV2): boolean {
+    if (!this.selectedType) return true;
+    if (this.matchesTypeFilter(node.typification)) return true;
+    return node.children.some(child => this.nodeOrChildrenMatch(child));
+  }
+
+  /**
+   * Obtiene la ruta breadcrumb del padre
+   */
+  getParentBreadcrumb(node: TypificationTreeNodeV2): string {
+    const breadcrumbs: string[] = [];
+    let current = node;
+
+    // Buscar el padre en el árbol
+    const findParent = (nodes: TypificationTreeNodeV2[], targetId: number): TypificationTreeNodeV2 | null => {
+      for (const n of nodes) {
+        if (n.children.some(c => c.typification.id === targetId)) {
+          return n;
+        }
+        const found = findParent(n.children, targetId);
+        if (found) return found;
+      }
+      return null;
+    };
+
+    const parentId = current.typification.idTipificacionPadre || current.typification.tipificacionPadre?.id;
+    if (parentId) {
+      const parent = findParent(this.treeNodes, current.typification.id);
+      if (parent) {
+        // Construir breadcrumb recursivamente
+        const buildPath = (n: TypificationTreeNodeV2): string[] => {
+          const path: string[] = [];
+          const pid = n.typification.idTipificacionPadre || n.typification.tipificacionPadre?.id;
+          if (pid) {
+            const p = findParent(this.treeNodes, n.typification.id);
+            if (p) {
+              path.push(...buildPath(p));
+            }
+          }
+          path.push(this.getEffectiveValue(n.config, n.typification, 'nombre'));
+          return path;
+        };
+
+        return buildPath(parent).join(' > ');
+      }
     }
+
+    return '';
+  }
+
+  /**
+   * Obtiene nodos filtrados (solo los que coinciden con el tipo)
+   */
+  getFilteredNodes(nodes: TypificationTreeNodeV2[]): TypificationTreeNodeV2[] {
+    if (!this.selectedType) return nodes;
+
+    const filtered: TypificationTreeNodeV2[] = [];
+
+    const collectMatching = (nodeList: TypificationTreeNodeV2[]) => {
+      for (const node of nodeList) {
+        if (this.matchesTypeFilter(node.typification)) {
+          filtered.push(node);
+        }
+        if (node.children.length > 0) {
+          collectMatching(node.children);
+        }
+      }
+    };
+
+    collectMatching(nodes);
+    return filtered;
   }
 }
