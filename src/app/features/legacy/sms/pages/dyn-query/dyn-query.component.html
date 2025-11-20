@@ -1,4 +1,4 @@
-<div class="bg-gray-50 dark:bg-gray-900 min-h-screen pt-24 px-8">
+<div class="min-h-screen pt-24 px-8" [class.dark]="isDarkMode()" [class.bg-gray-50]="!isDarkMode()" [class.bg-gray-900]="isDarkMode()">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Consulta Dinámica SMS</h1>
@@ -330,46 +330,71 @@
 </div>
 
 <!-- Loading Modal -->
-<div *ngIf="loadingPreview() || loadingExport() || loadingSave()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
-    <div class="w-10 h-10 border-3 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
-    <p class="text-base font-bold text-gray-900 dark:text-gray-100">{{ loadingPreview() ? 'Cargando previsualización...' : loadingExport() ? 'Generando Excel...' : 'Guardando combo...' }}</p>
+<div *ngIf="loadingPreview() || loadingExport() || loadingSave()" class="fixed inset-0 z-[2000] flex items-center justify-center animate-fade-in" [class.bg-black/60]="!isDarkMode()" [class.bg-black/70]="isDarkMode()">
+  <div class="rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border]="true" [class.border-gray-200]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
+    <div class="w-10 h-10 rounded-full animate-spin mx-auto mb-4" [class.border-3]="true" [class.border-gray-300]="!isDarkMode()" [class.border-gray-600]="isDarkMode()" [class.border-t-blue-600]="!isDarkMode()" [class.border-t-blue-400]="isDarkMode()"></div>
+    <p class="text-base font-bold" [class.text-gray-900]="!isDarkMode()" [class.text-gray-100]="isDarkMode()">{{ loadingPreview() ? 'Cargando previsualización...' : loadingExport() ? 'Generando Excel...' : 'Guardando combo...' }}</p>
   </div>
 </div>
 
 <!-- Alert Modal -->
-<div *ngIf="alertMessage()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
+<div *ngIf="alertMessage()" class="fixed inset-0 z-[2000] flex items-center justify-center animate-fade-in" [class.bg-black/60]="!isDarkMode()" [class.bg-black/70]="isDarkMode()">
+  <div class="rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border]="true" [class.border-gray-200]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
     <div class="text-4xl mb-3">⚠️</div>
-    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Atención</h3>
-    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{{ alertMessage() }}</p>
+    <h3 class="text-lg font-bold mb-2" [class.text-gray-900]="!isDarkMode()" [class.text-gray-100]="isDarkMode()">Atención</h3>
+    <p class="text-sm mb-4 whitespace-pre-line" [class.text-gray-700]="!isDarkMode()" [class.text-gray-300]="isDarkMode()">{{ alertMessage() }}</p>
     <button type="button" class="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg" (click)="closeAlert()">Entendido</button>
   </div>
 </div>
 
 <!-- Success Modal -->
-<div *ngIf="successMessage()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
+<div *ngIf="successMessage()" class="fixed inset-0 z-[2000] flex items-center justify-center animate-fade-in" [class.bg-black/60]="!isDarkMode()" [class.bg-black/70]="isDarkMode()">
+  <div class="rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border]="true" [class.border-gray-200]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
     <div class="text-4xl mb-3">✓</div>
-    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Éxito</h3>
-    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{{ successMessage() }}</p>
+    <h3 class="text-lg font-bold mb-2" [class.text-gray-900]="!isDarkMode()" [class.text-gray-100]="isDarkMode()">Éxito</h3>
+    <p class="text-sm mb-4 whitespace-pre-line" [class.text-gray-700]="!isDarkMode()" [class.text-gray-300]="isDarkMode()">{{ successMessage() }}</p>
     <button type="button" class="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg" (click)="closeSuccess()">Aceptar</button>
   </div>
 </div>
 
 <!-- Round Wizard Modal -->
-<div *ngIf="showRoundWizard()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl animate-scale-in border border-gray-200 dark:border-gray-700">
-    <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">Generación Guiada</h3>
-    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">¿Cuántas rondas deseas generar?</p>
+<div *ngIf="showRoundWizard()" class="fixed inset-0 z-[2000] flex items-center justify-center animate-fade-in" [class.bg-black/60]="!isDarkMode()" [class.bg-black/70]="isDarkMode()">
+  <div class="rounded-lg p-6 max-w-md w-11/12 shadow-2xl animate-scale-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border]="true" [class.border-gray-200]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
+    <h3 class="text-xl font-bold mb-2" [class.text-gray-900]="!isDarkMode()" [class.text-gray-100]="isDarkMode()">Generación Guiada</h3>
+    <p class="text-sm mb-4" [class.text-gray-700]="!isDarkMode()" [class.text-gray-300]="isDarkMode()">¿Cuántas rondas deseas generar?</p>
     <input type="number"
-           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 transition-all hover:border-gray-400 dark:hover:border-gray-500 shadow-sm mb-4"
+           class="w-full px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 transition-all shadow-sm mb-4"
+           [class.border]="true"
+           [class.border-gray-300]="!isDarkMode()"
+           [class.border-gray-600]="isDarkMode()"
+           [class.bg-white]="!isDarkMode()"
+           [class.bg-gray-700]="isDarkMode()"
+           [class.text-gray-900]="!isDarkMode()"
+           [class.text-gray-100]="isDarkMode()"
+           [class.focus:ring-blue-500]="!isDarkMode()"
+           [class.focus:ring-blue-400]="isDarkMode()"
+           [class.focus:border-blue-500]="!isDarkMode()"
+           [class.focus:border-blue-400]="isDarkMode()"
+           [class.hover:border-gray-400]="!isDarkMode()"
+           [class.hover:border-gray-500]="isDarkMode()"
            [(ngModel)]="roundCount"
            min="1"
            max="10"
            placeholder="Número de rondas">
     <div class="flex gap-3">
-      <button type="button" class="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all cursor-pointer shadow-sm" (click)="closeRoundWizard()">Cancelar</button>
+      <button type="button" class="flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer shadow-sm"
+              [class.bg-gray-100]="!isDarkMode()"
+              [class.bg-gray-700]="isDarkMode()"
+              [class.border]="true"
+              [class.border-gray-300]="!isDarkMode()"
+              [class.border-gray-600]="isDarkMode()"
+              [class.text-gray-700]="!isDarkMode()"
+              [class.text-gray-300]="isDarkMode()"
+              [class.hover:bg-gray-200]="!isDarkMode()"
+              [class.hover:bg-gray-600]="isDarkMode()"
+              [class.hover:border-gray-400]="!isDarkMode()"
+              [class.hover:border-gray-500]="isDarkMode()"
+              (click)="closeRoundWizard()">Cancelar</button>
       <button type="button" class="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 cursor-pointer" (click)="confirmGenerate()">Generar</button>
     </div>
   </div>

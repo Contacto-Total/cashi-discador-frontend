@@ -82,9 +82,7 @@ html, body {
    ======================================== */
 
 /* Cuando body tiene clase light-theme, sobrescribir colores hardcoded */
-body.light-theme {
-  background-color: #f5f3f0 !important;
-}
+
 
 /* Contenedores principales oscuros -> crema */
 body.light-theme .monitoring-container,
@@ -832,19 +830,6 @@ body.dark-theme h6 {
   margin: 0 0 2px 0;
 }
 
-/* Light Theme - Text */
-body.light-theme p,
-body.light-theme label,
-body.light-theme span {
-  color: #475569;
-}
-
-/* Dark Theme - Text */
-body.dark-theme p,
-body.dark-theme label,
-body.dark-theme span {
-  color: #e2e8f0;
-}
 
 /* Light Theme - Containers */
 body.light-theme .container,
@@ -897,14 +882,6 @@ body.light-theme tbody td {
   padding: 12px;
 }
 
-/* Dark Theme - Tables */
-body.dark-theme table {
-  background-color: #1E293B;
-  border-collapse: collapse;
-  width: 100%;
-  color: #ffffff;
-}
-
 body.dark-theme thead {
   background-color: #334155;
 }
@@ -935,51 +912,9 @@ body.dark-theme tbody td {
 /* Botones - Removidos estilos globales que rompían el diseño.
    Ahora cada componente usa sus propios estilos o clases de Tailwind */
 
-/* Light Theme - Inputs */
-body.light-theme input:not(.mat-mdc-input-element):not([type="checkbox"]):not([type="radio"]),
-body.light-theme textarea:not(.mat-mdc-input-element),
-body.light-theme select:not(.mat-mdc-select) {
-  background-color: #fefdfb;
-  border: 1px solid #d4cfc5;
-  border-radius: 6px;
-  padding: 10px 16px;
-  color: #1e293b;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-body.light-theme input:focus:not(.mat-mdc-input-element),
-body.light-theme textarea:focus:not(.mat-mdc-input-element),
-body.light-theme select:focus:not(.mat-mdc-select) {
-  outline: none;
-  border-color: #10B981;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
-}
-
-body.light-theme input::placeholder,
-body.light-theme textarea::placeholder {
-  color: #9e9890;
-}
-
 body.light-theme select option {
   background-color: #fefdfb;
   color: #1e293b;
-}
-
-/* Dark Theme - Inputs */
-body.dark-theme input:not(.mat-mdc-input-element):not([type="checkbox"]):not([type="radio"]),
-body.dark-theme textarea:not(.mat-mdc-input-element),
-body.dark-theme select:not(.mat-mdc-select) {
-  background-color: #1E293B;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 10px 16px;
-  color: #ffffff;
-  font-size: 14px;
-  transition: all 0.2s ease;
-  width: 100%;
 }
 
 body.dark-theme input:focus:not(.mat-mdc-input-element),
@@ -1353,14 +1288,6 @@ body.light-theme h6 {
   color: #0f172a !important;
 }
 
-/* All text elements - FORCE dark color */
-body.light-theme p,
-body.light-theme span:not(.mat-mdc-button-touch-target),
-body.light-theme label,
-body.light-theme div:not([class*="btn"]):not([class*="button"]):not(.logo-icon):not(.badge):not(.status) {
-  color: #475569 !important;
-}
-
 /* Tables - complete override */
 body.light-theme table,
 body.light-theme .table,
@@ -1377,12 +1304,7 @@ body.light-theme .table-header {
   border-color: #cbd5e1 !important;
 }
 
-body.light-theme td,
-body.light-theme tbody,
-body.light-theme .table-cell {
-  color: #475569 !important;
-  border-color: #e2e8f0 !important;
-}
+
 
 body.light-theme tr:hover,
 body.light-theme .table-row:hover {
@@ -1430,32 +1352,6 @@ body.light-theme b {
   color: #1e293b !important;
 }
 
-/* Any element with specific dark bg classes */
-body.light-theme .bg-slate-950,
-body.light-theme .bg-slate-900,
-body.light-theme .bg-slate-800,
-body.light-theme .bg-gray-900,
-body.light-theme .bg-gray-800,
-body.light-theme .bg-dark {
-  background-color: #fefdfb !important;
-  color: #1e293b !important;
-}
-
-/* Text color overrides */
-body.light-theme .text-white,
-body.light-theme .text-gray-100,
-body.light-theme .text-gray-200,
-body.light-theme .text-slate-100,
-body.light-theme .text-slate-200 {
-  color: #1e293b !important;
-}
-
-body.light-theme .text-gray-400,
-body.light-theme .text-gray-500,
-body.light-theme .text-slate-400,
-body.light-theme .text-slate-500 {
-  color: #64748b !important;
-}
 
 /* ========================================
    COMPONENT-SPECIFIC CLASS OVERRIDES
@@ -2115,31 +2011,10 @@ body.light-theme .bg-gradient-to-br .border-slate-700 {
   border-color: #d4cfc5 !important;
 }
 
-/* Buttons */
-body.light-theme .bg-gradient-to-br button {
-  background-color: #3B82F6 !important;
-  color: #ffffff !important;
-}
 
-body.light-theme .bg-gradient-to-br button span {
-  color: #ffffff !important;
-}
 
-body.light-theme .bg-gradient-to-br button lucide-angular,
-body.light-theme .bg-gradient-to-br button lucide-angular svg {
-  color: #ffffff !important;
-  stroke: #ffffff !important;
-}
 
-body.light-theme .bg-gradient-to-br button.bg-blue-600 {
-  background-color: #3B82F6 !important;
-  color: #ffffff !important;
-}
 
-body.light-theme .bg-gradient-to-br button.bg-blue-600 span,
-body.light-theme .bg-gradient-to-br button.bg-blue-600 lucide-angular {
-  color: #ffffff !important;
-}
 
 body.light-theme .bg-gradient-to-br button.bg-green-600 {
   background-color: #10B981 !important;

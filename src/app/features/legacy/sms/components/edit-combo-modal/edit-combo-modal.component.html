@@ -2,7 +2,7 @@
 <div class="fixed inset-0 bg-black/60 dark:bg-black/70 backdrop-blur-sm z-[999] animate-fade-in" (click)="close()"></div>
 
 <!-- Modal Container - Más compacto -->
-<div class="fixed inset-0 z-[1000] flex items-center justify-center p-4 pointer-events-none">
+<div class="fixed inset-0 z-2000 flex items-center justify-center p-4 pointer-events-none" [class.dark]="isDarkMode()">
   <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-scale-in pointer-events-auto">
 
     <!-- Modal Header - Compacto -->

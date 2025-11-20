@@ -1,4 +1,5 @@
 export interface CreatePaymentAgreementRequest {
+  entidad: string;
   fechaActual: string;
   nombreTitular: string;
   dni: string;

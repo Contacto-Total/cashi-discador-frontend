@@ -6,3 +6,101 @@
   position: fixed;
   width: 100%;
 }
+
+/* Forzar estilos de modo claro y oscuro correctamente */
+
+/* MODO CLARO: anular dark: classes que usan prefers-color-scheme */
+.min-h-screen:not(.dark) {
+  background-color: rgb(249 250 251) !important;
+
+  /* Anular clases dark: para que NO se apliquen en modo claro */
+  * {
+    &[class*="dark:bg-gray-900"] { background-color: rgb(249 250 251) !important; }
+    &[class*="dark:bg-gray-800"] { background-color: white !important; }
+    &[class*="dark:bg-gray-700"] { background-color: white !important; }
+    &[class*="dark:bg-gray-600"] { background-color: rgb(243 244 246) !important; }
+    &[class*="dark:bg-slate-800"] { background-color: white !important; }
+    &[class*="dark:bg-gray-800\/50"] { background-color: rgb(249 250 251) !important; }
+
+    &[class*="dark:text-white"] { color: rgb(17 24 39) !important; }
+    &[class*="dark:text-gray-100"] { color: rgb(17 24 39) !important; }
+    &[class*="dark:text-gray-300"] { color: rgb(55 65 81) !important; }
+    &[class*="dark:text-gray-400"] { color: rgb(75 85 99) !important; }
+    &[class*="dark:text-gray-500"] { color: rgb(107 114 128) !important; }
+    &[class*="dark:text-blue-400"] { color: rgb(37 99 235) !important; }
+    &[class*="dark:text-blue-300"] { color: rgb(37 99 235) !important; }
+
+    &[class*="dark:border-gray-700"] { border-color: rgb(229 231 235) !important; }
+    &[class*="dark:border-gray-600"] { border-color: rgb(209 213 219) !important; }
+    &[class*="dark:border-gray-500"] { border-color: rgb(156 163 175) !important; }
+    &[class*="dark:border-blue-500"] { border-color: rgb(96 165 250) !important; }
+  }
+
+  /* Mejorar contraste de elementos específicos */
+  div[class*="bg-gray-50"] { background-color: rgb(243 244 246) !important; } /* Contenedor principal más oscuro */
+  div[class*="bg-white"] { background-color: white !important; }
+
+  /* Chips de variables no seleccionados - más visibles */
+  button[class*="bg-white"][class*="border-gray-300"]:not([class*="from-blue-600"]) {
+    background-color: white !important;
+    border-color: rgb(209 213 219) !important;
+    color: rgb(55 65 81) !important;
+  }
+
+  /* Botones Ver y Editar - más oscuros */
+  button[class*="bg-blue-50"] {
+    background-color: rgb(219 234 254) !important;
+    border-color: rgb(147 197 253) !important;
+    color: rgb(29 78 216) !important;
+  }
+
+  button[class*="bg-gray-100"] {
+    background-color: rgb(243 244 246) !important;
+    border-color: rgb(209 213 219) !important;
+    color: rgb(55 65 81) !important;
+  }
+
+  /* Tags de variables - azul más oscuro */
+  span[class*="bg-blue-100"][class*="text-blue-700"] {
+    background-color: rgb(219 234 254) !important;
+    border-color: rgb(147 197 253) !important;
+    color: rgb(29 78 216) !important;
+  }
+
+  /* Icono del tenor - fondo más oscuro y icono blanco */
+  div[class*="p-2"][class*="bg-blue-100"][class*="rounded-lg"] {
+    background-color: rgb(59 130 246) !important; /* blue-500 - más vibrante */
+
+    ::ng-deep lucide-angular {
+      color: white !important;
+
+      svg {
+        color: white !important;
+        fill: white !important;
+        stroke: white !important;
+      }
+    }
+  }
+}
+
+/* MODO OSCURO: aplicar colores oscuros */
+.min-h-screen.dark {
+  background-color: rgb(17 24 39) !important;
+
+  /* Fondos */
+  * {
+    &[class*="bg-gray-50"] { background-color: rgb(17 24 39) !important; }
+    &[class*="bg-white"] { background-color: rgb(31 41 55) !important; }
+    &[class*="bg-gray-100"] { background-color: rgb(55 65 81) !important; }
+    &[class*="bg-gray-200"] { background-color: rgb(75 85 99) !important; }
+
+    &[class*="text-gray-900"] { color: white !important; }
+    &[class*="text-gray-700"] { color: rgb(243 244 246) !important; }
+    &[class*="text-gray-600"] { color: rgb(156 163 175) !important; }
+    &[class*="text-gray-500"] { color: rgb(156 163 175) !important; }
+
+    &[class*="border-gray-200"] { border-color: rgb(55 65 81) !important; }
+    &[class*="border-gray-300"] { border-color: rgb(55 65 81) !important; }
+    &[class*="border-gray-400"] { border-color: rgb(75 85 99) !important; }
+  }
+}

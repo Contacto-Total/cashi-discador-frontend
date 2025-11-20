@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomSelectComponent } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { CustomInputNumberComponent } from '../../../../../shared/components/custom-ui/custom-input-number/custom-input-number.component';
@@ -7,6 +7,7 @@ import { CustomCheckboxComponent } from '../../../../../shared/components/custom
 import { CustomTabsComponent } from '../../../../../shared/components/custom-ui/custom-tabs/custom-tabs.component';
 import { CustomMultiSelectComponent } from '../../../../../shared/components/custom-ui/custom-multiselect/custom-multiselect.component';
 import { ToastService } from '../../../../../shared/services/toast.service';
+import { ThemeService } from '../../../../../shared/services/theme.service';
 import { CampaignService } from '../../services/campaign.service';
 import { CampaignReportRequest } from '../../models/campaign-report.request';
 import { Range } from '../../models/range.model';
@@ -76,6 +77,9 @@ export class RangeSliderComponent implements OnInit {
   private lastEditedRangeIndex: number = -1;
   private lastEditedField: 'min' | 'max' = 'min';
   private isGenerating: boolean = false;
+
+  private themeService = inject(ThemeService);
+  isDarkMode = this.themeService.isDarkMode;
 
   constructor(
     private campaignService: CampaignService,

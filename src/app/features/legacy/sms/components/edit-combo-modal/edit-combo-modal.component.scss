@@ -2,3 +2,256 @@
  * All styles use Tailwind CSS classes in the component template.
  * This file is kept for Angular component configuration compatibility.
  */
+
+/* Forzar estilos de modo claro y oscuro correctamente */
+
+/* MODO CLARO: anular dark: classes que usan prefers-color-scheme */
+:not(.dark) {
+  /* Overlay */
+  .bg-black\/60 { background-color: rgba(0, 0, 0, 0.6) !important; }
+
+  /* Anular clases dark: para que NO se apliquen en modo claro */
+  * {
+    &[class*="dark:bg-gray-800"] { background-color: white !important; }
+    &[class*="dark:bg-gray-900"] { background-color: white !important; }
+    &[class*="dark:bg-gray-700"] { background-color: rgb(243 244 246) !important; }
+    &[class*="dark:bg-gray-600"] { background-color: rgb(229 231 235) !important; }
+    &[class*="dark:bg-gray-700\/50"] { background-color: rgb(249 250 251) !important; }
+    &[class*="dark:bg-gray-800\/50"] { background-color: rgb(249 250 251) !important; }
+    &[class*="dark:bg-blue-900\/30"] { background-color: rgb(219 234 254) !important; }
+    &[class*="dark:bg-red-900\/30"] { background-color: rgb(254 226 226) !important; }
+
+    &[class*="dark:text-white"] { color: rgb(17 24 39) !important; }
+    &[class*="dark:text-gray-100"] { color: rgb(17 24 39) !important; }
+    &[class*="dark:text-gray-200"] { color: rgb(31 41 55) !important; }
+    &[class*="dark:text-gray-300"] { color: rgb(55 65 81) !important; }
+    &[class*="dark:text-gray-400"] { color: rgb(107 114 128) !important; }
+    &[class*="dark:text-blue-300"] { color: rgb(29 78 216) !important; }
+    &[class*="dark:text-blue-400"] { color: rgb(37 99 235) !important; }
+    &[class*="dark:text-red-300"] { color: rgb(185 28 28) !important; }
+    &[class*="dark:text-red-400"] { color: rgb(220 38 38) !important; }
+
+    &[class*="dark:border-gray-700"] { border-color: rgb(229 231 235) !important; }
+    &[class*="dark:border-gray-600"] { border-color: rgb(209 213 219) !important; }
+    &[class*="dark:border-blue-400"] { border-color: rgb(96 165 250) !important; }
+    &[class*="dark:border-blue-500"] { border-color: rgb(59 130 246) !important; }
+    &[class*="dark:border-red-700"] { border-color: rgb(239 68 68) !important; }
+
+    &[class*="dark:divide-gray-700"] { border-color: rgb(229 231 235) !important; }
+
+    &[class*="dark:hover:bg-gray-700"]:hover { background-color: rgb(243 244 246) !important; }
+    &[class*="dark:hover:bg-gray-600"]:hover { background-color: rgb(229 231 235) !important; }
+    &[class*="dark:hover:text-gray-200"]:hover { color: rgb(31 41 55) !important; }
+    &[class*="dark:hover:bg-red-900\/50"]:hover { background-color: rgb(254 202 202) !important; }
+
+    &[class*="dark:focus:ring-blue-400"]:focus { --tw-ring-color: rgb(96 165 250) !important; }
+    &[class*="dark:focus:border-blue-400"]:focus { border-color: rgb(96 165 250) !important; }
+  }
+
+  /* Fondos específicos más oscuros para mejor contraste */
+  div[class*="bg-gray-50"] { background-color: rgb(249 250 251) !important; }
+  div[class*="bg-white"] { background-color: white !important; }
+
+  /* Tabs - fondos más oscuros */
+  button[class*="bg-gray-100"] { background-color: rgb(243 244 246) !important; }
+
+  /* Inputs y textareas - bordes más visibles */
+  input[class*="border-gray-300"],
+  textarea[class*="border-gray-300"],
+  select[class*="border-gray-300"] {
+    border-color: rgb(209 213 219) !important;
+    background-color: white !important;
+    color: rgb(17 24 39) !important;
+  }
+
+  /* Chips de variables no seleccionados - más visibles */
+  button[class*="bg-white"][class*="border-gray-300"]:not([class*="from-blue-600"]) {
+    background-color: white !important;
+    border-color: rgb(209 213 219) !important;
+    color: rgb(55 65 81) !important;
+  }
+
+  /* Chips de campo (Baja 30, etc.) */
+  span[class*="bg-blue-100"][class*="text-blue-700"] {
+    background-color: rgb(219 234 254) !important;
+    color: rgb(29 78 216) !important;
+  }
+
+  /* Rangos - contenedor */
+  div[class*="bg-gray-50"][class*="border-gray-200"] {
+    background-color: rgb(249 250 251) !important;
+    border-color: rgb(229 231 235) !important;
+  }
+}
+
+/* MODO OSCURO: aplicar colores oscuros */
+.dark {
+  /* Overlay */
+  .bg-black\/60 { background-color: rgba(0, 0, 0, 0.7) !important; }
+
+  /* Fondos principales */
+  div[class*="bg-white"] { background-color: rgb(31 41 55) !important; }
+  div[class*="bg-gray-50"] { background-color: rgb(17 24 39) !important; }
+  div[class*="bg-gray-100"] { background-color: rgb(55 65 81) !important; }
+  div[class*="bg-gray-200"] { background-color: rgb(75 85 99) !important; }
+  div[class*="bg-blue-50"] { background-color: rgb(30 58 138) !important; }
+
+  /* Textos */
+  * {
+    &[class*="text-gray-900"] { color: white !important; }
+    &[class*="text-gray-700"] { color: rgb(243 244 246) !important; }
+    &[class*="text-gray-600"] { color: rgb(156 163 175) !important; }
+    &[class*="text-gray-500"] { color: rgb(156 163 175) !important; }
+    &[class*="text-blue-700"] { color: rgb(96 165 250) !important; }
+    &[class*="text-blue-600"] { color: rgb(96 165 250) !important; }
+    &[class*="text-red-600"] { color: rgb(248 113 113) !important; }
+    &[class*="text-red-700"] { color: rgb(252 165 165) !important; }
+
+    &[class*="border-gray-200"] { border-color: rgb(55 65 81) !important; }
+    &[class*="border-gray-300"] { border-color: rgb(55 65 81) !important; }
+    &[class*="border-gray-400"] { border-color: rgb(75 85 99) !important; }
+    &[class*="border-blue-300"] { border-color: rgb(30 64 175) !important; }
+    &[class*="border-red-300"] { border-color: rgb(153 27 27) !important; }
+
+    &[class*="divide-gray-200"] { border-color: rgb(55 65 81) !important; }
+
+    &[class*="hover:bg-gray-100"]:hover { background-color: rgb(55 65 81) !important; }
+    &[class*="hover:bg-blue-50"]:hover { background-color: rgb(30 58 138) !important; }
+  }
+
+  /* Inputs, textareas y selects */
+  input:not([type="checkbox"]),
+  textarea,
+  select {
+    background-color: rgb(55 65 81) !important;
+    border-color: rgb(75 85 99) !important;
+    color: white !important;
+  }
+
+  /* Chips de variables no seleccionados */
+  button[class*="bg-white"][class*="border-gray-300"]:not([class*="from-blue-600"]) {
+    background-color: rgb(55 65 81) !important;
+    border-color: rgb(75 85 99) !important;
+    color: rgb(209 213 219) !important;
+  }
+
+  /* Chips de campo (Baja 30, etc.) */
+  span[class*="bg-blue-100"][class*="text-blue-700"] {
+    background-color: rgba(30, 58, 138, 0.5) !important;
+    color: rgb(96 165 250) !important;
+  }
+
+  /* Labels de checkboxes - contenedores */
+  label[class*="bg-gray-50"] {
+    background-color: rgb(55 65 81) !important;
+    border-color: rgb(75 85 99) !important;
+
+    &:hover {
+      background-color: rgb(75 85 99) !important;
+    }
+  }
+
+  /* Labels en checkboxes - texto */
+  label span[class*="text-gray-700"] {
+    color: rgb(209 213 219) !important;
+  }
+
+  /* Textos dentro de labels */
+  label[class*="text-xs"] span {
+    color: rgb(209 213 219) !important;
+  }
+
+  /* Contenedores de rangos y condiciones */
+  div[class*="bg-gray-50"][class*="border-gray-200"] {
+    background-color: rgba(55, 65, 81, 0.5) !important;
+    border-color: rgb(75 85 99) !important;
+  }
+
+  /* Tabs navigation - fondo oscuro */
+  div[class*="flex"][class*="border-b"][class*="bg-gray-50"] {
+    background-color: rgb(31 41 55) !important;
+  }
+
+  /* Tabs inactivos */
+  button[class*="border-transparent"][class*="text-gray-600"] {
+    background-color: transparent !important;
+    color: rgb(156 163 175) !important;
+
+    &:hover {
+      background-color: rgb(55 65 81) !important;
+      color: rgb(209 213 219) !important;
+    }
+  }
+
+  /* Tab activo */
+  button[class*="bg-white"][class*="border-blue-600"] {
+    background-color: rgb(31 41 55) !important;
+    color: rgb(96 165 250) !important;
+    border-bottom-color: rgb(96 165 250) !important;
+  }
+
+  /* Área de contenido - fondo oscuro */
+  div[class*="flex-1"][class*="overflow-y-auto"][class*="bg-white"] {
+    background-color: rgb(17 24 39) !important;
+  }
+
+  /* Panel derecho - Plantilla SMS - columna completa */
+  div[class*="flex"][class*="flex-col"][class*="bg-gray-50"] {
+    background-color: rgb(17 24 39) !important;
+  }
+
+  /* Sección de Plantilla SMS */
+  div[class*="p-3"][class*="border-b"][class*="border-gray-200"] {
+    background-color: rgb(31 41 55) !important;
+  }
+
+  /* Vista Previa section */
+  div[class*="flex-1"][class*="p-3"][class*="overflow-y-auto"] {
+    background-color: rgb(17 24 39) !important;
+  }
+
+  /* Sin preview box */
+  div[class*="bg-white"][class*="border-dashed"] {
+    background-color: rgb(31 41 55) !important;
+    border-color: rgb(75 85 99) !important;
+  }
+
+  /* Labels de secciones - más visibles */
+  div[class*="text-gray-500"][class*="uppercase"],
+  label[class*="text-gray-500"][class*="uppercase"] {
+    color: rgb(156 163 175) !important;
+  }
+
+  /* Label "Caracteres:" y otros labels pequeños */
+  span[class*="text-gray-500"] {
+    color: rgb(156 163 175) !important;
+  }
+
+  /* Input del nombre del tenor */
+  input[class*="border-gray-300"][class*="bg-white"] {
+    background-color: rgb(55 65 81) !important;
+    border-color: rgb(75 85 99) !important;
+    color: white !important;
+  }
+
+  /* Footer del modal */
+  div[class*="flex"][class*="gap-2"][class*="border-t"][class*="bg-gray-50"] {
+    background-color: rgb(31 41 55) !important;
+  }
+
+  /* Botón Cancelar */
+  button[class*="bg-white"][class*="border-gray-300"]:not([class*="from-blue"]):not([class*="from-violet"]) {
+    background-color: rgb(55 65 81) !important;
+    border-color: rgb(75 85 99) !important;
+    color: rgb(209 213 219) !important;
+
+    &:hover {
+      background-color: rgb(75 85 99) !important;
+    }
+  }
+
+  /* Área donde va el nombre del tenor - fondo oscuro */
+  div[class*="p-3"][class*="border-b"][class*="bg-gray-50"]:has(input) {
+    background-color: rgb(31 41 55) !important;
+  }
+}

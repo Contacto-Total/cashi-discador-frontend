@@ -10,6 +10,7 @@ import { finalize } from 'rxjs';
 import { debounceTime, map, distinctUntilChanged, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LucideAngularModule, Settings, Filter, Plus, Trash2, ListChecks, Ban, FileText, Table, Eye, Send, Save, XCircle } from 'lucide-angular';
+import { ThemeService } from '../../../../../shared/services/theme.service';
 
 const VAR_PATTERN_I = /\{([A-Z0-9_]+)\}/gi;
 const VAR_PATTERN = /\{([A-Z0-9_]+)\}/g;
@@ -39,6 +40,9 @@ export class DynQueryComponent implements OnInit {
   private api = inject(DynQueryService);
   private comboApi = inject(ComboService);
   private router = inject(Router);
+  private themeService = inject(ThemeService);
+
+  isDarkMode = this.themeService.isDarkMode;
   sampleRow = signal<Row | null>(null);
 
   @ViewChild('tplArea') tplArea?: ElementRef<HTMLTextAreaElement>;

@@ -1,4 +1,4 @@
-<div class="bg-gray-50 dark:bg-gray-900 min-h-screen pt-24 px-8">
+<div class="min-h-screen pt-24 px-8" [class.dark]="isDarkMode()" [class.bg-gray-50]="!isDarkMode()" [class.bg-gray-900]="isDarkMode()">
   <!-- Header -->
   <div class="flex items-center justify-between mb-6">
     <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Gestión de Tenores</h1>
@@ -55,7 +55,7 @@
         <div class="flex justify-between items-start mb-3">
           <div class="flex items-center gap-2.5 flex-1">
             <div class="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg group-hover:scale-110 transition-transform">
-              <lucide-angular [img]="MessageSquare" [size]="16" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+              <lucide-angular [img]="MessageSquare" [size]="16" class=""></lucide-angular>
             </div>
             <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100">
               {{ r.name || '(Sin nombre)' }}
@@ -98,8 +98,8 @@
 </div>
 
 <!-- Side Panel Preview -->
-<div *ngIf="previewOpen()" (click)="closePreview()" class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[999] animate-fade-in cursor-pointer"></div>
-<aside *ngIf="previewOpen()" class="fixed top-0 right-0 bottom-0 w-[400px] bg-white dark:bg-gray-800 shadow-2xl z-[1000] flex flex-col animate-slide-in border-l border-gray-300 dark:border-gray-700">
+<div *ngIf="previewOpen()" (click)="closePreview()" class="fixed inset-0 backdrop-blur-sm z-[999] animate-fade-in cursor-pointer" [class.bg-black/50]="!isDarkMode()" [class.bg-black/70]="isDarkMode()"></div>
+<aside *ngIf="previewOpen()" class="fixed top-0 right-0 bottom-0 w-[400px] shadow-2xl z-[1000] flex flex-col animate-slide-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border-l]="true" [class.border-gray-300]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
   <div class="flex justify-between items-center p-4 border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
     <h3 class="text-base font-bold text-gray-900 dark:text-white">{{ previewTitle() }}</h3>
     <button (click)="closePreview()" class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-600 dark:text-gray-300 transition-colors cursor-pointer">
@@ -158,22 +158,22 @@
 </ng-template>
 
 <!-- Modales -->
-<div *ngIf="alertMessage()" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
+<div *ngIf="alertMessage()" class="fixed inset-0 z-[2000] flex items-center justify-center animate-fade-in" [class.bg-black/60]="!isDarkMode()" [class.bg-black/70]="isDarkMode()">
+  <div class="rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border]="true" [class.border-gray-200]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
     <div class="text-4xl mb-3">⚠️</div>
-    <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">Atención</h3>
-    <p class="text-sm text-gray-700 dark:text-gray-300 mb-4 whitespace-pre-line">{{ alertMessage() }}</p>
+    <h3 class="text-lg font-bold mb-2" [class.text-gray-900]="!isDarkMode()" [class.text-gray-100]="isDarkMode()">Atención</h3>
+    <p class="text-sm mb-4 whitespace-pre-line" [class.text-gray-700]="!isDarkMode()" [class.text-gray-300]="isDarkMode()">{{ alertMessage() }}</p>
     <button (click)="closeAlert()" class="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white rounded-lg text-sm font-medium transition-all shadow-lg">
       Entendido
     </button>
   </div>
 </div>
 
-<div *ngIf="loadingModal().isOpen" class="fixed inset-0 bg-black/60 dark:bg-black/70 z-[2000] flex items-center justify-center animate-fade-in">
-  <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in border border-gray-200 dark:border-gray-700">
-    <div class="w-10 h-10 border-3 border-gray-300 dark:border-gray-600 border-t-blue-600 dark:border-t-blue-400 rounded-full animate-spin mx-auto mb-4"></div>
-    <p class="text-base font-bold text-gray-900 dark:text-gray-100">{{ loadingModal().data?.title || 'Procesando...' }}</p>
-    <small *ngIf="loadingModal().data?.subtitle" class="block mt-1 text-sm text-gray-700 dark:text-gray-400">{{ loadingModal().data?.subtitle }}</small>
+<div *ngIf="loadingModal().isOpen" class="fixed inset-0 z-[2000] flex items-center justify-center animate-fade-in" [class.bg-black/60]="!isDarkMode()" [class.bg-black/70]="isDarkMode()">
+  <div class="rounded-lg p-6 max-w-md w-11/12 shadow-2xl text-center animate-scale-in" [class.dark]="isDarkMode()" [class.bg-white]="!isDarkMode()" [class.bg-gray-800]="isDarkMode()" [class.border]="true" [class.border-gray-200]="!isDarkMode()" [class.border-gray-700]="isDarkMode()">
+    <div class="w-10 h-10 rounded-full animate-spin mx-auto mb-4" [class.border-3]="true" [class.border-gray-300]="!isDarkMode()" [class.border-gray-600]="isDarkMode()" [class.border-t-blue-600]="!isDarkMode()" [class.border-t-blue-400]="isDarkMode()"></div>
+    <p class="text-base font-bold" [class.text-gray-900]="!isDarkMode()" [class.text-gray-100]="isDarkMode()">{{ loadingModal().data?.title || 'Procesando...' }}</p>
+    <small *ngIf="loadingModal().data?.subtitle" class="block mt-1 text-sm" [class.text-gray-700]="!isDarkMode()" [class.text-gray-400]="isDarkMode()">{{ loadingModal().data?.subtitle }}</small>
   </div>
 </div>
 

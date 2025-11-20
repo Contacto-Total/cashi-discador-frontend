@@ -73,6 +73,7 @@ export class PaymentAgreementCardPageComponent implements OnInit {
 
   private createForm(): FormGroup {
     return this.fb.group({
+      entidad: ['financiera_oh', Validators.required],
       fechaActual: [this.formatDate(new Date()), Validators.required],
       nombreTitular: ['', [Validators.required, Validators.minLength(2)]],
       dni: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
@@ -285,6 +286,7 @@ export class PaymentAgreementCardPageComponent implements OnInit {
       const deudaTotalParaEnvio = this.isBlackoutMode ? formValue.montoAprobado : formValue.deudaTotal;
 
       const request: CreatePaymentAgreementRequest = {
+        entidad: formValue.entidad,
         fechaActual: this.formatDisplayDate(formValue.fechaActual),
         nombreTitular: formValue.nombreTitular,
         dni: formValue.dni,

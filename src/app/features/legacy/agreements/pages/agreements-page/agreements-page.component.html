@@ -1,51 +1,90 @@
-<body>
-  <div class="payment-agreement-container">
-    <!-- Header con título y botones -->
-    <div class="document-header">
-      <h1 class="document-title">Generador de Acuerdo de Pago</h1>
-      <form [formGroup]="searchForm" style="display: flex; gap: 10px; align-items: center; margin-right: 10px;">
-    <input
-      formControlName="dniBusqueda"
-      type="text"
-      placeholder="DNI"
-      class="editable-input"
-      maxlength="8"
-      style="width: 120px;" />
-
-    <button
-      type="button"
-      class="btn btn-search"
-      (click)="buscarPorDni()"
-      [disabled]="searchForm.invalid">
-      Buscar
-    </button>
-
-    <div *ngIf="tramoDetectado" style="margin-left: 10px; padding: 5px 10px; background-color: #e8f5e9; border: 1px solid #4caf50; border-radius: 4px; font-weight: bold; color: #2e7d32;">
-      Tramo: {{ tramoDetectado }}
+<div class="payment-agreement-container">
+  <!-- Header -->
+  <div class="flex items-center gap-2 mb-3">
+    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg flex items-center justify-center">
+      <lucide-angular name="file-text" [size]="16" class="text-white"></lucide-angular>
     </div>
-  </form>
-  <span *ngIf="isLoading" class="spinner"></span>
-      <div class="document-actions">
-        <button 
-          type="button" 
-          class="btn btn-clean" 
-          (click)="resetForm()">
-          Limpiar
-        </button>
-        <button 
-          type="button" 
-          class="btn btn-primary" 
-          (click)="onSubmit()" 
-          [disabled]="agreementForm.invalid || isLoading">
-          
-          {{ isLoading ? 'Generando...' : 'Generar PDF' }}
-        </button>
+    <div>
+      <h1 class="text-lg font-bold text-slate-900 dark:text-white">Generador de Acuerdo de Pago</h1>
+      <p class="text-xs text-slate-600 dark:text-slate-400">Creación de acuerdos de pago para clientes</p>
+    </div>
+  </div>
+
+  <!-- Barra de opciones -->
+  <div class="document-header">
+    <!-- Búsqueda DNI -->
+    <form [formGroup]="searchForm" class="flex gap-2 items-center">
+      <input
+        formControlName="dniBusqueda"
+        type="text"
+        placeholder="DNI"
+        class="h-10 w-[120px] px-3 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+        maxlength="8" />
+      <button
+        type="button"
+        class="h-10 px-4 text-sm font-medium text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        (click)="buscarPorDni()"
+        [disabled]="searchForm.invalid">
+        Buscar
+      </button>
+      <div *ngIf="tramoDetectado" class="ml-2 px-3 py-1 bg-green-50 border border-green-500 rounded text-sm font-bold text-green-700">
+        Tramo: {{ tramoDetectado }}
       </div>
-    </div>
+      <div *ngIf="tramoDetectado" class="ml-2 px-3 py-1 rounded text-sm font-bold"
+           [class.bg-blue-50]="selectedEntidad === 'financiera_oh'"
+           [class.border-blue-500]="selectedEntidad === 'financiera_oh'"
+           [class.text-blue-700]="selectedEntidad === 'financiera_oh'"
+           [class.bg-purple-50]="selectedEntidad === 'nsoluciones'"
+           [class.border-purple-500]="selectedEntidad === 'nsoluciones'"
+           [class.text-purple-700]="selectedEntidad === 'nsoluciones'"
+           [class.border]="true">
+        Plantilla: {{ selectedEntidad === 'financiera_oh' ? 'Financiera Oh' : 'NSoluciones' }}
+      </div>
+      <span *ngIf="isLoading" class="spinner"></span>
+    </form>
 
-    <!-- Documento con inputs incrustados -->
-    <div class="document-container">
-      <form [formGroup]="agreementForm" class="document">
+    <!-- Botones de acción -->
+    <div class="document-actions">
+      <button
+        type="button"
+        class="h-10 px-4 text-sm font-medium text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg transition-all duration-200"
+        (click)="resetForm()">
+        Limpiar
+      </button>
+      <button
+        type="button"
+        class="h-10 px-4 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-purple-700 hover:from-blue-700 hover:to-purple-800 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        (click)="onSubmit()"
+        [disabled]="agreementForm.invalid || isLoading">
+        {{ isLoading ? 'Generando...' : 'Generar PDF' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Placeholder cuando no hay DNI buscado -->
+  <div *ngIf="!mostrarDocumento" class="document-container">
+    <div class="flex flex-col items-center justify-center py-20 px-8 rounded-lg shadow-sm"
+         [class.bg-white]="!isDarkMode"
+         [class.bg-slate-800]="isDarkMode">
+      <div class="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-700 rounded-full flex items-center justify-center mb-6 shadow-lg">
+        <lucide-angular name="search" [size]="48" style="color: white;"></lucide-angular>
+      </div>
+      <h3 class="text-xl font-bold mb-2"
+          [class.text-slate-900]="!isDarkMode"
+          [class.text-white]="isDarkMode">
+        Busca un cliente para comenzar
+      </h3>
+      <p class="text-sm text-center max-w-md"
+         [class.text-slate-600]="!isDarkMode"
+         [class.text-slate-400]="isDarkMode">
+        Ingresa el DNI del cliente en el buscador para cargar automáticamente los datos y generar el acuerdo de pago.
+      </p>
+    </div>
+  </div>
+
+  <!-- Documento con inputs incrustados -->
+  <div *ngIf="mostrarDocumento" class="document-container">
+    <form [formGroup]="agreementForm" class="document bg-white text-black">
         <!-- Header con logos -->
         <div class="header">
           <div class="logo-section">
@@ -79,14 +118,21 @@
           </div>
         </div>
 
-        <div class="red-header">
-          ACUERDO DE PAGO - CAMPAÑA LIMPIA TU DEUDA
+        <div class="red-header text-white"
+             [class.bg-[#d32f2f]]="selectedEntidad === 'financiera_oh'"
+             [class.bg-black]="selectedEntidad === 'nsoluciones'">
+          <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+            ACUERDO DE PAGO - CAMPAÑA LIMPIA TU DEUDA
+          </ng-container>
+          <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+            ACUERDO DE PAGO - CANCELACIÓN TOTAL
+          </ng-container>
         </div>
 
-        <table class="client-table">
+        <table class="client-table bg-white text-black">
           <tr>
-            <td class="label-cell">NOMBRE DEL TITULAR</td>
-            <td class="highlight input-cell">
+            <td class="label-cell bg-[#f8f9fa] text-black">NOMBRE DEL TITULAR</td>
+            <td class="highlight input-cell bg-white text-black">
               <input
                 type="text"
                 formControlName="nombreTitular"
@@ -96,8 +142,8 @@
             </td>
           </tr>
           <tr>
-            <td class="label-cell">NUMERO DNI</td>
-            <td class="highlight input-cell">
+            <td class="label-cell bg-[#f8f9fa] text-black">NUMERO DNI</td>
+            <td class="highlight input-cell bg-white text-black">
               <input
                 type="text"
                 formControlName="dni"
@@ -107,8 +153,8 @@
             </td>
           </tr>
           <tr>
-            <td class="label-cell">Nro. CUENTA TARJETA Oh!</td>
-            <td class="highlight input-cell">
+            <td class="label-cell bg-[#f8f9fa] text-black">Nro. CUENTA TARJETA Oh!</td>
+            <td class="highlight input-cell bg-white text-black">
               <input
                 type="text"
                 formControlName="cuentaTarjeta"
@@ -119,11 +165,11 @@
           </tr>
         </table>
 
-        <div class="congratulations">
+        <div class="congratulations text-black">
           ¡Felicitaciones!, ya se encuentra <strong>APROBADO</strong> su <strong>CAMPAÑA ESPECIAL</strong> con el cual estaría cancelando <strong>TODA SU DEUDA</strong>, lo puede pagar desde el día de hoy, se encontrará habilitado hasta este:
         </div>
 
-        <div class="date-highlight">
+        <div class="date-highlight text-black">
           <div class="date-input-container">
             <input 
               type="date" 
@@ -141,18 +187,20 @@
           </div>
         </div>
 
-        <div class="debt-header">
+        <div class="debt-header text-white"
+             [class.bg-[#d32f2f]]="selectedEntidad === 'financiera_oh'"
+             [class.bg-black]="selectedEntidad === 'nsoluciones'">
           DETALLE DE DEUDA Y PROMOCIÓN APROBADA
         </div>
 
-        <table class="debt-table">
+        <table class="debt-table bg-white text-black">
           <tr>
-            <th>DEUDA TOTAL</th>
-            <th>DESCUENTO</th>
-            <th>MONTO APROBADO</th>
+            <th class="bg-white text-black">DEUDA TOTAL</th>
+            <th class="bg-white text-black">DESCUENTO</th>
+            <th class="bg-white text-black">MONTO APROBADO</th>
           </tr>
           <tr>
-            <td class="amount">
+            <td class="amount bg-white text-black">
               <div class="amount-input-container">
                 S/ <input 
                     type="number" 
@@ -166,10 +214,10 @@
               </div>
             </td>
 
-            <td class="amount">
+            <td class="amount bg-white text-black">
               <div class="amount-input-container">
-                S/ <input 
-                    type="number" 
+                S/ <input
+                    type="number"
                     formControlName="descuento"
                     class="editable-input number-input"
                     [class.blackout]="isBlackoutMode"
@@ -177,7 +225,7 @@
               </div>
             </td>
 
-            <td class="highlight-amount">
+            <td class="highlight-amount bg-yellow-300 text-black">
               <div class="amount-input-container">
                 S/ <input 
                       type="number" 
@@ -248,53 +296,97 @@
           </tr>
         </table>
 
-        <div class="instructions">
-          Acercarse con su DNI, tarjeta Oh! y este documento; Indicar en los cajeros que va a realizar un <strong>pago o abono</strong> a su Tarjeta Oh por el monto <strong>APROBADO</strong>, en caso de no tener la tarjeta puede pagar con el número de cuenta de su tarjeta consignada en la parte superior de este documento.
+        <div class="instructions text-black">
+          <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+            Acercarse con su DNI, tarjeta Oh! y este documento; Indicar en los cajeros que va a realizar un <strong>pago o abono</strong> a su Tarjeta Oh por el monto <strong>APROBADO</strong>, en caso de no tener la tarjeta puede pagar con el número de cuenta de su tarjeta consignada en la parte superior de este documento.
+          </ng-container>
+          <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+            Acercarse a cualquier agencia o Agente BCP, realice el pago al Número de cuenta corriente BCP Soles: 1931851985017 <br>
+            El Número de cuenta interbancaria es 00219300185198501718. Una vez realizado el depósito enviar el voucher de pago número telefonico 915326798 para iniciar el tramite de la Carta de no adeudo.
+          </ng-container>
         </div>
 
-        <div class="section-header">CENTROS DE PAGO VIRTUAL:</div>
-        <div class="section-content">
+        <div class="section-header bg-[#e0e0e0] text-black">CENTROS DE PAGO VIRTUAL:</div>
+        <div class="section-content text-black">
           <div class="centers-content">
             <div class="bcp-logo">BCP</div>
             <div class="center">APP/WEB</div>
-            <div class="dni">Con su número de DNI</div>
+            <div class="dni text-black">
+              <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+                Con su número de DNI
+              </ng-container>
+              <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+                NUMERO DE CUENTA CORRIENTE - 1931851985017
+              </ng-container>
+            </div>
           </div>
         </div>
 
-        <div class="section-header">CENTROS DE PAGO PRESENCIAL :</div>
-        <div class="section-content">
+        <div class="section-header bg-[#e0e0e0] text-black">CENTROS DE PAGO PRESENCIAL :</div>
+        <div class="section-content text-black">
           <div class="centers-content">
             <div class="bcp-logo">BCP</div>
             <div class="center">AGENTE/VENTANILLA</div>
-            <div class="dni">Presentando su DNI</div>
+            <div class="dni text-black">
+              <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+                Presentando su DNI
+              </ng-container>
+              <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+                NUMERO DE CUENTA CORRIENTE - 1931851985017
+              </ng-container>
+            </div>
           </div>
         </div>
 
-        <div class="section-header">CONFIRMACIÓN DE PAGO:</div>
-        <div class="section-content">
-          Enviar foto del voucher de transacción al WhatsApp corporativo de Financiera Oh para su validación, registro, cancelación de deuda y retiro de cobranza.
+        <div class="section-header bg-[#e0e0e0] text-black">CONFIRMACIÓN DE PAGO:</div>
+        <div class="section-content text-black">
+          <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+            Enviar foto del voucher de transacción al WhatsApp corporativo de Financiera Oh para su validación, registro, cancelación de deuda y retiro de cobranza.
+          </ng-container>
+          <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+            Enviar foto del vóucher de transacción al WhatsApp corporativo de NSOLUCIONES para su validación, registro, cancelación de deuda y retiro de cobranza.
+          </ng-container>
         </div>
 
-        <div class="section-header">TRAMITE DE CARTA DE NO ADEUDO:</div>
-        <div class="section-content">
-          A partir de 15 días hábiles de la cancelación ya puede solicitar el trámite su carta de no adeudo escribiendo al <strong>WhatsApp: 980732405 - OPCION 2</strong> o llamando al (01) 619-4800; (01) 631-5400; para que lo pueda recoger en plataforma o solicitar el envío a su correo.
+        <div class="section-header bg-[#e0e0e0] text-black">TRAMITE DE CARTA DE NO ADEUDO:</div>
+        <div class="section-content text-black">
+          <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+            A partir de 15 días hábiles de la cancelación ya puede solicitar el trámite su carta de no adeudo escribiendo al <strong>WhatsApp: 980732405 - OPCION 2</strong> o llamando al (01) 619-4800; (01) 631-5400; para que lo pueda recoger en plataforma o solicitar el envío a su correo.
+          </ng-container>
+          <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+            A partir de 24 HORAS posterior al pago ya podrá solicitar el trámite su carta de no adeudo escribiendo al WhatsApp: 915326798 para coordinar el envío  a su correo.
+          </ng-container>
         </div>
 
-        <div class="contact-info">
-          Si desea mayor información, comuníquese a los siguientes números de contacto directo: Vía Telf.: o vía WhatsApp: <strong>968437436</strong>
+        <div class="contact-info text-black">
+          <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+            Si desea mayor información, comuníquese a los siguientes números de contacto directo: Vía Telf.: o vía WhatsApp: <strong>968437436</strong>
+          </ng-container>
+          <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+            Si desea mayor información, comuníquese a los siguientes números de contacto directo: Vía Telf.: o vía WhatsApp: <strong>915257493</strong>
+          </ng-container>
         </div>
 
         <!-- Sección de firma -->
-        <div class="signature-section">
-          <div class="signature-left">
+        <div class="signature-section text-black">
+          <div class="signature-left text-black">
             <span>Atentamente,</span>
           </div>
-          <div class="signature-center">
-            <div class="logo-placeholder small">LOGO BCP</div>
-            <div style="text-align: center; padding: 10px;">
-              <strong>Romina Tapia Albinagorta &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Dpto.</strong><br />
-              <strong>COBRANZAS Oh!</strong>
-            </div>
+          <div class="signature-center text-black">
+            <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
+              <div class="logo-placeholder small">LOGO BCP</div>
+              <div style="text-align: center; padding: 10px;">
+                <strong>Romina Tapia Albinagorta &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Dpto.</strong><br />
+                <strong>COBRANZAS Oh!</strong>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
+              <div class="logo-placeholder small">FIRMA</div>
+              <div style="text-align: center; padding: 10px;">
+                <strong>Emily Dayana Saenz Martinez</strong><br />
+                <strong>NSOLUCIONES CONSULTING S.A.C</strong>
+              </div>
+            </ng-container>
           </div>
           <div class="signature-right">
             <div class="logo-placeholder small">COMPROMISO</div>
@@ -359,4 +451,3 @@
       <button class="toast-close" (click)="removeToast(toast.id)">×</button>
     </div>
   </div>
-</body>

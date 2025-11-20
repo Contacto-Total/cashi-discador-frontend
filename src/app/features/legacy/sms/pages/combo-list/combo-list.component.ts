@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
-import { LucideAngularModule, Plus, Eye, Edit, X, Download, Trash2, Inbox, Info, XCircle, Search, MessageSquare } from 'lucide-angular';
+import { LucideAngularModule, Plus, Eye, Edit, X, Download, Trash2, Inbox, Info, XCircle, Search, MessageSquare, Tags, FileBadge } from 'lucide-angular';
 import { ComboService } from '../../services/combo.service';
 import { ComboResponse } from '../../models/combo.model';
 import { toSignal } from "@angular/core/rxjs-interop";
@@ -10,6 +10,7 @@ import { Row } from "../../models/dyn-query.model";
 import { Router } from '@angular/router';
 import { renderPreviewMessage, smsSegmentsLen } from '../../utils/sms-utils';
 import { EditComboModalComponent } from '../../components/edit-combo-modal/edit-combo-modal.component';
+import { ThemeService } from '../../../../../shared/services/theme.service';
 
 type ChipKey =
   | 'NOMBRE'
@@ -55,11 +56,15 @@ export class ComboListComponent {
   readonly Info = Info;
   readonly Search = Search;
   readonly MessageSquare = MessageSquare;
+  readonly Tags = Tags;
+  readonly FileBadge = FileBadge;
 
   private api = inject(ComboService);
   fb = inject(FormBuilder);
   private router = inject(Router);
+  private themeService = inject(ThemeService);
 
+  isDarkMode = this.themeService.isDarkMode;
 
   previewSms = signal<string | null>(null);
   smsLen = (t: string) => smsSegmentsLen(t);

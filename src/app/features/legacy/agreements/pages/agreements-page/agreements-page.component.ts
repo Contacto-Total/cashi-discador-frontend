@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { AgreementsService } from '../../services/agreements.service';
 import { CreatePaymentAgreementRequest } from '../../models/create-payment-agreement.request';
 import { LucideAngularModule } from 'lucide-angular';
+import { ThemeService } from '../../../../../shared/services/theme.service';
 
 @Component({
   selector: 'app-agreements-page',
@@ -27,6 +28,7 @@ export class AgreementsPageComponent implements OnInit {
   tramoDetectado = '';
   mostrarObservacion = false;
   observacionTexto = '';
+  mostrarDocumento = false;
 
   toasts: Array<{ id: number; type: 'error' | 'warning' | 'success'; message: string; icon: string }> = [];
   private toastIdCounter = 0;
@@ -39,26 +41,27 @@ export class AgreementsPageComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private agreementsService: AgreementsService
+    private agreementsService: AgreementsService,
+    private themeService: ThemeService
   ) {
     this.agreementForm = this.createForm();
     this.searchForm = this.fb.group({
       dniBusqueda: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]]
     });
+
+    // Reactividad: actualizar isDarkMode cuando cambie el tema
+    effect(() => {
+      this.isDarkMode = this.themeService.isDarkMode();
+    });
   }
 
   ngOnInit() {
-    this.checkDarkMode();
     this.setupFormValueChanges();
-  }
-
-  checkDarkMode() {
-    const isDark = document.documentElement.classList.contains('dark');
-    this.isDarkMode = isDark;
   }
 
   createForm(): FormGroup {
     return this.fb.group({
+      entidad: ['financiera_oh', Validators.required],
       fechaActual: [this.formatDate(new Date()), Validators.required],
       nombreTitular: ['', [Validators.required, Validators.minLength(2)]],
       dni: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]],
@@ -119,6 +122,18 @@ export class AgreementsPageComponent implements OnInit {
     return formatted.replace('septiembre', 'setiembre');
   }
 
+  determinarEntidadPorTramo(tramo: string): string {
+    // Tramo 3 o Tramo 5 → financiera_oh
+    // CONTACTO_TOTAL → nsoluciones
+    if (tramo === 'Tramo 3' || tramo === 'Tramo 5') {
+      return 'financiera_oh';
+    } else if (tramo === 'CONTACTO_TOTAL') {
+      return 'nsoluciones';
+    }
+    // Por defecto, usar financiera_oh
+    return 'financiera_oh';
+  }
+
   calculateDiscount() {
     const deudaTotal = this.agreementForm.get('deudaTotal')?.value || 0;
     const montoAprobado = this.agreementForm.get('montoAprobado')?.value || 0;
@@ -150,7 +165,11 @@ export class AgreementsPageComponent implements OnInit {
 
     this.agreementsService.getAgreementData(dni).subscribe({
       next: (response) => {
+        // Determinar la entidad basándose en el tramo
+        const entidad = this.determinarEntidadPorTramo(response.tramo);
+
         this.agreementForm.patchValue({
+          entidad: entidad,
           fechaActual: response.fechaActual,
           nombreTitular: response.nombreDelTitular,
           dni: dni,
@@ -162,6 +181,7 @@ export class AgreementsPageComponent implements OnInit {
         this.tramoDetectado = response.tramo;
         this.observacionTexto = `Deuda total: ${response.deudaTotal}\nSaldo capital asignado: ${response.saldoCapitalAsig}\nLTD: ${response.ltd}\nLTDE: ${response.ltde}\nAsesor: ${response.asesor}\nTipificación: ${response.observacion}`;
         this.mostrarObservacion = true;
+        this.mostrarDocumento = true;
         this.isLoading = false;
       },
       error: (error) => {
@@ -251,6 +271,7 @@ export class AgreementsPageComponent implements OnInit {
     const deudaTotalParaEnvio = this.isBlackoutMode ? formValue.montoAprobado : formValue.deudaTotal;
 
     const request: CreatePaymentAgreementRequest = {
+      entidad: formValue.entidad,
       fechaActual: this.formatDisplayDate(formValue.fechaActual),
       nombreTitular: formValue.nombreTitular,
       dni: formValue.dni,
@@ -274,9 +295,13 @@ export class AgreementsPageComponent implements OnInit {
         this.isLoading = false;
         this.showToast('success', 'Acuerdo descargado.');
       },
-      error: () => {
+      error: (error) => {
+        console.error('Error completo:', error);
+        console.error('Status:', error.status);
+        console.error('Mensaje:', error.message);
+        console.error('Request enviado:', request);
         this.isLoading = false;
-        this.showToast('error', 'Error al generar documento.');
+        this.showToast('error', `Error ${error.status}: ${error.message || 'Error al generar documento'}`);
       }
     });
   }
@@ -292,9 +317,14 @@ export class AgreementsPageComponent implements OnInit {
     this.readonlyInputs = false;
     this.isBlackoutMode = false;
     this.tramoDetectado = '';
+    this.mostrarDocumento = false;
     this.toasts = [];
 
+    // Preservar la entidad seleccionada
+    const entidadActual = this.agreementForm.get('entidad')?.value || 'financiera_oh';
+
     this.agreementForm.patchValue({
+      entidad: entidadActual,
       fechaActual: this.formatDate(new Date()),
       nombreTitular: '',
       dni: '',
@@ -437,5 +467,9 @@ export class AgreementsPageComponent implements OnInit {
     return this.isBlackoutMode
       ? 'Restaurar vista de deuda total'
       : 'Ocultar deuda total y usar monto aprobado como deuda';
+  }
+
+  get selectedEntidad(): string {
+    return this.agreementForm.get('entidad')?.value || 'financiera_oh';
   }
 }

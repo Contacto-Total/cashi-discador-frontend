@@ -16,3 +16,134 @@
     width: 100%;
   }
 }
+
+/* Forzar estilos de modo claro y oscuro correctamente */
+
+/* MODO CLARO: anular dark: classes que usan prefers-color-scheme */
+.min-h-screen:not(.dark) {
+  /* Gradiente claro */
+  background: linear-gradient(to bottom right, rgb(248 250 252), rgb(239 246 255), rgb(241 245 249)) !important;
+
+  /* Anular clases dark: para que NO se apliquen en modo claro */
+  * {
+    &[class*="dark:from-slate-950"] { background: none !important; }
+    &[class*="dark:via-gray-950"] { background: none !important; }
+    &[class*="dark:to-black"] { background: none !important; }
+    &[class*="dark:bg-slate-900"] { background-color: white !important; }
+    &[class*="dark:bg-slate-800"] { background-color: rgb(241 245 249) !important; } /* Más contraste para tarjetas */
+    &[class*="dark:bg-slate-700"] { background-color: rgb(203 213 225) !important; } /* Más contraste para badges */
+    &[class*="dark:bg-gray-700"] { background-color: rgb(203 213 225) !important; }
+    &[class*="dark:bg-slate-600"] { background-color: rgb(226 232 240) !important; }
+
+    &[class*="dark:text-white"] { color: rgb(15 23 42) !important; }
+    &[class*="dark:text-slate-100"] { color: rgb(15 23 42) !important; }
+    &[class*="dark:text-slate-400"] { color: rgb(71 85 105) !important; } /* Labels más oscuros */
+    &[class*="dark:text-slate-300"] { color: rgb(51 65 85) !important; } /* Más oscuro */
+    &[class*="dark:text-slate-500"] { color: rgb(100 116 139) !important; }
+
+    &[class*="dark:border-slate-700"] { border-color: rgb(203 213 225) !important; }
+    &[class*="dark:border-slate-600"] { border-color: rgb(148 163 184) !important; } /* Bordes más visibles */
+  }
+
+  /* Forzar colores específicos en modo claro */
+  div[class*="bg-slate-50"] { background-color: rgb(241 245 249) !important; } /* Tarjetas más visibles */
+  span[class*="bg-slate-200"] { background-color: rgb(226 232 240) !important; } /* Badges visibles */
+  label[class*="text-slate-600"] { color: rgb(71 85 105) !important; } /* Labels legibles */
+  div[class*="border-slate-200"] { border-color: rgb(203 213 225) !important; } /* Bordes más fuertes */
+
+  /* Iconos - colores específicos */
+  lucide-angular[class*="text-white"] {
+    color: white !important; /* Icono del título - siempre blanco */
+  }
+  div[class*="from-blue-600"][class*="to-purple-700"] lucide-angular {
+    color: white !important; /* Icono del título - siempre blanco */
+  }
+
+  /* Botones - colores específicos */
+  button[class*="border-blue-500"][class*="text-blue-500"] {
+    color: rgb(59 130 246) !important; /* Añadir Rango - texto azul */
+  }
+  button[class*="from-blue-500"][class*="to-purple-600"] {
+    color: white !important; /* Generar Campaña - texto blanco */
+  }
+
+  /* Custom tabs - sobrescribir estilos hardcodeados para modo claro */
+  app-custom-tabs ::ng-deep {
+    .tabs-header {
+      background: white !important;
+      border-bottom-color: rgb(226 232 240) !important;
+
+      .tab-button {
+        color: rgb(100 116 139) !important; /* Gris para inactivos */
+
+        &:hover:not(.active) {
+          color: rgb(71 85 105) !important;
+          background: rgba(0, 0, 0, 0.02) !important;
+        }
+
+        &.active {
+          color: rgb(16 185 129) !important; /* Verde para activo */
+          border-bottom-color: rgb(16 185 129) !important;
+          background: rgba(16, 185, 129, 0.05) !important;
+        }
+      }
+    }
+  }
+}
+
+/* MODO OSCURO: aplicar colores oscuros */
+.min-h-screen.dark {
+  /* Gradiente oscuro */
+  background: linear-gradient(to bottom right, rgb(2 6 23), rgb(17 24 39), rgb(0 0 0)) !important;
+
+  /* Fondos */
+  * {
+    &[class*="bg-white"] { background-color: rgb(30 41 59) !important; }
+    &[class*="bg-slate-50"] { background-color: rgb(30 41 59) !important; }
+    &[class*="bg-slate-100"] { background-color: rgb(30 41 59) !important; }
+    &[class*="bg-slate-200"] { background-color: rgb(51 65 85) !important; }
+
+    &[class*="text-slate-900"] { color: white !important; }
+    &[class*="text-slate-600"] { color: rgb(148 163 184) !important; }
+    &[class*="text-slate-500"] { color: rgb(148 163 184) !important; }
+
+    &[class*="border-slate-200"] { border-color: rgb(51 65 85) !important; }
+    &[class*="border-slate-300"] { border-color: rgb(51 65 85) !important; }
+  }
+
+  /* Iconos - colores específicos */
+  lucide-angular[class*="text-white"] {
+    color: white !important; /* Icono del título - siempre blanco */
+  }
+  div[class*="from-blue-600"][class*="to-purple-700"] lucide-angular {
+    color: white !important; /* Icono del título - siempre blanco */
+  }
+
+  /* Botones - mantener colores específicos en modo oscuro */
+  button[class*="from-blue-500"][class*="to-purple-600"] {
+    color: white !important; /* Generar Campaña - texto blanco */
+  }
+
+  /* Custom tabs - estilos para modo oscuro */
+  app-custom-tabs ::ng-deep {
+    .tabs-header {
+      background: rgb(30 41 59) !important; /* slate-800 */
+      border-bottom-color: rgb(51 65 85) !important;
+
+      .tab-button {
+        color: rgb(148 163 184) !important; /* Gris claro para inactivos */
+
+        &:hover:not(.active) {
+          color: rgb(203 213 225) !important;
+          background: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        &.active {
+          color: rgb(16 185 129) !important; /* Verde para activo */
+          border-bottom-color: rgb(16 185 129) !important;
+          background: rgba(16, 185, 129, 0.05) !important;
+        }
+      }
+    }
+  }
+}

@@ -1,10 +1,11 @@
-import { Component, EventEmitter, Input, OnInit, Output, signal, computed } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { LucideAngularModule, X, Settings, Filter, ListChecks, Ban, Plus, Trash2 } from 'lucide-angular';
 import { ComboService } from '../../services/combo.service';
 import { ComboResponse } from '../../models/combo.model';
 import { renderPreviewMessage, smsSegmentsLen } from '../../utils/sms-utils';
+import { ThemeService } from '../../../../../shared/services/theme.service';
 
 type ChipKey =
   | 'NOMBRE'
@@ -51,6 +52,9 @@ export class EditComboModalComponent implements OnInit {
 
   activeTab = signal<'variables' | 'rangos' | 'condiciones' | 'restricciones'>('variables');
   saving = signal(false);
+
+  private themeService = inject(ThemeService);
+  isDarkMode = this.themeService.isDarkMode;
 
   selectedChips = new Set<ChipKey>();
 
