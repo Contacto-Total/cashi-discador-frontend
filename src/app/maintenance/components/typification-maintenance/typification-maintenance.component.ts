@@ -43,6 +43,34 @@ export class TypificationMaintenanceComponent implements OnInit {
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
 
+  // Inline editing state
+  editingNodeId = signal<number | null>(null);
+  editingForm = signal<{
+    nombrePersonalizado: string;
+    descripcionPersonalizada: string;
+    colorPersonalizado: string;
+    iconoPersonalizado: string;
+    ordenVisualizacionPersonalizado: number;
+  } | null>(null);
+  savingEdit = signal(false);
+
+  presetColors = [
+    { hex: '#3B82F6', name: 'Azul' },
+    { hex: '#10B981', name: 'Verde' },
+    { hex: '#EF4444', name: 'Rojo' },
+    { hex: '#F59E0B', name: 'Naranja' },
+    { hex: '#8B5CF6', name: 'Violeta' },
+    { hex: '#EC4899', name: 'Rosa' },
+    { hex: '#6366F1', name: 'Índigo' },
+    { hex: '#14B8A6', name: 'Turquesa' }
+  ];
+
+  commonIcons = [
+    'phone', 'phone-call', 'check-circle', 'x-circle', 'alert-circle',
+    'user', 'users', 'credit-card', 'dollar-sign', 'calendar',
+    'clock', 'mail', 'message-square', 'file-text', 'building', 'wallet'
+  ];
+
   constructor(
     private classificationService: TypificationV2Service,
     public themeService: ThemeService
@@ -409,5 +437,132 @@ export class TypificationMaintenanceComponent implements OnInit {
       }
     });
     */
+  }
+
+  // ========================================
+  // Inline Editing Methods
+  // ========================================
+
+  /**
+   * Inicia la edición inline de una tipificación
+   */
+  startEdit(node: TypificationTreeNodeV2, event: Event) {
+    event.stopPropagation();
+
+    const config = node.config;
+    const typification = node.typification;
+
+    this.editingNodeId.set(config?.id || null);
+    this.editingForm.set({
+      nombrePersonalizado: config?.nombrePersonalizado || typification.nombre,
+      descripcionPersonalizada: config?.descripcionPersonalizada || typification.descripcion || '',
+      colorPersonalizado: config?.colorPersonalizado || typification.colorSugerido || '#3B82F6',
+      iconoPersonalizado: config?.iconoPersonalizado || typification.iconoSugerido || '',
+      ordenVisualizacionPersonalizado: config?.ordenVisualizacionPersonalizado || typification.ordenVisualizacion || 0
+    });
+  }
+
+  /**
+   * Cancela la edición inline
+   */
+  cancelEdit() {
+    this.editingNodeId.set(null);
+    this.editingForm.set(null);
+  }
+
+  /**
+   * Guarda los cambios de edición inline
+   */
+  saveEdit(node: TypificationTreeNodeV2) {
+    if (!this.editingForm() || !node.config) return;
+
+    this.savingEdit.set(true);
+    const form = this.editingForm()!;
+
+    const command = {
+      nombrePersonalizado: form.nombrePersonalizado !== node.typification.nombre ? form.nombrePersonalizado : undefined,
+      descripcionPersonalizada: form.descripcionPersonalizada !== (node.typification.descripcion || '') ? form.descripcionPersonalizada : undefined,
+      colorPersonalizado: form.colorPersonalizado !== (node.typification.colorSugerido || '#3B82F6') ? form.colorPersonalizado : undefined,
+      iconoPersonalizado: form.iconoPersonalizado !== (node.typification.iconoSugerido || '') ? form.iconoPersonalizado : undefined,
+      ordenVisualizacionPersonalizado: form.ordenVisualizacionPersonalizado !== (node.typification.ordenVisualizacion || 0) ? form.ordenVisualizacionPersonalizado : undefined
+    };
+
+    this.classificationService.updateTenantTypificationConfig(node.config.id, command).subscribe({
+      next: () => {
+        this.savingEdit.set(false);
+        this.editingNodeId.set(null);
+        this.editingForm.set(null);
+        this.showSuccessMessage();
+        this.loadTypifications();
+      },
+      error: (error) => {
+        console.error('Error al guardar personalización:', error);
+        this.savingEdit.set(false);
+        alert('Error al guardar los cambios');
+      }
+    });
+  }
+
+  /**
+   * Resetea la personalización a valores del catálogo
+   */
+  resetCustomization(node: TypificationTreeNodeV2, event: Event) {
+    event.stopPropagation();
+
+    if (!node.config) return;
+
+    if (!confirm('¿Resetear a valores del catálogo global?')) {
+      return;
+    }
+
+    const command = {
+      nombrePersonalizado: undefined,
+      descripcionPersonalizada: undefined,
+      colorPersonalizado: undefined,
+      iconoPersonalizado: undefined,
+      ordenVisualizacionPersonalizado: undefined
+    };
+
+    this.classificationService.updateTenantTypificationConfig(node.config.id, command).subscribe({
+      next: () => {
+        this.showSuccessMessage();
+        this.loadTypifications();
+      },
+      error: (error) => {
+        console.error('Error al resetear personalización:', error);
+        alert('Error al resetear personalización');
+      }
+    });
+  }
+
+  /**
+   * Verifica si un nodo está siendo editado
+   */
+  isEditing(configId: number | undefined): boolean {
+    return configId !== undefined && this.editingNodeId() === configId;
+  }
+
+  /**
+   * Verifica si un nodo tiene personalizaciones
+   */
+  hasCustomizations(config: any): boolean {
+    if (!config) return false;
+    return !!(
+      config.nombrePersonalizado ||
+      config.descripcionPersonalizada ||
+      config.colorPersonalizado ||
+      config.iconoPersonalizado ||
+      config.ordenVisualizacionPersonalizado !== null
+    );
+  }
+
+  /**
+   * Obtiene el valor efectivo de un campo
+   */
+  getEffectiveValue(config: any, typification: any, field: string): any {
+    const customField = field + 'Personalizado';
+    const catalogField = field === 'nombre' ? 'nombre' : field === 'color' ? 'colorSugerido' : field === 'icono' ? 'iconoSugerido' : field;
+
+    return config?.[customField] || typification[catalogField] || '';
   }
 }
