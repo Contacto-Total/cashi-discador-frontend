@@ -205,6 +205,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminGuard]
   },
   {
+    path: 'admin/maintenance/typifications',
+    loadComponent: () => import('./maintenance/components/typification-maintenance/typification-maintenance.component').then(m => m.TypificationMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
     path: 'admin/cartas-cesion',
     loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
