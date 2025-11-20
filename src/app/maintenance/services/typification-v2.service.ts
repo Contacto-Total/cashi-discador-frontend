@@ -198,11 +198,11 @@ export class TypificationV2Service {
   // ========================================
 
   getAllTenants(): Observable<Tenant[]> {
-    return this.http.get<Tenant[]>(`${environment.gatewayUrl}/tenants`);
+    return this.http.get<Tenant[]>(`${environment.webServiceUrl}/system-config/tenants`);
   }
 
   getPortfoliosByTenant(tenantId: number): Observable<Portfolio[]> {
-    return this.http.get<Portfolio[]>(`${environment.gatewayUrl}/tenants/${tenantId}/carteras`);
+    return this.http.get<Portfolio[]>(`${environment.webServiceUrl}/system-config/tenants/${tenantId}/portfolios`);
   }
 
   getSubPortfoliosByPortfolio(portfolioId: number): Observable<any[]> {
