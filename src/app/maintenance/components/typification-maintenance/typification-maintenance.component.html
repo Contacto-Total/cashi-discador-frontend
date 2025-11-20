@@ -170,6 +170,9 @@
       [isOpen]="showAdditionalFieldsDialog()"
       [typificationName]="selectedTypificationForFields()?.nombre || ''"
       [fields]="additionalFieldsForEdit()"
+      [tenantId]="selectedTenantId!"
+      [portfolioId]="selectedPortfolioId"
+      [subPortfolioId]="undefined"
       (save)="onAdditionalFieldsSaved($event)"
       (close)="closeAdditionalFieldsDialog()">
     </app-typification-additional-fields-dialog>

@@ -252,6 +252,28 @@ export class TypificationV2Service {
     );
   }
 
+  /**
+   * Obtiene las columnas numéricas disponibles en la tabla dinámica de una subcartera
+   * @param tenantId ID del tenant
+   * @param portfolioId ID del portfolio
+   * @param subPortfolioId ID de la subcartera
+   */
+  getDynamicTableColumns(
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number
+  ): Observable<{ columns: string[] }> {
+    const params = new HttpParams()
+      .set('tenantId', tenantId.toString())
+      .set('portfolioId', portfolioId.toString())
+      .set('subPortfolioId', subPortfolioId.toString());
+
+    return this.http.get<{ columns: string[] }>(
+      `${this.configUrl}/dynamic-table-columns`,
+      { params }
+    );
+  }
+
   // ========================================
   // Helper Methods
   // ========================================

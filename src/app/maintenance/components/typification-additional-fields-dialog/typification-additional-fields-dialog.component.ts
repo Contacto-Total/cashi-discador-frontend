@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2 } from '../../models/typification-v2.model';
+import { TypificationV2Service } from '../../services/typification-v2.service';
 
 @Component({
   selector: 'app-typification-additional-fields-dialog',
@@ -131,15 +132,53 @@ import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2 } from '../../models/
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                           Campo en Tabla Dinámica
                         </label>
-                        <input
-                          type="text"
-                          [(ngModel)]="field.campoTablaDinamica"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                          placeholder="promocion_1"
-                        />
-                        <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          Nombre del campo tal como aparece en la tabla dinámica del cliente (ej: promocion_1, monto_minimo_pagar)
-                        </p>
+
+                        @if (!portfolioId() || !subPortfolioId()) {
+                          <!-- Modo manual: Sin subcartera seleccionada -->
+                          <input
+                            type="text"
+                            [(ngModel)]="field.campoTablaDinamica"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                            placeholder="promocion_1"
+                          />
+                          <div class="mt-2 py-2 px-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-700 dark:text-blue-400">
+                            <p class="flex items-center gap-2 mb-1">
+                              <lucide-angular name="info" [size]="14"></lucide-angular>
+                              <strong>Modo Manual</strong>
+                            </p>
+                            <p class="ml-5">
+                              Ingrese el nombre exacto de la columna tal como aparece en la tabla dinámica de la subcartera.
+                              Ejemplos: <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">promocion_1</code>,
+                              <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">monto_minimo_pagar</code>
+                            </p>
+                          </div>
+                        } @else if (loadingColumns()) {
+                          <div class="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
+                            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                            Cargando columnas disponibles...
+                          </div>
+                        } @else if (availableColumns().length > 0) {
+                          <select
+                            [(ngModel)]="field.campoTablaDinamica"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                          >
+                            <option value="">-- Seleccione un campo --</option>
+                            @for (column of availableColumns(); track column) {
+                              <option [value]="column">{{ column }}</option>
+                            }
+                          </select>
+                          <p class="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                            <lucide-angular name="check-circle" [size]="12"></lucide-angular>
+                            {{ availableColumns().length }} campo(s) numérico(s) disponible(s) en la tabla dinámica
+                          </p>
+                        } @else {
+                          <div class="py-2 px-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-sm text-yellow-700 dark:text-yellow-400">
+                            <p class="flex items-center gap-2">
+                              <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+                              No se pudieron cargar las columnas. Verifique que exista una tabla dinámica para esta subcartera.
+                            </p>
+                          </div>
+                        }
                       </div>
                     }
                   </div>
@@ -183,11 +222,18 @@ export class TypificationAdditionalFieldsDialogComponent {
   isOpen = input.required<boolean>();
   typificationName = input<string>('');
   fields = input<AdditionalFieldV2[]>([]);
+  tenantId = input.required<number>();
+  portfolioId = input<number | undefined>(undefined);
+  subPortfolioId = input<number | undefined>(undefined);
 
   close = output<void>();
   save = output<AdditionalFieldV2[]>();
 
   localFields = signal<AdditionalFieldV2[]>([]);
+  availableColumns = signal<string[]>([]);
+  loadingColumns = signal<boolean>(false);
+
+  private typificationService = inject(TypificationV2Service);
 
   constructor() {
     effect(() => {
@@ -219,10 +265,40 @@ export class TypificationAdditionalFieldsDialogComponent {
       // Si cambia a DYNAMIC_TABLE, no es requerido
       field.esRequerido = false;
       field.tipoCampo = FieldTypeV2.CHIP_SELECT;
+
+      // Cargar columnas disponibles
+      this.loadAvailableColumns();
     } else {
       // Si cambia a MANUAL, limpiar campo de tabla dinámica
       field.campoTablaDinamica = undefined;
+      this.availableColumns.set([]);
     }
+  }
+
+  loadAvailableColumns() {
+    const tenantId = this.tenantId();
+    const portfolioId = this.portfolioId();
+    const subPortfolioId = this.subPortfolioId();
+
+    if (!tenantId || !portfolioId || !subPortfolioId) {
+      console.warn('No se puede cargar columnas: faltan tenant/portfolio/subportfolio');
+      return;
+    }
+
+    this.loadingColumns.set(true);
+
+    this.typificationService.getDynamicTableColumns(tenantId, portfolioId, subPortfolioId)
+      .subscribe({
+        next: (response) => {
+          this.availableColumns.set(response.columns);
+          this.loadingColumns.set(false);
+        },
+        error: (error) => {
+          console.error('Error loading available columns:', error);
+          this.availableColumns.set([]);
+          this.loadingColumns.set(false);
+        }
+      });
   }
 
   handleCancel() {
