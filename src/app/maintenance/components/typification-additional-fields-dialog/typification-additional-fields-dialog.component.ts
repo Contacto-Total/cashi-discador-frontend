@@ -30,6 +30,41 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
 
           <!-- Body -->
           <div class="flex-1 overflow-y-auto p-6 space-y-4">
+            <!-- Selector de Subcartera (para ver columnas disponibles) -->
+            @if (portfolioId()) {
+              <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <lucide-angular name="database" [size]="16" class="text-blue-600"></lucide-angular>
+                  Seleccionar Subcartera para ver columnas disponibles
+                </label>
+
+                @if (loadingSubPortfolios()) {
+                  <div class="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
+                    <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                    Cargando subcarteras...
+                  </div>
+                } @else if (subPortfolios().length > 0) {
+                  <select
+                    [(ngModel)]="selectedSubPortfolioId"
+                    (ngModelChange)="onSubPortfolioChange($event)"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                  >
+                    <option [ngValue]="undefined">-- Seleccione una subcartera --</option>
+                    @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                      <option [ngValue]="subPortfolio.id">{{ subPortfolio.nombre || subPortfolio.nombreSubcartera }}</option>
+                    }
+                  </select>
+                  <p class="text-xs text-blue-700 dark:text-blue-400 mt-2">
+                    💡 Seleccione una subcartera para ver las columnas numéricas disponibles en su tabla dinámica
+                  </p>
+                } @else {
+                  <p class="text-sm text-gray-600 dark:text-gray-400">
+                    No hay subcarteras disponibles para este portfolio
+                  </p>
+                }
+              </div>
+            }
+
             <!-- Botón agregar campo -->
             <button
               type="button"
@@ -133,7 +168,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                           Campo en Tabla Dinámica
                         </label>
 
-                        @if (!portfolioId() || !subPortfolioId()) {
+                        @if (!selectedSubPortfolioId()) {
                           <!-- Modo manual: Sin subcartera seleccionada -->
                           <input
                             type="text"
@@ -141,15 +176,16 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                             placeholder="promocion_1"
                           />
-                          <div class="mt-2 py-2 px-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-700 dark:text-blue-400">
+                          <div class="mt-2 py-2 px-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs text-yellow-700 dark:text-yellow-400">
                             <p class="flex items-center gap-2 mb-1">
-                              <lucide-angular name="info" [size]="14"></lucide-angular>
-                              <strong>Modo Manual</strong>
+                              <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
+                              <strong>⚠️ Modo Manual</strong>
                             </p>
                             <p class="ml-5">
-                              Ingrese el nombre exacto de la columna tal como aparece en la tabla dinámica de la subcartera.
-                              Ejemplos: <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">promocion_1</code>,
-                              <code class="bg-blue-100 dark:bg-blue-900 px-1 rounded">monto_minimo_pagar</code>
+                              Seleccione una subcartera arriba para ver las columnas disponibles automáticamente.
+                              O ingrese manualmente el nombre exacto de la columna.
+                              Ejemplos: <code class="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">promocion_1</code>,
+                              <code class="bg-yellow-100 dark:bg-yellow-900 px-1 rounded">monto_minimo_pagar</code>
                             </p>
                           </div>
                         } @else if (loadingColumns()) {
@@ -232,6 +268,9 @@ export class TypificationAdditionalFieldsDialogComponent {
   localFields = signal<AdditionalFieldV2[]>([]);
   availableColumns = signal<string[]>([]);
   loadingColumns = signal<boolean>(false);
+  subPortfolios = signal<any[]>([]);
+  loadingSubPortfolios = signal<boolean>(false);
+  selectedSubPortfolioId = signal<number | undefined>(undefined);
 
   private typificationService = inject(TypificationV2Service);
 
@@ -239,8 +278,44 @@ export class TypificationAdditionalFieldsDialogComponent {
     effect(() => {
       if (this.isOpen()) {
         this.localFields.set([...this.fields()]);
+        this.loadSubPortfolios();
       }
     });
+  }
+
+  loadSubPortfolios() {
+    const portfolioId = this.portfolioId();
+
+    if (!portfolioId) {
+      console.warn('No portfolio selected, cannot load subportfolios');
+      return;
+    }
+
+    this.loadingSubPortfolios.set(true);
+
+    this.typificationService.getSubPortfoliosByPortfolio(portfolioId)
+      .subscribe({
+        next: (subPortfolios) => {
+          this.subPortfolios.set(subPortfolios);
+          this.loadingSubPortfolios.set(false);
+
+          // Si hay subPortfolioId preseleccionado, usarlo
+          if (this.subPortfolioId()) {
+            this.selectedSubPortfolioId.set(this.subPortfolioId());
+          }
+        },
+        error: (error) => {
+          console.error('Error loading subportfolios:', error);
+          this.subPortfolios.set([]);
+          this.loadingSubPortfolios.set(false);
+        }
+      });
+  }
+
+  onSubPortfolioChange(subPortfolioId: number) {
+    this.selectedSubPortfolioId.set(subPortfolioId);
+    // Limpiar columnas anteriores
+    this.availableColumns.set([]);
   }
 
   addField() {
@@ -278,7 +353,7 @@ export class TypificationAdditionalFieldsDialogComponent {
   loadAvailableColumns() {
     const tenantId = this.tenantId();
     const portfolioId = this.portfolioId();
-    const subPortfolioId = this.subPortfolioId();
+    const subPortfolioId = this.selectedSubPortfolioId();
 
     if (!tenantId || !portfolioId || !subPortfolioId) {
       console.warn('No se puede cargar columnas: faltan tenant/portfolio/subportfolio');
