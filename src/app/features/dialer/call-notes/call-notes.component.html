@@ -63,6 +63,91 @@
           <!-- Campos adicionales dinámicos -->
           @if (loadingAdditionalFields) {
             <p class="loading-text">Cargando campos adicionales...</p>
+          } @else if (additionalFieldsV2.length > 0) {
+            <div class="additional-fields-section">
+              <h4 class="subsection-title">Información Adicional</h4>
+
+              @for (field of additionalFieldsV2; track field.id) {
+                @if (field.tipoCampo === FieldTypeV2.CHIP_SELECT && field.fuenteValor === FieldDataSourceV2.DYNAMIC_TABLE) {
+                  <!-- Campo con chip-select dinámico -->
+                  <div class="chip-select-field">
+                    <app-chip-select
+                      [label]="field.labelCampo"
+                      [options]="buildChipOptions(field)"
+                      [required]="field.esRequerido"
+                      [allowCustomValue]="true"
+                      (valueChange)="onChipValueChange(field.id, $event)"
+                    />
+                  </div>
+                } @else if (field.tipoCampo === FieldTypeV2.DATE) {
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
+                    <input
+                      matInput
+                      [matDatepicker]="picker"
+                      [formControlName]="'campo_' + field.id"
+                      [placeholder]="field.labelCampo">
+                    <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                    <mat-datepicker #picker></mat-datepicker>
+                    @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
+                      <mat-error>Este campo es requerido</mat-error>
+                    }
+                  </mat-form-field>
+                } @else if (field.tipoCampo === FieldTypeV2.NUMBER) {
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
+                    <input
+                      matInput
+                      type="number"
+                      [formControlName]="'campo_' + field.id"
+                      [placeholder]="field.labelCampo"
+                      [min]="field.valorMinimo ?? null"
+                      [max]="field.valorMaximo ?? null">
+                    @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
+                      <mat-error>Este campo es requerido</mat-error>
+                    }
+                    @if (notesForm.get('campo_' + field.id)?.hasError('min')) {
+                      <mat-error>Valor mínimo: {{ field.valorMinimo }}</mat-error>
+                    }
+                    @if (notesForm.get('campo_' + field.id)?.hasError('max')) {
+                      <mat-error>Valor máximo: {{ field.valorMaximo }}</mat-error>
+                    }
+                  </mat-form-field>
+                } @else if (field.tipoCampo === FieldTypeV2.TEXTAREA) {
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
+                    <textarea
+                      matInput
+                      [formControlName]="'campo_' + field.id"
+                      [placeholder]="field.labelCampo"
+                      [maxlength]="field.longitudMaxima ?? null"
+                      rows="3"></textarea>
+                    @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
+                      <mat-error>Este campo es requerido</mat-error>
+                    }
+                    @if (field.longitudMaxima) {
+                      <mat-hint align="end">{{ notesForm.get('campo_' + field.id)?.value?.length || 0 }} / {{ field.longitudMaxima }}</mat-hint>
+                    }
+                  </mat-form-field>
+                } @else if (field.tipoCampo === FieldTypeV2.TEXT) {
+                  <mat-form-field appearance="outline" class="full-width">
+                    <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
+                    <input
+                      matInput
+                      type="text"
+                      [formControlName]="'campo_' + field.id"
+                      [placeholder]="field.labelCampo"
+                      [maxlength]="field.longitudMaxima ?? null">
+                    @if (notesForm.get('campo_' + field.id)?.hasError('required')) {
+                      <mat-error>Este campo es requerido</mat-error>
+                    }
+                    @if (field.longitudMaxima) {
+                      <mat-hint align="end">{{ notesForm.get('campo_' + field.id)?.value?.length || 0 }} / {{ field.longitudMaxima }}</mat-hint>
+                    }
+                  </mat-form-field>
+                }
+              }
+            </div>
           } @else if (additionalFields.length > 0) {
             <div class="additional-fields-section">
               <h4 class="subsection-title">Información Adicional</h4>

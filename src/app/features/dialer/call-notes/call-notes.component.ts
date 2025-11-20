@@ -13,7 +13,10 @@ import { Call, CallDisposition, CompleteCallRequest } from '../../../core/models
 import { Contact } from '../../../core/models/contact.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { TypificationService } from '../../../maintenance/services/typification.service';
+import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
 import { TypificationCatalog, AdditionalField, FieldType } from '../../../maintenance/models/typification.model';
+import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2 } from '../../../maintenance/models/typification-v2.model';
+import { ChipSelectComponent, ChipOption } from '../../../shared/components/chip-select/chip-select.component';
 
 @Component({
   selector: 'app-call-notes',
@@ -27,7 +30,8 @@ import { TypificationCatalog, AdditionalField, FieldType } from '../../../mainte
     MatSelectModule,
     MatButtonModule,
     MatDatepickerModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    ChipSelectComponent
   ],
   templateUrl: './call-notes.component.html',
   styleUrls: ['./call-notes.component.css']
@@ -53,14 +57,18 @@ export class CallNotesComponent implements OnInit {
 
   // Campos adicionales dinámicos
   additionalFields: AdditionalField[] = [];
+  additionalFieldsV2: AdditionalFieldV2[] = [];
   loadingAdditionalFields = false;
   FieldType = FieldType; // Para usar en el template
+  FieldTypeV2 = FieldTypeV2; // Para usar en el template
+  FieldDataSourceV2 = FieldDataSourceV2; // Para usar en el template
 
   constructor(
     private fb: FormBuilder,
     private callService: CallService,
     private authService: AuthService,
-    private typificationService: TypificationService
+    private typificationService: TypificationService,
+    private typificationV2Service: TypificationV2Service
   ) {}
 
   ngOnInit(): void {
@@ -204,27 +212,48 @@ export class CallNotesComponent implements OnInit {
 
   loadAdditionalFields(typificationId: number): void {
     this.loadingAdditionalFields = true;
+    const user = this.authService.getCurrentUser();
 
-    this.typificationService.getAdditionalFields(typificationId).subscribe({
-      next: (fields) => {
-        this.additionalFields = fields;
-        this.addDynamicFieldsToForm(fields);
+    if (!user || !user.tenantId) {
+      console.warn('No se pudo obtener información del usuario');
+      this.loadingAdditionalFields = false;
+      return;
+    }
+
+    // Usar API V2 con clientId para obtener valores dinámicos
+    const clientId = this.contact?.id;
+
+    this.typificationV2Service.getTypificationFieldsWithValues(
+      user.tenantId,
+      typificationId,
+      user.portfolioId,
+      clientId
+    ).subscribe({
+      next: (response) => {
+        this.additionalFieldsV2 = response.fields;
+        this.addDynamicFieldsToFormV2(response.fields);
         this.loadingAdditionalFields = false;
       },
       error: (error) => {
-        console.error('Error loading additional fields:', error);
-        this.additionalFields = [];
+        console.error('Error loading additional fields V2:', error);
+        this.additionalFieldsV2 = [];
         this.loadingAdditionalFields = false;
       }
     });
   }
 
   clearAdditionalFields(): void {
-    // Remover controles dinámicos del formulario
+    // Remover controles dinámicos del formulario V1
     this.additionalFields.forEach(field => {
       this.notesForm.removeControl(`campo_${field.id}`);
     });
     this.additionalFields = [];
+
+    // Remover controles dinámicos del formulario V2
+    this.additionalFieldsV2.forEach(field => {
+      this.notesForm.removeControl(`campo_${field.id}`);
+    });
+    this.additionalFieldsV2 = [];
   }
 
   addDynamicFieldsToForm(fields: AdditionalField[]): void {
@@ -247,6 +276,54 @@ export class CallNotesComponent implements OnInit {
 
       this.notesForm.addControl(`campo_${field.id}`, this.fb.control('', validators));
     });
+  }
+
+  addDynamicFieldsToFormV2(fields: AdditionalFieldV2[]): void {
+    fields.forEach(field => {
+      const validators = field.esRequerido ? [Validators.required] : [];
+
+      // Agregar validadores según el tipo de campo
+      if (field.tipoCampo === FieldTypeV2.NUMBER) {
+        if (field.valorMinimo !== null && field.valorMinimo !== undefined) {
+          validators.push(Validators.min(field.valorMinimo));
+        }
+        if (field.valorMaximo !== null && field.valorMaximo !== undefined) {
+          validators.push(Validators.max(field.valorMaximo));
+        }
+      } else if (field.tipoCampo === FieldTypeV2.TEXT || field.tipoCampo === FieldTypeV2.TEXTAREA) {
+        if (field.longitudMaxima) {
+          validators.push(Validators.maxLength(field.longitudMaxima));
+        }
+      }
+
+      this.notesForm.addControl(`campo_${field.id}`, this.fb.control('', validators));
+    });
+  }
+
+  buildChipOptions(field: AdditionalFieldV2): ChipOption[] {
+    const options: ChipOption[] = [];
+
+    // Si el campo tiene un valor desde la tabla dinámica, agregarlo como opción
+    if (field.value !== null && field.value !== undefined) {
+      options.push({
+        label: `${field.labelCampo}: $${Number(field.value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        value: field.value
+      });
+    }
+
+    // TODO: Agregar otras opciones como Deuda Total si está disponible
+    // if (this.contact?.debtAmount) {
+    //   options.push({
+    //     label: `Deuda Total: $${this.contact.debtAmount.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`,
+    //     value: this.contact.debtAmount
+    //   });
+    // }
+
+    return options;
+  }
+
+  onChipValueChange(fieldId: number, value: any): void {
+    this.notesForm.get(`campo_${fieldId}`)?.setValue(value);
   }
 
   onSubmit(): void {
