@@ -111,4 +111,13 @@ export class PaymentScheduleService {
       `${this.baseUrl}/management/${managementId}/latest-status`
     );
   }
+
+  /**
+   * Obtiene cronogramas activos de un cliente
+   */
+  getActiveSchedulesByCustomer(customerId: number): Observable<PaymentScheduleResource[]> {
+    return this.http.get<PaymentScheduleResource[]>(
+      `${environment.apiUrl}/payment-schedules/customer/${customerId}/active`
+    );
+  }
 }

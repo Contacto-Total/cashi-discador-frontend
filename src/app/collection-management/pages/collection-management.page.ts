@@ -50,6 +50,28 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       }
 
+      <!-- Alerta de Promesa de Pago Activa -->
+      @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
+        <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-[slideInDown_0.5s_ease-out]">
+          @for (schedule of activePaymentSchedules(); track schedule.id) {
+            <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 dark:from-amber-600 dark:via-yellow-600 dark:to-amber-700 text-white px-6 py-3 rounded-lg shadow-2xl mb-2">
+              <div class="flex items-center gap-3">
+                <div class="text-2xl">📅</div>
+                <div>
+                  <div class="font-bold text-base">Promesa de Pago Activa</div>
+                  <div class="text-sm opacity-90">
+                    Monto: S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}
+                    @if (schedule.installments && schedule.installments.length > 0 && schedule.installments[0].dueDate) {
+                      - Vencimiento: {{ formatDate(schedule.installments[0].dueDate) }}
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
       <!-- Header Principal - ULTRA COMPACTO -->
       <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
         <div class="relative px-3 py-1">
@@ -882,6 +904,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   });
 
+  // Cronogramas de pago activos
+  activePaymentSchedules = signal<any[]>([]);
+
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
@@ -1223,8 +1248,35 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           });
 
           console.log('✅ Datos del cliente actualizados en la UI');
+
+          // 📅 Cargar cronogramas de promesas de pago activos
+          this.loadActivePaymentSchedules(clienteDetalle.idCliente);
         } else {
           console.log('⚠️ No se pudieron cargar los datos del cliente');
+        }
+      }
+    });
+  }
+
+  /**
+   * Carga los cronogramas de promesas de pago activos para un cliente
+   */
+  private loadActivePaymentSchedules(customerId: number) {
+    console.log(`📅 Cargando cronogramas activos para cliente ${customerId}...`);
+
+    this.paymentScheduleService.getActiveSchedulesByCustomer(customerId).pipe(
+      catchError((error) => {
+        console.warn('⚠️ Error cargando cronogramas activos:', error);
+        return of([]);
+      })
+    ).subscribe({
+      next: (schedules) => {
+        console.log('✅ Cronogramas activos cargados:', schedules);
+        this.activePaymentSchedules.set(schedules);
+
+        // Si hay promesas activas, mostrar alerta
+        if (schedules && schedules.length > 0) {
+          console.log(`📅 ¡Cliente tiene ${schedules.length} promesa(s) de pago activa(s)!`);
         }
       }
     });
@@ -2359,6 +2411,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       default:
         return String(value);
+    }
+  }
+
+  /**
+   * Formatea una fecha para mostrar en la UI
+   */
+  formatDate(dateValue: string | Date): string {
+    if (!dateValue) return '-';
+
+    try {
+      const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+      return date.toLocaleDateString('es-PE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    } catch {
+      return String(dateValue);
     }
   }
 
