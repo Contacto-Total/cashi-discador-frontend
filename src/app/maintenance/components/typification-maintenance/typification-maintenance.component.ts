@@ -368,24 +368,13 @@ export class TypificationMaintenanceComponent implements OnInit {
     this.additionalFieldsForEdit.set([]);
   }
 
-  onAdditionalFieldsSaved(fields: AdditionalFieldV2[]) {
-    const typificationId = this.selectedTypificationForFields()?.id;
-    if (!typificationId) return;
-
-    console.log('Guardando campos adicionales:', fields);
-
-    this.classificationService.saveAdditionalFields(typificationId, fields).subscribe({
-      next: () => {
-        this.showAdditionalFieldsDialog.set(false);
-        this.selectedTypificationForFields.set(undefined);
-        this.additionalFieldsForEdit.set([]);
-        this.showSuccessMessage();
-      },
-      error: (error) => {
-        console.error('Error saving additional fields:', error);
-        alert('Error al guardar los campos adicionales');
-      }
-    });
+  onAdditionalFieldsSaved() {
+    // El nuevo diálogo ya guarda internamente, solo cerramos y mostramos éxito
+    console.log('Campos adicionales guardados exitosamente');
+    this.showAdditionalFieldsDialog.set(false);
+    this.selectedTypificationForFields.set(undefined);
+    this.additionalFieldsForEdit.set([]);
+    this.showSuccessMessage();
   }
 
   deleteTypification(typification: TypificationCatalogV2) {

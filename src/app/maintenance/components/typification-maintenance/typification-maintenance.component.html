@@ -169,11 +169,11 @@
     <app-typification-additional-fields-dialog
       [isOpen]="showAdditionalFieldsDialog()"
       [typificationName]="selectedTypificationForFields()?.nombre || ''"
-      [fields]="additionalFieldsForEdit()"
+      [typificationId]="selectedTypificationForFields()?.id!"
       [tenantId]="selectedTenantId!"
       [portfolioId]="selectedPortfolioId"
       [subPortfolioId]="undefined"
-      (save)="onAdditionalFieldsSaved($event)"
+      (save)="onAdditionalFieldsSaved()"
       (close)="closeAdditionalFieldsDialog()">
     </app-typification-additional-fields-dialog>
   }
