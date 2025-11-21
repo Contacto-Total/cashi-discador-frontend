@@ -212,7 +212,7 @@ export class TypificationV2Service {
   }
 
   getSubPortfoliosByPortfolio(portfolioId: number): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.webServiceUrl}/v1/system-config/portfolios/${portfolioId}/subportfolios`);
+    return this.http.get<any[]>(`${this.configUrl}/portfolios/${portfolioId}/subportfolios`);
   }
 
   // ========================================
