@@ -277,6 +277,11 @@ export class TypificationAdditionalFieldsDialogComponent {
   constructor() {
     effect(() => {
       if (this.isOpen()) {
+        console.log('Dialog opened with:', {
+          tenantId: this.tenantId(),
+          portfolioId: this.portfolioId(),
+          subPortfolioId: this.subPortfolioId()
+        });
         this.localFields.set([...this.fields()]);
         this.loadSubPortfolios();
       }
