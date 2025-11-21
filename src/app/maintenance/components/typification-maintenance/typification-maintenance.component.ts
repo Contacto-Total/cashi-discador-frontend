@@ -374,24 +374,18 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     console.log('Guardando campos adicionales:', fields);
 
-    // TODO: Implementar endpoint para guardar campos adicionales
-    // Por ahora solo cerramos el diálogo
-    this.showAdditionalFieldsDialog.set(false);
-    this.selectedTypificationForFields.set(undefined);
-    this.additionalFieldsForEdit.set([]);
-    this.showSuccessMessage();
-
-    // Aquí deberías llamar al servicio para guardar:
-    // this.classificationService.saveAdditionalFields(typificationId, fields).subscribe({
-    //   next: () => {
-    //     this.showSuccessMessage();
-    //     this.closeAdditionalFieldsDialog();
-    //   },
-    //   error: (error) => {
-    //     console.error('Error saving additional fields:', error);
-    //     alert('Error al guardar los campos adicionales');
-    //   }
-    // });
+    this.classificationService.saveAdditionalFields(typificationId, fields).subscribe({
+      next: () => {
+        this.showAdditionalFieldsDialog.set(false);
+        this.selectedTypificationForFields.set(undefined);
+        this.additionalFieldsForEdit.set([]);
+        this.showSuccessMessage();
+      },
+      error: (error) => {
+        console.error('Error saving additional fields:', error);
+        alert('Error al guardar los campos adicionales');
+      }
+    });
   }
 
   deleteTypification(typification: TypificationCatalogV2) {

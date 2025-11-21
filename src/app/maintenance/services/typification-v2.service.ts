@@ -225,6 +225,13 @@ export class TypificationV2Service {
     );
   }
 
+  saveAdditionalFields(typificationId: number, fields: AdditionalFieldV2[]): Observable<AdditionalFieldV2[]> {
+    return this.http.put<AdditionalFieldV2[]>(
+      `${this.catalogUrl}/${typificationId}/additional-fields`,
+      fields
+    );
+  }
+
   /**
    * Obtiene los campos adicionales de una tipificación con valores dinámicos desde la tabla del cliente
    * @param tenantId ID del tenant
