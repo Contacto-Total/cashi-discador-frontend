@@ -133,3 +133,42 @@ export interface AdditionalFieldV2 {
   value?: any;
   options?: Array<{label: string, value: any}>;
 }
+
+// Modelos para el sistema de opciones con toggles
+export interface CampoOpcionDTO {
+  id?: number;
+  codigoOpcion: string;
+  labelOpcion: string;
+  campoTablaDinamica?: string;
+  estaHabilitada: boolean;
+  ordenVisualizacion: number;
+}
+
+export interface ConfigurarOpcionesCampoRequest {
+  idCampo: number;
+  opciones: OpcionToggleDTO[];
+}
+
+export interface OpcionToggleDTO {
+  codigoOpcion: string;
+  estaHabilitada: boolean;
+  ordenVisualizacion?: number;
+}
+
+export interface CampoConOpcionesResponse {
+  idCampo: number;
+  nombreCampo: string;
+  labelCampo: string;
+  tipoCampo: string;
+  esRequerido: boolean;
+  ordenVisualizacion: number;
+  opciones: OpcionConValorDTO[];
+}
+
+export interface OpcionConValorDTO {
+  id: number;
+  codigoOpcion: string;
+  labelOpcion: string;
+  valor: any;
+  esPersonalizado: boolean;
+}

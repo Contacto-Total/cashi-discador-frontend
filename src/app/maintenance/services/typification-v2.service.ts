@@ -9,7 +9,10 @@ import {
   UpdateTypificationCommandV2,
   UpdateTypificationConfigCommandV2,
   ClassificationTypeV2,
-  AdditionalFieldV2
+  AdditionalFieldV2,
+  CampoOpcionDTO,
+  ConfigurarOpcionesCampoRequest,
+  CampoConOpcionesResponse
 } from '../models/typification-v2.model';
 import { Portfolio } from '../models/portfolio.model';
 import { Tenant } from '../models/tenant.model';
@@ -277,6 +280,101 @@ export class TypificationV2Service {
 
     return this.http.get<{ columns: string[] }>(
       `${this.configUrl}/dynamic-table-columns`,
+      { params }
+    );
+  }
+
+  // ========================================
+  // Field Options (Toggle System)
+  // ========================================
+
+  /**
+   * Genera opciones automáticamente desde las columnas dinámicas de una subcartera
+   */
+  generarOpcionesCampo(
+    campoId: number,
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number
+  ): Observable<CampoOpcionDTO[]> {
+    const params = new HttpParams()
+      .set('tenantId', tenantId.toString())
+      .set('portfolioId', portfolioId.toString())
+      .set('subPortfolioId', subPortfolioId.toString());
+
+    return this.http.get<CampoOpcionDTO[]>(
+      `${this.catalogUrl}/campo/${campoId}/opciones/generar`,
+      { params }
+    );
+  }
+
+  /**
+   * Inicializa las opciones de un campo en la base de datos
+   */
+  inicializarOpcionesCampo(
+    campoId: number,
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number
+  ): Observable<CampoOpcionDTO[]> {
+    const params = new HttpParams()
+      .set('tenantId', tenantId.toString())
+      .set('portfolioId', portfolioId.toString())
+      .set('subPortfolioId', subPortfolioId.toString());
+
+    return this.http.post<CampoOpcionDTO[]>(
+      `${this.catalogUrl}/campo/${campoId}/opciones/inicializar`,
+      {},
+      { params }
+    );
+  }
+
+  /**
+   * Obtiene todas las opciones de un campo (para mostrar toggles al admin)
+   */
+  getOpcionesCampo(campoId: number): Observable<CampoOpcionDTO[]> {
+    return this.http.get<CampoOpcionDTO[]>(
+      `${this.catalogUrl}/campo/${campoId}/opciones`
+    );
+  }
+
+  /**
+   * Obtiene solo las opciones habilitadas de un campo (para dropdown del agente)
+   */
+  getOpcionesHabilitadas(campoId: number): Observable<CampoOpcionDTO[]> {
+    return this.http.get<CampoOpcionDTO[]>(
+      `${this.catalogUrl}/campo/${campoId}/opciones/habilitadas`
+    );
+  }
+
+  /**
+   * Configura las opciones de un campo (activa/desactiva toggles)
+   */
+  configurarOpciones(request: ConfigurarOpcionesCampoRequest): Observable<CampoOpcionDTO[]> {
+    return this.http.put<CampoOpcionDTO[]>(
+      `${this.catalogUrl}/campo/opciones/configurar`,
+      request
+    );
+  }
+
+  /**
+   * Obtiene las opciones habilitadas con sus valores desde la tabla dinámica del cliente
+   */
+  getOpcionesConValores(
+    campoId: number,
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number,
+    clientId: number
+  ): Observable<CampoConOpcionesResponse> {
+    const params = new HttpParams()
+      .set('tenantId', tenantId.toString())
+      .set('portfolioId', portfolioId.toString())
+      .set('subPortfolioId', subPortfolioId.toString())
+      .set('clientId', clientId.toString());
+
+    return this.http.get<CampoConOpcionesResponse>(
+      `${this.catalogUrl}/campo/${campoId}/opciones/valores`,
       { params }
     );
   }
