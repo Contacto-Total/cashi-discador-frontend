@@ -1,1 +1,0 @@
-import{b as e}from"./chunk-3CY7Y4VT.js";var c=class{applyChanges(E,t,S,n,m){E.forEachOperation((l,p,a)=>{let o,r;if(l.previousIndex==null){let i=S(l,p,a);o=t.createEmbeddedView(i.templateRef,i.context,i.index),r=e.INSERTED}else a==null?(t.remove(p),r=e.REMOVED):(o=t.get(p),t.move(o,a),r=e.MOVED);m&&m({context:o?.context,operation:r,record:l})})}detach(){}};export{c as a};

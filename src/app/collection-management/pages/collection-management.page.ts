@@ -155,21 +155,19 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       </div>
 
-      <!-- Contenido Principal -->
+      <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
       <div class="flex-1 flex overflow-hidden">
-        <!-- Panel Izquierdo - COMPACTO -->
-        <div class="w-80 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
-          <!-- Tabs compactos -->
+        <!-- PANEL IZQUIERDO - Info Cliente Compacta -->
+        <div class="w-56 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+          <!-- Mini tabs -->
           <div class="flex border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             @for (tab of tabs; track tab.id) {
               <button
                 (click)="activeTab.set(tab.id)"
-                [class]="'flex-1 px-2 py-1.5 text-xs font-semibold transition-all duration-300 relative group ' +
-                  (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-700 dark:text-gray-100 hover:text-blue-700 dark:hover:text-blue-200 hover:bg-gray-50 dark:hover:bg-gray-800')"
+                [class]="'flex-1 px-1 py-1 text-[10px] font-semibold transition-all relative ' +
+                  (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')"
               >
-                <div class="flex items-center justify-center gap-1">
-                  {{ tab.label }}
-                </div>
+                {{ tab.label }}
                 @if (activeTab() === tab.id) {
                   <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></div>
                 }
@@ -178,184 +176,71 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
 
           <!-- Contenido de tabs -->
-          <div class="flex-1 overflow-y-auto p-2">
+          <div class="flex-1 overflow-y-auto p-1.5">
             <div>
               @if (activeTab() === 'cliente') {
-                <div class="space-y-2">
-                  <!-- Grid dinámico de campos configurables -->
-                  <div class="grid grid-cols-4 gap-2">
-                    @for (field of customerOutputFields(); track field.id) {
-                      <div
-                        class="rounded-lg border p-2 transition-all"
-                        [class.col-span-1]="!field.size || field.size === 'small'"
-                        [class.col-span-2]="field.size === 'medium'"
-                        [class.col-span-3]="field.size === 'large'"
-                        [class.col-span-4]="field.size === 'full'"
-                        [class.bg-cyan-50]="field.highlight && !themeService.isDarkMode()"
-                        [class.dark:bg-cyan-950/30]="field.highlight && themeService.isDarkMode()"
-                        [class.border-cyan-300]="field.highlight && !themeService.isDarkMode()"
-                        [class.dark:border-cyan-900/50]="field.highlight && themeService.isDarkMode()"
-                        [class.bg-slate-50]="!field.highlight && !themeService.isDarkMode()"
-                        [class.dark:bg-slate-900/50]="!field.highlight && themeService.isDarkMode()"
-                        [class.border-slate-200]="!field.highlight && !themeService.isDarkMode()"
-                        [class.dark:border-slate-700]="!field.highlight && themeService.isDarkMode()"
-                      >
-                        <div class="flex items-start justify-between gap-2">
-                          <div class="flex-1 min-w-0">
-                            <div
-                              class="text-[9px] font-bold uppercase tracking-wide mb-0.5 flex items-center gap-1"
-                              [class.text-cyan-800]="field.highlight && !themeService.isDarkMode()"
-                              [class.dark:text-cyan-100]="field.highlight && themeService.isDarkMode()"
-                              [class.text-slate-600]="!field.highlight && !themeService.isDarkMode()"
-                              [class.dark:text-slate-400]="!field.highlight && themeService.isDarkMode()">
-                              @if (field.highlight) {
-                              }
-                              {{ field.label }}
-                            </div>
-                            <div
-                              class="text-[11px] font-bold break-words"
-                              [class.text-cyan-900]="field.highlight && !themeService.isDarkMode()"
-                              [class.dark:text-cyan-50]="field.highlight && themeService.isDarkMode()"
-                              [class.text-slate-900]="!field.highlight && !themeService.isDarkMode()"
-                              [class.dark:text-white]="!field.highlight && themeService.isDarkMode()">
-                              {{ formatFieldValue(getFieldValue(field.field), field.format) }}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    }
-                  </div>
-
+                <div class="space-y-1">
+                  <!-- Lista compacta de campos -->
+                  @for (field of customerOutputFields(); track field.id) {
+                    <div class="flex justify-between items-center py-0.5 border-b border-slate-100 dark:border-slate-800">
+                      <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase">{{ field.label }}</span>
+                      <span class="text-[10px] font-semibold text-slate-800 dark:text-white truncate max-w-[120px]">
+                        {{ formatFieldValue(getFieldValue(field.field), field.format) }}
+                      </span>
+                    </div>
+                  }
                   @if (customerOutputFields().length === 0) {
-                    <div class="text-center py-4 text-slate-500 dark:text-slate-400 text-xs">
-                      <p>No hay campos configurados para mostrar</p>
-                      <p class="text-[10px] mt-1">Configure los campos en Mantenimiento > Salidas de Cliente</p>
+                    <div class="text-center py-2 text-slate-400 text-[9px]">
+                      Sin campos configurados
                     </div>
                   }
                 </div>
               }
 
               @if (activeTab() === 'cuenta') {
-                <div class="space-y-2">
-                  <div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg p-2">
-                    <div class="text-[10px] font-bold text-slate-800 dark:text-white mb-1 flex items-center gap-1">
-                      Info. Producto
-                    </div>
-                    <div class="space-y-1 text-[10px]">
-                      <div class="flex justify-between">
-                        <span class="text-slate-600 dark:text-slate-200">Producto:</span>
-                        <span class="font-bold text-slate-900 dark:text-white">{{ customerData().cuenta.tipo_producto }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-slate-600 dark:text-slate-200">F. Desemb.:</span>
-                        <span class="font-bold text-slate-900 dark:text-white">{{ customerData().cuenta.fecha_desembolso }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-slate-600 dark:text-slate-200">Monto:</span>
-                        <span class="font-bold text-slate-900 dark:text-white">S/ {{ customerData().cuenta.monto_original.toFixed(2) }}</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-slate-600 dark:text-slate-200">Plazo:</span>
-                        <span class="font-bold text-slate-900 dark:text-white">{{ customerData().cuenta.plazo_meses }}m</span>
-                      </div>
-                      <div class="flex justify-between">
-                        <span class="text-slate-600 dark:text-slate-200">Tasa:</span>
-                        <span class="font-bold text-slate-900 dark:text-white">{{ customerData().cuenta.tasa_interes }}%</span>
-                      </div>
-                    </div>
+                <div class="space-y-1.5">
+                  <!-- Producto -->
+                  <div class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Producto</div>
+                  <div class="space-y-0.5 text-[10px]">
+                    <div class="flex justify-between"><span class="text-slate-500">Tipo:</span><span class="font-semibold text-slate-800 dark:text-white">{{ customerData().cuenta.tipo_producto }}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Monto:</span><span class="font-semibold text-slate-800 dark:text-white">S/ {{ customerData().cuenta.monto_original.toFixed(2) }}</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Plazo:</span><span class="font-semibold text-slate-800 dark:text-white">{{ customerData().cuenta.plazo_meses }}m</span></div>
                   </div>
-
-                  <div class="bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-900/50 rounded-lg p-2">
-                    <div class="text-[10px] font-bold text-red-800 dark:text-red-100 mb-1 flex items-center gap-1">
-                      Detalle Deuda
-                    </div>
-                    <div class="space-y-1 text-[10px]">
-                      <div class="flex justify-between bg-white dark:bg-gray-800/50 rounded px-1">
-                        <span class="text-red-700 dark:text-red-200">Capital:</span>
-                        <span class="font-bold text-red-900 dark:text-white">S/ {{ customerData().deuda.saldo_capital.toFixed(2) }}</span>
-                      </div>
-                      <div class="flex justify-between bg-white dark:bg-gray-800/50 rounded px-1">
-                        <span class="text-red-700 dark:text-red-200">Intereses:</span>
-                        <span class="font-bold text-red-900 dark:text-white">S/ {{ customerData().deuda.intereses_vencidos.toFixed(2) }}</span>
-                      </div>
-                      <div class="flex justify-between bg-white rounded px-1">
-                        <span class="text-red-700">Moras:</span>
-                        <span class="font-bold text-red-900">S/ {{ customerData().deuda.mora_acumulada.toFixed(2) }}</span>
-                      </div>
-                      <div class="flex justify-between bg-white rounded px-1">
-                        <span class="text-red-700">G. Cobr.:</span>
-                        <span class="font-bold text-red-900">S/ {{ customerData().deuda.gastos_cobranza.toFixed(2) }}</span>
-                      </div>
-                      <div class="h-px bg-red-300 my-1"></div>
-                      <div class="flex justify-between bg-red-200 rounded px-1 py-0.5">
-                        <span class="font-bold text-red-900">Total:</span>
-                        <span class="font-bold text-red-900">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</span>
-                      </div>
+                  <!-- Deuda -->
+                  <div class="text-[9px] font-bold text-red-500 uppercase mt-2">Deuda</div>
+                  <div class="space-y-0.5 text-[10px]">
+                    <div class="flex justify-between"><span class="text-red-400">Capital:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.saldo_capital.toFixed(2) }}</span></div>
+                    <div class="flex justify-between"><span class="text-red-400">Intereses:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.intereses_vencidos.toFixed(2) }}</span></div>
+                    <div class="flex justify-between"><span class="text-red-400">Mora:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.mora_acumulada.toFixed(2) }}</span></div>
+                    <div class="flex justify-between bg-red-100 dark:bg-red-950/50 rounded px-1 py-0.5 mt-1">
+                      <span class="font-bold text-red-700 dark:text-red-200">TOTAL:</span>
+                      <span class="font-bold text-red-700 dark:text-red-200">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</span>
                     </div>
                   </div>
                 </div>
               }
 
               @if (activeTab() === 'historial') {
-                <div class="space-y-2">
+                <div class="space-y-1">
                   @if (historialGestiones().length === 0) {
-                    <div class="text-center py-8 space-y-3">
-                      <div>
-                        <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Sin gestiones previas</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          No hay gestiones registradas para este cliente
-                        </p>
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                          Cliente: {{ customerData().id_cliente }}
-                        </p>
-                      </div>
-                      <button
-                        (click)="loadManagementHistory()"
-                        class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors flex items-center gap-2 mx-auto">
-                        Recargar Historial
-                      </button>
+                    <div class="text-center py-4">
+                      <p class="text-[10px] text-gray-400">Sin gestiones previas</p>
+                      <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-500 text-white text-[9px] rounded">Recargar</button>
                     </div>
                   } @else {
                     @for (gestion of historialGestiones(); track $index) {
-                      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
-                        <div class="flex justify-between items-start mb-1">
-                          <div class="text-[9px] font-bold text-gray-700 dark:text-gray-100 flex items-center gap-1">
-                            {{ gestion.fecha }}
-                          </div>
-                          <div class="text-[9px] text-gray-500 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ gestion.asesor }}</div>
+                      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5">
+                        <div class="flex justify-between items-center text-[9px]">
+                          <span class="font-bold text-gray-600 dark:text-gray-300">{{ gestion.fecha }}</span>
+                          <span class="text-gray-400">{{ gestion.asesor }}</span>
                         </div>
-                        <div class="space-y-1 text-[10px]">
-                          <div class="font-bold text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/30 px-2 py-0.5 rounded inline-block">{{ gestion.resultado }}</div>
-                          <div class="font-semibold text-green-700 dark:text-green-200 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded inline-block ml-1">{{ gestion.gestion }}</div>
-                          <div class="text-[9px] text-gray-600 dark:text-gray-100 italic mt-1 bg-white dark:bg-gray-900 p-1 rounded leading-tight">{{ gestion.observacion }}</div>
-                          <div class="text-[9px] text-gray-500 dark:text-gray-100">Duración: {{ gestion.duracion }}</div>
-
-                          <!-- Cronograma de pagos -->
-                          @if (gestion.schedule) {
-                            <div class="mt-2 p-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded">
-                              <div class="flex items-center justify-between gap-1 mb-1">
-                                <div class="flex items-center gap-1">
-                                  <span class="text-[9px] font-bold text-purple-900 dark:text-purple-200 uppercase">Cronograma</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  (click)="openScheduleDetail(gestion.id)"
-                                  class="text-[8px] px-1.5 py-0.5 bg-purple-600 hover:bg-purple-700 text-white rounded transition-colors font-bold">
-                                  Ver Detalle
-                                </button>
-                              </div>
-                              <div class="text-[9px] text-purple-800 dark:text-purple-300">
-                                <div class="flex justify-between">
-                                  <span>Cuotas: {{ gestion.schedule.numberOfInstallments }}</span>
-                                  <span class="font-bold">S/ {{ gestion.schedule.totalAmount | number:'1.2-2' }}</span>
-                                </div>
-                                <div class="text-[8px] text-purple-600 dark:text-purple-400 mt-0.5">
-                                  {{ gestion.schedule.installments.length }} cuota(s) registrada(s)
-                                </div>
-                              </div>
-                            </div>
-                          }
-                        </div>
+                        <div class="text-[10px] font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.gestion }}</div>
+                        <div class="text-[9px] text-gray-500 dark:text-gray-400 truncate">{{ gestion.observacion }}</div>
+                        @if (gestion.schedule) {
+                          <button (click)="openScheduleDetail(gestion.id)" class="text-[8px] text-purple-600 dark:text-purple-400 mt-0.5 hover:underline">
+                            Ver cronograma →
+                          </button>
+                        }
                       </div>
                     }
                   }
@@ -429,42 +314,37 @@ import { AuthService } from '../../core/services/auth.service';
             </div>
             }
 
-            <!-- Tipo de Gestión - SISTEMA DINÁMICO (N NIVELES) -->
+            <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
             @if (usesHierarchicalClassifications()) {
-              @for (level of hierarchyLevels(); track $index) {
-                @if (shouldShowLevel($index)) {
-                  <div class="bg-green-50 dark:bg-green-950/30 rounded-lg shadow-md border border-green-300 dark:border-green-900/50 p-2 mb-2 animate-[fadeIn_0.3s_ease-in]">
-                    <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
-                      <div [class]="'w-1.5 h-1.5 rounded-full ' +
-                        ($index === 0 ? 'bg-red-500' :
-                         $index === 1 ? 'bg-blue-500' :
-                         $index === 2 ? 'bg-purple-500' :
-                         $index === 3 ? 'bg-orange-500' :
-                         'bg-green-500')"></div>
-                      {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
-                    </label>
-                    <div class="relative">
-                      <select
-                        [ngModel]="selectedClassifications()[$index]"
-                        (ngModelChange)="onClassificationLevelChange($index, $event)"
-                        [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-green-200 dark:focus:ring-green-800 hover:border-green-500 text-xs ' +
-                          (errors().tipoGestion && $index === 0 ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-green-300 dark:border-green-700 bg-white dark:bg-gray-900') + ' ' +
-                          (selectedClassifications()[$index] ? 'bg-green-100 dark:bg-green-950/30 border-green-500 dark:border-green-600' : '')"
-                      >
-                        <option value="">-- Seleccionar --</option>
-                        @for (option of level; track option.id) {
-                          <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
-                        }
-                      </select>
-                    </div>
-                    @if (errors().tipoGestion && $index === 0) {
-                      <div class="text-red-600 dark:text-red-400 text-[10px] mt-1 flex items-center gap-1">
-                        Requerido
+              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-3">
+                <div class="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">Clasificación</div>
+                <div class="flex flex-wrap gap-2">
+                  @for (level of hierarchyLevels(); track $index) {
+                    @if (shouldShowLevel($index)) {
+                      <div class="flex-1 min-w-[140px]">
+                        <label class="block text-[9px] text-gray-500 dark:text-gray-400 mb-0.5">
+                          {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
+                        </label>
+                        <select
+                          [ngModel]="selectedClassifications()[$index]"
+                          (ngModelChange)="onClassificationLevelChange($index, $event)"
+                          [class]="'w-full p-1.5 border rounded text-[11px] font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
+                            (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white') + ' ' +
+                            (selectedClassifications()[$index] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
+                        >
+                          <option value="">Seleccionar...</option>
+                          @for (option of level; track option.id) {
+                            <option [value]="option.id">[{{ option.codigo }}] {{ option.label }}</option>
+                          }
+                        </select>
                       </div>
                     }
-                  </div>
+                  }
+                </div>
+                @if (errors().tipoGestion) {
+                  <div class="text-red-500 text-[9px] mt-1">Seleccione una clasificación</div>
                 }
-              }
+              </div>
             }
 
             <!-- Sección de Campos Dinámicos - NUEVA -->
@@ -607,6 +487,77 @@ import { AuthService } from '../../core/services/auth.service';
               >
                 Cancelar
               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
+        <div class="w-56 bg-white dark:bg-slate-900 border-l dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+          <!-- Teléfonos -->
+          <div class="p-2 border-b dark:border-slate-800">
+            <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
+                <span class="text-green-600 dark:text-green-400 text-sm">📱</span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[9px] text-green-600 dark:text-green-400">Principal</div>
+                  <div class="text-[11px] font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
+                </div>
+              </div>
+              @if (customerData().contacto.telefono_alternativo) {
+                <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                  <span class="text-slate-500 text-sm">📞</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[9px] text-slate-500 dark:text-slate-400">Alternativo</div>
+                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
+                  </div>
+                </div>
+              }
+              @if (customerData().contacto.telefono_trabajo) {
+                <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                  <span class="text-slate-500 text-sm">🏢</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[9px] text-slate-500 dark:text-slate-400">Trabajo</div>
+                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Email y Dirección -->
+          <div class="p-2 border-b dark:border-slate-800">
+            <div class="space-y-1">
+              @if (customerData().contacto.email) {
+                <div class="flex items-start gap-2">
+                  <span class="text-blue-500 text-sm">✉️</span>
+                  <div class="text-[10px] text-gray-600 dark:text-gray-300 break-all">{{ customerData().contacto.email }}</div>
+                </div>
+              }
+              @if (customerData().contacto.direccion) {
+                <div class="flex items-start gap-2">
+                  <span class="text-orange-500 text-sm">📍</span>
+                  <div class="text-[10px] text-gray-600 dark:text-gray-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Resumen Rápido Deuda -->
+          <div class="p-2 bg-red-50 dark:bg-red-950/20">
+            <div class="text-center">
+              <div class="text-[9px] text-red-500 uppercase font-bold">Deuda Total</div>
+              <div class="text-lg font-black text-red-600 dark:text-red-400">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</div>
+              <div class="text-[10px] text-red-500 dark:text-red-400">{{ customerData().deuda.dias_mora }} días mora</div>
+            </div>
+          </div>
+
+          <!-- Último Pago -->
+          <div class="p-2 flex-1">
+            <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Último Pago</div>
+            <div class="text-[10px] text-gray-600 dark:text-gray-300">
+              <div>{{ customerData().deuda.fecha_ultimo_pago }}</div>
+              <div class="font-bold text-green-600 dark:text-green-400">S/ {{ customerData().deuda.monto_ultimo_pago.toFixed(2) }}</div>
             </div>
           </div>
         </div>
