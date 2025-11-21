@@ -12,6 +12,7 @@ export class InactivityService {
   private warningTimer$ = new Subject<void>();
   private lastActivityTime: number = Date.now();
   private checkInterval: any;
+  private warningEmitted: boolean = false; // Flag para emitir warning solo una vez
 
   // Eventos que resetean el contador de inactividad
   private activityEvents$ = merge(
@@ -39,6 +40,7 @@ export class InactivityService {
     }
 
     this.lastActivityTime = Date.now();
+    this.warningEmitted = false; // Resetear flag al iniciar
 
     // Escuchar eventos de actividad del usuario
     this.activityEvents$
@@ -76,8 +78,9 @@ export class InactivityService {
         this.inactivityTimer$.next();
         this.detener();
       });
-    } else if (tiempoInactivo >= tiempoParaAdvertencia) {
-      // Mostrar advertencia
+    } else if (tiempoInactivo >= tiempoParaAdvertencia && !this.warningEmitted) {
+      // Mostrar advertencia (solo una vez)
+      this.warningEmitted = true;
       this.ngZone.run(() => {
         this.warningTimer$.next();
       });
@@ -86,6 +89,7 @@ export class InactivityService {
 
   resetearContador(): void {
     this.lastActivityTime = Date.now();
+    this.warningEmitted = false; // Resetear flag al continuar sesión
   }
 
   getTiempoRestante(): number {

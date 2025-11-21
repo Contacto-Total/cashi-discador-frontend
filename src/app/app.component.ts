@@ -33,6 +33,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   private callStatusSubscription?: Subscription; // ✅ CRITICAL FIX: Guardar subscription para evitar duplicados
   private dialogRef: any;
   private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
+  private sessionClosing = false; // Prevenir múltiples cierres de sesión
   private callActivatedTimestamp: number | null = null; // Timestamp de cuando la llamada se activó
   private navigationTimeout: any = null; // Timeout para navegación retrasada
 
@@ -133,6 +134,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private iniciarMonitoreoInactividad(): void {
+    // Resetear flag de cierre de sesión
+    this.sessionClosing = false;
+
     // Iniciar servicio de inactividad
     this.inactivityService.iniciar();
 
@@ -172,6 +176,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private cerrarSesionPorInactividad(): void {
+    // Evitar múltiples llamadas
+    if (this.sessionClosing) {
+      return;
+    }
+    this.sessionClosing = true;
+
     // Cerrar modal si está abierto
     if (this.dialogRef) {
       this.dialogRef.close();
@@ -183,6 +193,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Mostrar mensaje (opcional)
     alert('Tu sesión ha expirado por inactividad');
+
+    // Resetear flag después de un breve delay
+    setTimeout(() => {
+      this.sessionClosing = false;
+    }, 1000);
   }
 
   /**
