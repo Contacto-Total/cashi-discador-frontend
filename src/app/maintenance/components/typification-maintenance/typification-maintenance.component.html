@@ -347,7 +347,7 @@
                 (click)="resetCustomization(node, $event)"
                 title="Resetear a valores del catálogo"
                 class="w-6 h-6 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors">
-
+                <lucide-angular name="corner-up-left" [size]="14"></lucide-angular>
               </button>
             }
 
@@ -355,7 +355,7 @@
               (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
               title="Agregar hijo"
               class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-
+              <lucide-angular name="plus-circle" [size]="14"></lucide-angular>
             </button>
 
             <button
@@ -369,7 +369,7 @@
               (click)="openEditDialog(node.typification); $event.stopPropagation()"
               title="Editar catálogo global"
               class="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-
+              <lucide-angular name="edit-2" [size]="14"></lucide-angular>
             </button>
 
             <button
@@ -379,7 +379,7 @@
               [class.opacity-30]="node.typification.esSistema"
               [class.cursor-not-allowed]="node.typification.esSistema"
               class="w-6 h-6 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-
+              <lucide-angular name="trash-2" [size]="14"></lucide-angular>
             </button>
           </div>
         }
@@ -567,7 +567,7 @@
               (click)="resetCustomization(node, $event)"
               title="Resetear a valores del catálogo"
               class="w-6 h-6 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 rounded transition-colors">
-
+              <lucide-angular name="corner-up-left" [size]="14"></lucide-angular>
             </button>
           }
 
@@ -575,7 +575,7 @@
             (click)="openCreateChildDialog(node.typification); $event.stopPropagation()"
             title="Agregar hijo"
             class="w-6 h-6 flex items-center justify-center text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30 rounded transition-colors">
-
+            <lucide-angular name="plus-circle" [size]="14"></lucide-angular>
           </button>
 
           <button
@@ -589,7 +589,7 @@
             (click)="openEditDialog(node.typification); $event.stopPropagation()"
             title="Editar catálogo global"
             class="w-6 h-6 flex items-center justify-center text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors">
-
+            <lucide-angular name="edit-2" [size]="14"></lucide-angular>
           </button>
 
           <button
@@ -599,7 +599,7 @@
             [class.opacity-30]="node.typification.esSistema"
             [class.cursor-not-allowed]="node.typification.esSistema"
             class="w-6 h-6 flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors disabled:hover:bg-transparent">
-
+            <lucide-angular name="trash-2" [size]="14"></lucide-angular>
           </button>
         </div>
       </div>
