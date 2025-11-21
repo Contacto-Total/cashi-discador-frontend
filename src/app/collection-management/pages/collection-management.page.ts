@@ -108,63 +108,16 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       </div>
 
-      <!-- Barra de Info Cliente - ULTRA COMPACTA -->
-      <div class="bg-white dark:bg-slate-900 border-b border-blue-400 dark:border-slate-700 shadow-sm relative overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-r from-blue-50 dark:from-blue-950/50 to-transparent opacity-50"></div>
-        <div class="relative px-3 py-1">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3 text-xs">
-              <div>
-                <div class="text-[9px] text-gray-500 dark:text-white uppercase font-semibold flex items-center gap-0.5">
-                  Cliente
-                </div>
-                <div class="text-xs font-bold text-gray-900 dark:text-white">{{ customerData().nombre_completo }}</div>
-              </div>
-              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-              <div>
-                <div class="text-[9px] text-gray-500 dark:text-white">Documento</div>
-                <div class="font-semibold text-gray-800 dark:text-white text-[10px]">{{ customerData().tipo_documento }}: {{ customerData().numero_documento }}</div>
-              </div>
-              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-              <div>
-                <div class="text-[9px] text-gray-500 dark:text-white">ID Cliente</div>
-                <div class="font-semibold text-gray-800 dark:text-white font-mono text-[10px]">{{ customerData().id_cliente }}</div>
-              </div>
-              <div class="h-6 w-px bg-gray-200 dark:bg-gray-700"></div>
-              <div>
-                <div class="text-[9px] text-gray-500 dark:text-white">Cuenta</div>
-                <div class="font-semibold text-gray-800 dark:text-white text-[10px]">{{ customerData().cuenta.numero_cuenta }}</div>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <div class="text-right bg-red-50 dark:bg-red-950/30 px-2 py-1 rounded border border-red-200 dark:border-red-900/50">
-                <div class="text-[9px] text-red-600 dark:text-red-200 font-semibold flex items-center justify-end gap-0.5">
-                  Deuda
-                </div>
-                <div class="text-sm font-bold text-red-600 dark:text-red-100">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</div>
-              </div>
-              <div class="text-right bg-orange-50 dark:bg-orange-950/30 px-2 py-1 rounded border border-orange-200 dark:border-orange-900/50">
-                <div class="text-[9px] text-orange-600 dark:text-orange-200 font-semibold flex items-center justify-end gap-0.5">
-                  Mora
-                </div>
-                <div class="text-sm font-bold text-orange-600 dark:text-orange-100">{{ customerData().deuda.dias_mora }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
       <div class="flex-1 flex overflow-hidden">
-        <!-- PANEL IZQUIERDO - Info Cliente Compacta -->
-        <div class="w-56 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
-          <!-- Mini tabs -->
+        <!-- PANEL IZQUIERDO - Info Cliente -->
+        <div class="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+          <!-- Tabs -->
           <div class="flex border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             @for (tab of tabs; track tab.id) {
               <button
                 (click)="activeTab.set(tab.id)"
-                [class]="'flex-1 px-1 py-1 text-[10px] font-semibold transition-all relative ' +
+                [class]="'flex-1 px-2 py-1.5 text-[11px] font-semibold transition-all relative ' +
                   (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')"
               >
                 {{ tab.label }}
@@ -176,21 +129,21 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
 
           <!-- Contenido de tabs -->
-          <div class="flex-1 overflow-y-auto p-1.5">
+          <div class="flex-1 overflow-y-auto p-2">
             <div>
               @if (activeTab() === 'cliente') {
-                <div class="space-y-1">
-                  <!-- Lista compacta de campos -->
+                <div class="space-y-2">
+                  <!-- Lista vertical de campos -->
                   @for (field of customerOutputFields(); track field.id) {
-                    <div class="flex justify-between items-center py-0.5 border-b border-slate-100 dark:border-slate-800">
-                      <span class="text-[9px] text-slate-500 dark:text-slate-400 uppercase">{{ field.label }}</span>
-                      <span class="text-[10px] font-semibold text-slate-800 dark:text-white truncate max-w-[120px]">
+                    <div class="pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                      <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">{{ field.label }}</div>
+                      <div class="text-[12px] font-semibold text-slate-800 dark:text-white break-words">
                         {{ formatFieldValue(getFieldValue(field.field), field.format) }}
-                      </span>
+                      </div>
                     </div>
                   }
                   @if (customerOutputFields().length === 0) {
-                    <div class="text-center py-2 text-slate-400 text-[9px]">
+                    <div class="text-center py-2 text-slate-400 text-[10px]">
                       Sin campos configurados
                     </div>
                   }
@@ -492,7 +445,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
-        <div class="w-56 bg-white dark:bg-slate-900 border-l dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-64 bg-white dark:bg-slate-900 border-l dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Teléfonos -->
           <div class="p-2 border-b dark:border-slate-800">
             <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
