@@ -40,7 +40,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
 
                 @if (loadingSubPortfolios()) {
                   <div class="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
-                    <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                    <lucide-angular name="loader" [size]="16" class="animate-spin"></lucide-angular>
                     Cargando subcarteras...
                   </div>
                 } @else if (subPortfolios().length > 0) {
@@ -190,7 +190,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                           </div>
                         } @else if (loadingColumns()) {
                           <div class="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
-                            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                            <lucide-angular name="loader" [size]="16" class="animate-spin"></lucide-angular>
                             Cargando columnas disponibles...
                           </div>
                         } @else if (availableColumns().length > 0) {
@@ -314,8 +314,11 @@ export class TypificationAdditionalFieldsDialogComponent {
 
   onSubPortfolioChange(subPortfolioId: number) {
     this.selectedSubPortfolioId.set(subPortfolioId);
-    // Limpiar columnas anteriores
+    // Limpiar columnas anteriores y cargar nuevas
     this.availableColumns.set([]);
+    if (subPortfolioId) {
+      this.loadAvailableColumns();
+    }
   }
 
   addField() {
