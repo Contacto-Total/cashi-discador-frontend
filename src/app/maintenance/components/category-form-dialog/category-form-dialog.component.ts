@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { ClassificationType } from '../../models/typification.model';
+import { ClassificationTypeService } from '../../services/classification-type.service';
 
 interface CategoryForm {
   code: string;
@@ -221,6 +222,8 @@ export class CategoryFormDialogComponent implements OnInit, OnChanges {
   errors = signal<Record<string, string>>({});
   typeExamples = signal<ClassificationTypeExample[]>([]);
 
+  constructor(private classificationTypeService: ClassificationTypeService) {}
+
   ngOnInit() {
     this.buildTypeExamples();
   }
@@ -300,12 +303,31 @@ export class CategoryFormDialogComponent implements OnInit, OnChanges {
 
     this.saving.set(true);
 
-    // Simulación de guardado - En producción esto llamaría al backend
-    setTimeout(() => {
-      this.saving.set(false);
-      alert(`⚠️ Funcionalidad pendiente:\n\nPara crear categorías dinámicamente, necesitas:\n\n1. Backend: Crear tabla 'classification_types' en la BD\n2. Backend: API REST para CRUD de tipos\n3. Frontend: Actualizar enum ClassificationType dinámicamente\n\nPor ahora, las categorías son enums fijos en el código.\n\nCategoría a crear:\nCódigo: ${this.form.code}\nNombre: ${this.form.name}`);
-      this.save.emit(this.form.name);
-    }, 1000);
+    // Crear el tipo de clasificación en el backend
+    const newType = {
+      code: this.form.code.trim(),
+      name: this.form.name.trim(),
+      description: this.form.description.trim() || undefined,
+      isActive: true,
+      isSystem: false,
+      displayOrder: 0
+    };
+
+    this.classificationTypeService.createType(newType).subscribe({
+      next: (created) => {
+        console.log('✅ Tipo de clasificación creado:', created);
+        this.saving.set(false);
+        this.save.emit(created.code);
+      },
+      error: (error) => {
+        console.error('❌ Error creando tipo de clasificación:', error);
+        this.saving.set(false);
+
+        // Mostrar error al usuario
+        const errorMessage = error.error || error.message || 'Error desconocido al crear la categoría';
+        alert(`❌ Error al crear la categoría:\n\n${errorMessage}`);
+      }
+    });
   }
 
   onCancel() {

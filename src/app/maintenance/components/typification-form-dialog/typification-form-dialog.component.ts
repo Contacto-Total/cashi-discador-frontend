@@ -174,21 +174,23 @@ interface ClassificationFormV2 {
           <div>
             <label class="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">
               Icono Visual
-              <span class="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Opcional - Selecciona un icono representativo)</span>
+              <span class="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">({{ commonIcons.length }} iconos disponibles)</span>
             </label>
             <div class="space-y-3">
-              <!-- Common Icons -->
-              <div class="grid grid-cols-10 gap-2">
-                @for (icon of commonIcons; track icon.name) {
-                  <button
-                    type="button"
-                    (click)="form.iconoSugerido = icon.name"
-                    [class]="'p-3 rounded-lg border-2 transition-all hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center ' +
-                             (form.iconoSugerido === icon.name ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' : 'border-gray-300 dark:border-gray-600')"
-                    [title]="icon.label">
-                    <lucide-angular [name]="icon.name" [size]="20" class="text-gray-700 dark:text-gray-200"></lucide-angular>
-                  </button>
-                }
+              <!-- Common Icons - Scrollable Grid -->
+              <div class="max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-slate-800/50">
+                <div class="grid grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-2">
+                  @for (icon of commonIcons; track icon.name) {
+                    <button
+                      type="button"
+                      (click)="form.iconoSugerido = icon.name"
+                      [class]="'p-2.5 rounded-lg border-2 transition-all hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center ' +
+                               (form.iconoSugerido === icon.name ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 ring-2 ring-blue-300' : 'border-gray-300 dark:border-gray-600')"
+                      [title]="icon.label">
+                      <lucide-angular [name]="icon.name" [size]="18" class="text-gray-700 dark:text-gray-200"></lucide-angular>
+                    </button>
+                  }
+                </div>
               </div>
 
               <!-- Selected Icon Preview -->
@@ -356,21 +358,65 @@ export class TypificationFormDialogComponent implements OnInit {
   commonIcons = [
     { name: 'phone', label: 'Teléfono' },
     { name: 'phone-call', label: 'Llamada' },
+    { name: 'phone-incoming', label: 'Llamada Entrante' },
+    { name: 'phone-outgoing', label: 'Llamada Saliente' },
+    { name: 'phone-missed', label: 'Llamada Perdida' },
     { name: 'check-circle', label: 'Éxito' },
     { name: 'x-circle', label: 'Error' },
     { name: 'alert-circle', label: 'Alerta' },
+    { name: 'alert-triangle', label: 'Advertencia' },
+    { name: 'info', label: 'Información' },
     { name: 'user', label: 'Usuario' },
     { name: 'users', label: 'Usuarios' },
+    { name: 'user-check', label: 'Usuario Verificado' },
+    { name: 'user-x', label: 'Usuario Rechazado' },
     { name: 'credit-card', label: 'Tarjeta' },
     { name: 'dollar-sign', label: 'Dinero' },
+    { name: 'banknote', label: 'Billete' },
+    { name: 'coins', label: 'Monedas' },
     { name: 'calendar', label: 'Calendario' },
+    { name: 'calendar-check', label: 'Fecha Confirmada' },
+    { name: 'calendar-x', label: 'Fecha Cancelada' },
     { name: 'clock', label: 'Reloj' },
+    { name: 'timer', label: 'Temporizador' },
     { name: 'mail', label: 'Correo' },
     { name: 'message-square', label: 'Mensaje' },
+    { name: 'message-circle', label: 'Chat' },
     { name: 'file-text', label: 'Documento' },
-    { name: 'building', label: 'Casa' },
-    { name: 'wallet', label: 'Maletín' },
-    { name: 'trending-up', label: 'Tendencia' }
+    { name: 'file-check', label: 'Documento Aprobado' },
+    { name: 'file-x', label: 'Documento Rechazado' },
+    { name: 'building', label: 'Edificio' },
+    { name: 'home', label: 'Casa' },
+    { name: 'wallet', label: 'Billetera' },
+    { name: 'briefcase', label: 'Maletín' },
+    { name: 'trending-up', label: 'Tendencia Positiva' },
+    { name: 'trending-down', label: 'Tendencia Negativa' },
+    { name: 'thumbs-up', label: 'Me gusta' },
+    { name: 'thumbs-down', label: 'No me gusta' },
+    { name: 'star', label: 'Estrella' },
+    { name: 'heart', label: 'Corazón' },
+    { name: 'bell', label: 'Campana' },
+    { name: 'bell-off', label: 'Silenciar' },
+    { name: 'settings', label: 'Configuración' },
+    { name: 'shield', label: 'Seguridad' },
+    { name: 'shield-check', label: 'Verificado' },
+    { name: 'lock', label: 'Bloqueado' },
+    { name: 'unlock', label: 'Desbloqueado' },
+    { name: 'map-pin', label: 'Ubicación' },
+    { name: 'navigation', label: 'Navegación' },
+    { name: 'send', label: 'Enviar' },
+    { name: 'download', label: 'Descargar' },
+    { name: 'upload', label: 'Subir' },
+    { name: 'plus-circle', label: 'Agregar' },
+    { name: 'minus-circle', label: 'Quitar' },
+    { name: 'edit', label: 'Editar' },
+    { name: 'trash', label: 'Eliminar' },
+    { name: 'archive', label: 'Archivar' },
+    { name: 'bookmark', label: 'Marcador' },
+    { name: 'tag', label: 'Etiqueta' },
+    { name: 'flag', label: 'Bandera' },
+    { name: 'zap', label: 'Rayo' },
+    { name: 'target', label: 'Objetivo' }
   ];
 
   saving = signal(false);
