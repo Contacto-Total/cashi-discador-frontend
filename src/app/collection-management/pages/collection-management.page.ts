@@ -745,20 +745,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       const selected = this.selectedClassifications();
 
       if (selected.length === 0 || !selected[selected.length - 1]) {
+        console.log('[isFormValid] ❌ No hay clasificación seleccionada');
         return false;
       }
 
-      // TEMPORAL: No verificar isLeaf mientras los campos dinámicos estén deshabilitados
       // Verificar que no haya más niveles disponibles (no debe haber hijos)
       const lastSelectedId = selected[selected.length - 1];
       const all: any[] = this.managementClassifications() as any[];
       const hasChildren = all.some((c: any) => c.parentId && Number(c.parentId) === Number(lastSelectedId));
 
-      // Solo es válido si no hay hijos disponibles O si ya llegamos al último nivel
+      // Solo es válido si no hay hijos disponibles
       if (hasChildren) {
-        console.log('[isFormValid] Aún hay niveles por seleccionar');
+        console.log('[isFormValid] ❌ Aún hay niveles por seleccionar, lastSelectedId:', lastSelectedId);
         return false;
       }
+      console.log('[isFormValid] ✅ Clasificación completa:', selected);
     } else {
       // Sistema simple: verificar resultado de contacto
       if (!this.managementForm.resultadoContacto) {
@@ -766,27 +767,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Verificar campos de pago si son requeridos
-    // NOTA: Los campos de pago ahora son campos dinámicos, validados en el paso 3
-    // Ya no se usan managementForm.metodoPago ni managementForm.montoPago
-
-    // 3. Verificar campos dinámicos requeridos
+    // 2. Verificar campos dinámicos requeridos
     const schema = this.dynamicFieldsSchema();
-    if (schema && schema.fields && schema.fields.length > 0) {
-      const dynamicValues = this.dynamicFieldValues();
+    const dynamicValues = this.dynamicFieldValues();
 
+    console.log('[isFormValid] Schema:', schema);
+    console.log('[isFormValid] Dynamic Values:', dynamicValues);
+
+    if (schema && schema.fields && schema.fields.length > 0) {
       for (const field of schema.fields) {
         if (field.required) {
           const value = dynamicValues[field.id];
+          console.log(`[isFormValid] Campo '${field.id}' (required=${field.required}): valor='${value}'`);
 
           // Campo vacío
           if (value === undefined || value === null || value === '') {
+            console.log(`[isFormValid] ❌ Campo requerido '${field.id}' está vacío`);
             return false;
           }
 
           // Tabla sin filas
           if (field.type === 'table') {
             if (!Array.isArray(value) || value.length === 0) {
+              console.log(`[isFormValid] ❌ Tabla '${field.id}' sin filas`);
               return false;
             }
           }
@@ -794,6 +797,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
+    console.log('[isFormValid] ✅ Formulario válido!');
     return true;
   });
 
