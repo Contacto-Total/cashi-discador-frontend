@@ -168,9 +168,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
       if (result === 'logout') {
         this.logout();
-      } else if (result === 'timeout') {
-        this.cerrarSesionPorInactividad();
       }
+      // NO llamar cerrarSesionPorInactividad si result === 'timeout'
+      // porque onTimeout$ ya lo llamó (evita duplicado)
       // Si result === 'continue', el usuario clickeó continuar y el contador ya se reseteó
     });
   }
@@ -188,16 +188,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.dialogRef = null;
     }
 
-    // Cerrar sesión
+    // Cerrar sesión (esto redirige al login)
     this.logout();
 
-    // Mostrar mensaje (opcional)
-    alert('Tu sesión ha expirado por inactividad');
-
-    // Resetear flag después de un breve delay
+    // Mostrar alerta DESPUÉS de que navegue al login
     setTimeout(() => {
+      alert('Tu sesión ha expirado por inactividad');
       this.sessionClosing = false;
-    }, 1000);
+    }, 500);
   }
 
   /**
