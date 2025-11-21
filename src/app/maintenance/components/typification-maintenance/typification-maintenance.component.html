@@ -280,7 +280,14 @@
             [class.h-6]="!matchesTypeFilter(node.typification)"
             [class.text-[9px]]="!matchesTypeFilter(node.typification)"
             [style.background-color]="getEffectiveValue(node.config, node.typification, 'color') || '#6B7280'">
-            {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
+            @if (getEffectiveValue(node.config, node.typification, 'icono')) {
+              <lucide-angular
+                [name]="getEffectiveValue(node.config, node.typification, 'icono')"
+                [size]="matchesTypeFilter(node.typification) ? 18 : 14">
+              </lucide-angular>
+            } @else {
+              {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
+            }
           </div>
 
           <!-- Name and Type -->
@@ -497,7 +504,14 @@
           <div
             class="flex-shrink-0 w-10 h-10 rounded flex items-center justify-center text-white text-sm font-bold shadow-sm"
             [style.background-color]="getEffectiveValue(node.config, node.typification, 'color') || '#6B7280'">
-            {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
+            @if (getEffectiveValue(node.config, node.typification, 'icono')) {
+              <lucide-angular
+                [name]="getEffectiveValue(node.config, node.typification, 'icono')"
+                [size]="20">
+              </lucide-angular>
+            } @else {
+              {{ node.typification.codigo?.substring(0, 2) || 'NA' }}
+            }
           </div>
 
           <!-- Name with Breadcrumb -->

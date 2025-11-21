@@ -65,9 +65,7 @@ export interface CreateTypificationCommandV2 {
   nombre: string;
   descripcion?: string;
   tipoClasificacion: ClassificationTypeV2;
-  tipificacionPadre?: {
-    id: number;
-  };
+  idTipificacionPadre?: number;
   ordenVisualizacion?: number;
   esEstadoFinal?: boolean;
   requiereObservaciones?: boolean;
