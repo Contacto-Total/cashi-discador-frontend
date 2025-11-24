@@ -104,7 +104,10 @@ export class DynQueryComponent implements OnInit {
     const insert = (needsSpaceBefore ? ' ' : '') + text;
 
     const next = before + insert + after;
-    ctrl.setValue(next);
+
+    // Update both the FormControl and the native element
+    el.value = next;
+    ctrl.setValue(next, { emitEvent: false });
     ctrl.markAsDirty();
 
     const caret = (before + insert).length;
