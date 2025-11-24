@@ -383,20 +383,47 @@ export class TypificationMaintenanceComponent implements OnInit {
       return;
     }
 
-    if (!confirm(`¿Está seguro de eliminar la tipificación "${typification.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    // Si estamos en una vista filtrada por tenant/cartera, solo deshabilitar para esa subcartera
+    // Si NO hay filtros, eliminar del catálogo global
+    const isFiltered = this.selectedTenantId !== undefined;
+
+    const message = isFiltered
+      ? `¿Está seguro de deshabilitar la tipificación "${typification.nombre}" para esta cartera?\n\nPuedes volver a habilitarla después.`
+      : `¿Está seguro de eliminar la tipificación "${typification.nombre}" del catálogo global?\n\nEsto afectará a TODAS las carteras y subcarteras.\n\nEsta acción no se puede deshacer.`;
+
+    if (!confirm(message)) {
       return;
     }
 
-    this.classificationService.deleteTypification(typification.id).subscribe({
-      next: () => {
-        this.showSuccessMessage();
-        this.loadTypifications();
-      },
-      error: (error) => {
-        console.error('Error al eliminar tipificación:', error);
-        alert('Error al eliminar la tipificación. Puede que tenga dependencias.');
-      }
-    });
+    if (isFiltered) {
+      // Deshabilitar solo para esta cartera/subcartera
+      this.classificationService.disableClassification(
+        this.selectedTenantId!,
+        typification.id,
+        this.selectedPortfolioId
+      ).subscribe({
+        next: () => {
+          this.showSuccessMessage();
+          this.loadTypifications();
+        },
+        error: (error) => {
+          console.error('Error al deshabilitar tipificación:', error);
+          alert('Error al deshabilitar la tipificación.');
+        }
+      });
+    } else {
+      // Eliminar del catálogo global (afecta a todos)
+      this.classificationService.deleteTypification(typification.id).subscribe({
+        next: () => {
+          this.showSuccessMessage();
+          this.loadTypifications();
+        },
+        error: (error) => {
+          console.error('Error al eliminar tipificación:', error);
+          alert('Error al eliminar la tipificación del catálogo global. Puede que tenga dependencias.');
+        }
+      });
+    }
   }
 
   showSuccessMessage() {
