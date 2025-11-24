@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CustomSelectComponent } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { CustomInputNumberComponent } from '../../../../../shared/components/custom-ui/custom-input-number/custom-input-number.component';
@@ -12,6 +12,7 @@ import { CampaignService } from '../../services/campaign.service';
 import { CampaignReportRequest } from '../../models/campaign-report.request';
 import { Range } from '../../models/range.model';
 import { LucideAngularModule } from 'lucide-angular';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-range-slider',
@@ -80,6 +81,12 @@ export class RangeSliderComponent implements OnInit {
 
   private themeService = inject(ThemeService);
   isDarkMode = this.themeService.isDarkMode;
+
+  // Loading modal state
+  loadingModal = signal<{ isOpen: boolean; data?: { title: string; subtitle?: string } }>({ isOpen: false });
+
+  // Subject for cancelling the campaign generation
+  private cancelGeneration$ = new Subject<void>();
 
   constructor(
     private campaignService: CampaignService,
@@ -415,6 +422,15 @@ export class RangeSliderComponent implements OnInit {
     console.log('✅ Validación exitosa, iniciando generación...');
     this.isGenerating = true;
 
+    // Show loading modal
+    this.loadingModal.set({
+      isOpen: true,
+      data: {
+        title: 'Generando Campaña',
+        subtitle: 'Procesando rangos y generando archivos...'
+      }
+    });
+
     const contactoDirectoRangesToConsult = this.contactoDirectoRanges.map(range => ({
       min: range.min.toString(),
       max: range.isChecked ? '+' : range.max.toString()
@@ -447,29 +463,44 @@ export class RangeSliderComponent implements OnInit {
       excluirPagadasHoy: this.excluirPagadasHoy
     };
 
-    this.toastService.info('Procesando... Insertando rangos, consultando y generando reporte');
+    this.campaignService.getFileToCampaña(request)
+      .pipe(takeUntil(this.cancelGeneration$))
+      .subscribe({
+        next: (data: Blob) => {
+          const url = window.URL.createObjectURL(data);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'output-files.zip';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
 
-    this.campaignService.getFileToCampaña(request).subscribe({
-      next: (data: Blob) => {
-        const url = window.URL.createObjectURL(data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'output-files.zip';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+          this.toastService.success('Los rangos han sido procesados correctamente');
+          this.isGenerating = false;
+          this.loadingModal.set({ isOpen: false });
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error(error);
+          // Check if the error was due to cancellation
+          if (error?.name === 'AbortError' || error === 'cancelled') {
+            this.toastService.info('Generación de campaña cancelada');
+          } else {
+            this.toastService.error('Un error ha ocurrido al procesar los rangos');
+          }
+          this.isGenerating = false;
+          this.loadingModal.set({ isOpen: false });
+          this.cdr.markForCheck();
+        }
+      });
+  }
 
-        this.toastService.success('Los rangos han sido procesados correctamente');
-        this.isGenerating = false;
-        this.cdr.markForCheck();
-      },
-      error: (error) => {
-        console.error(error);
-        this.toastService.error('Un error ha ocurrido al procesar los rangos');
-        this.isGenerating = false;
-        this.cdr.markForCheck();
-      }
-    });
+  cancelCampaignGeneration() {
+    this.cancelGeneration$.next();
+    this.isGenerating = false;
+    this.loadingModal.set({ isOpen: false });
+    this.toastService.info('Generación de campaña cancelada');
+    this.cdr.markForCheck();
   }
 }
