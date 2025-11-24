@@ -329,6 +329,12 @@ export class DynQueryComponent implements OnInit {
     this.fetchSampleRow();
   }
 
+  onTextareaInput(event: Event) {
+    const target = event.target as HTMLTextAreaElement;
+    // Force immediate sync from native element to FormControl
+    this.form.controls.plantillaTexto.setValue(target.value, { emitEvent: true });
+  }
+
   previewText = computed(() => {
     const tpl = this.tplSig();
     const row = this.sampleRow();
