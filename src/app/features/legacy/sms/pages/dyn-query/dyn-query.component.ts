@@ -428,8 +428,9 @@ export class DynQueryComponent implements OnInit {
   }
 
   private insertPlaceholderOnce(key: string) {
-    const ctrl = this.form.controls.plantillaTexto;
-    const cur = ctrl.value ?? '';
+    const el = this.tplArea?.nativeElement;
+    // Read from native element to get the most recent value (including user typing)
+    const cur = el?.value ?? this.form.controls.plantillaTexto.value ?? '';
     const re = new RegExp(`\\{${key}\\}(?!\\w)`, 'i');
     if (re.test(cur)) return;
     this.insertAtCursor(`{${key}}`);
