@@ -2905,4 +2905,43 @@ body.light-theme {
   }
 }
 
+/* ============================================
+   ERROR MODAL - Backdrop difuminado
+   ============================================ */
+.error-modal-backdrop {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.error-modal-panel {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Soporte para temas oscuros */
+:root.dark .error-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
 

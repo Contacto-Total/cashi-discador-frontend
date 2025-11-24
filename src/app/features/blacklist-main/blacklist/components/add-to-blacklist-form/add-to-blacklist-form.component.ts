@@ -4,6 +4,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { BlacklistMainService } from '../../services/blacklist-service/blacklist.service';
 import { BlacklistRequest } from '../../model/request/blacklist.request';
 import { ToastService } from '../../../../../shared/services/toast.service';
+import { ErrorModalService } from '../../../../../shared/services/error-modal.service';
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { LucideAngularModule } from 'lucide-angular';
 
@@ -23,7 +24,8 @@ export class AddToBlacklistFormComponent implements OnInit {
 
   constructor(
     private blacklistService: BlacklistMainService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private errorModalService: ErrorModalService
   ) {}
 
   ngOnInit(): void {
@@ -94,9 +96,31 @@ export class AddToBlacklistFormComponent implements OnInit {
         this.isLoading = false;
       },
       error: (error) => {
-        const message = error?.message || 'Error al agregar a la blacklist';
-        this.toastService.error(message);
         this.isLoading = false;
+
+        // Extraer mensaje de error
+        let errorMessage = 'Error al agregar a la blacklist';
+        let errorDetails = undefined;
+
+        if (error?.error?.message) {
+          errorMessage = error.error.message;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+
+        // Si hay detalles técnicos, agregarlos
+        if (error?.error?.details) {
+          errorDetails = error.error.details;
+        } else if (error?.status) {
+          errorDetails = `Código de error: ${error.status}`;
+        }
+
+        // Mostrar popup de error con fondo difuminado
+        this.errorModalService.showError(
+          errorMessage,
+          'Error al agregar a Blacklist',
+          errorDetails
+        );
       }
     });
   }
