@@ -85,28 +85,31 @@ export class DynQueryComponent implements OnInit {
     const ctrl = this.form.controls.plantillaTexto;
     const el = this.tplArea?.nativeElement;
 
+    // ALWAYS read from native element first
+    const currentValue = el?.value ?? ctrl.value ?? '';
+
     if (!el) {
-      const cur = ctrl.value ?? '';
-      const sep = cur && !cur.endsWith(' ') ? ' ' : '';
-      ctrl.setValue(cur + sep + text);
+      // No element, just append to current value
+      const sep = currentValue && !currentValue.endsWith(' ') ? ' ' : '';
+      ctrl.setValue(currentValue + sep + text);
       ctrl.markAsDirty();
       return;
     }
 
-    // Read from native element to get the most recent value (including user typing)
-    const val = el.value ?? '';
-    const start = el.selectionStart ?? val.length;
+    // Get cursor position
+    const start = el.selectionStart ?? currentValue.length;
     const end = el.selectionEnd ?? start;
 
-    const before = val.slice(0, start);
-    const after = val.slice(end);
+    const before = currentValue.slice(0, start);
+    const after = currentValue.slice(end);
 
     const needsSpaceBefore = before.length && !/\s$/.test(before);
     const insert = (needsSpaceBefore ? ' ' : '') + text;
 
     const next = before + insert + after;
 
-    // Update FormControl to sync with native element
+    // Update native element first, then FormControl
+    el.value = next;
     ctrl.setValue(next);
     ctrl.markAsDirty();
 
@@ -332,7 +335,7 @@ export class DynQueryComponent implements OnInit {
   onTextareaInput(event: Event) {
     const target = event.target as HTMLTextAreaElement;
     // Force immediate sync from native element to FormControl
-    this.form.controls.plantillaTexto.setValue(target.value, { emitEvent: true });
+    this.form.controls.plantillaTexto.setValue(target.value);
   }
 
   previewText = computed(() => {
