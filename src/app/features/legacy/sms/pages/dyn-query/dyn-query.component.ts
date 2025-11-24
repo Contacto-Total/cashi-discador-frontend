@@ -93,7 +93,8 @@ export class DynQueryComponent implements OnInit {
       return;
     }
 
-    const val = ctrl.value ?? '';
+    // Read from native element to get the most recent value (including user typing)
+    const val = el.value ?? '';
     const start = el.selectionStart ?? val.length;
     const end = el.selectionEnd ?? start;
 
@@ -105,8 +106,7 @@ export class DynQueryComponent implements OnInit {
 
     const next = before + insert + after;
 
-    // Update both the FormControl and the native element
-    el.value = next;
+    // Update FormControl to sync with native element
     ctrl.setValue(next);
     ctrl.markAsDirty();
 
