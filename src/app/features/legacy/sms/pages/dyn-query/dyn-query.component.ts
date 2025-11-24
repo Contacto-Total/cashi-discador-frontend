@@ -107,7 +107,7 @@ export class DynQueryComponent implements OnInit {
 
     // Update both the FormControl and the native element
     el.value = next;
-    ctrl.setValue(next, { emitEvent: false });
+    ctrl.setValue(next);
     ctrl.markAsDirty();
 
     const caret = (before + insert).length;
