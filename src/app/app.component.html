@@ -189,6 +189,11 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Blacklist</span>
       </a>
 
+      <a routerLink="/phone-lines" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Consulta Líneas' : ''">
+        <lucide-angular name="smartphone" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Consulta Líneas</span>
+      </a>
+
       <!-- Cartas Dropdown -->
       <div class="sidebar-group">
         <button type="button" class="sidebar-item" [class.active]="isCartasActive()" (click)="toggleCartasDropdown()" [title]="isSidebarCollapsed ? 'Cartas' : ''">

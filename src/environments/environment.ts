@@ -21,6 +21,9 @@ export const environment = {
 
   // FreeSWITCH on AWS - WebSocket SIP over SSL (port 7443)
   freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
-  freeswitchDomain: 'cobranza.contactototal.com.pe'
+  freeswitchDomain: 'cobranza.contactototal.com.pe',
+
+  // Scraper Service
+  scraperServiceUrl: 'http://localhost:8090'
 };
 

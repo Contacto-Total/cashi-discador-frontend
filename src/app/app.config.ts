@@ -2,7 +2,7 @@ import { ApplicationConfig, importProvidersFrom, provideZoneChangeDetection } fr
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimations } from '@angular/platform-browser/animations';
-import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowRight, ArrowUp, Ban, Banknote, BarChart2, BarChart3, Bell, BellOff, Bookmark, BookOpen, Briefcase, Building, Building2, Calendar, CalendarCheck, CalendarX, Check, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clipboard, ClipboardList, Clock, CloudUpload, Code, Coffee, Coins, Columns, Copy, CornerUpLeft, CreditCard, Database, DollarSign, Download, Edit, Edit2, Eye, EyeOff, FileBadge, FileCheck, FilePlus, FileText, FileX, Filter, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, HandMetal, Hash, Headphones, Heart, History, Home, Inbox, Info, Key, LayoutDashboard, List, ListChecks, Loader, Lock, LogOut, Mail, Map, MapPin, Megaphone, Menu, MessageCircle, MessageSquare, Mic, MinusCircle, Moon, MoreVertical, Navigation, Package, Pause, Pencil, Phone, PhoneCall, PhoneForwarded, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Play, Plus, PlusCircle, RefreshCw, Rocket, Save, Search, SearchX, Send, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Smile, Sparkles, Square, Star, Sun, Table, Table2, Tag, Tags, Target, ThumbsDown, ThumbsUp, Timer, Trash, Trash2, TrendingDown, TrendingUp, Trophy, Type, Unlock, Upload, User, UserCheck, UserCircle, UserCog, Users, UserX, Wallet, X, XCircle, Zap } from 'lucide-angular';
+import { LucideAngularModule, Activity, AlertCircle, AlertTriangle, Archive, ArrowLeft, ArrowRight, ArrowUp, Ban, Banknote, BarChart2, BarChart3, Bell, BellOff, Bookmark, BookOpen, Briefcase, Building, Building2, Calendar, CalendarCheck, CalendarX, Check, CheckCheck, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Circle, Clipboard, ClipboardEdit, ClipboardList, Clock, CloudUpload, Code, Coffee, Coins, Columns, Copy, CornerUpLeft, CreditCard, Database, DollarSign, Download, Edit, Edit2, Eye, EyeOff, FileBadge, FileCheck, FilePlus, FileText, FileX, Filter, Flag, Folder, FolderOpen, FolderTree, FunctionSquare, GitBranch, Glasses, HandMetal, Hash, Headphones, Heart, History, Home, Inbox, Info, Key, LayoutDashboard, List, ListChecks, Loader, Lock, LogOut, Mail, Map, MapPin, Megaphone, Menu, MessageCircle, MessageSquare, Mic, MinusCircle, Moon, MoreVertical, Navigation, Package, Pause, Pencil, Phone, PhoneCall, PhoneForwarded, PhoneIncoming, PhoneMissed, PhoneOff, PhoneOutgoing, Play, Plus, PlusCircle, RefreshCw, Rocket, Save, Search, SearchX, Send, Settings, Shield, ShieldBan, ShieldCheck, ShieldOff, ShoppingCart, Sliders, Smartphone, Smile, Sparkles, Square, Star, Sun, Table, Table2, Tag, Tags, Target, ThumbsDown, ThumbsUp, Timer, Trash, Trash2, TrendingDown, TrendingUp, Trophy, Type, Unlock, Upload, User, UserCheck, UserCircle, UserCog, Users, UserX, Wallet, X, XCircle, Zap } from 'lucide-angular';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { tokenRefreshInterceptor } from './core/interceptors/token-refresh.interceptor';
@@ -45,6 +45,7 @@ export const appConfig: ApplicationConfig = {
         ChevronUp,
         Circle,
         Clipboard,
+        ClipboardEdit,
         ClipboardList,
         Clock,
         CloudUpload,
@@ -127,6 +128,8 @@ export const appConfig: ApplicationConfig = {
         ShieldCheck,
         ShieldOff,
         ShoppingCart,
+        Sliders,
+        Smartphone,
         Smile,
         Sparkles,
         Square,

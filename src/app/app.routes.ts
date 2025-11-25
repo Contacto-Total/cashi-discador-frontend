@@ -126,6 +126,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'phone-lines',
+    loadComponent: () => import('./features/phone-lines/pages/phone-lines-page/phone-lines-page.component').then(m => m.PhoneLinesPageComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'agreements',
     loadComponent: () => import('./features/legacy/agreements/agreements.component').then(m => m.AgreementsComponent),
     canActivate: [authGuard]
