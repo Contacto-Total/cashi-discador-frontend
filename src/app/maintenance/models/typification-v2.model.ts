@@ -107,7 +107,8 @@ export enum FieldTypeV2 {
   NUMBER = 'NUMBER',
   TEXT = 'TEXT',
   TEXTAREA = 'TEXTAREA',
-  CHIP_SELECT = 'CHIP_SELECT'
+  CHIP_SELECT = 'CHIP_SELECT',
+  PAYMENT_SCHEDULE = 'PAYMENT_SCHEDULE'
 }
 
 export enum FieldDataSourceV2 {
@@ -171,4 +172,31 @@ export interface OpcionConValorDTO {
   labelOpcion: string;
   valor: any;
   esPersonalizado: boolean;
+}
+
+// Modelos para Cronograma de Pagos (Payment Schedule)
+export interface PaymentInstallment {
+  numeroCuota: number;
+  monto: number;
+  fechaPago: string; // ISO date string
+}
+
+export interface PaymentScheduleConfig {
+  montoTotal: number;
+  numeroCuotas: number;
+  cuotas: PaymentInstallment[];
+  grupoPromesaUuid?: string;
+}
+
+export interface PaymentScheduleRequest {
+  idCliente: number;
+  idAgente: number;
+  idTenant: number;
+  idCartera?: number;
+  idSubcartera?: number;
+  idCampana?: number;
+  idTipificacion: number;
+  observaciones?: string;
+  metodoContacto?: string;
+  schedule: PaymentScheduleConfig;
 }

@@ -380,6 +380,57 @@ export class TypificationV2Service {
   }
 
   // ========================================
+  // Payment Schedule
+  // ========================================
+
+  /**
+   * Crea un cronograma de pagos con múltiples cuotas
+   */
+  createPaymentSchedule(request: any): Observable<any[]> {
+    return this.http.post<any[]>(
+      `${environment.gatewayUrl}/v2/management-records/payment-schedule`,
+      request
+    );
+  }
+
+  /**
+   * Obtiene los cronogramas de pago de un cliente
+   */
+  getPaymentSchedulesByClient(clientId: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.gatewayUrl}/v2/management-records/payment-schedule/client/${clientId}`
+    );
+  }
+
+  /**
+   * Obtiene un grupo de cuotas por su UUID
+   */
+  getPaymentScheduleByGroup(groupUuid: string): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.gatewayUrl}/v2/management-records/payment-schedule/group/${groupUuid}`
+    );
+  }
+
+  /**
+   * Actualiza el estado de pago de una cuota
+   */
+  updatePaymentStatus(recordId: number, estadoPago: string, montoPagadoReal?: number, fechaPagoReal?: string): Observable<any> {
+    let params = new HttpParams().set('estadoPago', estadoPago);
+    if (montoPagadoReal !== undefined) {
+      params = params.set('montoPagadoReal', montoPagadoReal.toString());
+    }
+    if (fechaPagoReal) {
+      params = params.set('fechaPagoReal', fechaPagoReal);
+    }
+
+    return this.http.put<any>(
+      `${environment.gatewayUrl}/v2/management-records/${recordId}/payment-status`,
+      {},
+      { params }
+    );
+  }
+
+  // ========================================
   // Helper Methods
   // ========================================
 

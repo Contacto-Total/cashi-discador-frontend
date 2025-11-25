@@ -15,8 +15,9 @@ import { AuthService } from '../../../core/services/auth.service';
 import { TypificationService } from '../../../maintenance/services/typification.service';
 import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
 import { TypificationCatalog, AdditionalField, FieldType } from '../../../maintenance/models/typification.model';
-import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2 } from '../../../maintenance/models/typification-v2.model';
+import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2, PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 import { ChipSelectComponent, ChipOption } from '../../../shared/components/chip-select/chip-select.component';
+import { PaymentScheduleComponent, AmountOption } from '../../../shared/components/payment-schedule/payment-schedule.component';
 
 @Component({
   selector: 'app-call-notes',
@@ -31,7 +32,8 @@ import { ChipSelectComponent, ChipOption } from '../../../shared/components/chip
     MatButtonModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    ChipSelectComponent
+    ChipSelectComponent,
+    PaymentScheduleComponent
   ],
   templateUrl: './call-notes.component.html',
   styleUrls: ['./call-notes.component.css']
@@ -62,6 +64,9 @@ export class CallNotesComponent implements OnInit {
   FieldType = FieldType; // Para usar en el template
   FieldTypeV2 = FieldTypeV2; // Para usar en el template
   FieldDataSourceV2 = FieldDataSourceV2; // Para usar en el template
+
+  // Cronograma de pagos
+  paymentScheduleConfig: PaymentScheduleConfig | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -326,6 +331,41 @@ export class CallNotesComponent implements OnInit {
     this.notesForm.get(`campo_${fieldId}`)?.setValue(value);
   }
 
+  buildPaymentAmountOptions(field: AdditionalFieldV2): AmountOption[] {
+    const options: AmountOption[] = [];
+
+    // Si el campo tiene opciones predefinidas
+    if (field.options && field.options.length > 0) {
+      field.options.forEach(opt => {
+        if (opt.value !== null && opt.value !== undefined) {
+          options.push({
+            label: opt.label,
+            value: Number(opt.value),
+            field: field.campoTablaDinamica
+          });
+        }
+      });
+    }
+
+    // Si el campo tiene un valor desde la tabla dinámica
+    if (field.value !== null && field.value !== undefined) {
+      const exists = options.some(o => o.value === Number(field.value));
+      if (!exists) {
+        options.push({
+          label: field.labelCampo,
+          value: Number(field.value),
+          field: field.campoTablaDinamica
+        });
+      }
+    }
+
+    return options;
+  }
+
+  onPaymentScheduleChange(config: PaymentScheduleConfig | null): void {
+    this.paymentScheduleConfig = config;
+  }
+
   onSubmit(): void {
     if (this.notesForm.invalid || !this.call || !this.contact) {
       return;
@@ -374,19 +414,47 @@ export class CallNotesComponent implements OnInit {
     // Primero completar la llamada
     this.callService.completeCall(this.call.callId, callRequest).subscribe({
       next: () => {
-        // Luego guardar el registro de gestión V2 con tipificaciones
-        this.typificationService.saveManagementRecord(managementRecord).subscribe({
-          next: () => {
-            this.loading = false;
-            this.notesComplete.emit();
-          },
-          error: (error) => {
-            console.error('Error saving management record:', error);
-            // Incluso si falla el registro V2, la llamada ya se completó
-            this.loading = false;
-            this.notesComplete.emit();
-          }
-        });
+        // Si hay cronograma de pagos configurado, usar el endpoint de payment-schedule
+        if (this.paymentScheduleConfig && this.paymentScheduleConfig.cuotas.length > 0) {
+          const paymentScheduleRequest = {
+            idCliente: this.contact!.id,
+            idAgente: user.id,
+            idTenant: user.tenantId,
+            idCartera: user.portfolioId,
+            idSubcartera: user.subPortfolioId,
+            idCampana: null,
+            idTipificacion: this.getSelectedTipificacionId(),
+            observaciones: this.notesForm.value.notes,
+            metodoContacto: 'LLAMADA_SALIENTE',
+            schedule: this.paymentScheduleConfig
+          };
+
+          this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
+            next: (records) => {
+              console.log('Payment schedule created with', records.length, 'installments');
+              this.loading = false;
+              this.notesComplete.emit();
+            },
+            error: (error) => {
+              console.error('Error creating payment schedule:', error);
+              this.loading = false;
+              this.notesComplete.emit();
+            }
+          });
+        } else {
+          // Guardar registro de gestión normal
+          this.typificationService.saveManagementRecord(managementRecord).subscribe({
+            next: () => {
+              this.loading = false;
+              this.notesComplete.emit();
+            },
+            error: (error) => {
+              console.error('Error saving management record:', error);
+              this.loading = false;
+              this.notesComplete.emit();
+            }
+          });
+        }
       },
       error: (error) => {
         console.error('Error completing call:', error);
