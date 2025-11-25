@@ -366,6 +366,11 @@ export class CallNotesComponent implements OnInit {
     this.paymentScheduleConfig = config;
   }
 
+  isPaymentScheduleField(field: AdditionalFieldV2): boolean {
+    const tipo = String(field.tipoCampo).toLowerCase();
+    return tipo === 'payment_schedule';
+  }
+
   onSubmit(): void {
     if (this.notesForm.invalid || !this.call || !this.contact) {
       return;
