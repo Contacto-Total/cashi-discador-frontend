@@ -19,6 +19,7 @@ import { TypificationService } from '../../maintenance/services/typification.ser
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
+import { AmountOption } from '../../shared/components/payment-schedule/payment-schedule.component';
 import { CustomerOutputConfigService } from '../../maintenance/services/customer-output-config.service';
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
@@ -346,6 +347,7 @@ import { AuthService } from '../../core/services/auth.service';
                 [schema]="dynamicFieldsSchema()"
                 [externalUpdates]="externalFieldUpdates()"
                 [selectedClassification]="selectedClassification()"
+                [customerAmounts]="customerPaymentAmounts()"
                 (dataChange)="onDynamicFieldsChange($event)"
               />
             }
@@ -697,6 +699,60 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   paymentMethods = computed(() => this.systemConfigService.getPaymentMethods());
   scheduleTypes = computed(() => this.systemConfigService.getScheduleConfig().tipos_cronograma);
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);
+
+  // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
+  customerPaymentAmounts = computed<AmountOption[]>(() => {
+    const data = this.customerData();
+    if (!data || !data.deuda) {
+      return [];
+    }
+
+    const amounts: AmountOption[] = [];
+
+    // Agregar los diferentes montos de deuda disponibles
+    if (data.deuda.saldo_total && data.deuda.saldo_total > 0) {
+      amounts.push({
+        label: 'Deuda Total',
+        value: data.deuda.saldo_total,
+        field: 'saldo_total'
+      });
+    }
+
+    if (data.deuda.saldo_capital && data.deuda.saldo_capital > 0) {
+      amounts.push({
+        label: 'Capital',
+        value: data.deuda.saldo_capital,
+        field: 'saldo_capital'
+      });
+    }
+
+    if (data.deuda.intereses_vencidos && data.deuda.intereses_vencidos > 0) {
+      amounts.push({
+        label: 'Intereses',
+        value: data.deuda.intereses_vencidos,
+        field: 'intereses_vencidos'
+      });
+    }
+
+    if (data.deuda.mora_acumulada && data.deuda.mora_acumulada > 0) {
+      amounts.push({
+        label: 'Mora',
+        value: data.deuda.mora_acumulada,
+        field: 'mora_acumulada'
+      });
+    }
+
+    if (data.deuda.gastos_cobranza && data.deuda.gastos_cobranza > 0) {
+      amounts.push({
+        label: 'Gastos',
+        value: data.deuda.gastos_cobranza,
+        field: 'gastos_cobranza'
+      });
+    }
+
+    console.log('[CollectionManagement] Customer payment amounts:', amounts);
+    return amounts;
+  });
 
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },

@@ -374,6 +374,7 @@ export class DynamicFieldRendererComponent {
   schema = input<MetadataSchema | null>(null);
   externalUpdates = input<DynamicFieldData>({});
   selectedClassification = input<ManagementClassification | null>(null);
+  customerAmounts = input<AmountOption[]>([]); // Amounts from customer's debt data
 
   // Field data with two-way binding
   fieldData = signal<DynamicFieldData>({});
@@ -712,7 +713,14 @@ export class DynamicFieldRendererComponent {
 
   // Payment Schedule methods
   getPaymentAmountOptions(field: FieldConfig): AmountOption[] {
-    // Try to get options from field configuration
+    // First priority: use customer amounts from the ini_* table
+    const amounts = this.customerAmounts();
+    if (amounts && amounts.length > 0) {
+      console.log('[DynamicFieldRenderer] Using customer amounts:', amounts);
+      return amounts;
+    }
+
+    // Second priority: try to get options from field configuration
     if (field.options && field.options.length > 0) {
       return field.options.map(opt => ({
         label: opt.label || String(opt.value),
@@ -721,10 +729,10 @@ export class DynamicFieldRendererComponent {
       }));
     }
 
-    // Default options if none configured
+    // Default options if none configured (fallback)
+    console.log('[DynamicFieldRenderer] No customer amounts, using defaults');
     return [
-      { label: 'Deuda Total', value: 1000, field: 'deudaTotal' },
-      { label: 'Saldo Vencido', value: 500, field: 'saldoVencido' }
+      { label: 'Sin datos de deuda', value: 0, field: 'default' }
     ];
   }
 
