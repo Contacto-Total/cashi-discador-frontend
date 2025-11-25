@@ -305,8 +305,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 .editable-input.number-input {
   text-align: right;
-  min-width: 80px;
-  width: 80px;
+  min-width: 110px;
+  width: 110px;
 }
 
 .editable-input.large-input {
@@ -854,8 +854,8 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   }
 
   .editable-input.number-input {
-    min-width: 60px;
-    width: 60px;
+    min-width: 85px;
+    width: 85px;
   }
 
   .client-table {
