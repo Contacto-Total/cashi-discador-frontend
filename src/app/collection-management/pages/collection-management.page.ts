@@ -1414,7 +1414,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   loadManagementHistory() {
-    const customerId = String(this.customerData().id);
+    const customerIdRaw = this.customerData()?.id;
+    if (!customerIdRaw) {
+      console.log('[HISTORIAL] No hay cliente cargado, omitiendo carga de historial');
+      return;
+    }
+    const customerId = String(customerIdRaw);
     console.log('[HISTORIAL] Cargando historial para cliente ID:', customerId);
 
     this.managementService.getManagementsByCustomer(customerId).subscribe({
