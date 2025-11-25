@@ -168,13 +168,17 @@ export class AgreementsPageComponent implements OnInit {
         // Determinar la entidad basándose en el tramo
         const entidad = this.determinarEntidadPorTramo(response.tramo);
 
+        // Formatear deuda total con 2 decimales
+        const deudaTotal = parseFloat(response.deudaTotal).toFixed(2);
+
         this.agreementForm.patchValue({
           entidad: entidad,
           fechaActual: response.fechaActual,
           nombreTitular: response.nombreDelTitular,
           dni: dni,
           cuentaTarjeta: response.cuentaTarjeta,
-          fechaCompromiso: response.fechaCompromiso
+          fechaCompromiso: response.fechaCompromiso,
+          deudaTotal: parseFloat(deudaTotal)
         });
 
         this.readonlyInputs = true;
