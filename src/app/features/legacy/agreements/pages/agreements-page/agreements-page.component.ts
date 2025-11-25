@@ -169,7 +169,7 @@ export class AgreementsPageComponent implements OnInit {
         const entidad = this.determinarEntidadPorTramo(response.tramo);
 
         // Formatear deuda total con 2 decimales
-        const deudaTotal = parseFloat(response.deudaTotal).toFixed(2);
+        const deudaTotal = Math.ceil(Number(response.deudaTotal)).toFixed(2);
 
         this.agreementForm.patchValue({
           entidad: entidad,
