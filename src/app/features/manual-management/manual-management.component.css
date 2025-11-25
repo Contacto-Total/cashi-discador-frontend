@@ -21,9 +21,51 @@
   font-size: 14px;
 }
 
+/* Selectores de contexto */
+.context-card {
+  margin-bottom: 24px;
+}
+
+.context-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.context-selectors {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .context-selectors {
+    grid-template-columns: 1fr;
+  }
+}
+
+.context-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  color: #92400e;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
 /* Buscador */
 .search-card {
   margin-bottom: 24px;
+}
+
+.search-card.disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .search-container {

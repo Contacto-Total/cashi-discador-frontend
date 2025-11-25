@@ -5,8 +5,73 @@
     <p class="subtitle">Busca un cliente por documento para tipificar sin necesidad de una llamada</p>
   </div>
 
+  <!-- Selectores de contexto -->
+  <mat-card class="context-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>business</mat-icon>
+        Seleccionar Contexto
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="context-selectors">
+        <!-- Selector de Inquilino -->
+        <mat-form-field appearance="outline">
+          <mat-label>Inquilino</mat-label>
+          <mat-select [value]="selectedTenantId()"
+                      (selectionChange)="onTenantChange($event.value)"
+                      [disabled]="loadingTenants()">
+            @for (tenant of tenants; track tenant.id) {
+              <mat-option [value]="tenant.id">{{ tenant.tenantName }}</mat-option>
+            }
+          </mat-select>
+          @if (loadingTenants()) {
+            <mat-spinner matSuffix diameter="20"></mat-spinner>
+          }
+        </mat-form-field>
+
+        <!-- Selector de Cartera -->
+        <mat-form-field appearance="outline">
+          <mat-label>Cartera</mat-label>
+          <mat-select [value]="selectedPortfolioId()"
+                      (selectionChange)="onPortfolioChange($event.value)"
+                      [disabled]="!selectedTenantId() || loadingPortfolios()">
+            @for (portfolio of portfolios; track portfolio.id) {
+              <mat-option [value]="portfolio.id">{{ portfolio.portfolioName }}</mat-option>
+            }
+          </mat-select>
+          @if (loadingPortfolios()) {
+            <mat-spinner matSuffix diameter="20"></mat-spinner>
+          }
+        </mat-form-field>
+
+        <!-- Selector de Subcartera -->
+        <mat-form-field appearance="outline">
+          <mat-label>Subcartera</mat-label>
+          <mat-select [value]="selectedSubPortfolioId()"
+                      (selectionChange)="onSubPortfolioChange($event.value)"
+                      [disabled]="!selectedPortfolioId() || loadingSubPortfolios()">
+            @for (subPortfolio of subPortfolios; track subPortfolio.id) {
+              <mat-option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }}</mat-option>
+            }
+          </mat-select>
+          @if (loadingSubPortfolios()) {
+            <mat-spinner matSuffix diameter="20"></mat-spinner>
+          }
+        </mat-form-field>
+      </div>
+
+      @if (!canSearch()) {
+        <div class="context-hint">
+          <mat-icon>info</mat-icon>
+          Selecciona inquilino, cartera y subcartera para buscar clientes
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+
   <!-- Buscador -->
-  <mat-card class="search-card">
+  <mat-card class="search-card" [class.disabled]="!canSearch()">
     <mat-card-header>
       <mat-card-title>Buscar Cliente</mat-card-title>
     </mat-card-header>
@@ -18,13 +83,14 @@
                  [value]="searchDocument()"
                  (input)="onSearchInput($event)"
                  (keyup.enter)="searchByDocument()"
+                 [disabled]="!canSearch()"
                  placeholder="Ingresa el documento del cliente">
           <mat-icon matSuffix>search</mat-icon>
         </mat-form-field>
 
         <button mat-raised-button color="primary"
                 (click)="searchByDocument()"
-                [disabled]="searching()">
+                [disabled]="searching() || !canSearch()">
           @if (searching()) {
             <mat-spinner diameter="20"></mat-spinner>
           } @else {

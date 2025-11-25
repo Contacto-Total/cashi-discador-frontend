@@ -16,6 +16,10 @@ import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ClientSearchService, DynamicClient } from '../../core/services/client-search.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TypificationV2Service } from '../../maintenance/services/typification-v2.service';
+import { TenantService } from '../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../maintenance/services/portfolio.service';
+import { Tenant } from '../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { environment } from '../../../environments/environment';
 import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2, TypificationCatalogV2 } from '../../maintenance/models/typification-v2.model';
 import { ChipSelectComponent, ChipOption } from '../../shared/components/chip-select/chip-select.component';
@@ -46,6 +50,17 @@ import { Subject, of } from 'rxjs';
   styleUrls: ['./manual-management.component.css']
 })
 export class ManualManagementComponent implements OnInit {
+  // Selectores de contexto
+  tenants: Tenant[] = [];
+  portfolios: Portfolio[] = [];
+  subPortfolios: SubPortfolio[] = [];
+  selectedTenantId = signal<number | null>(null);
+  selectedPortfolioId = signal<number | null>(null);
+  selectedSubPortfolioId = signal<number | null>(null);
+  loadingTenants = signal(false);
+  loadingPortfolios = signal(false);
+  loadingSubPortfolios = signal(false);
+
   // Búsqueda
   searchDocument = signal('');
   searchResults = signal<DynamicClient[]>([]);
@@ -68,11 +83,6 @@ export class ManualManagementComponent implements OnInit {
   FieldTypeV2 = FieldTypeV2;
   FieldDataSourceV2 = FieldDataSourceV2;
 
-  // Usuario y contexto
-  tenantId: number = 0;
-  portfolioId: number = 0;
-  subPortfolioId: number = 0;
-
   // Guardado
   saving = signal(false);
   saveSuccess = signal(false);
@@ -85,23 +95,90 @@ export class ManualManagementComponent implements OnInit {
     private http: HttpClient,
     private clientSearchService: ClientSearchService,
     private authService: AuthService,
-    private typificationV2Service: TypificationV2Service
+    private typificationV2Service: TypificationV2Service,
+    private tenantService: TenantService,
+    private portfolioService: PortfolioService
   ) {}
 
   ngOnInit(): void {
-    this.loadUserContext();
     this.initTypificationForm();
     this.setupSearchAutocomplete();
-    this.loadTypifications();
+    this.loadTenants();
   }
 
-  private loadUserContext(): void {
-    const user = this.authService.getCurrentUser();
-    if (user) {
-      this.tenantId = user.tenantId || 0;
-      this.portfolioId = user.portfolioId || 0;
-      this.subPortfolioId = user.subPortfolioId || 0;
+  // ========== CARGA DE SELECTORES EN CASCADA ==========
+
+  private loadTenants(): void {
+    this.loadingTenants.set(true);
+    this.tenantService.getAllTenants().subscribe({
+      next: (tenants) => {
+        this.tenants = tenants.filter(t => t.isActive);
+        this.loadingTenants.set(false);
+      },
+      error: (err) => {
+        console.error('Error cargando inquilinos:', err);
+        this.loadingTenants.set(false);
+      }
+    });
+  }
+
+  onTenantChange(tenantId: number | null): void {
+    this.selectedTenantId.set(tenantId);
+    this.selectedPortfolioId.set(null);
+    this.selectedSubPortfolioId.set(null);
+    this.portfolios = [];
+    this.subPortfolios = [];
+    this.clearSelection();
+
+    if (tenantId) {
+      this.loadingPortfolios.set(true);
+      this.portfolioService.getPortfoliosByTenant(tenantId).subscribe({
+        next: (portfolios) => {
+          this.portfolios = portfolios.filter(p => p.isActive);
+          this.loadingPortfolios.set(false);
+        },
+        error: (err) => {
+          console.error('Error cargando carteras:', err);
+          this.loadingPortfolios.set(false);
+        }
+      });
     }
+  }
+
+  onPortfolioChange(portfolioId: number | null): void {
+    this.selectedPortfolioId.set(portfolioId);
+    this.selectedSubPortfolioId.set(null);
+    this.subPortfolios = [];
+    this.clearSelection();
+
+    if (portfolioId) {
+      this.loadingSubPortfolios.set(true);
+      this.portfolioService.getSubPortfoliosByPortfolio(portfolioId).subscribe({
+        next: (subPortfolios) => {
+          this.subPortfolios = subPortfolios.filter(sp => sp.isActive);
+          this.loadingSubPortfolios.set(false);
+        },
+        error: (err) => {
+          console.error('Error cargando subcarteras:', err);
+          this.loadingSubPortfolios.set(false);
+        }
+      });
+    }
+  }
+
+  onSubPortfolioChange(subPortfolioId: number | null): void {
+    this.selectedSubPortfolioId.set(subPortfolioId);
+    this.clearSelection();
+
+    if (subPortfolioId) {
+      this.loadTypifications();
+    }
+  }
+
+  canSearch(): boolean {
+    return this.selectedTenantId() !== null &&
+           this.selectedPortfolioId() !== null &&
+           this.selectedSubPortfolioId() !== null;
   }
 
   private initTypificationForm(): void {
@@ -137,15 +214,15 @@ export class ManualManagementComponent implements OnInit {
       debounceTime(300),
       distinctUntilChanged(),
       switchMap(term => {
-        if (!term || term.length < 3) {
+        if (!term || term.length < 3 || !this.canSearch()) {
           return of([]);
         }
         this.searching.set(true);
         this.searchError.set('');
         return this.clientSearchService.searchClientsByDocumento(
-          this.tenantId,
-          this.portfolioId,
-          this.subPortfolioId,
+          this.selectedTenantId()!,
+          this.selectedPortfolioId()!,
+          this.selectedSubPortfolioId()!,
           term,
           10
         ).pipe(
@@ -175,14 +252,19 @@ export class ManualManagementComponent implements OnInit {
       return;
     }
 
+    if (!this.canSearch()) {
+      this.searchError.set('Selecciona inquilino, cartera y subcartera primero');
+      return;
+    }
+
     this.searching.set(true);
     this.searchError.set('');
     this.selectedClient.set(null);
 
     this.clientSearchService.findClientByDocumento(
-      this.tenantId,
-      this.portfolioId,
-      this.subPortfolioId,
+      this.selectedTenantId()!,
+      this.selectedPortfolioId()!,
+      this.selectedSubPortfolioId()!,
       documento
     ).subscribe({
       next: (client) => {
@@ -227,12 +309,16 @@ export class ManualManagementComponent implements OnInit {
   // ========== TIPIFICACIÓN EN CASCADA ==========
 
   private loadTypifications(): void {
+    if (!this.canSearch()) {
+      return;
+    }
+
     this.loadingTypifications.set(true);
 
     this.typificationV2Service.getEffectiveTypifications(
-      this.tenantId,
-      this.portfolioId,
-      this.subPortfolioId
+      this.selectedTenantId()!,
+      this.selectedPortfolioId()!,
+      this.selectedSubPortfolioId()!
     ).subscribe({
       next: (typifications) => {
         this.allTypifications = typifications;
@@ -293,9 +379,9 @@ export class ManualManagementComponent implements OnInit {
     const clientId = this.selectedClient()?.id;
 
     this.typificationV2Service.getTypificationFieldsWithValues(
-      this.tenantId,
+      this.selectedTenantId()!,
       typificationId,
-      this.portfolioId,
+      this.selectedPortfolioId()!,
       clientId
     ).subscribe({
       next: (response) => {
@@ -365,9 +451,9 @@ export class ManualManagementComponent implements OnInit {
     const user = this.authService.getCurrentUser();
 
     const record = {
-      idTenant: this.tenantId,
-      idCartera: this.portfolioId,
-      idSubcartera: this.subPortfolioId,
+      idTenant: this.selectedTenantId(),
+      idCartera: this.selectedPortfolioId(),
+      idSubcartera: this.selectedSubPortfolioId(),
       documento: client.documento,
       idAgente: user?.id,
       idTipificacionNivel1: formValue.nivel1,
