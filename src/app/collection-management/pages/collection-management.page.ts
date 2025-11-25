@@ -1104,7 +1104,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       tipo_documento: 'DNI',
       numero_documento: client.documento,
       fecha_nacimiento: '',
-      edad: null,
+      edad: 0,
       contacto: {
         telefono_principal: client.telefono || client.telefono_1 || '',
         telefono_alternativo: client.telefono_2 || '',
