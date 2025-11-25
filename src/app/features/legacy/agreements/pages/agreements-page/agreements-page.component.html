@@ -202,15 +202,14 @@
           <tr>
             <td class="amount bg-white text-black">
               <div class="amount-input-container">
-                S/ <input 
-                    type="number" 
+                S/ <input
+                    type="number"
                     formControlName="deudaTotal"
-                    class="editable-input number-input"
+                    class="editable-input number-input readonly-input"
                     [class.blackout]="isBlackoutMode"
+                    readonly
                     step="1"
-                    min="0"
-                    (input)="calculateDiscount()"
-                    [class.is-invalid]="isFieldInvalid('deudaTotal')">
+                    min="0">
               </div>
             </td>
 
