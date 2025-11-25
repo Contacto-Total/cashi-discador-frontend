@@ -215,6 +215,15 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
 
+  // ========================================
+  // GESTIÓN MANUAL (Tipificación sin llamada)
+  // ========================================
+  {
+    path: 'manual-management',
+    loadComponent: () => import('./features/manual-management/manual-management.component').then(m => m.ManualManagementComponent),
+    canActivate: [authGuard]
+  },
+
   {
     path: '',
     redirectTo: '/login',

@@ -27,6 +27,11 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Clientes</span>
       </a>
 
+      <a routerLink="/manual-management" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Gestión Manual' : ''">
+        <lucide-angular name="clipboard-edit" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Gestión Manual</span>
+      </a>
+
       <!-- Items para ADMIN -->
       <!-- Monitoreo Dropdown -->
       <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
