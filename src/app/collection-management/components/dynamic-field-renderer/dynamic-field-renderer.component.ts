@@ -7,11 +7,13 @@ import {
   DynamicFieldData
 } from '../../../maintenance/models/field-config.model';
 import { ManagementClassification } from '../../models/system-config.model';
+import { PaymentScheduleComponent, AmountOption } from '../../../shared/components/payment-schedule/payment-schedule.component';
+import { PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 
 @Component({
   selector: 'app-dynamic-field-renderer',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaymentScheduleComponent],
   template: `
     @if (schema() && schema()!.fields && schema()!.fields.length > 0) {
       <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3">
@@ -23,7 +25,7 @@ import { ManagementClassification } from '../../models/system-config.model';
         <!-- Dynamic Fields in Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           @for (field of schema()!.fields; track field.id) {
-            <div [class.md:col-span-2]="field.type === 'table' || field.type === 'textarea'">
+            <div [class.md:col-span-2]="field.type === 'table' || field.type === 'textarea' || field.type === 'payment_schedule'">
               <label class="text-[11px] font-bold text-gray-800 dark:text-gray-100 mb-1 flex items-center gap-1">
                 {{ field.label }}
                 @if (field.required) {
@@ -184,6 +186,15 @@ import { ManagementClassification } from '../../models/system-config.model';
                   [placeholder]="field.placeholder || 'https://ejemplo.com'"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                />
+              }
+
+              <!-- Payment Schedule Input -->
+              @if (field.type === 'payment_schedule') {
+                <app-payment-schedule
+                  [availableAmounts]="getPaymentAmountOptions(field)"
+                  [maxInstallments]="6"
+                  (scheduleChange)="onPaymentScheduleChange(field.id, $event)"
                 />
               }
 
@@ -376,14 +387,18 @@ export class DynamicFieldRendererComponent {
       const currentSchema = this.schema();
 
       if (currentSchema && currentSchema.fields) {
+        console.log('[DynamicFieldRenderer] Schema received with fields:', currentSchema.fields.map(f => ({ id: f.id, type: f.type, label: f.label })));
         const initialData: DynamicFieldData = {};
 
         currentSchema.fields.forEach(field => {
+          console.log(`[DynamicFieldRenderer] Processing field: ${field.id}, type: ${field.type}`);
           if (field.type === 'table') {
             const minRows = field.minRows || 0;
             initialData[field.id] = Array.from({ length: minRows }, () => this.createEmptyTableRow(field.columns || []));
           } else if (field.type === 'checkbox') {
             initialData[field.id] = false;
+          } else if (field.type === 'payment_schedule') {
+            initialData[field.id] = null; // PaymentScheduleConfig will be set by the component
           } else {
             initialData[field.id] = '';
           }
@@ -693,5 +708,30 @@ export class DynamicFieldRendererComponent {
   // Public method to set field data (for loading existing data)
   setData(data: DynamicFieldData) {
     this.fieldData.set(data);
+  }
+
+  // Payment Schedule methods
+  getPaymentAmountOptions(field: FieldConfig): AmountOption[] {
+    // Try to get options from field configuration
+    if (field.options && field.options.length > 0) {
+      return field.options.map(opt => ({
+        label: opt.label || String(opt.value),
+        value: typeof opt.value === 'number' ? opt.value : parseFloat(String(opt.value)) || 0,
+        field: opt.field
+      }));
+    }
+
+    // Default options if none configured
+    return [
+      { label: 'Deuda Total', value: 1000, field: 'deudaTotal' },
+      { label: 'Saldo Vencido', value: 500, field: 'saldoVencido' }
+    ];
+  }
+
+  onPaymentScheduleChange(fieldId: string, schedule: PaymentScheduleConfig | null): void {
+    const currentData = { ...this.fieldData() };
+    currentData[fieldId] = schedule;
+    this.fieldData.set(currentData);
+    console.log('[DynamicField] Payment schedule changed:', fieldId, schedule);
   }
 }

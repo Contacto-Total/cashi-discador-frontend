@@ -14,27 +14,29 @@
  * 4. API: GET /api/v1/field-types - se actualizará automáticamente con el seeder
  */
 export type FieldType =
-  | 'text'         // Campo de texto simple
-  | 'textarea'     // Área de texto multilínea
-  | 'number'       // Número entero
-  | 'decimal'      // Número con decimales
-  | 'currency'     // Valor monetario
-  | 'date'         // Selector de fecha
-  | 'time'         // Selector de hora
-  | 'datetime'     // Selector de fecha y hora
-  | 'checkbox'     // Casilla de verificación
-  | 'select'       // Lista desplegable
-  | 'multiselect'  // Selección múltiple
-  | 'email'        // Dirección de correo
-  | 'phone'        // Número telefónico
-  | 'url'          // Dirección web
-  | 'json'         // Datos estructurados JSON
-  | 'table'        // Tabla dinámica (solo campo principal)
-  | 'auto-number'; // Autonumérico (solo columnas de tabla)
+  | 'text'             // Campo de texto simple
+  | 'textarea'         // Área de texto multilínea
+  | 'number'           // Número entero
+  | 'decimal'          // Número con decimales
+  | 'currency'         // Valor monetario
+  | 'date'             // Selector de fecha
+  | 'time'             // Selector de hora
+  | 'datetime'         // Selector de fecha y hora
+  | 'checkbox'         // Casilla de verificación
+  | 'select'           // Lista desplegable
+  | 'multiselect'      // Selección múltiple
+  | 'email'            // Dirección de correo
+  | 'phone'            // Número telefónico
+  | 'url'              // Dirección web
+  | 'json'             // Datos estructurados JSON
+  | 'table'            // Tabla dinámica (solo campo principal)
+  | 'auto-number'      // Autonumérico (solo columnas de tabla)
+  | 'payment_schedule'; // Cronograma de pagos (múltiples cuotas)
 
 export interface SelectOption {
   value: string;
   label: string;
+  field?: string; // Optional field reference for payment schedule amounts
 }
 
 /**
