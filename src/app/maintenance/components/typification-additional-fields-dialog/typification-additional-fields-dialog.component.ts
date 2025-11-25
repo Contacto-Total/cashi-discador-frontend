@@ -2,7 +2,7 @@ import { Component, effect, inject, input, output, signal } from '@angular/core'
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampoOpcionDTO, ConfigurarOpcionesCampoRequest, OpcionToggleDTO } from '../../models/typification-v2.model';
+import { AdditionalFieldV2, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, OpcionToggleDTO } from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
 
 @Component({
@@ -71,13 +71,46 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
               </div>
             }
 
-            <!-- Lista de Opciones con Toggles -->
+            <!-- Selector de Campo CHIP_SELECT -->
             @if (selectedSubPortfolioId()) {
+              <div class="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
+                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <lucide-angular name="list" [size]="16" class="text-purple-600"></lucide-angular>
+                  Seleccionar Campo a Configurar
+                </label>
+
+                @if (loadingFields()) {
+                  <div class="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
+                    <lucide-angular name="loader" [size]="16" class="animate-spin"></lucide-angular>
+                    Cargando campos...
+                  </div>
+                } @else if (additionalFields().length > 0) {
+                  <select
+                    [(ngModel)]="selectedCampoId"
+                    (ngModelChange)="onCampoChange($event)"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+                  >
+                    <option [ngValue]="undefined">-- Seleccione un campo tipo CHIP_SELECT --</option>
+                    @for (campo of additionalFields(); track campo.id) {
+                      <option [ngValue]="campo.id">{{ campo.labelCampo || campo.nombreCampo }} (ID: {{ campo.id }})</option>
+                    }
+                  </select>
+                } @else {
+                  <div class="text-center py-4 text-yellow-600 dark:text-yellow-400">
+                    <lucide-angular name="alert-triangle" [size]="24" class="mx-auto mb-2"></lucide-angular>
+                    <p class="text-sm">Esta tipificación no tiene campos adicionales de tipo CHIP_SELECT</p>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Lista de Opciones con Toggles -->
+            @if (selectedSubPortfolioId() && selectedCampoId()) {
               <div class="space-y-3">
                 <div class="flex items-center justify-between">
                   <h3 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <lucide-angular name="list-checks" [size]="20" class="text-green-600"></lucide-angular>
-                    Opciones Disponibles
+                    Opciones para: {{ getSelectedCampoName() }}
                   </h3>
                   @if (!opcionesInicializadas() && !loadingOpciones()) {
                     <button
@@ -175,7 +208,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
             <button
               type="button"
               (click)="handleSave()"
-              [disabled]="!selectedSubPortfolioId() || opciones().length === 0 || loadingOpciones()"
+              [disabled]="!selectedSubPortfolioId() || !selectedCampoId() || opciones().length === 0 || loadingOpciones()"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <lucide-angular name="save" [size]="20"></lucide-angular>
@@ -205,6 +238,11 @@ export class TypificationAdditionalFieldsDialogComponent {
   loadingSubPortfolios = signal<boolean>(false);
   selectedSubPortfolioId = signal<number | undefined>(undefined);
 
+  // New: Additional fields (CHIP_SELECT type only)
+  additionalFields = signal<AdditionalFieldV2[]>([]);
+  loadingFields = signal<boolean>(false);
+  selectedCampoId = signal<number | undefined>(undefined);
+
   private typificationService = inject(TypificationV2Service);
 
   constructor() {
@@ -217,6 +255,33 @@ export class TypificationAdditionalFieldsDialogComponent {
           subPortfolioId: this.subPortfolioId()
         });
         this.loadSubPortfolios();
+        this.loadAdditionalFields();
+      }
+    });
+  }
+
+  loadAdditionalFields() {
+    const typificationId = this.typificationId();
+    if (!typificationId) return;
+
+    this.loadingFields.set(true);
+    this.typificationService.getAdditionalFields(typificationId).subscribe({
+      next: (fields) => {
+        // Filter only CHIP_SELECT type fields
+        const chipSelectFields = fields.filter(f => f.tipoCampo === FieldTypeV2.CHIP_SELECT);
+        this.additionalFields.set(chipSelectFields);
+        this.loadingFields.set(false);
+        console.log('CHIP_SELECT fields loaded:', chipSelectFields.length);
+
+        // Auto-select if only one CHIP_SELECT field
+        if (chipSelectFields.length === 1) {
+          this.selectedCampoId.set(chipSelectFields[0].id);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading additional fields:', error);
+        this.additionalFields.set([]);
+        this.loadingFields.set(false);
       }
     });
   }
@@ -256,21 +321,27 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.opcionesInicializadas.set(false);
   }
 
+  onCampoChange(campoId: number) {
+    this.selectedCampoId.set(campoId);
+    this.opciones.set([]);
+    this.opcionesInicializadas.set(false);
+  }
+
   inicializarOpciones() {
     const tenantId = this.tenantId();
     const portfolioId = this.portfolioId();
     const subPortfolioId = this.selectedSubPortfolioId();
-    const typificationId = this.typificationId();
+    const campoId = this.selectedCampoId();
 
-    if (!tenantId || !portfolioId || !subPortfolioId || !typificationId) {
-      console.warn('Faltan parámetros para inicializar opciones');
+    if (!tenantId || !portfolioId || !subPortfolioId || !campoId) {
+      console.warn('Faltan parámetros para inicializar opciones', { tenantId, portfolioId, subPortfolioId, campoId });
       return;
     }
 
     this.loadingOpciones.set(true);
 
-    // Primero intentamos cargar opciones existentes
-    this.typificationService.getOpcionesCampo(typificationId)
+    // Primero intentamos cargar opciones existentes usando el campoId (NOT typificationId)
+    this.typificationService.getOpcionesCampo(campoId)
       .subscribe({
         next: (opciones) => {
           if (opciones && opciones.length > 0) {
@@ -278,15 +349,15 @@ export class TypificationAdditionalFieldsDialogComponent {
             this.opciones.set(opciones);
             this.opcionesInicializadas.set(true);
             this.loadingOpciones.set(false);
-            console.log('Opciones cargadas:', opciones.length);
+            console.log('Opciones cargadas para campo', campoId, ':', opciones.length);
           } else {
             // No existen opciones, inicializarlas
-            this.inicializarNuevasOpciones(typificationId, tenantId, portfolioId, subPortfolioId);
+            this.inicializarNuevasOpciones(campoId, tenantId, portfolioId, subPortfolioId);
           }
         },
         error: (error) => {
-          console.error('Error cargando opciones, intentando inicializar:', error);
-          this.inicializarNuevasOpciones(typificationId, tenantId, portfolioId, subPortfolioId);
+          console.error('Error cargando opciones para campo', campoId, ', intentando inicializar:', error);
+          this.inicializarNuevasOpciones(campoId, tenantId, portfolioId, subPortfolioId);
         }
       });
   }
@@ -323,17 +394,17 @@ export class TypificationAdditionalFieldsDialogComponent {
   }
 
   handleSave() {
-    const typificationId = this.typificationId();
+    const campoId = this.selectedCampoId();
     const opcionesActuales = this.opciones();
 
-    if (!typificationId || opcionesActuales.length === 0) {
+    if (!campoId || opcionesActuales.length === 0) {
       console.warn('No hay opciones para guardar');
       return;
     }
 
-    // Preparar request
+    // Preparar request usando el campoId correcto (NOT typificationId)
     const request: ConfigurarOpcionesCampoRequest = {
-      idCampo: typificationId,
+      idCampo: campoId,
       opciones: opcionesActuales.map(o => ({
         codigoOpcion: o.codigoOpcion,
         estaHabilitada: o.estaHabilitada,
@@ -345,7 +416,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.typificationService.configurarOpciones(request)
       .subscribe({
         next: (opcionesActualizadas) => {
-          console.log('Opciones guardadas exitosamente:', opcionesActualizadas.length);
+          console.log('Opciones guardadas exitosamente para campo', campoId, ':', opcionesActualizadas.length);
           this.opciones.set(opcionesActualizadas);
           this.save.emit();
         },
@@ -353,5 +424,12 @@ export class TypificationAdditionalFieldsDialogComponent {
           console.error('Error guardando opciones:', error);
         }
       });
+  }
+
+  getSelectedCampoName(): string {
+    const campoId = this.selectedCampoId();
+    if (!campoId) return '';
+    const campo = this.additionalFields().find(f => f.id === campoId);
+    return campo?.labelCampo || campo?.nombreCampo || '';
   }
 }

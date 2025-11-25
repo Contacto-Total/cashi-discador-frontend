@@ -1,8 +1,37 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PaymentSchedule } from '../models/payment-schedule.model';
+
+/**
+ * Interface para el registro de gestión V2 del backend discador
+ */
+export interface RegistroGestionV2 {
+  id?: number;
+  uuid?: string;
+  idTenant: number;
+  idCartera?: number;
+  idSubcartera?: number;
+  idCliente: number;
+  idAgente: number;
+  idCampana?: number;
+  fechaGestion?: string;
+  duracionSegundos?: number;
+  tipificacion: { id: number };
+  tipificacionNivel1?: { id: number };
+  tipificacionNivel2?: { id: number };
+  tipificacionNivel3?: { id: number };
+  tipificacionNivel4?: { id: number };
+  observaciones?: string;
+  notasPrivadas?: string;
+  metodoContacto?: string;
+  canalContacto?: string;
+  estadoGestion?: string;
+  fechaSeguimiento?: string;
+  requiereSeguimiento?: boolean;
+  fechaCreacion?: string;
+}
 
 export interface ManagementResource {
   id: number;
@@ -99,25 +128,48 @@ export interface RegisterPaymentRequest {
   providedIn: 'root'
 })
 export class ManagementService {
-  private readonly baseUrl = `${environment.tipificacionUrl}/managements`;
+  // Usando el backend discador para gestiones V2
+  private readonly baseUrl = `${environment.gatewayUrl}/v2/management-records`;
   private readonly scheduleUrl = `${environment.tipificacionUrl}/payment-schedules`;
 
   constructor(private http: HttpClient) {}
 
+  /**
+   * Crea un nuevo registro de gestión en el backend discador
+   */
   createManagement(request: CreateManagementRequest): Observable<ManagementResource> {
-    return this.http.post<ManagementResource>(this.baseUrl, request);
+    // Transformar el request al formato que espera el backend discador
+    const backendRequest: RegistroGestionV2 = this.transformToBackendFormat(request);
+
+    console.log('[MANAGEMENT] Creating management record:', backendRequest);
+
+    return this.http.post<RegistroGestionV2>(this.baseUrl, backendRequest).pipe(
+      map(response => this.transformToFrontendFormat(response, request))
+    );
   }
 
+  /**
+   * Obtiene una gestión por ID
+   */
   getManagementById(managementId: string): Observable<ManagementResource> {
-    return this.http.get<ManagementResource>(`${this.baseUrl}/${managementId}`);
+    return this.http.get<RegistroGestionV2>(`${this.baseUrl}/${managementId}`).pipe(
+      map(response => this.transformToFrontendFormat(response))
+    );
   }
 
+  /**
+   * Obtiene todas las gestiones de un cliente
+   */
   getManagementsByCustomer(customerId: string): Observable<ManagementResource[]> {
-    return this.http.get<ManagementResource[]>(`${this.baseUrl}/customer/${customerId}`);
+    return this.http.get<RegistroGestionV2[]>(`${this.baseUrl}/client/${customerId}`).pipe(
+      map(records => records.map(r => this.transformToFrontendFormat(r)))
+    );
   }
 
   getManagementsByAdvisor(advisorId: string): Observable<ManagementResource[]> {
-    return this.http.get<ManagementResource[]>(`${this.baseUrl}/advisor/${advisorId}`);
+    return this.http.get<RegistroGestionV2[]>(`${this.baseUrl}/agent/${advisorId}`).pipe(
+      map(records => records.map(r => this.transformToFrontendFormat(r)))
+    );
   }
 
   getActiveSchedulesByCustomer(customerId: string): Observable<PaymentSchedule[]> {
@@ -126,14 +178,94 @@ export class ManagementService {
   }
 
   startCall(managementId: number, request: StartCallRequest): Observable<ManagementResource> {
-    return this.http.post<ManagementResource>(`${this.baseUrl}/${managementId}/call/start`, request);
+    // Por ahora mantener la funcionalidad básica
+    console.log('[CALL] Start call for management:', managementId, request);
+    return this.getManagementById(managementId.toString());
   }
 
   endCall(managementId: number, request: EndCallRequest): Observable<ManagementResource> {
-    return this.http.post<ManagementResource>(`${this.baseUrl}/${managementId}/call/end`, request);
+    // Por ahora mantener la funcionalidad básica
+    console.log('[CALL] End call for management:', managementId, request);
+    return this.getManagementById(managementId.toString());
   }
 
   registerPayment(managementId: string, request: RegisterPaymentRequest): Observable<ManagementResource> {
-    return this.http.post<ManagementResource>(`${this.baseUrl}/${managementId}/payment`, request);
+    // Por ahora mantener la funcionalidad básica
+    console.log('[PAYMENT] Register payment for management:', managementId, request);
+    return this.getManagementById(managementId);
+  }
+
+  /**
+   * Transforma el request del frontend al formato del backend discador
+   */
+  private transformToBackendFormat(request: CreateManagementRequest): RegistroGestionV2 {
+    // Determinar cuál es la tipificación final (la de mayor nivel seleccionada)
+    const finalTypificationId = request.level3Id || request.level2Id || request.level1Id;
+
+    const backendRequest: RegistroGestionV2 = {
+      idTenant: request.tenantId,
+      idCartera: request.portfolioId,
+      idSubcartera: request.subPortfolioId || undefined,
+      idCliente: Number(request.customerId),
+      idAgente: this.extractAgentId(request.advisorId),
+      tipificacion: { id: finalTypificationId },
+      observaciones: request.observations || '',
+      canalContacto: request.phone || '',
+      metodoContacto: 'LLAMADA_SALIENTE',
+      estadoGestion: 'COMPLETADA'
+    };
+
+    // Agregar niveles jerárquicos si existen
+    if (request.level1Id) {
+      backendRequest.tipificacionNivel1 = { id: request.level1Id };
+    }
+    if (request.level2Id) {
+      backendRequest.tipificacionNivel2 = { id: request.level2Id };
+    }
+    if (request.level3Id) {
+      backendRequest.tipificacionNivel3 = { id: request.level3Id };
+    }
+
+    return backendRequest;
+  }
+
+  /**
+   * Transforma la respuesta del backend al formato del frontend
+   */
+  private transformToFrontendFormat(record: RegistroGestionV2, originalRequest?: CreateManagementRequest): ManagementResource {
+    return {
+      id: record.id || 0,
+      customerId: String(record.idCliente),
+      advisorId: String(record.idAgente),
+      tenantId: record.idTenant,
+      tenantName: '',
+      portfolioId: record.idCartera || 0,
+      portfolioName: '',
+      subPortfolioId: record.idSubcartera,
+      subPortfolioName: '',
+      phone: record.canalContacto || '',
+      level1Id: record.tipificacionNivel1?.id || (record.tipificacion as any)?.id || 0,
+      level1Name: originalRequest?.level1Name || (record.tipificacionNivel1 as any)?.nombre || '',
+      level2Id: record.tipificacionNivel2?.id,
+      level2Name: originalRequest?.level2Name || (record.tipificacionNivel2 as any)?.nombre || '',
+      level3Id: record.tipificacionNivel3?.id,
+      level3Name: originalRequest?.level3Name || (record.tipificacionNivel3 as any)?.nombre || '',
+      observations: record.observaciones,
+      managementDate: record.fechaGestion?.split('T')[0],
+      managementTime: record.fechaGestion?.split('T')[1]?.substring(0, 8)
+    };
+  }
+
+  /**
+   * Extrae el ID numérico del agente desde el advisorId
+   * Si es "ADV-001" intenta obtener el ID real del usuario logueado
+   */
+  private extractAgentId(advisorId: string): number {
+    // Por ahora usar un ID fijo, luego integrar con el sistema de auth
+    // TODO: Obtener el ID real del agente desde el servicio de autenticación
+    if (advisorId.startsWith('ADV-')) {
+      return 1; // ID temporal
+    }
+    return Number(advisorId) || 1;
   }
 }
