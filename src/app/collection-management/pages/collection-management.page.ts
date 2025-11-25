@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -927,6 +927,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private customerOutputConfigService: CustomerOutputConfigService,
     private customerService: CustomerService,
     private router: Router,
+    private route: ActivatedRoute,
     private http: HttpClient,
     private sipService: SipService,
     private agentService: AgentService,
@@ -1009,6 +1010,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.autoLoadCustomerByPhone(callInfo.from);
       }
     });
+
+    // Verificar si viene desde gestión manual con parámetros de cliente
+    this.route.queryParams.subscribe(params => {
+      if (params['source'] === 'manual' && params['documento']) {
+        console.log('📋 [MANUAL] Cargando cliente desde gestión manual:', params);
+        this.loadCustomerByDocumentoFromManual(
+          params['documento'],
+          Number(params['tenantId']),
+          Number(params['portfolioId']),
+          Number(params['subPortfolioId'])
+        );
+      }
+    });
   }
 
   /**
@@ -1033,6 +1047,95 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         console.error('❌ [AUTO-LOAD] Error buscando cliente:', error);
       }
     });
+  }
+
+  /**
+   * Carga un cliente por documento desde la gestión manual
+   * Busca en la tabla dinámica ini_ de la subcartera especificada
+   */
+  private loadCustomerByDocumentoFromManual(
+    documento: string,
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number
+  ) {
+    console.log('🔍 [MANUAL] Buscando cliente por documento:', documento);
+
+    // Establecer el contexto de tenant/portfolio para las tipificaciones
+    this.selectedTenantId = tenantId;
+    this.selectedPortfolioId = portfolioId;
+    this.reloadTypifications();
+    this.loadCustomerOutputConfig();
+
+    // Buscar cliente en la tabla dinámica
+    this.http.get<any>(`${environment.apiUrl}/client-search/find`, {
+      params: {
+        tenantId: tenantId.toString(),
+        portfolioId: portfolioId.toString(),
+        subPortfolioId: subPortfolioId.toString(),
+        documento: documento
+      }
+    }).pipe(
+      catchError((error) => {
+        console.error('❌ [MANUAL] Error buscando cliente:', error);
+        return of(null);
+      })
+    ).subscribe({
+      next: (clientData) => {
+        if (clientData) {
+          console.log('✅ [MANUAL] Cliente encontrado:', clientData);
+          this.loadCustomerFromDynamicTable(clientData);
+        } else {
+          console.warn('⚠️ [MANUAL] Cliente no encontrado');
+        }
+      }
+    });
+  }
+
+  /**
+   * Carga los datos de un cliente desde la tabla dinámica ini_
+   */
+  private loadCustomerFromDynamicTable(client: any) {
+    // Mapear los datos de la tabla dinámica al formato de CustomerData
+    this.customerData.set({
+      id: client.id || 0,
+      id_cliente: client.documento,
+      nombre_completo: client.nombre || client.nombres + ' ' + (client.apellidos || ''),
+      tipo_documento: 'DNI',
+      numero_documento: client.documento,
+      fecha_nacimiento: '',
+      edad: null,
+      contacto: {
+        telefono_principal: client.telefono || client.telefono_1 || '',
+        telefono_alternativo: client.telefono_2 || '',
+        telefono_trabajo: client.telefono_3 || '',
+        email: client.email || '',
+        direccion: client.direccion || ''
+      },
+      cuenta: {
+        numero_cuenta: client.cuenta || '',
+        tipo_producto: client.producto || 'PRÉSTAMO',
+        fecha_desembolso: '',
+        monto_original: client.monto_original || 0,
+        plazo_meses: 0,
+        tasa_interes: 0
+      },
+      deuda: {
+        saldo_capital: client.deuda_capital || 0,
+        intereses_vencidos: 0,
+        mora_acumulada: client.deuda_mora || 0,
+        gastos_cobranza: 0,
+        saldo_total: (client.deuda_capital || 0) + (client.deuda_mora || 0),
+        dias_mora: client.dias_mora || 0,
+        fecha_ultimo_pago: '',
+        monto_ultimo_pago: 0
+      }
+    });
+
+    // Cargar historial de gestiones
+    this.loadManagementHistory();
+
+    console.log('✅ [MANUAL] Cliente cargado exitosamente');
   }
 
   loadTenants() {

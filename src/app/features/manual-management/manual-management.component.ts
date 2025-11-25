@@ -1,6 +1,6 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,21 +8,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatAutocompleteModule } from '@angular/material/autocomplete';
 
-import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ClientSearchService, DynamicClient } from '../../core/services/client-search.service';
-import { AuthService } from '../../core/services/auth.service';
-import { TypificationV2Service } from '../../maintenance/services/typification-v2.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
-import { environment } from '../../../environments/environment';
-import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2, TypificationCatalogV2 } from '../../maintenance/models/typification-v2.model';
-import { ChipSelectComponent, ChipOption } from '../../shared/components/chip-select/chip-select.component';
 
 import { debounceTime, distinctUntilChanged, switchMap, catchError } from 'rxjs/operators';
 import { Subject, of } from 'rxjs';
@@ -32,19 +23,13 @@ import { Subject, of } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatAutocompleteModule,
-    ChipSelectComponent
+    MatSelectModule
   ],
   templateUrl: './manual-management.component.html',
   styleUrls: ['./manual-management.component.css']
@@ -64,44 +49,19 @@ export class ManualManagementComponent implements OnInit {
   // Búsqueda
   searchDocument = signal('');
   searchResults = signal<DynamicClient[]>([]);
-  selectedClient = signal<DynamicClient | null>(null);
   searching = signal(false);
   searchError = signal('');
-
-  // Tipificación
-  typificationForm!: FormGroup;
-  allTypifications: TypificationCatalogV2[] = [];
-  nivel1Options: TypificationCatalogV2[] = [];
-  nivel2Options: TypificationCatalogV2[] = [];
-  nivel3Options: TypificationCatalogV2[] = [];
-  nivel4Options: TypificationCatalogV2[] = [];
-  loadingTypifications = signal(false);
-
-  // Campos adicionales
-  additionalFieldsV2: AdditionalFieldV2[] = [];
-  loadingAdditionalFields = signal(false);
-  FieldTypeV2 = FieldTypeV2;
-  FieldDataSourceV2 = FieldDataSourceV2;
-
-  // Guardado
-  saving = signal(false);
-  saveSuccess = signal(false);
-  saveError = signal('');
 
   private searchSubject = new Subject<string>();
 
   constructor(
-    private fb: FormBuilder,
-    private http: HttpClient,
+    private router: Router,
     private clientSearchService: ClientSearchService,
-    private authService: AuthService,
-    private typificationV2Service: TypificationV2Service,
     private tenantService: TenantService,
     private portfolioService: PortfolioService
   ) {}
 
   ngOnInit(): void {
-    this.initTypificationForm();
     this.setupSearchAutocomplete();
     this.loadTenants();
   }
@@ -128,7 +88,7 @@ export class ManualManagementComponent implements OnInit {
     this.selectedSubPortfolioId.set(null);
     this.portfolios = [];
     this.subPortfolios = [];
-    this.clearSelection();
+    this.clearSearch();
 
     if (tenantId) {
       this.loadingPortfolios.set(true);
@@ -149,7 +109,7 @@ export class ManualManagementComponent implements OnInit {
     this.selectedPortfolioId.set(portfolioId);
     this.selectedSubPortfolioId.set(null);
     this.subPortfolios = [];
-    this.clearSelection();
+    this.clearSearch();
 
     if (portfolioId) {
       this.loadingSubPortfolios.set(true);
@@ -168,11 +128,7 @@ export class ManualManagementComponent implements OnInit {
 
   onSubPortfolioChange(subPortfolioId: number | null): void {
     this.selectedSubPortfolioId.set(subPortfolioId);
-    this.clearSelection();
-
-    if (subPortfolioId) {
-      this.loadTypifications();
-    }
+    this.clearSearch();
   }
 
   canSearch(): boolean {
@@ -181,33 +137,7 @@ export class ManualManagementComponent implements OnInit {
            this.selectedSubPortfolioId() !== null;
   }
 
-  private initTypificationForm(): void {
-    this.typificationForm = this.fb.group({
-      nivel1: [null, Validators.required],
-      nivel2: [null],
-      nivel3: [null],
-      nivel4: [null],
-      notes: ['', Validators.required],
-      scheduleCallback: [null]
-    });
-
-    // Suscribirse a cambios en cascada
-    this.typificationForm.get('nivel1')?.valueChanges.subscribe(value => {
-      this.onNivel1Change(value);
-    });
-
-    this.typificationForm.get('nivel2')?.valueChanges.subscribe(value => {
-      this.onNivel2Change(value);
-    });
-
-    this.typificationForm.get('nivel3')?.valueChanges.subscribe(value => {
-      this.onNivel3Change(value);
-    });
-
-    this.typificationForm.get('nivel4')?.valueChanges.subscribe(value => {
-      this.onNivel4Change(value);
-    });
-  }
+  // ========== BÚSQUEDA DE CLIENTE ==========
 
   private setupSearchAutocomplete(): void {
     this.searchSubject.pipe(
@@ -259,7 +189,6 @@ export class ManualManagementComponent implements OnInit {
 
     this.searching.set(true);
     this.searchError.set('');
-    this.selectedClient.set(null);
 
     this.clientSearchService.findClientByDocumento(
       this.selectedTenantId()!,
@@ -269,8 +198,8 @@ export class ManualManagementComponent implements OnInit {
     ).subscribe({
       next: (client) => {
         this.searching.set(false);
-        this.selectedClient.set(client);
-        this.searchResults.set([]);
+        // Redirigir a collection-management con los datos del cliente
+        this.navigateToCollectionManagement(client);
       },
       error: (err) => {
         this.searching.set(false);
@@ -285,204 +214,30 @@ export class ManualManagementComponent implements OnInit {
   }
 
   selectClient(client: DynamicClient): void {
-    this.selectedClient.set(client);
-    this.searchDocument.set(client.documento);
-    this.searchResults.set([]);
+    // Redirigir a collection-management con los datos del cliente
+    this.navigateToCollectionManagement(client);
   }
 
-  clearSelection(): void {
-    this.selectedClient.set(null);
+  private navigateToCollectionManagement(client: DynamicClient): void {
+    // Navegar a collection-management pasando los datos como state
+    this.router.navigate(['/collection-management'], {
+      queryParams: {
+        documento: client.documento,
+        tenantId: this.selectedTenantId(),
+        portfolioId: this.selectedPortfolioId(),
+        subPortfolioId: this.selectedSubPortfolioId(),
+        source: 'manual'
+      }
+    });
+  }
+
+  clearSearch(): void {
     this.searchDocument.set('');
     this.searchResults.set([]);
     this.searchError.set('');
-    this.resetTypificationForm();
   }
 
-  private resetTypificationForm(): void {
-    this.typificationForm.reset();
-    this.nivel2Options = [];
-    this.nivel3Options = [];
-    this.nivel4Options = [];
-    this.additionalFieldsV2 = [];
-  }
-
-  // ========== TIPIFICACIÓN EN CASCADA ==========
-
-  private loadTypifications(): void {
-    if (!this.canSearch()) {
-      return;
-    }
-
-    this.loadingTypifications.set(true);
-
-    this.typificationV2Service.getEffectiveTypifications(
-      this.selectedTenantId()!,
-      this.selectedPortfolioId()!,
-      this.selectedSubPortfolioId()!
-    ).subscribe({
-      next: (typifications) => {
-        this.allTypifications = typifications;
-        // Cargar nivel 1 (tipificaciones raíz)
-        this.nivel1Options = typifications.filter(t => !t.idTipificacionPadre && t.nivelJerarquia === 1);
-        this.loadingTypifications.set(false);
-      },
-      error: (err) => {
-        console.error('Error cargando tipificaciones:', err);
-        this.loadingTypifications.set(false);
-      }
-    });
-  }
-
-  private onNivel1Change(nivel1Id: number | null): void {
-    // Resetear niveles inferiores
-    this.typificationForm.patchValue({ nivel2: null, nivel3: null, nivel4: null });
-    this.nivel2Options = [];
-    this.nivel3Options = [];
-    this.nivel4Options = [];
-    this.additionalFieldsV2 = [];
-
-    if (nivel1Id) {
-      this.nivel2Options = this.allTypifications.filter(t => t.idTipificacionPadre === nivel1Id);
-      this.loadAdditionalFields(nivel1Id);
-    }
-  }
-
-  private onNivel2Change(nivel2Id: number | null): void {
-    this.typificationForm.patchValue({ nivel3: null, nivel4: null });
-    this.nivel3Options = [];
-    this.nivel4Options = [];
-
-    if (nivel2Id) {
-      this.nivel3Options = this.allTypifications.filter(t => t.idTipificacionPadre === nivel2Id);
-      this.loadAdditionalFields(nivel2Id);
-    }
-  }
-
-  private onNivel3Change(nivel3Id: number | null): void {
-    this.typificationForm.patchValue({ nivel4: null });
-    this.nivel4Options = [];
-
-    if (nivel3Id) {
-      this.nivel4Options = this.allTypifications.filter(t => t.idTipificacionPadre === nivel3Id);
-      this.loadAdditionalFields(nivel3Id);
-    }
-  }
-
-  private onNivel4Change(nivel4Id: number | null): void {
-    if (nivel4Id) {
-      this.loadAdditionalFields(nivel4Id);
-    }
-  }
-
-  private loadAdditionalFields(typificationId: number): void {
-    this.loadingAdditionalFields.set(true);
-    const clientId = this.selectedClient()?.id;
-
-    this.typificationV2Service.getTypificationFieldsWithValues(
-      this.selectedTenantId()!,
-      typificationId,
-      this.selectedPortfolioId()!,
-      clientId
-    ).subscribe({
-      next: (response) => {
-        this.additionalFieldsV2 = response.fields || [];
-        // Agregar controles dinámicos al formulario
-        this.additionalFieldsV2.forEach(field => {
-          if (!this.typificationForm.contains(field.nombreCampo)) {
-            this.typificationForm.addControl(
-              field.nombreCampo,
-              this.fb.control(field.value || '', field.esRequerido ? Validators.required : [])
-            );
-          } else {
-            this.typificationForm.get(field.nombreCampo)?.setValue(field.value || '');
-          }
-        });
-        this.loadingAdditionalFields.set(false);
-      },
-      error: (err: Error) => {
-        console.error('Error cargando campos adicionales:', err);
-        this.loadingAdditionalFields.set(false);
-      }
-    });
-  }
-
-  // Convertir tipificaciones a opciones de chips
-  getChipOptions(options: TypificationCatalogV2[]): ChipOption[] {
-    return options.map(opt => ({
-      value: opt.id,
-      label: opt.nombre,
-      color: opt.colorSugerido || '#6366f1',
-      icon: opt.iconoSugerido
-    }));
-  }
-
-  onNivelChipSelect(nivel: string, value: number | null): void {
-    this.typificationForm.patchValue({ [nivel]: value });
-  }
-
-  // ========== GUARDAR TIPIFICACIÓN ==========
-
-  saveTypification(): void {
-    if (!this.typificationForm.valid) {
-      this.saveError.set('Por favor completa todos los campos requeridos');
-      return;
-    }
-
-    const client = this.selectedClient();
-    if (!client) {
-      this.saveError.set('No hay cliente seleccionado');
-      return;
-    }
-
-    this.saving.set(true);
-    this.saveError.set('');
-
-    const formValue = this.typificationForm.value;
-
-    // Obtener la tipificación más específica seleccionada
-    const tipificacionFinal = formValue.nivel4 || formValue.nivel3 || formValue.nivel2 || formValue.nivel1;
-
-    // Recopilar valores de campos adicionales
-    const camposAdicionales: { [key: string]: any } = {};
-    this.additionalFieldsV2.forEach(field => {
-      camposAdicionales[field.nombreCampo] = formValue[field.nombreCampo];
-    });
-
-    const user = this.authService.getCurrentUser();
-
-    const record = {
-      idTenant: this.selectedTenantId(),
-      idCartera: this.selectedPortfolioId(),
-      idSubcartera: this.selectedSubPortfolioId(),
-      documento: client.documento,
-      idAgente: user?.id,
-      idTipificacionNivel1: formValue.nivel1,
-      idTipificacionNivel2: formValue.nivel2,
-      idTipificacionNivel3: formValue.nivel3,
-      idTipificacionNivel4: formValue.nivel4,
-      idTipificacion: tipificacionFinal,
-      observaciones: formValue.notes,
-      fechaSeguimiento: formValue.scheduleCallback,
-      camposAdicionales: JSON.stringify(camposAdicionales),
-      fuenteGestion: 'MANUAL'
-    };
-
-    this.http.post(`${environment.apiUrl}/v2/management-records`, record).subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.saveSuccess.set(true);
-        setTimeout(() => this.saveSuccess.set(false), 3000);
-        this.resetTypificationForm();
-      },
-      error: (err: Error) => {
-        this.saving.set(false);
-        this.saveError.set('Error al guardar la tipificación');
-        console.error('Error:', err);
-      }
-    });
-  }
-
-  // ========== HELPERS PARA MOSTRAR DATOS DEL CLIENTE ==========
+  // ========== HELPERS ==========
 
   getClientName(client: DynamicClient): string {
     if (client.nombre) return client.nombre;
@@ -493,24 +248,5 @@ export class ManualManagementComponent implements OnInit {
 
   getClientPhone(client: DynamicClient): string {
     return client.telefono || client.telefono_1 || client.telefono_2 || 'Sin teléfono';
-  }
-
-  formatCurrency(value: number | undefined): string {
-    if (value === undefined || value === null) return '-';
-    return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(value);
-  }
-
-  // Obtener todos los campos dinámicos del cliente para mostrar
-  getClientFields(client: DynamicClient): { key: string; value: any }[] {
-    const excludedKeys = ['id', 'documento'];
-    return Object.entries(client)
-      .filter(([key, value]) => !excludedKeys.includes(key) && value !== null && value !== undefined)
-      .map(([key, value]) => ({ key: this.formatFieldName(key), value }));
-  }
-
-  private formatFieldName(key: string): string {
-    return key
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, l => l.toUpperCase());
   }
 }
