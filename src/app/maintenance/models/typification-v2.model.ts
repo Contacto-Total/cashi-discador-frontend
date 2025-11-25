@@ -21,7 +21,7 @@ export interface TypificationCatalogV2 {
   tipificacionPadre?: {
     id: number;
   };
-  idTipificacionPadre?: number; // ID directo del padre (para construir árbol)
+  parentTypificationId?: number; // ID directo del padre (para construir árbol)
   nivelJerarquia: number;
   ordenVisualizacion?: number;
   esEstadoFinal?: boolean;

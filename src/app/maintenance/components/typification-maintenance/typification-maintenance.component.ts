@@ -210,8 +210,8 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     this.typifications.forEach(typification => {
       const node = nodeMap.get(typification.id)!;
-      // Usar idTipificacionPadre si está disponible, sino tipificacionPadre?.id
-      const parentId = typification.idTipificacionPadre || typification.tipificacionPadre?.id;
+      // Usar parentTypificationId si está disponible, sino tipificacionPadre?.id
+      const parentId = typification.parentTypificationId || typification.tipificacionPadre?.id;
       if (parentId) {
         const parent = nodeMap.get(parentId);
         if (parent) {
@@ -650,14 +650,14 @@ export class TypificationMaintenanceComponent implements OnInit {
       return null;
     };
 
-    const parentId = current.typification.idTipificacionPadre || current.typification.tipificacionPadre?.id;
+    const parentId = current.typification.parentTypificationId || current.typification.tipificacionPadre?.id;
     if (parentId) {
       const parent = findParent(this.treeNodes, current.typification.id);
       if (parent) {
         // Construir breadcrumb recursivamente
         const buildPath = (n: TypificationTreeNodeV2): string[] => {
           const path: string[] = [];
-          const pid = n.typification.idTipificacionPadre || n.typification.tipificacionPadre?.id;
+          const pid = n.typification.parentTypificationId || n.typification.tipificacionPadre?.id;
           if (pid) {
             const p = findParent(this.treeNodes, n.typification.id);
             if (p) {
