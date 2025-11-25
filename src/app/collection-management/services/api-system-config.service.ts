@@ -116,9 +116,10 @@ export class ApiSystemConfigService {
   isLoading = signal(false);
   isLoaded = signal(false);
 
-  // Configuración de tenant/portfolio
+  // Configuración de tenant/portfolio/subportfolio
   private currentTenantId?: number;
   private currentPortfolioId?: number;
+  private currentSubPortfolioId?: number;
 
   constructor(private http: HttpClient) {
     // NO cargar datos automáticamente - esperar a que se configure el tenant
@@ -126,9 +127,9 @@ export class ApiSystemConfigService {
   }
 
   /**
-   * Configura el tenant y portfolio actual y recarga las clasificaciones
+   * Configura el tenant, portfolio y subportfolio actual y recarga las clasificaciones
    */
-  setTenantAndPortfolio(tenantId: number, portfolioId?: number) {
+  setTenantAndPortfolio(tenantId: number, portfolioId?: number, subPortfolioId?: number) {
     // IMPORTANTE: Limpiar clasificaciones anteriores ANTES de cambiar el contexto
     this.tenantClassifications.set([]);
     this.contactClassifications.set([]);
@@ -136,6 +137,7 @@ export class ApiSystemConfigService {
 
     this.currentTenantId = tenantId;
     this.currentPortfolioId = portfolioId;
+    this.currentSubPortfolioId = subPortfolioId;
 
     // Recargar tipificaciones del catálogo (CUSTOM) después de cambiar contexto
     this.loadTenantClassifications();
@@ -175,7 +177,7 @@ export class ApiSystemConfigService {
         return;
       }
 
-      const subportfolioParam = 0;
+      const subportfolioParam = this.currentSubPortfolioId || 0;
       const portfolioParam = this.currentPortfolioId || 0;
       const url = `${environment.gatewayUrl}/v2/typifications/config/effective/tenant/${this.currentTenantId}/portfolio/${portfolioParam}/subportfolio/${subportfolioParam}`;
 

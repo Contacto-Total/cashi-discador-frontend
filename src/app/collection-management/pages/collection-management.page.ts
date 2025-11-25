@@ -1061,9 +1061,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   ) {
     console.log('🔍 [MANUAL] Buscando cliente por documento:', documento);
 
-    // Establecer el contexto de tenant/portfolio para las tipificaciones
+    // Establecer el contexto de tenant/portfolio/subportfolio para las tipificaciones
     this.selectedTenantId = tenantId;
     this.selectedPortfolioId = portfolioId;
+    this.selectedSubPortfolioId = subPortfolioId;
     this.reloadTypifications();
     this.loadCustomerOutputConfig();
 
@@ -1138,22 +1139,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     console.log('✅ [MANUAL] Cliente cargado exitosamente');
   }
 
+  // Variable para almacenar el subPortfolioId seleccionado
+  selectedSubPortfolioId?: number;
+
   loadTenants() {
     const currentUser = this.authService.getCurrentUser();
     console.log('[V2] Usuario actual:', currentUser);
 
-    if (currentUser?.tenantId && currentUser?.portfolioId) {
+    if (currentUser?.tenantId && currentUser?.portfolioId && currentUser?.subPortfolioId) {
       this.selectedTenantId = currentUser.tenantId;
       this.selectedPortfolioId = currentUser.portfolioId;
-      console.log(`[V2] Usando asignación del usuario: tenant=${this.selectedTenantId}, portfolio=${this.selectedPortfolioId}`);
+      this.selectedSubPortfolioId = currentUser.subPortfolioId;
+      console.log(`[V2] Usando asignación del usuario: tenant=${this.selectedTenantId}, portfolio=${this.selectedPortfolioId}, subPortfolio=${this.selectedSubPortfolioId}`);
 
       // Cargar datos SIN llamar a onTenantChange (que resetea portfolioId)
       this.reloadTypifications();
       this.loadCustomerOutputConfig();
       this.loadFirstCustomer();
     } else {
-      console.error('[V2] Usuario no tiene asignación de tenant/portfolio');
-      console.error('[V2] Valores recibidos:', { tenantId: currentUser?.tenantId, portfolioId: currentUser?.portfolioId });
+      console.error('[V2] Usuario no tiene asignación completa de tenant/portfolio/subportfolio');
+      console.error('[V2] Valores recibidos:', {
+        tenantId: currentUser?.tenantId,
+        portfolioId: currentUser?.portfolioId,
+        subPortfolioId: currentUser?.subPortfolioId
+      });
     }
   }
 
@@ -1192,7 +1201,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.apiSystemConfigService.setTenantAndPortfolio(
       this.selectedTenantId,
-      this.selectedPortfolioId
+      this.selectedPortfolioId,
+      this.selectedSubPortfolioId
     );
   }
 
