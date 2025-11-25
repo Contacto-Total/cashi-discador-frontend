@@ -145,7 +145,7 @@
                       <mat-hint align="end">{{ notesForm.get('campo_' + field.id)?.value?.length || 0 }} / {{ field.longitudMaxima }}</mat-hint>
                     }
                   </mat-form-field>
-                } @else if (field.tipoCampo === FieldTypeV2.PAYMENT_SCHEDULE) {
+                } @else if (field.tipoCampo === FieldTypeV2.PAYMENT_SCHEDULE || field.tipoCampo === 'payment_schedule' || field.tipoCampo === 'PAYMENT_SCHEDULE') {
                   <!-- Campo de Cronograma de Pagos -->
                   <div class="payment-schedule-field">
                     <h4 class="field-title">{{ field.labelCampo }} @if (field.esRequerido) {*}</h4>

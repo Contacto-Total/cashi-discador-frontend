@@ -256,6 +256,20 @@ export class FieldConfigDialogComponent {
   constructor() {
     // Cargar tipos de campo desde el backend
     this.apiSystemConfigService.getFieldTypesForMainFields().subscribe(types => {
+      // Agregar PAYMENT_SCHEDULE si no existe
+      const hasPaymentSchedule = types.some(t => t.typeCode === 'payment_schedule');
+      if (!hasPaymentSchedule) {
+        types.push({
+          id: 999,
+          typeCode: 'payment_schedule',
+          typeName: 'Cronograma de Pagos',
+          description: 'Permite dividir un monto en múltiples cuotas con fechas',
+          icon: 'calendar-check',
+          availableForMainField: true,
+          availableForTableColumn: false,
+          displayOrder: 100
+        });
+      }
       this.fieldTypes.set(types);
     });
 
