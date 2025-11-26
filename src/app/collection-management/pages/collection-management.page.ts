@@ -53,29 +53,58 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       }
 
-      <!-- Alerta de Promesa de Pago Activa -->
+      <!-- Alerta de Promesa de Pago Activa con detalle de cuotas -->
       @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
-        <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-[slideInDown_0.5s_ease-out]">
+        <div class="fixed top-4 right-4 z-50 animate-[slideInDown_0.5s_ease-out] max-w-md">
           @for (schedule of activePaymentSchedules(); track schedule.id) {
-            <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 dark:from-amber-600 dark:via-yellow-600 dark:to-amber-700 text-white px-6 py-3 rounded-lg shadow-2xl mb-2 cursor-pointer hover:scale-105 transition-transform" (click)="showPaymentScheduleDetail(schedule)">
-              <div class="flex items-center gap-3">
-                <div class="text-2xl">📅</div>
-                <div>
-                  <div class="font-bold text-base">Promesa de Pago Activa</div>
-                  <div class="text-sm opacity-90">
-                    Monto Total: S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}
-                    ({{ schedule.numberOfInstallments }} {{ schedule.numberOfInstallments === 1 ? 'cuota' : 'cuotas' }})
+            <div class="bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-xl shadow-2xl mb-3 overflow-hidden">
+              <!-- Header -->
+              <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">⚠️</span>
+                  <div>
+                    <div class="font-bold text-sm">PROMESA DE PAGO ACTIVA</div>
+                    <div class="text-xs opacity-80">No puede registrar otra promesa</div>
                   </div>
-                  @if (schedule.nextDueDate) {
-                    <div class="text-xs opacity-75">
-                      Próximo vencimiento: {{ formatDate(schedule.nextDueDate) }}
-                      @if (schedule.cuotasPendientes > 0) {
-                        - {{ schedule.cuotasPendientes }} cuota(s) pendiente(s)
-                      }
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
+                  <div class="text-xs opacity-80">Total</div>
+                </div>
+              </div>
+              <!-- Detalle de cuotas -->
+              <div class="px-4 py-3">
+                <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
+                <div class="space-y-1.5 max-h-40 overflow-y-auto">
+                  @for (cuota of schedule.installments; track cuota.numeroCuota) {
+                    <div class="flex items-center justify-between text-xs bg-white/20 rounded-lg px-3 py-2">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold">Cuota {{ cuota.numeroCuota }}</span>
+                        @if (cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+                          <span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">✓ PAGADO</span>
+                        } @else if (cuota.status === 'VENCIDO') {
+                          <span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded">⚠ VENCIDO</span>
+                        } @else {
+                          <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">⏳ PENDIENTE</span>
+                        }
+                      </div>
+                      <div class="text-right">
+                        <div class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</div>
+                        <div class="text-[10px] opacity-75">{{ formatDate(cuota.dueDate) }}</div>
+                      </div>
                     </div>
                   }
                 </div>
               </div>
+              <!-- Footer con resumen -->
+              @if (schedule.cuotasPendientes > 0) {
+                <div class="px-4 py-2 bg-black/20 text-xs">
+                  <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> cuota(s) pendiente(s)
+                  @if (schedule.nextDueDate) {
+                    · Próximo vencimiento: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
+                  }
+                </div>
+              }
             </div>
           }
         </div>
@@ -2592,6 +2621,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
     console.log('[SAVE] Final paymentScheduleData:', paymentScheduleData);
+
+    // ⚠️ VALIDACIÓN: No permitir registrar nueva promesa si hay cuotas pendientes
+    if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
+      const activeSchedules = this.activePaymentSchedules();
+      const hasPendingInstallments = activeSchedules.some(schedule => schedule.cuotasPendientes > 0);
+
+      if (hasPendingInstallments) {
+        this.saving.set(false);
+        alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa de pago activa con cuotas pendientes.\n\nDebe esperar a que se completen o cancelen las cuotas pendientes antes de registrar una nueva promesa.');
+        return;
+      }
+    }
 
     // Si hay cronograma de pago con cuotas, usar el endpoint específico
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
