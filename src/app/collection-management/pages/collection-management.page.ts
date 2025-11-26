@@ -175,29 +175,6 @@ import { AuthService } from '../../core/services/auth.service';
                 </div>
               }
 
-              @if (activeTab() === 'cuenta') {
-                <div class="space-y-1.5">
-                  <!-- Producto -->
-                  <div class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Producto</div>
-                  <div class="space-y-0.5 text-[10px]">
-                    <div class="flex justify-between"><span class="text-slate-500">Tipo:</span><span class="font-semibold text-slate-800 dark:text-white">{{ customerData().cuenta.tipo_producto }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-500">Monto:</span><span class="font-semibold text-slate-800 dark:text-white">S/ {{ customerData().cuenta.monto_original.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-500">Plazo:</span><span class="font-semibold text-slate-800 dark:text-white">{{ customerData().cuenta.plazo_meses }}m</span></div>
-                  </div>
-                  <!-- Deuda -->
-                  <div class="text-[9px] font-bold text-red-500 uppercase mt-2">Deuda</div>
-                  <div class="space-y-0.5 text-[10px]">
-                    <div class="flex justify-between"><span class="text-red-400">Capital:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.saldo_capital.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-red-400">Intereses:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.intereses_vencidos.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-red-400">Mora:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.mora_acumulada.toFixed(2) }}</span></div>
-                    <div class="flex justify-between bg-red-100 dark:bg-red-950/50 rounded px-1 py-0.5 mt-1">
-                      <span class="font-bold text-red-700 dark:text-red-200">TOTAL:</span>
-                      <span class="font-bold text-red-700 dark:text-red-200">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</span>
-                    </div>
-                  </div>
-                </div>
-              }
-
               @if (activeTab() === 'historial') {
                 <div class="space-y-1">
                   @if (historialGestiones().length === 0) {
@@ -522,22 +499,27 @@ import { AuthService } from '../../core/services/auth.service';
             </div>
           </div>
 
-          <!-- Resumen Rápido Deuda -->
-          <div class="p-2 bg-red-50 dark:bg-red-950/20">
-            <div class="text-center">
-              <div class="text-[9px] text-red-500 uppercase font-bold">Deuda Total</div>
-              <div class="text-lg font-black text-red-600 dark:text-red-400">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</div>
-              <div class="text-[10px] text-red-500 dark:text-red-400">{{ customerData().deuda.dias_mora }} días mora</div>
-            </div>
-          </div>
-
-          <!-- Último Pago -->
-          <div class="p-2 flex-1">
-            <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Último Pago</div>
-            <div class="text-[10px] text-gray-600 dark:text-gray-300">
-              <div>{{ customerData().deuda.fecha_ultimo_pago }}</div>
-              <div class="font-bold text-green-600 dark:text-green-400">S/ {{ customerData().deuda.monto_ultimo_pago.toFixed(2) }}</div>
-            </div>
+          <!-- Datos de Negociación -->
+          <div class="p-2 flex-1 overflow-y-auto">
+            <div class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Datos de Cuenta</div>
+            @if (clientNumericFields().length > 0) {
+              <div class="space-y-1">
+                @for (field of clientNumericFields(); track field.field) {
+                  <div class="flex justify-between items-center py-1 px-2 rounded text-[10px]"
+                       [class]="field.value > 0 ? 'bg-red-50 dark:bg-red-950/30' : 'bg-gray-50 dark:bg-gray-800/50'">
+                    <span class="text-gray-600 dark:text-gray-400 truncate mr-2">{{ field.label }}</span>
+                    <span class="font-bold whitespace-nowrap"
+                          [class]="field.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'">
+                      {{ formatCurrency(field.value) }}
+                    </span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="text-center py-4 text-[10px] text-gray-400">
+                Sin datos de cuenta
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -780,7 +762,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },
-    { id: 'cuenta', label: 'Cuenta', icon: 'wallet' },
     { id: 'historial', label: 'Historial', icon: 'history' }
   ];
 
@@ -989,6 +970,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
+
+  // Computed para extraer campos numéricos del cliente para mostrar en panel de negociación
+  clientNumericFields = computed(() => {
+    const rawData = this.rawClientData();
+    const numericFields: { label: string; value: number; field: string }[] = [];
+
+    // Campos a excluir (IDs, campos técnicos)
+    const excludeFields = ['id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado'];
+
+    for (const [key, value] of Object.entries(rawData)) {
+      // Verificar que sea un número y no esté excluido
+      const numValue = typeof value === 'number' ? value : parseFloat(value);
+      if (!isNaN(numValue) && !excludeFields.includes(key.toLowerCase())) {
+        numericFields.push({
+          label: this.formatFieldLabel(key),
+          value: numValue,
+          field: key
+        });
+      }
+    }
+
+    // Ordenar por valor descendente (mayores primero)
+    return numericFields.sort((a, b) => b.value - a.value);
+  });
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
@@ -2251,6 +2256,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+  }
+
+  /**
+   * Formatea un valor numérico como moneda (Soles)
+   */
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN'
+    }).format(value);
   }
 
   showPaymentSection(): boolean {
