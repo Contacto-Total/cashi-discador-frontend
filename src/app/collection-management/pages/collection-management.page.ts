@@ -701,56 +701,46 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);
 
   // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
+  // Detecta TODAS las columnas numéricas dinámicamente
   customerPaymentAmounts = computed<AmountOption[]>(() => {
-    const data = this.customerData();
-    if (!data || !data.deuda) {
+    const rawData = this.rawClientData();
+
+    if (!rawData || Object.keys(rawData).length === 0) {
+      console.log('[PAYMENT] No raw client data available');
       return [];
     }
 
     const amounts: AmountOption[] = [];
 
-    // Agregar los diferentes montos de deuda disponibles
-    if (data.deuda.saldo_total && data.deuda.saldo_total > 0) {
-      amounts.push({
-        label: 'Deuda Total',
-        value: data.deuda.saldo_total,
-        field: 'saldo_total'
-      });
+    // Campos a excluir (IDs, códigos, no son montos de pago)
+    const excludeFields = ['id', 'tenant_id', 'portfolio_id', 'sub_portfolio_id', 'created_at', 'updated_at'];
+
+    // Recorrer todas las propiedades del cliente y detectar las numéricas
+    for (const [key, value] of Object.entries(rawData)) {
+      // Saltar campos excluidos
+      if (excludeFields.includes(key.toLowerCase())) {
+        continue;
+      }
+
+      // Verificar si es un valor numérico y mayor a 0
+      const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+
+      if (!isNaN(numValue) && numValue > 0) {
+        // Formatear el nombre del campo para mostrarlo mejor
+        const label = this.formatFieldLabel(key);
+
+        amounts.push({
+          label: label,
+          value: numValue,
+          field: key
+        });
+      }
     }
 
-    if (data.deuda.saldo_capital && data.deuda.saldo_capital > 0) {
-      amounts.push({
-        label: 'Capital',
-        value: data.deuda.saldo_capital,
-        field: 'saldo_capital'
-      });
-    }
+    // Ordenar por valor descendente (montos más altos primero)
+    amounts.sort((a, b) => b.value - a.value);
 
-    if (data.deuda.intereses_vencidos && data.deuda.intereses_vencidos > 0) {
-      amounts.push({
-        label: 'Intereses',
-        value: data.deuda.intereses_vencidos,
-        field: 'intereses_vencidos'
-      });
-    }
-
-    if (data.deuda.mora_acumulada && data.deuda.mora_acumulada > 0) {
-      amounts.push({
-        label: 'Mora',
-        value: data.deuda.mora_acumulada,
-        field: 'mora_acumulada'
-      });
-    }
-
-    if (data.deuda.gastos_cobranza && data.deuda.gastos_cobranza > 0) {
-      amounts.push({
-        label: 'Gastos',
-        value: data.deuda.gastos_cobranza,
-        field: 'gastos_cobranza'
-      });
-    }
-
-    console.log('[CollectionManagement] Customer payment amounts:', amounts);
+    console.log('[PAYMENT] Detected numeric amounts from ini_* table:', amounts);
     return amounts;
   });
 
@@ -963,6 +953,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
 
+  // Raw client data from ini_* table (to detect all numeric columns dynamically)
+  rawClientData = signal<Record<string, any>>({});
+
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
@@ -1153,6 +1146,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Carga los datos de un cliente desde la tabla dinámica ini_
    */
   private loadCustomerFromDynamicTable(client: any) {
+    // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
+    this.rawClientData.set(client);
+    console.log('[PAYMENT] Raw client data from ini_* table:', client);
+
     // Mapear los datos de la tabla dinámica al formato de CustomerData
     this.customerData.set({
       id: client.id || 0,
@@ -1379,6 +1376,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       next: (clienteDetalle) => {
         if (clienteDetalle) {
           console.log('✅ Cliente cargado:', clienteDetalle);
+
+          // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
+          this.rawClientData.set(clienteDetalle);
+          console.log('[PAYMENT] Raw client data from detalle:', clienteDetalle);
 
           // Mapear los datos del backend al formato del signal
           this.customerData.set({
@@ -2121,6 +2122,51 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return options.length > 0;
   }
 
+  /**
+   * Formatea el nombre de un campo de la tabla ini_* para mostrarlo de forma legible
+   * Convierte snake_case a Title Case y aplica traducciones comunes
+   */
+  formatFieldLabel(fieldName: string): string {
+    // Traducciones comunes de campos de cobranza
+    const translations: Record<string, string> = {
+      'deuda_total': 'Deuda Total',
+      'saldo_total': 'Saldo Total',
+      'saldo_capital': 'Saldo Capital',
+      'capital': 'Capital',
+      'deuda_capital': 'Deuda Capital',
+      'intereses': 'Intereses',
+      'intereses_vencidos': 'Intereses Vencidos',
+      'mora': 'Mora',
+      'mora_acumulada': 'Mora Acumulada',
+      'deuda_mora': 'Deuda Mora',
+      'gastos': 'Gastos',
+      'gastos_cobranza': 'Gastos Cobranza',
+      'monto_original': 'Monto Original',
+      'monto_desembolso': 'Monto Desembolso',
+      'saldo_vencido': 'Saldo Vencido',
+      'cuota_vencida': 'Cuota Vencida',
+      'cuotas_vencidas': 'Cuotas Vencidas',
+      'monto_cuota': 'Monto Cuota',
+      'dias_mora': 'Días Mora',
+      'monto_minimo': 'Monto Mínimo',
+      'monto_total': 'Monto Total',
+      'deuda': 'Deuda',
+      'saldo': 'Saldo'
+    };
+
+    // Buscar traducción exacta
+    const lowerField = fieldName.toLowerCase();
+    if (translations[lowerField]) {
+      return translations[lowerField];
+    }
+
+    // Si no hay traducción, convertir snake_case a Title Case
+    return fieldName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   showPaymentSection(): boolean {
     const selectedManagement = this.managementClassifications().find(c => c.id === this.managementForm.tipoGestion);
     return selectedManagement?.requiere_pago || false;
@@ -2735,6 +2781,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private loadCustomerFromResource(customer: any) {
     console.log('[TEST] Cargando cliente:', customer);
+
+    // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
+    this.rawClientData.set(customer);
+    console.log('[PAYMENT] Raw client data from resource:', customer);
 
     // Mapear CustomerResource a CustomerData
     this.customerData.set({
