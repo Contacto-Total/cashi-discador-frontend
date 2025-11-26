@@ -16,6 +16,8 @@ import { ManagementForm, ValidationErrors } from '../models/management.model';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio } from '../../maintenance/models/portfolio.model';
 import { TypificationService } from '../../maintenance/services/typification.service';
+import { TypificationV2Service } from '../../maintenance/services/typification-v2.service';
+import { CampoOpcionDTO } from '../../maintenance/models/typification-v2.model';
 import { ApiSystemConfigService } from '../services/api-system-config.service';
 import { DynamicFieldRendererComponent } from '../components/dynamic-field-renderer/dynamic-field-renderer.component';
 import { MetadataSchema, FieldConfig } from '../../maintenance/models/field-config.model';
@@ -701,9 +703,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);
 
   // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
-  // Detecta TODAS las columnas numéricas dinámicamente
+  // Detecta TODAS las columnas numéricas dinámicamente, luego filtra por opciones habilitadas
   customerPaymentAmounts = computed<AmountOption[]>(() => {
     const rawData = this.rawClientData();
+    const enabledOptions = this.enabledPaymentOptions();
 
     if (!rawData || Object.keys(rawData).length === 0) {
       console.log('[PAYMENT] No raw client data available');
@@ -715,6 +718,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Campos a excluir (IDs, códigos, no son montos de pago)
     const excludeFields = ['id', 'tenant_id', 'portfolio_id', 'sub_portfolio_id', 'created_at', 'updated_at'];
 
+    // Si hay opciones configuradas, solo mostrar las habilitadas
+    // Si no hay opciones (enabledOptions está vacío), mostrar todas las numéricas
+    const hasConfiguredOptions = enabledOptions.length > 0;
+    const enabledFieldNames = hasConfiguredOptions
+      ? enabledOptions.map(o => o.campoTablaDinamica?.toLowerCase())
+      : null;
+
     // Recorrer todas las propiedades del cliente y detectar las numéricas
     for (const [key, value] of Object.entries(rawData)) {
       // Saltar campos excluidos
@@ -722,12 +732,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         continue;
       }
 
+      // Si hay opciones configuradas, solo incluir las habilitadas
+      if (hasConfiguredOptions && enabledFieldNames && !enabledFieldNames.includes(key.toLowerCase())) {
+        continue;
+      }
+
       // Verificar si es un valor numérico y mayor a 0
       const numValue = typeof value === 'number' ? value : parseFloat(String(value));
 
       if (!isNaN(numValue) && numValue > 0) {
-        // Formatear el nombre del campo para mostrarlo mejor
-        const label = this.formatFieldLabel(key);
+        // Buscar el label de la opción configurada, o formatear el nombre del campo
+        const configuredOption = enabledOptions.find(o => o.campoTablaDinamica?.toLowerCase() === key.toLowerCase());
+        const label = configuredOption?.labelOpcion || this.formatFieldLabel(key);
 
         amounts.push({
           label: label,
@@ -740,7 +756,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Ordenar por valor descendente (montos más altos primero)
     amounts.sort((a, b) => b.value - a.value);
 
-    console.log('[PAYMENT] Detected numeric amounts from ini_* table:', amounts);
+    console.log('[PAYMENT] Payment amounts (filtered by enabled options):', amounts.length, hasConfiguredOptions ? 'FILTERED' : 'ALL');
     return amounts;
   });
 
@@ -956,6 +972,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
 
+  // Enabled payment amount options (configured in maintenance)
+  enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
+  paymentScheduleFieldId = signal<number | null>(null);
+
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
@@ -972,6 +992,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private paymentScheduleService: PaymentScheduleService,
     public themeService: ThemeService,
     private classificationService: TypificationService,
+    private typificationV2Service: TypificationV2Service,
     private apiSystemConfigService: ApiSystemConfigService,
     private customerOutputConfigService: CustomerOutputConfigService,
     private customerService: CustomerService,
@@ -1772,6 +1793,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.dynamicFieldsSchema.set(schema);
         this.isLoadingDynamicFields.set(false);
 
+        // Check if there's a payment_schedule field and load its enabled options
+        const paymentScheduleField = (response.fields || []).find((f: any) =>
+          f.fieldType.toLowerCase() === 'payment_schedule'
+        );
+        if (paymentScheduleField && paymentScheduleField.id) {
+          this.paymentScheduleFieldId.set(paymentScheduleField.id);
+          this.loadEnabledPaymentOptions(paymentScheduleField.id);
+        } else {
+          this.paymentScheduleFieldId.set(null);
+          this.enabledPaymentOptions.set([]);
+        }
+
         // Check if this is a payment typification and load schedules
         this.checkAndLoadPaymentSchedules();
       },
@@ -1781,6 +1814,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.isLeafClassification.set(false);
         this.dynamicFields.set([]);
         this.dynamicFieldsSchema.set(null);
+      }
+    });
+  }
+
+  /**
+   * Loads enabled payment options for a payment_schedule field
+   */
+  private loadEnabledPaymentOptions(fieldId: number) {
+    console.log('[PAYMENT] Loading enabled options for field ID:', fieldId);
+
+    this.typificationV2Service.getOpcionesHabilitadas(fieldId).subscribe({
+      next: (opciones) => {
+        console.log('[PAYMENT] Enabled options loaded:', opciones.length, opciones.map(o => o.campoTablaDinamica));
+        this.enabledPaymentOptions.set(opciones);
+      },
+      error: (error) => {
+        console.warn('[PAYMENT] Error loading enabled options, showing all amounts:', error);
+        // If error (e.g., no options configured yet), show all amounts
+        this.enabledPaymentOptions.set([]);
       }
     });
   }
