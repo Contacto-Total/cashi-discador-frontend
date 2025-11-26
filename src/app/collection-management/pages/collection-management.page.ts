@@ -703,10 +703,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);
 
   // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
-  // Detecta TODAS las columnas numéricas dinámicamente, luego filtra por opciones habilitadas
+  // Respeta la configuración del admin: si hay config, solo muestra las habilitadas
   customerPaymentAmounts = computed<AmountOption[]>(() => {
     const rawData = this.rawClientData();
     const enabledOptions = this.enabledPaymentOptions();
+    const hasConfig = this.hasPaymentOptionsConfig();
 
     if (!rawData || Object.keys(rawData).length === 0) {
       console.log('[PAYMENT] No raw client data available');
@@ -715,48 +716,59 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     const amounts: AmountOption[] = [];
 
-    // Campos a excluir (IDs, códigos, no son montos de pago)
-    const excludeFields = ['id', 'tenant_id', 'portfolio_id', 'sub_portfolio_id', 'created_at', 'updated_at'];
+    // Si hay configuración en el mantenimiento, solo mostrar las opciones habilitadas
+    if (hasConfig) {
+      // Solo incluir los campos que están en enabledOptions
+      for (const option of enabledOptions) {
+        // Skip "personalizado" option - it's handled separately in the UI
+        if (option.codigoOpcion === 'personalizado') {
+          continue;
+        }
 
-    // Si hay opciones configuradas, solo mostrar las habilitadas
-    // Si no hay opciones (enabledOptions está vacío), mostrar todas las numéricas
-    const hasConfiguredOptions = enabledOptions.length > 0;
-    const enabledFieldNames = hasConfiguredOptions
-      ? enabledOptions.map(o => o.campoTablaDinamica?.toLowerCase())
-      : null;
+        const fieldName = option.campoTablaDinamica;
+        if (!fieldName) continue;
 
-    // Recorrer todas las propiedades del cliente y detectar las numéricas
-    for (const [key, value] of Object.entries(rawData)) {
-      // Saltar campos excluidos
-      if (excludeFields.includes(key.toLowerCase())) {
-        continue;
+        // Find the value in rawData (case-insensitive)
+        const rawKey = Object.keys(rawData).find(k => k.toLowerCase() === fieldName.toLowerCase());
+        if (!rawKey) continue;
+
+        const value = rawData[rawKey];
+        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+
+        if (!isNaN(numValue) && numValue > 0) {
+          amounts.push({
+            label: option.labelOpcion || this.formatFieldLabel(fieldName),
+            value: numValue,
+            field: fieldName
+          });
+        }
       }
 
-      // Si hay opciones configuradas, solo incluir las habilitadas
-      if (hasConfiguredOptions && enabledFieldNames && !enabledFieldNames.includes(key.toLowerCase())) {
-        continue;
+      console.log('[PAYMENT] Amounts from CONFIG (enabled only):', amounts.length);
+    } else {
+      // No hay configuración: mostrar todas las columnas numéricas como fallback
+      const excludeFields = ['id', 'tenant_id', 'portfolio_id', 'sub_portfolio_id', 'created_at', 'updated_at'];
+
+      for (const [key, value] of Object.entries(rawData)) {
+        if (excludeFields.includes(key.toLowerCase())) continue;
+
+        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
+
+        if (!isNaN(numValue) && numValue > 0) {
+          amounts.push({
+            label: this.formatFieldLabel(key),
+            value: numValue,
+            field: key
+          });
+        }
       }
 
-      // Verificar si es un valor numérico y mayor a 0
-      const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-
-      if (!isNaN(numValue) && numValue > 0) {
-        // Buscar el label de la opción configurada, o formatear el nombre del campo
-        const configuredOption = enabledOptions.find(o => o.campoTablaDinamica?.toLowerCase() === key.toLowerCase());
-        const label = configuredOption?.labelOpcion || this.formatFieldLabel(key);
-
-        amounts.push({
-          label: label,
-          value: numValue,
-          field: key
-        });
-      }
+      console.log('[PAYMENT] Amounts FALLBACK (no config, all numeric):', amounts.length);
     }
 
     // Ordenar por valor descendente (montos más altos primero)
     amounts.sort((a, b) => b.value - a.value);
 
-    console.log('[PAYMENT] Payment amounts (filtered by enabled options):', amounts.length, hasConfiguredOptions ? 'FILTERED' : 'ALL');
     return amounts;
   });
 
@@ -975,6 +987,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
   paymentScheduleFieldId = signal<number | null>(null);
+  // Flag to indicate if payment options have been configured (even if all are disabled)
+  hasPaymentOptionsConfig = signal<boolean>(false);
 
   private callTimer?: number;
   private managementId?: string;
@@ -1803,6 +1817,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         } else {
           this.paymentScheduleFieldId.set(null);
           this.enabledPaymentOptions.set([]);
+          this.hasPaymentOptionsConfig.set(false);
         }
 
         // Check if this is a payment typification and load schedules
@@ -1820,18 +1835,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Loads enabled payment options for a payment_schedule field
+   * Uses getOpcionesCampo to get ALL options (to know if config exists)
+   * then filters to only show enabled ones
    */
   private loadEnabledPaymentOptions(fieldId: number) {
-    console.log('[PAYMENT] Loading enabled options for field ID:', fieldId);
+    console.log('[PAYMENT] Loading options for field ID:', fieldId);
 
-    this.typificationV2Service.getOpcionesHabilitadas(fieldId).subscribe({
-      next: (opciones) => {
-        console.log('[PAYMENT] Enabled options loaded:', opciones.length, opciones.map(o => o.campoTablaDinamica));
-        this.enabledPaymentOptions.set(opciones);
+    // Get ALL options (enabled and disabled) to know if config exists
+    this.typificationV2Service.getOpcionesCampo(fieldId).subscribe({
+      next: (allOpciones) => {
+        // If there are any options in DB, config has been initialized
+        const hasConfig = allOpciones && allOpciones.length > 0;
+        this.hasPaymentOptionsConfig.set(hasConfig);
+
+        // Filter only enabled options
+        const enabledOpciones = hasConfig
+          ? allOpciones.filter(o => o.estaHabilitada)
+          : [];
+
+        console.log('[PAYMENT] Options config exists:', hasConfig, '| Total:', allOpciones?.length || 0, '| Enabled:', enabledOpciones.length);
+        this.enabledPaymentOptions.set(enabledOpciones);
       },
       error: (error) => {
-        console.warn('[PAYMENT] Error loading enabled options, showing all amounts:', error);
-        // If error (e.g., no options configured yet), show all amounts
+        console.warn('[PAYMENT] Error loading options, showing all amounts:', error);
+        // If error, assume no config exists → show all amounts
+        this.hasPaymentOptionsConfig.set(false);
         this.enabledPaymentOptions.set([]);
       }
     });
