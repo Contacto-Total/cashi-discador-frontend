@@ -49,6 +49,7 @@ export class PaymentAgreementCardPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.setupFormValueChanges();
+    this.setupFormasPagoListener();
   }
 
   private setupFormValueChanges(): void {
@@ -69,6 +70,28 @@ export class PaymentAgreementCardPageComponent implements OnInit {
         this.calculateDiscount();
       }
     });
+  }
+
+  private setupFormasPagoListener(): void {
+    // Escuchar cambios en el array de formas de pago
+    this.formasDePagoArray.valueChanges.subscribe(() => {
+      this.updateFechaCompromisoFromFirstPayment();
+    });
+  }
+
+  private updateFechaCompromisoFromFirstPayment(): void {
+    // Si hay al menos una forma de pago, usar su fecha como fecha de compromiso
+    if (this.formasDePagoArray.length > 0) {
+      const primeraFormaPago = this.formasDePagoArray.at(0);
+      const fechaPrimerPago = primeraFormaPago.get('fechaPago')?.value;
+
+      if (fechaPrimerPago) {
+        this.agreementForm.patchValue(
+          { fechaCompromiso: fechaPrimerPago },
+          { emitEvent: false }
+        );
+      }
+    }
   }
 
   private createForm(): FormGroup {
@@ -100,13 +123,21 @@ export class PaymentAgreementCardPageComponent implements OnInit {
     return this.agreementForm.get('formasDePago') as FormArray;
   }
 
+  get isFechaCompromisoReadonly(): boolean {
+    // Si hay cuotas de pago, la fecha de compromiso es readonly (se toma de la primera cuota)
+    return this.formasDePagoArray.length > 0 || this.readonlyInputs;
+  }
+
   addFormaPago(): void {
     if (this.formasDePagoArray.length >= 10) return;
     this.formasDePagoArray.push(this.createFormaPago());
+    // La actualización de fechaCompromiso ocurre automáticamente por el listener
   }
 
   removeFormaPago(index: number): void {
     this.formasDePagoArray.removeAt(index);
+    // Si se elimina la primera cuota, se actualiza automáticamente la fecha de compromiso
+    // Si no quedan cuotas, la fecha de compromiso queda como estaba
   }
 
   toggleBlackoutMode(): void {
