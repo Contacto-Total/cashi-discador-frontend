@@ -34,8 +34,10 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
             <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p class="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
                 <lucide-angular name="info" [size]="16"></lucide-angular>
-                <strong>Instrucciones:</strong> Seleccione una subcartera para ver los campos de monto disponibles.
-                Active los toggles de las opciones que desea que el agente pueda seleccionar.
+                <span>
+                  <strong>Instrucciones:</strong> Seleccione una subcartera y un campo para configurar qué montos puede ver el agente.
+                  Los montos se obtienen de las columnas numéricas de la tabla de clientes.
+                </span>
               </p>
             </div>
 
@@ -71,7 +73,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
               </div>
             }
 
-            <!-- Selector de Campo CHIP_SELECT -->
+            <!-- Selector de Campo Configurable (CHIP_SELECT o PAYMENT_SCHEDULE) -->
             @if (selectedSubPortfolioId()) {
               <div class="p-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg">
                 <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
@@ -90,15 +92,18 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                     (ngModelChange)="onCampoChange($event)"
                     class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                   >
-                    <option [ngValue]="undefined">-- Seleccione un campo tipo CHIP_SELECT --</option>
+                    <option [ngValue]="undefined">-- Seleccione un campo --</option>
                     @for (campo of additionalFields(); track campo.id) {
-                      <option [ngValue]="campo.id">{{ campo.labelCampo || campo.nombreCampo }} (ID: {{ campo.id }})</option>
+                      <option [ngValue]="campo.id">
+                        {{ campo.labelCampo || campo.nombreCampo }}
+                        ({{ campo.tipoCampo === 'CHIP_SELECT' ? 'Selector' : 'Cronograma' }})
+                      </option>
                     }
                   </select>
                 } @else {
                   <div class="text-center py-4 text-yellow-600 dark:text-yellow-400">
                     <lucide-angular name="alert-triangle" [size]="24" class="mx-auto mb-2"></lucide-angular>
-                    <p class="text-sm">Esta tipificación no tiene campos adicionales de tipo CHIP_SELECT</p>
+                    <p class="text-sm">Esta tipificación no tiene campos configurables (CHIP_SELECT o PAYMENT_SCHEDULE)</p>
                   </div>
                 }
               </div>
@@ -267,15 +272,18 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.loadingFields.set(true);
     this.typificationService.getAdditionalFields(typificationId).subscribe({
       next: (fields) => {
-        // Filter only CHIP_SELECT type fields
-        const chipSelectFields = fields.filter(f => f.tipoCampo === FieldTypeV2.CHIP_SELECT);
-        this.additionalFields.set(chipSelectFields);
+        // Filter CHIP_SELECT and PAYMENT_SCHEDULE type fields (both need amount configuration)
+        const configurableFields = fields.filter(f =>
+          f.tipoCampo === FieldTypeV2.CHIP_SELECT ||
+          f.tipoCampo === FieldTypeV2.PAYMENT_SCHEDULE
+        );
+        this.additionalFields.set(configurableFields);
         this.loadingFields.set(false);
-        console.log('CHIP_SELECT fields loaded:', chipSelectFields.length);
+        console.log('Configurable fields loaded:', configurableFields.length, configurableFields.map(f => f.tipoCampo));
 
-        // Auto-select if only one CHIP_SELECT field
-        if (chipSelectFields.length === 1) {
-          this.selectedCampoId.set(chipSelectFields[0].id);
+        // Auto-select if only one configurable field
+        if (configurableFields.length === 1) {
+          this.selectedCampoId.set(configurableFields[0].id);
         }
       },
       error: (error) => {
