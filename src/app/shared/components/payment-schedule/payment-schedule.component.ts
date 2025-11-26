@@ -26,8 +26,8 @@ export interface AmountOption {
             <button
               type="button"
               class="amount-chip"
-              [class.selected]="selectedAmount() === option.value && !isCustomAmount()"
-              (click)="selectAmount(option.value)"
+              [class.selected]="selectedField() === option.field && !isCustomAmount()"
+              (click)="selectAmount(option.value, option.field)"
             >
               <span class="chip-label">{{ option.label }}</span>
               <span class="chip-value">{{ formatCurrency(option.value) }}</span>
@@ -352,6 +352,7 @@ export class PaymentScheduleComponent implements OnInit {
 
   // Signals
   selectedAmount = signal<number>(0);
+  selectedField = signal<string | undefined>(undefined);
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
@@ -394,14 +395,16 @@ export class PaymentScheduleComponent implements OnInit {
     return this._isCustomAmount();
   }
 
-  selectAmount(amount: number): void {
+  selectAmount(amount: number, field?: string): void {
     this._isCustomAmount.set(false);
     this.selectedAmount.set(amount);
+    this.selectedField.set(field);
     this.generateInstallments();
   }
 
   enableCustomAmount(): void {
     this._isCustomAmount.set(true);
+    this.selectedField.set(undefined);
     if (this.customAmountValue > 0) {
       this.selectedAmount.set(this.customAmountValue);
       this.generateInstallments();
