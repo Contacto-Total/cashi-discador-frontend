@@ -499,25 +499,28 @@ import { AuthService } from '../../core/services/auth.service';
             </div>
           </div>
 
-          <!-- Datos de Negociación -->
+          <!-- Resumen Rápido Deuda -->
+          <div class="p-2 bg-red-50 dark:bg-red-950/20">
+            <div class="text-center">
+              <div class="text-[9px] text-red-500 uppercase font-bold">Deuda Total</div>
+              <div class="text-lg font-black text-red-600 dark:text-red-400">{{ formatCurrency(customerData().deuda.saldo_total) }}</div>
+              <div class="text-[10px] text-red-500 dark:text-red-400">{{ clientDiasMora() }} días mora</div>
+            </div>
+          </div>
+
+          <!-- Montos de la Cuenta -->
           <div class="p-2 flex-1 overflow-y-auto">
-            <div class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Datos de Cuenta</div>
-            @if (clientNumericFields().length > 0) {
+            @if (clientAmountFields().length > 0) {
               <div class="space-y-1">
-                @for (field of clientNumericFields(); track field.field) {
-                  <div class="flex justify-between items-center py-1 px-2 rounded text-[10px]"
-                       [class]="field.value > 0 ? 'bg-red-50 dark:bg-red-950/30' : 'bg-gray-50 dark:bg-gray-800/50'">
+                @for (field of clientAmountFields(); track field.field) {
+                  <div class="flex justify-between items-center py-0.5 px-1 text-[10px]">
                     <span class="text-gray-600 dark:text-gray-400 truncate mr-2">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap"
+                    <span class="font-semibold whitespace-nowrap"
                           [class]="field.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'">
                       {{ formatCurrency(field.value) }}
                     </span>
                   </div>
                 }
-              </div>
-            } @else {
-              <div class="text-center py-4 text-[10px] text-gray-400">
-                Sin datos de cuenta
               </div>
             }
           </div>
@@ -971,19 +974,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
 
-  // Computed para extraer campos numéricos del cliente para mostrar en panel de negociación
-  clientNumericFields = computed(() => {
+  // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
+  clientAmountFields = computed(() => {
     const rawData = this.rawClientData();
-    const numericFields: { label: string; value: number; field: string }[] = [];
+    const amountFields: { label: string; value: number; field: string }[] = [];
 
-    // Campos a excluir (IDs, campos técnicos)
-    const excludeFields = ['id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado'];
+    // Campos a excluir (NO son montos)
+    const excludeFields = [
+      'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
+      'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
+      'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
+      'fec_vencimiento', 'fecha_vencimiento', 'fec_asignacion', 'fecha_asignacion',
+      'fec_ultimo_pago', 'fecha_ultimo_pago', 'fec_nacimiento', 'fecha_nacimiento'
+    ];
 
     for (const [key, value] of Object.entries(rawData)) {
-      // Verificar que sea un número y no esté excluido
+      const lowerKey = key.toLowerCase();
+      // Excluir campos que empiezan con fec_ o fecha_ (son fechas)
+      if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
+      // Excluir campos específicos
+      if (excludeFields.includes(lowerKey)) continue;
+
+      // Verificar que sea un número
       const numValue = typeof value === 'number' ? value : parseFloat(value);
-      if (!isNaN(numValue) && !excludeFields.includes(key.toLowerCase())) {
-        numericFields.push({
+      if (!isNaN(numValue) && numValue >= 0) {
+        amountFields.push({
           label: this.formatFieldLabel(key),
           value: numValue,
           field: key
@@ -992,7 +1007,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     // Ordenar por valor descendente (mayores primero)
-    return numericFields.sort((a, b) => b.value - a.value);
+    return amountFields.sort((a, b) => b.value - a.value);
+  });
+
+  // Computed para obtener días de mora del cliente
+  clientDiasMora = computed(() => {
+    const rawData = this.rawClientData();
+    const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
+    return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
   });
 
   // Enabled payment amount options (configured in maintenance)
