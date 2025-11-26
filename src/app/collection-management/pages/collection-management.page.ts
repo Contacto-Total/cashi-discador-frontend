@@ -2421,14 +2421,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const schema = this.dynamicFieldsSchema();
     let paymentScheduleData = null;
 
+    console.log('[SAVE] === DEBUG PAYMENT SCHEDULE ===');
+    console.log('[SAVE] dynamicValues:', dynamicValues);
+    console.log('[SAVE] schema:', schema);
+    console.log('[SAVE] schema.fields:', schema?.fields);
+
     // Buscar el campo payment_schedule en el schema y obtener su valor
     if (schema && schema.fields) {
       const paymentScheduleField = schema.fields.find(f => f.type === 'payment_schedule');
+      console.log('[SAVE] paymentScheduleField found:', paymentScheduleField);
+      if (paymentScheduleField) {
+        console.log('[SAVE] Looking for field id:', paymentScheduleField.id);
+        console.log('[SAVE] Value in dynamicValues:', dynamicValues[paymentScheduleField.id]);
+      }
       if (paymentScheduleField && dynamicValues[paymentScheduleField.id]) {
         paymentScheduleData = dynamicValues[paymentScheduleField.id];
         console.log('[SAVE] Payment schedule detected:', paymentScheduleData);
       }
     }
+    console.log('[SAVE] Final paymentScheduleData:', paymentScheduleData);
 
     // Si hay cronograma de pago con cuotas, usar el endpoint específico
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
