@@ -458,11 +458,60 @@ import { AuthService } from '../../core/services/auth.service';
               </div>
             }
 
+            <!-- Selector de Cuota para Cancelación -->
+            @if (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0) {
+              <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">💰</span>
+                  <div>
+                    <h4 class="text-xs font-bold text-green-900 dark:text-green-100">Seleccionar Cuota a Cancelar</h4>
+                    <p class="text-[9px] text-green-600 dark:text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  @for (cuota of pendingInstallmentsForCancellation(); track cuota.numeroCuota) {
+                    <label
+                      class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
+                      [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
+                        ? 'bg-green-500 text-white shadow-md'
+                        : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
+                    >
+                      <div class="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="cuotaCancelacion"
+                          [value]="cuota"
+                          [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
+                          (change)="selectedInstallmentForCancellation.set(cuota)"
+                          class="w-4 h-4 text-green-600"
+                        />
+                        <div>
+                          <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
+                          <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            Vence: {{ formatDate(cuota.dueDate) }}
+                          </span>
+                        </div>
+                      </div>
+                      <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                    </label>
+                  }
+                </div>
+
+                @if (!selectedInstallmentForCancellation()) {
+                  <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Debe seleccionar una cuota para registrar la cancelación</span>
+                  </div>
+                }
+              </div>
+            }
+
             <!-- Botones de Acción - COMPACTOS -->
             <div class="flex gap-2 pt-2">
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid()"
+                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0 && !selectedInstallmentForCancellation())"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                 class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -1005,6 +1054,41 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
+
+  // Cuota seleccionada para cancelación/pago
+  selectedInstallmentForCancellation = signal<any | null>(null);
+
+  // Computed para detectar si la tipificación seleccionada es de tipo Cancelación (código CA)
+  isCancellationTypification = computed(() => {
+    const selected = this.selectedClassification();
+    if (!selected) return false;
+    // Detectar por código "CA" o por label que contenga "CANCELACION"
+    return selected.codigo === 'CA' ||
+           selected.label?.toUpperCase().includes('CANCELACION') ||
+           selected.label?.toUpperCase().includes('CANCELACIÓN');
+  });
+
+  // Computed para obtener las cuotas pendientes de todas las promesas activas
+  pendingInstallmentsForCancellation = computed(() => {
+    const schedules = this.activePaymentSchedules();
+    const allPending: any[] = [];
+
+    for (const schedule of schedules) {
+      if (schedule.installments) {
+        for (const cuota of schedule.installments) {
+          if (cuota.status !== 'PAGADO' && cuota.status !== 'CUMPLIDO' && cuota.status !== 'CANCELADO') {
+            allPending.push({
+              ...cuota,
+              scheduleId: schedule.id,
+              grupoPromesaUuid: schedule.grupoPromesaUuid
+            });
+          }
+        }
+      }
+    }
+
+    return allPending;
+  });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
@@ -1644,6 +1728,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             numberOfInstallments: cuotas[0]?.totalCuotas || cuotas.length,
             fechaGestion: cuotas[0]?.fechaGestion,
             installments: cuotas.map(c => ({
+              id: c.id,  // ID del registro en registros_gestion_v2 (necesario para actualizar estado)
               numeroCuota: c.numeroCuota,
               monto: c.montoPromesa,
               dueDate: c.fechaPromesaPago,
@@ -2702,7 +2787,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           if (this.callStartTime && this.callActive()) {
             this.registerCallToBackend(response.id);
           }
-          this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+
+          // Si es una cancelación y hay cuota seleccionada, actualizar su estado a PAGADA
+          const selectedCuota = this.selectedInstallmentForCancellation();
+          if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
+            console.log('💰 Actualizando estado de cuota a PAGADA:', selectedCuota);
+
+            const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+            this.managementService.updatePaymentStatus(
+              selectedCuota.id,
+              'PAGADA',
+              selectedCuota.monto,
+              today
+            ).subscribe({
+              next: (updatedRecord) => {
+                console.log('✅ Estado de cuota actualizado:', updatedRecord);
+                // Limpiar la selección
+                this.selectedInstallmentForCancellation.set(null);
+                // Recargar los cronogramas activos para reflejar el cambio
+                const customerId = this.customerData().id;
+                if (customerId) {
+                  this.loadActivePaymentSchedules(customerId);
+                }
+                this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+              },
+              error: (err) => {
+                console.error('⚠️ Error actualizando estado de cuota:', err);
+                // Aunque falle la actualización del estado, la gestión ya se guardó
+                this.selectedInstallmentForCancellation.set(null);
+                this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+              }
+            });
+          } else {
+            this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+          }
         },
         error: (error) => {
           console.error('Error al guardar gestión:', error);

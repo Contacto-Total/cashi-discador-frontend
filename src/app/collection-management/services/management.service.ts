@@ -245,6 +245,32 @@ export class ManagementService {
   }
 
   /**
+   * Actualiza el estado de pago de una cuota de promesa de pago
+   * @param recordId ID del registro en registros_gestion_v2
+   * @param estadoPago Nuevo estado: PENDIENTE, PAGADA, VENCIDA, PARCIAL, CANCELADA
+   * @param montoPagadoReal Monto realmente pagado (opcional)
+   * @param fechaPagoReal Fecha en que se realizó el pago (opcional)
+   */
+  updatePaymentStatus(
+    recordId: number,
+    estadoPago: 'PENDIENTE' | 'PAGADA' | 'VENCIDA' | 'PARCIAL' | 'CANCELADA',
+    montoPagadoReal?: number,
+    fechaPagoReal?: string
+  ): Observable<RegistroGestionV2> {
+    console.log('[PAYMENT-STATUS] Updating payment status:', { recordId, estadoPago, montoPagadoReal, fechaPagoReal });
+
+    let params = `estadoPago=${estadoPago}`;
+    if (montoPagadoReal !== undefined) {
+      params += `&montoPagadoReal=${montoPagadoReal}`;
+    }
+    if (fechaPagoReal) {
+      params += `&fechaPagoReal=${fechaPagoReal}`;
+    }
+
+    return this.http.put<RegistroGestionV2>(`${this.baseUrl}/${recordId}/payment-status?${params}`, {});
+  }
+
+  /**
    * Obtiene las cabeceras de montos (campos numéricos decimales) para una subcartera
    * Esto permite mostrar los nombres visuales de los campos de monto
    */
