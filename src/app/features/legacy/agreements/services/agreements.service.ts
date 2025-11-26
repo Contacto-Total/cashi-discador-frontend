@@ -46,6 +46,12 @@ export class AgreementsService {
     }).pipe(retry(2), catchError(this.handleError));
   }
 
+  downloadNoDebtLetter(request: any) {
+    return this.http.post(this.baseUrl + '/carta-no-adeudo', request, {
+      ...this.fileHttpOptions, responseType: 'blob'
+    }).pipe(retry(2), catchError(this.handleError));
+  }
+
   getAgreementData(dni: string) {
     return this.http.get<AgreementDataResponse>(this.baseUrl + `/datos-cliente/${dni}`, this.httpOptions);
   }

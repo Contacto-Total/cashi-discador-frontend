@@ -1,0 +1,191 @@
+<div class="no-debt-letter-container min-h-screen p-6 transition-colors duration-200"
+     [class.bg-gray-50]="!isDarkMode"
+     [class.bg-gray-900]="isDarkMode">
+
+  <!-- Toast Notifications -->
+  <div class="toast-container">
+    <div *ngFor="let toast of toasts"
+         class="toast"
+         [class.toast-error]="toast.type === 'error'"
+         [class.toast-warning]="toast.type === 'warning'"
+         [class.toast-success]="toast.type === 'success'">
+      <span class="toast-icon">{{ toast.icon }}</span>
+      <span class="toast-message">{{ toast.message }}</span>
+      <button class="toast-close" (click)="removeToast(toast.id)">×</button>
+    </div>
+  </div>
+
+  <!-- Header con búsqueda -->
+  <div class="header-section bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+        Generador de Carta de No Adeudo
+      </h1>
+
+      <div class="flex gap-3">
+        <button
+          *ngIf="mostrarDocumento"
+          type="button"
+          class="btn-secondary"
+          (click)="resetForm()">
+          <lucide-angular name="x" [size]="18"></lucide-angular>
+          Limpiar
+        </button>
+        <button
+          *ngIf="mostrarDocumento"
+          type="button"
+          class="btn-primary"
+          (click)="generarPDF()"
+          [disabled]="isLoading || !letterForm.valid">
+          <lucide-angular name="download" [size]="18"></lucide-angular>
+          {{ isLoading ? 'Generando...' : 'Generar PDF' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Búsqueda -->
+    <form [formGroup]="searchForm" class="flex items-center gap-3">
+      <div class="flex-1 max-w-xs">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          DNI del Cliente
+        </label>
+        <input
+          formControlName="dniBusqueda"
+          type="text"
+          placeholder="Ingrese DNI"
+          maxlength="8"
+          (input)="onlyNumbers($event)"
+          class="input-field"
+          [class.border-red-500]="searchForm.get('dniBusqueda')?.invalid && searchForm.get('dniBusqueda')?.touched">
+      </div>
+
+      <button
+        type="button"
+        class="btn-search mt-6"
+        (click)="buscarPorDni()"
+        [disabled]="searchForm.invalid || isLoading">
+        <lucide-angular name="search" [size]="18"></lucide-angular>
+        Buscar
+      </button>
+
+      <div *ngIf="isLoading" class="mt-6">
+        <lucide-angular name="loader" [size]="24" class="animate-spin text-blue-600"></lucide-angular>
+      </div>
+    </form>
+  </div>
+
+  <!-- Documento Preview -->
+  <div *ngIf="mostrarDocumento" class="document-wrapper">
+    <div class="document-container bg-white shadow-2xl">
+      <form [formGroup]="letterForm">
+
+        <!-- Header con logos -->
+        <div class="header-logos">
+          <div class="logo-left">
+            <div class="logo-placeholder">LOGO NSOLUCIONES</div>
+          </div>
+          <div class="logo-right">
+            <div class="logo-placeholder">LOGO NS</div>
+          </div>
+        </div>
+
+        <!-- Fecha -->
+        <div class="fecha-container">
+          <input
+            type="date"
+            formControlName="fechaActual"
+            class="fecha-input">
+          <div class="fecha-display">
+            {{ formatDisplayDate(letterForm.get('fechaActual')?.value) }}
+          </div>
+        </div>
+
+        <!-- Título -->
+        <h2 class="titulo-carta">CARTA DE NO ADEUDO</h2>
+
+        <!-- Introducción -->
+        <p class="texto-introduccion">
+          Mediante la presente dejamos constancia que:
+        </p>
+
+        <!-- Datos del titular -->
+        <div class="datos-titular">
+          <div class="dato-row">
+            <input
+              type="text"
+              formControlName="nombreCompleto"
+              class="nombre-input"
+              readonly>
+            <span class="dni-label">DNI:</span>
+            <input
+              type="text"
+              formControlName="dni"
+              class="dni-input"
+              readonly>
+          </div>
+
+          <div class="dato-row">
+            <span class="cuenta-label">Titular de la cuenta Nro.</span>
+            <input
+              type="text"
+              formControlName="numeroCuenta"
+              class="cuenta-input"
+              readonly>
+          </div>
+        </div>
+
+        <!-- Párrafo principal -->
+        <div class="parrafo-principal">
+          <p>
+            Originada(s) en <strong>FINANCIERA OH!</strong> S.A, con RUC <strong>{{ rucFinanciera }}</strong>, cedido(s) a favor de
+            <strong>NSOLUCIONES CONSULTING S.A.C.</strong> con RUC <strong>{{ rucNsoluciones }}</strong>, mediante contrato de
+            trasferencia de cartera crediticia en la modalidad de cesión de derechos, quien a la fecha es
+            el actual acreedor, no mantiene deuda o saldo deudor en nuestra empresa sobre el(los)
+            crédito(s) antes mencionado(s), registrándose en situación de <strong>CANCELADO</strong>.
+          </p>
+        </div>
+
+        <!-- Fecha de cancelación -->
+        <div class="fecha-cancelacion">
+          <p>
+            Y la fecha de cancelación de esta(s) obligación(es) fue el día
+            <input
+              type="date"
+              formControlName="fechaCancelacion"
+              class="fecha-input inline-block">
+            <span class="fecha-display inline-block">
+              {{ formatDisplayDate(letterForm.get('fechaCancelacion')?.value) }}
+            </span>.
+          </p>
+        </div>
+
+        <!-- Despedida -->
+        <div class="despedida">
+          <p>Atentamente,</p>
+        </div>
+
+        <!-- Firma -->
+        <div class="firma-section">
+          <div class="firma-imagen">
+            <div class="logo-placeholder small">FIRMA</div>
+          </div>
+          <div class="firma-datos">
+            <p class="firma-nombre">{{ firmaNombre }}</p>
+            <p class="firma-cargo">{{ firmaCargo }}</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-section">
+          <div class="footer-line"></div>
+          <div class="footer-datos">
+            <p>{{ direccion }}</p>
+            <p>{{ telefono }}</p>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+</div>

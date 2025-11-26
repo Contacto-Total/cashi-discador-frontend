@@ -135,6 +135,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/legacy/agreements/agreements.component').then(m => m.AgreementsComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'cartas/no-adeudo',
+    loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-page/no-debt-letter-page.component').then(m => m.NoDebtLetterPageComponent),
+    canActivate: [authGuard]
+  },
 
   {
     path: 'admin/extensions',

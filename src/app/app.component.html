@@ -207,6 +207,10 @@
             <lucide-angular name="file-text" [size]="18"></lucide-angular>
             <span class="item-text" title="Acuerdos de Pago">Acuerdos de Pago</span>
           </a>
+          <a routerLink="/cartas/no-adeudo" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="file-check" [size]="18"></lucide-angular>
+            <span class="item-text" title="Carta de No Adeudo">Carta de No Adeudo</span>
+          </a>
           <a routerLink="/admin/cartas-cesion" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()" *ngIf="isAdminOrSupervisor()">
             <lucide-angular name="file-text" [size]="18"></lucide-angular>
             <span class="item-text" title="Cartas de Cesión">Cartas de Cesión</span>
