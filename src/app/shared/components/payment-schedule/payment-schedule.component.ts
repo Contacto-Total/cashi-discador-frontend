@@ -474,7 +474,8 @@ export class PaymentScheduleComponent implements OnInit {
     const config: PaymentScheduleConfig = {
       montoTotal: this.selectedAmount(),
       numeroCuotas: this.numberOfInstallments(),
-      cuotas: installments
+      cuotas: installments,
+      campoMontoOrigen: this.selectedField()  // El nombre del campo de donde viene el monto (ej: sld_mora)
     };
 
     this.scheduleChange.emit(config);

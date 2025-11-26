@@ -2454,6 +2454,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones,
         metodoContacto: 'LLAMADA_SALIENTE',
+        campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
           numeroCuotas: paymentScheduleData.numeroCuotas,

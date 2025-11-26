@@ -137,6 +137,7 @@ export interface PaymentScheduleRequest {
   idTipificacion: number;
   observaciones?: string;
   metodoContacto?: string;
+  campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
