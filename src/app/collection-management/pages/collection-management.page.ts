@@ -7,7 +7,7 @@ import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
-import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest } from '../services/management.service';
+import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera } from '../services/management.service';
 import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
@@ -975,34 +975,55 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   rawClientData = signal<Record<string, any>>({});
 
   // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
+  // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
   clientAmountFields = computed(() => {
     const rawData = this.rawClientData();
+    const cabeceras = this.montoCabeceras();
     const amountFields: { label: string; value: number; field: string }[] = [];
 
-    // Campos a excluir (NO son montos)
-    const excludeFields = [
-      'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
-      'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
-      'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
-      'fec_vencimiento', 'fecha_vencimiento', 'fec_asignacion', 'fecha_asignacion',
-      'fec_ultimo_pago', 'fecha_ultimo_pago', 'fec_nacimiento', 'fecha_nacimiento'
-    ];
+    // Si tenemos cabeceras configuradas, usarlas para filtrar solo montos
+    if (cabeceras.length > 0) {
+      for (const cabecera of cabeceras) {
+        const lowerCodigo = cabecera.codigo.toLowerCase();
+        const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
 
-    for (const [key, value] of Object.entries(rawData)) {
-      const lowerKey = key.toLowerCase();
-      // Excluir campos que empiezan con fec_ o fecha_ (son fechas)
-      if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
-      // Excluir campos específicos
-      if (excludeFields.includes(lowerKey)) continue;
+        if (value !== undefined && value !== null) {
+          const numValue = typeof value === 'number' ? value : parseFloat(value);
+          if (!isNaN(numValue)) {
+            amountFields.push({
+              label: cabecera.nombre,  // Usar nombre visual de la cabecera
+              value: numValue,
+              field: lowerCodigo
+            });
+          }
+        }
+      }
+    } else {
+      // Fallback: si no hay cabeceras, usar lógica anterior pero con exclusiones estrictas
+      const excludeFields = [
+        'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
+        'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
+        'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
+        'telefono_celular', 'telefono_domicilio', 'telefono_laboral',
+        'telf_referencia_1', 'telf_referencia_2'
+      ];
 
-      // Verificar que sea un número
-      const numValue = typeof value === 'number' ? value : parseFloat(value);
-      if (!isNaN(numValue) && numValue >= 0) {
-        amountFields.push({
-          label: this.formatFieldLabel(key),
-          value: numValue,
-          field: key
-        });
+      for (const [key, value] of Object.entries(rawData)) {
+        const lowerKey = key.toLowerCase();
+        // Excluir campos que empiezan con fec_, fecha_, telefono_, telf_
+        if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
+        if (lowerKey.startsWith('telefono_') || lowerKey.startsWith('telf_')) continue;
+        // Excluir campos específicos
+        if (excludeFields.includes(lowerKey)) continue;
+
+        const numValue = typeof value === 'number' ? value : parseFloat(value);
+        if (!isNaN(numValue) && numValue >= 0) {
+          amountFields.push({
+            label: this.formatFieldLabel(key),
+            value: numValue,
+            field: key
+          });
+        }
       }
     }
 
@@ -1016,6 +1037,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
     return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
   });
+
+  // Cabeceras de configuración para mostrar nombres visuales
+  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string }[]>([]);
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
@@ -1218,6 +1242,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.rawClientData.set(client);
     console.log('[PAYMENT] Raw client data from ini_* table:', client);
 
+    // Cargar cabeceras de montos para esta subcartera
+    this.loadMontoCabeceras();
+
     // Mapear los datos de la tabla dinámica al formato de CustomerData
     this.customerData.set({
       id: client.id || 0,
@@ -1258,6 +1285,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.loadManagementHistory();
 
     console.log('✅ [MANUAL] Cliente cargado exitosamente');
+  }
+
+  /**
+   * Carga las cabeceras de montos desde configuracion_cabeceras para mostrar nombres visuales
+   */
+  private loadMontoCabeceras() {
+    if (!this.selectedSubPortfolioId) {
+      console.warn('[CABECERAS] No hay subcartera seleccionada');
+      return;
+    }
+
+    console.log('[CABECERAS] Cargando cabeceras de montos para subcartera:', this.selectedSubPortfolioId);
+
+    this.managementService.getMontoCabeceras(this.selectedSubPortfolioId).pipe(
+      catchError(error => {
+        console.error('[CABECERAS] Error cargando cabeceras:', error);
+        return of([]);
+      })
+    ).subscribe(cabeceras => {
+      console.log('[CABECERAS] Cabeceras cargadas:', cabeceras);
+      this.montoCabeceras.set(cabeceras.map(c => ({
+        codigo: c.codigo,
+        nombre: c.nombre,
+        tipoDato: c.tipoDato,
+        tipoSql: c.tipoSql
+      })));
+    });
   }
 
   // Variable para almacenar el subPortfolioId seleccionado
@@ -1448,6 +1502,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
           this.rawClientData.set(clienteDetalle);
           console.log('[PAYMENT] Raw client data from detalle:', clienteDetalle);
+
+          // Cargar cabeceras de montos para esta subcartera
+          this.loadMontoCabeceras();
 
           // Mapear los datos del backend al formato del signal
           this.customerData.set({
@@ -2965,6 +3022,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
     this.rawClientData.set(customer);
     console.log('[PAYMENT] Raw client data from resource:', customer);
+
+    // Cargar cabeceras de montos para esta subcartera
+    this.loadMontoCabeceras();
 
     // Mapear CustomerResource a CustomerData
     this.customerData.set({
