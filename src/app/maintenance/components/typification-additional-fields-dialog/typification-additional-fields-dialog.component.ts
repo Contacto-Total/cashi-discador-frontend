@@ -160,7 +160,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
             } @else {
               <!-- Estado inicial: seleccionar subcartera -->
               <div class="text-center py-12 text-gray-400 dark:text-gray-500">
-                <lucide-angular name="mouse-pointer-click" [size]="48" class="mx-auto mb-4 opacity-50"></lucide-angular>
+                <lucide-angular name="pointer" [size]="48" class="mx-auto mb-4 opacity-50"></lucide-angular>
                 <p class="text-sm">Seleccione una subcartera para ver los montos disponibles</p>
               </div>
             }
