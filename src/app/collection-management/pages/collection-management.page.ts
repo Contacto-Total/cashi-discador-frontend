@@ -57,17 +57,23 @@ import { AuthService } from '../../core/services/auth.service';
       @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
         <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-[slideInDown_0.5s_ease-out]">
           @for (schedule of activePaymentSchedules(); track schedule.id) {
-            <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 dark:from-amber-600 dark:via-yellow-600 dark:to-amber-700 text-white px-6 py-3 rounded-lg shadow-2xl mb-2">
+            <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 dark:from-amber-600 dark:via-yellow-600 dark:to-amber-700 text-white px-6 py-3 rounded-lg shadow-2xl mb-2 cursor-pointer hover:scale-105 transition-transform" (click)="showPaymentScheduleDetail(schedule)">
               <div class="flex items-center gap-3">
                 <div class="text-2xl">📅</div>
                 <div>
                   <div class="font-bold text-base">Promesa de Pago Activa</div>
                   <div class="text-sm opacity-90">
-                    Monto: S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}
-                    @if (schedule.installments && schedule.installments.length > 0 && schedule.installments[0].dueDate) {
-                      - Vencimiento: {{ formatDate(schedule.installments[0].dueDate) }}
-                    }
+                    Monto Total: S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}
+                    ({{ schedule.numberOfInstallments }} {{ schedule.numberOfInstallments === 1 ? 'cuota' : 'cuotas' }})
                   </div>
+                  @if (schedule.nextDueDate) {
+                    <div class="text-xs opacity-75">
+                      Próximo vencimiento: {{ formatDate(schedule.nextDueDate) }}
+                      @if (schedule.cuotasPendientes > 0) {
+                        - {{ schedule.cuotasPendientes }} cuota(s) pendiente(s)
+                      }
+                    </div>
+                  }
                 </div>
               </div>
             </div>
@@ -1284,6 +1290,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Cargar historial de gestiones
     this.loadManagementHistory();
 
+    // Cargar promesas de pago activas
+    if (client.id) {
+      this.loadActivePaymentSchedules(client.id);
+    }
+
     console.log('✅ [MANUAL] Cliente cargado exitosamente');
   }
 
@@ -1565,12 +1576,59 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         return of([]);
       })
     ).subscribe({
-      next: (schedules) => {
-        console.log('✅ Cronogramas activos cargados:', schedules);
+      next: (records: any[]) => {
+        console.log('✅ Registros de promesas cargados:', records);
+
+        if (!records || records.length === 0) {
+          this.activePaymentSchedules.set([]);
+          return;
+        }
+
+        // Agrupar registros por grupoPromesaUuid
+        const groupedSchedules = new Map<string, any[]>();
+        for (const record of records) {
+          const uuid = record.grupoPromesaUuid;
+          if (uuid) {
+            if (!groupedSchedules.has(uuid)) {
+              groupedSchedules.set(uuid, []);
+            }
+            groupedSchedules.get(uuid)!.push(record);
+          }
+        }
+
+        // Transformar cada grupo a un formato para mostrar
+        const schedules = Array.from(groupedSchedules.entries()).map(([uuid, cuotas]) => {
+          // Ordenar cuotas por número
+          cuotas.sort((a, b) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
+
+          // Calcular monto total sumando todas las cuotas
+          const totalAmount = cuotas.reduce((sum, c) => sum + (c.montoPromesa || 0), 0);
+
+          // Encontrar la próxima cuota pendiente
+          const pendingCuotas = cuotas.filter(c => c.estadoPago !== 'PAGADO' && c.estadoPago !== 'CUMPLIDO');
+          const nextCuota = pendingCuotas[0] || cuotas[0];
+
+          return {
+            id: uuid,
+            grupoPromesaUuid: uuid,
+            totalAmount: totalAmount,
+            numberOfInstallments: cuotas[0]?.totalCuotas || cuotas.length,
+            fechaGestion: cuotas[0]?.fechaGestion,
+            installments: cuotas.map(c => ({
+              numeroCuota: c.numeroCuota,
+              monto: c.montoPromesa,
+              dueDate: c.fechaPromesaPago,
+              status: c.estadoPago || 'PENDIENTE'
+            })),
+            nextDueDate: nextCuota?.fechaPromesaPago,
+            cuotasPendientes: pendingCuotas.length
+          };
+        });
+
+        console.log('📅 Cronogramas transformados:', schedules);
         this.activePaymentSchedules.set(schedules);
 
-        // Si hay promesas activas, mostrar alerta
-        if (schedules && schedules.length > 0) {
+        if (schedules.length > 0) {
           console.log(`📅 ¡Cliente tiene ${schedules.length} promesa(s) de pago activa(s)!`);
         }
       }
@@ -2889,6 +2947,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Muestra el detalle de un cronograma de pago
+   */
+  showPaymentScheduleDetail(schedule: any) {
+    console.log('📅 Detalle de promesa de pago:', schedule);
+
+    // Construir mensaje con las cuotas
+    let message = `PROMESA DE PAGO\n\n`;
+    message += `Monto Total: S/ ${schedule.totalAmount?.toFixed(2) || '0.00'}\n`;
+    message += `Número de Cuotas: ${schedule.numberOfInstallments}\n\n`;
+    message += `DETALLE DE CUOTAS:\n`;
+
+    if (schedule.installments && schedule.installments.length > 0) {
+      for (const cuota of schedule.installments) {
+        const fechaStr = cuota.dueDate ? this.formatDate(cuota.dueDate) : '-';
+        const estadoStr = cuota.status === 'PAGADO' ? '✅ PAGADO' : '⏳ Pendiente';
+        message += `  Cuota ${cuota.numeroCuota}: S/ ${cuota.monto?.toFixed(2) || '0.00'} - ${fechaStr} - ${estadoStr}\n`;
+      }
+    }
+
+    alert(message);
+  }
+
   getContactClassificationLabel(id: string): string {
     const typification = this.contactClassifications().find(c => c.id === id);
     if (!typification) return id;
@@ -3064,6 +3145,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // Cargar historial de gestiones del cliente
     this.loadManagementHistory();
+
+    // Cargar promesas de pago activas
+    if (customer.id) {
+      this.loadActivePaymentSchedules(customer.id);
+    }
 
     console.log('[TEST] Cliente cargado exitosamente');
   }

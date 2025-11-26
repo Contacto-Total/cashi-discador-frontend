@@ -113,11 +113,11 @@ export class PaymentScheduleService {
   }
 
   /**
-   * Obtiene cronogramas activos de un cliente
+   * Obtiene cronogramas activos de un cliente desde registros_gestion_v2
    */
-  getActiveSchedulesByCustomer(customerId: number): Observable<PaymentScheduleResource[]> {
-    return this.http.get<PaymentScheduleResource[]>(
-      `${environment.apiUrl}/payment-schedules/customer/${customerId}/active`
+  getActiveSchedulesByCustomer(customerId: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.gatewayUrl}/v2/management-records/payment-schedule/client/${customerId}`
     );
   }
 }
