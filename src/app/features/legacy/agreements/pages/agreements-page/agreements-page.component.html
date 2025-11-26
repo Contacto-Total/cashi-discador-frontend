@@ -171,15 +171,18 @@
 
         <div class="date-highlight text-black">
           <div class="date-input-container">
-            <input 
-              type="date" 
+            <input
+              type="date"
               formControlName="fechaCompromiso"
               class="editable-input date-input"
               [class.is-invalid]="isFieldInvalid('fechaCompromiso')"
-              [readonly]="readonlyInputs">
+              [readonly]="isFechaCompromisoReadonly">
 
             <div class="formatted-date" *ngIf="agreementForm.get('fechaCompromiso')?.value">
               {{ formatDisplayDate(agreementForm.get('fechaCompromiso')?.value) }}
+              <span *ngIf="formasDePagoArray.length > 0" style="font-size: 0.8em; color: #666; margin-left: 5px;">
+                (Fecha del 1er pago)
+              </span>
             </div>
           </div>
           <div class="error-message" *ngIf="isFieldInvalid('fechaCompromiso')">

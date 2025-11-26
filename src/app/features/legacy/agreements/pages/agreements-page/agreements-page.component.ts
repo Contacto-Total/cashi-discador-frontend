@@ -57,6 +57,7 @@ export class AgreementsPageComponent implements OnInit {
 
   ngOnInit() {
     this.setupFormValueChanges();
+    this.setupFormasPagoListener();
   }
 
   createForm(): FormGroup {
@@ -85,6 +86,11 @@ export class AgreementsPageComponent implements OnInit {
     return this.agreementForm.get('formasDePago') as FormArray;
   }
 
+  get isFechaCompromisoReadonly(): boolean {
+    // Si hay cuotas de pago, la fecha de compromiso es readonly (se toma de la primera cuota)
+    return this.formasDePagoArray.length > 0 || this.readonlyInputs;
+  }
+
   setupFormValueChanges() {
     this.agreementForm.get('deudaTotal')?.valueChanges.subscribe(() => {
       if (!this.isDeudaTotalReset) {
@@ -103,6 +109,28 @@ export class AgreementsPageComponent implements OnInit {
         this.calculateDiscount();
       }
     });
+  }
+
+  setupFormasPagoListener() {
+    // Escuchar cambios en el array de formas de pago
+    this.formasDePagoArray.valueChanges.subscribe(() => {
+      this.updateFechaCompromisoFromFirstPayment();
+    });
+  }
+
+  updateFechaCompromisoFromFirstPayment() {
+    // Si hay al menos una forma de pago, usar su fecha como fecha de compromiso
+    if (this.formasDePagoArray.length > 0) {
+      const primeraFormaPago = this.formasDePagoArray.at(0);
+      const fechaPrimerPago = primeraFormaPago.get('fechaPago')?.value;
+
+      if (fechaPrimerPago) {
+        this.agreementForm.patchValue(
+          { fechaCompromiso: fechaPrimerPago },
+          { emitEvent: false }
+        );
+      }
+    }
   }
 
   formatDate(date: Date): string {
