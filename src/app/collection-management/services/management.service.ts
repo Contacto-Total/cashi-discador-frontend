@@ -124,6 +124,32 @@ export interface RegisterPaymentRequest {
   bankName?: string;
 }
 
+/**
+ * Interface para crear cronograma de pagos con cuotas
+ */
+export interface PaymentScheduleRequest {
+  idCliente: number;
+  idAgente: number;
+  idTenant: number;
+  idCartera?: number;
+  idSubcartera?: number;
+  idCampana?: number;
+  idTipificacion: number;
+  observaciones?: string;
+  metodoContacto?: string;
+  schedule: {
+    montoTotal: number;
+    numeroCuotas: number;
+    cuotas: PaymentInstallmentRequest[];
+  };
+}
+
+export interface PaymentInstallmentRequest {
+  numeroCuota: number;
+  monto: number;
+  fechaPago: string; // formato YYYY-MM-DD
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -193,6 +219,15 @@ export class ManagementService {
     // Por ahora mantener la funcionalidad básica
     console.log('[PAYMENT] Register payment for management:', managementId, request);
     return this.getManagementById(managementId);
+  }
+
+  /**
+   * Crea un cronograma de pagos con múltiples cuotas
+   * Cada cuota se guarda como un registro separado con el mismo grupoPromesaUuid
+   */
+  createPaymentSchedule(request: PaymentScheduleRequest): Observable<RegistroGestionV2[]> {
+    console.log('[SCHEDULE] Creating payment schedule:', request);
+    return this.http.post<RegistroGestionV2[]>(`${this.baseUrl}/payment-schedule`, request);
   }
 
   /**

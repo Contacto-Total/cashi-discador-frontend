@@ -7,7 +7,7 @@ import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
-import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest } from '../services/management.service';
+import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest } from '../services/management.service';
 import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
@@ -2416,51 +2416,96 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const level2 = selectedClassifs[1] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[1]) : null;
     const level3 = selectedClassifs[2] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[2]) : null;
 
-    const request: CreateManagementRequest = {
-      customerId: String(this.customerData().id),
-      advisorId: 'ADV-001',
+    // Verificar si hay un cronograma de pago en los campos dinámicos
+    const dynamicValues = this.dynamicFieldValues();
+    const schema = this.dynamicFieldsSchema();
+    let paymentScheduleData = null;
 
-      // Multi-tenant fields
-      tenantId: this.selectedTenantId!,
-      portfolioId: this.selectedPortfolioId || 1, // Temporal: asignar 1 si no está seleccionado
-      subPortfolioId: 1, // Temporal: asignar 1
-
-      // Phone from customer data
-      phone: this.customerData().contacto?.telefono_principal || '',
-
-      // Hierarchy levels with IDs and names
-      level1Id: typificationLevel1Id,
-      level1Name: level1?.label || '',
-      level2Id: typificationLevel2Id,
-      level2Name: level2?.label || null,
-      level3Id: typificationLevel3Id,
-      level3Name: level3?.label || null,
-
-      observations: this.managementForm.observaciones
-    };
-
-    this.managementService.createManagement(request).subscribe({
-      next: (response) => {
-        if (this.callStartTime && this.callActive()) {
-          this.registerCallToBackend(response.id);
-        }
-
-        // NOTA: Los pagos ahora se registran automáticamente en el backend desde dynamicFields
-        // El backend detecta clasificaciones con requiresPayment=true y procesa los campos
-        // monto_pagado, metodo_pago, numero_operacion, fecha_pago, etc.
-        // Ya no es necesario llamar a registerPaymentToBackend() aquí
-
-        // El cronograma se crea automáticamente en el backend desde dynamicFields
-        // No es necesario llamar a createScheduleToBackend() aquí
-
-        this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
-      },
-      error: (error) => {
-        console.error('Error al guardar gestión:', error);
-        this.saving.set(false);
-        alert('⚠️ Error al guardar la gestión. Por favor intente nuevamente.');
+    // Buscar el campo payment_schedule en el schema y obtener su valor
+    if (schema && schema.fields) {
+      const paymentScheduleField = schema.fields.find(f => f.type === 'payment_schedule');
+      if (paymentScheduleField && dynamicValues[paymentScheduleField.id]) {
+        paymentScheduleData = dynamicValues[paymentScheduleField.id];
+        console.log('[SAVE] Payment schedule detected:', paymentScheduleData);
       }
-    });
+    }
+
+    // Si hay cronograma de pago con cuotas, usar el endpoint específico
+    if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
+      const finalTypificationId = typificationLevel3Id || typificationLevel2Id || typificationLevel1Id;
+
+      const scheduleRequest: PaymentScheduleRequest = {
+        idCliente: this.customerData().id || 0,
+        idAgente: 1, // TODO: obtener del usuario logueado
+        idTenant: this.selectedTenantId!,
+        idCartera: this.selectedPortfolioId || 1,
+        idSubcartera: 1,
+        idTipificacion: finalTypificationId,
+        observaciones: this.managementForm.observaciones,
+        metodoContacto: 'LLAMADA_SALIENTE',
+        schedule: {
+          montoTotal: paymentScheduleData.montoTotal,
+          numeroCuotas: paymentScheduleData.numeroCuotas,
+          cuotas: paymentScheduleData.cuotas.map((cuota: any) => ({
+            numeroCuota: cuota.numeroCuota,
+            monto: cuota.monto,
+            fechaPago: cuota.fechaPago
+          }))
+        }
+      };
+
+      console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);
+
+      this.managementService.createPaymentSchedule(scheduleRequest).subscribe({
+        next: (records) => {
+          console.log('[SAVE] Payment schedule created successfully:', records);
+          this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+        },
+        error: (error) => {
+          console.error('Error al guardar cronograma de pago:', error);
+          this.saving.set(false);
+          alert('⚠️ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
+        }
+      });
+    } else {
+      // Gestión normal sin cronograma de pago
+      const request: CreateManagementRequest = {
+        customerId: String(this.customerData().id),
+        advisorId: 'ADV-001',
+
+        // Multi-tenant fields
+        tenantId: this.selectedTenantId!,
+        portfolioId: this.selectedPortfolioId || 1,
+        subPortfolioId: 1,
+
+        // Phone from customer data
+        phone: this.customerData().contacto?.telefono_principal || '',
+
+        // Hierarchy levels with IDs and names
+        level1Id: typificationLevel1Id,
+        level1Name: level1?.label || '',
+        level2Id: typificationLevel2Id,
+        level2Name: level2?.label || null,
+        level3Id: typificationLevel3Id,
+        level3Name: level3?.label || null,
+
+        observations: this.managementForm.observaciones
+      };
+
+      this.managementService.createManagement(request).subscribe({
+        next: (response) => {
+          if (this.callStartTime && this.callActive()) {
+            this.registerCallToBackend(response.id);
+          }
+          this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+        },
+        error: (error) => {
+          console.error('Error al guardar gestión:', error);
+          this.saving.set(false);
+          alert('⚠️ Error al guardar la gestión. Por favor intente nuevamente.');
+        }
+      });
+    }
   }
 
   private registerCallToBackend(managementId: number) {
