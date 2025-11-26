@@ -186,6 +186,7 @@ export interface PaymentScheduleConfig {
   numeroCuotas: number;
   cuotas: PaymentInstallment[];
   grupoPromesaUuid?: string;
+  campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora)
 }
 
 export interface PaymentScheduleRequest {

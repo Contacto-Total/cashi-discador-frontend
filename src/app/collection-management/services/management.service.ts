@@ -137,6 +137,7 @@ export interface PaymentScheduleRequest {
   idTipificacion: number;
   observaciones?: string;
   metodoContacto?: string;
+  campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
@@ -150,6 +151,18 @@ export interface PaymentInstallmentRequest {
   fechaPago: string; // formato YYYY-MM-DD
 }
 
+/**
+ * Interface para configuración de cabecera desde la tabla configuracion_cabeceras
+ */
+export interface ConfiguracionCabecera {
+  id: number;
+  codigo: string;      // Nombre técnico (ej: SLD_MORA)
+  nombre: string;      // Nombre visual (ej: "Saldo mora")
+  tipoDato: string;    // TEXTO, NUMERICO, FECHA
+  tipoSql: string;     // decimal(18,2), int, etc.
+  ordenVisualizacion?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -157,6 +170,7 @@ export class ManagementService {
   // Usando el backend discador para gestiones V2
   private readonly baseUrl = `${environment.gatewayUrl}/v2/management-records`;
   private readonly scheduleUrl = `${environment.tipificacionUrl}/payment-schedules`;
+  private readonly cabecerasUrl = `${environment.gatewayUrl}/configuracion-cabeceras`;
 
   constructor(private http: HttpClient) {}
 
@@ -228,6 +242,15 @@ export class ManagementService {
   createPaymentSchedule(request: PaymentScheduleRequest): Observable<RegistroGestionV2[]> {
     console.log('[SCHEDULE] Creating payment schedule:', request);
     return this.http.post<RegistroGestionV2[]>(`${this.baseUrl}/payment-schedule`, request);
+  }
+
+  /**
+   * Obtiene las cabeceras de montos (campos numéricos decimales) para una subcartera
+   * Esto permite mostrar los nombres visuales de los campos de monto
+   */
+  getMontoCabeceras(idSubcartera: number): Observable<ConfiguracionCabecera[]> {
+    console.log('[CABECERAS] Fetching monto cabeceras for subcartera:', idSubcartera);
+    return this.http.get<ConfiguracionCabecera[]>(`${this.cabecerasUrl}/subcartera/${idSubcartera}/montos`);
   }
 
   /**

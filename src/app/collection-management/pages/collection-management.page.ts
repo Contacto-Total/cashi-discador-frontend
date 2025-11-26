@@ -7,7 +7,7 @@ import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
-import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest } from '../services/management.service';
+import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera } from '../services/management.service';
 import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
@@ -172,29 +172,6 @@ import { AuthService } from '../../core/services/auth.service';
                       Sin campos configurados
                     </div>
                   }
-                </div>
-              }
-
-              @if (activeTab() === 'cuenta') {
-                <div class="space-y-1.5">
-                  <!-- Producto -->
-                  <div class="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">Producto</div>
-                  <div class="space-y-0.5 text-[10px]">
-                    <div class="flex justify-between"><span class="text-slate-500">Tipo:</span><span class="font-semibold text-slate-800 dark:text-white">{{ customerData().cuenta.tipo_producto }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-500">Monto:</span><span class="font-semibold text-slate-800 dark:text-white">S/ {{ customerData().cuenta.monto_original.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-500">Plazo:</span><span class="font-semibold text-slate-800 dark:text-white">{{ customerData().cuenta.plazo_meses }}m</span></div>
-                  </div>
-                  <!-- Deuda -->
-                  <div class="text-[9px] font-bold text-red-500 uppercase mt-2">Deuda</div>
-                  <div class="space-y-0.5 text-[10px]">
-                    <div class="flex justify-between"><span class="text-red-400">Capital:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.saldo_capital.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-red-400">Intereses:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.intereses_vencidos.toFixed(2) }}</span></div>
-                    <div class="flex justify-between"><span class="text-red-400">Mora:</span><span class="font-semibold text-red-600 dark:text-red-300">S/ {{ customerData().deuda.mora_acumulada.toFixed(2) }}</span></div>
-                    <div class="flex justify-between bg-red-100 dark:bg-red-950/50 rounded px-1 py-0.5 mt-1">
-                      <span class="font-bold text-red-700 dark:text-red-200">TOTAL:</span>
-                      <span class="font-bold text-red-700 dark:text-red-200">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</span>
-                    </div>
-                  </div>
                 </div>
               }
 
@@ -526,18 +503,26 @@ import { AuthService } from '../../core/services/auth.service';
           <div class="p-2 bg-red-50 dark:bg-red-950/20">
             <div class="text-center">
               <div class="text-[9px] text-red-500 uppercase font-bold">Deuda Total</div>
-              <div class="text-lg font-black text-red-600 dark:text-red-400">S/ {{ customerData().deuda.saldo_total.toFixed(2) }}</div>
-              <div class="text-[10px] text-red-500 dark:text-red-400">{{ customerData().deuda.dias_mora }} días mora</div>
+              <div class="text-lg font-black text-red-600 dark:text-red-400">{{ formatCurrency(customerData().deuda.saldo_total) }}</div>
+              <div class="text-[10px] text-red-500 dark:text-red-400">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
-          <!-- Último Pago -->
-          <div class="p-2 flex-1">
-            <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Último Pago</div>
-            <div class="text-[10px] text-gray-600 dark:text-gray-300">
-              <div>{{ customerData().deuda.fecha_ultimo_pago }}</div>
-              <div class="font-bold text-green-600 dark:text-green-400">S/ {{ customerData().deuda.monto_ultimo_pago.toFixed(2) }}</div>
-            </div>
+          <!-- Montos de la Cuenta -->
+          <div class="p-2 flex-1 overflow-y-auto">
+            @if (clientAmountFields().length > 0) {
+              <div class="space-y-1">
+                @for (field of clientAmountFields(); track field.field) {
+                  <div class="flex justify-between items-center py-0.5 px-1 text-[10px]">
+                    <span class="text-gray-600 dark:text-gray-400 truncate mr-2">{{ field.label }}</span>
+                    <span class="font-semibold whitespace-nowrap"
+                          [class]="field.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'">
+                      {{ formatCurrency(field.value) }}
+                    </span>
+                  </div>
+                }
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -780,7 +765,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },
-    { id: 'cuenta', label: 'Cuenta', icon: 'wallet' },
     { id: 'historial', label: 'Historial', icon: 'history' }
   ];
 
@@ -990,6 +974,73 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
 
+  // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
+  // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
+  clientAmountFields = computed(() => {
+    const rawData = this.rawClientData();
+    const cabeceras = this.montoCabeceras();
+    const amountFields: { label: string; value: number; field: string }[] = [];
+
+    // Si tenemos cabeceras configuradas, usarlas para filtrar solo montos
+    if (cabeceras.length > 0) {
+      for (const cabecera of cabeceras) {
+        const lowerCodigo = cabecera.codigo.toLowerCase();
+        const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
+
+        if (value !== undefined && value !== null) {
+          const numValue = typeof value === 'number' ? value : parseFloat(value);
+          if (!isNaN(numValue)) {
+            amountFields.push({
+              label: cabecera.nombre,  // Usar nombre visual de la cabecera
+              value: numValue,
+              field: lowerCodigo
+            });
+          }
+        }
+      }
+    } else {
+      // Fallback: si no hay cabeceras, usar lógica anterior pero con exclusiones estrictas
+      const excludeFields = [
+        'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
+        'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
+        'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
+        'telefono_celular', 'telefono_domicilio', 'telefono_laboral',
+        'telf_referencia_1', 'telf_referencia_2'
+      ];
+
+      for (const [key, value] of Object.entries(rawData)) {
+        const lowerKey = key.toLowerCase();
+        // Excluir campos que empiezan con fec_, fecha_, telefono_, telf_
+        if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
+        if (lowerKey.startsWith('telefono_') || lowerKey.startsWith('telf_')) continue;
+        // Excluir campos específicos
+        if (excludeFields.includes(lowerKey)) continue;
+
+        const numValue = typeof value === 'number' ? value : parseFloat(value);
+        if (!isNaN(numValue) && numValue >= 0) {
+          amountFields.push({
+            label: this.formatFieldLabel(key),
+            value: numValue,
+            field: key
+          });
+        }
+      }
+    }
+
+    // Ordenar por valor descendente (mayores primero)
+    return amountFields.sort((a, b) => b.value - a.value);
+  });
+
+  // Computed para obtener días de mora del cliente
+  clientDiasMora = computed(() => {
+    const rawData = this.rawClientData();
+    const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
+    return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
+  });
+
+  // Cabeceras de configuración para mostrar nombres visuales
+  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string }[]>([]);
+
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
   paymentScheduleFieldId = signal<number | null>(null);
@@ -1191,6 +1242,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.rawClientData.set(client);
     console.log('[PAYMENT] Raw client data from ini_* table:', client);
 
+    // Cargar cabeceras de montos para esta subcartera
+    this.loadMontoCabeceras();
+
     // Mapear los datos de la tabla dinámica al formato de CustomerData
     this.customerData.set({
       id: client.id || 0,
@@ -1231,6 +1285,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.loadManagementHistory();
 
     console.log('✅ [MANUAL] Cliente cargado exitosamente');
+  }
+
+  /**
+   * Carga las cabeceras de montos desde configuracion_cabeceras para mostrar nombres visuales
+   */
+  private loadMontoCabeceras() {
+    if (!this.selectedSubPortfolioId) {
+      console.warn('[CABECERAS] No hay subcartera seleccionada');
+      return;
+    }
+
+    console.log('[CABECERAS] Cargando cabeceras de montos para subcartera:', this.selectedSubPortfolioId);
+
+    this.managementService.getMontoCabeceras(this.selectedSubPortfolioId).pipe(
+      catchError(error => {
+        console.error('[CABECERAS] Error cargando cabeceras:', error);
+        return of([]);
+      })
+    ).subscribe(cabeceras => {
+      console.log('[CABECERAS] Cabeceras cargadas:', cabeceras);
+      this.montoCabeceras.set(cabeceras.map(c => ({
+        codigo: c.codigo,
+        nombre: c.nombre,
+        tipoDato: c.tipoDato,
+        tipoSql: c.tipoSql
+      })));
+    });
   }
 
   // Variable para almacenar el subPortfolioId seleccionado
@@ -1421,6 +1502,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
           this.rawClientData.set(clienteDetalle);
           console.log('[PAYMENT] Raw client data from detalle:', clienteDetalle);
+
+          // Cargar cabeceras de montos para esta subcartera
+          this.loadMontoCabeceras();
 
           // Mapear los datos del backend al formato del signal
           this.customerData.set({
@@ -2253,6 +2337,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       .join(' ');
   }
 
+  /**
+   * Formatea un valor numérico como moneda (Soles)
+   */
+  formatCurrency(value: number): string {
+    return new Intl.NumberFormat('es-PE', {
+      style: 'currency',
+      currency: 'PEN'
+    }).format(value);
+  }
+
   showPaymentSection(): boolean {
     const selectedManagement = this.managementClassifications().find(c => c.id === this.managementForm.tipoGestion);
     return selectedManagement?.requiere_pago || false;
@@ -2454,6 +2548,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones,
         metodoContacto: 'LLAMADA_SALIENTE',
+        campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
           numeroCuotas: paymentScheduleData.numeroCuotas,
@@ -2927,6 +3022,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
     this.rawClientData.set(customer);
     console.log('[PAYMENT] Raw client data from resource:', customer);
+
+    // Cargar cabeceras de montos para esta subcartera
+    this.loadMontoCabeceras();
 
     // Mapear CustomerResource a CustomerData
     this.customerData.set({
