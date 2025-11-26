@@ -720,8 +720,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (hasConfig) {
       // Solo incluir los campos que están en enabledOptions
       for (const option of enabledOptions) {
-        // Skip "personalizado" option - it's handled separately in the UI
+        // Handle "personalizado" option specially - add as custom option marker
         if (option.codigoOpcion === 'personalizado') {
+          amounts.push({
+            label: 'Otro monto',
+            value: -1, // Special marker for custom amount
+            field: 'personalizado'
+          });
           continue;
         }
 
@@ -735,7 +740,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const value = rawData[rawKey];
         const numValue = typeof value === 'number' ? value : parseFloat(String(value));
 
-        if (!isNaN(numValue) && numValue > 0) {
+        // Include if value is valid number (including 0, but not NaN)
+        if (!isNaN(numValue) && numValue >= 0) {
           amounts.push({
             label: option.labelOpcion || this.formatFieldLabel(fieldName),
             value: numValue,

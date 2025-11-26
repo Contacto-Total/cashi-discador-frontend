@@ -22,38 +22,40 @@ export interface AmountOption {
           Seleccionar Monto
         </label>
         <div class="amount-chips">
-          @for (option of amountOptions(); track option.value) {
+          @for (option of regularAmountOptions(); track option.field) {
             <button
               type="button"
               class="amount-chip"
-              [class.selected]="selectedAmount() === option.value"
+              [class.selected]="selectedAmount() === option.value && !isCustomAmount()"
               (click)="selectAmount(option.value)"
             >
               <span class="chip-label">{{ option.label }}</span>
               <span class="chip-value">{{ formatCurrency(option.value) }}</span>
             </button>
           }
-          <!-- Opción personalizada -->
-          <button
-            type="button"
-            class="amount-chip custom"
-            [class.selected]="isCustomAmount()"
-            (click)="enableCustomAmount()"
-          >
-            <span class="chip-label">Otro monto</span>
-            @if (isCustomAmount()) {
-              <input
-                type="number"
-                class="custom-input"
-                [(ngModel)]="customAmountValue"
-                (ngModelChange)="onCustomAmountChange($event)"
-                (click)="$event.stopPropagation()"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              >
-            }
-          </button>
+          <!-- Opción personalizada - solo si está habilitada -->
+          @if (hasCustomOption()) {
+            <button
+              type="button"
+              class="amount-chip custom"
+              [class.selected]="isCustomAmount()"
+              (click)="enableCustomAmount()"
+            >
+              <span class="chip-label">Otro monto</span>
+              @if (isCustomAmount()) {
+                <input
+                  type="number"
+                  class="custom-input"
+                  [(ngModel)]="customAmountValue"
+                  (ngModelChange)="onCustomAmountChange($event)"
+                  (click)="$event.stopPropagation()"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                >
+              }
+            </button>
+          }
         </div>
       </div>
 
@@ -357,6 +359,16 @@ export class PaymentScheduleComponent implements OnInit {
 
   // Computed - now reactive because availableAmounts is a signal
   amountOptions = computed(() => this.availableAmounts());
+
+  // Filter out the custom option for regular display
+  regularAmountOptions = computed(() =>
+    this.availableAmounts().filter(opt => opt.field !== 'personalizado')
+  );
+
+  // Check if custom option is enabled
+  hasCustomOption = computed(() =>
+    this.availableAmounts().some(opt => opt.field === 'personalizado')
+  );
   totalAmount = computed(() =>
     this.installments().reduce((sum, i) => sum + (i.monto || 0), 0)
   );
