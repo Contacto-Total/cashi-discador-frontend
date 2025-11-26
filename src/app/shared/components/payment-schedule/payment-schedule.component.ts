@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, signal, computed } from '@angular/core';
+import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaymentScheduleConfig, PaymentInstallment } from '../../../maintenance/models/typification-v2.model';
@@ -343,7 +343,8 @@ export interface AmountOption {
   `]
 })
 export class PaymentScheduleComponent implements OnInit {
-  @Input() availableAmounts: AmountOption[] = [];
+  // Signal inputs for reactivity
+  availableAmounts = input<AmountOption[]>([]);
   @Input() maxInstallments: number = 6;
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
 
@@ -354,8 +355,8 @@ export class PaymentScheduleComponent implements OnInit {
   customAmountValue: number = 0;
   private _isCustomAmount = signal<boolean>(false);
 
-  // Computed
-  amountOptions = computed(() => this.availableAmounts);
+  // Computed - now reactive because availableAmounts is a signal
+  amountOptions = computed(() => this.availableAmounts());
   totalAmount = computed(() =>
     this.installments().reduce((sum, i) => sum + (i.monto || 0), 0)
   );
