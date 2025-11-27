@@ -59,7 +59,7 @@ export interface WhatsAppLogoutResult {
   providedIn: 'root'
 })
 export class PhoneLineService {
-  private readonly baseUrl = environment.scraperServiceUrl || 'http://localhost:8090';
+  private readonly baseUrl = environment.gatewayUrl || 'http://localhost:8090';
 
   constructor(private http: HttpClient) {}
 

@@ -24,6 +24,6 @@ export const environment = {
   freeswitchDomain: 'cobranza.contactototal.com.pe',
 
   // Scraper Service
-  scraperServiceUrl: 'http://localhost:8090'
+  scraperServiceUrl: 'cobranza.contactototal.com.pe:8090'
 };
 
