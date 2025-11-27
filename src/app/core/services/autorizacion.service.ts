@@ -154,6 +154,22 @@ export class AutorizacionService {
   }
 
   /**
+   * Obtiene el ID del usuario actual desde localStorage
+   */
+  private getCurrentUserId(): number | null {
+    try {
+      const userStr = localStorage.getItem('callcenter_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        return user.id || null;
+      }
+    } catch (e) {
+      console.error('[AUTORIZACION] Error obteniendo usuario actual:', e);
+    }
+    return null;
+  }
+
+  /**
    * Obtiene los supervisores/admins que están en línea
    */
   obtenerSupervisoresEnLinea(): Observable<SupervisorEnLinea[]> {
@@ -287,27 +303,59 @@ export class AutorizacionService {
    * Maneja mensajes de WebSocket
    */
   private handleWebSocketMessage(message: any): void {
-    console.log('[AUTORIZACION] Mensaje WebSocket recibido:', message);
+    console.log('[AUTORIZACION] Mensaje WebSocket recibido (raw):', message);
 
-    if (!message || !message.tipo) return;
+    if (!message) return;
 
-    const evento = message as AutorizacionEvent;
+    // Normalizar el mensaje - el backend puede enviar en 2 formatos:
+    // 1. Directo: { tipo: "...", solicitud: {...} }
+    // 2. Envuelto: { type: "...", payload: { tipo: "...", solicitud: {...} } }
+    let evento: AutorizacionEvent;
+
+    if (message.payload && message.payload.tipo) {
+      // Formato envuelto desde sendToUser
+      evento = message.payload as AutorizacionEvent;
+      console.log('[AUTORIZACION] Mensaje normalizado desde payload:', evento);
+    } else if (message.tipo) {
+      // Formato directo desde topic
+      evento = message as AutorizacionEvent;
+    } else if (message.type && message.payload) {
+      // Otro formato envuelto
+      evento = message.payload as AutorizacionEvent;
+    } else {
+      console.log('[AUTORIZACION] Formato de mensaje no reconocido:', message);
+      return;
+    }
+
+    if (!evento.tipo || !evento.solicitud) {
+      console.log('[AUTORIZACION] Evento incompleto, ignorando:', evento);
+      return;
+    }
+
+    // Obtener ID del usuario actual para filtrar mensajes
+    const currentUserId = this.getCurrentUserId();
+    console.log('[AUTORIZACION] Procesando evento:', evento.tipo, '| Usuario actual:', currentUserId);
 
     switch (evento.tipo) {
       case 'NUEVA_SOLICITUD_AUTORIZACION':
-        console.log('[AUTORIZACION] Nueva solicitud recibida!');
+        // Solo mostrar si la solicitud es para ESTE supervisor
+        if (evento.solicitud.idSupervisor !== currentUserId) {
+          console.log('[AUTORIZACION] Ignorando solicitud - no es para este supervisor. Destinatario:', evento.solicitud.idSupervisor, 'Yo:', currentUserId);
+          return;
+        }
+        console.log('[AUTORIZACION] Nueva solicitud recibida para MÍ!');
         this.solicitudesPendientes.update(list => [evento.solicitud, ...list]);
         this.nuevaSolicitudSubject.next(evento.solicitud);
         break;
 
       case 'SOLICITUD_APROBADA':
-        console.log('[AUTORIZACION] Solicitud aprobada!');
+        console.log('[AUTORIZACION] ✅ Solicitud APROBADA recibida!');
         this.solicitudActual.set(evento.solicitud);
         this.respuestaSubject.next(evento.solicitud);
         break;
 
       case 'SOLICITUD_RECHAZADA':
-        console.log('[AUTORIZACION] Solicitud rechazada!');
+        console.log('[AUTORIZACION] ❌ Solicitud RECHAZADA recibida!');
         this.solicitudActual.set(evento.solicitud);
         this.respuestaSubject.next(evento.solicitud);
         break;
