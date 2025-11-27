@@ -789,6 +789,17 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: #e5e7eb;
 }
 
+:host-context(.dark) .modal-body input {
+  background: #374151;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+:host-context(.dark) .modal-body input:focus {
+  border-color: #3b82f6;
+  background: #374151;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
