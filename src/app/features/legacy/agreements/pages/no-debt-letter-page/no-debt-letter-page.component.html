@@ -16,9 +16,13 @@
   </div>
 
   <!-- Header con búsqueda -->
-  <div class="header-section bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
+  <div class="header-section rounded-lg shadow-md p-6 mb-6"
+       [class.bg-white]="!isDarkMode"
+       [class.bg-gray-800]="isDarkMode">
     <div class="flex items-center justify-between mb-4">
-      <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+      <h1 class="text-2xl font-bold"
+          [class.text-gray-800]="!isDarkMode"
+          [class.text-gray-100]="isDarkMode">
         Generador de Carta de No Adeudo
       </h1>
 
@@ -46,7 +50,9 @@
     <!-- Búsqueda -->
     <form [formGroup]="searchForm" class="flex items-center gap-3">
       <div class="flex-1 max-w-xs">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <label class="block text-sm font-medium mb-1"
+               [class.text-gray-700]="!isDarkMode"
+               [class.text-gray-300]="isDarkMode">
           DNI del Cliente
         </label>
         <input

@@ -766,6 +766,29 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   padding-top: 15px;
 }
 
+/* Dark mode styles for modal */
+:host-context(.dark) .modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+:host-context(.dark) .modal-dialog {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #f9fafb;
+}
+
+:host-context(.dark) .modal-header {
+  color: #f9fafb;
+}
+
+:host-context(.dark) .close-btn {
+  color: #f9fafb;
+}
+
+:host-context(.dark) .modal-field label {
+  color: #e5e7eb;
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
