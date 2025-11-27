@@ -80,10 +80,12 @@ import { AuthService } from '../../core/services/auth.service';
                     <div class="flex items-center justify-between text-xs bg-white/20 rounded-lg px-3 py-2">
                       <div class="flex items-center gap-2">
                         <span class="font-bold">Cuota {{ cuota.numeroCuota }}</span>
-                        @if (cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                          <span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">✓ PAGADO</span>
-                        } @else if (cuota.status === 'VENCIDO') {
-                          <span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded">⚠ VENCIDO</span>
+                        @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+                          <span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">✓ PAGADA</span>
+                        } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
+                          <span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded">⚠ VENCIDA</span>
+                        } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
+                          <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded">✗ CANCELADA</span>
                         } @else {
                           <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">⏳ PENDIENTE</span>
                         }
@@ -1076,7 +1078,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     for (const schedule of schedules) {
       if (schedule.installments) {
         for (const cuota of schedule.installments) {
-          if (cuota.status !== 'PAGADO' && cuota.status !== 'CUMPLIDO' && cuota.status !== 'CANCELADO') {
+          // El backend usa PAGADA/CANCELADA, no PAGADO/CANCELADO
+          const estado = cuota.status?.toUpperCase();
+          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO') {
             allPending.push({
               ...cuota,
               scheduleId: schedule.id,
@@ -1717,8 +1721,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Calcular monto total sumando todas las cuotas
           const totalAmount = cuotas.reduce((sum, c) => sum + (c.montoPromesa || 0), 0);
 
-          // Encontrar la próxima cuota pendiente
-          const pendingCuotas = cuotas.filter(c => c.estadoPago !== 'PAGADO' && c.estadoPago !== 'CUMPLIDO');
+          // Encontrar la próxima cuota pendiente (el backend usa PAGADA, no PAGADO)
+          const pendingCuotas = cuotas.filter(c => c.estadoPago !== 'PAGADA' && c.estadoPago !== 'PAGADO' && c.estadoPago !== 'CUMPLIDO' && c.estadoPago !== 'CANCELADA');
           const nextCuota = pendingCuotas[0] || cuotas[0];
 
           return {
@@ -3121,7 +3125,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (schedule.installments && schedule.installments.length > 0) {
       for (const cuota of schedule.installments) {
         const fechaStr = cuota.dueDate ? this.formatDate(cuota.dueDate) : '-';
-        const estadoStr = cuota.status === 'PAGADO' ? '✅ PAGADO' : '⏳ Pendiente';
+        let estadoStr = '⏳ Pendiente';
+        if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+          estadoStr = '✅ PAGADA';
+        } else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
+          estadoStr = '⚠️ VENCIDA';
+        } else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
+          estadoStr = '✗ CANCELADA';
+        }
         message += `  Cuota ${cuota.numeroCuota}: S/ ${cuota.monto?.toFixed(2) || '0.00'} - ${fechaStr} - ${estadoStr}\n`;
       }
     }
