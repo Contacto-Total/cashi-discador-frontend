@@ -88,8 +88,10 @@ export class AddToBlacklistFormComponent implements OnInit {
     this.blacklistService.insertBlacklist(blacklistTemp).subscribe({
       next: () => {
         const fechaActual = new Date().toISOString().split('T')[0];
-        this.toastService.success(
-          `Cliente DNI: ${dni} agregado a Blacklist (${fechaActual} - ${fechaFin})`
+        this.errorModalService.showSuccess(
+          `El cliente con DNI ${dni} ha sido agregado exitosamente a la blacklist.`,
+          'Cliente Agregado',
+          `Período: ${fechaActual} - ${fechaFin}`
         );
         this.formGroup.reset();
         this.blacklistAdded.emit();

@@ -2944,4 +2944,23 @@ body.light-theme {
   background-color: rgba(0, 0, 0, 0.6) !important;
 }
 
+/* ============================================
+   Success Modal Styles
+   ============================================ */
+.success-modal-backdrop {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.success-modal-panel {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Soporte para temas oscuros */
+:root.dark .success-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
 

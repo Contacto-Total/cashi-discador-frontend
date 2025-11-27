@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { ErrorModalComponent, ErrorModalData } from '../components/error-modal/error-modal.component';
+import { SuccessModalComponent, SuccessModalData } from '../components/success-modal/success-modal.component';
 
 @Injectable({
   providedIn: 'root'
@@ -58,5 +59,29 @@ export class ErrorModalService {
       'Error del Servidor',
       details
     );
+  }
+
+  /**
+   * Muestra un modal de éxito con fondo difuminado
+   * @param message Mensaje principal del éxito
+   * @param title Título del modal (opcional, por defecto "Éxito")
+   * @param details Detalles adicionales (opcional)
+   */
+  showSuccess(message: string, title?: string, details?: string): void {
+    const config: MatDialogConfig<SuccessModalData> = {
+      data: {
+        title: title || 'Éxito',
+        message,
+        details
+      },
+      panelClass: 'success-modal-panel',
+      backdropClass: 'success-modal-backdrop',
+      disableClose: false,
+      hasBackdrop: true,
+      width: '500px',
+      maxWidth: '90vw'
+    };
+
+    this.dialog.open(SuccessModalComponent, config);
   }
 }
