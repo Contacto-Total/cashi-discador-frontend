@@ -233,7 +233,60 @@ export class ManagementService {
 
   getActiveSchedulesByCustomer(customerId: string): Observable<PaymentSchedule[]> {
     console.log('[SCHEDULE] Fetching active schedules for customer:', customerId);
-    return this.http.get<PaymentSchedule[]>(`${this.scheduleUrl}/customer/${customerId}/active`);
+    // Usar el nuevo endpoint del backend discador que devuelve cabeceras con cuotas
+    return this.http.get<any[]>(`${this.baseUrl}/payment-schedule/client/${customerId}/active`).pipe(
+      map(records => this.transformToPaymentSchedules(records))
+    );
+  }
+
+  /**
+   * Transforma los registros del backend (RegistroGestionV2 con cuotasPromesa) al formato PaymentSchedule del frontend
+   */
+  private transformToPaymentSchedules(records: any[]): PaymentSchedule[] {
+    return records.map(record => {
+      const cuotas = record.cuotasPromesa || [];
+
+      // Calcular totales
+      const totalAmount = cuotas.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
+      const paidAmount = cuotas
+        .filter((c: any) => c.estado === 'PAGADA' || c.estado === 'CUMPLIDO')
+        .reduce((sum: number, c: any) => sum + (c.montoPagadoReal || c.monto || 0), 0);
+      const pendingAmount = totalAmount - paidAmount;
+
+      const paidInstallments = cuotas.filter((c: any) => c.estado === 'PAGADA' || c.estado === 'CUMPLIDO').length;
+      const pendingInstallments = cuotas.filter((c: any) => c.estado === 'PENDIENTE').length;
+
+      return {
+        id: record.id,
+        scheduleId: {
+          scheduleId: record.grupoPromesaUuid || record.uuid
+        },
+        customerId: String(record.idCliente),
+        managementId: String(record.id),
+        totalAmount: totalAmount,
+        numberOfInstallments: cuotas.length,
+        startDate: record.fechaGestion?.split('T')[0] || new Date().toISOString().split('T')[0],
+        isActive: pendingInstallments > 0,
+        scheduleType: record.tipoCronograma || 'CONFIANZA',
+        negotiatedAmount: record.montoPromesaPago || totalAmount,
+        installments: cuotas.map((cuota: any) => ({
+          id: cuota.id,
+          installmentNumber: cuota.numeroCuota,
+          numeroCuota: cuota.numeroCuota,
+          amount: cuota.monto,
+          monto: cuota.monto,
+          dueDate: cuota.fechaPago,
+          fechaPago: cuota.fechaPago,
+          paidDate: cuota.fechaPagoReal || null,
+          status: cuota.estado || 'PENDIENTE'
+        })),
+        paidAmount,
+        pendingAmount,
+        paidInstallments,
+        pendingInstallments,
+        fullyPaid: pendingInstallments === 0
+      } as PaymentSchedule;
+    });
   }
 
   startCall(managementId: number, request: StartCallRequest): Observable<ManagementResource> {
