@@ -33,6 +33,8 @@ export interface RegistroGestionV2 {
   requiereSeguimiento?: boolean;
   fechaCreacion?: string;
   rutaJerarquia?: string;
+  nombreAgente?: string;
+  userAgent?: string;
 }
 
 export interface ManagementResource {
@@ -113,6 +115,10 @@ export interface CreateManagementRequest {
   idCampana?: number | null;
   idLlamada?: number | null;
   duracionSegundos?: number | null;
+
+  // Información del agente y dispositivo
+  nombreAgente?: string;
+  userAgent?: string;
 }
 
 export interface StartCallRequest {
@@ -318,7 +324,10 @@ export class ManagementService {
       // Campos opcionales de llamada
       idCampana: request.idCampana || undefined,
       idLlamada: request.idLlamada || undefined,
-      duracionSegundos: request.duracionSegundos || undefined
+      duracionSegundos: request.duracionSegundos || undefined,
+      // Información del agente y dispositivo
+      nombreAgente: request.nombreAgente || undefined,
+      userAgent: request.userAgent || undefined
     };
 
     // Agregar niveles jerárquicos si existen

@@ -2783,6 +2783,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Determinar si es una llamada activa o gestión manual
       const isActiveCall = this.callActive() || !!this.callStartTime;
 
+      // Obtener información del usuario actual
+      const currentUser = this.authService.getCurrentUser();
+
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
         advisorId: 'ADV-001',
@@ -2810,7 +2813,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         canalContacto: isActiveCall ? 'TELEFONO' : 'SISTEMA',
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
         idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
-        duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null
+        duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null,
+
+        // Información del agente y dispositivo
+        nombreAgente: currentUser?.username || currentUser?.firstName || 'Sistema',
+        userAgent: navigator.userAgent
       };
 
       this.managementService.createManagement(request).subscribe({
