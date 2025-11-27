@@ -258,6 +258,9 @@
   <main class="main-content">
     <router-outlet></router-outlet>
   </main>
+
+  <!-- Notificaciones globales de autorización (para supervisores) -->
+  <app-authorization-notification></app-authorization-notification>
 </div>
 
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">

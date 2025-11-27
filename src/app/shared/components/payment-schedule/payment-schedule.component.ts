@@ -349,6 +349,7 @@ export class PaymentScheduleComponent implements OnInit {
   availableAmounts = input<AmountOption[]>([]);
   @Input() maxInstallments: number = 6;
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
+  @Output() customAmountSelected = new EventEmitter<boolean>(); // Emite cuando se selecciona monto personalizado
 
   // Signals
   selectedAmount = signal<number>(0);
@@ -400,11 +401,13 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
     this.generateInstallments();
+    this.customAmountSelected.emit(false); // No es monto personalizado
   }
 
   enableCustomAmount(): void {
     this._isCustomAmount.set(true);
     this.selectedField.set(undefined);
+    this.customAmountSelected.emit(true); // Es monto personalizado - requiere autorización
     if (this.customAmountValue > 0) {
       this.selectedAmount.set(this.customAmountValue);
       this.generateInstallments();

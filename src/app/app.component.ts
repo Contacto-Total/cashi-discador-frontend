@@ -10,6 +10,7 @@ import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
+import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -20,7 +21,8 @@ import { Subscription } from 'rxjs';
     CommonModule,
     RouterOutlet,
     RouterModule,
-    LucideAngularModule
+    LucideAngularModule,
+    AuthorizationNotificationComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
