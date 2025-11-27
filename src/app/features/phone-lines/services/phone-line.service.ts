@@ -68,21 +68,21 @@ export class PhoneLineService {
   // ========================================
   queryPhoneLines(request: PhoneLineRequest): Observable<PhoneLineResponse> {
     return this.http.post<PhoneLineResponse>(
-      `${this.baseUrl}/api/v1/phone-lines/query`,
+      `${this.baseUrl}/v1/phone-lines/query`,
       request
     );
   }
 
   queryPhoneLinesForceRefresh(request: PhoneLineRequest): Observable<PhoneLineResponse> {
     return this.http.post<PhoneLineResponse>(
-      `${this.baseUrl}/api/v1/phone-lines/query/refresh`,
+      `${this.baseUrl}/v1/phone-lines/query/refresh`,
       request
     );
   }
 
   queryPhoneLinesByDocument(documentNumber: string): Observable<PhoneLineResponse> {
     return this.http.get<PhoneLineResponse>(
-      `${this.baseUrl}/api/v1/phone-lines/query/${documentNumber}`
+      `${this.baseUrl}/v1/phone-lines/query/${documentNumber}`
     );
   }
 
@@ -91,33 +91,33 @@ export class PhoneLineService {
   // ========================================
   startBatch(skipWhatsApp: boolean = false): Observable<BatchProcessResponse> {
     return this.http.post<BatchProcessResponse>(
-      `${this.baseUrl}/api/batch/phone-lines/start?skipWhatsApp=${skipWhatsApp}`,
+      `${this.baseUrl}/batch/phone-lines/start?skipWhatsApp=${skipWhatsApp}`,
       {}
     );
   }
 
   getBatchStatus(batchId: string): Observable<BatchProcessResponse> {
     return this.http.get<BatchProcessResponse>(
-      `${this.baseUrl}/api/batch/phone-lines/status/${batchId}`
+      `${this.baseUrl}/batch/phone-lines/status/${batchId}`
     );
   }
 
   isBatchRunning(): Observable<boolean> {
     return this.http.get<boolean>(
-      `${this.baseUrl}/api/batch/phone-lines/running`
+      `${this.baseUrl}/batch/phone-lines/running`
     );
   }
 
   stopBatch(batchId: string): Observable<BatchProcessResponse> {
     return this.http.post<BatchProcessResponse>(
-      `${this.baseUrl}/api/batch/phone-lines/stop/${batchId}`,
+      `${this.baseUrl}/batch/phone-lines/stop/${batchId}`,
       {}
     );
   }
 
   resetStuckBatches(): Observable<string> {
     return this.http.post(
-      `${this.baseUrl}/api/batch/phone-lines/reset`,
+      `${this.baseUrl}/batch/phone-lines/reset`,
       {},
       { responseType: 'text' }
     );
@@ -128,33 +128,33 @@ export class PhoneLineService {
   // ========================================
   getWhatsAppStatus(): Observable<WhatsAppConnectionStatus> {
     return this.http.get<WhatsAppConnectionStatus>(
-      `${this.baseUrl}/api/v1/whatsapp/status`
+      `${this.baseUrl}/v1/whatsapp/status`
     );
   }
 
   connectWhatsApp(): Observable<WhatsAppQRResponse> {
     return this.http.post<WhatsAppQRResponse>(
-      `${this.baseUrl}/api/v1/whatsapp/connect`,
+      `${this.baseUrl}/v1/whatsapp/connect`,
       {}
     );
   }
 
   getWhatsAppQR(): Observable<WhatsAppQRResponse> {
     return this.http.get<WhatsAppQRResponse>(
-      `${this.baseUrl}/api/v1/whatsapp/qr`
+      `${this.baseUrl}/v1/whatsapp/qr`
     );
   }
 
   verifyPendingPhones(): Observable<WhatsAppBatchResult> {
     return this.http.post<WhatsAppBatchResult>(
-      `${this.baseUrl}/api/v1/whatsapp/verify`,
+      `${this.baseUrl}/v1/whatsapp/verify`,
       {}
     );
   }
 
   logoutWhatsApp(): Observable<WhatsAppLogoutResult> {
     return this.http.post<WhatsAppLogoutResult>(
-      `${this.baseUrl}/api/v1/whatsapp/logout`,
+      `${this.baseUrl}/v1/whatsapp/logout`,
       {}
     );
   }
