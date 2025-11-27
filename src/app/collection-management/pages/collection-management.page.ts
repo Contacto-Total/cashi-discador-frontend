@@ -875,10 +875,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
 
       console.log('[PAYMENT] Amounts FALLBACK (no config, all numeric):', amounts.length);
+
+      // En modo fallback, siempre agregar la opción "Otro monto" para permitir autorización
+      amounts.push({
+        label: 'Otro monto',
+        value: -1, // Special marker for custom amount
+        field: 'personalizado'
+      });
     }
 
-    // Ordenar por valor descendente (montos más altos primero)
-    amounts.sort((a, b) => b.value - a.value);
+    // Ordenar por valor descendente (montos más altos primero, pero "personalizado" va al final)
+    amounts.sort((a, b) => {
+      if (a.field === 'personalizado') return 1;
+      if (b.field === 'personalizado') return -1;
+      return b.value - a.value;
+    });
 
     return amounts;
   });
