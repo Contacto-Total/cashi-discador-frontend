@@ -14,6 +14,8 @@ export interface RegistroGestionV2 {
   idCartera?: number;
   idSubcartera?: number;
   idCliente: number;
+  nombreCliente?: string;
+  documentoCliente?: string;
   idAgente: number;
   idCampana?: number;
   idLlamada?: number;
@@ -89,6 +91,8 @@ export interface PaymentDetailResource {
 
 export interface CreateManagementRequest {
   customerId: string;
+  customerName?: string;
+  customerDocument?: string;
   advisorId: string;
 
   // Multi-tenant fields
@@ -313,6 +317,8 @@ export class ManagementService {
       idCartera: request.portfolioId,
       idSubcartera: request.subPortfolioId || undefined,
       idCliente: Number(request.customerId),
+      nombreCliente: request.customerName || undefined,
+      documentoCliente: request.customerDocument || undefined,
       idAgente: this.extractAgentId(request.advisorId),
       tipificacion: { id: finalTypificationId },
       observaciones: request.observations || '',

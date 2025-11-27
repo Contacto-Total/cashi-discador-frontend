@@ -2788,6 +2788,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
+        customerName: this.customerData().nombre_completo || '',
+        customerDocument: this.customerData().numero_documento || '',
         advisorId: 'ADV-001',
 
         // Multi-tenant fields
