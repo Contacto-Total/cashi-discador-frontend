@@ -255,12 +255,12 @@ export class ManagementService {
   }
 
   /**
-   * Crea un cronograma de pagos con múltiples cuotas
-   * Cada cuota se guarda como un registro separado con el mismo grupoPromesaUuid
+   * Crea un cronograma de pagos (1 cabecera + N cuotas en tabla separada)
+   * Retorna la cabecera con las cuotas asociadas
    */
-  createPaymentSchedule(request: PaymentScheduleRequest): Observable<RegistroGestionV2[]> {
+  createPaymentSchedule(request: PaymentScheduleRequest): Observable<RegistroGestionV2> {
     console.log('[SCHEDULE] Creating payment schedule:', request);
-    return this.http.post<RegistroGestionV2[]>(`${this.baseUrl}/payment-schedule`, request);
+    return this.http.post<RegistroGestionV2>(`${this.baseUrl}/payment-schedule`, request);
   }
 
   /**
