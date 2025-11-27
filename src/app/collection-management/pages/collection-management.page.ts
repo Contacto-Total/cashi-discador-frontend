@@ -1743,11 +1743,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        console.log('📅 Cronogramas transformados:', schedules);
-        this.activePaymentSchedules.set(schedules);
+        // Filtrar solo cronogramas que tienen al menos una cuota pendiente
+        const activeSchedules = schedules.filter(s => s.cuotasPendientes > 0);
 
-        if (schedules.length > 0) {
-          console.log(`📅 ¡Cliente tiene ${schedules.length} promesa(s) de pago activa(s)!`);
+        console.log('📅 Cronogramas transformados:', schedules);
+        console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
+        this.activePaymentSchedules.set(activeSchedules);
+
+        if (activeSchedules.length > 0) {
+          console.log(`📅 ¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
         }
       }
     });
