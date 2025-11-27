@@ -1853,6 +1853,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return this.formatTime(callDetail.durationSeconds);
   }
 
+  /**
+   * Calcula la duración de la llamada en segundos desde callStartTime hasta ahora
+   */
+  private calculateCallDurationSeconds(): number {
+    if (!this.callStartTime) return 0;
+    const startTime = new Date(this.callStartTime).getTime();
+    const now = new Date().getTime();
+    return Math.floor((now - startTime) / 1000);
+  }
+
   ngOnDestroy() {
     if (this.callTimer) {
       clearInterval(this.callTimer);
@@ -2727,6 +2737,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
       const finalTypificationId = typificationLevel3Id || typificationLevel2Id || typificationLevel1Id;
 
+      // Determinar si es una llamada activa o gestión manual
+      const isActiveCallSchedule = this.callActive() || !!this.callStartTime;
+
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
         idAgente: 1, // TODO: obtener del usuario logueado
@@ -2735,7 +2748,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idSubcartera: 1,
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones,
-        metodoContacto: 'LLAMADA_SALIENTE',
+        metodoContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
@@ -2763,6 +2776,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       });
     } else {
       // Gestión normal sin cronograma de pago
+      // Determinar si es una llamada activa o gestión manual
+      const isActiveCall = this.callActive() || !!this.callStartTime;
+
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
         advisorId: 'ADV-001',
@@ -2783,7 +2799,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         level3Id: typificationLevel3Id,
         level3Name: level3?.label || null,
 
-        observations: this.managementForm.observaciones
+        observations: this.managementForm.observaciones,
+
+        // Campos de contexto de gestión
+        metodoContacto: isActiveCall ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
+        canalContacto: isActiveCall ? 'TELEFONO' : 'SISTEMA',
+        idCampana: null,  // Se puede obtener del contexto si hay campaña activa
+        idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
+        duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null
       };
 
       this.managementService.createManagement(request).subscribe({
