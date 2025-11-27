@@ -53,23 +53,60 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       }
 
-      <!-- Alerta de Promesa de Pago Activa -->
+      <!-- Alerta de Promesa de Pago Activa con detalle de cuotas -->
       @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
-        <div class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 animate-[slideInDown_0.5s_ease-out]">
+        <div class="fixed top-4 right-4 z-50 animate-[slideInDown_0.5s_ease-out] max-w-md">
           @for (schedule of activePaymentSchedules(); track schedule.id) {
-            <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 dark:from-amber-600 dark:via-yellow-600 dark:to-amber-700 text-white px-6 py-3 rounded-lg shadow-2xl mb-2">
-              <div class="flex items-center gap-3">
-                <div class="text-2xl">📅</div>
-                <div>
-                  <div class="font-bold text-base">Promesa de Pago Activa</div>
-                  <div class="text-sm opacity-90">
-                    Monto: S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}
-                    @if (schedule.installments && schedule.installments.length > 0 && schedule.installments[0].dueDate) {
-                      - Vencimiento: {{ formatDate(schedule.installments[0].dueDate) }}
-                    }
+            <div class="bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-xl shadow-2xl mb-3 overflow-hidden">
+              <!-- Header -->
+              <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">⚠️</span>
+                  <div>
+                    <div class="font-bold text-sm">PROMESA DE PAGO ACTIVA</div>
+                    <div class="text-xs opacity-80">No puede registrar otra promesa</div>
                   </div>
                 </div>
+                <div class="text-right">
+                  <div class="text-lg font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
+                  <div class="text-xs opacity-80">Total</div>
+                </div>
               </div>
+              <!-- Detalle de cuotas -->
+              <div class="px-4 py-3">
+                <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
+                <div class="space-y-1.5 max-h-40 overflow-y-auto">
+                  @for (cuota of schedule.installments; track cuota.numeroCuota) {
+                    <div class="flex items-center justify-between text-xs bg-white/20 rounded-lg px-3 py-2">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold">Cuota {{ cuota.numeroCuota }}</span>
+                        @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+                          <span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">✓ PAGADA</span>
+                        } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
+                          <span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded">⚠ VENCIDA</span>
+                        } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
+                          <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded">✗ CANCELADA</span>
+                        } @else {
+                          <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">⏳ PENDIENTE</span>
+                        }
+                      </div>
+                      <div class="text-right">
+                        <div class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</div>
+                        <div class="text-[10px] opacity-75">{{ formatDate(cuota.dueDate) }}</div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              </div>
+              <!-- Footer con resumen -->
+              @if (schedule.cuotasPendientes > 0) {
+                <div class="px-4 py-2 bg-black/20 text-xs">
+                  <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> cuota(s) pendiente(s)
+                  @if (schedule.nextDueDate) {
+                    · Próximo vencimiento: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
+                  }
+                </div>
+              }
             </div>
           }
         </div>
@@ -423,11 +460,60 @@ import { AuthService } from '../../core/services/auth.service';
               </div>
             }
 
+            <!-- Selector de Cuota para Cancelación -->
+            @if (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0) {
+              <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">💰</span>
+                  <div>
+                    <h4 class="text-xs font-bold text-green-900 dark:text-green-100">Seleccionar Cuota a Cancelar</h4>
+                    <p class="text-[9px] text-green-600 dark:text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
+                  </div>
+                </div>
+
+                <div class="space-y-1.5">
+                  @for (cuota of pendingInstallmentsForCancellation(); track cuota.numeroCuota) {
+                    <label
+                      class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
+                      [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
+                        ? 'bg-green-500 text-white shadow-md'
+                        : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
+                    >
+                      <div class="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="cuotaCancelacion"
+                          [value]="cuota"
+                          [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
+                          (change)="selectedInstallmentForCancellation.set(cuota)"
+                          class="w-4 h-4 text-green-600"
+                        />
+                        <div>
+                          <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
+                          <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            Vence: {{ formatDate(cuota.dueDate) }}
+                          </span>
+                        </div>
+                      </div>
+                      <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                    </label>
+                  }
+                </div>
+
+                @if (!selectedInstallmentForCancellation()) {
+                  <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
+                    <span>⚠️</span>
+                    <span>Debe seleccionar una cuota para registrar la cancelación</span>
+                  </div>
+                }
+              </div>
+            }
+
             <!-- Botones de Acción - COMPACTOS -->
             <div class="flex gap-2 pt-2">
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid()"
+                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0 && !selectedInstallmentForCancellation())"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                 class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -971,6 +1057,43 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
 
+  // Cuota seleccionada para cancelación/pago
+  selectedInstallmentForCancellation = signal<any | null>(null);
+
+  // Computed para detectar si la tipificación seleccionada es de tipo Cancelación (código CA)
+  isCancellationTypification = computed(() => {
+    const selected = this.selectedClassification();
+    if (!selected) return false;
+    // Detectar por código "CA" o por label que contenga "CANCELACION"
+    return selected.codigo === 'CA' ||
+           selected.label?.toUpperCase().includes('CANCELACION') ||
+           selected.label?.toUpperCase().includes('CANCELACIÓN');
+  });
+
+  // Computed para obtener las cuotas pendientes de todas las promesas activas
+  pendingInstallmentsForCancellation = computed(() => {
+    const schedules = this.activePaymentSchedules();
+    const allPending: any[] = [];
+
+    for (const schedule of schedules) {
+      if (schedule.installments) {
+        for (const cuota of schedule.installments) {
+          // El backend usa PAGADA/CANCELADA, no PAGADO/CANCELADO
+          const estado = cuota.status?.toUpperCase();
+          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO') {
+            allPending.push({
+              ...cuota,
+              scheduleId: schedule.id,
+              grupoPromesaUuid: schedule.grupoPromesaUuid
+            });
+          }
+        }
+      }
+    }
+
+    return allPending;
+  });
+
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
 
@@ -1284,6 +1407,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Cargar historial de gestiones
     this.loadManagementHistory();
 
+    // Cargar promesas de pago activas
+    if (client.id) {
+      this.loadActivePaymentSchedules(client.id);
+    }
+
     console.log('✅ [MANUAL] Cliente cargado exitosamente');
   }
 
@@ -1565,13 +1693,65 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         return of([]);
       })
     ).subscribe({
-      next: (schedules) => {
-        console.log('✅ Cronogramas activos cargados:', schedules);
-        this.activePaymentSchedules.set(schedules);
+      next: (records: any[]) => {
+        console.log('✅ Registros de promesas cargados:', records);
 
-        // Si hay promesas activas, mostrar alerta
-        if (schedules && schedules.length > 0) {
-          console.log(`📅 ¡Cliente tiene ${schedules.length} promesa(s) de pago activa(s)!`);
+        if (!records || records.length === 0) {
+          this.activePaymentSchedules.set([]);
+          return;
+        }
+
+        // Agrupar registros por grupoPromesaUuid
+        const groupedSchedules = new Map<string, any[]>();
+        for (const record of records) {
+          const uuid = record.grupoPromesaUuid;
+          if (uuid) {
+            if (!groupedSchedules.has(uuid)) {
+              groupedSchedules.set(uuid, []);
+            }
+            groupedSchedules.get(uuid)!.push(record);
+          }
+        }
+
+        // Transformar cada grupo a un formato para mostrar
+        const schedules = Array.from(groupedSchedules.entries()).map(([uuid, cuotas]) => {
+          // Ordenar cuotas por número
+          cuotas.sort((a, b) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
+
+          // Calcular monto total sumando todas las cuotas
+          const totalAmount = cuotas.reduce((sum, c) => sum + (c.montoPromesa || 0), 0);
+
+          // Encontrar la próxima cuota pendiente (el backend usa PAGADA, no PAGADO)
+          const pendingCuotas = cuotas.filter(c => c.estadoPago !== 'PAGADA' && c.estadoPago !== 'PAGADO' && c.estadoPago !== 'CUMPLIDO' && c.estadoPago !== 'CANCELADA');
+          const nextCuota = pendingCuotas[0] || cuotas[0];
+
+          return {
+            id: uuid,
+            grupoPromesaUuid: uuid,
+            totalAmount: totalAmount,
+            numberOfInstallments: cuotas[0]?.totalCuotas || cuotas.length,
+            fechaGestion: cuotas[0]?.fechaGestion,
+            installments: cuotas.map(c => ({
+              id: c.id,  // ID del registro en registros_gestion_v2 (necesario para actualizar estado)
+              numeroCuota: c.numeroCuota,
+              monto: c.montoPromesa,
+              dueDate: c.fechaPromesaPago,
+              status: c.estadoPago || 'PENDIENTE'
+            })),
+            nextDueDate: nextCuota?.fechaPromesaPago,
+            cuotasPendientes: pendingCuotas.length
+          };
+        });
+
+        // Filtrar solo cronogramas que tienen al menos una cuota pendiente
+        const activeSchedules = schedules.filter(s => s.cuotasPendientes > 0);
+
+        console.log('📅 Cronogramas transformados:', schedules);
+        console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
+        this.activePaymentSchedules.set(activeSchedules);
+
+        if (activeSchedules.length > 0) {
+          console.log(`📅 ¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
         }
       }
     });
@@ -1675,6 +1855,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return '00:00:00';
     }
     return this.formatTime(callDetail.durationSeconds);
+  }
+
+  /**
+   * Calcula la duración de la llamada en segundos desde callStartTime hasta ahora
+   */
+  private calculateCallDurationSeconds(): number {
+    if (!this.callStartTime) return 0;
+    const startTime = new Date(this.callStartTime).getTime();
+    const now = new Date().getTime();
+    return Math.floor((now - startTime) / 1000);
   }
 
   ngOnDestroy() {
@@ -2535,9 +2725,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
     console.log('[SAVE] Final paymentScheduleData:', paymentScheduleData);
 
+    // ⚠️ VALIDACIÓN: No permitir registrar nueva promesa si hay cuotas pendientes
+    if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
+      const activeSchedules = this.activePaymentSchedules();
+      const hasPendingInstallments = activeSchedules.some(schedule => schedule.cuotasPendientes > 0);
+
+      if (hasPendingInstallments) {
+        this.saving.set(false);
+        alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa de pago activa con cuotas pendientes.\n\nDebe esperar a que se completen o cancelen las cuotas pendientes antes de registrar una nueva promesa.');
+        return;
+      }
+    }
+
     // Si hay cronograma de pago con cuotas, usar el endpoint específico
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
       const finalTypificationId = typificationLevel3Id || typificationLevel2Id || typificationLevel1Id;
+
+      // Determinar si es una llamada activa o gestión manual
+      const isActiveCallSchedule = this.callActive() || !!this.callStartTime;
 
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
@@ -2547,7 +2752,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idSubcartera: 1,
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones,
-        metodoContacto: 'LLAMADA_SALIENTE',
+        metodoContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
@@ -2575,6 +2780,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       });
     } else {
       // Gestión normal sin cronograma de pago
+      // Determinar si es una llamada activa o gestión manual
+      const isActiveCall = this.callActive() || !!this.callStartTime;
+
+      // Obtener información del usuario actual
+      const currentUser = this.authService.getCurrentUser();
+
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
         advisorId: 'ADV-001',
@@ -2595,7 +2806,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         level3Id: typificationLevel3Id,
         level3Name: level3?.label || null,
 
-        observations: this.managementForm.observaciones
+        observations: this.managementForm.observaciones,
+
+        // Campos de contexto de gestión
+        metodoContacto: isActiveCall ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
+        canalContacto: isActiveCall ? 'TELEFONO' : 'SISTEMA',
+        idCampana: null,  // Se puede obtener del contexto si hay campaña activa
+        idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
+        duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null,
+
+        // Información del agente y dispositivo
+        nombreAgente: currentUser?.username || currentUser?.firstName || 'Sistema',
+        userAgent: navigator.userAgent
       };
 
       this.managementService.createManagement(request).subscribe({
@@ -2603,7 +2825,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           if (this.callStartTime && this.callActive()) {
             this.registerCallToBackend(response.id);
           }
-          this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+
+          // Si es una cancelación y hay cuota seleccionada, actualizar su estado a PAGADA
+          const selectedCuota = this.selectedInstallmentForCancellation();
+          if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
+            console.log('💰 Actualizando estado de cuota a PAGADA:', selectedCuota);
+
+            const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
+            this.managementService.updatePaymentStatus(
+              selectedCuota.id,
+              'PAGADA',
+              selectedCuota.monto,
+              today
+            ).subscribe({
+              next: (updatedRecord) => {
+                console.log('✅ Estado de cuota actualizado:', updatedRecord);
+                // Limpiar la selección
+                this.selectedInstallmentForCancellation.set(null);
+                // Recargar los cronogramas activos para reflejar el cambio
+                const customerId = this.customerData().id;
+                if (customerId) {
+                  this.loadActivePaymentSchedules(customerId);
+                }
+                this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+              },
+              error: (err) => {
+                console.error('⚠️ Error actualizando estado de cuota:', err);
+                // Aunque falle la actualización del estado, la gestión ya se guardó
+                this.selectedInstallmentForCancellation.set(null);
+                this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+              }
+            });
+          } else {
+            this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+          }
         },
         error: (error) => {
           console.error('Error al guardar gestión:', error);
@@ -2889,6 +3144,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Muestra el detalle de un cronograma de pago
+   */
+  showPaymentScheduleDetail(schedule: any) {
+    console.log('📅 Detalle de promesa de pago:', schedule);
+
+    // Construir mensaje con las cuotas
+    let message = `PROMESA DE PAGO\n\n`;
+    message += `Monto Total: S/ ${schedule.totalAmount?.toFixed(2) || '0.00'}\n`;
+    message += `Número de Cuotas: ${schedule.numberOfInstallments}\n\n`;
+    message += `DETALLE DE CUOTAS:\n`;
+
+    if (schedule.installments && schedule.installments.length > 0) {
+      for (const cuota of schedule.installments) {
+        const fechaStr = cuota.dueDate ? this.formatDate(cuota.dueDate) : '-';
+        let estadoStr = '⏳ Pendiente';
+        if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+          estadoStr = '✅ PAGADA';
+        } else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
+          estadoStr = '⚠️ VENCIDA';
+        } else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
+          estadoStr = '✗ CANCELADA';
+        }
+        message += `  Cuota ${cuota.numeroCuota}: S/ ${cuota.monto?.toFixed(2) || '0.00'} - ${fechaStr} - ${estadoStr}\n`;
+      }
+    }
+
+    alert(message);
+  }
+
   getContactClassificationLabel(id: string): string {
     const typification = this.contactClassifications().find(c => c.id === id);
     if (!typification) return id;
@@ -3064,6 +3349,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // Cargar historial de gestiones del cliente
     this.loadManagementHistory();
+
+    // Cargar promesas de pago activas
+    if (customer.id) {
+      this.loadActivePaymentSchedules(customer.id);
+    }
 
     console.log('[TEST] Cliente cargado exitosamente');
   }

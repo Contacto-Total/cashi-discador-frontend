@@ -16,6 +16,7 @@ export interface RegistroGestionV2 {
   idCliente: number;
   idAgente: number;
   idCampana?: number;
+  idLlamada?: number;
   fechaGestion?: string;
   duracionSegundos?: number;
   tipificacion: { id: number };
@@ -31,6 +32,9 @@ export interface RegistroGestionV2 {
   fechaSeguimiento?: string;
   requiereSeguimiento?: boolean;
   fechaCreacion?: string;
+  rutaJerarquia?: string;
+  nombreAgente?: string;
+  userAgent?: string;
 }
 
 export interface ManagementResource {
@@ -104,6 +108,17 @@ export interface CreateManagementRequest {
   level3Name?: string | null;
 
   observations?: string;
+
+  // Campos adicionales para registro completo
+  metodoContacto?: 'LLAMADA_SALIENTE' | 'LLAMADA_ENTRANTE' | 'WHATSAPP' | 'SMS' | 'EMAIL' | 'PRESENCIAL' | 'GESTION_MANUAL';
+  canalContacto?: 'TELEFONO' | 'WHATSAPP' | 'SMS' | 'EMAIL' | 'PRESENCIAL' | 'SISTEMA';
+  idCampana?: number | null;
+  idLlamada?: number | null;
+  duracionSegundos?: number | null;
+
+  // Información del agente y dispositivo
+  nombreAgente?: string;
+  userAgent?: string;
 }
 
 export interface StartCallRequest {
@@ -245,6 +260,32 @@ export class ManagementService {
   }
 
   /**
+   * Actualiza el estado de pago de una cuota de promesa de pago
+   * @param recordId ID del registro en registros_gestion_v2
+   * @param estadoPago Nuevo estado: PENDIENTE, PAGADA, VENCIDA, PARCIAL, CANCELADA
+   * @param montoPagadoReal Monto realmente pagado (opcional)
+   * @param fechaPagoReal Fecha en que se realizó el pago (opcional)
+   */
+  updatePaymentStatus(
+    recordId: number,
+    estadoPago: 'PENDIENTE' | 'PAGADA' | 'VENCIDA' | 'PARCIAL' | 'CANCELADA',
+    montoPagadoReal?: number,
+    fechaPagoReal?: string
+  ): Observable<RegistroGestionV2> {
+    console.log('[PAYMENT-STATUS] Updating payment status:', { recordId, estadoPago, montoPagadoReal, fechaPagoReal });
+
+    let params = `estadoPago=${estadoPago}`;
+    if (montoPagadoReal !== undefined) {
+      params += `&montoPagadoReal=${montoPagadoReal}`;
+    }
+    if (fechaPagoReal) {
+      params += `&fechaPagoReal=${fechaPagoReal}`;
+    }
+
+    return this.http.put<RegistroGestionV2>(`${this.baseUrl}/${recordId}/payment-status?${params}`, {});
+  }
+
+  /**
    * Obtiene las cabeceras de montos (campos numéricos decimales) para una subcartera
    * Esto permite mostrar los nombres visuales de los campos de monto
    */
@@ -260,6 +301,13 @@ export class ManagementService {
     // Determinar cuál es la tipificación final (la de mayor nivel seleccionada)
     const finalTypificationId = request.level3Id || request.level2Id || request.level1Id;
 
+    // Generar ruta jerárquica: "Nivel1 > Nivel2 > Nivel3"
+    const rutaParts: string[] = [];
+    if (request.level1Name) rutaParts.push(request.level1Name);
+    if (request.level2Name) rutaParts.push(request.level2Name);
+    if (request.level3Name) rutaParts.push(request.level3Name);
+    const rutaJerarquia = rutaParts.join(' > ');
+
     const backendRequest: RegistroGestionV2 = {
       idTenant: request.tenantId,
       idCartera: request.portfolioId,
@@ -268,9 +316,18 @@ export class ManagementService {
       idAgente: this.extractAgentId(request.advisorId),
       tipificacion: { id: finalTypificationId },
       observaciones: request.observations || '',
-      canalContacto: request.phone || '',
-      metodoContacto: 'LLAMADA_SALIENTE',
-      estadoGestion: 'COMPLETADA'
+      // Campos corregidos
+      canalContacto: request.canalContacto || 'SISTEMA',
+      metodoContacto: request.metodoContacto || 'GESTION_MANUAL',
+      estadoGestion: 'COMPLETADA',
+      rutaJerarquia: rutaJerarquia || undefined,
+      // Campos opcionales de llamada
+      idCampana: request.idCampana || undefined,
+      idLlamada: request.idLlamada || undefined,
+      duracionSegundos: request.duracionSegundos || undefined,
+      // Información del agente y dispositivo
+      nombreAgente: request.nombreAgente || undefined,
+      userAgent: request.userAgent || undefined
     };
 
     // Agregar niveles jerárquicos si existen
