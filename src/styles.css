@@ -3221,4 +3221,189 @@ body.light-theme app-collection-management .bg-slate-800 {
   background-color: #f1f5f9 !important;
 }
 
+/* ========================================
+   Dynamic Field Renderer - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-dynamic-field-renderer .bg-purple-950\/20,
+body.light-theme app-dynamic-field-renderer .bg-purple-950\/20 {
+  background-color: #faf5ff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .border-purple-900\/50,
+body.light-theme app-dynamic-field-renderer .border-purple-900\/50 {
+  border-color: #e9d5ff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-purple-200,
+body.light-theme app-dynamic-field-renderer .text-purple-200 {
+  color: #7c3aed !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .border-purple-800,
+body.light-theme app-dynamic-field-renderer .border-purple-800 {
+  border-color: #e9d5ff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-gray-100,
+body.light-theme app-dynamic-field-renderer .text-gray-100 {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-gray-400,
+body.light-theme app-dynamic-field-renderer .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-gray-300,
+body.light-theme app-dynamic-field-renderer .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .border-gray-600,
+body.light-theme app-dynamic-field-renderer .border-gray-600 {
+  border-color: #d1d5db !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .bg-slate-800,
+body.light-theme app-dynamic-field-renderer .bg-slate-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .bg-gray-700,
+body.light-theme app-dynamic-field-renderer .bg-gray-700 {
+  background-color: #f3f4f6 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer input,
+:root:not(.dark) app-dynamic-field-renderer select,
+:root:not(.dark) app-dynamic-field-renderer textarea,
+body.light-theme app-dynamic-field-renderer input,
+body.light-theme app-dynamic-field-renderer select,
+body.light-theme app-dynamic-field-renderer textarea {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+/* ========================================
+   Payment Schedule Component - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-payment-schedule .bg-slate-800,
+:root:not(.dark) app-payment-schedule .bg-gray-800,
+body.light-theme app-payment-schedule .bg-slate-800,
+body.light-theme app-payment-schedule .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-payment-schedule .bg-slate-900,
+:root:not(.dark) app-payment-schedule .bg-gray-900,
+body.light-theme app-payment-schedule .bg-slate-900,
+body.light-theme app-payment-schedule .bg-gray-900 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-payment-schedule .text-white,
+body.light-theme app-payment-schedule .text-white {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-payment-schedule .text-gray-300,
+:root:not(.dark) app-payment-schedule .text-gray-400,
+body.light-theme app-payment-schedule .text-gray-300,
+body.light-theme app-payment-schedule .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-payment-schedule .border-gray-700,
+:root:not(.dark) app-payment-schedule .border-gray-600,
+body.light-theme app-payment-schedule .border-gray-700,
+body.light-theme app-payment-schedule .border-gray-600 {
+  border-color: #e5e7eb !important;
+}
+
+:root:not(.dark) app-payment-schedule input,
+:root:not(.dark) app-payment-schedule select,
+body.light-theme app-payment-schedule input,
+body.light-theme app-payment-schedule select {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+/* ========================================
+   Payment Schedule View - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-payment-schedule-view .bg-slate-800,
+:root:not(.dark) app-payment-schedule-view .bg-gray-800,
+body.light-theme app-payment-schedule-view .bg-slate-800,
+body.light-theme app-payment-schedule-view .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .bg-slate-900,
+:root:not(.dark) app-payment-schedule-view .bg-gray-900,
+body.light-theme app-payment-schedule-view .bg-slate-900,
+body.light-theme app-payment-schedule-view .bg-gray-900 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .text-white,
+body.light-theme app-payment-schedule-view .text-white {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .text-gray-300,
+:root:not(.dark) app-payment-schedule-view .text-gray-400,
+body.light-theme app-payment-schedule-view .text-gray-300,
+body.light-theme app-payment-schedule-view .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .border-gray-700,
+:root:not(.dark) app-payment-schedule-view .border-slate-700,
+body.light-theme app-payment-schedule-view .border-gray-700,
+body.light-theme app-payment-schedule-view .border-slate-700 {
+  border-color: #e5e7eb !important;
+}
+
+/* ========================================
+   Select Supervisor Modal - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-select-supervisor-modal .bg-slate-900,
+:root:not(.dark) app-select-supervisor-modal .bg-gray-900,
+body.light-theme app-select-supervisor-modal .bg-slate-900,
+body.light-theme app-select-supervisor-modal .bg-gray-900 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .bg-slate-800,
+:root:not(.dark) app-select-supervisor-modal .bg-gray-800,
+body.light-theme app-select-supervisor-modal .bg-slate-800,
+body.light-theme app-select-supervisor-modal .bg-gray-800 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .text-white,
+body.light-theme app-select-supervisor-modal .text-white {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .text-gray-300,
+:root:not(.dark) app-select-supervisor-modal .text-gray-400,
+body.light-theme app-select-supervisor-modal .text-gray-300,
+body.light-theme app-select-supervisor-modal .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .border-gray-700,
+:root:not(.dark) app-select-supervisor-modal .border-slate-700,
+body.light-theme app-select-supervisor-modal .border-gray-700,
+body.light-theme app-select-supervisor-modal .border-slate-700 {
+  border-color: #e5e7eb !important;
+}
+
 
