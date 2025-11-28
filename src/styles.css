@@ -4325,3 +4325,101 @@ html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600
   color: #dbeafe !important;
 }
 
+/* ===============================================
+   PAYMENT-SCHEDULE COMPONENT LIGHT MODE FIXES
+   =============================================== */
+
+/* Container principal */
+html:not(.dark) app-payment-schedule .payment-schedule-container {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Labels */
+html:not(.dark) app-payment-schedule .text-slate-700 {
+  color: #334155 !important;
+}
+
+/* Botones de monto no seleccionados */
+html:not(.dark) app-payment-schedule .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-payment-schedule .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-payment-schedule .text-slate-700 {
+  color: #334155 !important;
+}
+
+/* Botón seleccionado */
+html:not(.dark) app-payment-schedule .border-blue-500.bg-blue-500 {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+/* Detalle del cronograma */
+html:not(.dark) app-payment-schedule .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+/* Inputs */
+html:not(.dark) app-payment-schedule input {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-payment-schedule input:focus {
+  border-color: #3b82f6 !important;
+}
+
+/* Resumen */
+html:not(.dark) app-payment-schedule .bg-emerald-50 {
+  background-color: #ecfdf5 !important;
+}
+
+html:not(.dark) app-payment-schedule .border-emerald-200 {
+  border-color: #a7f3d0 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-emerald-700 {
+  color: #047857 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-emerald-600 {
+  color: #059669 !important;
+}
+
+/* Iconos background */
+html:not(.dark) app-payment-schedule .bg-emerald-100 {
+  background-color: #d1fae5 !important;
+}
+
+html:not(.dark) app-payment-schedule .bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+html:not(.dark) app-payment-schedule .bg-amber-100 {
+  background-color: #fef3c7 !important;
+}
+
+/* Textos de iconos */
+html:not(.dark) app-payment-schedule .text-emerald-600 {
+  color: #059669 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-blue-600 {
+  color: #2563eb !important;
+}
+
+html:not(.dark) app-payment-schedule .text-amber-600 {
+  color: #d97706 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-slate-500 {
+  color: #64748b !important;
+}
+

@@ -1,6 +1,7 @@
 import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { PaymentScheduleConfig, PaymentInstallment } from '../../../maintenance/models/typification-v2.model';
 
 export interface AmountOption {
@@ -12,40 +13,46 @@ export interface AmountOption {
 @Component({
   selector: 'app-payment-schedule',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    <div class="payment-schedule-container">
+    <div class="payment-schedule-container bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 transition-colors duration-300">
       <!-- Selector de Monto -->
-      <div class="field-group">
-        <label class="field-label">
-          <span class="label-icon">💰</span>
+      <div class="field-group mb-5">
+        <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
+          <div class="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+            <lucide-angular name="wallet" [size]="14" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
+          </div>
           Seleccionar Monto
         </label>
-        <div class="amount-chips">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
           @for (option of regularAmountOptions(); track option.field) {
             <button
               type="button"
-              class="amount-chip"
-              [class.selected]="selectedField() === option.field && !isCustomAmount()"
+              [class]="'flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ' +
+                (selectedField() === option.field && !isCustomAmount()
+                  ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                  : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
               (click)="selectAmount(option.value, option.field)"
             >
-              <span class="chip-label">{{ option.label }}</span>
-              <span class="chip-value">{{ formatCurrency(option.value) }}</span>
+              <span class="text-[10px] opacity-70 leading-tight text-center">{{ option.label }}</span>
+              <span class="text-sm font-bold mt-1">{{ formatCurrency(option.value) }}</span>
             </button>
           }
-          <!-- Opción personalizada - solo si está habilitada -->
+          <!-- Opción personalizada -->
           @if (hasCustomOption()) {
             <button
               type="button"
-              class="amount-chip custom"
-              [class.selected]="isCustomAmount()"
+              [class]="'flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ' +
+                (isCustomAmount()
+                  ? 'border-purple-500 bg-purple-500 dark:bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                  : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-600')"
               (click)="enableCustomAmount()"
             >
-              <span class="chip-label">Otro monto</span>
+              <span class="text-[10px] opacity-70">Otro monto</span>
               @if (isCustomAmount()) {
                 <input
                   type="number"
-                  class="custom-input"
+                  class="w-full mt-1 px-2 py-1 border border-white/30 rounded text-center text-sm font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white"
                   [(ngModel)]="customAmountValue"
                   (ngModelChange)="onCustomAmountChange($event)"
                   (click)="$event.stopPropagation()"
@@ -53,6 +60,8 @@ export interface AmountOption {
                   min="0"
                   step="0.01"
                 >
+              } @else {
+                <lucide-angular name="edit-3" [size]="16" class="mt-1"></lucide-angular>
               }
             </button>
           }
@@ -61,17 +70,21 @@ export interface AmountOption {
 
       <!-- Selector de Cuotas -->
       @if (selectedAmount() > 0) {
-        <div class="field-group">
-          <label class="field-label">
-            <span class="label-icon">📅</span>
+        <div class="field-group mb-5 animate-fade-in">
+          <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
+            <div class="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+              <lucide-angular name="calendar-days" [size]="14" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+            </div>
             Número de Cuotas
           </label>
-          <div class="installments-selector">
+          <div class="flex flex-wrap gap-2">
             @for (num of installmentOptions; track num) {
               <button
                 type="button"
-                class="installment-btn"
-                [class.selected]="numberOfInstallments() === num"
+                [class]="'px-4 py-2 border-2 rounded-lg cursor-pointer transition-all duration-200 text-sm font-medium hover:shadow-md ' +
+                  (numberOfInstallments() === num
+                    ? 'border-emerald-500 bg-emerald-500 dark:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30'
+                    : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-slate-600')"
                 (click)="setInstallments(num)"
               >
                 {{ num }} {{ num === 1 ? 'cuota' : 'cuotas' }}
@@ -83,36 +96,39 @@ export interface AmountOption {
 
       <!-- Detalle de Cuotas -->
       @if (installments().length > 0) {
-        <div class="field-group">
-          <label class="field-label">
-            <span class="label-icon">📋</span>
+        <div class="field-group animate-fade-in">
+          <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
+            <div class="w-6 h-6 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+              <lucide-angular name="list-ordered" [size]="14" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+            </div>
             Detalle del Cronograma
           </label>
-          <div class="installments-detail">
+          <div class="bg-white dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden transition-colors duration-300">
             @for (installment of installments(); track installment.numeroCuota) {
-              <div class="installment-row">
-                <div class="installment-number">
+              <div class="grid grid-cols-1 sm:grid-cols-[100px_1fr_1fr] gap-3 p-3 border-b border-slate-100 dark:border-slate-600 last:border-b-0 items-center transition-colors duration-300">
+                <div class="font-bold text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2">
+                  <lucide-angular name="hash" [size]="14"></lucide-angular>
                   Cuota {{ installment.numeroCuota }}
                 </div>
-                <div class="installment-amount">
-                  <label>Monto:</label>
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-slate-500 dark:text-slate-400 min-w-[50px]">Monto:</label>
                   <input
                     type="number"
                     [(ngModel)]="installment.monto"
                     (ngModelChange)="onInstallmentChange()"
                     min="0"
                     step="0.01"
-                    class="amount-input"
+                    class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                 </div>
-                <div class="installment-date">
-                  <label>Fecha:</label>
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-slate-500 dark:text-slate-400 min-w-[50px]">Fecha:</label>
                   <input
                     type="date"
                     [(ngModel)]="installment.fechaPago"
                     (ngModelChange)="onInstallmentChange()"
                     [min]="minDate"
-                    class="date-input"
+                    class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                 </div>
               </div>
@@ -120,15 +136,18 @@ export interface AmountOption {
           </div>
 
           <!-- Resumen -->
-          <div class="schedule-summary">
-            <div class="summary-row">
-              <span>Monto Total:</span>
-              <span class="total-amount">{{ formatCurrency(totalAmount()) }}</span>
+          <div class="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl border border-emerald-200 dark:border-emerald-800 transition-colors duration-300">
+            <div class="flex justify-between items-center text-sm text-emerald-700 dark:text-emerald-300">
+              <span class="flex items-center gap-2">
+                <lucide-angular name="calculator" [size]="16"></lucide-angular>
+                Monto Total:
+              </span>
+              <span class="text-lg font-bold">{{ formatCurrency(totalAmount()) }}</span>
             </div>
             @if (numberOfInstallments() > 1) {
-              <div class="summary-row">
+              <div class="flex justify-between items-center text-sm text-emerald-600 dark:text-emerald-400 mt-2 pt-2 border-t border-emerald-200 dark:border-emerald-700">
                 <span>Monto por cuota:</span>
-                <span>{{ formatCurrency(amountPerInstallment()) }}</span>
+                <span class="font-semibold">{{ formatCurrency(amountPerInstallment()) }}</span>
               </div>
             }
           </div>
@@ -137,210 +156,34 @@ export interface AmountOption {
     </div>
   `,
   styles: [`
-    .payment-schedule-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      padding: 1rem;
-      background: #f8fafc;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .field-label {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 600;
-      color: #334155;
-      font-size: 0.875rem;
-    }
-
-    .label-icon {
-      font-size: 1rem;
-    }
-
-    .amount-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-    }
-
-    .amount-chip {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.75rem 1rem;
-      border: 2px solid #e2e8f0;
-      border-radius: 8px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      min-width: 120px;
-    }
-
-    .amount-chip:hover {
-      border-color: #3b82f6;
-      background: #eff6ff;
-    }
-
-    .amount-chip.selected {
-      border-color: #3b82f6;
-      background: #3b82f6;
-      color: white;
-    }
-
-    .amount-chip.custom {
-      min-width: 140px;
-    }
-
-    .chip-label {
-      font-size: 0.75rem;
-      opacity: 0.8;
-    }
-
-    .chip-value {
-      font-size: 1rem;
-      font-weight: 600;
-    }
-
-    .custom-input {
-      width: 100%;
-      padding: 0.25rem;
-      border: 1px solid white;
-      border-radius: 4px;
-      text-align: center;
-      font-size: 0.875rem;
-      margin-top: 0.25rem;
-      background: rgba(255,255,255,0.9);
-      color: #1e293b;
-    }
-
-    .installments-selector {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    .installment-btn {
-      padding: 0.5rem 1rem;
-      border: 2px solid #e2e8f0;
-      border-radius: 8px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-size: 0.875rem;
-    }
-
-    .installment-btn:hover {
-      border-color: #10b981;
-      background: #ecfdf5;
-    }
-
-    .installment-btn.selected {
-      border-color: #10b981;
-      background: #10b981;
-      color: white;
-    }
-
-    .installments-detail {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .installment-row {
-      display: grid;
-      grid-template-columns: 80px 1fr 1fr;
-      gap: 1rem;
-      align-items: center;
-      padding: 0.5rem;
-      border-bottom: 1px solid #f1f5f9;
-    }
-
-    .installment-row:last-child {
-      border-bottom: none;
-    }
-
-    .installment-number {
-      font-weight: 600;
-      color: #3b82f6;
-      font-size: 0.875rem;
-    }
-
-    .installment-amount,
-    .installment-date {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .installment-amount label,
-    .installment-date label {
-      font-size: 0.75rem;
-      color: #64748b;
-      min-width: 45px;
-    }
-
-    .amount-input,
-    .date-input {
-      flex: 1;
-      padding: 0.5rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.875rem;
-    }
-
-    .amount-input:focus,
-    .date-input:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-    }
-
-    .schedule-summary {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: #f0fdf4;
-      border-radius: 8px;
-      border: 1px solid #bbf7d0;
-    }
-
-    .summary-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.875rem;
-      color: #166534;
-    }
-
-    .total-amount {
-      font-size: 1.125rem;
-      font-weight: 700;
-    }
-
-    @media (max-width: 640px) {
-      .installment-row {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
       }
-
-      .amount-chips {
-        flex-direction: column;
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
+    }
 
-      .amount-chip {
-        width: 100%;
-      }
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    /* Date input styling for dark mode */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0);
+    }
+
+    :host-context(html.dark) input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+    }
+
+    /* Number input arrows */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      opacity: 1;
     }
   `]
 })
@@ -349,7 +192,7 @@ export class PaymentScheduleComponent implements OnInit {
   availableAmounts = input<AmountOption[]>([]);
   @Input() maxInstallments: number = 6;
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
-  @Output() customAmountSelected = new EventEmitter<boolean>(); // Emite cuando se selecciona monto personalizado
+  @Output() customAmountSelected = new EventEmitter<boolean>();
 
   // Signals
   selectedAmount = signal<number>(0);
@@ -359,21 +202,21 @@ export class PaymentScheduleComponent implements OnInit {
   customAmountValue: number = 0;
   private _isCustomAmount = signal<boolean>(false);
 
-  // Computed - now reactive because availableAmounts is a signal
+  // Computed
   amountOptions = computed(() => this.availableAmounts());
 
-  // Filter out the custom option for regular display
   regularAmountOptions = computed(() =>
     this.availableAmounts().filter(opt => opt.field !== 'personalizado')
   );
 
-  // Check if custom option is enabled
   hasCustomOption = computed(() =>
     this.availableAmounts().some(opt => opt.field === 'personalizado')
   );
+
   totalAmount = computed(() =>
     this.installments().reduce((sum, i) => sum + (i.monto || 0), 0)
   );
+
   amountPerInstallment = computed(() => {
     const num = this.numberOfInstallments();
     const amount = this.selectedAmount();
@@ -384,10 +227,7 @@ export class PaymentScheduleComponent implements OnInit {
   minDate: string = '';
 
   ngOnInit(): void {
-    // Generar opciones de cuotas
     this.installmentOptions = Array.from({ length: this.maxInstallments }, (_, i) => i + 1);
-
-    // Fecha mínima es hoy
     const today = new Date();
     this.minDate = today.toISOString().split('T')[0];
   }
@@ -401,13 +241,13 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
     this.generateInstallments();
-    this.customAmountSelected.emit(false); // No es monto personalizado
+    this.customAmountSelected.emit(false);
   }
 
   enableCustomAmount(): void {
     this._isCustomAmount.set(true);
     this.selectedField.set(undefined);
-    this.customAmountSelected.emit(true); // Es monto personalizado - requiere autorización
+    this.customAmountSelected.emit(true);
     if (this.customAmountValue > 0) {
       this.selectedAmount.set(this.customAmountValue);
       this.generateInstallments();
@@ -442,11 +282,9 @@ export class PaymentScheduleComponent implements OnInit {
     const today = new Date();
 
     for (let i = 0; i < numInstallments; i++) {
-      // Calcular fecha (cada 30 días)
       const dueDate = new Date(today);
       dueDate.setDate(dueDate.getDate() + (30 * (i + 1)));
 
-      // La última cuota recibe el remainder
       const installmentAmount = i === numInstallments - 1
         ? amountPerInstallment + remainder
         : amountPerInstallment;
@@ -478,7 +316,7 @@ export class PaymentScheduleComponent implements OnInit {
       montoTotal: this.selectedAmount(),
       numeroCuotas: this.numberOfInstallments(),
       cuotas: installments,
-      campoMontoOrigen: this.selectedField()  // El nombre del campo de donde viene el monto (ej: sld_mora)
+      campoMontoOrigen: this.selectedField()
     };
 
     this.scheduleChange.emit(config);
