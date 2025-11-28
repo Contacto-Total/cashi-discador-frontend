@@ -2964,103 +2964,261 @@ body.light-theme {
 }
 
 /* ============================================
-   Collection Management - Light Theme Fixes
+   Collection Management - THEME-AWARE STYLING
    ============================================ */
 
-/* Fondo principal en modo claro */
-body.light-theme app-collection-management {
-  display: block;
-  background-color: #f8fafc !important;
+/* ========================================
+   LIGHT THEME (DEFAULT)
+   ======================================== */
+
+/* Contenedor principal - Modo Claro */
+:root:not(.dark) app-collection-management > div,
+body.light-theme app-collection-management > div {
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9) !important;
 }
 
-/* Asegurar que el modo claro funcione correctamente con Tailwind */
-:root:not(.dark) app-collection-management .bg-white {
+/* Header - Modo Claro */
+:root:not(.dark) app-collection-management > div > div:nth-child(3),
+body.light-theme app-collection-management > div > div:nth-child(3) {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+}
+
+/* Paneles laterales - Modo Claro */
+:root:not(.dark) app-collection-management .bg-white,
+body.light-theme app-collection-management .bg-white {
   background-color: #ffffff !important;
 }
 
-:root:not(.dark) app-collection-management .bg-slate-50 {
-  background-color: #f8fafc !important;
-}
-
-:root:not(.dark) app-collection-management .bg-gray-50 {
-  background-color: #f9fafb !important;
-}
-
-:root:not(.dark) app-collection-management .text-gray-800,
-:root:not(.dark) app-collection-management .text-slate-800 {
-  color: #1e293b !important;
-}
-
-:root:not(.dark) app-collection-management .text-gray-600,
-:root:not(.dark) app-collection-management .text-slate-600 {
-  color: #475569 !important;
-}
-
-:root:not(.dark) app-collection-management .text-gray-500,
-:root:not(.dark) app-collection-management .text-slate-500 {
-  color: #64748b !important;
-}
-
-:root:not(.dark) app-collection-management .border-gray-200,
-:root:not(.dark) app-collection-management .border-slate-200 {
-  border-color: #e2e8f0 !important;
-}
-
-:root:not(.dark) app-collection-management .border-gray-300,
-:root:not(.dark) app-collection-management .border-slate-300 {
-  border-color: #cbd5e1 !important;
-}
-
-/* Cards y paneles en modo claro */
-:root:not(.dark) app-collection-management .bg-gray-800 {
+:root:not(.dark) app-collection-management .bg-slate-900,
+body.light-theme app-collection-management .bg-slate-900 {
   background-color: #ffffff !important;
 }
 
-:root:not(.dark) app-collection-management .bg-slate-900 {
-  background-color: #ffffff !important;
-}
-
-:root:not(.dark) app-collection-management .bg-slate-950 {
+:root:not(.dark) app-collection-management .bg-slate-950,
+body.light-theme app-collection-management .bg-slate-950 {
   background-color: #f1f5f9 !important;
 }
 
-/* Inputs y selects en modo claro */
+:root:not(.dark) app-collection-management .bg-gray-800,
+body.light-theme app-collection-management .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-gray-900,
+body.light-theme app-collection-management .bg-gray-900 {
+  background-color: #f8fafc !important;
+}
+
+/* Bordes - Modo Claro */
+:root:not(.dark) app-collection-management .border-slate-800,
+body.light-theme app-collection-management .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) app-collection-management .border-slate-700,
+body.light-theme app-collection-management .border-slate-700 {
+  border-color: #cbd5e1 !important;
+}
+
+:root:not(.dark) app-collection-management .border-gray-700,
+body.light-theme app-collection-management .border-gray-700 {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) app-collection-management .border-gray-600,
+body.light-theme app-collection-management .border-gray-600 {
+  border-color: #cbd5e1 !important;
+}
+
+/* Textos - Modo Claro */
+:root:not(.dark) app-collection-management .text-white:not([class*="bg-"]):not(button):not(h1),
+body.light-theme app-collection-management .text-white:not([class*="bg-"]):not(button):not(h1) {
+  color: #0f172a !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-300,
+body.light-theme app-collection-management .text-gray-300 {
+  color: #475569 !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-400,
+body.light-theme app-collection-management .text-gray-400 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) app-collection-management .text-slate-400,
+body.light-theme app-collection-management .text-slate-400 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) app-collection-management .text-slate-300,
+body.light-theme app-collection-management .text-slate-300 {
+  color: #475569 !important;
+}
+
+:root:not(.dark) app-collection-management .text-slate-200,
+body.light-theme app-collection-management .text-slate-200 {
+  color: #334155 !important;
+}
+
+/* Tabs - Modo Claro */
+:root:not(.dark) app-collection-management .text-blue-200,
+body.light-theme app-collection-management .text-blue-200 {
+  color: #1e40af !important;
+}
+
+:root:not(.dark) app-collection-management .bg-blue-950\/50,
+body.light-theme app-collection-management .bg-blue-950\/50 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Inputs y selects - Modo Claro */
 :root:not(.dark) app-collection-management select,
 :root:not(.dark) app-collection-management input[type="text"],
 :root:not(.dark) app-collection-management input[type="number"],
 :root:not(.dark) app-collection-management input[type="date"],
-:root:not(.dark) app-collection-management textarea {
+:root:not(.dark) app-collection-management textarea,
+body.light-theme app-collection-management select,
+body.light-theme app-collection-management input[type="text"],
+body.light-theme app-collection-management input[type="number"],
+body.light-theme app-collection-management input[type="date"],
+body.light-theme app-collection-management textarea {
   background-color: #ffffff !important;
   color: #1e293b !important;
   border-color: #cbd5e1 !important;
 }
 
-:root:not(.dark) app-collection-management select:focus,
-:root:not(.dark) app-collection-management input:focus,
-:root:not(.dark) app-collection-management textarea:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+:root:not(.dark) app-collection-management select option,
+body.light-theme app-collection-management select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
 }
 
-/* Texto en modo claro */
-:root:not(.dark) app-collection-management .text-white {
-  color: #ffffff !important;
-}
-
-/* Asegurar gradientes de fondo claro */
-:root:not(.dark) app-collection-management .from-gray-50,
-:root:not(.dark) app-collection-management .from-slate-50 {
+/* Panel central - Modo Claro */
+:root:not(.dark) app-collection-management .from-slate-900,
+body.light-theme app-collection-management .from-slate-900 {
   --tw-gradient-from: #f8fafc var(--tw-gradient-from-position) !important;
 }
 
-:root:not(.dark) app-collection-management .via-slate-50,
-:root:not(.dark) app-collection-management .via-blue-50 {
-  --tw-gradient-via: #eff6ff var(--tw-gradient-via-position) !important;
+:root:not(.dark) app-collection-management .via-gray-900,
+body.light-theme app-collection-management .via-gray-900 {
+  --tw-gradient-via: #f1f5f9 var(--tw-gradient-via-position) !important;
 }
 
-:root:not(.dark) app-collection-management .to-slate-100,
-:root:not(.dark) app-collection-management .to-blue-100 {
-  --tw-gradient-to: #f1f5f9 var(--tw-gradient-to-position) !important;
+:root:not(.dark) app-collection-management .to-slate-900,
+body.light-theme app-collection-management .to-slate-900 {
+  --tw-gradient-to: #f8fafc var(--tw-gradient-to-position) !important;
+}
+
+/* Cards de información - Modo Claro */
+:root:not(.dark) app-collection-management .bg-green-950\/30,
+body.light-theme app-collection-management .bg-green-950\/30 {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-red-950\/30,
+body.light-theme app-collection-management .bg-red-950\/30 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-red-950\/20,
+body.light-theme app-collection-management .bg-red-950\/20 {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-purple-950\/30,
+:root:not(.dark) app-collection-management .bg-purple-950\/20,
+body.light-theme app-collection-management .bg-purple-950\/30,
+body.light-theme app-collection-management .bg-purple-950\/20 {
+  background-color: rgba(147, 51, 234, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-indigo-950\/30,
+:root:not(.dark) app-collection-management .bg-indigo-950\/20,
+body.light-theme app-collection-management .bg-indigo-950\/30,
+body.light-theme app-collection-management .bg-indigo-950\/20 {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-blue-950\/30,
+body.light-theme app-collection-management .bg-blue-950\/30 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Textos de colores especiales - Modo Claro */
+:root:not(.dark) app-collection-management .text-green-300,
+body.light-theme app-collection-management .text-green-300 {
+  color: #16a34a !important;
+}
+
+:root:not(.dark) app-collection-management .text-green-400,
+body.light-theme app-collection-management .text-green-400 {
+  color: #22c55e !important;
+}
+
+:root:not(.dark) app-collection-management .text-red-300,
+body.light-theme app-collection-management .text-red-300 {
+  color: #dc2626 !important;
+}
+
+:root:not(.dark) app-collection-management .text-red-400,
+body.light-theme app-collection-management .text-red-400 {
+  color: #ef4444 !important;
+}
+
+:root:not(.dark) app-collection-management .text-blue-300,
+body.light-theme app-collection-management .text-blue-300 {
+  color: #2563eb !important;
+}
+
+:root:not(.dark) app-collection-management .text-purple-300,
+:root:not(.dark) app-collection-management .text-purple-400,
+body.light-theme app-collection-management .text-purple-300,
+body.light-theme app-collection-management .text-purple-400 {
+  color: #9333ea !important;
+}
+
+:root:not(.dark) app-collection-management .text-purple-100,
+body.light-theme app-collection-management .text-purple-100 {
+  color: #6b21a8 !important;
+}
+
+:root:not(.dark) app-collection-management .text-orange-400,
+body.light-theme app-collection-management .text-orange-400 {
+  color: #ea580c !important;
+}
+
+/* Bordes de colores - Modo Claro */
+:root:not(.dark) app-collection-management .border-green-800,
+body.light-theme app-collection-management .border-green-800 {
+  border-color: #86efac !important;
+}
+
+:root:not(.dark) app-collection-management .border-purple-700,
+body.light-theme app-collection-management .border-purple-700 {
+  border-color: #c4b5fd !important;
+}
+
+/* Fondo del resumen de deuda - Modo Claro */
+:root:not(.dark) app-collection-management .bg-red-50,
+body.light-theme app-collection-management .bg-red-50 {
+  background-color: #fef2f2 !important;
+}
+
+/* Historial items - Modo Claro */
+:root:not(.dark) app-collection-management .bg-gray-50,
+body.light-theme app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-50,
+body.light-theme app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-800,
+body.light-theme app-collection-management .bg-slate-800 {
+  background-color: #f1f5f9 !important;
 }
 
 
