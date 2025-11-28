@@ -256,25 +256,27 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                       <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
                       <div class="flex flex-wrap gap-2">
                         @for (cuota of schedule.installments; track cuota.numeroCuota) {
-                          <div class="flex items-center gap-3 text-xs bg-white/20 rounded-lg px-3 py-2">
-                            <span class="font-bold">Cuota {{ cuota.numeroCuota }}</span>
+                          <div class="flex items-center gap-2 text-xs bg-white/20 rounded-lg px-3 py-2">
+                            <span class="font-bold">C{{ cuota.numeroCuota }}</span>
+                            <span class="opacity-70">|</span>
                             <span class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
-                            <span class="opacity-80">{{ formatDate(cuota.dueDate) }}</span>
+                            <span class="opacity-70">|</span>
+                            <span class="font-medium">📅 {{ formatDate(cuota.dueDate) }}</span>
                             @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                              <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">PAGADA</span>
+                              <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">✓</span>
                             } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                              <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">VENCIDA</span>
+                              <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">!</span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-                              <span class="bg-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">CANCELADA</span>
+                              <span class="bg-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">✗</span>
                             } @else {
-                              <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">PENDIENTE</span>
+                              <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">⏳</span>
                             }
                           </div>
                         }
                       </div>
                       @if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
                         <div class="mt-2 text-xs opacity-80">
-                          <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> cuota(s) pendiente(s) · Próximo vencimiento: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
+                          <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
                         </div>
                       }
                     </div>
