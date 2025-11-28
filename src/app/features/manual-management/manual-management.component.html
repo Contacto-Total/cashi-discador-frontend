@@ -1,32 +1,32 @@
-<div class="min-h-screen bg-slate-950 dark:bg-slate-950 p-4">
+<div class="min-h-screen bg-gray-100 dark:bg-slate-950 p-4">
   <!-- Header -->
   <div class="flex items-center gap-2 mb-3">
     <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
       <lucide-angular name="clipboard-edit" [size]="16" class="text-white"></lucide-angular>
     </div>
     <div>
-      <h1 class="text-lg font-bold text-white">Gestión Manual</h1>
-      <p class="text-xs text-gray-400">Busca un cliente por documento para tipificar</p>
+      <h1 class="text-lg font-bold text-slate-800 dark:text-white">Gestión Manual</h1>
+      <p class="text-xs text-slate-500 dark:text-gray-400">Busca un cliente por documento para tipificar</p>
     </div>
   </div>
 
   <div class="section">
     <!-- Selectores de contexto -->
-    <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 mb-4">
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 mb-4">
       <div class="flex items-center gap-2 mb-4">
-        <lucide-angular name="building-2" [size]="18" class="text-blue-400"></lucide-angular>
-        <span class="text-sm font-semibold text-white">Seleccionar Contexto</span>
+        <lucide-angular name="building-2" [size]="18" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+        <span class="text-sm font-semibold text-slate-800 dark:text-white">Seleccionar Contexto</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Selector de Inquilino -->
         <div>
-          <label class="block text-xs text-gray-400 mb-1.5">Inquilino</label>
+          <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1.5">Inquilino</label>
           <select
             [value]="selectedTenantId()"
             (change)="onTenantChange($any($event.target).value)"
             [disabled]="loadingTenants()"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
             <option value="">Seleccionar...</option>
             @for (tenant of tenants; track tenant.id) {
               <option [value]="tenant.id">{{ tenant.tenantName }}</option>
@@ -36,12 +36,12 @@
 
         <!-- Selector de Cartera -->
         <div>
-          <label class="block text-xs text-gray-400 mb-1.5">Cartera</label>
+          <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1.5">Cartera</label>
           <select
             [value]="selectedPortfolioId()"
             (change)="onPortfolioChange($any($event.target).value)"
             [disabled]="!selectedTenantId() || loadingPortfolios()"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
             <option value="">Seleccionar...</option>
             @for (portfolio of portfolios; track portfolio.id) {
               <option [value]="portfolio.id">{{ portfolio.portfolioName }}</option>
@@ -51,12 +51,12 @@
 
         <!-- Selector de Subcartera -->
         <div>
-          <label class="block text-xs text-gray-400 mb-1.5">Subcartera</label>
+          <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1.5">Subcartera</label>
           <select
             [value]="selectedSubPortfolioId()"
             (change)="onSubPortfolioChange($any($event.target).value)"
             [disabled]="!selectedPortfolioId() || loadingSubPortfolios()"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
             <option value="">Seleccionar...</option>
             @for (subPortfolio of subPortfolios; track subPortfolio.id) {
               <option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }}</option>
@@ -66,18 +66,18 @@
       </div>
 
       @if (!canSearch()) {
-        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <lucide-angular name="info" [size]="16" class="text-amber-400"></lucide-angular>
-          <span class="text-xs text-amber-400">Selecciona inquilino, cartera y subcartera para buscar clientes</span>
+        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 rounded-lg">
+          <lucide-angular name="info" [size]="16" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+          <span class="text-xs text-amber-700 dark:text-amber-400">Selecciona inquilino, cartera y subcartera para buscar clientes</span>
         </div>
       }
     </div>
 
     <!-- Buscador -->
-    <div class="bg-slate-900 rounded-xl border border-slate-800 p-4" [class.opacity-50]="!canSearch()" [class.pointer-events-none]="!canSearch()">
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4" [class.opacity-50]="!canSearch()" [class.pointer-events-none]="!canSearch()">
       <div class="flex items-center gap-2 mb-4">
-        <lucide-angular name="search" [size]="18" class="text-green-400"></lucide-angular>
-        <span class="text-sm font-semibold text-white">Buscar Cliente</span>
+        <lucide-angular name="search" [size]="18" class="text-green-500 dark:text-green-400"></lucide-angular>
+        <span class="text-sm font-semibold text-slate-800 dark:text-white">Buscar Cliente</span>
       </div>
 
       <div class="flex gap-3">
@@ -89,12 +89,12 @@
             (keyup.enter)="searchByDocument()"
             [disabled]="!canSearch()"
             placeholder="Ingresa el documento del cliente (DNI/Cédula)"
-            class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50">
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50">
         </div>
         <button
           (click)="searchByDocument()"
           [disabled]="searching() || !canSearch()"
-          class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-600 disabled:to-gray-700 text-white text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 disabled:cursor-not-allowed">
+          class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 disabled:from-gray-400 disabled:to-gray-500 dark:disabled:from-gray-600 dark:disabled:to-gray-700 text-white text-sm font-semibold rounded-lg transition-all duration-200 flex items-center gap-2 disabled:cursor-not-allowed">
           @if (searching()) {
             <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
             Buscando...
@@ -107,14 +107,14 @@
 
       <!-- Resultados de autocompletado -->
       @if (searchResults().length > 0) {
-        <div class="mt-3 bg-slate-800 border border-slate-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+        <div class="mt-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
           @for (client of searchResults(); track client.documento) {
             <div
               (click)="selectClient(client)"
-              class="flex items-center gap-4 px-4 py-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700 last:border-b-0 transition-colors">
-              <span class="text-blue-400 font-semibold text-sm min-w-[100px]">{{ client.documento }}</span>
-              <span class="flex-1 text-white text-sm">{{ getClientName(client) }}</span>
-              <span class="text-gray-400 text-xs">{{ getClientPhone(client) }}</span>
+              class="flex items-center gap-4 px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-300 dark:border-slate-700 last:border-b-0 transition-colors">
+              <span class="text-blue-600 dark:text-blue-400 font-semibold text-sm min-w-[100px]">{{ client.documento }}</span>
+              <span class="flex-1 text-slate-800 dark:text-white text-sm">{{ getClientName(client) }}</span>
+              <span class="text-slate-500 dark:text-gray-400 text-xs">{{ getClientPhone(client) }}</span>
             </div>
           }
         </div>
@@ -122,9 +122,9 @@
 
       <!-- Error de búsqueda -->
       @if (searchError()) {
-        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <lucide-angular name="alert-circle" [size]="16" class="text-red-400"></lucide-angular>
-          <span class="text-xs text-red-400">{{ searchError() }}</span>
+        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/20 rounded-lg">
+          <lucide-angular name="alert-circle" [size]="16" class="text-red-500 dark:text-red-400"></lucide-angular>
+          <span class="text-xs text-red-600 dark:text-red-400">{{ searchError() }}</span>
         </div>
       }
     </div>
