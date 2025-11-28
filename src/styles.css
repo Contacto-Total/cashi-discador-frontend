@@ -2963,4 +2963,104 @@ body.light-theme {
   background-color: rgba(0, 0, 0, 0.6) !important;
 }
 
+/* ============================================
+   Collection Management - Light Theme Fixes
+   ============================================ */
+
+/* Fondo principal en modo claro */
+body.light-theme app-collection-management {
+  display: block;
+  background-color: #f8fafc !important;
+}
+
+/* Asegurar que el modo claro funcione correctamente con Tailwind */
+:root:not(.dark) app-collection-management .bg-white {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-800,
+:root:not(.dark) app-collection-management .text-slate-800 {
+  color: #1e293b !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-600,
+:root:not(.dark) app-collection-management .text-slate-600 {
+  color: #475569 !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-500,
+:root:not(.dark) app-collection-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) app-collection-management .border-gray-200,
+:root:not(.dark) app-collection-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) app-collection-management .border-gray-300,
+:root:not(.dark) app-collection-management .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+/* Cards y paneles en modo claro */
+:root:not(.dark) app-collection-management .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-900 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-950 {
+  background-color: #f1f5f9 !important;
+}
+
+/* Inputs y selects en modo claro */
+:root:not(.dark) app-collection-management select,
+:root:not(.dark) app-collection-management input[type="text"],
+:root:not(.dark) app-collection-management input[type="number"],
+:root:not(.dark) app-collection-management input[type="date"],
+:root:not(.dark) app-collection-management textarea {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+:root:not(.dark) app-collection-management select:focus,
+:root:not(.dark) app-collection-management input:focus,
+:root:not(.dark) app-collection-management textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Texto en modo claro */
+:root:not(.dark) app-collection-management .text-white {
+  color: #ffffff !important;
+}
+
+/* Asegurar gradientes de fondo claro */
+:root:not(.dark) app-collection-management .from-gray-50,
+:root:not(.dark) app-collection-management .from-slate-50 {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position) !important;
+}
+
+:root:not(.dark) app-collection-management .via-slate-50,
+:root:not(.dark) app-collection-management .via-blue-50 {
+  --tw-gradient-via: #eff6ff var(--tw-gradient-via-position) !important;
+}
+
+:root:not(.dark) app-collection-management .to-slate-100,
+:root:not(.dark) app-collection-management .to-blue-100 {
+  --tw-gradient-to: #f1f5f9 var(--tw-gradient-to-position) !important;
+}
+
 
