@@ -343,6 +343,50 @@ export class ManagementService {
   }
 
   /**
+   * Verifica si una cuota puede ser cancelada (pagada)
+   * Solo se puede cancelar si está PENDIENTE y la fecha de pago es hoy o futura
+   * @param cuotaId ID de la cuota en cuotas_promesa
+   */
+  puedeCancelarCuota(cuotaId: number): Observable<{ cuotaId: number; puedeCancelar: boolean; mensaje?: string }> {
+    console.log('[CUOTA] Checking if cuota can be canceled:', cuotaId);
+    return this.http.get<{ cuotaId: number; puedeCancelar: boolean; mensaje?: string }>(`${this.baseUrl}/cuota/${cuotaId}/puede-cancelar`);
+  }
+
+  /**
+   * Cancela (marca como PAGADA) una cuota de promesa de pago con validación de fecha
+   * Valida que la cuota esté PENDIENTE y que la fecha de pago no haya pasado
+   * @param cuotaId ID de la cuota en cuotas_promesa
+   * @param montoPagadoReal Monto realmente pagado (opcional)
+   * @param fechaPagoReal Fecha en que se realizó el pago (opcional)
+   * @param observaciones Observaciones adicionales (opcional)
+   */
+  cancelarCuota(
+    cuotaId: number,
+    montoPagadoReal?: number,
+    fechaPagoReal?: string,
+    observaciones?: string
+  ): Observable<any> {
+    console.log('[CUOTA] Canceling cuota:', { cuotaId, montoPagadoReal, fechaPagoReal, observaciones });
+
+    let params = '';
+    const paramParts: string[] = [];
+    if (montoPagadoReal !== undefined) {
+      paramParts.push(`montoPagadoReal=${montoPagadoReal}`);
+    }
+    if (fechaPagoReal) {
+      paramParts.push(`fechaPagoReal=${fechaPagoReal}`);
+    }
+    if (observaciones) {
+      paramParts.push(`observaciones=${encodeURIComponent(observaciones)}`);
+    }
+    if (paramParts.length > 0) {
+      params = '?' + paramParts.join('&');
+    }
+
+    return this.http.put<any>(`${this.baseUrl}/cuota/${cuotaId}/cancelar${params}`, {});
+  }
+
+  /**
    * Obtiene las cabeceras de montos (campos numéricos decimales) para una subcartera
    * Esto permite mostrar los nombres visuales de los campos de monto
    */

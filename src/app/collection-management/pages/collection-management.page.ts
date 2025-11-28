@@ -444,7 +444,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
             }
 
             <!-- Selector de Cuota para Cancelación -->
-            @if (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0) {
+            @if (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0)) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
@@ -454,36 +454,74 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                   </div>
                 </div>
 
-                <div class="space-y-1.5">
-                  @for (cuota of pendingInstallmentsForCancellation(); track cuota.numeroCuota) {
-                    <label
-                      class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
-                      [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
-                        ? 'bg-green-500 text-white shadow-md'
-                        : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
-                    >
-                      <div class="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="cuotaCancelacion"
-                          [value]="cuota"
-                          [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
-                          (change)="selectedInstallmentForCancellation.set(cuota)"
-                          class="w-4 h-4 text-green-600"
-                        />
-                        <div>
-                          <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                          <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
-                            Vence: {{ formatDate(cuota.dueDate) }}
-                          </span>
+                <!-- Cuotas disponibles para cancelar -->
+                @if (pendingInstallmentsForCancellation().length > 0) {
+                  <div class="space-y-1.5">
+                    @for (cuota of pendingInstallmentsForCancellation(); track cuota.numeroCuota) {
+                      <label
+                        class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
+                        [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
+                      >
+                        <div class="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="cuotaCancelacion"
+                            [value]="cuota"
+                            [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
+                            (change)="selectedInstallmentForCancellation.set(cuota)"
+                            class="w-4 h-4 text-green-600"
+                          />
+                          <div>
+                            <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
+                            <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                              Vence: {{ formatDate(cuota.dueDate) }}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
-                    </label>
-                  }
-                </div>
+                        <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                      </label>
+                    }
+                  </div>
+                }
 
-                @if (!selectedInstallmentForCancellation()) {
+                <!-- Cuotas VENCIDAS (no se pueden cancelar) -->
+                @if (overdueInstallments().length > 0) {
+                  <div class="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-sm">⛔</span>
+                      <span class="text-[10px] font-bold text-red-700 dark:text-red-400">CUOTAS VENCIDAS (No se pueden cancelar)</span>
+                    </div>
+                    <div class="space-y-1">
+                      @for (cuota of overdueInstallments(); track cuota.numeroCuota) {
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 opacity-75">
+                          <div class="flex items-center gap-3">
+                            <span class="text-red-500 dark:text-red-400 text-xs">✗</span>
+                            <div>
+                              <span class="font-bold text-xs text-red-800 dark:text-red-300">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-[10px] ml-2 text-red-600 dark:text-red-400">
+                                Venció: {{ formatDate(cuota.dueDate) }}
+                              </span>
+                            </div>
+                          </div>
+                          <span class="font-bold text-sm text-red-700 dark:text-red-400">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                        </div>
+                      }
+                    </div>
+                    <div class="text-[9px] text-red-600 dark:text-red-400 mt-2">
+                      La fecha de pago ya pasó. Estas cuotas serán marcadas como promesa rota.
+                    </div>
+                  </div>
+                }
+
+                <!-- Mensaje cuando no hay cuotas disponibles para cancelar -->
+                @if (pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0) {
+                  <div class="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center gap-1">
+                    <span>🚫</span>
+                    <span>No hay cuotas disponibles para cancelar. Todas las cuotas están vencidas.</span>
+                  </div>
+                } @else if (!selectedInstallmentForCancellation() && pendingInstallmentsForCancellation().length > 0) {
                   <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
@@ -511,7 +549,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 <!-- Botón Normal de Guardar -->
                 <button
                   (click)="saveManagement()"
-                  [disabled]="saving() || !isFormValid() || (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0 && !selectedInstallmentForCancellation())"
+                  [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation()) || (isCancellationTypification() && pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0)"
                   [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                   class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
                 >
@@ -1112,27 +1150,79 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Computed para obtener las cuotas pendientes de todas las promesas activas
+  // IMPORTANTE: Solo incluye cuotas que pueden ser canceladas (fecha de pago >= hoy)
   pendingInstallmentsForCancellation = computed(() => {
     const schedules = this.activePaymentSchedules();
     const allPending: any[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
 
     for (const schedule of schedules) {
       if (schedule.installments) {
         for (const cuota of schedule.installments) {
           // El backend usa PAGADA/CANCELADA, no PAGADO/CANCELADO
           const estado = cuota.status?.toUpperCase();
-          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO') {
-            allPending.push({
-              ...cuota,
-              scheduleId: schedule.id,
-              grupoPromesaUuid: schedule.grupoPromesaUuid
-            });
+          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO' && estado !== 'VENCIDA' && estado !== 'VENCIDO') {
+            // Validar que la fecha de pago no haya pasado
+            const fechaPago = cuota.dueDate || cuota.fechaPago;
+            if (fechaPago) {
+              const fechaPagoDate = new Date(fechaPago);
+              fechaPagoDate.setHours(0, 0, 0, 0);
+              // Solo incluir si la fecha de pago es hoy o futura
+              if (fechaPagoDate >= today) {
+                allPending.push({
+                  ...cuota,
+                  scheduleId: schedule.id,
+                  grupoPromesaUuid: schedule.grupoPromesaUuid
+                });
+              }
+            }
           }
         }
       }
     }
 
     return allPending;
+  });
+
+  // Computed para obtener cuotas VENCIDAS (fecha de pago pasada, no se pueden cancelar)
+  overdueInstallments = computed(() => {
+    const schedules = this.activePaymentSchedules();
+    const overdue: any[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const schedule of schedules) {
+      if (schedule.installments) {
+        for (const cuota of schedule.installments) {
+          const estado = cuota.status?.toUpperCase();
+          // Cuotas pendientes con fecha vencida o cuotas ya marcadas como VENCIDA
+          if (estado === 'VENCIDA' || estado === 'VENCIDO') {
+            overdue.push({
+              ...cuota,
+              scheduleId: schedule.id,
+              grupoPromesaUuid: schedule.grupoPromesaUuid
+            });
+          } else if (estado === 'PENDIENTE') {
+            const fechaPago = cuota.dueDate || cuota.fechaPago;
+            if (fechaPago) {
+              const fechaPagoDate = new Date(fechaPago);
+              fechaPagoDate.setHours(0, 0, 0, 0);
+              // Si la fecha de pago ya pasó, está vencida
+              if (fechaPagoDate < today) {
+                overdue.push({
+                  ...cuota,
+                  scheduleId: schedule.id,
+                  grupoPromesaUuid: schedule.grupoPromesaUuid
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return overdue;
   });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
@@ -3052,20 +3142,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             this.registerCallToBackend(response.id);
           }
 
-          // Si es una cancelación y hay cuota seleccionada, actualizar su estado a PAGADA
+          // Si es una cancelación y hay cuota seleccionada, cancelarla (marcar como PAGADA)
+          // Usa el nuevo endpoint que valida que la fecha de pago no haya pasado
           const selectedCuota = this.selectedInstallmentForCancellation();
           if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
-            console.log('💰 Actualizando estado de cuota a PAGADA:', selectedCuota);
+            console.log('💰 Cancelando cuota (marcando como PAGADA):', selectedCuota);
 
             const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-            this.managementService.updatePaymentStatus(
+            this.managementService.cancelarCuota(
               selectedCuota.id,
-              'PAGADA',
               selectedCuota.monto,
-              today
+              today,
+              this.managementForm.observaciones || undefined
             ).subscribe({
-              next: (updatedRecord) => {
-                console.log('✅ Estado de cuota actualizado:', updatedRecord);
+              next: (result) => {
+                console.log('✅ Cuota cancelada exitosamente:', result);
                 // Limpiar la selección
                 this.selectedInstallmentForCancellation.set(null);
                 // Recargar los cronogramas activos para reflejar el cambio
@@ -3076,8 +3167,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               },
               error: (err) => {
-                console.error('⚠️ Error actualizando estado de cuota:', err);
-                // Aunque falle la actualización del estado, la gestión ya se guardó
+                console.error('⚠️ Error cancelando cuota:', err);
+                // Si el error es porque la fecha ya pasó, mostrar mensaje específico
+                if (err.error?.error || err.error?.mensaje) {
+                  alert(`⚠️ ${err.error.mensaje || 'No se puede cancelar esta cuota. La fecha de pago ya pasó.'}`);
+                }
+                // Aunque falle la cancelación, la gestión ya se guardó
                 this.selectedInstallmentForCancellation.set(null);
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               }
