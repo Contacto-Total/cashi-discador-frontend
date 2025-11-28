@@ -4038,3 +4038,95 @@ body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: #94a3b8 !important;
 }
 
+/* ============================================================
+   MANUAL MANAGEMENT - MODO CLARO
+   ============================================================ */
+
+html:not(.dark) app-manual-management .min-h-screen {
+  background-color: #f3f4f6 !important;
+}
+
+html:not(.dark) app-manual-management .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-manual-management .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) app-manual-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-manual-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-manual-management .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) app-manual-management .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) app-manual-management select,
+html:not(.dark) app-manual-management input {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) app-manual-management select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+html:not(.dark) app-manual-management .text-blue-500 {
+  color: #3b82f6 !important;
+}
+
+html:not(.dark) app-manual-management .text-green-500 {
+  color: #22c55e !important;
+}
+
+html:not(.dark) app-manual-management .text-amber-600 {
+  color: #d97706 !important;
+}
+
+html:not(.dark) app-manual-management .text-amber-700 {
+  color: #b45309 !important;
+}
+
+html:not(.dark) app-manual-management .bg-amber-100 {
+  background-color: #fef3c7 !important;
+}
+
+html:not(.dark) app-manual-management .border-amber-300 {
+  border-color: #fcd34d !important;
+}
+
+html:not(.dark) app-manual-management .text-blue-600 {
+  color: #2563eb !important;
+}
+
+html:not(.dark) app-manual-management .hover\:bg-slate-200:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-manual-management .text-red-500 {
+  color: #ef4444 !important;
+}
+
+html:not(.dark) app-manual-management .text-red-600 {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) app-manual-management .bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+html:not(.dark) app-manual-management .border-red-300 {
+  border-color: #fca5a5 !important;
+}
+
