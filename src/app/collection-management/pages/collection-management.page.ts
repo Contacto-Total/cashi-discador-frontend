@@ -788,14 +788,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
   // Respeta la configuración del admin: si hay config, solo muestra las habilitadas
+  // Usa nombres visuales de montoCabeceras como fuente de verdad
   customerPaymentAmounts = computed<AmountOption[]>(() => {
     const rawData = this.rawClientData();
     const enabledOptions = this.enabledPaymentOptions();
     const hasConfig = this.hasPaymentOptionsConfig();
+    const cabeceras = this.montoCabeceras();
 
     if (!rawData || Object.keys(rawData).length === 0) {
       console.log('[PAYMENT] No raw client data available');
       return [];
+    }
+
+    // Crear mapa de código -> nombre visual desde cabeceras
+    const codigoToNombre = new Map<string, string>();
+    for (const c of cabeceras) {
+      codigoToNombre.set(c.codigo.toLowerCase(), c.nombre);
     }
 
     const amounts: AmountOption[] = [];
@@ -826,8 +834,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Include if value is valid number (including 0, but not NaN)
         if (!isNaN(numValue) && numValue >= 0) {
+          // Prioridad: 1) nombre de cabeceras, 2) labelOpcion del backend, 3) formatFieldLabel
+          const visualName = codigoToNombre.get(fieldName.toLowerCase())
+            || option.labelOpcion
+            || this.formatFieldLabel(fieldName);
+
           amounts.push({
-            label: option.labelOpcion || this.formatFieldLabel(fieldName),
+            label: visualName,
             value: numValue,
             field: fieldName
           });
@@ -845,8 +858,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const numValue = typeof value === 'number' ? value : parseFloat(String(value));
 
         if (!isNaN(numValue) && numValue > 0) {
+          // Usar nombre visual de cabeceras si existe, sino formatFieldLabel
+          const visualName = codigoToNombre.get(key.toLowerCase())
+            || this.formatFieldLabel(key);
+
           amounts.push({
-            label: this.formatFieldLabel(key),
+            label: visualName,
             value: numValue,
             field: key
           });

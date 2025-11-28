@@ -2,8 +2,17 @@ import { Component, effect, inject, input, output, signal, computed } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { HttpClient } from '@angular/common/http';
 import { AdditionalFieldV2, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2 } from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
+import { environment } from '../../../../environments/environment';
+
+interface ConfiguracionCabecera {
+  codigo: string;
+  nombre: string;
+  tipoDato: string;
+  tipoSql: string;
+}
 
 @Component({
   selector: 'app-typification-additional-fields-dialog',
@@ -111,7 +120,7 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                           <!-- Label -->
                           <div class="flex-1">
                             <span class="text-sm font-medium text-gray-900 dark:text-white">
-                              {{ opcion.labelOpcion }}
+                              {{ getVisualName(opcion) }}
                             </span>
                             @if (opcion.codigoOpcion !== 'personalizado') {
                               <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
@@ -217,7 +226,12 @@ export class TypificationAdditionalFieldsDialogComponent {
   selectedSubPortfolioId = signal<number | undefined>(undefined);
   paymentScheduleFieldId = signal<number | null>(null);
 
+  // Cabeceras para nombres visuales
+  cabeceras = signal<ConfiguracionCabecera[]>([]);
+  private cabecerasUrl = `${environment.apiUrl}/cabeceras`;
+
   private typificationService = inject(TypificationV2Service);
+  private http = inject(HttpClient);
 
   constructor() {
     effect(() => {
@@ -231,6 +245,7 @@ export class TypificationAdditionalFieldsDialogComponent {
 
   private resetState() {
     this.opciones.set([]);
+    this.cabeceras.set([]);
     this.errorMessage.set('');
     this.selectedSubPortfolioId.set(undefined);
     this.paymentScheduleFieldId.set(null);
@@ -286,11 +301,44 @@ export class TypificationAdditionalFieldsDialogComponent {
   onSubPortfolioChange(subPortfolioId: number) {
     this.selectedSubPortfolioId.set(subPortfolioId);
     this.opciones.set([]);
+    this.cabeceras.set([]);
     this.errorMessage.set('');
 
     if (subPortfolioId) {
+      this.loadCabeceras(subPortfolioId);
       this.loadOpcionesAutomatically();
     }
+  }
+
+  private loadCabeceras(subPortfolioId: number) {
+    this.http.get<ConfiguracionCabecera[]>(`${this.cabecerasUrl}/subcartera/${subPortfolioId}/montos`)
+      .subscribe({
+        next: (cabeceras) => {
+          this.cabeceras.set(cabeceras);
+          console.log('[DIALOG] Loaded cabeceras:', cabeceras.length);
+        },
+        error: (error) => {
+          console.warn('[DIALOG] Error loading cabeceras:', error);
+        }
+      });
+  }
+
+  getVisualName(opcion: CampoOpcionDTO): string {
+    if (opcion.codigoOpcion === 'personalizado') {
+      return 'Personalizado';
+    }
+
+    // Buscar en cabeceras por el código del campo
+    const fieldCode = opcion.campoTablaDinamica?.toLowerCase();
+    if (fieldCode) {
+      const cabecera = this.cabeceras().find(c => c.codigo.toLowerCase() === fieldCode);
+      if (cabecera?.nombre) {
+        return cabecera.nombre;
+      }
+    }
+
+    // Fallback al labelOpcion del backend
+    return opcion.labelOpcion || opcion.codigoOpcion;
   }
 
   private loadOpcionesAutomatically() {
