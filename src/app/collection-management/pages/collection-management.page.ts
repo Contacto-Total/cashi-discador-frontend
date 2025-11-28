@@ -2761,17 +2761,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Obtiene las clases CSS para cada fila de montos según su índice
-   * Alterna colores para mejor visualización
+   * Alterna entre 2 colores para mejor visualización
    */
   getAmountRowClass(index: number): string {
     const colors = [
       'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300',
-      'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300',
-      'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300',
-      'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
-      'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300',
-      'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300',
-      'bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300',
+      'bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-300',
     ];
     return colors[index % colors.length];
   }
