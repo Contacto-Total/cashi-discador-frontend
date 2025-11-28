@@ -229,7 +229,7 @@ export class TypificationAdditionalFieldsDialogComponent {
 
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
-  private cabecerasUrl = `${environment.apiUrl}/cabeceras`;
+  private cabecerasUrl = `${environment.apiUrl}/configuracion-cabeceras`;
 
   // Computed: opciones con nombres visuales traducidos
   opcionesConNombres = computed(() => {
