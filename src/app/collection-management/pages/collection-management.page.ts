@@ -59,55 +59,32 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
 
       <!-- Header Principal - ULTRA COMPACTO -->
       <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
-        <div class="relative px-3 py-1">
+        <div class="relative px-4 py-2">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div>
-                <div class="flex items-center gap-1.5">
-                  <div class="bg-blue-500 dark:bg-blue-600 p-1 rounded">
-                  </div>
-                  <div>
-                    <h1 class="text-sm font-bold">Gestión de Cobranza</h1>
-                    <p class="text-[9px] text-blue-100 dark:text-blue-300 flex items-center gap-0.5">
-                      {{ campaign().nombre }}
-                    </p>
-                  </div>
+            <!-- Lado Izquierdo: Título y Asesor -->
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-blue-500/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
+                  <span class="text-lg">📋</span>
                 </div>
+                <h1 class="text-base font-bold">Gestión de Cobranza</h1>
               </div>
               <div class="h-6 w-px bg-white/20"></div>
-              <div class="text-xs">
-                <div class="text-blue-100 dark:text-blue-300 text-[9px]">Asesor</div>
-                <div class="font-semibold text-white text-xs">María González Castro</div>
+              <div>
+                <div class="text-blue-200 dark:text-blue-300 text-[10px]">Asesor</div>
+                <div class="font-semibold text-white text-sm">María González Castro</div>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <!-- Botón de Dark Mode -->
-              <button
-                (click)="toggleDarkMode()"
-                [class]="'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-300 group border ' +
-                  (themeService.isDarkMode()
-                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/40'
-                    : 'bg-blue-500/90 hover:bg-blue-600 border-blue-600')"
-                [attr.aria-label]="themeService.isDarkMode() ? 'Activar modo claro' : 'Activar modo oscuro'"
-                title="Cambiar tema"
-              >
-                @if (themeService.isDarkMode()) {
-                  <span class="text-[10px] text-yellow-300 font-semibold">OSCURO</span>
-                } @else {
-                  <span class="text-[10px] text-white font-semibold">CLARO</span>
-                }
-              </button>
-
-              <div class="h-6 w-px bg-white/20"></div>
-
+            <!-- Lado Derecho: Estado y Cronómetro -->
+            <div class="flex items-center gap-4">
               <div class="text-right">
-                <div class="text-blue-100 dark:text-blue-300 text-[9px]">Estado</div>
-                <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-200')">
+                <div class="text-blue-200 dark:text-blue-300 text-[10px]">Estado</div>
+                <div [class]="'font-semibold text-sm transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-white/80')">
                   {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
               </div>
-              <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-blue-800/50 dark:bg-gray-900/80')">
+              <div [class]="'px-4 py-1.5 rounded-lg font-mono text-lg font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse shadow-lg shadow-red-500/30' : 'bg-blue-800/50 dark:bg-gray-900/80')">
                 {{ formatTime(callDuration()) }}
               </div>
             </div>
