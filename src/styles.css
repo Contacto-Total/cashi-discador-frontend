@@ -3849,3 +3849,192 @@ html:not(.dark) app-collection-management .flex-1.overflow-y-auto .text-gray-800
   color: #374151 !important;
 }
 
+/* ============================================================
+   SIDEBAR/NAVBAR - MODO CLARO (Global Styles)
+   ============================================================ */
+
+/* Contenedor principal */
+html:not(.dark) .app-container,
+body.light-theme .app-container {
+  background-color: #f1f5f9 !important;
+}
+
+/* Sidebar - Fondo claro */
+html:not(.dark) .cashi-sidebar,
+body.light-theme .cashi-sidebar {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Logo */
+html:not(.dark) .cashi-sidebar .sidebar-logo,
+body.light-theme .cashi-sidebar .sidebar-logo {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .cashi-sidebar .logo-text,
+body.light-theme .cashi-sidebar .logo-text {
+  color: #0f172a !important;
+}
+
+/* Navigation Items - Base */
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item {
+  color: #334155 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item lucide-angular {
+  color: #475569 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .item-text,
+body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .item-text {
+  color: #334155 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .dropdown-arrow,
+body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .dropdown-arrow {
+  color: #64748b !important;
+}
+
+/* Navigation Items - Hover */
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item:hover,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item:hover,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item:hover,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item:hover lucide-angular,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item:hover lucide-angular {
+  color: #10b981 !important;
+}
+
+/* Navigation Items - Active */
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item.active,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item.active,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item.active,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item.active {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item.active lucide-angular,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item.active lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item.active lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item.active lucide-angular {
+  color: #059669 !important;
+}
+
+/* Submenu Items */
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem {
+  color: #475569 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem lucide-angular {
+  color: #64748b !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover {
+  background-color: #f1f5f9 !important;
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover lucide-angular {
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active lucide-angular {
+  color: #059669 !important;
+}
+
+/* Footer */
+html:not(.dark) .cashi-sidebar .sidebar-footer,
+body.light-theme .cashi-sidebar .sidebar-footer {
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item {
+  color: #334155 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item lucide-angular {
+  color: #475569 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item.user-profile,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item.user-profile {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item.user-profile:hover,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item.user-profile:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item:hover,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item:hover lucide-angular {
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn lucide-angular {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn:hover,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn:hover {
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+
+/* Main Content */
+html:not(.dark) .main-content,
+body.light-theme .main-content {
+  background-color: #f8fafc !important;
+}
+
+/* Scrollbar */
+html:not(.dark) .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb,
+body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover,
+body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
