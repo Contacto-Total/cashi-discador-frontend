@@ -91,9 +91,9 @@ interface ConfiguracionCabecera {
                     <lucide-angular name="loader" [size]="40" class="animate-spin text-blue-600 mb-3"></lucide-angular>
                     <p class="text-sm">Cargando montos disponibles...</p>
                   </div>
-                } @else if (opciones().length > 0) {
+                } @else if (opcionesConNombres().length > 0) {
                   <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                    @for (opcion of opciones(); track opcion.codigoOpcion) {
+                    @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
                       <div
                         class="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer"
                         [class.bg-green-50]="opcion.estaHabilitada"
@@ -104,14 +104,15 @@ interface ConfiguracionCabecera {
                         [class.dark:bg-gray-700/50]="!opcion.estaHabilitada"
                         [class.border-gray-200]="!opcion.estaHabilitada"
                         [class.dark:border-gray-600]="!opcion.estaHabilitada"
-                        (click)="toggleOpcion(opcion)"
+                        (click)="toggleOpcionOriginal(opcion)"
                       >
                         <div class="flex items-center gap-3 flex-1">
                           <!-- Toggle Switch -->
                           <label class="relative inline-flex items-center cursor-pointer" (click)="$event.stopPropagation()">
                             <input
                               type="checkbox"
-                              [(ngModel)]="opcion.estaHabilitada"
+                              [checked]="opcion.estaHabilitada"
+                              (change)="toggleOpcionOriginal(opcion)"
                               class="sr-only peer"
                             >
                             <div class="w-10 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
@@ -120,7 +121,7 @@ interface ConfiguracionCabecera {
                           <!-- Label -->
                           <div class="flex-1">
                             <span class="text-sm font-medium text-gray-900 dark:text-white">
-                              {{ getVisualName(opcion) }}
+                              {{ opcion.visualName }}
                             </span>
                             @if (opcion.codigoOpcion !== 'personalizado') {
                               <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
@@ -230,6 +231,34 @@ export class TypificationAdditionalFieldsDialogComponent {
   cabeceras = signal<ConfiguracionCabecera[]>([]);
   private cabecerasUrl = `${environment.apiUrl}/cabeceras`;
 
+  // Computed: opciones con nombres visuales traducidos
+  opcionesConNombres = computed(() => {
+    const opciones = this.opciones();
+    const cabeceras = this.cabeceras();
+
+    // Crear mapa de código -> nombre visual
+    const codigoToNombre = new Map<string, string>();
+    for (const c of cabeceras) {
+      codigoToNombre.set(c.codigo.toLowerCase(), c.nombre);
+    }
+
+    // Devolver opciones con nombre visual
+    return opciones.map(opcion => {
+      let visualName = opcion.labelOpcion || opcion.codigoOpcion;
+
+      if (opcion.codigoOpcion === 'personalizado') {
+        visualName = 'Personalizado';
+      } else if (opcion.campoTablaDinamica) {
+        const nombre = codigoToNombre.get(opcion.campoTablaDinamica.toLowerCase());
+        if (nombre) {
+          visualName = nombre;
+        }
+      }
+
+      return { ...opcion, visualName };
+    });
+  });
+
   private typificationService = inject(TypificationV2Service);
   private http = inject(HttpClient);
 
@@ -287,6 +316,7 @@ export class TypificationAdditionalFieldsDialogComponent {
           // Auto-select if only one subportfolio
           if (subPortfolios.length === 1) {
             this.selectedSubPortfolioId.set(subPortfolios[0].id);
+            this.loadCabeceras(subPortfolios[0].id);
             this.loadOpcionesAutomatically();
           }
         },
@@ -321,24 +351,6 @@ export class TypificationAdditionalFieldsDialogComponent {
           console.warn('[DIALOG] Error loading cabeceras:', error);
         }
       });
-  }
-
-  getVisualName(opcion: CampoOpcionDTO): string {
-    if (opcion.codigoOpcion === 'personalizado') {
-      return 'Personalizado';
-    }
-
-    // Buscar en cabeceras por el código del campo
-    const fieldCode = opcion.campoTablaDinamica?.toLowerCase();
-    if (fieldCode) {
-      const cabecera = this.cabeceras().find(c => c.codigo.toLowerCase() === fieldCode);
-      if (cabecera?.nombre) {
-        return cabecera.nombre;
-      }
-    }
-
-    // Fallback al labelOpcion del backend
-    return opcion.labelOpcion || opcion.codigoOpcion;
   }
 
   private loadOpcionesAutomatically() {
@@ -397,8 +409,15 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.loadOpcionesAutomatically();
   }
 
-  toggleOpcion(opcion: CampoOpcionDTO) {
-    opcion.estaHabilitada = !opcion.estaHabilitada;
+  toggleOpcionOriginal(opcionConNombre: CampoOpcionDTO & { visualName: string }) {
+    // Buscar la opción original en el signal y modificarla
+    const opciones = this.opciones();
+    const opcionOriginal = opciones.find(o => o.codigoOpcion === opcionConNombre.codigoOpcion);
+    if (opcionOriginal) {
+      opcionOriginal.estaHabilitada = !opcionOriginal.estaHabilitada;
+      // Forzar actualización del signal
+      this.opciones.set([...opciones]);
+    }
   }
 
   getOpcionesHabilitadasCount(): number {
