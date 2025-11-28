@@ -4130,3 +4130,198 @@ html:not(.dark) app-manual-management .border-red-300 {
   border-color: #fca5a5 !important;
 }
 
+/* ===============================================
+   COLLECTION-MANAGEMENT LIGHT MODE FIXES
+   =============================================== */
+
+/* Header principal - modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 h1,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .text-white,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .font-semibold {
+  color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .text-blue-100 {
+  color: #dbeafe !important;
+}
+
+/* Alerta de promesa de pago - modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 {
+  background: linear-gradient(to bottom right, #f59e0b, #eab308, #f97316) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .text-white {
+  color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .font-semibold {
+  color: #ffffff !important;
+}
+
+/* Panel izquierdo - info cliente */
+html:not(.dark) app-collection-management .w-64.bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+/* Tabs del panel izquierdo */
+html:not(.dark) app-collection-management .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+
+html:not(.dark) app-collection-management .bg-blue-50 {
+  background-color: #eff6ff !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+/* Panel central - fondo degradado */
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-gray-50 {
+  background: linear-gradient(to bottom right, #f9fafb, #f8fafc, #eff6ff) !important;
+}
+
+/* Tarjetas en panel central */
+html:not(.dark) app-collection-management .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-300 {
+  border-color: #d1d5db !important;
+}
+
+/* Textos en modo claro */
+html:not(.dark) app-collection-management .text-gray-800 {
+  color: #1f2937 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-700 {
+  color: #374151 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Selects e inputs */
+html:not(.dark) app-collection-management select,
+html:not(.dark) app-collection-management input,
+html:not(.dark) app-collection-management textarea {
+  background-color: #f9fafb !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) app-collection-management select:focus,
+html:not(.dark) app-collection-management input:focus,
+html:not(.dark) app-collection-management textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Botones de control de llamada */
+html:not(.dark) app-collection-management .bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+html:not(.dark) app-collection-management .bg-green-100 {
+  background-color: #dcfce7 !important;
+}
+
+/* Historial de gestiones */
+html:not(.dark) app-collection-management .text-blue-600 {
+  color: #2563eb !important;
+}
+
+html:not(.dark) app-collection-management .text-purple-600 {
+  color: #9333ea !important;
+}
+
+/* Estados en header */
+html:not(.dark) app-collection-management .text-green-400 {
+  color: #4ade80 !important;
+}
+
+html:not(.dark) app-collection-management .text-yellow-400 {
+  color: #facc15 !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+/* Botón de tema en header */
+html:not(.dark) app-collection-management .bg-blue-500\/90 {
+  background-color: rgba(59, 130, 246, 0.9) !important;
+}
+
+/* Cronómetro de llamada */
+html:not(.dark) app-collection-management .bg-blue-800\/50 {
+  background-color: rgba(30, 64, 175, 0.5) !important;
+  color: #ffffff !important;
+}
+
+/* Indicadores de errores */
+html:not(.dark) app-collection-management .border-red-500 {
+  border-color: #ef4444 !important;
+}
+
+html:not(.dark) app-collection-management .bg-red-50 {
+  background-color: #fef2f2 !important;
+}
+
+html:not(.dark) app-collection-management .text-red-500 {
+  color: #ef4444 !important;
+}
+
+html:not(.dark) app-collection-management .text-red-600 {
+  color: #dc2626 !important;
+}
+
+/* Fix para garantizar que el header sea visible */
+html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600 * {
+  color: #ffffff;
+}
+
+html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600 .text-blue-100 {
+  color: #dbeafe !important;
+}
+
