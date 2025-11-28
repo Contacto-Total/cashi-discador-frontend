@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of, Subscription } from 'rxjs';
@@ -38,6 +39,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
   imports: [
     CommonModule,
     FormsModule,
+    LucideAngularModule,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
     SelectSupervisorModalComponent
@@ -65,7 +67,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-2">
                 <div class="w-8 h-8 bg-blue-500/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
-                  <span class="text-lg">📋</span>
+                  <lucide-angular name="clipboard-list" [size]="18" class="text-white"></lucide-angular>
                 </div>
                 <h1 class="text-base font-bold">Gestión de Cobranza</h1>
               </div>
