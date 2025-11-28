@@ -280,23 +280,42 @@ export class AutorizacionService {
   private subscribeToWebSocket(): void {
     if (this.wsSubscribed) return;
 
+    console.log('[AUTORIZACION] Iniciando suscripción a WebSocket...');
+
     // Intentar conectar si no está conectado
     if (!this.webSocketService.isConnected()) {
+      console.log('[AUTORIZACION] WebSocket no conectado, iniciando conexión...');
       this.webSocketService.connect();
     }
 
     // Suscribirse a eventos personales (para el usuario actual)
+    console.log('[AUTORIZACION] Suscribiendo a /user/queue/messages...');
     this.webSocketService.subscribe('/user/queue/messages').subscribe((message: any) => {
+      console.log('[AUTORIZACION] 📬 Mensaje recibido en /user/queue/messages:', message);
       this.handleWebSocketMessage(message);
     });
 
     // Suscribirse al topic general de autorizaciones
+    console.log('[AUTORIZACION] Suscribiendo a /topic/autorizaciones/supervisores...');
     this.webSocketService.subscribe('/topic/autorizaciones/supervisores').subscribe((message: any) => {
+      console.log('[AUTORIZACION] 📬 Mensaje recibido en /topic/autorizaciones/supervisores:', message);
       this.handleWebSocketMessage(message);
     });
 
     this.wsSubscribed = true;
-    console.log('[AUTORIZACION] Subscrito a WebSocket para autorizaciones');
+    console.log('[AUTORIZACION] ✅ Subscrito a WebSocket para autorizaciones');
+  }
+
+  /**
+   * Forzar re-suscripción al WebSocket (útil si la conexión se perdió)
+   */
+  public ensureWebSocketSubscription(): void {
+    console.log('[AUTORIZACION] Verificando suscripción WebSocket...');
+    if (!this.wsSubscribed) {
+      this.subscribeToWebSocket();
+    } else {
+      console.log('[AUTORIZACION] Ya está suscrito a WebSocket');
+    }
   }
 
   /**
