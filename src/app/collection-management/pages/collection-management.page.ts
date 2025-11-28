@@ -116,7 +116,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       }
 
       <!-- Header Principal - ULTRA COMPACTO -->
-      <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
+      <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
         <div class="relative px-3 py-1">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -126,7 +126,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                   </div>
                   <div>
                     <h1 class="text-sm font-bold">Gestión de Cobranza</h1>
-                    <p class="text-[9px] text-blue-200 dark:text-blue-300 flex items-center gap-0.5">
+                    <p class="text-[9px] text-blue-100 dark:text-blue-300 flex items-center gap-0.5">
                       {{ campaign().nombre }}
                     </p>
                   </div>
@@ -134,7 +134,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
               </div>
               <div class="h-6 w-px bg-white/20"></div>
               <div class="text-xs">
-                <div class="text-blue-200 dark:text-blue-300 text-[9px]">Asesor</div>
+                <div class="text-blue-100 dark:text-blue-300 text-[9px]">Asesor</div>
                 <div class="font-semibold text-white text-xs">María González Castro</div>
               </div>
             </div>
@@ -160,12 +160,12 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
               <div class="h-6 w-px bg-white/20"></div>
 
               <div class="text-right">
-                <div class="text-blue-200 dark:text-blue-300 text-[9px]">Estado</div>
+                <div class="text-blue-100 dark:text-blue-300 text-[9px]">Estado</div>
                 <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-200')">
                   {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
               </div>
-              <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-slate-800/50 dark:bg-gray-900/80')">
+              <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-blue-800/50 dark:bg-gray-900/80')">
                 {{ formatTime(callDuration()) }}
               </div>
             </div>
@@ -176,9 +176,9 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
       <div class="flex-1 flex overflow-hidden">
         <!-- PANEL IZQUIERDO - Info Cliente -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Tabs -->
-          <div class="flex border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+          <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             @for (tab of tabs; track tab.id) {
               <button
                 (click)="activeTab.set(tab.id)"
@@ -554,9 +554,9 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
         </div>
 
         <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-l dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-64 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Teléfonos -->
-          <div class="p-2 border-b dark:border-slate-800">
+          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
             <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
             <div class="space-y-1">
               <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
@@ -588,7 +588,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
           </div>
 
           <!-- Email y Dirección -->
-          <div class="p-2 border-b dark:border-slate-800">
+          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
             <div class="space-y-1">
               @if (customerData().contacto.email) {
                 <div class="flex items-start gap-2">
