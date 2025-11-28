@@ -100,9 +100,12 @@ export class WebsocketService {
   }
 
   private subscribeToTopic(topic: string, subject: Subject<any>): void {
+    console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
     this.stompClient?.subscribe(topic, (message: IMessage) => {
       try {
+        console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
         const payload = JSON.parse(message.body);
+        console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
         subject.next(payload);
       } catch (e) {
         console.error('Error parsing WebSocket message:', e);

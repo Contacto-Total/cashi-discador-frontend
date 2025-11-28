@@ -303,32 +303,35 @@ export class AutorizacionService {
    * Maneja mensajes de WebSocket
    */
   private handleWebSocketMessage(message: any): void {
-    console.log('[AUTORIZACION] Mensaje WebSocket recibido (raw):', message);
+    console.log('[AUTORIZACION] 📨 Mensaje WebSocket recibido (raw):', JSON.stringify(message, null, 2));
 
     if (!message) return;
 
-    // Normalizar el mensaje - el backend puede enviar en 2 formatos:
-    // 1. Directo: { tipo: "...", solicitud: {...} }
-    // 2. Envuelto: { type: "...", payload: { tipo: "...", solicitud: {...} } }
+    // Normalizar el mensaje - el backend puede enviar en varios formatos:
+    // 1. Directo: { tipo: "...", solicitud: {...}, timestamp: ... }
+    // 2. Envuelto por sendToUserByUsername: { type: "...", payload: { tipo: "...", solicitud: {...} }, timestamp: ... }
+    // 3. Otro formato envuelto: { type: "...", payload: { tipo: "...", solicitud: {...} } }
     let evento: AutorizacionEvent;
 
-    if (message.payload && message.payload.tipo) {
-      // Formato envuelto desde sendToUser
-      evento = message.payload as AutorizacionEvent;
-      console.log('[AUTORIZACION] Mensaje normalizado desde payload:', evento);
-    } else if (message.tipo) {
-      // Formato directo desde topic
+    if (message.tipo && message.solicitud) {
+      // Formato directo desde sendDirectToUser o topic
       evento = message as AutorizacionEvent;
-    } else if (message.type && message.payload) {
+      console.log('[AUTORIZACION] ✅ Mensaje en formato directo:', evento.tipo);
+    } else if (message.payload && message.payload.tipo) {
+      // Formato envuelto desde sendToUserByUsername
+      evento = message.payload as AutorizacionEvent;
+      console.log('[AUTORIZACION] ✅ Mensaje normalizado desde payload:', evento.tipo);
+    } else if (message.type && message.payload && message.payload.solicitud) {
       // Otro formato envuelto
       evento = message.payload as AutorizacionEvent;
+      console.log('[AUTORIZACION] ✅ Mensaje normalizado desde type/payload:', evento.tipo);
     } else {
-      console.log('[AUTORIZACION] Formato de mensaje no reconocido:', message);
+      console.log('[AUTORIZACION] ⚠️ Formato de mensaje no reconocido:', message);
       return;
     }
 
     if (!evento.tipo || !evento.solicitud) {
-      console.log('[AUTORIZACION] Evento incompleto, ignorando:', evento);
+      console.log('[AUTORIZACION] ⚠️ Evento incompleto, ignorando:', evento);
       return;
     }
 
@@ -349,13 +352,23 @@ export class AutorizacionService {
         break;
 
       case 'SOLICITUD_APROBADA':
-        console.log('[AUTORIZACION] ✅ Solicitud APROBADA recibida!');
+        // Verificar que esta respuesta es para MÍ (el agente que hizo la solicitud)
+        if (evento.solicitud.idAgenteSolicitante !== currentUserId) {
+          console.log('[AUTORIZACION] ⏭️ Ignorando APROBADA - no es mi solicitud. Agente:', evento.solicitud.idAgenteSolicitante, 'Yo:', currentUserId);
+          return;
+        }
+        console.log('[AUTORIZACION] ✅ ¡MI Solicitud fue APROBADA!');
         this.solicitudActual.set(evento.solicitud);
         this.respuestaSubject.next(evento.solicitud);
         break;
 
       case 'SOLICITUD_RECHAZADA':
-        console.log('[AUTORIZACION] ❌ Solicitud RECHAZADA recibida!');
+        // Verificar que esta respuesta es para MÍ (el agente que hizo la solicitud)
+        if (evento.solicitud.idAgenteSolicitante !== currentUserId) {
+          console.log('[AUTORIZACION] ⏭️ Ignorando RECHAZADA - no es mi solicitud. Agente:', evento.solicitud.idAgenteSolicitante, 'Yo:', currentUserId);
+          return;
+        }
+        console.log('[AUTORIZACION] ❌ ¡MI Solicitud fue RECHAZADA!');
         this.solicitudActual.set(evento.solicitud);
         this.respuestaSubject.next(evento.solicitud);
         break;
