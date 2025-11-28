@@ -118,7 +118,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
       <div class="flex-1 flex overflow-hidden">
         <!-- PANEL IZQUIERDO - Info Cliente -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Tabs -->
           <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             @for (tab of tabs; track tab.id) {
@@ -549,7 +549,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
         </div>
 
         <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Teléfonos -->
           <div class="p-2 border-b border-slate-200 dark:border-slate-800">
             <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
