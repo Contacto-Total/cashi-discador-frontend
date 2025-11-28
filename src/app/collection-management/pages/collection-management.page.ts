@@ -261,15 +261,18 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                             <span class="opacity-70">|</span>
                             <span class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
                             <span class="opacity-70">|</span>
-                            <span class="font-medium">📅 {{ formatDate(cuota.dueDate) }}</span>
+                            <span class="font-medium flex items-center gap-1">
+                              <lucide-angular name="calendar" [size]="12"></lucide-angular>
+                              {{ formatDate(cuota.dueDate) }}
+                            </span>
                             @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                              <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">✓</span>
+                              <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                              <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">!</span>
+                              <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-                              <span class="bg-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">✗</span>
+                              <span class="bg-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
                             } @else {
-                              <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded font-semibold">⏳</span>
+                              <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
                           </div>
                         }
