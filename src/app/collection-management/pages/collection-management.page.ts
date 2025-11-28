@@ -1728,50 +1728,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           return;
         }
 
-        // Agrupar registros por grupoPromesaUuid
-        const groupedSchedules = new Map<string, any[]>();
-        for (const record of records) {
-          const uuid = record.grupoPromesaUuid;
-          if (uuid) {
-            if (!groupedSchedules.has(uuid)) {
-              groupedSchedules.set(uuid, []);
-            }
-            groupedSchedules.get(uuid)!.push(record);
-          }
-        }
+        // El backend devuelve cabeceras con cuotasPromesa incluidas
+        // Cada record es una cabecera con su lista de cuotas
+        const schedules = records.map((header: any) => {
+          const cuotasPromesa = header.cuotasPromesa || [];
 
-        // Transformar cada grupo a un formato para mostrar
-        const schedules = Array.from(groupedSchedules.entries()).map(([uuid, cuotas]) => {
           // Ordenar cuotas por número
-          cuotas.sort((a, b) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
+          cuotasPromesa.sort((a: any, b: any) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
 
           // Calcular monto total sumando todas las cuotas
-          const totalAmount = cuotas.reduce((sum, c) => sum + (c.montoPromesa || 0), 0);
+          const totalAmount = cuotasPromesa.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
 
-          // Encontrar la próxima cuota pendiente (el backend usa PAGADA, no PAGADO)
-          const pendingCuotas = cuotas.filter(c => c.estadoPago !== 'PAGADA' && c.estadoPago !== 'PAGADO' && c.estadoPago !== 'CUMPLIDO' && c.estadoPago !== 'CANCELADA');
-          const nextCuota = pendingCuotas[0] || cuotas[0];
+          // Encontrar cuotas pendientes
+          const pendingCuotas = cuotasPromesa.filter((c: any) =>
+            c.estado !== 'PAGADA' && c.estado !== 'PAGADO' && c.estado !== 'CUMPLIDO' && c.estado !== 'CANCELADA'
+          );
+          const nextCuota = pendingCuotas[0] || cuotasPromesa[0];
 
           return {
-            id: uuid,
-            grupoPromesaUuid: uuid,
-            totalAmount: totalAmount,
-            numberOfInstallments: cuotas[0]?.totalCuotas || cuotas.length,
-            fechaGestion: cuotas[0]?.fechaGestion,
-            installments: cuotas.map(c => ({
-              id: c.id,  // ID del registro en registros_gestion_v2 (necesario para actualizar estado)
+            id: header.grupoPromesaUuid || header.id,
+            grupoPromesaUuid: header.grupoPromesaUuid,
+            totalAmount: totalAmount || header.montoPromesa,
+            numberOfInstallments: header.totalCuotas || cuotasPromesa.length,
+            fechaGestion: header.fechaGestion,
+            installments: cuotasPromesa.map((c: any) => ({
+              id: c.id,
               numeroCuota: c.numeroCuota,
-              monto: c.montoPromesa,
-              dueDate: c.fechaPromesaPago,
-              status: c.estadoPago || 'PENDIENTE'
+              monto: c.monto,
+              // La fecha de pago viene de CuotaPromesa.fechaPago
+              dueDate: c.fechaPago || null,
+              status: c.estado || 'PENDIENTE'
             })),
-            nextDueDate: nextCuota?.fechaPromesaPago,
+            nextDueDate: nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
         });
 
         // Filtrar solo cronogramas que tienen al menos una cuota pendiente
-        const activeSchedules = schedules.filter(s => s.cuotasPendientes > 0);
+        const activeSchedules = schedules.filter((s: any) => s.cuotasPendientes > 0);
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
