@@ -106,40 +106,16 @@ export class WebsocketService {
 
   private subscribeToTopic(topic: string, subject: Subject<any>): void {
     console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
-
-    // Verificar que el cliente está conectado antes de suscribirse
-    if (!this.stompClient || !this.stompClient.connected) {
-      console.warn(`[WebSocket] ⚠️ Cannot subscribe to ${topic}: client not connected, will retry...`);
-      // Reintentar después de un pequeño delay
-      setTimeout(() => {
-        if (this.stompClient && this.stompClient.connected) {
-          this.subscribeToTopic(topic, subject);
-        }
-      }, 100);
-      return;
-    }
-
-    try {
-      this.stompClient.subscribe(topic, (message: IMessage) => {
-        try {
-          console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
-          const payload = JSON.parse(message.body);
-          console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
-          subject.next(payload);
-        } catch (e) {
-          console.error('Error parsing WebSocket message:', e);
-        }
-      });
-      console.log(`[WebSocket] ✅ Successfully subscribed to ${topic}`);
-    } catch (e) {
-      console.error(`[WebSocket] ❌ Error subscribing to ${topic}:`, e);
-      // Reintentar después de un pequeño delay
-      setTimeout(() => {
-        if (this.stompClient && this.stompClient.connected) {
-          this.subscribeToTopic(topic, subject);
-        }
-      }, 500);
-    }
+    this.stompClient?.subscribe(topic, (message: IMessage) => {
+      try {
+        console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
+        const payload = JSON.parse(message.body);
+        console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
+        subject.next(payload);
+      } catch (e) {
+        console.error('Error parsing WebSocket message:', e);
+      }
+    });
   }
 
   send(destination: string, body: any): void {
