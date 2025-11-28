@@ -880,7 +880,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           amounts.push({
             label: visualName,
             value: numValue,
-            field: fieldName
+            field: fieldName,
+            restriccionFecha: option.restriccionFecha || 'SIN_RESTRICCION'
           });
         }
       }

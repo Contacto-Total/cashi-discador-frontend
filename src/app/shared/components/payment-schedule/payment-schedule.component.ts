@@ -8,6 +8,7 @@ export interface AmountOption {
   label: string;
   value: number;
   field?: string;
+  restriccionFecha?: 'SIN_RESTRICCION' | 'DENTRO_MES' | 'FUERA_MES' | string;
 }
 
 @Component({
@@ -32,10 +33,18 @@ export interface AmountOption {
                 (selectedField() === option.field && !isCustomAmount()
                   ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
-              (click)="selectAmount(option.value, option.field)"
+              (click)="selectAmount(option.value, option.field, option.restriccionFecha)"
             >
               <span class="text-[10px] opacity-70 leading-tight text-center">{{ option.label }}</span>
               <span class="text-sm font-bold mt-1">{{ formatCurrency(option.value) }}</span>
+              @if (option.restriccionFecha && option.restriccionFecha !== 'SIN_RESTRICCION') {
+                <span class="text-[8px] mt-1 px-1.5 py-0.5 rounded-full"
+                  [class]="option.restriccionFecha === 'DENTRO_MES'
+                    ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                    : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
+                  {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Próx. mes+' }}
+                </span>
+              }
             </button>
           }
           <!-- Opción personalizada -->
@@ -103,6 +112,16 @@ export interface AmountOption {
             </div>
             Detalle del Cronograma
           </label>
+          <!-- Mensaje de restricción de fecha -->
+          @if (dateRestrictionInfo().message) {
+            <div class="mb-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2"
+              [class]="selectedRestriccion() === 'DENTRO_MES'
+                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'">
+              <lucide-angular name="info" [size]="14"></lucide-angular>
+              <span>{{ dateRestrictionInfo().message }}</span>
+            </div>
+          }
           <div class="bg-white dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden transition-colors duration-300">
             @for (installment of installments(); track installment.numeroCuota) {
               <div class="grid grid-cols-1 sm:grid-cols-[100px_1fr_1fr] gap-3 p-3 border-b border-slate-100 dark:border-slate-600 last:border-b-0 items-center transition-colors duration-300">
@@ -127,7 +146,8 @@ export interface AmountOption {
                     type="date"
                     [(ngModel)]="installment.fechaPago"
                     (ngModelChange)="onInstallmentChange()"
-                    [min]="minDate"
+                    [min]="dateRestrictionInfo().minDate"
+                    [max]="dateRestrictionInfo().maxDate"
                     class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                 </div>
@@ -197,6 +217,7 @@ export class PaymentScheduleComponent implements OnInit {
   // Signals
   selectedAmount = signal<number>(0);
   selectedField = signal<string | undefined>(undefined);
+  selectedRestriccion = signal<string>('SIN_RESTRICCION');
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
@@ -204,6 +225,40 @@ export class PaymentScheduleComponent implements OnInit {
 
   // Computed
   amountOptions = computed(() => this.availableAmounts());
+
+  // Computed para restricción de fecha
+  dateRestrictionInfo = computed(() => {
+    const restriccion = this.selectedRestriccion();
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // Último día del mes actual
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    // Primer día del próximo mes
+    const firstDayNextMonth = new Date(currentYear, currentMonth + 1, 1);
+
+    switch (restriccion) {
+      case 'DENTRO_MES':
+        return {
+          minDate: today.toISOString().split('T')[0],
+          maxDate: lastDayOfMonth.toISOString().split('T')[0],
+          message: `Solo fechas dentro del mes actual (hasta ${lastDayOfMonth.toLocaleDateString('es-PE')})`
+        };
+      case 'FUERA_MES':
+        return {
+          minDate: firstDayNextMonth.toISOString().split('T')[0],
+          maxDate: undefined,
+          message: `Solo fechas a partir del ${firstDayNextMonth.toLocaleDateString('es-PE')}`
+        };
+      default:
+        return {
+          minDate: today.toISOString().split('T')[0],
+          maxDate: undefined,
+          message: undefined
+        };
+    }
+  });
 
   regularAmountOptions = computed(() =>
     this.availableAmounts().filter(opt => opt.field !== 'personalizado')
@@ -236,12 +291,19 @@ export class PaymentScheduleComponent implements OnInit {
     return this._isCustomAmount();
   }
 
-  selectAmount(amount: number, field?: string): void {
+  selectAmount(amount: number, field?: string, restriccion?: string): void {
     this._isCustomAmount.set(false);
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
+    this.selectedRestriccion.set(restriccion || 'SIN_RESTRICCION');
     this.generateInstallments();
     this.customAmountSelected.emit(false);
+  }
+
+  // Método para obtener la restricción de una opción por su field
+  getRestriccionForField(field: string): string {
+    const option = this.availableAmounts().find(o => o.field === field);
+    return option?.restriccionFecha || 'SIN_RESTRICCION';
   }
 
   enableCustomAmount(): void {
@@ -279,11 +341,50 @@ export class PaymentScheduleComponent implements OnInit {
     const remainder = Math.round((amount - (amountPerInstallment * numInstallments)) * 100) / 100;
 
     const newInstallments: PaymentInstallment[] = [];
+    const restriccion = this.selectedRestriccion();
+
+    // Determinar la fecha inicial según la restricción
+    let startDate: Date;
     const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    if (restriccion === 'FUERA_MES') {
+      // Empezar desde el primer día del próximo mes
+      startDate = new Date(currentYear, currentMonth + 1, 1);
+    } else {
+      // Para SIN_RESTRICCION o DENTRO_MES, empezar desde mañana
+      startDate = new Date(today);
+      startDate.setDate(startDate.getDate() + 1);
+    }
+
+    // Para DENTRO_MES, calcular el último día permitido
+    const lastDayOfMonth = restriccion === 'DENTRO_MES'
+      ? new Date(currentYear, currentMonth + 1, 0)
+      : null;
 
     for (let i = 0; i < numInstallments; i++) {
-      const dueDate = new Date(today);
-      dueDate.setDate(dueDate.getDate() + (30 * (i + 1)));
+      let dueDate: Date;
+
+      if (restriccion === 'DENTRO_MES' && lastDayOfMonth) {
+        // Distribuir fechas dentro del mes actual
+        const daysRemaining = Math.max(1, lastDayOfMonth.getDate() - startDate.getDate());
+        const dayIncrement = Math.floor(daysRemaining / numInstallments);
+        dueDate = new Date(startDate);
+        dueDate.setDate(startDate.getDate() + (dayIncrement * i));
+        // Asegurar que no pase del último día del mes
+        if (dueDate > lastDayOfMonth) {
+          dueDate = new Date(lastDayOfMonth);
+        }
+      } else if (restriccion === 'FUERA_MES') {
+        // Cada cuota con 30 días de diferencia, empezando desde el próximo mes
+        dueDate = new Date(startDate);
+        dueDate.setDate(dueDate.getDate() + (30 * i));
+      } else {
+        // SIN_RESTRICCION: comportamiento original
+        dueDate = new Date(today);
+        dueDate.setDate(dueDate.getDate() + (30 * (i + 1)));
+      }
 
       const installmentAmount = i === numInstallments - 1
         ? amountPerInstallment + remainder
