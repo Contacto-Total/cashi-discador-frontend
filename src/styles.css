@@ -4423,3 +4423,58 @@ html:not(.dark) app-payment-schedule .text-slate-500 {
   color: #64748b !important;
 }
 
+/* ===============================================
+   PAYMENT ALERT (PROMESA DE PAGO) LIGHT MODE FIXES
+   =============================================== */
+
+/* Alerta de promesa de pago - mejor contraste en modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 {
+  background: linear-gradient(to right, #f59e0b, #eab308, #f97316) !important;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-white,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-semibold {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .opacity-80 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/10 {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/5 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .border-amber-400 {
+  border-color: #fbbf24 !important;
+}
+
+/* Status badges en la alerta */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-green-600 {
+  background-color: #16a34a !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-red-600 {
+  background-color: #dc2626 !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-gray-600 {
+  background-color: #4b5563 !important;
+}
+
