@@ -43,7 +43,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
     SelectSupervisorModalComponent
   ],
   template: `
-    <div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
+    <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
       <!-- Notificación de éxito -->
       @if (showSuccess()) {
         <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">

@@ -29,6 +29,13 @@ export class ThemeService {
   }
 
   /**
+   * Check if dark mode is active
+   */
+  isDarkMode(): boolean {
+    return this.themeSubject.value === 'dark';
+  }
+
+  /**
    * Toggle between light and dark theme
    */
   toggleTheme(): void {

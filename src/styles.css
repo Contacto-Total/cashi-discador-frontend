@@ -2968,6 +2968,199 @@ body.light-theme {
    ============================================ */
 
 /* ========================================
+   CONTENEDOR PRINCIPAL - THEME AWARE
+   ======================================== */
+
+.collection-management-container {
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+:root.dark .collection-management-container,
+body.dark-theme .collection-management-container {
+  background: linear-gradient(to bottom right, #020617, #0f172a, #000000);
+}
+
+/* ========================================
+   HEADER - THEME AWARE
+   ======================================== */
+
+.collection-management-header {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb);
+}
+
+:root.dark .collection-management-header,
+body.dark-theme .collection-management-header {
+  background: linear-gradient(to right, #020617, #172554, #020617);
+}
+
+/* ========================================
+   PANELES LATERALES - THEME AWARE
+   ======================================== */
+
+.collection-panel {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
+:root.dark .collection-panel,
+body.dark-theme .collection-panel {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+/* ========================================
+   PANEL CENTRAL - THEME AWARE
+   ======================================== */
+
+.collection-central-panel {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #eff6ff);
+}
+
+:root.dark .collection-central-panel,
+body.dark-theme .collection-central-panel {
+  background: linear-gradient(to bottom right, #0f172a, #111827, #0f172a);
+}
+
+/* ========================================
+   CARDS - THEME AWARE
+   ======================================== */
+
+.collection-card {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #1e293b;
+}
+
+:root.dark .collection-card,
+body.dark-theme .collection-card {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+/* ========================================
+   TABS - THEME AWARE
+   ======================================== */
+
+.collection-tabs {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+:root.dark .collection-tabs,
+body.dark-theme .collection-tabs {
+  background-color: #020617;
+  border-color: #1e293b;
+}
+
+.collection-tab {
+  color: #475569;
+}
+
+.collection-tab:hover {
+  background-color: #f8fafc;
+}
+
+.collection-tab.active {
+  color: #1d4ed8;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+:root.dark .collection-tab,
+body.dark-theme .collection-tab {
+  color: #d1d5db;
+}
+
+:root.dark .collection-tab:hover,
+body.dark-theme .collection-tab:hover {
+  background-color: #1f2937;
+}
+
+:root.dark .collection-tab.active,
+body.dark-theme .collection-tab.active {
+  color: #93c5fd;
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ========================================
+   TEXTOS - THEME AWARE
+   ======================================== */
+
+.collection-text-primary {
+  color: #0f172a;
+}
+
+:root.dark .collection-text-primary,
+body.dark-theme .collection-text-primary {
+  color: #f8fafc;
+}
+
+.collection-text-secondary {
+  color: #475569;
+}
+
+:root.dark .collection-text-secondary,
+body.dark-theme .collection-text-secondary {
+  color: #94a3b8;
+}
+
+.collection-text-muted {
+  color: #64748b;
+}
+
+:root.dark .collection-text-muted,
+body.dark-theme .collection-text-muted {
+  color: #64748b;
+}
+
+/* ========================================
+   INPUTS Y SELECTS - THEME AWARE
+   ======================================== */
+
+.collection-input,
+.collection-management-container select,
+.collection-management-container input[type="text"],
+.collection-management-container input[type="number"],
+.collection-management-container input[type="date"],
+.collection-management-container input[type="datetime-local"],
+.collection-management-container textarea {
+  background-color: #ffffff;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.collection-management-container select option {
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
+:root.dark .collection-input,
+:root.dark .collection-management-container select,
+:root.dark .collection-management-container input[type="text"],
+:root.dark .collection-management-container input[type="number"],
+:root.dark .collection-management-container input[type="date"],
+:root.dark .collection-management-container input[type="datetime-local"],
+:root.dark .collection-management-container textarea,
+body.dark-theme .collection-input,
+body.dark-theme .collection-management-container select,
+body.dark-theme .collection-management-container input[type="text"],
+body.dark-theme .collection-management-container input[type="number"],
+body.dark-theme .collection-management-container input[type="date"],
+body.dark-theme .collection-management-container input[type="datetime-local"],
+body.dark-theme .collection-management-container textarea {
+  background-color: #1f2937;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+:root.dark .collection-management-container select option,
+body.dark-theme .collection-management-container select option {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+/* ========================================
    LIGHT THEME (DEFAULT)
    ======================================== */
 
@@ -3406,4 +3599,253 @@ body.light-theme app-select-supervisor-modal .border-slate-700 {
   border-color: #e5e7eb !important;
 }
 
+/* ============================================================
+   COLLECTION MANAGEMENT - MODO CLARO FORZADO (html:not(.dark))
+   ============================================================ */
+
+/* CONTENEDOR PRINCIPAL - Fondo claro */
+html:not(.dark) app-collection-management .collection-management-container {
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9) !important;
+}
+
+/* HEADER - Gradiente azul claro */
+html:not(.dark) app-collection-management > div > div:first-of-type:has(h1) {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+}
+
+/* PANELES LATERALES - Fondo blanco */
+html:not(.dark) app-collection-management .bg-white,
+html:not(.dark) app-collection-management [class*="bg-white"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-slate-900,
+html:not(.dark) app-collection-management [class*="dark:bg-slate-900"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-slate-950,
+html:not(.dark) app-collection-management [class*="dark:bg-slate-950"] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) app-collection-management .bg-gray-800,
+html:not(.dark) app-collection-management [class*="dark:bg-gray-800"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gray-900,
+html:not(.dark) app-collection-management [class*="dark:bg-gray-900"] {
+  background-color: #f8fafc !important;
+}
+
+/* PANEL CENTRAL - Fondo gradiente claro */
+html:not(.dark) app-collection-management .from-slate-900,
+html:not(.dark) app-collection-management .via-gray-900,
+html:not(.dark) app-collection-management .to-slate-900 {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #eff6ff) !important;
+}
+
+html:not(.dark) app-collection-management [class*="from-gray-50"][class*="via-slate-50"][class*="to-blue-50"] {
+  background: linear-gradient(to bottom right, #f9fafb, #f8fafc, #eff6ff) !important;
+}
+
+/* TABS - Fondo claro */
+html:not(.dark) app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) app-collection-management [class*="bg-blue-950"],
+html:not(.dark) app-collection-management [class*="dark:bg-blue-950"] {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* BORDES - Colores claros */
+html:not(.dark) app-collection-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .border-slate-800,
+html:not(.dark) app-collection-management [class*="dark:border-slate-800"] {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-700,
+html:not(.dark) app-collection-management [class*="dark:border-gray-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-600,
+html:not(.dark) app-collection-management [class*="dark:border-gray-600"] {
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) app-collection-management .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+/* TEXTOS - Colores oscuros para lectura */
+html:not(.dark) app-collection-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-400,
+html:not(.dark) app-collection-management [class*="dark:text-slate-400"] {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-300,
+html:not(.dark) app-collection-management [class*="dark:text-slate-300"] {
+  color: #475569 !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-200,
+html:not(.dark) app-collection-management [class*="dark:text-slate-200"] {
+  color: #334155 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-300,
+html:not(.dark) app-collection-management [class*="dark:text-gray-300"] {
+  color: #475569 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-400,
+html:not(.dark) app-collection-management [class*="dark:text-gray-400"] {
+  color: #6b7280 !important;
+}
+
+/* Textos dentro de tabs y paneles que NO están en botones o headers con fondo oscuro */
+html:not(.dark) app-collection-management .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+
+html:not(.dark) app-collection-management .text-blue-200,
+html:not(.dark) app-collection-management [class*="dark:text-blue-200"] {
+  color: #1e40af !important;
+}
+
+html:not(.dark) app-collection-management .text-blue-300,
+html:not(.dark) app-collection-management [class*="dark:text-blue-300"] {
+  color: #2563eb !important;
+}
+
+/* INPUTS Y SELECTS - Fondo blanco */
+html:not(.dark) app-collection-management select,
+html:not(.dark) app-collection-management input[type="text"],
+html:not(.dark) app-collection-management input[type="number"],
+html:not(.dark) app-collection-management input[type="date"],
+html:not(.dark) app-collection-management input[type="datetime-local"],
+html:not(.dark) app-collection-management textarea {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) app-collection-management select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* CARDS Y PANELES - Fondos claros */
+html:not(.dark) app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+html:not(.dark) app-collection-management [class*="dark:bg-gray-800"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management [class*="dark:bg-gray-900"] {
+  background-color: #f8fafc !important;
+}
+
+/* Fondos de colores especiales */
+html:not(.dark) app-collection-management [class*="dark:from-purple-950"],
+html:not(.dark) app-collection-management [class*="dark:to-indigo-950"] {
+  background: linear-gradient(to bottom right, #faf5ff, #eef2ff) !important;
+}
+
+html:not(.dark) app-collection-management [class*="dark:from-green-950"],
+html:not(.dark) app-collection-management [class*="dark:to-emerald-950"] {
+  background: linear-gradient(to bottom right, #f0fdf4, #ecfdf5) !important;
+}
+
+html:not(.dark) app-collection-management .bg-purple-950\/30,
+html:not(.dark) app-collection-management [class*="dark:bg-purple-950"] {
+  background-color: rgba(147, 51, 234, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .bg-indigo-950\/30,
+html:not(.dark) app-collection-management [class*="dark:bg-indigo-950"] {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .bg-green-950\/30,
+html:not(.dark) app-collection-management [class*="dark:bg-green-950"] {
+  background-color: rgba(34, 197, 94, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .bg-red-950\/30,
+html:not(.dark) app-collection-management .bg-red-950\/20,
+html:not(.dark) app-collection-management [class*="dark:bg-red-950"] {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+/* Bordes de colores especiales */
+html:not(.dark) app-collection-management .border-purple-700,
+html:not(.dark) app-collection-management [class*="dark:border-purple-700"] {
+  border-color: #c4b5fd !important;
+}
+
+html:not(.dark) app-collection-management .border-green-800,
+html:not(.dark) app-collection-management .border-green-700,
+html:not(.dark) app-collection-management [class*="dark:border-green-800"],
+html:not(.dark) app-collection-management [class*="dark:border-green-700"] {
+  border-color: #86efac !important;
+}
+
+/* Textos de colores especiales */
+html:not(.dark) app-collection-management .text-purple-200,
+html:not(.dark) app-collection-management .text-purple-300,
+html:not(.dark) app-collection-management [class*="dark:text-purple"] {
+  color: #7c3aed !important;
+}
+
+html:not(.dark) app-collection-management .text-green-300,
+html:not(.dark) app-collection-management .text-green-400,
+html:not(.dark) app-collection-management [class*="dark:text-green"] {
+  color: #16a34a !important;
+}
+
+/* MODAL - Fondo oscuro transparente, contenido blanco */
+html:not(.dark) app-collection-management .bg-black\/50,
+html:not(.dark) app-collection-management .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Historial items */
+html:not(.dark) app-collection-management [class*="dark:bg-gray-800"].rounded {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Timer background */
+html:not(.dark) app-collection-management [class*="dark:bg-gray-900"].rounded {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Garantizar que los textos en paneles sean legibles */
+html:not(.dark) app-collection-management .w-64 .text-slate-700,
+html:not(.dark) app-collection-management .w-64 .text-slate-800 {
+  color: #334155 !important;
+}
+
+html:not(.dark) app-collection-management .flex-1.overflow-y-auto .text-gray-700,
+html:not(.dark) app-collection-management .flex-1.overflow-y-auto .text-gray-800 {
+  color: #374151 !important;
+}
 
