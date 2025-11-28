@@ -43,7 +43,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
     SelectSupervisorModalComponent
   ],
   template: `
-    <div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
+    <div class="h-[100dvh] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col overflow-hidden">
       <!-- Notificación de éxito -->
       @if (showSuccess()) {
         <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">
@@ -60,7 +60,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
         <div class="fixed top-4 right-4 z-50 animate-[slideInDown_0.5s_ease-out] max-w-md">
           @for (schedule of activePaymentSchedules(); track schedule.id) {
-            <div class="bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-xl shadow-2xl mb-3 overflow-hidden">
+            <div class="bg-gradient-to-br from-amber-600 via-yellow-600 to-orange-600 text-white rounded-xl shadow-2xl mb-3 overflow-hidden">
               <!-- Header -->
               <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -116,17 +116,17 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       }
 
       <!-- Header Principal - ULTRA COMPACTO -->
-      <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
+      <div class="bg-gradient-to-r from-slate-950 via-blue-950 to-slate-950 text-white shadow-md relative overflow-hidden">
         <div class="relative px-3 py-1">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div>
                 <div class="flex items-center gap-1.5">
-                  <div class="bg-blue-500 dark:bg-blue-600 p-1 rounded">
+                  <div class="bg-blue-600 p-1 rounded">
                   </div>
                   <div>
                     <h1 class="text-sm font-bold">Gestión de Cobranza</h1>
-                    <p class="text-[9px] text-blue-100 dark:text-blue-300 flex items-center gap-0.5">
+                    <p class="text-[9px] text-blue-300 flex items-center gap-0.5">
                       {{ campaign().nombre }}
                     </p>
                   </div>
@@ -134,38 +134,19 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
               </div>
               <div class="h-6 w-px bg-white/20"></div>
               <div class="text-xs">
-                <div class="text-blue-100 dark:text-blue-300 text-[9px]">Asesor</div>
+                <div class="text-blue-300 text-[9px]">Asesor</div>
                 <div class="font-semibold text-white text-xs">María González Castro</div>
               </div>
             </div>
 
             <div class="flex items-center gap-2">
-              <!-- Botón de Dark Mode -->
-              <button
-                (click)="toggleDarkMode()"
-                [class]="'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-300 group border ' +
-                  (themeService.isDarkMode()
-                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/40'
-                    : 'bg-blue-500/90 hover:bg-blue-600 border-blue-600')"
-                [attr.aria-label]="themeService.isDarkMode() ? 'Activar modo claro' : 'Activar modo oscuro'"
-                title="Cambiar tema"
-              >
-                @if (themeService.isDarkMode()) {
-                  <span class="text-[10px] text-yellow-300 font-semibold">OSCURO</span>
-                } @else {
-                  <span class="text-[10px] text-white font-semibold">CLARO</span>
-                }
-              </button>
-
-              <div class="h-6 w-px bg-white/20"></div>
-
               <div class="text-right">
-                <div class="text-blue-100 dark:text-blue-300 text-[9px]">Estado</div>
-                <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-200')">
+                <div class="text-blue-300 text-[9px]">Estado</div>
+                <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-slate-200')">
                   {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
               </div>
-              <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-blue-800/50 dark:bg-gray-900/80')">
+              <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-gray-900/80')">
                 {{ formatTime(callDuration()) }}
               </div>
             </div>
@@ -176,14 +157,14 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
       <div class="flex-1 flex overflow-hidden">
         <!-- PANEL IZQUIERDO - Info Cliente -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-64 bg-slate-900 border-r border-slate-800 shadow-lg overflow-hidden flex flex-col">
           <!-- Tabs -->
-          <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+          <div class="flex border-b border-slate-800 bg-slate-950">
             @for (tab of tabs; track tab.id) {
               <button
                 (click)="activeTab.set(tab.id)"
                 [class]="'flex-1 px-2 py-1.5 text-[11px] font-semibold transition-all relative ' +
-                  (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')"
+                  (activeTab() === tab.id ? 'text-blue-200 bg-blue-950/50' : 'text-gray-300 hover:bg-gray-800')"
               >
                 {{ tab.label }}
                 @if (activeTab() === tab.id) {
@@ -200,9 +181,9 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 <div class="space-y-2">
                   <!-- Lista vertical de campos -->
                   @for (field of customerOutputFields(); track field.id) {
-                    <div class="pb-1.5 border-b border-slate-100 dark:border-slate-800">
-                      <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">{{ field.label }}</div>
-                      <div class="text-[12px] font-semibold text-slate-800 dark:text-white break-words">
+                    <div class="pb-1.5 border-b border-slate-800">
+                      <div class="text-[10px] text-slate-400 uppercase font-medium">{{ field.label }}</div>
+                      <div class="text-[12px] font-semibold text-white break-words">
                         {{ formatFieldValue(getFieldValue(field.field), field.format) }}
                       </div>
                     </div>
@@ -224,15 +205,15 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                     </div>
                   } @else {
                     @for (gestion of historialGestiones(); track $index) {
-                      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5">
+                      <div class="bg-gray-800 border border-gray-700 rounded p-1.5">
                         <div class="flex justify-between items-center text-[9px]">
-                          <span class="font-bold text-gray-600 dark:text-gray-300">{{ gestion.fecha }}</span>
+                          <span class="font-bold text-gray-300">{{ gestion.fecha }}</span>
                           <span class="text-gray-400">{{ gestion.asesor }}</span>
                         </div>
-                        <div class="text-[10px] font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.gestion }}</div>
-                        <div class="text-[9px] text-gray-500 dark:text-gray-400 truncate">{{ gestion.observacion }}</div>
+                        <div class="text-[10px] font-semibold text-blue-300 mt-0.5">{{ gestion.gestion }}</div>
+                        <div class="text-[9px] text-gray-400 truncate">{{ gestion.observacion }}</div>
                         @if (gestion.schedule) {
-                          <button (click)="openScheduleDetail(gestion.id)" class="text-[8px] text-purple-600 dark:text-purple-400 mt-0.5 hover:underline">
+                          <button (click)="openScheduleDetail(gestion.id)" class="text-[8px] text-purple-400 mt-0.5 hover:underline">
                             Ver cronograma →
                           </button>
                         }
@@ -246,13 +227,13 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
         </div>
 
         <!-- Panel Central - ULTRA COMPACTO -->
-        <div class="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-slate-50 to-blue-50 dark:from-slate-900 dark:via-gray-900 dark:to-slate-900 transition-colors duration-300">
+        <div class="flex-1 overflow-y-auto bg-gradient-to-br from-slate-900 via-gray-900 to-slate-900">
           <div class="p-3 space-y-2">
             <!-- Control de Llamada - COMPACTO -->
-            <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2 transition-colors duration-300 ' + (callActive() ? 'border-green-400 dark:border-green-500' : 'border-gray-200 dark:border-gray-700')">
+            <div [class]="'bg-gray-800 rounded-lg shadow-md border p-2 ' + (callActive() ? 'border-green-500' : 'border-gray-700')">
               <div class="flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs">
-                  <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
+                <h3 class="font-bold text-white flex items-center gap-2 text-xs">
+                  <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-900/30 animate-pulse' : 'bg-blue-900/30')">
                   </div>
                   Control de Llamada
                 </h3>
@@ -272,7 +253,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                   <button
                     (click)="endCall()"
                     [disabled]="!callActive()"
-                    class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                    class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
                   >
                     Finalizar
                   </button>
@@ -282,8 +263,8 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
 
             @if (!usesHierarchicalClassifications()) {
             <!-- Resultado de Contacto - COMPACTO -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-300">
-              <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
+            <div class="bg-gray-800 rounded-lg shadow-md border border-gray-700 p-2 hover:border-blue-600">
+              <label class="block font-bold text-white mb-1 text-[11px] flex items-center gap-1">
                 <div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                 Resultado de Contacto *
               </label>
@@ -291,9 +272,9 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 <select
                   [(ngModel)]="managementForm.resultadoContacto"
                   (ngModelChange)="onContactResultChange()"
-                  [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 hover:border-blue-400 dark:hover:border-blue-600 text-xs ' +
-                    (errors().resultadoContacto ? 'border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-600' : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900') + ' ' +
-                    (managementForm.resultadoContacto ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-400 dark:border-blue-600' : '')"
+                  [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-white appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-800 hover:border-blue-600 text-xs ' +
+                    (errors().resultadoContacto ? 'border-red-600 bg-red-950/30' : 'border-gray-600 bg-gray-900') + ' ' +
+                    (managementForm.resultadoContacto ? 'bg-blue-950/30 border-blue-600' : '')"
                 >
                   <option value="">-- Seleccionar resultado --</option>
                   @for (tip of contactClassifications(); track tip.id) {
@@ -302,7 +283,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 </select>
               </div>
               @if (errors().resultadoContacto) {
-                <div class="text-red-600 text-[10px] mt-1 flex items-center gap-1">
+                <div class="text-red-400 text-[10px] mt-1 flex items-center gap-1">
                   Requerido
                 </div>
               }
@@ -311,21 +292,21 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
 
             <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
             @if (usesHierarchicalClassifications()) {
-              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-3">
-                <div class="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">Clasificación</div>
+              <div class="bg-gray-800 rounded-lg shadow-md border border-gray-700 p-3">
+                <div class="text-[10px] font-bold text-gray-300 uppercase mb-2">Clasificación</div>
                 <div class="flex flex-wrap gap-2">
                   @for (level of hierarchyLevels(); track $index) {
                     @if (shouldShowLevel($index)) {
                       <div class="flex-1 min-w-[140px]">
-                        <label class="block text-[9px] text-gray-500 dark:text-gray-400 mb-0.5">
+                        <label class="block text-[9px] text-gray-400 mb-0.5">
                           {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
                         </label>
                         <select
                           [ngModel]="selectedClassifications()[$index]"
                           (ngModelChange)="onClassificationLevelChange($index, $event)"
                           [class]="'w-full p-1.5 border rounded text-[11px] font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
-                            (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white') + ' ' +
-                            (selectedClassifications()[$index] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
+                            (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-950/30' : 'border-gray-600 bg-gray-900 text-white') + ' ' +
+                            (selectedClassifications()[$index] ? 'border-green-400 bg-green-950/30' : '')"
                         >
                           <option value="">Seleccionar...</option>
                           @for (option of level; track option.id) {
@@ -337,23 +318,23 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                   }
                 </div>
                 @if (errors().tipoGestion) {
-                  <div class="text-red-500 text-[9px] mt-1">Seleccione una clasificación</div>
+                  <div class="text-red-400 text-[9px] mt-1">Seleccione una clasificación</div>
                 }
               </div>
             }
 
             <!-- Sección de Campos Dinámicos - NUEVA -->
             @if (isLoadingDynamicFields()) {
-              <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
-                <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
+              <div class="bg-indigo-950/20 border border-indigo-900/50 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-center gap-2 text-indigo-400">
                   <span class="text-xs">Cargando campos adicionales...</span>
                 </div>
               </div>
             }
-            
+
             @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0) {
-              <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
-                <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+              <div class="bg-gray-900/20 border border-gray-700 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-center gap-2 text-gray-400">
                   <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
                 </div>
               </div>
@@ -374,59 +355,59 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
 
             <!-- Schedule Helper - Payment Schedule Information -->
             @if (isLoadingSchedules()) {
-              <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3 animate-pulse">
-                <div class="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
+              <div class="bg-purple-950/20 border border-purple-900/50 rounded-lg shadow-md p-3 animate-pulse">
+                <div class="flex items-center justify-center gap-2 text-purple-400">
                   <span class="text-xs font-semibold">Cargando cronogramas pendientes...</span>
                 </div>
               </div>
             }
 
             @if (!isLoadingSchedules() && showScheduleHelper() && activeSchedules().length > 0) {
-              <div class="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border-2 border-purple-300 dark:border-purple-700 rounded-lg shadow-lg p-3 space-y-2">
+              <div class="bg-gradient-to-r from-purple-950/30 to-indigo-950/30 border-2 border-purple-700 rounded-lg shadow-lg p-3 space-y-2">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <div class="p-1.5 bg-purple-500 dark:bg-purple-600 rounded">
+                    <div class="p-1.5 bg-purple-600 rounded">
                     </div>
                     <div>
-                      <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Cronograma Activo Detectado</h4>
-                      <p class="text-[9px] text-purple-600 dark:text-purple-300">Cliente tiene {{ activeSchedules().length }} cronograma(s) pendiente(s)</p>
+                      <h4 class="text-xs font-bold text-purple-100">Cronograma Activo Detectado</h4>
+                      <p class="text-[9px] text-purple-300">Cliente tiene {{ activeSchedules().length }} cronograma(s) pendiente(s)</p>
                     </div>
                   </div>
                 </div>
 
                 @for (schedule of activeSchedules(); track schedule.id) {
-                  <div class="bg-white dark:bg-gray-800 rounded-lg border border-purple-200 dark:border-purple-700 p-2 space-y-2">
+                  <div class="bg-gray-800 rounded-lg border border-purple-700 p-2 space-y-2">
                     <!-- Schedule Summary -->
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-2">
-                        <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
+                        <div class="text-xs font-bold text-purple-100">
                           {{ schedule.scheduleType || 'CRONOGRAMA' }}
                         </div>
-                        <div class="text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded font-semibold">
+                        <div class="text-[9px] px-1.5 py-0.5 bg-green-900/30 text-green-300 rounded font-semibold">
                           ACTIVO
                         </div>
                       </div>
-                      <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
+                      <div class="text-xs font-bold text-purple-100">
                         S/ {{ schedule.totalAmount | number:'1.2-2' }}
                       </div>
                     </div>
 
                     <!-- Pending Installments -->
                     <div class="space-y-1">
-                      <div class="text-[9px] font-bold text-gray-600 dark:text-gray-300 uppercase">Cuotas Pendientes</div>
+                      <div class="text-[9px] font-bold text-gray-300 uppercase">Cuotas Pendientes</div>
                       @for (installment of getPendingInstallments(schedule); track installment.id; let idx = $index) {
                         @if (idx < 3) {
-                          <div class="flex items-center justify-between text-[10px] bg-gray-50 dark:bg-gray-900 p-1.5 rounded">
+                          <div class="flex items-center justify-between text-[10px] bg-gray-900 p-1.5 rounded">
                             <div class="flex items-center gap-2">
-                              <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
-                              <span class="text-gray-500 dark:text-gray-400">Vence: {{ installment.dueDate }}</span>
+                              <span class="font-semibold text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
+                              <span class="text-gray-400">Vence: {{ installment.dueDate }}</span>
                             </div>
-                            <span class="font-bold text-purple-700 dark:text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
+                            <span class="font-bold text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
                           </div>
                         }
                       }
                       @if (getPendingInstallments(schedule).length > 3) {
-                        <div class="text-[9px] text-center text-gray-500 dark:text-gray-400 italic">
+                        <div class="text-[9px] text-center text-gray-400 italic">
                           + {{ getPendingInstallments(schedule).length - 3 }} cuotas más
                         </div>
                       }
@@ -439,7 +420,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                         <button
                           type="button"
                           (click)="applyNextInstallmentPayment()"
-                          class="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
+                          class="flex-1 px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
                           Usar Próxima Cuota
                         </button>
                       }
@@ -449,14 +430,14 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                         <button
                           type="button"
                           (click)="applyFullSchedulePayment()"
-                          class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
+                          class="flex-1 px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
                           Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
                         </button>
                       }
                     </div>
 
                     <!-- Info Note -->
-                    <div class="text-[9px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
+                    <div class="text-[9px] text-purple-400 bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
                       <span>El pago se aplicará automáticamente a las cuotas pendientes en orden de vencimiento</span>
                     </div>
                   </div>
@@ -466,12 +447,12 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
 
             <!-- Selector de Cuota para Cancelación -->
             @if (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0) {
-              <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
+              <div class="bg-gradient-to-br from-green-950/30 to-emerald-950/30 border border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
                   <div>
-                    <h4 class="text-xs font-bold text-green-900 dark:text-green-100">Seleccionar Cuota a Cancelar</h4>
-                    <p class="text-[9px] text-green-600 dark:text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
+                    <h4 class="text-xs font-bold text-green-100">Seleccionar Cuota a Cancelar</h4>
+                    <p class="text-[9px] text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
                   </div>
                 </div>
 
@@ -481,7 +462,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                       class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
                       [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
                         ? 'bg-green-500 text-white shadow-md'
-                        : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
+                        : 'bg-gray-800 hover:bg-green-900/30 border border-green-700'"
                     >
                       <div class="flex items-center gap-3">
                         <input
@@ -494,7 +475,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                         />
                         <div>
                           <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                          <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                          <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-400'">
                             Vence: {{ formatDate(cuota.dueDate) }}
                           </span>
                         </div>
@@ -505,7 +486,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 </div>
 
                 @if (!selectedInstallmentForCancellation()) {
-                  <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
+                  <div class="text-[10px] text-amber-400 bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
                   </div>
@@ -520,7 +501,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 <button
                   (click)="openSupervisorSelectionModal()"
                   [disabled]="saving() || !isFormValid() || waitingForAuthorization()"
-                  class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                  class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
                 >
                   @if (waitingForAuthorization()) {
                     <span class="animate-pulse">⏳ Esperando Autorización...</span>
@@ -534,7 +515,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                   (click)="saveManagement()"
                   [disabled]="saving() || !isFormValid() || (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0 && !selectedInstallmentForCancellation())"
                   [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
-                  class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                  class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
                 >
                   @if (saving()) {
                     Guardando...
@@ -545,7 +526,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
               }
               <button
                 (click)="cancelarTipificacion()"
-                class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
+                class="px-6 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
               >
                 Cancelar
               </button>
@@ -554,33 +535,33 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
         </div>
 
         <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-64 bg-slate-900 border-l border-slate-800 shadow-lg overflow-hidden flex flex-col">
           <!-- Teléfonos -->
-          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
-            <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
+          <div class="p-2 border-b border-slate-800">
+            <div class="text-[9px] font-bold text-gray-400 uppercase mb-1.5">Contacto</div>
             <div class="space-y-1">
-              <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
-                <span class="text-green-600 dark:text-green-400 text-sm">📱</span>
+              <div class="flex items-center gap-2 p-1.5 bg-green-950/30 rounded border border-green-800 cursor-pointer hover:bg-green-900/40 transition-colors">
+                <span class="text-green-400 text-sm">📱</span>
                 <div class="flex-1 min-w-0">
-                  <div class="text-[9px] text-green-600 dark:text-green-400">Principal</div>
-                  <div class="text-[11px] font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
+                  <div class="text-[9px] text-green-400">Principal</div>
+                  <div class="text-[11px] font-bold text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
                 </div>
               </div>
               @if (customerData().contacto.telefono_alternativo) {
-                <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                  <span class="text-slate-500 text-sm">📞</span>
+                <div class="flex items-center gap-2 p-1.5 bg-slate-800 rounded border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors">
+                  <span class="text-slate-400 text-sm">📞</span>
                   <div class="flex-1 min-w-0">
-                    <div class="text-[9px] text-slate-500 dark:text-slate-400">Alternativo</div>
-                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
+                    <div class="text-[9px] text-slate-400">Alternativo</div>
+                    <div class="text-[11px] font-semibold text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
                   </div>
                 </div>
               }
               @if (customerData().contacto.telefono_trabajo) {
-                <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                  <span class="text-slate-500 text-sm">🏢</span>
+                <div class="flex items-center gap-2 p-1.5 bg-slate-800 rounded border border-slate-700 cursor-pointer hover:bg-slate-700 transition-colors">
+                  <span class="text-slate-400 text-sm">🏢</span>
                   <div class="flex-1 min-w-0">
-                    <div class="text-[9px] text-slate-500 dark:text-slate-400">Trabajo</div>
-                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
+                    <div class="text-[9px] text-slate-400">Trabajo</div>
+                    <div class="text-[11px] font-semibold text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
                   </div>
                 </div>
               }
@@ -588,29 +569,29 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
           </div>
 
           <!-- Email y Dirección -->
-          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
+          <div class="p-2 border-b border-slate-800">
             <div class="space-y-1">
               @if (customerData().contacto.email) {
                 <div class="flex items-start gap-2">
-                  <span class="text-blue-500 text-sm">✉️</span>
-                  <div class="text-[10px] text-gray-600 dark:text-gray-300 break-all">{{ customerData().contacto.email }}</div>
+                  <span class="text-blue-400 text-sm">✉️</span>
+                  <div class="text-[10px] text-gray-300 break-all">{{ customerData().contacto.email }}</div>
                 </div>
               }
               @if (customerData().contacto.direccion) {
                 <div class="flex items-start gap-2">
-                  <span class="text-orange-500 text-sm">📍</span>
-                  <div class="text-[10px] text-gray-600 dark:text-gray-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
+                  <span class="text-orange-400 text-sm">📍</span>
+                  <div class="text-[10px] text-gray-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
                 </div>
               }
             </div>
           </div>
 
           <!-- Resumen Rápido Deuda -->
-          <div class="p-2 bg-red-50 dark:bg-red-950/20">
+          <div class="p-2 bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] text-red-500 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
-              <div class="text-xl font-black text-red-600 dark:text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-[11px] text-orange-600 dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
+              <div class="text-[9px] text-red-400 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xl font-black text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+              <div class="text-[11px] text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
@@ -636,9 +617,9 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
       <!-- Modal de Cronograma Detallado -->
       @if (showScheduleDetail() && scheduleManagementId()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-slideInUp">
+          <div class="bg-slate-900 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-slideInUp">
             <!-- Header del modal -->
-            <div class="bg-gradient-to-r from-purple-600 to-purple-700 dark:from-purple-700 dark:to-purple-800 text-white px-6 py-4 flex items-center justify-between">
+            <div class="bg-gradient-to-r from-purple-700 to-purple-800 text-white px-6 py-4 flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div>
                   <h2 class="text-lg font-bold">Cronograma de Pagos</h2>
@@ -658,12 +639,12 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
             </div>
 
             <!-- Footer del modal -->
-            <div class="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end">
+            <div class="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex justify-end">
               <button
                 type="button"
                 (click)="closeScheduleDetail()"
-                class="px-4 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300
-                       hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                class="px-4 py-2 text-sm font-semibold text-slate-300
+                       hover:bg-slate-700 rounded-lg transition-colors">
                 Cerrar
               </button>
             </div>
@@ -2765,8 +2746,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   getAmountRowClass(index: number): string {
     const colors = [
-      'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300',
-      'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200',
+      'bg-red-950/30 text-red-300',
+      'bg-gray-800 text-gray-200',
     ];
     return colors[index % colors.length];
   }
