@@ -56,64 +56,6 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
         </div>
       }
 
-      <!-- Alerta de Promesa de Pago Activa con detalle de cuotas -->
-      @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
-        <div class="fixed top-4 right-4 z-50 animate-[slideInDown_0.5s_ease-out] max-w-md">
-          @for (schedule of activePaymentSchedules(); track schedule.id) {
-            <div class="bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-xl shadow-2xl mb-3 overflow-hidden">
-              <!-- Header -->
-              <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-2xl">⚠️</span>
-                  <div>
-                    <div class="font-bold text-sm">PROMESA DE PAGO ACTIVA</div>
-                    <div class="text-xs opacity-80">No puede registrar otra promesa</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-lg font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
-                  <div class="text-xs opacity-80">Total</div>
-                </div>
-              </div>
-              <!-- Detalle de cuotas -->
-              <div class="px-4 py-3">
-                <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
-                <div class="space-y-1.5 max-h-40 overflow-y-auto">
-                  @for (cuota of schedule.installments; track cuota.numeroCuota) {
-                    <div class="flex items-center justify-between text-xs bg-white/20 rounded-lg px-3 py-2">
-                      <div class="flex items-center gap-2">
-                        <span class="font-bold">Cuota {{ cuota.numeroCuota }}</span>
-                        @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                          <span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">✓ PAGADA</span>
-                        } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                          <span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded">⚠ VENCIDA</span>
-                        } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-                          <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded">✗ CANCELADA</span>
-                        } @else {
-                          <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">⏳ PENDIENTE</span>
-                        }
-                      </div>
-                      <div class="text-right">
-                        <div class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</div>
-                        <div class="text-[10px] opacity-75">{{ formatDate(cuota.dueDate) }}</div>
-                      </div>
-                    </div>
-                  }
-                </div>
-              </div>
-              <!-- Footer con resumen -->
-              @if (schedule.cuotasPendientes > 0) {
-                <div class="px-4 py-2 bg-black/20 text-xs">
-                  <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> cuota(s) pendiente(s)
-                  @if (schedule.nextDueDate) {
-                    · Próximo vencimiento: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
-                  }
-                </div>
-              }
-            </div>
-          }
-        </div>
-      }
 
       <!-- Header Principal - ULTRA COMPACTO -->
       <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
@@ -307,6 +249,61 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                 </div>
               }
             </div>
+            }
+
+            <!-- Alerta de Promesa de Pago Activa - Empuja el contenido hacia abajo -->
+            @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
+              <div class="animate-[slideInDown_0.3s_ease-out]">
+                @for (schedule of activePaymentSchedules(); track schedule.id) {
+                  <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-lg shadow-lg mb-2 overflow-hidden border-2 border-amber-400 dark:border-amber-500">
+                    <!-- Header compacto -->
+                    <div class="px-3 py-2 bg-black/10 flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 bg-white/20 rounded-lg flex items-center justify-center">
+                          <span class="text-sm">⚠</span>
+                        </div>
+                        <div>
+                          <div class="font-bold text-xs">PROMESA DE PAGO ACTIVA</div>
+                          <div class="text-[10px] opacity-80">No puede registrar otra promesa</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-base font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
+                        <div class="text-[10px] opacity-80">Total</div>
+                      </div>
+                    </div>
+                    <!-- Detalle de cuotas - colapsable y compacto -->
+                    <div class="px-3 py-2 bg-black/5">
+                      <div class="text-[10px] font-semibold mb-1.5 opacity-90 flex items-center gap-1">
+                        <span>DETALLE DE CUOTAS:</span>
+                      </div>
+                      <div class="flex flex-wrap gap-1.5">
+                        @for (cuota of schedule.installments; track cuota.numeroCuota) {
+                          <div class="flex items-center gap-2 text-[10px] bg-white/20 rounded-lg px-2 py-1.5">
+                            <span class="font-bold">C{{ cuota.numeroCuota }}</span>
+                            <span class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            <span class="opacity-75">{{ formatDate(cuota.dueDate) }}</span>
+                            @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+                              <span class="bg-green-600 text-[9px] px-1 py-0.5 rounded">✓</span>
+                            } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
+                              <span class="bg-red-600 text-[9px] px-1 py-0.5 rounded">!</span>
+                            } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
+                              <span class="bg-gray-600 text-[9px] px-1 py-0.5 rounded">✗</span>
+                            } @else {
+                              <span class="bg-blue-600 text-[9px] px-1 py-0.5 rounded">⏳</span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      @if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
+                        <div class="mt-1.5 text-[10px] opacity-80">
+                          <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
             }
 
             <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
