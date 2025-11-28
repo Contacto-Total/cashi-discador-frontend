@@ -2,6 +2,8 @@
   padding: 24px;
   max-width: 800px;
   margin: 0 auto;
+  min-height: 100vh;
+  background-color: #f8fafc;
 }
 
 .page-header {
@@ -21,9 +23,13 @@
   font-size: 14px;
 }
 
-/* Selectores de contexto */
-.context-card {
+/* Cards */
+.context-card,
+.search-card {
   margin-bottom: 24px;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
 }
 
 .context-card mat-card-title {
@@ -31,6 +37,7 @@
   align-items: center;
   gap: 8px;
   font-size: 18px;
+  color: #1e293b;
 }
 
 .context-selectors {
@@ -59,10 +66,6 @@
 }
 
 /* Buscador */
-.search-card {
-  margin-bottom: 24px;
-}
-
 .search-card.disabled {
   opacity: 0.6;
   pointer-events: none;
@@ -84,7 +87,7 @@
   border-radius: 8px;
   max-height: 200px;
   overflow-y: auto;
-  background: white;
+  background: #ffffff;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -98,7 +101,7 @@
 }
 
 .autocomplete-item:hover {
-  background: #f8fafc;
+  background: #f1f5f9;
 }
 
 .autocomplete-item:last-child {
@@ -133,43 +136,80 @@
   gap: 8px;
 }
 
-/* Info card */
-.info-card {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
+/* ========================================
+   DARK THEME
+   ======================================== */
+
+:host-context(html.dark) .manual-management-container,
+:host-context(body.dark-theme) .manual-management-container {
+  background-color: #0f172a;
 }
 
-.info-content {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
+:host-context(html.dark) .page-header h1,
+:host-context(body.dark-theme) .page-header h1 {
+  color: #f8fafc;
 }
 
-.info-icon {
-  color: #0284c7;
-  font-size: 32px;
-  width: 32px;
-  height: 32px;
+:host-context(html.dark) .page-header .subtitle,
+:host-context(body.dark-theme) .page-header .subtitle {
+  color: #94a3b8;
 }
 
-.info-content h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #0c4a6e;
+:host-context(html.dark) .context-card,
+:host-context(html.dark) .search-card,
+:host-context(body.dark-theme) .context-card,
+:host-context(body.dark-theme) .search-card {
+  background-color: #1e293b;
+  border-color: #334155;
 }
 
-.info-content ol {
-  margin: 0;
-  padding-left: 20px;
-  color: #0369a1;
+:host-context(html.dark) .context-card mat-card-title,
+:host-context(body.dark-theme) .context-card mat-card-title {
+  color: #f8fafc;
 }
 
-.info-content li {
-  margin-bottom: 8px;
-  line-height: 1.5;
+:host-context(html.dark) .context-hint,
+:host-context(body.dark-theme) .context-hint {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
 }
 
-.info-content li:last-child {
-  margin-bottom: 0;
+:host-context(html.dark) .autocomplete-results,
+:host-context(body.dark-theme) .autocomplete-results {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+:host-context(html.dark) .autocomplete-item,
+:host-context(body.dark-theme) .autocomplete-item {
+  border-bottom-color: #334155;
+}
+
+:host-context(html.dark) .autocomplete-item:hover,
+:host-context(body.dark-theme) .autocomplete-item:hover {
+  background: #334155;
+}
+
+:host-context(html.dark) .autocomplete-item .doc,
+:host-context(body.dark-theme) .autocomplete-item .doc {
+  color: #60a5fa;
+}
+
+:host-context(html.dark) .autocomplete-item .name,
+:host-context(body.dark-theme) .autocomplete-item .name {
+  color: #f1f5f9;
+}
+
+:host-context(html.dark) .autocomplete-item .phone,
+:host-context(body.dark-theme) .autocomplete-item .phone {
+  color: #94a3b8;
+}
+
+:host-context(html.dark) .search-error,
+:host-context(body.dark-theme) .search-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
 }
