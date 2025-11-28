@@ -608,21 +608,21 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-50 dark:bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] text-red-500 uppercase font-bold">Deuda Total</div>
-              <div class="text-lg font-black text-red-600 dark:text-red-400">{{ formatCurrency(customerData().deuda.saldo_total) }}</div>
-              <div class="text-[10px] text-red-500 dark:text-red-400">{{ clientDiasMora() }} días mora</div>
+              <div class="text-[9px] text-red-500 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xl font-black text-red-600 dark:text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+              <div class="text-[11px] text-orange-600 dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
           <!-- Montos de la Cuenta -->
           <div class="p-2 flex-1 overflow-y-auto">
             @if (clientAmountFields().length > 0) {
-              <div class="space-y-1">
-                @for (field of clientAmountFields(); track field.field) {
-                  <div class="flex justify-between items-center py-0.5 px-1 text-[10px]">
-                    <span class="text-gray-600 dark:text-gray-400 truncate mr-2">{{ field.label }}</span>
-                    <span class="font-semibold whitespace-nowrap"
-                          [class]="field.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'">
+              <div class="space-y-1.5">
+                @for (field of clientAmountFields(); track field.field; let i = $index) {
+                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
+                       [class]="getAmountRowClass(i)">
+                    <span class="truncate mr-2 font-medium">{{ field.label }}</span>
+                    <span class="font-bold whitespace-nowrap text-sm">
                       {{ formatCurrency(field.value) }}
                     </span>
                   </div>
@@ -2725,6 +2725,55 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       style: 'currency',
       currency: 'PEN'
     }).format(value);
+  }
+
+  /**
+   * Obtiene la etiqueta del monto principal (primer campo de montos o "Deuda Total")
+   */
+  getPrimaryAmountLabel(): string {
+    const fields = this.clientAmountFields();
+    if (fields.length > 0) {
+      // Buscar campo que contenga "total" en el nombre
+      const totalField = fields.find(f =>
+        f.label.toLowerCase().includes('total') ||
+        f.field.toLowerCase().includes('total')
+      );
+      return totalField?.label || fields[0].label;
+    }
+    return 'Deuda Total';
+  }
+
+  /**
+   * Obtiene el valor del monto principal
+   */
+  getPrimaryAmountValue(): number {
+    const fields = this.clientAmountFields();
+    if (fields.length > 0) {
+      // Buscar campo que contenga "total" en el nombre
+      const totalField = fields.find(f =>
+        f.label.toLowerCase().includes('total') ||
+        f.field.toLowerCase().includes('total')
+      );
+      return totalField?.value || fields[0].value;
+    }
+    return this.customerData().deuda?.saldo_total || 0;
+  }
+
+  /**
+   * Obtiene las clases CSS para cada fila de montos según su índice
+   * Alterna colores para mejor visualización
+   */
+  getAmountRowClass(index: number): string {
+    const colors = [
+      'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300',
+      'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300',
+      'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300',
+      'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300',
+      'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300',
+      'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300',
+      'bg-pink-50 dark:bg-pink-950/30 text-pink-700 dark:text-pink-300',
+    ];
+    return colors[index % colors.length];
   }
 
   showPaymentSection(): boolean {
