@@ -1,13 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
+import { LucideAngularModule } from 'lucide-angular';
 
 import { ClientSearchService, DynamicClient } from '../../core/services/client-search.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
@@ -23,13 +17,7 @@ import { Subject, of } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSelectModule
+    LucideAngularModule
   ],
   templateUrl: './manual-management.component.html',
   styleUrls: ['./manual-management.component.css']
