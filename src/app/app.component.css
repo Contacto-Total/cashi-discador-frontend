@@ -578,70 +578,95 @@
    THEME SUPPORT - LIGHT MODE
    ======================================== */
 
+html:not(.dark) .cashi-sidebar,
 body.light-theme .cashi-sidebar {
   background-color: #f8fafc !important;
   border-right: 1px solid #cbd5e1 !important;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06) !important;
 }
 
+html:not(.dark) .app-container,
+body.light-theme .app-container {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-logo,
 body.light-theme .cashi-sidebar .sidebar-logo {
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
+html:not(.dark) .cashi-sidebar .logo-text,
 body.light-theme .cashi-sidebar .logo-text {
   color: #1e293b !important;
 }
 
+html:not(.dark) .sidebar-toggle,
 body.light-theme .sidebar-toggle {
   background-color: #10B981 !important;
   background: #10B981 !important;
   border: 2px solid #e2e8f0 !important;
 }
 
+html:not(.dark) .sidebar-toggle .icon,
+html:not(.dark) .sidebar-toggle lucide-angular,
 body.light-theme .sidebar-toggle .icon,
 body.light-theme .sidebar-toggle lucide-angular {
   color: white !important;
 }
 
+html:not(.dark) .sidebar-toggle:hover,
 body.light-theme .sidebar-toggle:hover {
   background-color: #059669 !important;
   background: #059669 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item,
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item,
 body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item,
 body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item,
 body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item {
   color: #1e293b !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .item-text,
 body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .item-text {
   color: #1e293b !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item lucide-angular,
 body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item lucide-angular {
   color: #1e293b !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .dropdown-arrow,
 body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .dropdown-arrow {
   color: #1e293b !important;
 }
 
 /* Light mode - animated text pseudo-elements */
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .item-text.text-overflowing::after {
   color: #1e293b !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item:hover,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item:hover,
 body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item:hover,
 body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item:hover {
   background-color: rgba(16, 185, 129, 0.15) !important;
   color: #047857 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item:hover .item-text.text-overflowing::after,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item:hover .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item:hover .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item:hover .item-text.text-overflowing::after {
   color: #047857 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item.active,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item.active,
 body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item.active,
 body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item.active {
   background-color: rgba(16, 185, 129, 0.2) !important;
@@ -649,97 +674,113 @@ body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item.active {
   font-weight: 600;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item.active::before,
 body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item.active::before {
   background-color: #059669 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem,
 body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem {
   color: #334155 !important;
 }
 
 /* Light mode - animated text pseudo-elements for submenu */
+html:not(.dark) .cashi-sidebar .sidebar-submenu .sidebar-subitem .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-submenu .sidebar-subitem .item-text.text-overflowing::after {
   color: #334155 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover,
 body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover {
   background-color: rgba(16, 185, 129, 0.12) !important;
   color: #047857 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover .item-text.text-overflowing::after {
   color: #047857 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active,
 body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active {
   background-color: rgba(16, 185, 129, 0.18) !important;
   color: #065f46 !important;
   font-weight: 600 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active .item-text.text-overflowing::after {
   color: #065f46 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer,
 body.light-theme .cashi-sidebar .sidebar-footer {
   border-top: 1px solid #e2e8f0 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item,
 body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item {
   color: #1e293b !important;
 }
 
 /* Light mode - animated text pseudo-elements for footer */
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item .item-text.text-overflowing::after {
   color: #1e293b !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item.user-profile,
 body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item.user-profile {
   background-color: rgba(15, 23, 42, 0.06) !important;
   border: 1px solid rgba(15, 23, 42, 0.15) !important;
   color: #0f172a !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item.user-profile:hover,
 body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item.user-profile:hover {
   background-color: rgba(15, 23, 42, 0.1) !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item:hover,
 body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item:hover {
   background-color: rgba(16, 185, 129, 0.15) !important;
   color: #047857 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item:hover .item-text.text-overflowing::after,
 body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item:hover .item-text.text-overflowing::after {
   color: #047857 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn,
 body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn {
   color: #dc2626 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn:hover,
 body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn:hover {
   background-color: rgba(220, 38, 38, 0.1) !important;
   color: #dc2626 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb,
 body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb {
   background: #cbd5e1 !important;
 }
 
+html:not(.dark) .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover,
 body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover {
   background: #94a3b8 !important;
 }
 
+html:not(.dark) .main-content,
 body.light-theme .main-content {
   background-color: #f1f5f9 !important;
 }
 
+html.dark .main-content,
 body.dark-theme .main-content {
   background-color: #0A0E27 !important;
-}
-
-body.light-theme .app-container {
-  background-color: #f1f5f9 !important;
 }
 
 /* ========================================
