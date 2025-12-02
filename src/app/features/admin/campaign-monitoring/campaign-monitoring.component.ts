@@ -193,10 +193,59 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       timestamp: new Date()
     };
 
-    // Reproducir sonido si está habilitado
-    if (agente.sonidoAlerta) {
+    // Reproducir alerta con voz si está habilitado
+    if (agente.sonidoAlerta && this.soundEnabled) {
+      this.speakAlert(agente);
       this.playAlarm();
     }
+  }
+
+  /**
+   * Usa Text-to-Speech para anunciar la alerta (voz tipo Jarvis)
+   */
+  private speakAlert(agente: AgenteMonitoreo): void {
+    if (!('speechSynthesis' in window)) {
+      console.warn('Text-to-Speech no soportado');
+      return;
+    }
+
+    const estadoHablado = this.getEstadoHablado(agente.estadoActual);
+    const mensaje = `Atención. El agente ${agente.nombreCompleto} lleva demasiado tiempo en estado ${estadoHablado}. Requiere supervisión.`;
+
+    // Cancelar habla anterior
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(mensaje);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.9;  // Velocidad
+    utterance.pitch = 0.8; // Tono bajo = más serio
+    utterance.volume = 1.0;
+
+    // Buscar voz en español
+    const voices = speechSynthesis.getVoices();
+    const spanishVoice = voices.find(v => v.lang.startsWith('es'));
+    if (spanishVoice) {
+      utterance.voice = spanishVoice;
+    }
+
+    speechSynthesis.speak(utterance);
+  }
+
+  /**
+   * Convierte estado a texto hablado
+   */
+  private getEstadoHablado(estado: string): string {
+    const estados: Record<string, string> = {
+      'DISPONIBLE': 'disponible',
+      'EN_LLAMADA': 'en llamada',
+      'TIPIFICANDO': 'tipificando',
+      'EN_REUNION': 'en reunión',
+      'REFRIGERIO': 'refrigerio',
+      'SSHH': 'baño',
+      'EN_MANUAL': 'modo manual',
+      'PAUSADO': 'pausado'
+    };
+    return estados[estado] || estado;
   }
 
   /**
@@ -208,6 +257,10 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       this.alertasDismissed.add(alertKey);
       this.alertaActiva = null;
       this.stopAlarm();
+      // Detener voz también
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+      }
     }
   }
 

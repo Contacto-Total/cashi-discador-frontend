@@ -12,6 +12,7 @@ import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
+import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -23,7 +24,8 @@ import { Subscription } from 'rxjs';
     RouterOutlet,
     RouterModule,
     LucideAngularModule,
-    AuthorizationNotificationComponent
+    AuthorizationNotificationComponent,
+    AgentTimeAlertOverlayComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
