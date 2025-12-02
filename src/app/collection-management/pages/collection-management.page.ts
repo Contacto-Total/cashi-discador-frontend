@@ -1781,74 +1781,113 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Carga los datos del cliente desde el backend
+   * MODIFICADO: Ahora usa el mismo servicio que la búsqueda manual para obtener datos completos
    */
   private loadClienteDetalle(contactId: number) {
     console.log(`📋 Cargando datos del cliente para contacto ${contactId}...`);
 
-    // Llamar al endpoint que trae datos completos del cliente
+    // Primero obtener info básica del contacto para conseguir el documento
     this.http.get<any>(`${environment.gatewayUrl}/contacts/${contactId}/cliente-detalle`).pipe(
       catchError((error) => {
         console.error('❌ Error cargando datos del cliente:', error);
-        // Mantener datos hardcodeados si falla
         return of(null);
       })
     ).subscribe({
       next: (clienteDetalle) => {
-        if (clienteDetalle) {
-          console.log('✅ Cliente cargado:', clienteDetalle);
+        if (clienteDetalle && clienteDetalle.documento) {
+          console.log('✅ Cliente básico cargado, documento:', clienteDetalle.documento);
 
-          // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
-          this.rawClientData.set(clienteDetalle);
-          console.log('[PAYMENT] Raw client data from detalle:', clienteDetalle);
+          // Obtener el tenant del usuario actual
+          const currentUser = this.authService.getCurrentUser();
+          const tenantId = currentUser?.tenantId;
 
-          // Cargar cabeceras de montos para esta subcartera
-          this.loadMontoCabeceras();
+          if (!tenantId) {
+            console.error('❌ No se pudo obtener tenantId del usuario');
+            // Fallback: usar datos limitados del clienteDetalle
+            this.loadClienteDetalleFallback(clienteDetalle);
+            return;
+          }
 
-          // Mapear los datos del backend al formato del signal
-          this.customerData.set({
-            id: clienteDetalle.idCliente,
-            id_cliente: `CLI-${clienteDetalle.idCliente}`,
-            nombre_completo: clienteDetalle.nombreCompleto || '',
-            tipo_documento: clienteDetalle.tipoDocumento || 'DNI',
-            numero_documento: clienteDetalle.documento || '',
-            fecha_nacimiento: clienteDetalle.fechaNacimiento || '',
-            edad: clienteDetalle.edad || 0,
-            contacto: {
-              telefono_principal: clienteDetalle.telefonoPrincipal || '',
-              telefono_alternativo: clienteDetalle.telefonoSecundario || '',
-              telefono_trabajo: clienteDetalle.telefonoTrabajo || '',
-              email: clienteDetalle.email || '',
-              direccion: clienteDetalle.direccion || ''
+          // Usar el mismo servicio que la búsqueda manual para obtener datos COMPLETOS
+          console.log(`🔍 Buscando datos completos del cliente con documento ${clienteDetalle.documento} en tenant ${tenantId}...`);
+          this.customerService.searchCustomersByCriteria(tenantId, 'documento', clienteDetalle.documento).subscribe({
+            next: (customers) => {
+              if (customers && customers.length > 0) {
+                console.log('✅ Datos completos del cliente obtenidos:', customers[0]);
+                // Usar loadCustomerFromResource igual que en búsqueda manual
+                this.loadCustomerFromResource(customers[0]);
+              } else {
+                console.warn('⚠️ No se encontró cliente con documento:', clienteDetalle.documento);
+                // Fallback: usar datos limitados del clienteDetalle
+                this.loadClienteDetalleFallback(clienteDetalle);
+              }
             },
-            cuenta: {
-              numero_cuenta: clienteDetalle.cuenta || '',
-              tipo_producto: clienteDetalle.producto || '',
-              fecha_desembolso: '',
-              monto_original: 0,
-              plazo_meses: 0,
-              tasa_interes: 0
-            },
-            deuda: {
-              saldo_capital: clienteDetalle.deudaCapital || 0,
-              intereses_vencidos: 0,
-              mora_acumulada: 0,
-              gastos_cobranza: 0,
-              saldo_total: clienteDetalle.deudaTotal || 0,
-              dias_mora: clienteDetalle.diasMora || 0,
-              fecha_ultimo_pago: '',
-              monto_ultimo_pago: 0
+            error: (error) => {
+              console.error('❌ Error buscando datos completos del cliente:', error);
+              // Fallback: usar datos limitados del clienteDetalle
+              this.loadClienteDetalleFallback(clienteDetalle);
             }
           });
-
-          console.log('✅ Datos del cliente actualizados en la UI');
-
-          // 📅 Cargar cronogramas de promesas de pago activos
-          this.loadActivePaymentSchedules(clienteDetalle.idCliente);
         } else {
           console.log('⚠️ No se pudieron cargar los datos del cliente');
         }
       }
     });
+  }
+
+  /**
+   * Fallback: carga datos limitados del cliente cuando no se puede obtener datos completos
+   */
+  private loadClienteDetalleFallback(clienteDetalle: any) {
+    console.warn('⚠️ Usando fallback con datos limitados del cliente');
+
+    // Guardar los datos raw del cliente
+    this.rawClientData.set(clienteDetalle);
+    console.log('[PAYMENT] Raw client data from detalle (fallback):', clienteDetalle);
+
+    // Cargar cabeceras de montos para esta subcartera
+    this.loadMontoCabeceras();
+
+    // Mapear los datos del backend al formato del signal
+    this.customerData.set({
+      id: clienteDetalle.idCliente,
+      id_cliente: `CLI-${clienteDetalle.idCliente}`,
+      nombre_completo: clienteDetalle.nombreCompleto || '',
+      tipo_documento: clienteDetalle.tipoDocumento || 'DNI',
+      numero_documento: clienteDetalle.documento || '',
+      fecha_nacimiento: clienteDetalle.fechaNacimiento || '',
+      edad: clienteDetalle.edad || 0,
+      contacto: {
+        telefono_principal: clienteDetalle.telefonoPrincipal || '',
+        telefono_alternativo: clienteDetalle.telefonoSecundario || '',
+        telefono_trabajo: clienteDetalle.telefonoTrabajo || '',
+        email: clienteDetalle.email || '',
+        direccion: clienteDetalle.direccion || ''
+      },
+      cuenta: {
+        numero_cuenta: clienteDetalle.cuenta || '',
+        tipo_producto: clienteDetalle.producto || '',
+        fecha_desembolso: '',
+        monto_original: 0,
+        plazo_meses: 0,
+        tasa_interes: 0
+      },
+      deuda: {
+        saldo_capital: clienteDetalle.deudaCapital || 0,
+        intereses_vencidos: 0,
+        mora_acumulada: 0,
+        gastos_cobranza: 0,
+        saldo_total: clienteDetalle.deudaTotal || 0,
+        dias_mora: clienteDetalle.diasMora || 0,
+        fecha_ultimo_pago: '',
+        monto_ultimo_pago: 0
+      }
+    });
+
+    console.log('✅ Datos del cliente actualizados en la UI (fallback)');
+
+    // 📅 Cargar cronogramas de promesas de pago activos
+    this.loadActivePaymentSchedules(clienteDetalle.idCliente);
   }
 
   /**
