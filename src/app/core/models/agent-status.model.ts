@@ -7,6 +7,12 @@ export interface AgentStatus {
   tiempoEnEstadoMinutos: number;
   sessionId?: string;
   notas?: string;
+  // Campos de umbral de tiempo
+  segundosEnEstado?: number;
+  colorIndicador?: 'verde' | 'amarillo' | 'rojo';
+  porcentajeTiempo?: number;
+  excedeTiempoMaximo?: boolean;
+  tiempoMaximoSegundos?: number;
 }
 
 export enum AgentState {
@@ -27,6 +33,12 @@ export interface AgentStatusResponse {
   tiempoEnEstadoMinutos: number;
   notas?: string;
   sessionId?: string;
+  // Campos de umbral de tiempo
+  segundosEnEstado?: number;
+  colorIndicador?: 'verde' | 'amarillo' | 'rojo';
+  porcentajeTiempo?: number;
+  excedeTiempoMaximo?: boolean;
+  tiempoMaximoSegundos?: number;
 }
 
 export interface ChangeStatusRequest {

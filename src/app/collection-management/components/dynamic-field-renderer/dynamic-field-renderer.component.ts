@@ -195,6 +195,7 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
                   [availableAmounts]="getPaymentAmountOptions(field)"
                   [maxInstallments]="6"
                   (scheduleChange)="onPaymentScheduleChange(field.id, $event)"
+                  (customAmountSelected)="onCustomAmountSelected($event)"
                 />
               }
 
@@ -381,6 +382,8 @@ export class DynamicFieldRendererComponent {
 
   // Output when data changes
   dataChange = output<DynamicFieldData>();
+  // Output when custom amount is selected (requires authorization)
+  customAmountDetected = output<boolean>();
 
   constructor() {
     // Initialize field data when schema changes
@@ -741,5 +744,14 @@ export class DynamicFieldRendererComponent {
     currentData[fieldId] = schedule;
     this.fieldData.set(currentData);
     console.log('[DynamicField] Payment schedule changed:', fieldId, schedule);
+  }
+
+  /**
+   * Maneja cuando se selecciona monto personalizado
+   * Emite al padre para que muestre el botón de autorización
+   */
+  onCustomAmountSelected(isCustom: boolean): void {
+    console.log('[DynamicField] Custom amount selected:', isCustom);
+    this.customAmountDetected.emit(isCustom);
   }
 }

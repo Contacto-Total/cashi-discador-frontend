@@ -384,10 +384,10 @@ export class TypificationV2Service {
   // ========================================
 
   /**
-   * Crea un cronograma de pagos con múltiples cuotas
+   * Crea un cronograma de pagos (1 cabecera + N cuotas en tabla separada)
    */
-  createPaymentSchedule(request: any): Observable<any[]> {
-    return this.http.post<any[]>(
+  createPaymentSchedule(request: any): Observable<any> {
+    return this.http.post<any>(
       `${environment.gatewayUrl}/v2/management-records/payment-schedule`,
       request
     );

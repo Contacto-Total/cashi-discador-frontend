@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,11 +6,18 @@ import { Subscription } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
+import { StatusAlarmClockComponent } from '../../../shared/components/status-alarm-clock/status-alarm-clock.component';
+
+// Interfaz para alertas de agentes
+interface AgentAlert {
+  agente: AgenteMonitoreo;
+  timestamp: Date;
+}
 
 @Component({
   selector: 'app-campaign-monitoring',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, StatusAlarmClockComponent],
   templateUrl: './campaign-monitoring.component.html',
   styleUrls: ['./campaign-monitoring.component.css'],
   encapsulation: ViewEncapsulation.None
@@ -33,6 +40,13 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   llamadasEnTiempoReal: LlamadaTiempoReal[] = [];
   private llamadasSubscription?: Subscription;
 
+  // Sistema de alertas
+  alertaActiva: AgentAlert | null = null;
+  alertasDismissed: Set<string> = new Set(); // IDs de alertas ya cerradas (agente-estado)
+  soundEnabled = false; // El usuario debe activar el sonido manualmente (política de navegadores)
+
+  private readonly SOUND_STORAGE_KEY = 'supervisor_sound_enabled';
+
   constructor(
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
@@ -40,11 +54,27 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.loadSoundPreference(); // Cargar preferencia guardada
+    this.initAlarmAudio();
     this.loadCampaigns();
     this.startAutoDialerPolling();
     this.startAgentesPolling();
-    // TODO: Implement real-time calls polling when backend is ready
     this.startLlamadasPolling();
+  }
+
+  /**
+   * Carga la preferencia de sonido desde localStorage
+   */
+  private loadSoundPreference(): void {
+    const saved = localStorage.getItem(this.SOUND_STORAGE_KEY);
+    this.soundEnabled = saved === 'true';
+  }
+
+  /**
+   * Guarda la preferencia de sonido en localStorage
+   */
+  private saveSoundPreference(): void {
+    localStorage.setItem(this.SOUND_STORAGE_KEY, String(this.soundEnabled));
   }
 
   ngOnDestroy(): void {
@@ -57,7 +87,25 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     if (this.llamadasSubscription) {
       this.llamadasSubscription.unsubscribe();
     }
+    this.stopAlarm();
+    // Cerrar el AudioContext
+    if (this.audioContext) {
+      this.audioContext.close();
+    }
   }
+
+  /**
+   * Inicializa el audio de alarma usando Web Audio API para generar un beep
+   */
+  private initAlarmAudio(): void {
+    // Crear un AudioContext para generar sonidos programáticamente
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+
+  private audioContext: AudioContext | null = null;
+  private oscillator: OscillatorNode | null = null;
+  private gainNode: GainNode | null = null;
+  private isAlarmPlaying = false;
 
   /**
    * Carga todas las campañas para el selector
@@ -124,11 +172,268 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.agentesSubscription = this.autoDialerService.startAgentesPolling().subscribe({
       next: (agentes) => {
         this.agentesMonitoreo = agentes;
+
+        // Debug: mostrar agentes con tiempo excedido
+        const agentesExcedidos = agentes.filter(a => a.excedeTiempoMaximo);
+        if (agentesExcedidos.length > 0) {
+          console.log('[Monitor] Agentes con tiempo excedido:', agentesExcedidos.map(a => ({
+            nombre: a.nombreCompleto,
+            estado: a.estadoActual,
+            excede: a.excedeTiempoMaximo,
+            mensaje: a.mensajeAlerta,
+            sonido: a.sonidoAlerta
+          })));
+        }
+
+        // Verificar alertas de tiempo excedido
+        this.checkAgentAlerts(agentes);
       },
       error: (err) => {
         console.error('Error polling agentes:', err);
       }
     });
+  }
+
+  // Mapa para rastrear el estado anterior de cada agente
+  private previousAgentStates: Map<number, string> = new Map();
+
+  /**
+   * Verifica si hay agentes que exceden el tiempo y muestra alerta
+   */
+  private checkAgentAlerts(agentes: AgenteMonitoreo[]): void {
+    // Primero, limpiar alertas dismisseadas si el agente cambió de estado
+    for (const agente of agentes) {
+      const prevState = this.previousAgentStates.get(agente.idUsuario);
+      if (prevState && prevState !== agente.estadoActual) {
+        // El agente cambió de estado, limpiar sus alertas dismisseadas
+        console.log(`[Monitor] Agente ${agente.nombreCompleto} cambió de ${prevState} a ${agente.estadoActual}, limpiando alertas`);
+        this.clearDismissedForAgent(agente.idUsuario);
+      }
+      this.previousAgentStates.set(agente.idUsuario, agente.estadoActual);
+    }
+
+    // Si ya hay una alerta activa, no mostrar otra
+    if (this.alertaActiva) {
+      console.log('[Monitor] Ya hay una alerta activa, no se mostrarán nuevas');
+      return;
+    }
+
+    for (const agente of agentes) {
+      if (agente.excedeTiempoMaximo && agente.mensajeAlerta) {
+        const alertKey = `${agente.idUsuario}-${agente.estadoActual}`;
+
+        // Si esta alerta ya fue cerrada, no mostrarla de nuevo
+        if (this.alertasDismissed.has(alertKey)) {
+          console.log(`[Monitor] Alerta ${alertKey} ya fue cerrada, ignorando`);
+          continue;
+        }
+
+        // Mostrar alerta
+        console.log(`[Monitor] Mostrando alerta para agente ${agente.nombreCompleto}`);
+        this.showAlert(agente);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Muestra la alerta para un agente
+   */
+  showAlert(agente: AgenteMonitoreo): void {
+    this.alertaActiva = {
+      agente,
+      timestamp: new Date()
+    };
+
+    // Reproducir alerta con voz si está habilitado
+    if (agente.sonidoAlerta && this.soundEnabled) {
+      this.speakAlert(agente);
+      this.playAlarm();
+    }
+  }
+
+  /**
+   * Usa Text-to-Speech para anunciar la alerta (voz tipo Jarvis)
+   */
+  private speakAlert(agente: AgenteMonitoreo): void {
+    if (!('speechSynthesis' in window)) {
+      console.warn('Text-to-Speech no soportado');
+      return;
+    }
+
+    const estadoHablado = this.getEstadoHablado(agente.estadoActual);
+    const mensaje = `Atención. El agente ${agente.nombreCompleto} lleva demasiado tiempo en estado ${estadoHablado}. Requiere supervisión.`;
+
+    // Cancelar habla anterior
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(mensaje);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.9;  // Velocidad
+    utterance.pitch = 0.8; // Tono bajo = más serio
+    utterance.volume = 1.0;
+
+    // Buscar voz en español
+    const voices = speechSynthesis.getVoices();
+    const spanishVoice = voices.find(v => v.lang.startsWith('es'));
+    if (spanishVoice) {
+      utterance.voice = spanishVoice;
+    }
+
+    speechSynthesis.speak(utterance);
+  }
+
+  /**
+   * Convierte estado a texto hablado
+   */
+  private getEstadoHablado(estado: string): string {
+    const estados: Record<string, string> = {
+      'DISPONIBLE': 'disponible',
+      'EN_LLAMADA': 'en llamada',
+      'TIPIFICANDO': 'tipificando',
+      'EN_REUNION': 'en reunión',
+      'REFRIGERIO': 'refrigerio',
+      'SSHH': 'baño',
+      'EN_MANUAL': 'modo manual',
+      'PAUSADO': 'pausado'
+    };
+    return estados[estado] || estado;
+  }
+
+  /**
+   * Cierra la alerta actual
+   */
+  dismissAlert(): void {
+    if (this.alertaActiva) {
+      const alertKey = `${this.alertaActiva.agente.idUsuario}-${this.alertaActiva.agente.estadoActual}`;
+      this.alertasDismissed.add(alertKey);
+      this.alertaActiva = null;
+      this.stopAlarm();
+      // Detener voz también
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+      }
+    }
+  }
+
+  /**
+   * Cierra alerta si se hace click fuera del modal
+   */
+  onOverlayClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).classList.contains('alert-overlay')) {
+      this.dismissAlert();
+    }
+  }
+
+  /**
+   * Activa/desactiva el sonido de alertas
+   * El usuario debe hacer click para activar (política de navegadores)
+   */
+  toggleSound(): void {
+    this.soundEnabled = !this.soundEnabled;
+    this.saveSoundPreference(); // Guardar preferencia
+
+    if (this.soundEnabled && this.audioContext) {
+      // Reanudar AudioContext con interacción del usuario
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+      // Hacer un beep corto de confirmación
+      this.playTestBeep();
+    }
+  }
+
+  /**
+   * Reproduce un beep corto de prueba/confirmación
+   */
+  private playTestBeep(): void {
+    if (!this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + 0.1);
+  }
+
+  /**
+   * Reproduce el sonido de alarma usando Web Audio API
+   * Genera un beep intermitente tipo alarma
+   */
+  private playAlarm(): void {
+    // Solo reproducir si el sonido está habilitado
+    if (!this.audioContext || this.isAlarmPlaying || !this.soundEnabled) return;
+
+    try {
+      // Reanudar el AudioContext si está suspendido (política de autoplay)
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+
+      this.isAlarmPlaying = true;
+      this.startBeepSequence();
+    } catch (err) {
+      console.warn('No se pudo reproducir la alarma:', err);
+    }
+  }
+
+  /**
+   * Inicia una secuencia de beeps intermitentes
+   */
+  private startBeepSequence(): void {
+    if (!this.audioContext || !this.isAlarmPlaying) return;
+
+    // Crear oscilador y ganancia para cada beep
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    // Configurar el tono de alarma (frecuencia alta = urgente)
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, this.audioContext.currentTime); // La5
+
+    // Configurar volumen
+    gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+
+    // Duración del beep: 200ms
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + 0.2);
+
+    // Programar el siguiente beep después de 400ms (200ms beep + 200ms silencio)
+    oscillator.onended = () => {
+      if (this.isAlarmPlaying) {
+        setTimeout(() => this.startBeepSequence(), 200);
+      }
+    };
+  }
+
+  /**
+   * Detiene el sonido de alarma
+   */
+  private stopAlarm(): void {
+    this.isAlarmPlaying = false;
+  }
+
+  /**
+   * Limpia las alertas cerradas cuando un agente cambia de estado
+   */
+  clearDismissedForAgent(idUsuario: number): void {
+    const keysToRemove: string[] = [];
+    this.alertasDismissed.forEach(key => {
+      if (key.startsWith(`${idUsuario}-`)) {
+        keysToRemove.push(key);
+      }
+    });
+    keysToRemove.forEach(key => this.alertasDismissed.delete(key));
   }
 
   /**

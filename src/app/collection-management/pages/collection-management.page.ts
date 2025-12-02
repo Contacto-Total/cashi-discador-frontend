@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { catchError, of, Subscription } from 'rxjs';
@@ -27,8 +28,12 @@ import { PaymentScheduleViewComponent } from '../components/payment-schedule-vie
 import { CustomerService } from '../../customers/services/customer.service';
 import { SipService, CallState } from '../../core/services/sip.service';
 import { AgentService } from '../../core/services/agent.service';
-import { AgentState } from '../../core/models/agent-status.model';
+import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
+import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
+import { StatusAlarmClockComponent } from '../../shared/components/status-alarm-clock/status-alarm-clock.component';
+import { AutorizacionService, SupervisorEnLinea, CrearSolicitudRequest, SolicitudAutorizacion } from '../../core/services/autorizacion.service';
+import { SelectSupervisorModalComponent } from '../../shared/components/select-supervisor-modal/select-supervisor-modal.component';
 
 @Component({
   selector: 'app-collection-management',
@@ -36,11 +41,14 @@ import { AuthService } from '../../core/services/auth.service';
   imports: [
     CommonModule,
     FormsModule,
+    LucideAngularModule,
     DynamicFieldRendererComponent,
-    PaymentScheduleViewComponent
+    PaymentScheduleViewComponent,
+    SelectSupervisorModalComponent,
+    StatusAlarmClockComponent
   ],
   template: `
-    <div class="h-[100dvh] bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 dark:from-slate-950 dark:via-gray-950 dark:to-black flex flex-col overflow-hidden transition-colors duration-300">
+    <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
       <!-- Notificación de éxito -->
       @if (showSuccess()) {
         <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">
@@ -53,116 +61,41 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
       }
 
-      <!-- Alerta de Promesa de Pago Activa con detalle de cuotas -->
-      @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
-        <div class="fixed top-4 right-4 z-50 animate-[slideInDown_0.5s_ease-out] max-w-md">
-          @for (schedule of activePaymentSchedules(); track schedule.id) {
-            <div class="bg-gradient-to-br from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-xl shadow-2xl mb-3 overflow-hidden">
-              <!-- Header -->
-              <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-2xl">⚠️</span>
-                  <div>
-                    <div class="font-bold text-sm">PROMESA DE PAGO ACTIVA</div>
-                    <div class="text-xs opacity-80">No puede registrar otra promesa</div>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-lg font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
-                  <div class="text-xs opacity-80">Total</div>
-                </div>
-              </div>
-              <!-- Detalle de cuotas -->
-              <div class="px-4 py-3">
-                <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
-                <div class="space-y-1.5 max-h-40 overflow-y-auto">
-                  @for (cuota of schedule.installments; track cuota.numeroCuota) {
-                    <div class="flex items-center justify-between text-xs bg-white/20 rounded-lg px-3 py-2">
-                      <div class="flex items-center gap-2">
-                        <span class="font-bold">Cuota {{ cuota.numeroCuota }}</span>
-                        @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                          <span class="bg-green-600 text-white text-[10px] px-1.5 py-0.5 rounded">✓ PAGADA</span>
-                        } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                          <span class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded">⚠ VENCIDA</span>
-                        } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-                          <span class="bg-gray-600 text-white text-[10px] px-1.5 py-0.5 rounded">✗ CANCELADA</span>
-                        } @else {
-                          <span class="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">⏳ PENDIENTE</span>
-                        }
-                      </div>
-                      <div class="text-right">
-                        <div class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</div>
-                        <div class="text-[10px] opacity-75">{{ formatDate(cuota.dueDate) }}</div>
-                      </div>
-                    </div>
-                  }
-                </div>
-              </div>
-              <!-- Footer con resumen -->
-              @if (schedule.cuotasPendientes > 0) {
-                <div class="px-4 py-2 bg-black/20 text-xs">
-                  <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> cuota(s) pendiente(s)
-                  @if (schedule.nextDueDate) {
-                    · Próximo vencimiento: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
-                  }
-                </div>
-              }
-            </div>
-          }
-        </div>
-      }
 
       <!-- Header Principal - ULTRA COMPACTO -->
-      <div class="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
-        <div class="relative px-3 py-1">
+      <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
+        <div class="relative px-4 py-2">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div>
-                <div class="flex items-center gap-1.5">
-                  <div class="bg-blue-500 dark:bg-blue-600 p-1 rounded">
-                  </div>
-                  <div>
-                    <h1 class="text-sm font-bold">Gestión de Cobranza</h1>
-                    <p class="text-[9px] text-blue-200 dark:text-blue-300 flex items-center gap-0.5">
-                      {{ campaign().nombre }}
-                    </p>
-                  </div>
+            <!-- Lado Izquierdo: Título y Asesor -->
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-blue-500/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
+                  <lucide-angular name="clipboard-list" [size]="18" class="text-white"></lucide-angular>
                 </div>
+                <h1 class="text-base font-bold">Gestión de Cobranza</h1>
               </div>
               <div class="h-6 w-px bg-white/20"></div>
-              <div class="text-xs">
-                <div class="text-blue-200 dark:text-blue-300 text-[9px]">Asesor</div>
-                <div class="font-semibold text-white text-xs">María González Castro</div>
+              <div>
+                <div class="text-blue-200 dark:text-blue-300 text-[10px]">Asesor</div>
+                <div class="font-semibold text-white text-sm">María González Castro</div>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <!-- Botón de Dark Mode -->
-              <button
-                (click)="toggleDarkMode()"
-                [class]="'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-all duration-300 group border ' +
-                  (themeService.isDarkMode()
-                    ? 'bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/40'
-                    : 'bg-blue-500/90 hover:bg-blue-600 border-blue-600')"
-                [attr.aria-label]="themeService.isDarkMode() ? 'Activar modo claro' : 'Activar modo oscuro'"
-                title="Cambiar tema"
-              >
-                @if (themeService.isDarkMode()) {
-                  <span class="text-[10px] text-yellow-300 font-semibold">OSCURO</span>
-                } @else {
-                  <span class="text-[10px] text-white font-semibold">CLARO</span>
-                }
-              </button>
-
-              <div class="h-6 w-px bg-white/20"></div>
-
+            <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
+            <div class="flex items-center gap-4">
               <div class="text-right">
-                <div class="text-blue-200 dark:text-blue-300 text-[9px]">Estado</div>
-                <div [class]="'font-semibold text-xs transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-200')">
+                <div class="text-blue-200 dark:text-blue-300 text-[10px]">Estado</div>
+                <div [class]="'font-semibold text-sm transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-white/80')">
                   {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
               </div>
-              <div [class]="'px-3 py-1 rounded font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse' : 'bg-slate-800/50 dark:bg-gray-900/80')">
+              <!-- Indicador de umbral de tiempo (reloj de alarma) -->
+              <app-status-alarm-clock
+                [color]="colorIndicador()"
+                [excedido]="excedeTiempoMaximo()"
+                [size]="22">
+              </app-status-alarm-clock>
+              <div [class]="'px-4 py-1.5 rounded-lg font-mono text-lg font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse shadow-lg shadow-red-500/30' : 'bg-blue-800/50 dark:bg-gray-900/80')">
                 {{ formatTime(callDuration()) }}
               </div>
             </div>
@@ -173,9 +106,9 @@ import { AuthService } from '../../core/services/auth.service';
       <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
       <div class="flex-1 flex overflow-hidden">
         <!-- PANEL IZQUIERDO - Info Cliente -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-r dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Tabs -->
-          <div class="flex border-b dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
+          <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
             @for (tab of tabs; track tab.id) {
               <button
                 (click)="activeTab.set(tab.id)"
@@ -306,6 +239,64 @@ import { AuthService } from '../../core/services/auth.service';
             </div>
             }
 
+            <!-- Alerta de Promesa de Pago Activa - Empuja el contenido hacia abajo -->
+            @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
+              <div class="animate-[slideInDown_0.3s_ease-out]">
+                @for (schedule of activePaymentSchedules(); track schedule.id) {
+                  <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-lg shadow-lg mb-2 overflow-hidden border-2 border-amber-400 dark:border-amber-500">
+                    <!-- Header -->
+                    <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <span class="text-lg">⚠</span>
+                        </div>
+                        <div>
+                          <div class="font-bold text-sm">PROMESA DE PAGO ACTIVA</div>
+                          <div class="text-xs opacity-80">No puede registrar otra promesa</div>
+                        </div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-xl font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
+                        <div class="text-xs opacity-80">Total</div>
+                      </div>
+                    </div>
+                    <!-- Detalle de cuotas -->
+                    <div class="px-4 py-3 bg-black/5">
+                      <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
+                      <div class="flex flex-wrap gap-2">
+                        @for (cuota of schedule.installments; track cuota.numeroCuota) {
+                          <div class="flex items-center gap-2 text-xs bg-white/20 rounded-lg px-3 py-2">
+                            <span class="font-bold">C{{ cuota.numeroCuota }}</span>
+                            <span class="opacity-70">|</span>
+                            <span class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            <span class="opacity-70">|</span>
+                            <span class="font-medium flex items-center gap-1">
+                              <lucide-angular name="calendar" [size]="12"></lucide-angular>
+                              {{ formatDate(cuota.dueDate) }}
+                            </span>
+                            @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
+                              <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
+                            } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
+                              <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
+                            } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
+                              <span class="bg-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
+                            } @else {
+                              <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
+                            }
+                          </div>
+                        }
+                      </div>
+                      @if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
+                        <div class="mt-2 text-xs opacity-80">
+                          <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
             <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
             @if (usesHierarchicalClassifications()) {
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-3">
@@ -365,6 +356,7 @@ import { AuthService } from '../../core/services/auth.service';
                 [selectedClassification]="selectedClassification()"
                 [customerAmounts]="customerPaymentAmounts()"
                 (dataChange)="onDynamicFieldsChange($event)"
+                (customAmountDetected)="onCustomAmountDetected($event)"
               />
             }
 
@@ -461,7 +453,7 @@ import { AuthService } from '../../core/services/auth.service';
             }
 
             <!-- Selector de Cuota para Cancelación -->
-            @if (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0) {
+            @if (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0)) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
@@ -471,36 +463,74 @@ import { AuthService } from '../../core/services/auth.service';
                   </div>
                 </div>
 
-                <div class="space-y-1.5">
-                  @for (cuota of pendingInstallmentsForCancellation(); track cuota.numeroCuota) {
-                    <label
-                      class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
-                      [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
-                        ? 'bg-green-500 text-white shadow-md'
-                        : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
-                    >
-                      <div class="flex items-center gap-3">
-                        <input
-                          type="radio"
-                          name="cuotaCancelacion"
-                          [value]="cuota"
-                          [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
-                          (change)="selectedInstallmentForCancellation.set(cuota)"
-                          class="w-4 h-4 text-green-600"
-                        />
-                        <div>
-                          <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                          <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
-                            Vence: {{ formatDate(cuota.dueDate) }}
-                          </span>
+                <!-- Cuotas disponibles para cancelar -->
+                @if (pendingInstallmentsForCancellation().length > 0) {
+                  <div class="space-y-1.5">
+                    @for (cuota of pendingInstallmentsForCancellation(); track cuota.numeroCuota) {
+                      <label
+                        class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
+                        [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
+                          ? 'bg-green-500 text-white shadow-md'
+                          : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
+                      >
+                        <div class="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="cuotaCancelacion"
+                            [value]="cuota"
+                            [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
+                            (change)="selectedInstallmentForCancellation.set(cuota)"
+                            class="w-4 h-4 text-green-600"
+                          />
+                          <div>
+                            <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
+                            <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                              Vence: {{ formatDate(cuota.dueDate) }}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
-                    </label>
-                  }
-                </div>
+                        <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                      </label>
+                    }
+                  </div>
+                }
 
-                @if (!selectedInstallmentForCancellation()) {
+                <!-- Cuotas VENCIDAS (no se pueden cancelar) -->
+                @if (overdueInstallments().length > 0) {
+                  <div class="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-sm">⛔</span>
+                      <span class="text-[10px] font-bold text-red-700 dark:text-red-400">CUOTAS VENCIDAS (No se pueden cancelar)</span>
+                    </div>
+                    <div class="space-y-1">
+                      @for (cuota of overdueInstallments(); track cuota.numeroCuota) {
+                        <div class="flex items-center justify-between p-2 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 opacity-75">
+                          <div class="flex items-center gap-3">
+                            <span class="text-red-500 dark:text-red-400 text-xs">✗</span>
+                            <div>
+                              <span class="font-bold text-xs text-red-800 dark:text-red-300">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-[10px] ml-2 text-red-600 dark:text-red-400">
+                                Venció: {{ formatDate(cuota.dueDate) }}
+                              </span>
+                            </div>
+                          </div>
+                          <span class="font-bold text-sm text-red-700 dark:text-red-400">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                        </div>
+                      }
+                    </div>
+                    <div class="text-[9px] text-red-600 dark:text-red-400 mt-2">
+                      La fecha de pago ya pasó. Estas cuotas serán marcadas como promesa rota.
+                    </div>
+                  </div>
+                }
+
+                <!-- Mensaje cuando no hay cuotas disponibles para cancelar -->
+                @if (pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0) {
+                  <div class="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center gap-1">
+                    <span>🚫</span>
+                    <span>No hay cuotas disponibles para cancelar. Todas las cuotas están vencidas.</span>
+                  </div>
+                } @else if (!selectedInstallmentForCancellation() && pendingInstallmentsForCancellation().length > 0) {
                   <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
@@ -511,18 +541,34 @@ import { AuthService } from '../../core/services/auth.service';
 
             <!-- Botones de Acción - COMPACTOS -->
             <div class="flex gap-2 pt-2">
-              <button
-                (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && pendingInstallmentsForCancellation().length > 0 && !selectedInstallmentForCancellation())"
-                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
-                class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
-              >
-                @if (saving()) {
-                  Guardando...
-                } @else {
-                  Guardar Gestión
-                }
-              </button>
+              @if (requiresAuthorization()) {
+                <!-- Botón de Solicitar Autorización (cuando es monto personalizado) -->
+                <button
+                  (click)="openSupervisorSelectionModal()"
+                  [disabled]="saving() || !isFormValid() || waitingForAuthorization()"
+                  class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                >
+                  @if (waitingForAuthorization()) {
+                    <span class="animate-pulse">⏳ Esperando Autorización...</span>
+                  } @else {
+                    🔐 Solicitar Autorización
+                  }
+                </button>
+              } @else {
+                <!-- Botón Normal de Guardar -->
+                <button
+                  (click)="saveManagement()"
+                  [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation()) || (isCancellationTypification() && pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0)"
+                  [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
+                  class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                >
+                  @if (saving()) {
+                    Guardando...
+                  } @else {
+                    Guardar Gestión
+                  }
+                </button>
+              }
               <button
                 (click)="cancelarTipificacion()"
                 class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
@@ -534,9 +580,9 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
-        <div class="w-64 bg-white dark:bg-slate-900 border-l dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Teléfonos -->
-          <div class="p-2 border-b dark:border-slate-800">
+          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
             <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
             <div class="space-y-1">
               <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
@@ -568,7 +614,7 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
 
           <!-- Email y Dirección -->
-          <div class="p-2 border-b dark:border-slate-800">
+          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
             <div class="space-y-1">
               @if (customerData().contacto.email) {
                 <div class="flex items-start gap-2">
@@ -588,21 +634,21 @@ import { AuthService } from '../../core/services/auth.service';
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-50 dark:bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] text-red-500 uppercase font-bold">Deuda Total</div>
-              <div class="text-lg font-black text-red-600 dark:text-red-400">{{ formatCurrency(customerData().deuda.saldo_total) }}</div>
-              <div class="text-[10px] text-red-500 dark:text-red-400">{{ clientDiasMora() }} días mora</div>
+              <div class="text-[9px] text-red-500 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xl font-black text-red-600 dark:text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+              <div class="text-[11px] text-orange-600 dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
           <!-- Montos de la Cuenta -->
           <div class="p-2 flex-1 overflow-y-auto">
             @if (clientAmountFields().length > 0) {
-              <div class="space-y-1">
-                @for (field of clientAmountFields(); track field.field) {
-                  <div class="flex justify-between items-center py-0.5 px-1 text-[10px]">
-                    <span class="text-gray-600 dark:text-gray-400 truncate mr-2">{{ field.label }}</span>
-                    <span class="font-semibold whitespace-nowrap"
-                          [class]="field.value > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500'">
+              <div class="space-y-1.5">
+                @for (field of clientAmountFields(); track field.field; let i = $index) {
+                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
+                       [class]="getAmountRowClass(i)">
+                    <span class="truncate mr-2 font-medium">{{ field.label }}</span>
+                    <span class="font-bold whitespace-nowrap text-sm">
                       {{ formatCurrency(field.value) }}
                     </span>
                   </div>
@@ -650,6 +696,13 @@ import { AuthService } from '../../core/services/auth.service';
           </div>
         </div>
       }
+
+      <!-- Modal de Selección de Supervisor para Autorización -->
+      <app-select-supervisor-modal
+        [(visible)]="showSupervisorModal"
+        (supervisorSelected)="onSupervisorSelected($event)"
+        (cancelled)="onSupervisorSelectionCancelled()">
+      </app-select-supervisor-modal>
     </div>
   `,
   styles: [`
@@ -699,6 +752,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
+
+  // Signals para indicador de umbral de tiempo (reloj de alarma)
+  protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
+  protected excedeTiempoMaximo = signal(false);
+  private agentStatusSubscription?: Subscription;
+
+  // Signals para autorización de montos personalizados
+  protected requiresAuthorization = signal(false);
+  protected waitingForAuthorization = signal(false);
+  showSupervisorModal = false;
+  private currentAuthorizationData: CrearSolicitudRequest | null = null;
+
   protected historialGestiones = signal<Array<{
     id: number;
     fecha: string;
@@ -775,14 +840,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
   // Respeta la configuración del admin: si hay config, solo muestra las habilitadas
+  // Usa nombres visuales de montoCabeceras como fuente de verdad
   customerPaymentAmounts = computed<AmountOption[]>(() => {
     const rawData = this.rawClientData();
     const enabledOptions = this.enabledPaymentOptions();
     const hasConfig = this.hasPaymentOptionsConfig();
+    const cabeceras = this.montoCabeceras();
 
     if (!rawData || Object.keys(rawData).length === 0) {
       console.log('[PAYMENT] No raw client data available');
       return [];
+    }
+
+    // Crear mapa de código -> nombre visual desde cabeceras
+    const codigoToNombre = new Map<string, string>();
+    for (const c of cabeceras) {
+      codigoToNombre.set(c.codigo.toLowerCase(), c.nombre);
     }
 
     const amounts: AmountOption[] = [];
@@ -813,10 +886,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Include if value is valid number (including 0, but not NaN)
         if (!isNaN(numValue) && numValue >= 0) {
+          // Prioridad: 1) nombre de cabeceras, 2) labelOpcion del backend, 3) formatFieldLabel
+          const visualName = codigoToNombre.get(fieldName.toLowerCase())
+            || option.labelOpcion
+            || this.formatFieldLabel(fieldName);
+
           amounts.push({
-            label: option.labelOpcion || this.formatFieldLabel(fieldName),
+            label: visualName,
             value: numValue,
-            field: fieldName
+            field: fieldName,
+            restriccionFecha: option.restriccionFecha || 'SIN_RESTRICCION'
           });
         }
       }
@@ -832,8 +911,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const numValue = typeof value === 'number' ? value : parseFloat(String(value));
 
         if (!isNaN(numValue) && numValue > 0) {
+          // Usar nombre visual de cabeceras si existe, sino formatFieldLabel
+          const visualName = codigoToNombre.get(key.toLowerCase())
+            || this.formatFieldLabel(key);
+
           amounts.push({
-            label: this.formatFieldLabel(key),
+            label: visualName,
             value: numValue,
             field: key
           });
@@ -841,10 +924,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
 
       console.log('[PAYMENT] Amounts FALLBACK (no config, all numeric):', amounts.length);
+
+      // En modo fallback, siempre agregar la opción "Otro monto" para permitir autorización
+      amounts.push({
+        label: 'Otro monto',
+        value: -1, // Special marker for custom amount
+        field: 'personalizado'
+      });
     }
 
-    // Ordenar por valor descendente (montos más altos primero)
-    amounts.sort((a, b) => b.value - a.value);
+    // Ordenar por valor descendente (montos más altos primero, pero "personalizado" va al final)
+    amounts.sort((a, b) => {
+      if (a.field === 'personalizado') return 1;
+      if (b.field === 'personalizado') return -1;
+      return b.value - a.value;
+    });
 
     return amounts;
   });
@@ -1071,27 +1165,79 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Computed para obtener las cuotas pendientes de todas las promesas activas
+  // IMPORTANTE: Solo incluye cuotas que pueden ser canceladas (fecha de pago >= hoy)
   pendingInstallmentsForCancellation = computed(() => {
     const schedules = this.activePaymentSchedules();
     const allPending: any[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
 
     for (const schedule of schedules) {
       if (schedule.installments) {
         for (const cuota of schedule.installments) {
           // El backend usa PAGADA/CANCELADA, no PAGADO/CANCELADO
           const estado = cuota.status?.toUpperCase();
-          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO') {
-            allPending.push({
-              ...cuota,
-              scheduleId: schedule.id,
-              grupoPromesaUuid: schedule.grupoPromesaUuid
-            });
+          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO' && estado !== 'VENCIDA' && estado !== 'VENCIDO') {
+            // Validar que la fecha de pago no haya pasado
+            const fechaPago = cuota.dueDate || cuota.fechaPago;
+            if (fechaPago) {
+              const fechaPagoDate = new Date(fechaPago);
+              fechaPagoDate.setHours(0, 0, 0, 0);
+              // Solo incluir si la fecha de pago es hoy o futura
+              if (fechaPagoDate >= today) {
+                allPending.push({
+                  ...cuota,
+                  scheduleId: schedule.id,
+                  grupoPromesaUuid: schedule.grupoPromesaUuid
+                });
+              }
+            }
           }
         }
       }
     }
 
     return allPending;
+  });
+
+  // Computed para obtener cuotas VENCIDAS (fecha de pago pasada, no se pueden cancelar)
+  overdueInstallments = computed(() => {
+    const schedules = this.activePaymentSchedules();
+    const overdue: any[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const schedule of schedules) {
+      if (schedule.installments) {
+        for (const cuota of schedule.installments) {
+          const estado = cuota.status?.toUpperCase();
+          // Cuotas pendientes con fecha vencida o cuotas ya marcadas como VENCIDA
+          if (estado === 'VENCIDA' || estado === 'VENCIDO') {
+            overdue.push({
+              ...cuota,
+              scheduleId: schedule.id,
+              grupoPromesaUuid: schedule.grupoPromesaUuid
+            });
+          } else if (estado === 'PENDIENTE') {
+            const fechaPago = cuota.dueDate || cuota.fechaPago;
+            if (fechaPago) {
+              const fechaPagoDate = new Date(fechaPago);
+              fechaPagoDate.setHours(0, 0, 0, 0);
+              // Si la fecha de pago ya pasó, está vencida
+              if (fechaPagoDate < today) {
+                overdue.push({
+                  ...cuota,
+                  scheduleId: schedule.id,
+                  grupoPromesaUuid: schedule.grupoPromesaUuid
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return overdue;
   });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
@@ -1195,7 +1341,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private http: HttpClient,
     private sipService: SipService,
     private agentService: AgentService,
-    private authService: AuthService
+    private agentStatusService: AgentStatusService,
+    private authService: AuthService,
+    private autorizacionService: AutorizacionService
   ) {}
 
   ngOnInit() {
@@ -1287,6 +1435,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         );
       }
     });
+
+    // Suscribirse a respuestas de autorización
+    this.autorizacionService.respuesta$.subscribe(solicitud => {
+      if (solicitud && this.waitingForAuthorization()) {
+        this.handleAuthorizationResponse(solicitud);
+      }
+    });
+
+    // Iniciar polling del estado del agente para el indicador de umbral de tiempo
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser?.id) {
+      this.agentStatusSubscription = this.agentStatusService.startStatusPolling(currentUser.id).subscribe({
+        next: (response) => {
+          // Actualizar indicadores de umbral de tiempo
+          if (response.colorIndicador) {
+            this.colorIndicador.set(response.colorIndicador);
+          }
+          this.excedeTiempoMaximo.set(response.excedeTiempoMaximo || false);
+        },
+        error: (err) => console.error('❌ Error polling estado del agente:', err)
+      });
+    }
   }
 
   /**
@@ -1701,50 +1871,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           return;
         }
 
-        // Agrupar registros por grupoPromesaUuid
-        const groupedSchedules = new Map<string, any[]>();
-        for (const record of records) {
-          const uuid = record.grupoPromesaUuid;
-          if (uuid) {
-            if (!groupedSchedules.has(uuid)) {
-              groupedSchedules.set(uuid, []);
-            }
-            groupedSchedules.get(uuid)!.push(record);
-          }
-        }
+        // El backend devuelve cabeceras con cuotasPromesa incluidas
+        // Cada record es una cabecera con su lista de cuotas
+        const schedules = records.map((header: any) => {
+          const cuotasPromesa = header.cuotasPromesa || [];
 
-        // Transformar cada grupo a un formato para mostrar
-        const schedules = Array.from(groupedSchedules.entries()).map(([uuid, cuotas]) => {
           // Ordenar cuotas por número
-          cuotas.sort((a, b) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
+          cuotasPromesa.sort((a: any, b: any) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
 
           // Calcular monto total sumando todas las cuotas
-          const totalAmount = cuotas.reduce((sum, c) => sum + (c.montoPromesa || 0), 0);
+          const totalAmount = cuotasPromesa.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
 
-          // Encontrar la próxima cuota pendiente (el backend usa PAGADA, no PAGADO)
-          const pendingCuotas = cuotas.filter(c => c.estadoPago !== 'PAGADA' && c.estadoPago !== 'PAGADO' && c.estadoPago !== 'CUMPLIDO' && c.estadoPago !== 'CANCELADA');
-          const nextCuota = pendingCuotas[0] || cuotas[0];
+          // Encontrar cuotas pendientes
+          const pendingCuotas = cuotasPromesa.filter((c: any) =>
+            c.estado !== 'PAGADA' && c.estado !== 'PAGADO' && c.estado !== 'CUMPLIDO' && c.estado !== 'CANCELADA'
+          );
+          const nextCuota = pendingCuotas[0] || cuotasPromesa[0];
 
           return {
-            id: uuid,
-            grupoPromesaUuid: uuid,
-            totalAmount: totalAmount,
-            numberOfInstallments: cuotas[0]?.totalCuotas || cuotas.length,
-            fechaGestion: cuotas[0]?.fechaGestion,
-            installments: cuotas.map(c => ({
-              id: c.id,  // ID del registro en registros_gestion_v2 (necesario para actualizar estado)
+            id: header.grupoPromesaUuid || header.id,
+            grupoPromesaUuid: header.grupoPromesaUuid,
+            totalAmount: totalAmount || header.montoPromesa,
+            numberOfInstallments: header.totalCuotas || cuotasPromesa.length,
+            fechaGestion: header.fechaGestion,
+            installments: cuotasPromesa.map((c: any) => ({
+              id: c.id,
               numeroCuota: c.numeroCuota,
-              monto: c.montoPromesa,
-              dueDate: c.fechaPromesaPago,
-              status: c.estadoPago || 'PENDIENTE'
+              monto: c.monto,
+              // La fecha de pago viene de CuotaPromesa.fechaPago
+              dueDate: c.fechaPago || null,
+              status: c.estado || 'PENDIENTE'
             })),
-            nextDueDate: nextCuota?.fechaPromesaPago,
+            nextDueDate: nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
         });
 
         // Filtrar solo cronogramas que tienen al menos una cuota pendiente
-        const activeSchedules = schedules.filter(s => s.cuotasPendientes > 0);
+        const activeSchedules = schedules.filter((s: any) => s.cuotasPendientes > 0);
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
@@ -1766,12 +1930,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       { id: 'nombre_completo', label: 'Nombre Completo', field: 'nombre_completo', category: 'personal', format: 'text', highlight: false, size: 'full' },
       { id: 'telefono_principal', label: 'Celular', field: 'contacto.telefono_principal', category: 'contact', format: 'text', highlight: false, size: 'medium' },
       { id: 'email', label: 'Email', field: 'contacto.email', category: 'contact', format: 'text', highlight: false, size: 'medium' },
-      { id: 'direccion', label: 'Dirección', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' },
-      { id: 'edad', label: 'Edad', field: 'edad', category: 'personal', format: 'number', highlight: false, size: 'small' },
-      { id: 'saldo_total', label: 'Deuda Total', field: 'deuda.saldo_total', category: 'debt', format: 'currency', highlight: true, size: 'small' },
-      { id: 'dias_mora', label: 'Días de Mora', field: 'deuda.dias_mora', category: 'debt', format: 'number', highlight: true, size: 'small' },
-      { id: 'numero_cuenta', label: 'Nro. Cuenta', field: 'cuenta.numero_cuenta', category: 'account', format: 'text', highlight: false, size: 'medium' },
-      { id: 'tipo_producto', label: 'Producto', field: 'cuenta.tipo_producto', category: 'account', format: 'text', highlight: false, size: 'medium' }
+      { id: 'direccion', label: 'Dirección', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' }
     ]);
   }
 
@@ -1887,6 +2046,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (this.incomingCallSubscription) {
       this.incomingCallSubscription.unsubscribe();
     }
+    if (this.agentStatusSubscription) {
+      this.agentStatusSubscription.unsubscribe();
+    }
   }
 
   cancelarTipificacion() {
@@ -1922,6 +2084,143 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected closeScheduleDetail() {
     this.showScheduleDetail.set(false);
     this.scheduleManagementId.set(null);
+  }
+
+  // ===== MÉTODOS DE AUTORIZACIÓN PARA MONTOS PERSONALIZADOS =====
+
+  /**
+   * Detecta cuando el usuario selecciona un monto personalizado en el cronograma de pagos
+   */
+  onCustomAmountDetected(isCustom: boolean): void {
+    console.log('🔐 [Authorization] Custom amount detected:', isCustom);
+    this.requiresAuthorization.set(isCustom);
+    if (!isCustom) {
+      this.waitingForAuthorization.set(false);
+      this.currentAuthorizationData = null;
+    }
+  }
+
+  /**
+   * Abre el modal de selección de supervisor para solicitar autorización
+   */
+  openSupervisorSelectionModal(): void {
+    console.log('📋 [Authorization] Opening supervisor selection modal');
+
+    // Preparar los datos de la solicitud antes de abrir el modal
+    const dynamicValues = this.dynamicFieldValues();
+    const schema = this.dynamicFieldsSchema();
+    let paymentScheduleData = null;
+
+    if (schema && schema.fields) {
+      const paymentScheduleField = schema.fields.find(f => f.type === 'payment_schedule');
+      if (paymentScheduleField && dynamicValues[paymentScheduleField.id]) {
+        paymentScheduleData = dynamicValues[paymentScheduleField.id];
+      }
+    }
+
+    if (!paymentScheduleData) {
+      alert('⚠️ No hay datos de cronograma de pago para autorizar');
+      return;
+    }
+
+    const currentUser = this.authService.getCurrentUser();
+
+    // Obtener tipificación seleccionada
+    const selectedClassifs = this.selectedClassifications();
+    const allTypifications = this.managementClassifications();
+    const lastSelectedId = selectedClassifs[selectedClassifs.length - 1];
+    const selectedTypification = allTypifications.find((c: any) => c.id.toString() === lastSelectedId);
+
+    const nombreAgente = currentUser
+      ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username
+      : 'Agente';
+
+    this.currentAuthorizationData = {
+      idTenant: this.selectedTenantId!,
+      idCartera: this.selectedPortfolioId,
+      idSubcartera: this.selectedSubPortfolioId,
+      idAgenteSolicitante: currentUser?.id || 0,
+      nombreAgente: nombreAgente,
+      idSupervisor: 0, // Se completará cuando seleccione supervisor
+      idCliente: this.customerData().id || 0,
+      nombreCliente: this.customerData().nombre_completo || '',
+      documentoCliente: this.customerData().numero_documento || '',
+      idTipificacion: selectedTypification?.id ? Number(selectedTypification.id) : 0,
+      nombreTipificacion: selectedTypification?.label || '',
+      montoTotal: paymentScheduleData.montoTotal,
+      numeroCuotas: paymentScheduleData.numeroCuotas,
+      campoMontoOrigen: paymentScheduleData.campoMontoOrigen,
+      cuotas: paymentScheduleData.cuotas.map((c: any) => ({
+        numeroCuota: c.numeroCuota,
+        monto: c.monto,
+        fechaPago: c.fechaPago
+      })),
+      observacionesAgente: this.managementForm.observaciones || 'Solicitud de monto personalizado'
+    };
+
+    this.showSupervisorModal = true;
+  }
+
+  /**
+   * Callback cuando el agente selecciona un supervisor
+   */
+  onSupervisorSelected(supervisor: SupervisorEnLinea): void {
+    console.log('👤 [Authorization] Supervisor selected:', supervisor);
+    this.showSupervisorModal = false;
+
+    if (!this.currentAuthorizationData) {
+      console.error('❌ No authorization data prepared');
+      return;
+    }
+
+    // Agregar el ID del supervisor a la solicitud
+    const solicitudCompleta: CrearSolicitudRequest = {
+      ...this.currentAuthorizationData,
+      idSupervisor: supervisor.idUsuario
+    };
+
+    // Enviar la solicitud
+    this.autorizacionService.crearSolicitud(solicitudCompleta).subscribe({
+      next: (solicitud) => {
+        console.log('✅ [Authorization] Request created:', solicitud);
+        this.waitingForAuthorization.set(true);
+        // Mostrar mensaje de espera
+        alert(`📤 Solicitud enviada a ${supervisor.nombreCompleto}\n\nEsperando autorización...`);
+      },
+      error: (error) => {
+        console.error('❌ [Authorization] Error creating request:', error);
+        alert('❌ Error al enviar la solicitud de autorización');
+      }
+    });
+  }
+
+  /**
+   * Callback cuando el agente cancela la selección de supervisor
+   */
+  onSupervisorSelectionCancelled(): void {
+    console.log('❌ [Authorization] Supervisor selection cancelled');
+    this.showSupervisorModal = false;
+  }
+
+  /**
+   * Maneja la respuesta de autorización (aprobada o rechazada)
+   */
+  private handleAuthorizationResponse(solicitud: SolicitudAutorizacion): void {
+    console.log('📬 [Authorization] Response received:', solicitud);
+    this.waitingForAuthorization.set(false);
+
+    if (solicitud.estado === 'APROBADA') {
+      // Autorización aprobada - guardar automáticamente
+      alert('✅ ¡Autorización APROBADA!\n\nGuardando gestión automáticamente...');
+      this.requiresAuthorization.set(false); // Desactivar para que el guardado sea normal
+      this.saveManagement(); // Guardar la gestión
+    } else if (solicitud.estado === 'RECHAZADA') {
+      // Autorización rechazada - mostrar mensaje
+      const motivo = solicitud.comentariosSupervisor || 'Sin motivo especificado';
+      alert(`❌ Autorización RECHAZADA\n\nMotivo: ${motivo}\n\nPuede modificar los datos y volver a solicitar autorización.`);
+    } else if (solicitud.estado === 'EXPIRADA') {
+      alert('⏰ La solicitud de autorización ha expirado.\n\nPuede volver a solicitarla seleccionando otro supervisor.');
+    }
   }
 
   toggleCall() {
@@ -2537,6 +2836,50 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }).format(value);
   }
 
+  /**
+   * Obtiene la etiqueta del monto principal (primer campo de montos o "Deuda Total")
+   */
+  getPrimaryAmountLabel(): string {
+    const fields = this.clientAmountFields();
+    if (fields.length > 0) {
+      // Buscar campo que contenga "total" en el nombre
+      const totalField = fields.find(f =>
+        f.label.toLowerCase().includes('total') ||
+        f.field.toLowerCase().includes('total')
+      );
+      return totalField?.label || fields[0].label;
+    }
+    return 'Deuda Total';
+  }
+
+  /**
+   * Obtiene el valor del monto principal
+   */
+  getPrimaryAmountValue(): number {
+    const fields = this.clientAmountFields();
+    if (fields.length > 0) {
+      // Buscar campo que contenga "total" en el nombre
+      const totalField = fields.find(f =>
+        f.label.toLowerCase().includes('total') ||
+        f.field.toLowerCase().includes('total')
+      );
+      return totalField?.value || fields[0].value;
+    }
+    return this.customerData().deuda?.saldo_total || 0;
+  }
+
+  /**
+   * Obtiene las clases CSS para cada fila de montos según su índice
+   * Alterna entre 2 colores para mejor visualización
+   */
+  getAmountRowClass(index: number): string {
+    const colors = [
+      'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300',
+      'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200',
+    ];
+    return colors[index % colors.length];
+  }
+
   showPaymentSection(): boolean {
     const selectedManagement = this.managementClassifications().find(c => c.id === this.managementForm.tipoGestion);
     return selectedManagement?.requiere_pago || false;
@@ -2828,20 +3171,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             this.registerCallToBackend(response.id);
           }
 
-          // Si es una cancelación y hay cuota seleccionada, actualizar su estado a PAGADA
+          // Si es una cancelación y hay cuota seleccionada, cancelarla (marcar como PAGADA)
+          // Usa el nuevo endpoint que valida que la fecha de pago no haya pasado
           const selectedCuota = this.selectedInstallmentForCancellation();
           if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
-            console.log('💰 Actualizando estado de cuota a PAGADA:', selectedCuota);
+            console.log('💰 Cancelando cuota (marcando como PAGADA):', selectedCuota);
 
             const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-            this.managementService.updatePaymentStatus(
+            this.managementService.cancelarCuota(
               selectedCuota.id,
-              'PAGADA',
               selectedCuota.monto,
-              today
+              today,
+              this.managementForm.observaciones || undefined
             ).subscribe({
-              next: (updatedRecord) => {
-                console.log('✅ Estado de cuota actualizado:', updatedRecord);
+              next: (result) => {
+                console.log('✅ Cuota cancelada exitosamente:', result);
                 // Limpiar la selección
                 this.selectedInstallmentForCancellation.set(null);
                 // Recargar los cronogramas activos para reflejar el cambio
@@ -2852,8 +3196,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               },
               error: (err) => {
-                console.error('⚠️ Error actualizando estado de cuota:', err);
-                // Aunque falle la actualización del estado, la gestión ya se guardó
+                console.error('⚠️ Error cancelando cuota:', err);
+                // Si el error es porque la fecha ya pasó, mostrar mensaje específico
+                if (err.error?.error || err.error?.mensaje) {
+                  alert(`⚠️ ${err.error.mensaje || 'No se puede cancelar esta cuota. La fecha de pago ya pasó.'}`);
+                }
+                // Aunque falle la cancelación, la gestión ya se guardó
                 this.selectedInstallmentForCancellation.set(null);
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               }

@@ -79,15 +79,20 @@ export class WebsocketService {
   }
 
   subscribe(topic: string): Observable<any> {
+    console.log(`[WebSocket] subscribe() called for topic: ${topic}, already exists: ${this.messageSubjects.has(topic)}`);
+
     if (!this.messageSubjects.has(topic)) {
       const subject = new Subject<any>();
       this.messageSubjects.set(topic, subject);
 
       if (this.stompClient && this.stompClient.connected) {
+        console.log(`[WebSocket] Client connected, subscribing immediately to ${topic}`);
         this.subscribeToTopic(topic, subject);
       } else {
+        console.log(`[WebSocket] Client not connected yet, waiting for connection to subscribe to ${topic}`);
         // Wait for connection then subscribe
         const subscription = this.connectionStatus$.subscribe(connected => {
+          console.log(`[WebSocket] connectionStatus$ emitted: ${connected} for pending topic ${topic}`);
           if (connected && this.stompClient) {
             this.subscribeToTopic(topic, subject);
             subscription.unsubscribe();
@@ -100,9 +105,12 @@ export class WebsocketService {
   }
 
   private subscribeToTopic(topic: string, subject: Subject<any>): void {
+    console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
     this.stompClient?.subscribe(topic, (message: IMessage) => {
       try {
+        console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
         const payload = JSON.parse(message.body);
+        console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
         subject.next(payload);
       } catch (e) {
         console.error('Error parsing WebSocket message:', e);

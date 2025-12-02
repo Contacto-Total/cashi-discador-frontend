@@ -1,99 +1,105 @@
-<div class="manual-management-container">
+<div class="min-h-screen bg-gray-100 dark:bg-slate-950 p-4 transition-colors duration-300">
   <!-- Header -->
-  <div class="page-header">
-    <h1>Gestión Manual</h1>
-    <p class="subtitle">Busca un cliente por documento para tipificar sin necesidad de una llamada</p>
+  <div class="flex items-center gap-2 mb-3 animate-fade-in">
+    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:scale-110 transition-all duration-300">
+      <lucide-angular name="clipboard-edit" [size]="16" class="text-white"></lucide-angular>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold text-slate-800 dark:text-white transition-colors duration-300">Gestión Manual</h1>
+      <p class="text-xs text-slate-500 dark:text-gray-400 transition-colors duration-300">Busca un cliente por documento para tipificar</p>
+    </div>
   </div>
 
-  <!-- Selectores de contexto -->
-  <mat-card class="context-card">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>business</mat-icon>
-        Seleccionar Contexto
-      </mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="context-selectors">
+  <div class="section">
+    <!-- Selectores de contexto -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 mb-4 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in">
+      <div class="flex items-center gap-2 mb-4">
+        <lucide-angular name="building-2" [size]="18" class="text-blue-500 dark:text-blue-400 transition-colors duration-300"></lucide-angular>
+        <span class="text-sm font-semibold text-slate-800 dark:text-white transition-colors duration-300">Seleccionar Contexto</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Selector de Inquilino -->
-        <mat-form-field appearance="outline">
-          <mat-label>Inquilino</mat-label>
-          <mat-select [value]="selectedTenantId()"
-                      (selectionChange)="onTenantChange($event.value)"
-                      [disabled]="loadingTenants()">
+        <div class="transform hover:scale-[1.02] transition-transform duration-200">
+          <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1.5 transition-colors duration-300">Inquilino</label>
+          <select
+            [value]="selectedTenantId()"
+            (change)="onTenantChange($any($event.target).value)"
+            [disabled]="loadingTenants()"
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all duration-200 hover:border-blue-400 cursor-pointer">
+            <option value="">Seleccionar...</option>
             @for (tenant of tenants; track tenant.id) {
-              <mat-option [value]="tenant.id">{{ tenant.tenantName }}</mat-option>
+              <option [value]="tenant.id">{{ tenant.tenantName }}</option>
             }
-          </mat-select>
-          @if (loadingTenants()) {
-            <mat-spinner matSuffix diameter="20"></mat-spinner>
-          }
-        </mat-form-field>
+          </select>
+        </div>
 
         <!-- Selector de Cartera -->
-        <mat-form-field appearance="outline">
-          <mat-label>Cartera</mat-label>
-          <mat-select [value]="selectedPortfolioId()"
-                      (selectionChange)="onPortfolioChange($event.value)"
-                      [disabled]="!selectedTenantId() || loadingPortfolios()">
+        <div class="transform hover:scale-[1.02] transition-transform duration-200">
+          <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1.5 transition-colors duration-300">Cartera</label>
+          <select
+            [value]="selectedPortfolioId()"
+            (change)="onPortfolioChange($any($event.target).value)"
+            [disabled]="!selectedTenantId() || loadingPortfolios()"
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all duration-200 hover:border-blue-400 cursor-pointer">
+            <option value="">Seleccionar...</option>
             @for (portfolio of portfolios; track portfolio.id) {
-              <mat-option [value]="portfolio.id">{{ portfolio.portfolioName }}</mat-option>
+              <option [value]="portfolio.id">{{ portfolio.portfolioName }}</option>
             }
-          </mat-select>
-          @if (loadingPortfolios()) {
-            <mat-spinner matSuffix diameter="20"></mat-spinner>
-          }
-        </mat-form-field>
+          </select>
+        </div>
 
         <!-- Selector de Subcartera -->
-        <mat-form-field appearance="outline">
-          <mat-label>Subcartera</mat-label>
-          <mat-select [value]="selectedSubPortfolioId()"
-                      (selectionChange)="onSubPortfolioChange($event.value)"
-                      [disabled]="!selectedPortfolioId() || loadingSubPortfolios()">
+        <div class="transform hover:scale-[1.02] transition-transform duration-200">
+          <label class="block text-xs text-slate-500 dark:text-gray-400 mb-1.5 transition-colors duration-300">Subcartera</label>
+          <select
+            [value]="selectedSubPortfolioId()"
+            (change)="onSubPortfolioChange($any($event.target).value)"
+            [disabled]="!selectedPortfolioId() || loadingSubPortfolios()"
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 transition-all duration-200 hover:border-blue-400 cursor-pointer">
+            <option value="">Seleccionar...</option>
             @for (subPortfolio of subPortfolios; track subPortfolio.id) {
-              <mat-option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }}</mat-option>
+              <option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }}</option>
             }
-          </mat-select>
-          @if (loadingSubPortfolios()) {
-            <mat-spinner matSuffix diameter="20"></mat-spinner>
-          }
-        </mat-form-field>
+          </select>
+        </div>
       </div>
 
       @if (!canSearch()) {
-        <div class="context-hint">
-          <mat-icon>info</mat-icon>
-          Selecciona inquilino, cartera y subcartera para buscar clientes
+        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 rounded-lg transition-all duration-300 animate-pulse-subtle">
+          <lucide-angular name="info" [size]="16" class="text-amber-600 dark:text-amber-400 transition-colors duration-300"></lucide-angular>
+          <span class="text-xs text-amber-700 dark:text-amber-400 transition-colors duration-300">Selecciona inquilino, cartera y subcartera para buscar clientes</span>
         </div>
       }
-    </mat-card-content>
-  </mat-card>
+    </div>
 
-  <!-- Buscador -->
-  <mat-card class="search-card" [class.disabled]="!canSearch()">
-    <mat-card-header>
-      <mat-card-title>Buscar Cliente</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="search-container">
-        <mat-form-field appearance="outline" class="search-field">
-          <mat-label>Documento (DNI/Cédula)</mat-label>
-          <input matInput
-                 [value]="searchDocument()"
-                 (input)="onSearchInput($event)"
-                 (keyup.enter)="searchByDocument()"
-                 [disabled]="!canSearch()"
-                 placeholder="Ingresa el documento del cliente">
-          <mat-icon matSuffix>search</mat-icon>
-        </mat-form-field>
+    <!-- Buscador -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 shadow-sm hover:shadow-md transition-all duration-300 animate-slide-in-delayed" [class.opacity-50]="!canSearch()" [class.pointer-events-none]="!canSearch()">
+      <div class="flex items-center gap-2 mb-4">
+        <lucide-angular name="search" [size]="18" class="text-green-500 dark:text-green-400 transition-colors duration-300"></lucide-angular>
+        <span class="text-sm font-semibold text-slate-800 dark:text-white transition-colors duration-300">Buscar Cliente</span>
+      </div>
 
-        <button mat-raised-button color="primary"
-                (click)="searchByDocument()"
-                [disabled]="searching() || !canSearch()">
+      <div class="flex gap-3">
+        <div class="flex-1 relative group">
+          <input
+            type="text"
+            [value]="searchDocument()"
+            (input)="onSearchInput($event)"
+            (keyup.enter)="searchByDocument()"
+            [disabled]="!canSearch()"
+            placeholder="Ingresa el documento del cliente (DNI/Cédula)"
+            class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 transition-all duration-200 hover:border-green-400 group-hover:shadow-sm">
+        </div>
+        <button
+          (click)="searchByDocument()"
+          [disabled]="searching() || !canSearch()"
+          class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-gray-400 disabled:to-gray-500 dark:disabled:from-gray-600 dark:disabled:to-gray-700 text-white text-sm font-semibold rounded-lg transition-all duration-300 flex items-center gap-2 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-green-500/30 hover:scale-105 active:scale-95">
           @if (searching()) {
-            <mat-spinner diameter="20"></mat-spinner>
+            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+            Buscando...
           } @else {
+            <lucide-angular name="search" [size]="16"></lucide-angular>
             Buscar
           }
         </button>
@@ -101,12 +107,16 @@
 
       <!-- Resultados de autocompletado -->
       @if (searchResults().length > 0) {
-        <div class="autocomplete-results">
-          @for (client of searchResults(); track client.documento) {
-            <div class="autocomplete-item" (click)="selectClient(client)">
-              <span class="doc">{{ client.documento }}</span>
-              <span class="name">{{ getClientName(client) }}</span>
-              <span class="phone">{{ getClientPhone(client) }}</span>
+        <div class="mt-3 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto shadow-inner transition-all duration-300 animate-scale-in">
+          @for (client of searchResults(); track client.documento; let i = $index) {
+            <div
+              (click)="selectClient(client)"
+              class="flex items-center gap-4 px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer border-b border-slate-300 dark:border-slate-700 last:border-b-0 transition-all duration-200 hover:pl-6"
+              [style.animation-delay]="i * 50 + 'ms'">
+              <span class="text-blue-600 dark:text-blue-400 font-semibold text-sm min-w-[100px] transition-colors duration-200">{{ client.documento }}</span>
+              <span class="flex-1 text-slate-800 dark:text-white text-sm transition-colors duration-200">{{ getClientName(client) }}</span>
+              <span class="text-slate-500 dark:text-gray-400 text-xs transition-colors duration-200">{{ getClientPhone(client) }}</span>
+              <lucide-angular name="chevron-right" [size]="16" class="text-slate-400 dark:text-slate-500 opacity-0 group-hover:opacity-100 transition-all duration-200"></lucide-angular>
             </div>
           }
         </div>
@@ -114,28 +124,11 @@
 
       <!-- Error de búsqueda -->
       @if (searchError()) {
-        <div class="search-error">
-          <mat-icon>error</mat-icon>
-          {{ searchError() }}
+        <div class="flex items-center gap-2 mt-3 px-3 py-2 bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/20 rounded-lg transition-all duration-300 animate-shake">
+          <lucide-angular name="alert-circle" [size]="16" class="text-red-500 dark:text-red-400 transition-colors duration-300"></lucide-angular>
+          <span class="text-xs text-red-600 dark:text-red-400 transition-colors duration-300">{{ searchError() }}</span>
         </div>
       }
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Instrucciones -->
-  <mat-card class="info-card">
-    <mat-card-content>
-      <div class="info-content">
-        <mat-icon class="info-icon">lightbulb</mat-icon>
-        <div>
-          <h3>¿Cómo funciona?</h3>
-          <ol>
-            <li>Selecciona el <strong>inquilino</strong>, <strong>cartera</strong> y <strong>subcartera</strong> donde está el cliente</li>
-            <li>Ingresa el <strong>documento</strong> (DNI/Cédula) del cliente</li>
-            <li>Al encontrar el cliente, serás redirigido a la <strong>pantalla de gestión</strong> donde podrás tipificar</li>
-          </ol>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+    </div>
+  </div>
 </div>

@@ -9,7 +9,10 @@ import { WebsocketService } from './core/services/websocket.service';
 import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
+import { AgentStatusService } from './core/services/agent-status.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
+import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
+import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -20,7 +23,9 @@ import { Subscription } from 'rxjs';
     CommonModule,
     RouterOutlet,
     RouterModule,
-    LucideAngularModule
+    LucideAngularModule,
+    AuthorizationNotificationComponent,
+    AgentTimeAlertOverlayComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -56,6 +61,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private sipService: SipService,
     private inactivityService: InactivityService,
     private sessionConfig: SessionConfigService,
+    private agentStatusService: AgentStatusService,
     private dialog: MatDialog,
     private router: Router
   ) {}
@@ -292,10 +298,56 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
 
   logout(): void {
-    this.inactivityService.detener();
-    this.websocketService.disconnect();
-    this.sipService.unregister();
+    console.log('[LOGOUT] Iniciando proceso de cierre de sesión...');
+
+    // Obtener el usuario actual antes de limpiar todo
+    const currentUser = this.authService.getCurrentUser();
+
+    // Notificar al backend que el agente se desconecta (para actualizar monitoreo)
+    if (currentUser?.id) {
+      try {
+        this.agentStatusService.disconnectAgent(currentUser.id).subscribe({
+          next: () => console.log('[LOGOUT] Estado de agente eliminado en backend'),
+          error: (e) => console.error('[LOGOUT] Error eliminando estado de agente:', e)
+        });
+      } catch (e) {
+        console.error('[LOGOUT] Error llamando disconnectAgent:', e);
+      }
+    }
+
+    // Detener servicios de forma segura (con try-catch para evitar bloqueos)
+    try {
+      this.inactivityService.detener();
+      console.log('[LOGOUT] Servicio de inactividad detenido');
+    } catch (e) {
+      console.error('[LOGOUT] Error deteniendo inactividad:', e);
+    }
+
+    try {
+      this.websocketService.disconnect();
+      console.log('[LOGOUT] WebSocket desconectado');
+    } catch (e) {
+      console.error('[LOGOUT] Error desconectando WebSocket:', e);
+    }
+
+    try {
+      this.sipService.unregister();
+      console.log('[LOGOUT] SIP desregistrado');
+    } catch (e) {
+      console.error('[LOGOUT] Error desregistrando SIP:', e);
+    }
+
+    // Siempre ejecutar el logout del auth service (limpia tokens y navega a login)
+    console.log('[LOGOUT] Ejecutando authService.logout()...');
     this.authService.logout();
+
+    // Forzar navegación a login como respaldo (por si el router.navigate del authService falla)
+    setTimeout(() => {
+      if (this.router.url !== '/login') {
+        console.log('[LOGOUT] Forzando navegación a /login...');
+        this.router.navigate(['/login'], { replaceUrl: true });
+      }
+    }, 100);
   }
 
   isLoginPage(): boolean {

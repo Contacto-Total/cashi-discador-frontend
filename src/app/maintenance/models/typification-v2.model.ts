@@ -135,6 +135,13 @@ export interface AdditionalFieldV2 {
   options?: Array<{label: string, value: any}>;
 }
 
+// Enum para restricción de fecha en promesas de pago
+export enum RestriccionFecha {
+  SIN_RESTRICCION = 'SIN_RESTRICCION',   // Cualquier fecha futura
+  DENTRO_MES = 'DENTRO_MES',             // Solo fechas dentro del mes actual
+  FUERA_MES = 'FUERA_MES'                // Solo fechas del próximo mes en adelante
+}
+
 // Modelos para el sistema de opciones con toggles
 export interface CampoOpcionDTO {
   id?: number;
@@ -143,6 +150,7 @@ export interface CampoOpcionDTO {
   campoTablaDinamica?: string;
   estaHabilitada: boolean;
   ordenVisualizacion: number;
+  restriccionFecha?: RestriccionFecha | string;  // Restricción de fecha para promesas de pago
 }
 
 export interface ConfigurarOpcionesCampoRequest {
@@ -154,6 +162,7 @@ export interface OpcionToggleDTO {
   codigoOpcion: string;
   estaHabilitada: boolean;
   ordenVisualizacion?: number;
+  restriccionFecha?: RestriccionFecha | string;  // Restricción de fecha para promesas de pago
 }
 
 export interface CampoConOpcionesResponse {

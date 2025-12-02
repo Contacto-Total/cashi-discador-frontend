@@ -2,8 +2,17 @@ import { Component, effect, inject, input, output, signal, computed } from '@ang
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { AdditionalFieldV2, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2 } from '../../models/typification-v2.model';
+import { HttpClient } from '@angular/common/http';
+import { AdditionalFieldV2, CampoOpcionDTO, ConfigurarOpcionesCampoRequest, FieldTypeV2, RestriccionFecha } from '../../models/typification-v2.model';
 import { TypificationV2Service } from '../../services/typification-v2.service';
+import { environment } from '../../../../environments/environment';
+
+interface ConfiguracionCabecera {
+  codigo: string;
+  nombre: string;
+  tipoDato: string;
+  tipoSql: string;
+}
 
 @Component({
   selector: 'app-typification-additional-fields-dialog',
@@ -82,11 +91,11 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                     <lucide-angular name="loader" [size]="40" class="animate-spin text-blue-600 mb-3"></lucide-angular>
                     <p class="text-sm">Cargando montos disponibles...</p>
                   </div>
-                } @else if (opciones().length > 0) {
+                } @else if (opcionesConNombres().length > 0) {
                   <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                    @for (opcion of opciones(); track opcion.codigoOpcion) {
+                    @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
                       <div
-                        class="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer"
+                        class="p-3 rounded-lg border transition-all"
                         [class.bg-green-50]="opcion.estaHabilitada"
                         [class.dark:bg-green-900/20]="opcion.estaHabilitada"
                         [class.border-green-300]="opcion.estaHabilitada"
@@ -95,47 +104,69 @@ import { TypificationV2Service } from '../../services/typification-v2.service';
                         [class.dark:bg-gray-700/50]="!opcion.estaHabilitada"
                         [class.border-gray-200]="!opcion.estaHabilitada"
                         [class.dark:border-gray-600]="!opcion.estaHabilitada"
-                        (click)="toggleOpcion(opcion)"
                       >
-                        <div class="flex items-center gap-3 flex-1">
-                          <!-- Toggle Switch -->
-                          <label class="relative inline-flex items-center cursor-pointer" (click)="$event.stopPropagation()">
-                            <input
-                              type="checkbox"
-                              [(ngModel)]="opcion.estaHabilitada"
-                              class="sr-only peer"
-                            >
-                            <div class="w-10 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-                          </label>
+                        <!-- Row 1: Toggle + Label + Badge -->
+                        <div class="flex items-center justify-between cursor-pointer" (click)="toggleOpcionOriginal(opcion)">
+                          <div class="flex items-center gap-3 flex-1">
+                            <!-- Toggle Switch -->
+                            <label class="relative inline-flex items-center cursor-pointer" (click)="$event.stopPropagation()">
+                              <input
+                                type="checkbox"
+                                [checked]="opcion.estaHabilitada"
+                                (change)="toggleOpcionOriginal(opcion)"
+                                class="sr-only peer"
+                              >
+                              <div class="w-10 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
+                            </label>
 
-                          <!-- Label -->
-                          <div class="flex-1">
-                            <span class="text-sm font-medium text-gray-900 dark:text-white">
-                              {{ opcion.labelOpcion }}
-                            </span>
-                            @if (opcion.codigoOpcion !== 'personalizado') {
-                              <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                ({{ opcion.campoTablaDinamica }})
+                            <!-- Label -->
+                            <div class="flex-1">
+                              <span class="text-sm font-medium text-gray-900 dark:text-white">
+                                {{ opcion.visualName }}
+                              </span>
+                              @if (opcion.codigoOpcion !== 'personalizado') {
+                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                  ({{ opcion.campoTablaDinamica }})
+                                </span>
+                              }
+                            </div>
+
+                            <!-- Badge -->
+                            @if (opcion.codigoOpcion === 'personalizado') {
+                              <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-semibold rounded-full">
+                                Manual
                               </span>
                             }
                           </div>
 
-                          <!-- Badge -->
-                          @if (opcion.codigoOpcion === 'personalizado') {
-                            <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-semibold rounded-full">
-                              Manual
-                            </span>
-                          }
+                          <!-- Status Icon -->
+                          <div class="ml-2">
+                            @if (opcion.estaHabilitada) {
+                              <lucide-angular name="check-circle" [size]="20" class="text-green-600"></lucide-angular>
+                            } @else {
+                              <lucide-angular name="circle" [size]="20" class="text-gray-300 dark:text-gray-500"></lucide-angular>
+                            }
+                          </div>
                         </div>
 
-                        <!-- Status Icon -->
-                        <div class="ml-2">
-                          @if (opcion.estaHabilitada) {
-                            <lucide-angular name="check-circle" [size]="20" class="text-green-600"></lucide-angular>
-                          } @else {
-                            <lucide-angular name="circle" [size]="20" class="text-gray-300 dark:text-gray-500"></lucide-angular>
-                          }
-                        </div>
+                        <!-- Row 2: Restricción de Fecha (solo si está habilitada) -->
+                        @if (opcion.estaHabilitada) {
+                          <div class="mt-2 pt-2 border-t border-green-200 dark:border-green-800" (click)="$event.stopPropagation()">
+                            <div class="flex items-center gap-2">
+                              <lucide-angular name="calendar" [size]="14" class="text-blue-600"></lucide-angular>
+                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Restricción de fecha:</span>
+                              <select
+                                [ngModel]="opcion.restriccionFecha || 'SIN_RESTRICCION'"
+                                (ngModelChange)="onRestriccionFechaChange(opcion.codigoOpcion, $event)"
+                                class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="SIN_RESTRICCION">Sin restricción (cualquier fecha)</option>
+                                <option value="DENTRO_MES">Solo dentro del mes actual</option>
+                                <option value="FUERA_MES">Solo fuera del mes (próximo mes+)</option>
+                              </select>
+                            </div>
+                          </div>
+                        }
                       </div>
                     }
                   </div>
@@ -217,7 +248,40 @@ export class TypificationAdditionalFieldsDialogComponent {
   selectedSubPortfolioId = signal<number | undefined>(undefined);
   paymentScheduleFieldId = signal<number | null>(null);
 
+  // Cabeceras para nombres visuales
+  cabeceras = signal<ConfiguracionCabecera[]>([]);
+  private cabecerasUrl = `${environment.apiUrl}/configuracion-cabeceras`;
+
+  // Computed: opciones con nombres visuales traducidos
+  opcionesConNombres = computed(() => {
+    const opciones = this.opciones();
+    const cabeceras = this.cabeceras();
+
+    // Crear mapa de código -> nombre visual
+    const codigoToNombre = new Map<string, string>();
+    for (const c of cabeceras) {
+      codigoToNombre.set(c.codigo.toLowerCase(), c.nombre);
+    }
+
+    // Devolver opciones con nombre visual
+    return opciones.map(opcion => {
+      let visualName = opcion.labelOpcion || opcion.codigoOpcion;
+
+      if (opcion.codigoOpcion === 'personalizado') {
+        visualName = 'Personalizado';
+      } else if (opcion.campoTablaDinamica) {
+        const nombre = codigoToNombre.get(opcion.campoTablaDinamica.toLowerCase());
+        if (nombre) {
+          visualName = nombre;
+        }
+      }
+
+      return { ...opcion, visualName };
+    });
+  });
+
   private typificationService = inject(TypificationV2Service);
+  private http = inject(HttpClient);
 
   constructor() {
     effect(() => {
@@ -231,6 +295,7 @@ export class TypificationAdditionalFieldsDialogComponent {
 
   private resetState() {
     this.opciones.set([]);
+    this.cabeceras.set([]);
     this.errorMessage.set('');
     this.selectedSubPortfolioId.set(undefined);
     this.paymentScheduleFieldId.set(null);
@@ -272,6 +337,7 @@ export class TypificationAdditionalFieldsDialogComponent {
           // Auto-select if only one subportfolio
           if (subPortfolios.length === 1) {
             this.selectedSubPortfolioId.set(subPortfolios[0].id);
+            this.loadCabeceras(subPortfolios[0].id);
             this.loadOpcionesAutomatically();
           }
         },
@@ -286,11 +352,26 @@ export class TypificationAdditionalFieldsDialogComponent {
   onSubPortfolioChange(subPortfolioId: number) {
     this.selectedSubPortfolioId.set(subPortfolioId);
     this.opciones.set([]);
+    this.cabeceras.set([]);
     this.errorMessage.set('');
 
     if (subPortfolioId) {
+      this.loadCabeceras(subPortfolioId);
       this.loadOpcionesAutomatically();
     }
+  }
+
+  private loadCabeceras(subPortfolioId: number) {
+    this.http.get<ConfiguracionCabecera[]>(`${this.cabecerasUrl}/subcartera/${subPortfolioId}/montos`)
+      .subscribe({
+        next: (cabeceras) => {
+          this.cabeceras.set(cabeceras);
+          console.log('[DIALOG] Loaded cabeceras:', cabeceras.length);
+        },
+        error: (error) => {
+          console.warn('[DIALOG] Error loading cabeceras:', error);
+        }
+      });
   }
 
   private loadOpcionesAutomatically() {
@@ -349,8 +430,29 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.loadOpcionesAutomatically();
   }
 
-  toggleOpcion(opcion: CampoOpcionDTO) {
-    opcion.estaHabilitada = !opcion.estaHabilitada;
+  toggleOpcionOriginal(opcionConNombre: CampoOpcionDTO & { visualName: string }) {
+    // Buscar la opción original en el signal y modificarla
+    const opciones = this.opciones();
+    const opcionOriginal = opciones.find(o => o.codigoOpcion === opcionConNombre.codigoOpcion);
+    if (opcionOriginal) {
+      opcionOriginal.estaHabilitada = !opcionOriginal.estaHabilitada;
+      // Si se habilita y no tiene restricción, poner por defecto SIN_RESTRICCION
+      if (opcionOriginal.estaHabilitada && !opcionOriginal.restriccionFecha) {
+        opcionOriginal.restriccionFecha = RestriccionFecha.SIN_RESTRICCION;
+      }
+      // Forzar actualización del signal
+      this.opciones.set([...opciones]);
+    }
+  }
+
+  onRestriccionFechaChange(codigoOpcion: string, restriccion: string) {
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (opcion) {
+      opcion.restriccionFecha = restriccion as RestriccionFecha;
+      // Forzar actualización del signal
+      this.opciones.set([...opciones]);
+    }
   }
 
   getOpcionesHabilitadasCount(): number {
@@ -381,7 +483,8 @@ export class TypificationAdditionalFieldsDialogComponent {
       opciones: opcionesActuales.map(o => ({
         codigoOpcion: o.codigoOpcion,
         estaHabilitada: o.estaHabilitada,
-        ordenVisualizacion: o.ordenVisualizacion
+        ordenVisualizacion: o.ordenVisualizacion,
+        restriccionFecha: o.restriccionFecha || RestriccionFecha.SIN_RESTRICCION
       }))
     };
 

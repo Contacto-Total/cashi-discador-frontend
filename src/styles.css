@@ -2963,4 +2963,1518 @@ body.light-theme {
   background-color: rgba(0, 0, 0, 0.6) !important;
 }
 
+/* ============================================
+   Collection Management - THEME-AWARE STYLING
+   ============================================ */
+
+/* ========================================
+   CONTENEDOR PRINCIPAL - THEME AWARE
+   ======================================== */
+
+.collection-management-container {
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+:root.dark .collection-management-container,
+body.dark-theme .collection-management-container {
+  background: linear-gradient(to bottom right, #020617, #0f172a, #000000);
+}
+
+/* ========================================
+   HEADER - THEME AWARE
+   ======================================== */
+
+.collection-management-header {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb);
+}
+
+:root.dark .collection-management-header,
+body.dark-theme .collection-management-header {
+  background: linear-gradient(to right, #020617, #172554, #020617);
+}
+
+/* ========================================
+   PANELES LATERALES - THEME AWARE
+   ======================================== */
+
+.collection-panel {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
+:root.dark .collection-panel,
+body.dark-theme .collection-panel {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+/* ========================================
+   PANEL CENTRAL - THEME AWARE
+   ======================================== */
+
+.collection-central-panel {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #eff6ff);
+}
+
+:root.dark .collection-central-panel,
+body.dark-theme .collection-central-panel {
+  background: linear-gradient(to bottom right, #0f172a, #111827, #0f172a);
+}
+
+/* ========================================
+   CARDS - THEME AWARE
+   ======================================== */
+
+.collection-card {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+  color: #1e293b;
+}
+
+:root.dark .collection-card,
+body.dark-theme .collection-card {
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+/* ========================================
+   TABS - THEME AWARE
+   ======================================== */
+
+.collection-tabs {
+  background-color: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+:root.dark .collection-tabs,
+body.dark-theme .collection-tabs {
+  background-color: #020617;
+  border-color: #1e293b;
+}
+
+.collection-tab {
+  color: #475569;
+}
+
+.collection-tab:hover {
+  background-color: #f8fafc;
+}
+
+.collection-tab.active {
+  color: #1d4ed8;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+:root.dark .collection-tab,
+body.dark-theme .collection-tab {
+  color: #d1d5db;
+}
+
+:root.dark .collection-tab:hover,
+body.dark-theme .collection-tab:hover {
+  background-color: #1f2937;
+}
+
+:root.dark .collection-tab.active,
+body.dark-theme .collection-tab.active {
+  color: #93c5fd;
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ========================================
+   TEXTOS - THEME AWARE
+   ======================================== */
+
+.collection-text-primary {
+  color: #0f172a;
+}
+
+:root.dark .collection-text-primary,
+body.dark-theme .collection-text-primary {
+  color: #f8fafc;
+}
+
+.collection-text-secondary {
+  color: #475569;
+}
+
+:root.dark .collection-text-secondary,
+body.dark-theme .collection-text-secondary {
+  color: #94a3b8;
+}
+
+.collection-text-muted {
+  color: #64748b;
+}
+
+:root.dark .collection-text-muted,
+body.dark-theme .collection-text-muted {
+  color: #64748b;
+}
+
+/* ========================================
+   INPUTS Y SELECTS - THEME AWARE
+   ======================================== */
+
+.collection-input,
+.collection-management-container select,
+.collection-management-container input[type="text"],
+.collection-management-container input[type="number"],
+.collection-management-container input[type="date"],
+.collection-management-container input[type="datetime-local"],
+.collection-management-container textarea {
+  background-color: #ffffff;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.collection-management-container select option {
+  background-color: #ffffff;
+  color: #1e293b;
+}
+
+:root.dark .collection-input,
+:root.dark .collection-management-container select,
+:root.dark .collection-management-container input[type="text"],
+:root.dark .collection-management-container input[type="number"],
+:root.dark .collection-management-container input[type="date"],
+:root.dark .collection-management-container input[type="datetime-local"],
+:root.dark .collection-management-container textarea,
+body.dark-theme .collection-input,
+body.dark-theme .collection-management-container select,
+body.dark-theme .collection-management-container input[type="text"],
+body.dark-theme .collection-management-container input[type="number"],
+body.dark-theme .collection-management-container input[type="date"],
+body.dark-theme .collection-management-container input[type="datetime-local"],
+body.dark-theme .collection-management-container textarea {
+  background-color: #1f2937;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+:root.dark .collection-management-container select option,
+body.dark-theme .collection-management-container select option {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+/* ========================================
+   LIGHT THEME (DEFAULT)
+   ======================================== */
+
+/* Contenedor principal - Modo Claro */
+:root:not(.dark) app-collection-management > div,
+body.light-theme app-collection-management > div {
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9) !important;
+}
+
+/* Header - Modo Claro */
+:root:not(.dark) app-collection-management > div > div:nth-child(3),
+body.light-theme app-collection-management > div > div:nth-child(3) {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+}
+
+/* Paneles laterales - Modo Claro */
+:root:not(.dark) app-collection-management .bg-white,
+body.light-theme app-collection-management .bg-white {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-900,
+body.light-theme app-collection-management .bg-slate-900 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-950,
+body.light-theme app-collection-management .bg-slate-950 {
+  background-color: #f1f5f9 !important;
+}
+
+:root:not(.dark) app-collection-management .bg-gray-800,
+body.light-theme app-collection-management .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-collection-management .bg-gray-900,
+body.light-theme app-collection-management .bg-gray-900 {
+  background-color: #f8fafc !important;
+}
+
+/* Bordes - Modo Claro */
+:root:not(.dark) app-collection-management .border-slate-800,
+body.light-theme app-collection-management .border-slate-800 {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) app-collection-management .border-slate-700,
+body.light-theme app-collection-management .border-slate-700 {
+  border-color: #cbd5e1 !important;
+}
+
+:root:not(.dark) app-collection-management .border-gray-700,
+body.light-theme app-collection-management .border-gray-700 {
+  border-color: #e2e8f0 !important;
+}
+
+:root:not(.dark) app-collection-management .border-gray-600,
+body.light-theme app-collection-management .border-gray-600 {
+  border-color: #cbd5e1 !important;
+}
+
+/* Textos - Modo Claro */
+:root:not(.dark) app-collection-management .text-white:not([class*="bg-"]):not(button):not(h1),
+body.light-theme app-collection-management .text-white:not([class*="bg-"]):not(button):not(h1) {
+  color: #0f172a !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-300,
+body.light-theme app-collection-management .text-gray-300 {
+  color: #475569 !important;
+}
+
+:root:not(.dark) app-collection-management .text-gray-400,
+body.light-theme app-collection-management .text-gray-400 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) app-collection-management .text-slate-400,
+body.light-theme app-collection-management .text-slate-400 {
+  color: #64748b !important;
+}
+
+:root:not(.dark) app-collection-management .text-slate-300,
+body.light-theme app-collection-management .text-slate-300 {
+  color: #475569 !important;
+}
+
+:root:not(.dark) app-collection-management .text-slate-200,
+body.light-theme app-collection-management .text-slate-200 {
+  color: #334155 !important;
+}
+
+/* Tabs - Modo Claro */
+:root:not(.dark) app-collection-management .text-blue-200,
+body.light-theme app-collection-management .text-blue-200 {
+  color: #1e40af !important;
+}
+
+:root:not(.dark) app-collection-management .bg-blue-950\/50,
+body.light-theme app-collection-management .bg-blue-950\/50 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Inputs y selects - Modo Claro */
+:root:not(.dark) app-collection-management select,
+:root:not(.dark) app-collection-management input[type="text"],
+:root:not(.dark) app-collection-management input[type="number"],
+:root:not(.dark) app-collection-management input[type="date"],
+:root:not(.dark) app-collection-management textarea,
+body.light-theme app-collection-management select,
+body.light-theme app-collection-management input[type="text"],
+body.light-theme app-collection-management input[type="number"],
+body.light-theme app-collection-management input[type="date"],
+body.light-theme app-collection-management textarea {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+:root:not(.dark) app-collection-management select option,
+body.light-theme app-collection-management select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* Panel central - Modo Claro */
+:root:not(.dark) app-collection-management .from-slate-900,
+body.light-theme app-collection-management .from-slate-900 {
+  --tw-gradient-from: #f8fafc var(--tw-gradient-from-position) !important;
+}
+
+:root:not(.dark) app-collection-management .via-gray-900,
+body.light-theme app-collection-management .via-gray-900 {
+  --tw-gradient-via: #f1f5f9 var(--tw-gradient-via-position) !important;
+}
+
+:root:not(.dark) app-collection-management .to-slate-900,
+body.light-theme app-collection-management .to-slate-900 {
+  --tw-gradient-to: #f8fafc var(--tw-gradient-to-position) !important;
+}
+
+/* Cards de información - Modo Claro */
+:root:not(.dark) app-collection-management .bg-green-950\/30,
+body.light-theme app-collection-management .bg-green-950\/30 {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-red-950\/30,
+body.light-theme app-collection-management .bg-red-950\/30 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-red-950\/20,
+body.light-theme app-collection-management .bg-red-950\/20 {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-purple-950\/30,
+:root:not(.dark) app-collection-management .bg-purple-950\/20,
+body.light-theme app-collection-management .bg-purple-950\/30,
+body.light-theme app-collection-management .bg-purple-950\/20 {
+  background-color: rgba(147, 51, 234, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-indigo-950\/30,
+:root:not(.dark) app-collection-management .bg-indigo-950\/20,
+body.light-theme app-collection-management .bg-indigo-950\/30,
+body.light-theme app-collection-management .bg-indigo-950\/20 {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+}
+
+:root:not(.dark) app-collection-management .bg-blue-950\/30,
+body.light-theme app-collection-management .bg-blue-950\/30 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* Textos de colores especiales - Modo Claro */
+:root:not(.dark) app-collection-management .text-green-300,
+body.light-theme app-collection-management .text-green-300 {
+  color: #16a34a !important;
+}
+
+:root:not(.dark) app-collection-management .text-green-400,
+body.light-theme app-collection-management .text-green-400 {
+  color: #22c55e !important;
+}
+
+:root:not(.dark) app-collection-management .text-red-300,
+body.light-theme app-collection-management .text-red-300 {
+  color: #dc2626 !important;
+}
+
+:root:not(.dark) app-collection-management .text-red-400,
+body.light-theme app-collection-management .text-red-400 {
+  color: #ef4444 !important;
+}
+
+:root:not(.dark) app-collection-management .text-blue-300,
+body.light-theme app-collection-management .text-blue-300 {
+  color: #2563eb !important;
+}
+
+:root:not(.dark) app-collection-management .text-purple-300,
+:root:not(.dark) app-collection-management .text-purple-400,
+body.light-theme app-collection-management .text-purple-300,
+body.light-theme app-collection-management .text-purple-400 {
+  color: #9333ea !important;
+}
+
+:root:not(.dark) app-collection-management .text-purple-100,
+body.light-theme app-collection-management .text-purple-100 {
+  color: #6b21a8 !important;
+}
+
+:root:not(.dark) app-collection-management .text-orange-400,
+body.light-theme app-collection-management .text-orange-400 {
+  color: #ea580c !important;
+}
+
+/* Bordes de colores - Modo Claro */
+:root:not(.dark) app-collection-management .border-green-800,
+body.light-theme app-collection-management .border-green-800 {
+  border-color: #86efac !important;
+}
+
+:root:not(.dark) app-collection-management .border-purple-700,
+body.light-theme app-collection-management .border-purple-700 {
+  border-color: #c4b5fd !important;
+}
+
+/* Fondo del resumen de deuda - Modo Claro */
+:root:not(.dark) app-collection-management .bg-red-50,
+body.light-theme app-collection-management .bg-red-50 {
+  background-color: #fef2f2 !important;
+}
+
+/* Historial items - Modo Claro */
+:root:not(.dark) app-collection-management .bg-gray-50,
+body.light-theme app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-50,
+body.light-theme app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-collection-management .bg-slate-800,
+body.light-theme app-collection-management .bg-slate-800 {
+  background-color: #f1f5f9 !important;
+}
+
+/* ========================================
+   Dynamic Field Renderer - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-dynamic-field-renderer .bg-purple-950\/20,
+body.light-theme app-dynamic-field-renderer .bg-purple-950\/20 {
+  background-color: #faf5ff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .border-purple-900\/50,
+body.light-theme app-dynamic-field-renderer .border-purple-900\/50 {
+  border-color: #e9d5ff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-purple-200,
+body.light-theme app-dynamic-field-renderer .text-purple-200 {
+  color: #7c3aed !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .border-purple-800,
+body.light-theme app-dynamic-field-renderer .border-purple-800 {
+  border-color: #e9d5ff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-gray-100,
+body.light-theme app-dynamic-field-renderer .text-gray-100 {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-gray-400,
+body.light-theme app-dynamic-field-renderer .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .text-gray-300,
+body.light-theme app-dynamic-field-renderer .text-gray-300 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .border-gray-600,
+body.light-theme app-dynamic-field-renderer .border-gray-600 {
+  border-color: #d1d5db !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .bg-slate-800,
+body.light-theme app-dynamic-field-renderer .bg-slate-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer .bg-gray-700,
+body.light-theme app-dynamic-field-renderer .bg-gray-700 {
+  background-color: #f3f4f6 !important;
+}
+
+:root:not(.dark) app-dynamic-field-renderer input,
+:root:not(.dark) app-dynamic-field-renderer select,
+:root:not(.dark) app-dynamic-field-renderer textarea,
+body.light-theme app-dynamic-field-renderer input,
+body.light-theme app-dynamic-field-renderer select,
+body.light-theme app-dynamic-field-renderer textarea {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+/* ========================================
+   Payment Schedule Component - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-payment-schedule .bg-slate-800,
+:root:not(.dark) app-payment-schedule .bg-gray-800,
+body.light-theme app-payment-schedule .bg-slate-800,
+body.light-theme app-payment-schedule .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-payment-schedule .bg-slate-900,
+:root:not(.dark) app-payment-schedule .bg-gray-900,
+body.light-theme app-payment-schedule .bg-slate-900,
+body.light-theme app-payment-schedule .bg-gray-900 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-payment-schedule .text-white,
+body.light-theme app-payment-schedule .text-white {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-payment-schedule .text-gray-300,
+:root:not(.dark) app-payment-schedule .text-gray-400,
+body.light-theme app-payment-schedule .text-gray-300,
+body.light-theme app-payment-schedule .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-payment-schedule .border-gray-700,
+:root:not(.dark) app-payment-schedule .border-gray-600,
+body.light-theme app-payment-schedule .border-gray-700,
+body.light-theme app-payment-schedule .border-gray-600 {
+  border-color: #e5e7eb !important;
+}
+
+:root:not(.dark) app-payment-schedule input,
+:root:not(.dark) app-payment-schedule select,
+body.light-theme app-payment-schedule input,
+body.light-theme app-payment-schedule select {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+/* ========================================
+   Payment Schedule View - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-payment-schedule-view .bg-slate-800,
+:root:not(.dark) app-payment-schedule-view .bg-gray-800,
+body.light-theme app-payment-schedule-view .bg-slate-800,
+body.light-theme app-payment-schedule-view .bg-gray-800 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .bg-slate-900,
+:root:not(.dark) app-payment-schedule-view .bg-gray-900,
+body.light-theme app-payment-schedule-view .bg-slate-900,
+body.light-theme app-payment-schedule-view .bg-gray-900 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .text-white,
+body.light-theme app-payment-schedule-view .text-white {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .text-gray-300,
+:root:not(.dark) app-payment-schedule-view .text-gray-400,
+body.light-theme app-payment-schedule-view .text-gray-300,
+body.light-theme app-payment-schedule-view .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-payment-schedule-view .border-gray-700,
+:root:not(.dark) app-payment-schedule-view .border-slate-700,
+body.light-theme app-payment-schedule-view .border-gray-700,
+body.light-theme app-payment-schedule-view .border-slate-700 {
+  border-color: #e5e7eb !important;
+}
+
+/* ========================================
+   Select Supervisor Modal - Light Theme
+   ======================================== */
+
+:root:not(.dark) app-select-supervisor-modal .bg-slate-900,
+:root:not(.dark) app-select-supervisor-modal .bg-gray-900,
+body.light-theme app-select-supervisor-modal .bg-slate-900,
+body.light-theme app-select-supervisor-modal .bg-gray-900 {
+  background-color: #ffffff !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .bg-slate-800,
+:root:not(.dark) app-select-supervisor-modal .bg-gray-800,
+body.light-theme app-select-supervisor-modal .bg-slate-800,
+body.light-theme app-select-supervisor-modal .bg-gray-800 {
+  background-color: #f8fafc !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .text-white,
+body.light-theme app-select-supervisor-modal .text-white {
+  color: #1f2937 !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .text-gray-300,
+:root:not(.dark) app-select-supervisor-modal .text-gray-400,
+body.light-theme app-select-supervisor-modal .text-gray-300,
+body.light-theme app-select-supervisor-modal .text-gray-400 {
+  color: #4b5563 !important;
+}
+
+:root:not(.dark) app-select-supervisor-modal .border-gray-700,
+:root:not(.dark) app-select-supervisor-modal .border-slate-700,
+body.light-theme app-select-supervisor-modal .border-gray-700,
+body.light-theme app-select-supervisor-modal .border-slate-700 {
+  border-color: #e5e7eb !important;
+}
+
+/* ============================================================
+   COLLECTION MANAGEMENT - MODO CLARO FORZADO (html:not(.dark))
+   ============================================================ */
+
+/* CONTENEDOR PRINCIPAL - Fondo claro */
+html:not(.dark) app-collection-management .collection-management-container {
+  background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9) !important;
+}
+
+/* HEADER - Gradiente azul claro */
+html:not(.dark) app-collection-management > div > div:first-of-type:has(h1) {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+}
+
+/* PANELES LATERALES - Fondo blanco */
+html:not(.dark) app-collection-management .bg-white,
+html:not(.dark) app-collection-management [class*="bg-white"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-slate-900,
+html:not(.dark) app-collection-management [class*="dark:bg-slate-900"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-slate-950,
+html:not(.dark) app-collection-management [class*="dark:bg-slate-950"] {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) app-collection-management .bg-gray-800,
+html:not(.dark) app-collection-management [class*="dark:bg-gray-800"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gray-900,
+html:not(.dark) app-collection-management [class*="dark:bg-gray-900"] {
+  background-color: #f8fafc !important;
+}
+
+/* PANEL CENTRAL - Fondo gradiente claro */
+html:not(.dark) app-collection-management .from-slate-900,
+html:not(.dark) app-collection-management .via-gray-900,
+html:not(.dark) app-collection-management .to-slate-900 {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #eff6ff) !important;
+}
+
+html:not(.dark) app-collection-management [class*="from-gray-50"][class*="via-slate-50"][class*="to-blue-50"] {
+  background: linear-gradient(to bottom right, #f9fafb, #f8fafc, #eff6ff) !important;
+}
+
+/* TABS - Fondo claro */
+html:not(.dark) app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) app-collection-management [class*="bg-blue-950"],
+html:not(.dark) app-collection-management [class*="dark:bg-blue-950"] {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* BORDES - Colores claros */
+html:not(.dark) app-collection-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .border-slate-800,
+html:not(.dark) app-collection-management [class*="dark:border-slate-800"] {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-700,
+html:not(.dark) app-collection-management [class*="dark:border-gray-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-600,
+html:not(.dark) app-collection-management [class*="dark:border-gray-600"] {
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) app-collection-management .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+/* TEXTOS - Colores oscuros para lectura */
+html:not(.dark) app-collection-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-400,
+html:not(.dark) app-collection-management [class*="dark:text-slate-400"] {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-300,
+html:not(.dark) app-collection-management [class*="dark:text-slate-300"] {
+  color: #475569 !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-200,
+html:not(.dark) app-collection-management [class*="dark:text-slate-200"] {
+  color: #334155 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-300,
+html:not(.dark) app-collection-management [class*="dark:text-gray-300"] {
+  color: #475569 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-400,
+html:not(.dark) app-collection-management [class*="dark:text-gray-400"] {
+  color: #6b7280 !important;
+}
+
+/* Textos dentro de tabs y paneles que NO están en botones o headers con fondo oscuro */
+html:not(.dark) app-collection-management .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+
+html:not(.dark) app-collection-management .text-blue-200,
+html:not(.dark) app-collection-management [class*="dark:text-blue-200"] {
+  color: #1e40af !important;
+}
+
+html:not(.dark) app-collection-management .text-blue-300,
+html:not(.dark) app-collection-management [class*="dark:text-blue-300"] {
+  color: #2563eb !important;
+}
+
+/* INPUTS Y SELECTS - Fondo blanco */
+html:not(.dark) app-collection-management select,
+html:not(.dark) app-collection-management input[type="text"],
+html:not(.dark) app-collection-management input[type="number"],
+html:not(.dark) app-collection-management input[type="date"],
+html:not(.dark) app-collection-management input[type="datetime-local"],
+html:not(.dark) app-collection-management textarea {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) app-collection-management select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* CARDS Y PANELES - Fondos claros */
+html:not(.dark) app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+html:not(.dark) app-collection-management [class*="dark:bg-gray-800"] {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management [class*="dark:bg-gray-900"] {
+  background-color: #f8fafc !important;
+}
+
+/* Fondos de colores especiales */
+html:not(.dark) app-collection-management [class*="dark:from-purple-950"],
+html:not(.dark) app-collection-management [class*="dark:to-indigo-950"] {
+  background: linear-gradient(to bottom right, #faf5ff, #eef2ff) !important;
+}
+
+html:not(.dark) app-collection-management [class*="dark:from-green-950"],
+html:not(.dark) app-collection-management [class*="dark:to-emerald-950"] {
+  background: linear-gradient(to bottom right, #f0fdf4, #ecfdf5) !important;
+}
+
+html:not(.dark) app-collection-management .bg-purple-950\/30,
+html:not(.dark) app-collection-management [class*="dark:bg-purple-950"] {
+  background-color: rgba(147, 51, 234, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .bg-indigo-950\/30,
+html:not(.dark) app-collection-management [class*="dark:bg-indigo-950"] {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .bg-green-950\/30,
+html:not(.dark) app-collection-management [class*="dark:bg-green-950"] {
+  background-color: rgba(34, 197, 94, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .bg-red-950\/30,
+html:not(.dark) app-collection-management .bg-red-950\/20,
+html:not(.dark) app-collection-management [class*="dark:bg-red-950"] {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+}
+
+/* Bordes de colores especiales */
+html:not(.dark) app-collection-management .border-purple-700,
+html:not(.dark) app-collection-management [class*="dark:border-purple-700"] {
+  border-color: #c4b5fd !important;
+}
+
+html:not(.dark) app-collection-management .border-green-800,
+html:not(.dark) app-collection-management .border-green-700,
+html:not(.dark) app-collection-management [class*="dark:border-green-800"],
+html:not(.dark) app-collection-management [class*="dark:border-green-700"] {
+  border-color: #86efac !important;
+}
+
+/* Textos de colores especiales */
+html:not(.dark) app-collection-management .text-purple-200,
+html:not(.dark) app-collection-management .text-purple-300,
+html:not(.dark) app-collection-management [class*="dark:text-purple"] {
+  color: #7c3aed !important;
+}
+
+html:not(.dark) app-collection-management .text-green-300,
+html:not(.dark) app-collection-management .text-green-400,
+html:not(.dark) app-collection-management [class*="dark:text-green"] {
+  color: #16a34a !important;
+}
+
+/* MODAL - Fondo oscuro transparente, contenido blanco */
+html:not(.dark) app-collection-management .bg-black\/50,
+html:not(.dark) app-collection-management .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Historial items */
+html:not(.dark) app-collection-management [class*="dark:bg-gray-800"].rounded {
+  background-color: #f9fafb !important;
+  border-color: #e5e7eb !important;
+}
+
+/* Timer background */
+html:not(.dark) app-collection-management [class*="dark:bg-gray-900"].rounded {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Garantizar que los textos en paneles sean legibles */
+html:not(.dark) app-collection-management .w-64 .text-slate-700,
+html:not(.dark) app-collection-management .w-64 .text-slate-800 {
+  color: #334155 !important;
+}
+
+html:not(.dark) app-collection-management .flex-1.overflow-y-auto .text-gray-700,
+html:not(.dark) app-collection-management .flex-1.overflow-y-auto .text-gray-800 {
+  color: #374151 !important;
+}
+
+/* ============================================================
+   SIDEBAR/NAVBAR - MODO CLARO (Global Styles)
+   ============================================================ */
+
+/* Contenedor principal */
+html:not(.dark) .app-container,
+body.light-theme .app-container {
+  background-color: #f1f5f9 !important;
+}
+
+/* Sidebar - Fondo claro */
+html:not(.dark) .cashi-sidebar,
+body.light-theme .cashi-sidebar {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Logo */
+html:not(.dark) .cashi-sidebar .sidebar-logo,
+body.light-theme .cashi-sidebar .sidebar-logo {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .cashi-sidebar .logo-text,
+body.light-theme .cashi-sidebar .logo-text {
+  color: #0f172a !important;
+}
+
+/* Navigation Items - Base */
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item {
+  color: #334155 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item lucide-angular {
+  color: #475569 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .item-text,
+body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .item-text {
+  color: #334155 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav .sidebar-item .dropdown-arrow,
+body.light-theme .cashi-sidebar .sidebar-nav .sidebar-item .dropdown-arrow {
+  color: #64748b !important;
+}
+
+/* Navigation Items - Hover */
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item:hover,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item:hover,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item:hover,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item:hover lucide-angular,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item:hover lucide-angular {
+  color: #10b981 !important;
+}
+
+/* Navigation Items - Active */
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item.active,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item.active,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item.active,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item.active {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav a.sidebar-item.active lucide-angular,
+html:not(.dark) .cashi-sidebar .sidebar-nav button.sidebar-item.active lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav a.sidebar-item.active lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-nav button.sidebar-item.active lucide-angular {
+  color: #059669 !important;
+}
+
+/* Submenu Items */
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem {
+  color: #475569 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem lucide-angular {
+  color: #64748b !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover {
+  background-color: #f1f5f9 !important;
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem:hover lucide-angular {
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-submenu a.sidebar-subitem.active lucide-angular {
+  color: #059669 !important;
+}
+
+/* Footer */
+html:not(.dark) .cashi-sidebar .sidebar-footer,
+body.light-theme .cashi-sidebar .sidebar-footer {
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item {
+  color: #334155 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item lucide-angular {
+  color: #475569 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item.user-profile,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item.user-profile {
+  background-color: #f1f5f9 !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer .sidebar-item.user-profile:hover,
+body.light-theme .cashi-sidebar .sidebar-footer .sidebar-item.user-profile:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item:hover,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item:hover lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item:hover lucide-angular {
+  color: #10b981 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn lucide-angular,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn lucide-angular {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn:hover,
+body.light-theme .cashi-sidebar .sidebar-footer button.sidebar-item.logout-btn:hover {
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+
+/* Main Content */
+html:not(.dark) .main-content,
+body.light-theme .main-content {
+  background-color: #f8fafc !important;
+}
+
+/* Scrollbar */
+html:not(.dark) .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb,
+body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+}
+
+html:not(.dark) .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover,
+body.light-theme .cashi-sidebar .sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
+
+/* ============================================================
+   MANUAL MANAGEMENT - MODO CLARO
+   ============================================================ */
+
+html:not(.dark) app-manual-management .min-h-screen {
+  background-color: #f3f4f6 !important;
+}
+
+html:not(.dark) app-manual-management .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-manual-management .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) app-manual-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-manual-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-manual-management .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) app-manual-management .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) app-manual-management select,
+html:not(.dark) app-manual-management input {
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+html:not(.dark) app-manual-management select option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+html:not(.dark) app-manual-management .text-blue-500 {
+  color: #3b82f6 !important;
+}
+
+html:not(.dark) app-manual-management .text-green-500 {
+  color: #22c55e !important;
+}
+
+html:not(.dark) app-manual-management .text-amber-600 {
+  color: #d97706 !important;
+}
+
+html:not(.dark) app-manual-management .text-amber-700 {
+  color: #b45309 !important;
+}
+
+html:not(.dark) app-manual-management .bg-amber-100 {
+  background-color: #fef3c7 !important;
+}
+
+html:not(.dark) app-manual-management .border-amber-300 {
+  border-color: #fcd34d !important;
+}
+
+html:not(.dark) app-manual-management .text-blue-600 {
+  color: #2563eb !important;
+}
+
+html:not(.dark) app-manual-management .hover\:bg-slate-200:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-manual-management .text-red-500 {
+  color: #ef4444 !important;
+}
+
+html:not(.dark) app-manual-management .text-red-600 {
+  color: #dc2626 !important;
+}
+
+html:not(.dark) app-manual-management .bg-red-100 {
+  background-color: #fee2e2 !important;
+}
+
+html:not(.dark) app-manual-management .border-red-300 {
+  border-color: #fca5a5 !important;
+}
+
+/* ===============================================
+   COLLECTION-MANAGEMENT LIGHT MODE FIXES
+   =============================================== */
+
+/* Header principal - modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 {
+  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 h1,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .text-white,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .font-semibold {
+  color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .text-blue-100 {
+  color: #dbeafe !important;
+}
+
+/* Alerta de promesa de pago - modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 {
+  background: linear-gradient(to bottom right, #f59e0b, #eab308, #f97316) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .text-white {
+  color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .font-semibold {
+  color: #ffffff !important;
+}
+
+/* Panel izquierdo - info cliente */
+html:not(.dark) app-collection-management .w-64.bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-collection-management .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+/* Tabs del panel izquierdo */
+html:not(.dark) app-collection-management .text-blue-700 {
+  color: #1d4ed8 !important;
+}
+
+html:not(.dark) app-collection-management .bg-blue-50 {
+  background-color: #eff6ff !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+/* Panel central - fondo degradado */
+html:not(.dark) app-collection-management .bg-gradient-to-br.from-gray-50 {
+  background: linear-gradient(to bottom right, #f9fafb, #f8fafc, #eff6ff) !important;
+}
+
+/* Tarjetas en panel central */
+html:not(.dark) app-collection-management .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gray-50 {
+  background-color: #f9fafb !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-200 {
+  border-color: #e5e7eb !important;
+}
+
+html:not(.dark) app-collection-management .border-gray-300 {
+  border-color: #d1d5db !important;
+}
+
+/* Textos en modo claro */
+html:not(.dark) app-collection-management .text-gray-800 {
+  color: #1f2937 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-700 {
+  color: #374151 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+html:not(.dark) app-collection-management .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-500 {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+/* Selects e inputs */
+html:not(.dark) app-collection-management select,
+html:not(.dark) app-collection-management input,
+html:not(.dark) app-collection-management textarea {
+  background-color: #f9fafb !important;
+  color: #1f2937 !important;
+  border-color: #d1d5db !important;
+}
+
+html:not(.dark) app-collection-management select:focus,
+html:not(.dark) app-collection-management input:focus,
+html:not(.dark) app-collection-management textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Botones de control de llamada */
+html:not(.dark) app-collection-management .bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+html:not(.dark) app-collection-management .bg-green-100 {
+  background-color: #dcfce7 !important;
+}
+
+/* Historial de gestiones */
+html:not(.dark) app-collection-management .text-blue-600 {
+  color: #2563eb !important;
+}
+
+html:not(.dark) app-collection-management .text-purple-600 {
+  color: #9333ea !important;
+}
+
+/* Estados en header */
+html:not(.dark) app-collection-management .text-green-400 {
+  color: #4ade80 !important;
+}
+
+html:not(.dark) app-collection-management .text-yellow-400 {
+  color: #facc15 !important;
+}
+
+html:not(.dark) app-collection-management .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+/* Botón de tema en header */
+html:not(.dark) app-collection-management .bg-blue-500\/90 {
+  background-color: rgba(59, 130, 246, 0.9) !important;
+}
+
+/* Cronómetro de llamada */
+html:not(.dark) app-collection-management .bg-blue-800\/50 {
+  background-color: rgba(30, 64, 175, 0.5) !important;
+  color: #ffffff !important;
+}
+
+/* Indicadores de errores */
+html:not(.dark) app-collection-management .border-red-500 {
+  border-color: #ef4444 !important;
+}
+
+html:not(.dark) app-collection-management .bg-red-50 {
+  background-color: #fef2f2 !important;
+}
+
+html:not(.dark) app-collection-management .text-red-500 {
+  color: #ef4444 !important;
+}
+
+html:not(.dark) app-collection-management .text-red-600 {
+  color: #dc2626 !important;
+}
+
+/* Fix para garantizar que el header sea visible */
+html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600 * {
+  color: #ffffff;
+}
+
+html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600 .text-blue-100 {
+  color: #dbeafe !important;
+}
+
+/* ===============================================
+   PAYMENT-SCHEDULE COMPONENT LIGHT MODE FIXES
+   =============================================== */
+
+/* Container principal */
+html:not(.dark) app-payment-schedule .payment-schedule-container {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Labels */
+html:not(.dark) app-payment-schedule .text-slate-700 {
+  color: #334155 !important;
+}
+
+/* Botones de monto no seleccionados */
+html:not(.dark) app-payment-schedule .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-payment-schedule .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) app-payment-schedule .text-slate-700 {
+  color: #334155 !important;
+}
+
+/* Botón seleccionado */
+html:not(.dark) app-payment-schedule .border-blue-500.bg-blue-500 {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+/* Detalle del cronograma */
+html:not(.dark) app-payment-schedule .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+/* Inputs */
+html:not(.dark) app-payment-schedule input {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) app-payment-schedule input:focus {
+  border-color: #3b82f6 !important;
+}
+
+/* Resumen */
+html:not(.dark) app-payment-schedule .bg-emerald-50 {
+  background-color: #ecfdf5 !important;
+}
+
+html:not(.dark) app-payment-schedule .border-emerald-200 {
+  border-color: #a7f3d0 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-emerald-700 {
+  color: #047857 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-emerald-600 {
+  color: #059669 !important;
+}
+
+/* Iconos background */
+html:not(.dark) app-payment-schedule .bg-emerald-100 {
+  background-color: #d1fae5 !important;
+}
+
+html:not(.dark) app-payment-schedule .bg-blue-100 {
+  background-color: #dbeafe !important;
+}
+
+html:not(.dark) app-payment-schedule .bg-amber-100 {
+  background-color: #fef3c7 !important;
+}
+
+/* Textos de iconos */
+html:not(.dark) app-payment-schedule .text-emerald-600 {
+  color: #059669 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-blue-600 {
+  color: #2563eb !important;
+}
+
+html:not(.dark) app-payment-schedule .text-amber-600 {
+  color: #d97706 !important;
+}
+
+html:not(.dark) app-payment-schedule .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* ===============================================
+   PAYMENT ALERT (PROMESA DE PAGO) LIGHT MODE FIXES
+   =============================================== */
+
+/* Alerta de promesa de pago - mejor contraste en modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 {
+  background: linear-gradient(to right, #f59e0b, #eab308, #f97316) !important;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-white,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-semibold {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .opacity-80 {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/10 {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/5 {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) app-collection-management .border-amber-400 {
+  border-color: #fbbf24 !important;
+}
+
+/* Status badges en la alerta */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-green-600 {
+  background-color: #16a34a !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-red-600 {
+  background-color: #dc2626 !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-blue-600 {
+  background-color: #2563eb !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-gray-600 {
+  background-color: #4b5563 !important;
+}
 

@@ -233,7 +233,60 @@ export class ManagementService {
 
   getActiveSchedulesByCustomer(customerId: string): Observable<PaymentSchedule[]> {
     console.log('[SCHEDULE] Fetching active schedules for customer:', customerId);
-    return this.http.get<PaymentSchedule[]>(`${this.scheduleUrl}/customer/${customerId}/active`);
+    // Usar el nuevo endpoint del backend discador que devuelve cabeceras con cuotas
+    return this.http.get<any[]>(`${this.baseUrl}/payment-schedule/client/${customerId}/active`).pipe(
+      map(records => this.transformToPaymentSchedules(records))
+    );
+  }
+
+  /**
+   * Transforma los registros del backend (RegistroGestionV2 con cuotasPromesa) al formato PaymentSchedule del frontend
+   */
+  private transformToPaymentSchedules(records: any[]): PaymentSchedule[] {
+    return records.map(record => {
+      const cuotas = record.cuotasPromesa || [];
+
+      // Calcular totales
+      const totalAmount = cuotas.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
+      const paidAmount = cuotas
+        .filter((c: any) => c.estado === 'PAGADA' || c.estado === 'CUMPLIDO')
+        .reduce((sum: number, c: any) => sum + (c.montoPagadoReal || c.monto || 0), 0);
+      const pendingAmount = totalAmount - paidAmount;
+
+      const paidInstallments = cuotas.filter((c: any) => c.estado === 'PAGADA' || c.estado === 'CUMPLIDO').length;
+      const pendingInstallments = cuotas.filter((c: any) => c.estado === 'PENDIENTE').length;
+
+      return {
+        id: record.id,
+        scheduleId: {
+          scheduleId: record.grupoPromesaUuid || record.uuid
+        },
+        customerId: String(record.idCliente),
+        managementId: String(record.id),
+        totalAmount: totalAmount,
+        numberOfInstallments: cuotas.length,
+        startDate: record.fechaGestion?.split('T')[0] || new Date().toISOString().split('T')[0],
+        isActive: pendingInstallments > 0,
+        scheduleType: record.tipoCronograma || 'CONFIANZA',
+        negotiatedAmount: record.montoPromesaPago || totalAmount,
+        installments: cuotas.map((cuota: any) => ({
+          id: cuota.id,
+          installmentNumber: cuota.numeroCuota,
+          numeroCuota: cuota.numeroCuota,
+          amount: cuota.monto,
+          monto: cuota.monto,
+          dueDate: cuota.fechaPago,
+          fechaPago: cuota.fechaPago,
+          paidDate: cuota.fechaPagoReal || null,
+          status: cuota.estado || 'PENDIENTE'
+        })),
+        paidAmount,
+        pendingAmount,
+        paidInstallments,
+        pendingInstallments,
+        fullyPaid: pendingInstallments === 0
+      } as PaymentSchedule;
+    });
   }
 
   startCall(managementId: number, request: StartCallRequest): Observable<ManagementResource> {
@@ -255,12 +308,12 @@ export class ManagementService {
   }
 
   /**
-   * Crea un cronograma de pagos con múltiples cuotas
-   * Cada cuota se guarda como un registro separado con el mismo grupoPromesaUuid
+   * Crea un cronograma de pagos (1 cabecera + N cuotas en tabla separada)
+   * Retorna la cabecera con las cuotas asociadas
    */
-  createPaymentSchedule(request: PaymentScheduleRequest): Observable<RegistroGestionV2[]> {
+  createPaymentSchedule(request: PaymentScheduleRequest): Observable<RegistroGestionV2> {
     console.log('[SCHEDULE] Creating payment schedule:', request);
-    return this.http.post<RegistroGestionV2[]>(`${this.baseUrl}/payment-schedule`, request);
+    return this.http.post<RegistroGestionV2>(`${this.baseUrl}/payment-schedule`, request);
   }
 
   /**
@@ -287,6 +340,50 @@ export class ManagementService {
     }
 
     return this.http.put<RegistroGestionV2>(`${this.baseUrl}/${recordId}/payment-status?${params}`, {});
+  }
+
+  /**
+   * Verifica si una cuota puede ser cancelada (pagada)
+   * Solo se puede cancelar si está PENDIENTE y la fecha de pago es hoy o futura
+   * @param cuotaId ID de la cuota en cuotas_promesa
+   */
+  puedeCancelarCuota(cuotaId: number): Observable<{ cuotaId: number; puedeCancelar: boolean; mensaje?: string }> {
+    console.log('[CUOTA] Checking if cuota can be canceled:', cuotaId);
+    return this.http.get<{ cuotaId: number; puedeCancelar: boolean; mensaje?: string }>(`${this.baseUrl}/cuota/${cuotaId}/puede-cancelar`);
+  }
+
+  /**
+   * Cancela (marca como PAGADA) una cuota de promesa de pago con validación de fecha
+   * Valida que la cuota esté PENDIENTE y que la fecha de pago no haya pasado
+   * @param cuotaId ID de la cuota en cuotas_promesa
+   * @param montoPagadoReal Monto realmente pagado (opcional)
+   * @param fechaPagoReal Fecha en que se realizó el pago (opcional)
+   * @param observaciones Observaciones adicionales (opcional)
+   */
+  cancelarCuota(
+    cuotaId: number,
+    montoPagadoReal?: number,
+    fechaPagoReal?: string,
+    observaciones?: string
+  ): Observable<any> {
+    console.log('[CUOTA] Canceling cuota:', { cuotaId, montoPagadoReal, fechaPagoReal, observaciones });
+
+    let params = '';
+    const paramParts: string[] = [];
+    if (montoPagadoReal !== undefined) {
+      paramParts.push(`montoPagadoReal=${montoPagadoReal}`);
+    }
+    if (fechaPagoReal) {
+      paramParts.push(`fechaPagoReal=${fechaPagoReal}`);
+    }
+    if (observaciones) {
+      paramParts.push(`observaciones=${encodeURIComponent(observaciones)}`);
+    }
+    if (paramParts.length > 0) {
+      params = '?' + paramParts.join('&');
+    }
+
+    return this.http.put<any>(`${this.baseUrl}/cuota/${cuotaId}/cancelar${params}`, {});
   }
 
   /**

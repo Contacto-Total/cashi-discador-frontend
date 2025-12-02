@@ -435,8 +435,8 @@ export class CallNotesComponent implements OnInit {
           };
 
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
-            next: (records) => {
-              console.log('Payment schedule created with', records.length, 'installments');
+            next: (record) => {
+              console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas);
               this.loading = false;
               this.notesComplete.emit();
             },
