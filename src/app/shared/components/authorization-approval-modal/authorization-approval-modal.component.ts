@@ -1,8 +1,7 @@
-import { Component, EventEmitter, Input, Output, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AutorizacionService, SolicitudAutorizacion, CuotaSolicitud } from '../../../core/services/autorizacion.service';
-import { interval, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-authorization-approval-modal',
@@ -19,15 +18,6 @@ import { interval, Subscription } from 'rxjs';
               <div class="agent-info">
                 <span class="agent-name">👤 {{ solicitud.nombreAgente }}</span>
                 <span class="badge-warning">Solicita Autorización</span>
-              </div>
-            </div>
-            <div class="time-remaining" [class.urgent]="tiempoRestante() < 60" [class.warning]="tiempoRestante() >= 60 && tiempoRestante() < 180">
-              <div class="time-display">
-                <span class="time-icon">⏱️</span>
-                <span class="time-value">{{ formatTiempo(tiempoRestante()) }}</span>
-              </div>
-              <div class="progress-bar">
-                <div class="progress-fill" [style.width.%]="porcentajeTiempo()"></div>
               </div>
             </div>
           </div>
@@ -500,7 +490,7 @@ import { interval, Subscription } from 'rxjs';
     }
   `]
 })
-export class AuthorizationApprovalModalComponent implements OnInit, OnDestroy {
+export class AuthorizationApprovalModalComponent {
   @Input() visible = false;
   @Input() solicitud: SolicitudAutorizacion | null = null;
   @Output() visibleChange = new EventEmitter<boolean>();
@@ -509,53 +499,8 @@ export class AuthorizationApprovalModalComponent implements OnInit, OnDestroy {
 
   comentarios = '';
   procesando = signal<boolean>(false);
-  tiempoRestante = signal<number>(600); // 10 minutos por defecto
-
-  private timerSubscription?: Subscription;
-
-  // Porcentaje de tiempo restante (para la barra de progreso)
-  porcentajeTiempo = computed(() => {
-    const total = 600; // 10 minutos
-    return Math.max(0, (this.tiempoRestante() / total) * 100);
-  });
 
   constructor(private autorizacionService: AutorizacionService) {}
-
-  ngOnInit(): void {
-    if (this.solicitud?.segundosRestantes) {
-      this.tiempoRestante.set(this.solicitud.segundosRestantes);
-    }
-    this.iniciarTimer();
-  }
-
-  ngOnDestroy(): void {
-    this.detenerTimer();
-  }
-
-  private iniciarTimer(): void {
-    this.timerSubscription = interval(1000).subscribe(() => {
-      const actual = this.tiempoRestante();
-      if (actual > 0) {
-        this.tiempoRestante.set(actual - 1);
-      } else {
-        // Tiempo expirado, cerrar modal
-        this.detenerTimer();
-        this.closeModal();
-      }
-    });
-  }
-
-  private detenerTimer(): void {
-    if (this.timerSubscription) {
-      this.timerSubscription.unsubscribe();
-    }
-  }
-
-  formatTiempo(segundos: number): string {
-    const mins = Math.floor(segundos / 60);
-    const secs = segundos % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  }
 
   formatFecha(fecha: string): string {
     if (!fecha) return 'N/A';
@@ -589,12 +534,5 @@ export class AuthorizationApprovalModalComponent implements OnInit, OnDestroy {
       solicitud: this.solicitud,
       comentarios: this.comentarios
     });
-  }
-
-  private closeModal(): void {
-    this.visible = false;
-    this.visibleChange.emit(false);
-    this.comentarios = '';
-    this.detenerTimer();
   }
 }
