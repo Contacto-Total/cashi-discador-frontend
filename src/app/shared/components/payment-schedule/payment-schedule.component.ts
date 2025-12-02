@@ -135,7 +135,7 @@ export interface AmountOption {
                     type="number"
                     [(ngModel)]="installment.monto"
                     (ngModelChange)="onInstallmentAmountChange(installment.numeroCuota)"
-                    min="0"
+                    [min]="1"
                     step="0.01"
                     class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
@@ -405,18 +405,49 @@ export class PaymentScheduleComponent implements OnInit {
     this.emitChange();
   }
 
+  // Monto mínimo por cuota
+  private readonly MIN_CUOTA_AMOUNT = 1;
+
   /**
    * Recalcula las cuotas posteriores cuando se edita el monto de una cuota.
    * Las cuotas anteriores a la editada no se modifican.
    * El restante se distribuye equitativamente entre las cuotas posteriores.
+   *
+   * Validaciones:
+   * - Ninguna cuota puede ser menor a S/ 1.00
+   * - Ninguna cuota puede superar el monto total
+   * - La suma de cuotas debe ser exactamente igual al monto total
    */
   onInstallmentAmountChange(editedCuotaNumber: number): void {
     const currentInstallments = this.installments();
     const totalAmount = this.selectedAmount();
     const numInstallments = currentInstallments.length;
+    const editedIndex = editedCuotaNumber - 1; // Convertir a índice base 0
+    const editedCuota = currentInstallments[editedIndex];
 
-    // Si es la última cuota, no hay nada que recalcular
+    // Validación 1: El monto no puede ser menor al mínimo
+    if (editedCuota.monto < this.MIN_CUOTA_AMOUNT) {
+      editedCuota.monto = this.MIN_CUOTA_AMOUNT;
+    }
+
+    // Validación 2: Calcular el máximo permitido para esta cuota
+    // Máximo = Total - (suma de cuotas anteriores) - (mínimo * cuotas posteriores)
+    let sumaPreviousCuotas = 0;
+    for (let i = 0; i < editedIndex; i++) {
+      sumaPreviousCuotas += currentInstallments[i].monto || 0;
+    }
+    const cuotasPosteriores = numInstallments - editedCuotaNumber;
+    const minimoReservadoParaPosteriores = cuotasPosteriores * this.MIN_CUOTA_AMOUNT;
+    const maxAllowedForThisCuota = totalAmount - sumaPreviousCuotas - minimoReservadoParaPosteriores;
+
+    // Si el monto editado supera el máximo permitido, ajustarlo
+    if (editedCuota.monto > maxAllowedForThisCuota) {
+      editedCuota.monto = Math.max(this.MIN_CUOTA_AMOUNT, Math.floor(maxAllowedForThisCuota * 100) / 100);
+    }
+
+    // Si es la última cuota, solo validar y emitir
     if (editedCuotaNumber >= numInstallments) {
+      this.installments.set([...currentInstallments]);
       this.emitChange();
       return;
     }
@@ -431,13 +462,17 @@ export class PaymentScheduleComponent implements OnInit {
     const remaining = totalAmount - sumUpToEdited;
     const remainingInstallments = numInstallments - editedCuotaNumber;
 
-    // Si el restante es negativo o cero, las cuotas posteriores serán 0
-    if (remaining <= 0 || remainingInstallments <= 0) {
+    // Distribuir el restante equitativamente entre las cuotas posteriores
+    // Asegurando que cada una tenga al menos el mínimo
+    if (remaining < remainingInstallments * this.MIN_CUOTA_AMOUNT) {
+      // No hay suficiente para dar el mínimo a cada cuota posterior
+      // Esto no debería pasar si la validación de arriba funciona, pero por seguridad
+      const amountPerRemaining = Math.floor((remaining / remainingInstallments) * 100) / 100;
       for (let i = editedCuotaNumber; i < numInstallments; i++) {
-        currentInstallments[i].monto = 0;
+        currentInstallments[i].monto = Math.max(this.MIN_CUOTA_AMOUNT, amountPerRemaining);
       }
     } else {
-      // Distribuir el restante equitativamente entre las cuotas posteriores
+      // Distribuir normalmente
       const amountPerRemaining = Math.floor((remaining / remainingInstallments) * 100) / 100;
       const remainder = Math.round((remaining - (amountPerRemaining * remainingInstallments)) * 100) / 100;
 
