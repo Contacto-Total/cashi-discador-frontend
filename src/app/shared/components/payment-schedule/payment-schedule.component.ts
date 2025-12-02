@@ -134,7 +134,7 @@ export interface AmountOption {
                   <input
                     type="number"
                     [(ngModel)]="installment.monto"
-                    (ngModelChange)="onInstallmentChange()"
+                    (ngModelChange)="onInstallmentAmountChange(installment.numeroCuota)"
                     min="0"
                     step="0.01"
                     class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
@@ -402,6 +402,55 @@ export class PaymentScheduleComponent implements OnInit {
   }
 
   onInstallmentChange(): void {
+    this.emitChange();
+  }
+
+  /**
+   * Recalcula las cuotas posteriores cuando se edita el monto de una cuota.
+   * Las cuotas anteriores a la editada no se modifican.
+   * El restante se distribuye equitativamente entre las cuotas posteriores.
+   */
+  onInstallmentAmountChange(editedCuotaNumber: number): void {
+    const currentInstallments = this.installments();
+    const totalAmount = this.selectedAmount();
+    const numInstallments = currentInstallments.length;
+
+    // Si es la última cuota, no hay nada que recalcular
+    if (editedCuotaNumber >= numInstallments) {
+      this.emitChange();
+      return;
+    }
+
+    // Calcular la suma de las cuotas desde la primera hasta la editada (inclusive)
+    let sumUpToEdited = 0;
+    for (let i = 0; i < editedCuotaNumber; i++) {
+      sumUpToEdited += currentInstallments[i].monto || 0;
+    }
+
+    // Calcular el restante para las cuotas posteriores
+    const remaining = totalAmount - sumUpToEdited;
+    const remainingInstallments = numInstallments - editedCuotaNumber;
+
+    // Si el restante es negativo o cero, las cuotas posteriores serán 0
+    if (remaining <= 0 || remainingInstallments <= 0) {
+      for (let i = editedCuotaNumber; i < numInstallments; i++) {
+        currentInstallments[i].monto = 0;
+      }
+    } else {
+      // Distribuir el restante equitativamente entre las cuotas posteriores
+      const amountPerRemaining = Math.floor((remaining / remainingInstallments) * 100) / 100;
+      const remainder = Math.round((remaining - (amountPerRemaining * remainingInstallments)) * 100) / 100;
+
+      for (let i = editedCuotaNumber; i < numInstallments; i++) {
+        // La última cuota recibe el remainder para cuadrar exacto
+        currentInstallments[i].monto = i === numInstallments - 1
+          ? amountPerRemaining + remainder
+          : amountPerRemaining;
+      }
+    }
+
+    // Actualizar el signal con los nuevos valores
+    this.installments.set([...currentInstallments]);
     this.emitChange();
   }
 
