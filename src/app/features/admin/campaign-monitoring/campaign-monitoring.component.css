@@ -513,3 +513,245 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ========================================
+   ALERT ROW - Fila de agente con alerta
+   ======================================== */
+.agente-row.alert-row {
+  background: rgba(239, 68, 68, 0.1) !important;
+  animation: alertRowPulse 2s ease-in-out infinite;
+}
+
+@keyframes alertRowPulse {
+  0%, 100% {
+    background: rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    background: rgba(239, 68, 68, 0.2);
+  }
+}
+
+/* ========================================
+   ALERT MODAL - Modal de alerta
+   ======================================== */
+.alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.alert-modal {
+  background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+  border: 1px solid #EF4444;
+  border-radius: 16px;
+  padding: 0;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.1);
+  animation: modalSlideIn 0.3s ease, modalPulse 2s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes modalSlideIn {
+  from {
+    transform: scale(0.9) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes modalPulse {
+  0%, 100% {
+    box-shadow: 0 20px 60px rgba(239, 68, 68, 0.3), 0 0 40px rgba(239, 68, 68, 0.1);
+  }
+  50% {
+    box-shadow: 0 20px 80px rgba(239, 68, 68, 0.5), 0 0 60px rgba(239, 68, 68, 0.2);
+  }
+}
+
+.alert-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #94A3B8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 1;
+}
+
+.alert-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+}
+
+.alert-header {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.alert-icon-container {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 0.75rem;
+  animation: iconShake 0.5s ease-in-out infinite;
+}
+
+@keyframes iconShake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+.alert-icon {
+  color: white;
+}
+
+.alert-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.alert-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.alert-agent-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.agent-avatar {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.agent-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.agent-name {
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.agent-extension {
+  color: #94A3B8;
+  font-size: 0.85rem;
+}
+
+.alert-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-label {
+  color: #94A3B8;
+  font-size: 0.9rem;
+}
+
+.alert-status .status-badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.alert-time, .alert-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #CBD5E1;
+  font-size: 0.95rem;
+}
+
+.alert-time lucide-angular, .alert-message lucide-angular {
+  color: #94A3B8;
+}
+
+.alert-message {
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border-left: 3px solid #EF4444;
+}
+
+.alert-message lucide-angular {
+  color: #EF4444;
+}
+
+.alert-footer {
+  padding: 1rem 1.5rem 1.5rem;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-dismiss {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border: none;
+  color: white;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 150px;
+}
+
+.btn-dismiss:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}

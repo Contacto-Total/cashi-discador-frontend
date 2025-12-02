@@ -40,6 +40,13 @@ export interface AgenteMonitoreo {
   telefonoDestino: string | null;
   segundosEnEstado: number;
   uuidLlamadaActual: string | null;
+  // Campos de umbral de tiempo
+  colorIndicador: 'verde' | 'amarillo' | 'rojo';
+  porcentajeTiempo: number;
+  excedeTiempoMaximo: boolean;
+  tiempoMaximoSegundos: number | null;
+  mensajeAlerta: string | null;
+  sonidoAlerta: boolean;
 }
 
 export interface LlamadaTiempoReal {

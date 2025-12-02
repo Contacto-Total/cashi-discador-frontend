@@ -193,11 +193,13 @@
                 <th>Agente</th>
                 <th>Estado</th>
                 <th>Teléfono</th>
-                <th>Desde</th>
+                <th>Tiempo</th>
+                <th style="width: 50px; text-align: center;">Alerta</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row">
+              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row"
+                  [class.alert-row]="agente.excedeTiempoMaximo">
                 <td class="agente-info">
                   <div class="agente-extension">SIP/{{ agente.sipExtension }}</div>
                   <div class="agente-nombre">{{ agente.nombreCompleto }}</div>
@@ -213,9 +215,17 @@
                 <td class="agente-tiempo">
                   {{ formatTiempo(agente.segundosEnEstado) }}
                 </td>
+                <td class="agente-alerta" style="text-align: center;">
+                  <app-status-alarm-clock
+                    [color]="agente.colorIndicador"
+                    [excedido]="agente.excedeTiempoMaximo"
+                    [size]="20"
+                    [tooltip]="agente.mensajeAlerta || ''">
+                  </app-status-alarm-clock>
+                </td>
               </tr>
               <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
-                <td colspan="4" style="text-align: center; color: #94a3b8;">
+                <td colspan="5" style="text-align: center; color: #94a3b8;">
                   No hay agentes registrados
                 </td>
               </tr>
@@ -223,6 +233,57 @@
           </table>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Alerta de Agente -->
+<div class="alert-overlay" *ngIf="alertaActiva" (click)="onOverlayClick($event)">
+  <div class="alert-modal">
+    <button class="alert-close" (click)="dismissAlert()">
+      <lucide-angular name="x" [size]="20"></lucide-angular>
+    </button>
+
+    <div class="alert-header">
+      <div class="alert-icon-container">
+        <lucide-angular name="alert-triangle" [size]="32" class="alert-icon"></lucide-angular>
+      </div>
+      <h3>Alerta de Agente</h3>
+    </div>
+
+    <div class="alert-body">
+      <div class="alert-agent-info">
+        <div class="agent-avatar">
+          <lucide-angular name="user" [size]="24"></lucide-angular>
+        </div>
+        <div class="agent-details">
+          <span class="agent-name">{{ alertaActiva.agente.nombreCompleto }}</span>
+          <span class="agent-extension">SIP/{{ alertaActiva.agente.sipExtension }}</span>
+        </div>
+      </div>
+
+      <div class="alert-status">
+        <span class="status-label">Estado:</span>
+        <span class="status-badge" [style.background-color]="getEstadoColor(alertaActiva.agente.estadoActual)">
+          {{ getEstadoTexto(alertaActiva.agente.estadoActual) }}
+        </span>
+      </div>
+
+      <div class="alert-time">
+        <lucide-angular name="clock" [size]="18"></lucide-angular>
+        <span>Tiempo en estado: <strong>{{ formatTiempo(alertaActiva.agente.segundosEnEstado) }}</strong></span>
+      </div>
+
+      <div class="alert-message">
+        <lucide-angular name="alert-circle" [size]="18"></lucide-angular>
+        <span>{{ alertaActiva.agente.mensajeAlerta }}</span>
+      </div>
+    </div>
+
+    <div class="alert-footer">
+      <button class="btn-dismiss" (click)="dismissAlert()">
+        Entendido
+      </button>
     </div>
   </div>
 </div>

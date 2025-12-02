@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,11 +6,18 @@ import { Subscription } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
+import { StatusAlarmClockComponent } from '../../../shared/components/status-alarm-clock/status-alarm-clock.component';
+
+// Interfaz para alertas de agentes
+interface AgentAlert {
+  agente: AgenteMonitoreo;
+  timestamp: Date;
+}
 
 @Component({
   selector: 'app-campaign-monitoring',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, StatusAlarmClockComponent],
   templateUrl: './campaign-monitoring.component.html',
   styleUrls: ['./campaign-monitoring.component.css'],
   encapsulation: ViewEncapsulation.None
@@ -33,6 +40,11 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   llamadasEnTiempoReal: LlamadaTiempoReal[] = [];
   private llamadasSubscription?: Subscription;
 
+  // Sistema de alertas
+  alertaActiva: AgentAlert | null = null;
+  alertasDismissed: Set<string> = new Set(); // IDs de alertas ya cerradas (agente-estado)
+  private alarmAudio: HTMLAudioElement | null = null;
+
   constructor(
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
@@ -40,10 +52,10 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.initAlarmAudio();
     this.loadCampaigns();
     this.startAutoDialerPolling();
     this.startAgentesPolling();
-    // TODO: Implement real-time calls polling when backend is ready
     this.startLlamadasPolling();
   }
 
@@ -57,6 +69,18 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     if (this.llamadasSubscription) {
       this.llamadasSubscription.unsubscribe();
     }
+    this.stopAlarm();
+  }
+
+  /**
+   * Inicializa el audio de alarma
+   */
+  private initAlarmAudio(): void {
+    // Crear elemento de audio con un sonido de alarma simple
+    this.alarmAudio = new Audio();
+    // Usamos un data URI para un beep simple (no necesita archivo externo)
+    this.alarmAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2LkZuam5aTiXxsWk1EU2h9j5yhpqSfloV0X0g4OExfc4iaqrCxraSWg2xTPC00RFtxh5mqtLi1raCPeV9GMTAvRFpwh5iqtLi1raCQeWBHMTAwRVtxh5iqtLi1raCPeV9GMTEvRFpxiJmqtLm1raCQeV9HMjAvRVtxh5mqtLi0rJ+PeF5FMS8vRFpwh5mqtLm1raCQeWBGMTAvRVtxh5mqtLi1raCPeV9HMTAwRVtxh5mqtLi1raCPeWBHMTAwRVxxiJmqtLi1raCQeWBGMTAwRVtxh5mqtLi0rJ+PeF5FMS8vRFpwh5mqtLm1raCQeWBGMTAvRVtxh5mqtLi1raCPeV9HMTAwRVtxh5mqtLi1raCPeWBHMTAwRVxxiJmqtLi1raCQeWBGMTAwRVtxh5mqtLi0rJ+PeF5FMS8vRFpwh5mqtLm1';
+    this.alarmAudio.loop = true;
   }
 
   /**
@@ -124,11 +148,105 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.agentesSubscription = this.autoDialerService.startAgentesPolling().subscribe({
       next: (agentes) => {
         this.agentesMonitoreo = agentes;
+        // Verificar alertas de tiempo excedido
+        this.checkAgentAlerts(agentes);
       },
       error: (err) => {
         console.error('Error polling agentes:', err);
       }
     });
+  }
+
+  /**
+   * Verifica si hay agentes que exceden el tiempo y muestra alerta
+   */
+  private checkAgentAlerts(agentes: AgenteMonitoreo[]): void {
+    // Si ya hay una alerta activa, no mostrar otra
+    if (this.alertaActiva) return;
+
+    for (const agente of agentes) {
+      if (agente.excedeTiempoMaximo && agente.mensajeAlerta) {
+        const alertKey = `${agente.idUsuario}-${agente.estadoActual}`;
+
+        // Si esta alerta ya fue cerrada, no mostrarla de nuevo
+        if (this.alertasDismissed.has(alertKey)) continue;
+
+        // Mostrar alerta
+        this.showAlert(agente);
+        break;
+      }
+    }
+  }
+
+  /**
+   * Muestra la alerta para un agente
+   */
+  showAlert(agente: AgenteMonitoreo): void {
+    this.alertaActiva = {
+      agente,
+      timestamp: new Date()
+    };
+
+    // Reproducir sonido si está habilitado
+    if (agente.sonidoAlerta) {
+      this.playAlarm();
+    }
+  }
+
+  /**
+   * Cierra la alerta actual
+   */
+  dismissAlert(): void {
+    if (this.alertaActiva) {
+      const alertKey = `${this.alertaActiva.agente.idUsuario}-${this.alertaActiva.agente.estadoActual}`;
+      this.alertasDismissed.add(alertKey);
+      this.alertaActiva = null;
+      this.stopAlarm();
+    }
+  }
+
+  /**
+   * Cierra alerta si se hace click fuera del modal
+   */
+  onOverlayClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).classList.contains('alert-overlay')) {
+      this.dismissAlert();
+    }
+  }
+
+  /**
+   * Reproduce el sonido de alarma
+   */
+  private playAlarm(): void {
+    if (this.alarmAudio) {
+      this.alarmAudio.currentTime = 0;
+      this.alarmAudio.play().catch(err => {
+        console.warn('No se pudo reproducir la alarma:', err);
+      });
+    }
+  }
+
+  /**
+   * Detiene el sonido de alarma
+   */
+  private stopAlarm(): void {
+    if (this.alarmAudio) {
+      this.alarmAudio.pause();
+      this.alarmAudio.currentTime = 0;
+    }
+  }
+
+  /**
+   * Limpia las alertas cerradas cuando un agente cambia de estado
+   */
+  clearDismissedForAgent(idUsuario: number): void {
+    const keysToRemove: string[] = [];
+    this.alertasDismissed.forEach(key => {
+      if (key.startsWith(`${idUsuario}-`)) {
+        keysToRemove.push(key);
+      }
+    });
+    keysToRemove.forEach(key => this.alertasDismissed.delete(key));
   }
 
   /**
