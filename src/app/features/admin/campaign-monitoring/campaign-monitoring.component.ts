@@ -43,7 +43,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   // Sistema de alertas
   alertaActiva: AgentAlert | null = null;
   alertasDismissed: Set<string> = new Set(); // IDs de alertas ya cerradas (agente-estado)
-  private alarmAudio: HTMLAudioElement | null = null;
+  soundEnabled = false; // El usuario debe activar el sonido manualmente (política de navegadores)
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -70,18 +70,24 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       this.llamadasSubscription.unsubscribe();
     }
     this.stopAlarm();
+    // Cerrar el AudioContext
+    if (this.audioContext) {
+      this.audioContext.close();
+    }
   }
 
   /**
-   * Inicializa el audio de alarma
+   * Inicializa el audio de alarma usando Web Audio API para generar un beep
    */
   private initAlarmAudio(): void {
-    // Crear elemento de audio con un sonido de alarma simple
-    this.alarmAudio = new Audio();
-    // Usamos un data URI para un beep simple (no necesita archivo externo)
-    this.alarmAudio.src = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdH2LkZuam5aTiXxsWk1EU2h9j5yhpqSfloV0X0g4OExfc4iaqrCxraSWg2xTPC00RFtxh5mqtLi1raCPeV9GMTAvRFpwh5iqtLi1raCQeWBHMTAwRVtxh5iqtLi1raCPeV9GMTEvRFpxiJmqtLm1raCQeV9HMjAvRVtxh5mqtLi0rJ+PeF5FMS8vRFpwh5mqtLm1raCQeWBGMTAvRVtxh5mqtLi1raCPeV9HMTAwRVtxh5mqtLi1raCPeWBHMTAwRVxxiJmqtLi1raCQeWBGMTAwRVtxh5mqtLi0rJ+PeF5FMS8vRFpwh5mqtLm1raCQeWBGMTAvRVtxh5mqtLi1raCPeV9HMTAwRVtxh5mqtLi1raCPeWBHMTAwRVxxiJmqtLi1raCQeWBGMTAwRVtxh5mqtLi0rJ+PeF5FMS8vRFpwh5mqtLm1';
-    this.alarmAudio.loop = true;
+    // Crear un AudioContext para generar sonidos programáticamente
+    this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   }
+
+  private audioContext: AudioContext | null = null;
+  private oscillator: OscillatorNode | null = null;
+  private gainNode: GainNode | null = null;
+  private isAlarmPlaying = false;
 
   /**
    * Carga todas las campañas para el selector
@@ -215,25 +221,100 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Reproduce el sonido de alarma
+   * Activa/desactiva el sonido de alertas
+   * El usuario debe hacer click para activar (política de navegadores)
+   */
+  toggleSound(): void {
+    this.soundEnabled = !this.soundEnabled;
+
+    if (this.soundEnabled && this.audioContext) {
+      // Reanudar AudioContext con interacción del usuario
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+      // Hacer un beep corto de confirmación
+      this.playTestBeep();
+    }
+  }
+
+  /**
+   * Reproduce un beep corto de prueba/confirmación
+   */
+  private playTestBeep(): void {
+    if (!this.audioContext) return;
+
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(440, this.audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + 0.1);
+  }
+
+  /**
+   * Reproduce el sonido de alarma usando Web Audio API
+   * Genera un beep intermitente tipo alarma
    */
   private playAlarm(): void {
-    if (this.alarmAudio) {
-      this.alarmAudio.currentTime = 0;
-      this.alarmAudio.play().catch(err => {
-        console.warn('No se pudo reproducir la alarma:', err);
-      });
+    // Solo reproducir si el sonido está habilitado
+    if (!this.audioContext || this.isAlarmPlaying || !this.soundEnabled) return;
+
+    try {
+      // Reanudar el AudioContext si está suspendido (política de autoplay)
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+
+      this.isAlarmPlaying = true;
+      this.startBeepSequence();
+    } catch (err) {
+      console.warn('No se pudo reproducir la alarma:', err);
     }
+  }
+
+  /**
+   * Inicia una secuencia de beeps intermitentes
+   */
+  private startBeepSequence(): void {
+    if (!this.audioContext || !this.isAlarmPlaying) return;
+
+    // Crear oscilador y ganancia para cada beep
+    const oscillator = this.audioContext.createOscillator();
+    const gainNode = this.audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioContext.destination);
+
+    // Configurar el tono de alarma (frecuencia alta = urgente)
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, this.audioContext.currentTime); // La5
+
+    // Configurar volumen
+    gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+
+    // Duración del beep: 200ms
+    oscillator.start();
+    oscillator.stop(this.audioContext.currentTime + 0.2);
+
+    // Programar el siguiente beep después de 400ms (200ms beep + 200ms silencio)
+    oscillator.onended = () => {
+      if (this.isAlarmPlaying) {
+        setTimeout(() => this.startBeepSequence(), 200);
+      }
+    };
   }
 
   /**
    * Detiene el sonido de alarma
    */
   private stopAlarm(): void {
-    if (this.alarmAudio) {
-      this.alarmAudio.pause();
-      this.alarmAudio.currentTime = 0;
-    }
+    this.isAlarmPlaying = false;
   }
 
   /**

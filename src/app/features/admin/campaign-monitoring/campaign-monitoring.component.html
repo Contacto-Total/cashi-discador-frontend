@@ -15,6 +15,16 @@
       <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
       <span>Volver a Campañas</span>
     </button>
+
+    <!-- Botón para activar/desactivar sonido de alertas -->
+    <button
+      class="btn-sound"
+      [class.active]="soundEnabled"
+      (click)="toggleSound()"
+      [title]="soundEnabled ? 'Desactivar sonido de alertas' : 'Activar sonido de alertas (requerido para escuchar alarmas)'">
+      <lucide-angular [name]="soundEnabled ? 'volume-2' : 'volume-x'" [size]="18"></lucide-angular>
+      <span>{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</span>
+    </button>
   </div>
 
   <!-- Campaign Selector -->
