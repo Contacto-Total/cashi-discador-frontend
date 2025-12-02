@@ -79,7 +79,7 @@ export interface AmountOption {
 
       <!-- Selector de Cuotas -->
       @if (selectedAmount() > 0) {
-        <div class="field-group mb-5 animate-fade-in">
+        <div class="field-group mb-5">
           <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
             <div class="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
               <lucide-angular name="calendar-days" [size]="14" class="text-blue-600 dark:text-blue-400"></lucide-angular>
@@ -105,7 +105,7 @@ export interface AmountOption {
 
       <!-- Detalle de Cuotas -->
       @if (installments().length > 0) {
-        <div class="field-group animate-fade-in">
+        <div class="field-group">
           <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
             <div class="w-6 h-6 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
               <lucide-angular name="list-ordered" [size]="14" class="text-amber-600 dark:text-amber-400"></lucide-angular>
