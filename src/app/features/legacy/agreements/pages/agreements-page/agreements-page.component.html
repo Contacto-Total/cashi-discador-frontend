@@ -2,7 +2,7 @@
   <!-- Header -->
   <div class="flex items-center gap-2 mb-3">
     <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="file-text" [size]="16" class="text-white"></lucide-angular>
+      <lucide-angular name="file-text" [size]="16" class="text-white!"></lucide-angular>
     </div>
     <div>
       <h1 class="text-lg font-bold text-slate-900 dark:text-white">Generador de Acuerdo de Pago</h1>
@@ -67,7 +67,7 @@
          [class.bg-white]="!isDarkMode"
          [class.bg-slate-800]="isDarkMode">
       <div class="w-24 h-24 bg-gradient-to-br from-blue-600 to-purple-700 rounded-full flex items-center justify-center mb-6 shadow-lg">
-        <lucide-angular name="search" [size]="48" style="color: white;"></lucide-angular>
+        <lucide-angular name="search" [size]="48" style="color: white !important;"></lucide-angular>
       </div>
       <h3 class="text-xl font-bold mb-2"
           [class.text-slate-900]="!isDarkMode"
@@ -318,7 +318,7 @@
                 Con su número de DNI
               </ng-container>
               <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
-                NUMERO DE CUENTA CORRIENTE - 1931851985017
+                PAGO POR SERVICIO - NSOLUCIONES CONSULTING
               </ng-container>
             </div>
           </div>
@@ -334,7 +334,7 @@
                 Presentando su DNI
               </ng-container>
               <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
-                NUMERO DE CUENTA CORRIENTE - 1931851985017
+                PAGO POR SERVICIO - NSOLUCIONES CONSULTING
               </ng-container>
             </div>
           </div>
