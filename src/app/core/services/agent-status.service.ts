@@ -35,7 +35,13 @@ export class AgentStatusService {
           timestampCambio: response.timestampCambio,
           tiempoEnEstadoMinutos: response.tiempoEnEstadoMinutos,
           notas: response.notas,
-          sessionId: response.sessionId
+          sessionId: response.sessionId,
+          // Campos de umbral de tiempo
+          segundosEnEstado: response.segundosEnEstado,
+          colorIndicador: response.colorIndicador,
+          porcentajeTiempo: response.porcentajeTiempo,
+          excedeTiempoMaximo: response.excedeTiempoMaximo,
+          tiempoMaximoSegundos: response.tiempoMaximoSegundos
         };
         this.currentStatusSubject.next(status);
       })
@@ -93,10 +99,11 @@ export class AgentStatusService {
   }
 
   /**
-   * Inicia el polling automático del estado del agente cada 30 segundos
+   * Inicia el polling automático del estado del agente cada 10 segundos
+   * para mantener actualizado el indicador de umbral de tiempo
    */
   startStatusPolling(idUsuario: number): Observable<AgentStatusResponse> {
-    return interval(30000).pipe(
+    return interval(10000).pipe(
       startWith(0),
       switchMap(() => this.getAgentStatus(idUsuario))
     );

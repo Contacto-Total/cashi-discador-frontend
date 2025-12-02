@@ -28,8 +28,10 @@ import { PaymentScheduleViewComponent } from '../components/payment-schedule-vie
 import { CustomerService } from '../../customers/services/customer.service';
 import { SipService, CallState } from '../../core/services/sip.service';
 import { AgentService } from '../../core/services/agent.service';
-import { AgentState } from '../../core/models/agent-status.model';
+import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
+import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
+import { StatusAlarmClockComponent } from '../../shared/components/status-alarm-clock/status-alarm-clock.component';
 import { AutorizacionService, SupervisorEnLinea, CrearSolicitudRequest, SolicitudAutorizacion } from '../../core/services/autorizacion.service';
 import { SelectSupervisorModalComponent } from '../../shared/components/select-supervisor-modal/select-supervisor-modal.component';
 
@@ -42,7 +44,8 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
     LucideAngularModule,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
-    SelectSupervisorModalComponent
+    SelectSupervisorModalComponent,
+    StatusAlarmClockComponent
   ],
   template: `
     <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
@@ -78,7 +81,7 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
               </div>
             </div>
 
-            <!-- Lado Derecho: Estado y Cronómetro -->
+            <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
             <div class="flex items-center gap-4">
               <div class="text-right">
                 <div class="text-blue-200 dark:text-blue-300 text-[10px]">Estado</div>
@@ -86,6 +89,12 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
                   {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
               </div>
+              <!-- Indicador de umbral de tiempo (reloj de alarma) -->
+              <app-status-alarm-clock
+                [color]="colorIndicador()"
+                [excedido]="excedeTiempoMaximo()"
+                [size]="22">
+              </app-status-alarm-clock>
               <div [class]="'px-4 py-1.5 rounded-lg font-mono text-lg font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse shadow-lg shadow-red-500/30' : 'bg-blue-800/50 dark:bg-gray-900/80')">
                 {{ formatTime(callDuration()) }}
               </div>
@@ -744,6 +753,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
 
+  // Signals para indicador de umbral de tiempo (reloj de alarma)
+  protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
+  protected excedeTiempoMaximo = signal(false);
+  private agentStatusSubscription?: Subscription;
+
   // Signals para autorización de montos personalizados
   protected requiresAuthorization = signal(false);
   protected waitingForAuthorization = signal(false);
@@ -1327,6 +1341,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private http: HttpClient,
     private sipService: SipService,
     private agentService: AgentService,
+    private agentStatusService: AgentStatusService,
     private authService: AuthService,
     private autorizacionService: AutorizacionService
   ) {}
@@ -1427,6 +1442,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.handleAuthorizationResponse(solicitud);
       }
     });
+
+    // Iniciar polling del estado del agente para el indicador de umbral de tiempo
+    const currentUser = this.authService.getCurrentUser();
+    if (currentUser?.id) {
+      this.agentStatusSubscription = this.agentStatusService.startStatusPolling(currentUser.id).subscribe({
+        next: (response) => {
+          // Actualizar indicadores de umbral de tiempo
+          if (response.colorIndicador) {
+            this.colorIndicador.set(response.colorIndicador);
+          }
+          this.excedeTiempoMaximo.set(response.excedeTiempoMaximo || false);
+        },
+        error: (err) => console.error('❌ Error polling estado del agente:', err)
+      });
+    }
   }
 
   /**
@@ -2015,6 +2045,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
     if (this.incomingCallSubscription) {
       this.incomingCallSubscription.unsubscribe();
+    }
+    if (this.agentStatusSubscription) {
+      this.agentStatusSubscription.unsubscribe();
     }
   }
 
