@@ -110,6 +110,19 @@ export class AgentStatusService {
   }
 
   /**
+   * Desconecta al agente (elimina su estado en el backend)
+   * Llamar al hacer logout para que el monitoreo muestre al agente como desconectado
+   */
+  disconnectAgent(idUsuario: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${idUsuario}`).pipe(
+      tap(() => {
+        console.log(`[AgentStatusService] Agente ${idUsuario} marcado como desconectado`);
+        this.currentStatusSubject.next(null);
+      })
+    );
+  }
+
+  /**
    * Obtiene el estado actual sin hacer una nueva petición
    */
   getCurrentStatus(): AgentStatus | null {
