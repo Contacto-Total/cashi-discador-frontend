@@ -172,6 +172,19 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.agentesSubscription = this.autoDialerService.startAgentesPolling().subscribe({
       next: (agentes) => {
         this.agentesMonitoreo = agentes;
+
+        // Debug: mostrar agentes con tiempo excedido
+        const agentesExcedidos = agentes.filter(a => a.excedeTiempoMaximo);
+        if (agentesExcedidos.length > 0) {
+          console.log('[Monitor] Agentes con tiempo excedido:', agentesExcedidos.map(a => ({
+            nombre: a.nombreCompleto,
+            estado: a.estadoActual,
+            excede: a.excedeTiempoMaximo,
+            mensaje: a.mensajeAlerta,
+            sonido: a.sonidoAlerta
+          })));
+        }
+
         // Verificar alertas de tiempo excedido
         this.checkAgentAlerts(agentes);
       },
@@ -181,21 +194,42 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Mapa para rastrear el estado anterior de cada agente
+  private previousAgentStates: Map<number, string> = new Map();
+
   /**
    * Verifica si hay agentes que exceden el tiempo y muestra alerta
    */
   private checkAgentAlerts(agentes: AgenteMonitoreo[]): void {
+    // Primero, limpiar alertas dismisseadas si el agente cambió de estado
+    for (const agente of agentes) {
+      const prevState = this.previousAgentStates.get(agente.idUsuario);
+      if (prevState && prevState !== agente.estadoActual) {
+        // El agente cambió de estado, limpiar sus alertas dismisseadas
+        console.log(`[Monitor] Agente ${agente.nombreCompleto} cambió de ${prevState} a ${agente.estadoActual}, limpiando alertas`);
+        this.clearDismissedForAgent(agente.idUsuario);
+      }
+      this.previousAgentStates.set(agente.idUsuario, agente.estadoActual);
+    }
+
     // Si ya hay una alerta activa, no mostrar otra
-    if (this.alertaActiva) return;
+    if (this.alertaActiva) {
+      console.log('[Monitor] Ya hay una alerta activa, no se mostrarán nuevas');
+      return;
+    }
 
     for (const agente of agentes) {
       if (agente.excedeTiempoMaximo && agente.mensajeAlerta) {
         const alertKey = `${agente.idUsuario}-${agente.estadoActual}`;
 
         // Si esta alerta ya fue cerrada, no mostrarla de nuevo
-        if (this.alertasDismissed.has(alertKey)) continue;
+        if (this.alertasDismissed.has(alertKey)) {
+          console.log(`[Monitor] Alerta ${alertKey} ya fue cerrada, ignorando`);
+          continue;
+        }
 
         // Mostrar alerta
+        console.log(`[Monitor] Mostrando alerta para agente ${agente.nombreCompleto}`);
         this.showAlert(agente);
         break;
       }
