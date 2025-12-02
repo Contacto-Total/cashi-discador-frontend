@@ -198,4 +198,24 @@ export class CustomerService {
   registerCustomerAccess(customerId: number): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${customerId}/access`, {});
   }
+
+  /**
+   * Busca un cliente por documento exacto en la tabla dinámica
+   * Retorna TODOS los campos de la tabla ini_* incluyendo montos financieros
+   */
+  findClientByDocumento(
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number,
+    documento: string
+  ): Observable<Record<string, any>> {
+    return this.http.get<Record<string, any>>(`${environment.apiUrl}/client-search/find`, {
+      params: {
+        tenantId: tenantId.toString(),
+        portfolioId: portfolioId.toString(),
+        subPortfolioId: subPortfolioId.toString(),
+        documento: documento
+      }
+    });
+  }
 }

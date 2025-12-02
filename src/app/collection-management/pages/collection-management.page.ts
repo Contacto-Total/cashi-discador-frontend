@@ -1797,25 +1797,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         if (clienteDetalle && clienteDetalle.documento) {
           console.log('✅ Cliente básico cargado, documento:', clienteDetalle.documento);
 
-          // Obtener el tenant del usuario actual
+          // Obtener tenant, portfolio y subportfolio del usuario actual
           const currentUser = this.authService.getCurrentUser();
           const tenantId = currentUser?.tenantId;
+          const portfolioId = currentUser?.portfolioId;
+          const subPortfolioId = currentUser?.subPortfolioId;
 
-          if (!tenantId) {
-            console.error('❌ No se pudo obtener tenantId del usuario');
+          if (!tenantId || !portfolioId || !subPortfolioId) {
+            console.error('❌ No se pudo obtener asignación completa del usuario:', { tenantId, portfolioId, subPortfolioId });
             // Fallback: usar datos limitados del clienteDetalle
             this.loadClienteDetalleFallback(clienteDetalle);
             return;
           }
 
-          // Usar el mismo servicio que la búsqueda manual para obtener datos COMPLETOS
-          console.log(`🔍 Buscando datos completos del cliente con documento ${clienteDetalle.documento} en tenant ${tenantId}...`);
-          this.customerService.searchCustomersByCriteria(tenantId, 'documento', clienteDetalle.documento).subscribe({
-            next: (customers) => {
-              if (customers && customers.length > 0) {
-                console.log('✅ Datos completos del cliente obtenidos:', customers[0]);
+          // Usar el endpoint /api/client-search/find que retorna datos COMPLETOS de la tabla dinámica
+          console.log(`🔍 Buscando datos completos del cliente con documento ${clienteDetalle.documento} en tenant ${tenantId}, portfolio ${portfolioId}, subportfolio ${subPortfolioId}...`);
+          this.customerService.findClientByDocumento(tenantId, portfolioId, subPortfolioId, clienteDetalle.documento).subscribe({
+            next: (clienteCompleto) => {
+              if (clienteCompleto) {
+                console.log('✅ Datos completos del cliente obtenidos:', clienteCompleto);
                 // Usar loadCustomerFromResource igual que en búsqueda manual
-                this.loadCustomerFromResource(customers[0]);
+                this.loadCustomerFromResource(clienteCompleto);
               } else {
                 console.warn('⚠️ No se encontró cliente con documento:', clienteDetalle.documento);
                 // Fallback: usar datos limitados del clienteDetalle
