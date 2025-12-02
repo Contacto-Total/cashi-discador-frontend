@@ -1900,12 +1900,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       { id: 'nombre_completo', label: 'Nombre Completo', field: 'nombre_completo', category: 'personal', format: 'text', highlight: false, size: 'full' },
       { id: 'telefono_principal', label: 'Celular', field: 'contacto.telefono_principal', category: 'contact', format: 'text', highlight: false, size: 'medium' },
       { id: 'email', label: 'Email', field: 'contacto.email', category: 'contact', format: 'text', highlight: false, size: 'medium' },
-      { id: 'direccion', label: 'Dirección', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' },
-      { id: 'edad', label: 'Edad', field: 'edad', category: 'personal', format: 'number', highlight: false, size: 'small' },
-      { id: 'saldo_total', label: 'Deuda Total', field: 'deuda.saldo_total', category: 'debt', format: 'currency', highlight: true, size: 'small' },
-      { id: 'dias_mora', label: 'Días de Mora', field: 'deuda.dias_mora', category: 'debt', format: 'number', highlight: true, size: 'small' },
-      { id: 'numero_cuenta', label: 'Nro. Cuenta', field: 'cuenta.numero_cuenta', category: 'account', format: 'text', highlight: false, size: 'medium' },
-      { id: 'tipo_producto', label: 'Producto', field: 'cuenta.tipo_producto', category: 'account', format: 'text', highlight: false, size: 'medium' }
+      { id: 'direccion', label: 'Dirección', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' }
     ]);
   }
 
