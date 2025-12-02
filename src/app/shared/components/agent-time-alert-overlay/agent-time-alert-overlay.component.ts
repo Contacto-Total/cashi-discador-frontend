@@ -151,6 +151,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   estadoTexto = '';
   soundEnabled = false;
 
+  private readonly SOUND_STORAGE_KEY = 'agent_sound_enabled';
   private statusSubscription?: Subscription;
   private lastAlertState = ''; // Para evitar repetir la misma alerta
   private userId: number | null = null;
@@ -162,6 +163,9 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // Cargar preferencia de sonido
+    this.loadSoundPreference();
+
     // Verificar si es agente
     const user = this.authService.getCurrentUser();
     if (user?.role === 'AGENT' && user.id) {
@@ -241,11 +245,27 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   toggleSound(event: Event): void {
     event.stopPropagation();
     this.soundEnabled = !this.soundEnabled;
+    this.saveSoundPreference(); // Guardar preferencia
 
     if (this.soundEnabled) {
       // Hacer un test de voz para confirmar
       this.speak('Alertas de voz activadas');
     }
+  }
+
+  /**
+   * Carga la preferencia de sonido desde localStorage
+   */
+  private loadSoundPreference(): void {
+    const saved = localStorage.getItem(this.SOUND_STORAGE_KEY);
+    this.soundEnabled = saved === 'true';
+  }
+
+  /**
+   * Guarda la preferencia de sonido en localStorage
+   */
+  private saveSoundPreference(): void {
+    localStorage.setItem(this.SOUND_STORAGE_KEY, String(this.soundEnabled));
   }
 
   /**

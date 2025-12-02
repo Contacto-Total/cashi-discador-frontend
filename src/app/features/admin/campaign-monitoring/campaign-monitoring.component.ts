@@ -45,6 +45,8 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   alertasDismissed: Set<string> = new Set(); // IDs de alertas ya cerradas (agente-estado)
   soundEnabled = false; // El usuario debe activar el sonido manualmente (política de navegadores)
 
+  private readonly SOUND_STORAGE_KEY = 'supervisor_sound_enabled';
+
   constructor(
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
@@ -52,11 +54,27 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.loadSoundPreference(); // Cargar preferencia guardada
     this.initAlarmAudio();
     this.loadCampaigns();
     this.startAutoDialerPolling();
     this.startAgentesPolling();
     this.startLlamadasPolling();
+  }
+
+  /**
+   * Carga la preferencia de sonido desde localStorage
+   */
+  private loadSoundPreference(): void {
+    const saved = localStorage.getItem(this.SOUND_STORAGE_KEY);
+    this.soundEnabled = saved === 'true';
+  }
+
+  /**
+   * Guarda la preferencia de sonido en localStorage
+   */
+  private saveSoundPreference(): void {
+    localStorage.setItem(this.SOUND_STORAGE_KEY, String(this.soundEnabled));
   }
 
   ngOnDestroy(): void {
@@ -279,6 +297,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   toggleSound(): void {
     this.soundEnabled = !this.soundEnabled;
+    this.saveSoundPreference(); // Guardar preferencia
 
     if (this.soundEnabled && this.audioContext) {
       // Reanudar AudioContext con interacción del usuario
