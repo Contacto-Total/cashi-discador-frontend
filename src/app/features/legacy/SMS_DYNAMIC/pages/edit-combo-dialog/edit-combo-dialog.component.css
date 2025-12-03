@@ -1,32 +1,142 @@
 /* edit-combo-dialog.component.css */
 
-/* Panel Material */
-:host ::ng-deep .combo-dialog .mdc-dialog__surface{
-  border-radius: 16px !important;
+/* Panel Material - Esquinas redondeadas modernas */
+:host ::ng-deep .combo-dialog .mdc-dialog__surface {
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+:host ::ng-deep .combo-dialog .mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 20px;
+}
+
+/* Layout principal */
+.dlg {
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  background: #ffffff;
+  border-radius: 20px;
   overflow: hidden;
 }
 
-/* Layout */
-.dlg{
-  display:flex;
-  flex-direction:column;
-  max-height:80vh;
+/* Header moderno con gradiente sutil */
+.dlg__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid #e2e8f0;
+  position: relative;
 }
-.dlg__head{
-  display:flex; align-items:center; gap:12px;
-  padding:14px 18px;
-  border-bottom:1px solid #e5e7eb;
-}
-.dlg__head h2{ margin:0; font-size:1.2rem; font-weight:700; }
-.icon-btn{ border:none; background:transparent; font-size:18px; margin-left:auto; cursor:pointer; }
 
-.dlg__body{ padding:16px 18px 10px; }
-.dlg__foot{
-  padding:12px 18px;
-  border-top:1px solid #e5e7eb;
-  background:#fff;
-  /* sombra suave para separar el footer sticky del scroll */
-  box-shadow: 0 -6px 12px -10px rgba(0,0,0,.12);
+.dlg__head::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #cbd5e1, transparent);
+}
+
+.dlg__head h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.025em;
+}
+
+/* Botón cerrar moderno */
+.icon-btn {
+  border: none;
+  background: #f1f5f9;
+  font-size: 18px;
+  margin-left: auto;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+  transform: scale(1.05);
+}
+
+/* Body con scroll suave */
+.dlg__body {
+  padding: 24px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+/* Footer moderno con botones */
+.dlg__foot {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  box-shadow: 0 -4px 20px -5px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Botones del footer */
+.dlg__foot button,
+.dlg__foot .btn-cancel,
+.dlg__foot .btn-save {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.dlg__foot .btn-cancel,
+.dlg__foot button[type="button"]:not(.btn-save) {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.dlg__foot .btn-cancel:hover,
+.dlg__foot button[type="button"]:not(.btn-save):hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.dlg__foot .btn-save,
+.dlg__foot button[type="submit"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 4px 14px -3px rgba(59, 130, 246, 0.4);
+}
+
+.dlg__foot .btn-save:hover,
+.dlg__foot button[type="submit"]:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px -3px rgba(59, 130, 246, 0.5);
+}
+
+.dlg__foot .btn-save:disabled,
+.dlg__foot button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Grid */
@@ -660,9 +770,17 @@ textarea{ resize: vertical; }
 /* ========================================
    DARK MODE STYLES
    ======================================== */
+:host-context(.dark) .dlg {
+  background: #0f172a;
+}
+
 :host-context(.dark) .dlg__head {
-  background: #1e293b;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-bottom-color: #334155;
+}
+
+:host-context(.dark) .dlg__head::after {
+  background: linear-gradient(90deg, transparent, #475569, transparent);
 }
 
 :host-context(.dark) .dlg__head h2 {
@@ -670,10 +788,12 @@ textarea{ resize: vertical; }
 }
 
 :host-context(.dark) .icon-btn {
+  background: #1e293b;
   color: #94a3b8;
 }
 
 :host-context(.dark) .icon-btn:hover {
+  background: #334155;
   color: #f8fafc;
 }
 
@@ -682,9 +802,22 @@ textarea{ resize: vertical; }
 }
 
 :host-context(.dark) .dlg__foot {
-  background: #1e293b;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   border-top-color: #334155;
-  box-shadow: 0 -6px 12px -10px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 -4px 20px -5px rgba(0, 0, 0, 0.4);
+}
+
+:host-context(.dark) .dlg__foot .btn-cancel,
+:host-context(.dark) .dlg__foot button[type="button"]:not(.btn-save) {
+  background: #1e293b;
+  color: #cbd5e1;
+  border-color: #334155;
+}
+
+:host-context(.dark) .dlg__foot .btn-cancel:hover,
+:host-context(.dark) .dlg__foot button[type="button"]:not(.btn-save):hover {
+  background: #334155;
+  border-color: #475569;
 }
 
 :host-context(.dark) label {
