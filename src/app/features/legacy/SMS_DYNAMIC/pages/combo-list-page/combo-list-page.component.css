@@ -28,7 +28,7 @@
   font-size: 1.75rem;
   font-weight: 600;
   margin: 0;
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -111,7 +111,7 @@
 }
 
 .create-tenor-btn {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white !important;
 }
 
@@ -121,7 +121,7 @@
 
 
 .create-tenor-btn:hover {
-  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
@@ -157,7 +157,7 @@
 }
 
 .filter-chip.active {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
   border-color: transparent;
 }
@@ -198,7 +198,7 @@
   left: 0;
   bottom: 0;
   width: 3px;
-  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
   transform: scaleY(0);
   transition: transform 0.3s ease;
   transform-origin: top;
@@ -321,12 +321,12 @@
 
 .tag {
   padding: 0.35rem 0.75rem;
-  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-  color: #4338ca;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1d4ed8;
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
-  border: 1px solid #a5b4fc;
+  border: 1px solid #93c5fd;
 }
 
 /* Estado vacío */
@@ -470,7 +470,7 @@
 }
 
 .sms-bubble {
-  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
   padding: 1rem;
   border-radius: 12px;
@@ -767,9 +767,9 @@
 }
 
 :host-context(.dark) .tag {
-  background: linear-gradient(135deg, #312e81, #1e1b4b);
-  color: #a5b4fc;
-  border-color: #4338ca;
+  background: linear-gradient(135deg, #1e3a8a, #172554);
+  color: #93c5fd;
+  border-color: #1d4ed8;
 }
 
 :host-context(.dark) .empty-state {

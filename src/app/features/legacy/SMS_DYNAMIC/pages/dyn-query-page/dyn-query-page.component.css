@@ -9,7 +9,7 @@
 }
 
 .header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   padding: 24px;
   border-radius: 12px;
@@ -66,7 +66,7 @@
   content: '';
   width: 4px;
   height: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   border-radius: 2px;
 }
 
@@ -100,7 +100,7 @@
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -142,8 +142,8 @@
 }
 
 .chip.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
@@ -183,8 +183,8 @@
 }
 
 .checkbox input:checked + .checkmark {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: #3b82f6;
 }
 
 .checkmark {
@@ -306,7 +306,7 @@
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
 }
@@ -374,7 +374,7 @@
 }
 
 .count-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
@@ -485,16 +485,16 @@
 }
 
 /* Colores de acento por grupo (2 tonos para el degradado del chip activo) */
-.chip-group--cliente    { --group-accent: #445ab8; --group-accent-2: #282e61; }
-.chip-group--financiero { --group-accent: #445ab8; --group-accent-2: #282e61; }
-.chip-group--fechas     { --group-accent: #445ab8; --group-accent-2: #282e61; }
+.chip-group--cliente    { --group-accent: #3b82f6; --group-accent-2: #1d4ed8; }
+.chip-group--financiero { --group-accent: #3b82f6; --group-accent-2: #1d4ed8; }
+.chip-group--fechas     { --group-accent: #3b82f6; --group-accent-2: #1d4ed8; }
 
 /* 🔧 FIX: que el chip activo gane a los estilos de grupo */
 .chip-group .chip.active {
   background: linear-gradient(135deg,
-  var(--group-accent, #764ba2) 0%,
-  var(--group-accent-2, #764ba2) 100%);
-  border-color: var(--group-accent, #667eea);
+  var(--group-accent, #2563eb) 0%,
+  var(--group-accent-2, #2563eb) 100%);
+  border-color: var(--group-accent, #3b82f6);
   color: #fff;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
@@ -710,7 +710,7 @@ input:checked+.slider:before {
 }
 
 .interval-input:focus {
-  border-color: #667eea !important;
+  border-color: #3b82f6 !important;
 }
 
 /* Checkbox + símbolo matemático */
@@ -738,7 +738,7 @@ input:checked+.slider:before {
 
 /* Variable destacada en el centro */
 .interval-variable {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   padding: 12px 24px;
   border-radius: 24px;
@@ -919,7 +919,7 @@ input:checked+.slider:before {
 :host-context(.dark) .form-select:focus,
 :host-context(.dark) .form-input:focus,
 :host-context(.dark) .form-textarea:focus {
-  border-color: #667eea;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
 
@@ -1008,7 +1008,7 @@ input:checked+.slider:before {
 }
 
 :host-context(.dark) .slider:before {
-  background-color: #667eea;
+  background-color: #3b82f6;
   box-shadow: 0 0.4em #475569;
 }
 
@@ -1055,7 +1055,7 @@ input:checked+.slider:before {
 }
 
 :host-context(.dark) .interval-input:focus {
-  border-color: #667eea !important;
+  border-color: #3b82f6 !important;
 }
 
 :host-context(.dark) .interval-symbol {

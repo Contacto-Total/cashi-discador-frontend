@@ -45,7 +45,7 @@ input, select, textarea{
   transition: .15s border, .15s box-shadow;
 }
 input:focus, select:focus, textarea:focus{
-  border-color:#6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+  border-color:#3b82f6; box-shadow: 0 0 0 3px rgba(99,102,241,.15);
 }
 textarea{ resize: vertical; }
 
@@ -85,15 +85,15 @@ textarea{ resize: vertical; }
 }
 
 .chip:focus-visible{
-  outline: 2px solid #6366f1;
+  outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 
 .chip.active{
   background: linear-gradient(135deg,
-  var(--group-accent, #764ba2) 0%,
-  var(--group-accent-2, #764ba2) 100%);
-  border-color: var(--group-accent, #667eea);
+  var(--group-accent, #2563eb) 0%,
+  var(--group-accent-2, #2563eb) 100%);
+  border-color: var(--group-accent, #3b82f6);
   color: #fff;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
@@ -194,7 +194,7 @@ textarea{ resize: vertical; }
 
 /* realce cuando está marcado (soportado en navegadores modernos) */
 .checks label:has(input:checked){
-  border-color: #4f46e5;
+  border-color: #3b82f6;
   background: #eef2ff;
   box-shadow: 0 0 0 3px rgba(79,70,229,.12) inset;
 }
@@ -245,15 +245,15 @@ textarea{ resize: vertical; }
 }
 
 /* Colores de acento por grupo (2 tonos para el degradado del chip activo) */
-.chip-group--cliente    { --group-accent: #445ab8; --group-accent-2: #282e61; }
-.chip-group--financiero { --group-accent: #445ab8; --group-accent-2: #282e61; }
-.chip-group--fechas     { --group-accent: #445ab8; --group-accent-2: #282e61; }
+.chip-group--cliente    { --group-accent: #3b82f6; --group-accent-2: #1d4ed8; }
+.chip-group--financiero { --group-accent: #3b82f6; --group-accent-2: #1d4ed8; }
+.chip-group--fechas     { --group-accent: #3b82f6; --group-accent-2: #1d4ed8; }
 
 .chip.active {
   background: linear-gradient(135deg,
-  var(--group-accent, #764ba2) 0%,
-  var(--group-accent-2, #764ba2) 100%);
-  border-color: var(--group-accent, #667eea);
+  var(--group-accent, #2563eb) 0%,
+  var(--group-accent-2, #2563eb) 100%);
+  border-color: var(--group-accent, #3b82f6);
   color: #fff;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
@@ -405,7 +405,7 @@ textarea{ resize: vertical; }
 }
 .btn-danger:hover{ transform: translateY(-1px); box-shadow: 0 8px 24px rgba(239,68,68,0.4); }
 .btn-secondary{
-  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #fff;
   box-shadow: 0 4px 16px rgba(139,92,246,0.3);
 }
@@ -460,7 +460,7 @@ textarea{ resize: vertical; }
   text-align:center; font-weight:600; font-size:16px;
   border:2px solid #cbd5e1 !important;
 }
-.interval-input:focus{ border-color:#667eea !important; }
+.interval-input:focus{ border-color:#3b82f6 !important; }
 
 .interval-check{
   display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
@@ -473,7 +473,7 @@ textarea{ resize: vertical; }
 
 /* Variable destacada */
 .interval-variable{
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color:#fff; padding:12px 24px; border-radius:24px;
   font-weight:700; font-size:16px; min-width:140px; text-align:center;
   box-shadow: 0 4px 14px rgba(102,126,234,0.35);
@@ -702,7 +702,7 @@ textarea{ resize: vertical; }
 :host-context(.dark) input:focus,
 :host-context(.dark) select:focus,
 :host-context(.dark) textarea:focus {
-  border-color: #6366f1;
+  border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
@@ -755,8 +755,8 @@ textarea{ resize: vertical; }
 }
 
 :host-context(.dark) .checks label:has(input:checked) {
-  border-color: #4f46e5;
-  background: #312e81;
+  border-color: #3b82f6;
+  background: #1e3a8a;
 }
 
 :host-context(.dark) .chip-group {
@@ -804,7 +804,7 @@ textarea{ resize: vertical; }
 }
 
 :host-context(.dark) .interval-input:focus {
-  border-color: #667eea !important;
+  border-color: #3b82f6 !important;
 }
 
 :host-context(.dark) .interval-symbol {
