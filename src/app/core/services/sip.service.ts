@@ -28,6 +28,11 @@ export class SipService {
   public onError = new EventEmitter<string>();
   public onRegistered = new EventEmitter<boolean>();
   public onIncomingCall = new EventEmitter<{ from: string }>();
+  public onOutgoingCall = new EventEmitter<{ to: string }>();
+
+  // Guardar número de destino actual para llamadas salientes
+  // Permite que collection-management lo lea al inicializarse
+  private currentOutgoingNumber: string | null = null;
 
   private websocketService = inject(WebsocketService);
   private currentExtension: string | null = null;
@@ -67,6 +72,21 @@ export class SipService {
   blockIncomingCallsMode(block: boolean): void {
     this.blockIncomingCalls = block;
     console.log(block ? '🚫 Incoming calls BLOCKED (agent tipifying)' : '✅ Incoming calls UNBLOCKED (agent available)');
+  }
+
+  /**
+   * Obtener el número de destino de la llamada saliente actual
+   * Usado por collection-management para cargar datos del cliente
+   */
+  getCurrentOutgoingNumber(): string | null {
+    return this.currentOutgoingNumber;
+  }
+
+  /**
+   * Limpiar el número de destino de la llamada saliente
+   */
+  clearCurrentOutgoingNumber(): void {
+    this.currentOutgoingNumber = null;
   }
 
   /**
@@ -328,6 +348,11 @@ export class SipService {
       this.setupSessionHandlers(session);
       this.setupICEGatheringMonitor(session, 'outgoing');
       this.setupSDPOptimization(session);
+
+      // Guardar número de destino y emitir evento
+      this.currentOutgoingNumber = destination;
+      console.log('📤 Emitiendo onOutgoingCall con destino:', destination);
+      this.onOutgoingCall.emit({ to: destination });
 
     } catch (error: any) {
       console.error('❌ Failed to make call:', error);

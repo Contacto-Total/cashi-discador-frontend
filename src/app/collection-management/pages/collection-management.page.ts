@@ -1322,9 +1322,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
+  private outgoingCallSubscription?: Subscription;
   public callState: CallState = CallState.IDLE;
   public isMuted = signal(false);
   private incomingPhoneNumber: string | null = null;
+  private outgoingPhoneNumber: string | null = null;
 
   constructor(
     private systemConfigService: SystemConfigService,
@@ -1422,6 +1424,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.autoLoadCustomerByPhone(callInfo.from);
       }
     });
+
+    // Suscribirse a llamadas SALIENTES (desde /dialer manual) para cargar automáticamente el cliente
+    this.outgoingCallSubscription = this.sipService.onOutgoingCall.subscribe((callInfo: { to: string }) => {
+      console.log('📤 [CollectionManagement] Llamada saliente a:', callInfo.to);
+      this.outgoingPhoneNumber = callInfo.to;
+
+      // Buscar y cargar automáticamente el cliente por el número al que se llama
+      if (callInfo.to) {
+        this.autoLoadCustomerByPhone(callInfo.to);
+      }
+    });
+
+    // Verificar si hay una llamada saliente en curso (navegación desde /dialer)
+    // El evento onOutgoingCall ya se emitió antes de navegar aquí, así que leemos el número guardado
+    const pendingOutgoingNumber = this.sipService.getCurrentOutgoingNumber();
+    if (pendingOutgoingNumber && !this.customerData()) {
+      console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
+      this.outgoingPhoneNumber = pendingOutgoingNumber;
+      this.autoLoadCustomerByPhone(pendingOutgoingNumber);
+      // Limpiar para evitar cargar de nuevo si el usuario navega de vuelta
+      this.sipService.clearCurrentOutgoingNumber();
+    }
 
     // Verificar si viene desde gestión manual con parámetros de cliente
     this.route.queryParams.subscribe(params => {
@@ -2086,6 +2110,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
     if (this.incomingCallSubscription) {
       this.incomingCallSubscription.unsubscribe();
+    }
+    if (this.outgoingCallSubscription) {
+      this.outgoingCallSubscription.unsubscribe();
     }
     if (this.agentStatusSubscription) {
       this.agentStatusSubscription.unsubscribe();
