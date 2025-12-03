@@ -720,6 +720,12 @@
   border-color: #475569;
 }
 
+:host-context(.dark) .filter-chip.active {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+  border-color: transparent;
+}
+
 :host-context(.dark) .tenors-wrapper {
   background: #1e293b;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
