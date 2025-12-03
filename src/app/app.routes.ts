@@ -94,29 +94,15 @@ export const routes: Routes = [
   },
 
   // ========================================
-  // SMS LEGACY
+  // SMS
   // ========================================
   {
     path: 'sms/combos',
-    loadComponent: () => import('./features/legacy/sms/pages/combo-list/combo-list.component').then(m => m.ComboListComponent),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'sms/dynamic',
-    loadComponent: () => import('./features/legacy/sms/pages/dyn-query/dyn-query.component').then(m => m.DynQueryComponent),
-    canActivate: [authGuard]
-  },
-
-  // ========================================
-  // SMS V2 (Nueva implementación)
-  // ========================================
-  {
-    path: 'sms/combos-v2',
     loadComponent: () => import('./features/legacy/SMS_DYNAMIC/pages/combo-list-page/combo-list-page.component').then(m => m.ComboListPageComponent),
     canActivate: [authGuard]
   },
   {
-    path: 'sms/dynamic-v2',
+    path: 'sms/dynamic',
     loadComponent: () => import('./features/legacy/SMS_DYNAMIC/pages/dyn-query-page/dyn-query-page.component').then(m => m.DynQueryPageComponent),
     canActivate: [authGuard]
   },
