@@ -1,0 +1,378 @@
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1 class="page-title">Consulta Dinámica</h1>
+  </div>
+
+  <div class="layout">
+    <!-- Main Form -->
+    <div class="main-card">
+      <form [formGroup]="form" class="dynamic-form">
+        <!-- Tramo Section -->
+        <div class="form-field">
+          <label class="form-label">Tramo</label>
+          <select formControlName="tramo" class="form-select">
+            <option value="3">Tramo 3</option>
+            <option value="5">Tramo 5</option>
+            <option value="CONTACTO_TOTAL">Cartera Propia</option>  <!-- ← AÑADIR ESTA LÍNEA -->
+          </select>
+        </div>
+
+        <!-- Variables Section -->
+        <h2 class="section-title">
+          <span class="material-icons">tune</span>
+          Variables
+        </h2>
+
+        <div class="chip-groups">
+          <ng-container *ngFor="let g of chipGroups">
+            <!-- ⬇️ wrapper con clase por grupo -->
+            <div class="chip-group" [ngClass]="'chip-group--' + g.key">
+              <h3 class="chip-group-title">{{ g.title }}</h3>
+
+              <div class="chip-container">
+                <button
+                  *ngFor="let c of g.items"
+                  type="button"
+                  class="chip"
+                  [class.active]="isActive(c.key)"
+                (click)="toggleChip(c.key, c.affectsSelects !== false)"
+                [attr.aria-pressed]="isActive(c.key)"
+                [disabled]="isChipDisabled(c.key)"
+                >
+                {{ c.label }}
+                </button>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+
+
+        <!-- Importe Extra -->
+        <div *ngIf="selectedChips.has('LTD') || selectedChips.has('LTDE') || selectedChips.has('LTD_LTDE')" class="form-field">
+          <label class="form-label">Sumar importe</label>
+          <input type="number" min="0" step="1" class="form-input" formControlName="importeExtra" placeholder="0">
+        </div>
+
+        <!-- Rangos Section -->
+        <h2 class="section-title">
+          <span class="material-icons">filter_alt</span>
+          Rangos
+        </h2>
+
+        <div class="form-field">
+          <button type="button" class="btn btn-secondary" (click)="addRange()">
+            <span class="material-icons">add</span>
+            Añadir rango
+          </button>
+        </div>
+
+        <div class="range-item"
+             *ngFor="let rg of rangosFA.controls; let i = index"
+             [formGroup]="$any(rg)">
+
+          <!-- Modo intervalo: cuando ambos límites están activos -->
+          <div *ngIf="$any(rg).get('useMin')?.value && $any(rg).get('useMax')?.value; else singleMode"
+               class="interval-mode">
+
+            <div class="interval-header">
+              <select class="form-select slim interval-field" formControlName="field" title="Campo">
+                <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+              </select>
+
+              <button type="button" class="btn btn-danger btn-small" (click)="removeRange(i)">
+                <span class="material-icons">delete</span>
+                Borrar
+              </button>
+            </div>
+
+            <div class="interval-expression">
+              <!-- MIN -->
+              <input type="number" class="form-input slim interval-input" formControlName="min" placeholder="mín">
+
+              <!-- Símbolo < o ≤ con checkbox -->
+              <label class="interval-check">
+                <input type="checkbox" formControlName="inclusiveMin">
+                <span class="interval-symbol">{{ $any(rg).get('inclusiveMin')?.value ? '≤' : '<' }}</span>
+              </label>
+
+              <!-- VARIABLE -->
+              <div class="interval-variable">
+                {{ fieldLabel($any(rg).get('field')?.value) || 'Variable' }}
+              </div>
+
+              <!-- Símbolo < o ≤ con checkbox -->
+              <label class="interval-check">
+                <input type="checkbox" formControlName="inclusiveMax">
+                <span class="interval-symbol">{{ $any(rg).get('inclusiveMax')?.value ? '≤' : '<' }}</span>
+              </label>
+
+              <!-- MAX -->
+              <input type="number" class="form-input slim interval-input" formControlName="max" placeholder="máx">
+            </div>
+
+            <!-- Checkbox para desactivar intervalo -->
+            <div class="interval-footer">
+              <label class="tiny-check">
+                <input type="checkbox"
+                       checked
+                       (change)="$any(rg).get('mode')?.value === 'gt' ? toggleUseMax(i, false) : toggleUseMin(i, false)">
+                <span>Desactivar intervalo</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Modo simple: un solo límite -->
+          <ng-template #singleMode>
+            <div class="range-row">
+              <!-- 1) Campo -->
+              <select class="form-select slim col-field" formControlName="field" title="Campo">
+                <option *ngFor="let f of rangeFields" [value]="f.key">{{ f.label }}</option>
+              </select>
+
+              <!-- 2) Operador -->
+              <select class="form-select slim col-op"
+                      [value]="$any(rg).get('mode')?.value"
+                      (change)="changeOperator(i, $any($event.target).value)"
+                      title="Operador">
+                <option value="gt">&gt;</option>
+                <option value="lt">&lt;</option>
+              </select>
+
+              <!-- 3) Valor único -->
+              <div class="value-box col-value">
+                <ng-container [ngSwitch]="$any(rg).get('mode')?.value">
+                  <ng-container *ngSwitchCase="'gt'">
+                    <input type="number" class="form-input slim" formControlName="min" placeholder="valor mínimo">
+                    <label class="tiny-check">
+                      <input type="checkbox" formControlName="inclusiveMin">
+                      <span>{{ $any(rg).get('inclusiveMin')?.value ? '≥' : '>' }}</span>
+                    </label>
+                  </ng-container>
+                  <ng-container *ngSwitchCase="'lt'">
+                    <input type="number" class="form-input slim" formControlName="max" placeholder="valor máximo">
+                    <label class="tiny-check">
+                      <input type="checkbox" formControlName="inclusiveMax">
+                      <span>{{ $any(rg).get('inclusiveMax')?.value ? '≤' : '<' }}</span>
+                    </label>
+                  </ng-container>
+                </ng-container>
+              </div>
+
+              <!-- 4) Borrar -->
+              <button type="button" class="btn btn-danger btn-small col-del" (click)="removeRange(i)">
+                <span class="material-icons">delete</span>
+                Borrar
+              </button>
+            </div>
+
+            <!-- Checkbox para activar el segundo límite -->
+            <div class="hint" style="margin:8px 0 0 0;">
+              <label class="tiny-check">
+                <ng-container *ngIf="$any(rg).get('mode')?.value === 'gt'">
+                  <input type="checkbox"
+                         [checked]="$any(rg).get('useMax')?.value"
+                         (change)="toggleUseMax(i, $any($event.target).checked)">
+                  <span>añadir límite superior</span>
+                </ng-container>
+                <ng-container *ngIf="$any(rg).get('mode')?.value === 'lt'">
+                  <input type="checkbox"
+                         [checked]="$any(rg).get('useMin')?.value"
+                         (change)="toggleUseMin(i, $any($event.target).checked)">
+                  <span>añadir límite inferior</span>
+                </ng-container>
+              </label>
+            </div>
+          </ng-template>
+
+          <!-- Error de orden -->
+          <div *ngIf="$any(rg).errors?.['rangeOrder']" class="hint error-inline">
+            ⚠️ El valor mínimo no puede ser mayor que el máximo.
+          </div>
+        </div>
+
+
+
+        <!-- Condiciones Section -->
+        <h2 class="section-title">
+          <span class="material-icons">rule</span>
+          Condiciones
+        </h2>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_HOY')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS HOY
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_MANANA')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS MAÑANA
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_MANANA2')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS HOY Y MAÑANA
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" (change)="toggleCond($event,'PROMESAS_ROTAS')">
+              <span class="checkmark"></span>
+            </div>
+            PROMESAS ROTAS
+          </label>
+        </div>
+
+        <!-- Restricciones Section -->
+        <h2 class="section-title">
+          <span class="material-icons">block</span>
+          Restricciones
+        </h2>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="noContenido">
+              <span class="checkmark"></span>
+            </div>
+            No Contenido
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="excluirPromesasPeriodoActual">
+              <span class="checkmark"></span>
+            </div>
+            Excluir Promesas periodo actual
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="excluirCompromisos">
+              <span class="checkmark"></span>
+            </div>
+            Excluir Compromisos
+          </label>
+          <label class="checkbox-item">
+            <div class="checkbox">
+              <input type="checkbox" formControlName="excluirBlacklist">
+              <span class="checkmark"></span>
+            </div>
+            Excluir Blacklist
+          </label>
+        </div>
+
+        <!-- Plantilla Section -->
+        <h2 class="section-title">
+          <span class="material-icons">description</span>
+          Plantilla
+        </h2>
+        <div class="form-field">
+          <label class="form-label">Nombre</label>
+          <input type="text" class="form-input" formControlName="nombre" placeholder="Nombre del combo/plantilla">
+        </div>
+
+        <div class="form-field">
+          <label class="form-label label-with-count">
+            <span>Texto de SMS</span>
+          </label>
+          <textarea #tplArea class="form-textarea" formControlName="plantillaTexto" placeholder="Escribe el mensaje y usa las variables"></textarea>
+        </div>
+      </form>
+
+      <!-- Results Table -->
+      <div *ngIf="rows().length" class="results-card">
+        <h2 class="section-title">
+          <span class="material-icons">table_chart</span>
+          Resultado
+        </h2>
+        <div class="table-container">
+          <table class="data-table" mat-table [dataSource]="rows()">
+            <ng-container *ngFor="let c of cols()" [matColumnDef]="c">
+              <th mat-header-cell *matHeaderCellDef>{{ c }}</th>
+              <td mat-cell *matCellDef="let r">{{ r[c] }}</td>
+            </ng-container>
+            <tr mat-header-row *matHeaderRowDef="cols()"></tr>
+            <tr mat-row *matRowDef="let row; columns: cols();"></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="aside-card">
+
+      <!-- Controles de vista previa (toggle a la derecha) -->
+      <div class="preview-controls">
+        <span class="mode-label">Manual</span>
+
+        <label class="switch" aria-label="Cambiar modo de previsualización">
+          <input type="checkbox"
+                 [checked]="previewMode() === 'auto'"
+                 (change)="setMode($any($event.target).checked ? 'auto' : 'manual')">
+          <span class="slider"></span>
+        </label>
+
+        <span class="mode-label">Auto</span>
+
+      </div>
+
+
+
+      <!-- Header de previsualización con botón a la derecha -->
+      <div class="preview-header">
+        <h3 class="preview-title">
+          <span class="material-icons">preview</span>
+          Previsualización
+        </h3>
+
+        <button type="button"
+                class="btn btn-small btn-ghost"
+                (click)="refreshPreview()"
+                [disabled]="previewMode() !== 'manual' || loadingPreview()">
+          Actualizar
+        </button>
+      </div>
+
+      <div class="preview-box">
+        {{ previewText() || 'Tu SMS aparecerá aquí…' }}
+      </div>
+
+      <div class="character-meter">
+        <div class="character-bar"
+             [class.warning]="previewText().length > 120"
+             [class.danger]="previewText().length > 160"
+             [style.width.%]="Math.min((previewText().length / 160) * 100, 100)">
+        </div>
+      </div>
+      <div class="character-count">
+        {{ previewText().length }} / 160
+      </div>
+
+
+
+
+      <p class="hint">
+        💡 Consejo: mantén el mensaje bajo 160 caracteres o usa variables cortas.
+      </p>
+
+      <div class="button-group">
+        <button type="button" class="btn btn-primary" (click)="generarGuiado()">
+          <span class="material-icons">send</span>
+          Generar
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="guardarCombo()">
+          <span class="material-icons">save</span>
+          Guardar
+        </button>
+        <button type="button" class="btn btn-danger" (click)="Cancel()">
+          <span class="material-icons">cancel</span>
+          Cancelar
+        </button>
+      </div>
+    </aside>
+  </div>
+</div>

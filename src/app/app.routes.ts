@@ -108,6 +108,20 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // SMS V2 (Nueva implementación)
+  // ========================================
+  {
+    path: 'sms/combos-v2',
+    loadComponent: () => import('./features/legacy/SMS_DYNAMIC/pages/combo-list-page/combo-list-page.component').then(m => m.ComboListPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'sms/dynamic-v2',
+    loadComponent: () => import('./features/legacy/SMS_DYNAMIC/pages/dyn-query-page/dyn-query-page.component').then(m => m.DynQueryPageComponent),
+    canActivate: [authGuard]
+  },
+
+  // ========================================
   // OTROS MÓDULOS LEGACY
   // ========================================
   {

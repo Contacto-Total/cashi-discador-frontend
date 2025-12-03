@@ -1,0 +1,881 @@
+/* Contenedor principal */
+.container {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  color: #2c3e50;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 24px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  margin-top: 80px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+  align-items: start;
+}
+
+.main-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.aside-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 20px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 44px 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 2px;
+}
+
+/* Form Controls */
+.form-field {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-top: 25px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.form-select,
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-select:focus,
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Chips */
+.chip-container {
+  display: flex; /* Esto los alinea en fila */
+  gap: 8px;
+  flex-wrap: wrap; /* Si no hay espacio, permite el ajuste a la siguiente línea */
+}
+
+
+.chip {
+  padding: 8px 16px;
+  background: #f3f4f6;
+  border: 2px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #6b7280;
+  margin-right: 8px; /* Espacio a la derecha de cada chip */
+}
+
+.chip:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.chip.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Checkboxes */
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.checkbox input {
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.checkbox input:checked + .checkmark {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+}
+
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.checkmark::after {
+  content: '';
+  position: absolute;
+  display: none;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.checkbox input:checked + .checkmark::after {
+  display: block;
+}
+
+/* Preview Section */
+.preview-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top:10px;
+}
+
+.preview-box {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  min-height: 100px;
+  margin-bottom: 16px;
+  font-family: monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.character-meter {
+  background: #f3f4f6;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.character-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.character-bar.warning {
+  background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.character-bar.danger {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.character-count {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+.hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+.button-group {
+  display: flex;
+  gap: 12px;
+  flex-direction: column;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+}
+
+/* Results Table */
+.results-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #6b7280;
+}
+
+.data-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Character count in label */
+.label-with-count {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.count-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .aside-card {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 12px;
+  }
+
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .checkbox-group {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+
+/* === Grupos de chips con tinte suave === */
+.chip-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chip-group {
+  --group-accent: #374151;
+  --group-bg: rgba(0,0,0,0.03);
+  --group-border: rgba(0,0,0,0.08);
+  --label-col: 90px;
+
+  border: 1px solid var(--group-border);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: var(--label-col) 1fr;
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: center; /* Alineamos los elementos */
+}
+
+.chip-group-title {
+  grid-column: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--group-accent);
+  opacity: .9;
+  margin: 0;                 /* quita márgenes que empujen */
+  padding: 2px 0 0 0;        /* opcional: micro-ajuste vertical */
+}
+
+.chip-container{
+  grid-column: 2;            /* chips en la col fluida */
+  margin: 0;                 /* asegúrate de no tener margen izq */
+}
+
+/* Variante: Cliente (indigo/púrpura de tu header) */
+.chip-group--cliente {
+  --group-accent: #364278;
+  --group-bg: rgba(102, 126, 234, 0.06);
+  --group-border: rgba(102, 126, 234, 0.18);
+}
+
+/* Variante: Financiero (verde del medidor) */
+.chip-group--financiero {
+  --group-accent: #3a4785;
+  --group-bg: rgba(102, 126, 234, 0.06);
+  --group-border: rgba(102, 126, 234, 0.18);
+}
+
+/* Variante: Fechas (ámbar suave) */
+.chip-group--fechas {
+  --group-accent: #4563a1;
+  --group-bg: rgba(102, 126, 234, 0.06);
+  --group-border: rgba(102, 126, 234, 0.18);
+}
+
+/* (Opcional) chips inactivos heredan un filo/tinte del grupo */
+.chip-group--cliente .chip,
+.chip-group--financiero .chip,
+.chip-group--fechas .chip {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: var(--group-border);
+}
+
+.chip-group--cliente .chip:hover,
+.chip-group--financiero .chip:hover,
+.chip-group--fechas .chip:hover {
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 2px 10px var(--group-border);
+}
+
+/* Colores de acento por grupo (2 tonos para el degradado del chip activo) */
+.chip-group--cliente    { --group-accent: #445ab8; --group-accent-2: #282e61; }
+.chip-group--financiero { --group-accent: #445ab8; --group-accent-2: #282e61; }
+.chip-group--fechas     { --group-accent: #445ab8; --group-accent-2: #282e61; }
+
+/* 🔧 FIX: que el chip activo gane a los estilos de grupo */
+.chip-group .chip.active {
+  background: linear-gradient(135deg,
+  var(--group-accent, #764ba2) 0%,
+  var(--group-accent-2, #764ba2) 100%);
+  border-color: var(--group-accent, #667eea);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.chip[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none; /* por si acaso */
+}
+
+/* The switch - the box around the slider */
+.switch {
+  font-size: 1rem;
+  position: relative;
+  display: inline-block;
+  width: 4em;
+  height: 2em;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #eee;
+  transition: 0.4s;
+  border-radius: 0.5em;
+  box-shadow: 0 0.2em #dfd9d9;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 1.5em;
+  width: 1.4em;
+  border-radius: 0.3em;
+  left: 0.3em;
+  bottom: 0.7em;
+  background-color: #5d6ebc;
+  transition: 0.4s;
+  box-shadow: 0 0.4em #b4b8bc;
+}
+
+.slider:hover::before {
+  box-shadow: 0 0.2em #b4b7bc;
+  bottom: 0.5em;
+}
+
+input:checked+.slider:before {
+  transform: translateX(2em);
+  background: #282e61;
+}
+
+
+/* ===== Preview controls row ===== */
+.preview-controls{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;               /* permite bajar elementos en pantallas pequeñas */
+}
+
+.preview-controls .mode-label{
+  font-size: 13px;
+  color: #374151;
+}
+
+/* botón compacto a la misma altura que el switch */
+.btn-small{
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 10px;
+  line-height: 1;                /* quita “alto extra” del texto */
+}
+
+/* mantener el botón pegado al switch en la misma fila,
+   pero que la “badge” pueda ir después sin empujar */
+.btn-inline{
+  margin-left: 8px;
+}
+
+/* badge sutil y alineado */
+.badge{
+  background: #eef2ff;
+  color: #374151;
+  border: 1px solid #dbeafe;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+/* pequeño ajuste para que el switch quede visualmente centrado */
+.switch{ vertical-align: middle; }
+
+/* Header de Previsualización con botón a la derecha */
+.preview-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 30px;    /* mantiene el mismo respiro que tenías */
+  margin-bottom: 12px;
+}
+
+/* Botón “ghost” para el header */
+.btn-ghost{
+  background: #eef2ff;
+  color: #374151;
+  border: 1px solid #dbeafe;
+}
+.btn-ghost:hover{
+  filter: brightness(0.98);
+  transform: translateY(-1px);
+}
+
+/* Empujar el toggle a la derecha */
+.preview-controls{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;   /* <- acá lo pegamos a la derecha */
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-controls .mode-label{
+  font-size: 13px;
+  color: #374151;
+}
+
+/* Estado deshabilitado para botones */
+.btn:disabled,
+.btn[disabled],
+.btn-ghost:disabled,
+.btn-ghost[disabled],
+  /* por si usas <a> con clase de botón */
+.btn.is-disabled,
+.btn-ghost.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;   /* <- bloquea el clic */
+  box-shadow: none;
+  transform: none;
+  filter: grayscale(0.2) saturate(0.6);
+}
+
+
+/* ========================================================
+   ESTILOS PARA LA SECCIÓN DE RANGOS
+   Añade o reemplaza estos estilos en tu archivo CSS
+   ======================================================== */
+
+/* Contenedor de cada rango */
+.range-item {
+  background: #fafafa;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02) inset;
+}
+
+/* ===== MODO INTERVALO (min < variable < max) ===== */
+.interval-mode {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.interval-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.interval-header .interval-field {
+  flex: 1;
+  max-width: 300px;
+}
+
+/* Expresión matemática horizontal */
+.interval-expression {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px 16px;
+  background: white;
+  border-radius: 10px;
+  border: 2px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+/* Inputs de valores numéricos */
+.interval-input {
+  width: 130px !important;
+  height: 42px !important;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  border: 2px solid #cbd5e1 !important;
+}
+
+.interval-input:focus {
+  border-color: #667eea !important;
+}
+
+/* Checkbox + símbolo matemático */
+.interval-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.interval-check input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.interval-symbol {
+  font-size: 28px;
+  font-weight: 700;
+  color: #475569;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Variable destacada en el centro */
+.interval-variable {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-weight: 700;
+  font-size: 16px;
+  min-width: 140px;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+  white-space: nowrap;
+}
+
+/* Footer con checkbox para desactivar */
+.interval-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  text-align: center;
+}
+
+.interval-footer .tiny-check {
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ===== MODO SIMPLE (un solo límite) ===== */
+.range-row {
+  display: grid;
+  grid-template-columns: 240px 80px 1fr max-content;
+  gap: 12px;
+  align-items: center;
+}
+
+.col-field {
+  grid-column: 1;
+}
+
+.col-op {
+  grid-column: 2;
+}
+
+.col-value {
+  grid-column: 3;
+}
+
+.col-del {
+  grid-column: 4;
+  justify-self: end;
+}
+
+.range-row .value-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.range-row .form-input.slim {
+  width: 180px;
+}
+
+/* Inputs compactos */
+.form-select.slim,
+.form-input.slim {
+  height: 36px;
+  padding: 6px 10px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* Check pequeños junto a valores */
+.tiny-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.tiny-check input {
+  transform: translateY(1px);
+}
+
+/* Mensaje de error */
+.error-inline {
+  color: #ef4444;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* ===== RESPONSIVO ===== */
+@media (max-width: 900px) {
+  .interval-expression {
+    gap: 12px;
+    padding: 16px 12px;
+  }
+
+  .interval-input {
+    width: 110px !important;
+  }
+
+  .interval-variable {
+    min-width: 120px;
+    font-size: 15px;
+    padding: 10px 20px;
+  }
+
+  .interval-symbol {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 700px) {
+  .interval-expression {
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .interval-input {
+    width: 100% !important;
+    max-width: 200px;
+  }
+
+  .interval-variable {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .range-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .range-row .btn-small {
+    justify-self: stretch;
+  }
+}

@@ -1,6 +1,12 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["app/*"],
+      "@/SMS_DYNAMIC/*": ["app/features/legacy/SMS_DYNAMIC/*"],
+      "@/shared/*": ["app/shared/*"]
+    },
     "types": ["node"],
     "outDir": "./dist/out-tsc",
     "strict": true,
