@@ -1574,9 +1574,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       fecha_nacimiento: '',
       edad: 0,
       contacto: {
-        telefono_principal: client.telefono_principal || client.telefono || client.telefono_1 || '',
-        telefono_alternativo: client.telefono_secundario || client.telefono_2 || '',
-        telefono_trabajo: client.telefono_trabajo || client.telefono_3 || '',
+        telefono_principal: client.telefono_celular || client.telefono_principal || client.telefono || client.telefono_1 || '',
+        telefono_alternativo: client.telefono_domicilio || client.telefono_secundario || client.telefono_2 || '',
+        telefono_trabajo: client.telefono_laboral || client.telefono_trabajo || client.telefono_3 || '',
         email: client.email || '',
         direccion: client.direccion || ''
       },
