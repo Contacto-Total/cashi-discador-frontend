@@ -11,6 +11,7 @@ import { ContactService } from '../../../core/services/contact.service';
 import { WebsocketService } from '../../../core/services/websocket.service';
 import { WebrtcService, CallState } from '../../../core/services/webrtc.service';
 import { AgentService } from '../../../core/services/agent.service';
+import { SipService } from '../../../core/services/sip.service';
 import { Contact } from '../../../core/models/contact.model';
 import { Call, CallEvent, CallEventType, CallStatus, MakeCallRequest } from '../../../core/models/call.model';
 import { AgentState } from '../../../core/models/agent-status.model';
@@ -54,7 +55,8 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     private contactService: ContactService,
     private websocketService: WebsocketService,
     private webrtcService: WebrtcService,
-    private agentService: AgentService
+    private agentService: AgentService,
+    private sipService: SipService
   ) {}
 
   ngOnInit(): void {
@@ -212,6 +214,10 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
   async makeCallWithNumber(phoneNumber: string): Promise<void> {
     this.loading = true;
+
+    // Guardar el número de destino ANTES de iniciar la llamada
+    // para que collection-management pueda cargar datos del cliente
+    this.sipService.setCurrentOutgoingNumber(phoneNumber);
 
     const request: MakeCallRequest = {
       agentId: this.agentId,

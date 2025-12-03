@@ -90,6 +90,16 @@ export class SipService {
   }
 
   /**
+   * Establecer el número de destino de la llamada saliente
+   * Usado por el discador manual antes de iniciar la llamada
+   */
+  setCurrentOutgoingNumber(phoneNumber: string): void {
+    this.currentOutgoingNumber = phoneNumber;
+    console.log('📤 [SipService] Número de llamada saliente establecido:', phoneNumber);
+    this.onOutgoingCall.emit({ to: phoneNumber });
+  }
+
+  /**
    * Initialize and register to FreeSWITCH
    */
   async register(extension: string, password: string, wsServer: string, domain: string): Promise<void> {
