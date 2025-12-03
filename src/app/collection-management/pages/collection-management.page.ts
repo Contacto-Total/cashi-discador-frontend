@@ -1439,7 +1439,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Verificar si hay una llamada saliente en curso (navegación desde /dialer)
     // El evento onOutgoingCall ya se emitió antes de navegar aquí, así que leemos el número guardado
     const pendingOutgoingNumber = this.sipService.getCurrentOutgoingNumber();
-    if (pendingOutgoingNumber && !this.customerData()) {
+    // Verificar que no hay cliente REAL cargado (customerData tiene datos mock por defecto,
+    // pero sin 'id' numérico). Un cliente real tiene 'id' del backend.
+    if (pendingOutgoingNumber && !this.customerData()?.id) {
       console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
       this.outgoingPhoneNumber = pendingOutgoingNumber;
       this.autoLoadCustomerByPhone(pendingOutgoingNumber);
