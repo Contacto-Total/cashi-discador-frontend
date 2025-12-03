@@ -829,7 +829,7 @@ export class DynQueryPageComponent implements OnInit {
 
         // ✅ dialog bonito + navegar
         this.showSuccess('Guardado', 'El combo se guardó correctamente.')
-          .subscribe(() => this.router.navigate(['/SMS']));
+          .subscribe(() => this.router.navigate(['/sms/combos']));
       },
       error: (err) => {
         const msg = err?.error?.message || err?.message || 'No se pudo guardar el combo.';
@@ -841,7 +841,7 @@ export class DynQueryPageComponent implements OnInit {
   }
 
   Cancel() {
-    this.router.navigate(['/List-sms']);
+    this.router.navigate(['/sms/combos']);
   }
 
   protected readonly Math = Math;

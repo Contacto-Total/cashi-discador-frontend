@@ -367,7 +367,7 @@ export class ComboListPageComponent {
   }
 
   New() {
-    this.router.navigate(['/crear']);
+    this.router.navigate(['/sms/dynamic']);
   }
 
 

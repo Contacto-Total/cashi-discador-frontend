@@ -487,7 +487,7 @@ export class EditComboDialogComponent implements OnInit {
         this.showSuccess('Cambios guardados', 'Se actualizaron los datos del combo.')
           .subscribe(() => {
             this.dialogRef.close(true);
-            this.router.navigate(['/SMS']);  // ir a la principal
+            this.router.navigate(['/sms/combos']);  // ir a la principal
           });
       },
       error: () => { this.saving = false; this.dialogRef.close(false); }
