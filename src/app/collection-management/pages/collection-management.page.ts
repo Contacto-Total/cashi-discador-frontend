@@ -1842,8 +1842,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             next: (clienteCompleto) => {
               if (clienteCompleto) {
                 console.log('✅ Datos completos del cliente obtenidos:', clienteCompleto);
-                // Usar loadCustomerFromResource igual que en búsqueda manual
-                this.loadCustomerFromResource(clienteCompleto);
+                // Usar loadCustomerFromDynamicTable para datos raw de tabla ini_*
+                this.loadCustomerFromDynamicTable(clienteCompleto);
               } else {
                 console.warn('⚠️ No se encontró cliente con documento:', clienteDetalle.documento);
                 // Fallback: usar datos limitados del clienteDetalle
