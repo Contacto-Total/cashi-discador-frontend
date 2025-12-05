@@ -148,6 +148,8 @@ export interface RegisterPaymentRequest {
  */
 export interface PaymentScheduleRequest {
   idCliente: number;
+  nombreCliente?: string;
+  documentoCliente?: string;
   idAgente: number;
   idTenant: number;
   idCartera?: number;

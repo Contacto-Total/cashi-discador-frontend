@@ -3167,6 +3167,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
+        nombreCliente: this.customerData().nombre_completo,
+        documentoCliente: this.customerData().numero_documento,
         idAgente: currentUserSchedule?.id || 1,
         idTenant: this.selectedTenantId!,
         idCartera: this.selectedPortfolioId || 1,
