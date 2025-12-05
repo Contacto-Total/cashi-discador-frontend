@@ -371,8 +371,22 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       totalCuotas: recordatorio.totalCuotas
     }));
 
-    // Iniciar la llamada usando el SIP service
-    this.sipService.call(telefono);
+    // Cambiar estado a EN_LLAMADA antes de iniciar la llamada
+    this.agentStatusService.changeStatus(idAgente, {
+      estado: 'EN_LLAMADA',
+      notas: `Recordatorio cuota ${recordatorio.numeroCuota} - ${recordatorio.nombreCliente}`
+    }).subscribe({
+      next: () => {
+        console.log('📞 Estado cambiado a EN_LLAMADA');
+        // Iniciar la llamada usando el SIP service
+        this.sipService.call(telefono);
+      },
+      error: (err) => {
+        console.error('❌ Error cambiando estado a EN_LLAMADA:', err);
+        // Intentar llamar de todos modos
+        this.sipService.call(telefono);
+      }
+    });
   }
 
 
