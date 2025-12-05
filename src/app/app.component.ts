@@ -13,6 +13,8 @@ import { AgentStatusService } from './core/services/agent-status.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
 import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
+import { RecordatoriosModalComponent } from './shared/components/recordatorios-modal/recordatorios-modal.component';
+import { RecordatoriosService } from './core/services/recordatorios.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -62,6 +64,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private inactivityService: InactivityService,
     private sessionConfig: SessionConfigService,
     private agentStatusService: AgentStatusService,
+    private recordatoriosService: RecordatoriosService,
     private dialog: MatDialog,
     private router: Router
   ) {}
@@ -291,9 +294,46 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       });
 
       console.log('📞 Escuchando llamadas entrantes...');
+
+      // Verificar recordatorios pendientes después de conectar
+      this.verificarRecordatoriosPendientes(user);
     } catch (error) {
       console.error('❌ Error al conectar a FreeSWITCH:', error);
     }
+  }
+
+  /**
+   * Verifica si el agente tiene recordatorios pendientes y muestra el modal
+   */
+  private verificarRecordatoriosPendientes(user: any): void {
+    if (!user?.id) return;
+
+    // Solo mostrar para agentes (no admin/supervisor)
+    if (user.role !== 'AGENT') return;
+
+    // Pequeño delay para no saturar al usuario al entrar
+    setTimeout(() => {
+      this.recordatoriosService.getMisRecordatoriosHoy(user.id).subscribe({
+        next: (recordatorios) => {
+          const pendientes = recordatorios.filter(r => !r.yaLlamoHoy).length;
+
+          if (pendientes > 0) {
+            console.log(`🔔 Mostrando modal de recordatorios: ${pendientes} pendientes`);
+            this.dialog.open(RecordatoriosModalComponent, {
+              width: '420px',
+              data: {
+                cantidad: recordatorios.length,
+                pendientes: pendientes
+              },
+              panelClass: 'recordatorios-modal'
+            });
+          }
+        },
+        error: (err) => {
+          console.error('Error verificando recordatorios:', err);
+        }
+      });
+    }, 2000); // Esperar 2 segundos después de conectar
   }
 
 
