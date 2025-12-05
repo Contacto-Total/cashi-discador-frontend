@@ -3162,9 +3162,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Determinar si es una llamada activa o gestión manual
       const isActiveCallSchedule = this.callActive() || !!this.callStartTime;
 
+      // Obtener el ID del agente actual
+      const currentUserSchedule = this.authService.getCurrentUser();
+
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
-        idAgente: 1, // TODO: obtener del usuario logueado
+        idAgente: currentUserSchedule?.id || 1,
         idTenant: this.selectedTenantId!,
         idCartera: this.selectedPortfolioId || 1,
         idSubcartera: 1,
