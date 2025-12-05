@@ -398,6 +398,16 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Notificar al backend que el agente se desconecta (para actualizar monitoreo)
     if (currentUser?.id) {
+      // Detener el dialer de recordatorios si estaba activo
+      try {
+        this.recordatoriosService.detenerDialer(currentUser.id).subscribe({
+          next: () => console.log('[LOGOUT] Dialer de recordatorios detenido'),
+          error: () => {} // Ignorar errores si no había dialer activo
+        });
+      } catch (e) {
+        // Ignorar
+      }
+
       try {
         this.agentStatusService.disconnectAgent(currentUser.id).subscribe({
           next: () => console.log('[LOGOUT] Estado de agente eliminado en backend'),
@@ -428,6 +438,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       console.log('[LOGOUT] SIP desregistrado');
     } catch (e) {
       console.error('[LOGOUT] Error desregistrando SIP:', e);
+    }
+
+    // Limpiar sessionStorage (recordatorios en curso, etc.)
+    try {
+      sessionStorage.removeItem('recordatorioEnCurso');
+      console.log('[LOGOUT] SessionStorage limpiado');
+    } catch (e) {
+      // Ignorar
     }
 
     // Siempre ejecutar el logout del auth service (limpia tokens y navega a login)
