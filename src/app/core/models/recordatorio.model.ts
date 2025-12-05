@@ -47,3 +47,40 @@ export interface EstadisticasRecordatorios {
   noContestadas: number;
   pendientesHoy: number;
 }
+
+// ==================== DIALER INTERFACES ====================
+
+export interface EstadoDiscadoRecordatorios {
+  idAgente: number;
+  activo: boolean;
+  totalRecordatorios: number;
+  recordatoriosCompletados: number;
+  recordatoriosPendientes: number;
+  recordatorioActual: RecordatorioPromesa | null;
+  fechaInicio: string | null;
+  fechaFin: string | null;
+}
+
+export interface IniciarDialerResponse {
+  success: boolean;
+  mensaje: string;
+  estado: EstadoDiscadoRecordatorios;
+}
+
+export interface SiguienteRecordatorioResponse {
+  recordatorio: RecordatorioPromesa | null;
+  estado: EstadoDiscadoRecordatorios | null;
+  hayMas: boolean;
+}
+
+export interface CompletarRecordatorioResponse {
+  success: boolean;
+  mensaje: string;
+  estado: EstadoDiscadoRecordatorios;
+  terminado: boolean;
+}
+
+export interface EstadoDialerResponse {
+  activo: boolean;
+  estado: EstadoDiscadoRecordatorios | null;
+}

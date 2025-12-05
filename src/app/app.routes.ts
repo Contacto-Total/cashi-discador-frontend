@@ -234,15 +234,6 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
 
-  // ========================================
-  // RECORDATORIOS DE PROMESAS
-  // ========================================
-  {
-    path: 'recordatorios',
-    loadComponent: () => import('./features/recordatorios/recordatorios.component').then(m => m.RecordatoriosComponent),
-    canActivate: [authGuard]
-  },
-
   {
     path: '',
     redirectTo: '/login',

@@ -34,6 +34,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { StatusAlarmClockComponent } from '../../shared/components/status-alarm-clock/status-alarm-clock.component';
 import { AutorizacionService, SupervisorEnLinea, CrearSolicitudRequest, SolicitudAutorizacion } from '../../core/services/autorizacion.service';
 import { SelectSupervisorModalComponent } from '../../shared/components/select-supervisor-modal/select-supervisor-modal.component';
+import { RecordatoriosService } from '../../core/services/recordatorios.service';
+import { MatDialog } from '@angular/material/dialog';
+import { RecordatoriosModalComponent } from '../../shared/components/recordatorios-modal/recordatorios-modal.component';
 
 @Component({
   selector: 'app-collection-management',
@@ -1345,7 +1348,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private agentService: AgentService,
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
-    private autorizacionService: AutorizacionService
+    private autorizacionService: AutorizacionService,
+    private recordatoriosService: RecordatoriosService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit() {
@@ -3400,13 +3405,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.activeTab.set('historial');
 
-    // Cambiar estado a DISPONIBLE y volver al dashboard
-    console.log('✅ Gestión guardada, cambiando estado a DISPONIBLE...');
-
     // Desbloquear llamadas entrantes - tipificación completada
     this.isTipifying.set(false);
     this.sipService.blockIncomingCallsMode(false);
     console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+
+    // Verificar si estamos en modo recordatorio dialer
+    const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
+    if (recordatorioEnCurso) {
+      console.log('🔔 Modo recordatorio dialer activo, procesando siguiente...');
+      this.procesarSiguienteRecordatorio(JSON.parse(recordatorioEnCurso));
+      return;
+    }
+
+    // Flujo normal: cambiar estado a DISPONIBLE y volver al dashboard
+    console.log('✅ Gestión guardada, cambiando estado a DISPONIBLE...');
 
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id || 1; // Fallback a 1 si no se obtiene
@@ -3428,6 +3441,127 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.router.navigate(['/agent-dashboard']);
         }, 2000);
       }
+    });
+  }
+
+  /**
+   * Procesa el siguiente recordatorio después de completar la tipificación
+   */
+  private procesarSiguienteRecordatorio(recordatorioActual: any): void {
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id || recordatorioActual.idAgente;
+
+    // Completar el recordatorio actual en el backend
+    this.recordatoriosService.completarActual(agentId, 'CONTESTADO').subscribe({
+      next: (response) => {
+        console.log('🔔 Recordatorio completado:', response);
+
+        if (response.terminado) {
+          // Ya no hay más recordatorios - mostrar modal de finalización
+          console.log('🔔 Todos los recordatorios completados');
+          sessionStorage.removeItem('recordatorioEnCurso');
+
+          // Mostrar modal de finalización
+          setTimeout(() => {
+            this.showSuccess.set(false);
+            this.mostrarModalRecordatoriosFinalizado(agentId);
+          }, 1000);
+        } else {
+          // Obtener el siguiente recordatorio
+          this.recordatoriosService.obtenerSiguiente(agentId).subscribe({
+            next: (siguienteResp) => {
+              if (siguienteResp.hayMas && siguienteResp.recordatorio) {
+                console.log('🔔 Siguiente recordatorio:', siguienteResp.recordatorio);
+
+                // Guardar el nuevo recordatorio en sesión
+                sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
+                  idCuota: siguienteResp.recordatorio.idCuota,
+                  idAgente: agentId,
+                  idCliente: siguienteResp.recordatorio.idCliente,
+                  nombreCliente: siguienteResp.recordatorio.nombreCliente,
+                  telefono: siguienteResp.recordatorio.telefono,
+                  monto: siguienteResp.recordatorio.monto,
+                  numeroCuota: siguienteResp.recordatorio.numeroCuota,
+                  totalCuotas: siguienteResp.recordatorio.totalCuotas
+                }));
+
+                // Iniciar cuenta regresiva y luego llamar
+                this.showSuccess.set(false);
+                this.mostrarCountdownYLlamar(siguienteResp.recordatorio);
+              } else {
+                // No hay más recordatorios
+                sessionStorage.removeItem('recordatorioEnCurso');
+                this.showSuccess.set(false);
+                this.mostrarModalRecordatoriosFinalizado(agentId);
+              }
+            },
+            error: (err) => {
+              console.error('Error obteniendo siguiente recordatorio:', err);
+              sessionStorage.removeItem('recordatorioEnCurso');
+              this.showSuccess.set(false);
+              this.router.navigate(['/agent-dashboard']);
+            }
+          });
+        }
+      },
+      error: (err) => {
+        console.error('Error completando recordatorio:', err);
+        sessionStorage.removeItem('recordatorioEnCurso');
+        this.showSuccess.set(false);
+        this.router.navigate(['/agent-dashboard']);
+      }
+    });
+  }
+
+  /**
+   * Muestra countdown animado y luego inicia la llamada
+   */
+  private mostrarCountdownYLlamar(recordatorio: any): void {
+    const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
+      width: '450px',
+      disableClose: true,
+      data: {
+        cantidad: 0,
+        pendientes: 1,
+        idAgente: this.authService.getCurrentUser()?.id || 0,
+        // Indicar que es un "siguiente" no un inicio
+        modoSiguiente: true,
+        recordatorio: recordatorio
+      }
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.action === 'call' && result.recordatorio) {
+        // Iniciar la llamada
+        this.sipService.call(result.recordatorio.telefono);
+      } else if (result?.action === 'cancelled') {
+        sessionStorage.removeItem('recordatorioEnCurso');
+        this.router.navigate(['/agent-dashboard']);
+      }
+    });
+  }
+
+  /**
+   * Muestra el modal de recordatorios finalizados
+   */
+  private mostrarModalRecordatoriosFinalizado(agentId: number): void {
+    const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
+      width: '450px',
+      disableClose: true,
+      data: {
+        cantidad: 0,
+        pendientes: 0,
+        idAgente: agentId,
+        modoFinalizado: true
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(() => {
+      // Cambiar estado a disponible y navegar al dashboard
+      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+        next: () => this.router.navigate(['/agent-dashboard']),
+        error: () => this.router.navigate(['/agent-dashboard'])
+      });
     });
   }
 

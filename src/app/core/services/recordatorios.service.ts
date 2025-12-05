@@ -6,7 +6,11 @@ import {
   RecordatorioPromesa,
   RegistrarRecordatorioRequest,
   ResultadoRecordatorio,
-  EstadisticasRecordatorios
+  EstadisticasRecordatorios,
+  IniciarDialerResponse,
+  SiguienteRecordatorioResponse,
+  CompletarRecordatorioResponse,
+  EstadoDialerResponse
 } from '../models/recordatorio.model';
 
 @Injectable({
@@ -55,5 +59,61 @@ export class RecordatoriosService {
    */
   getResultadosPosibles(): Observable<ResultadoRecordatorio[]> {
     return this.http.get<ResultadoRecordatorio[]>(`${this.baseUrl}/resultados-posibles`);
+  }
+
+  // ==================== DIALER METHODS ====================
+
+  /**
+   * Inicia el discado automático de recordatorios
+   */
+  iniciarDialer(idAgente: number): Observable<IniciarDialerResponse> {
+    return this.http.post<IniciarDialerResponse>(`${this.baseUrl}/dialer/iniciar/${idAgente}`, {});
+  }
+
+  /**
+   * Obtiene el siguiente recordatorio de la cola
+   */
+  obtenerSiguiente(idAgente: number): Observable<SiguienteRecordatorioResponse> {
+    return this.http.get<SiguienteRecordatorioResponse>(`${this.baseUrl}/dialer/siguiente/${idAgente}`);
+  }
+
+  /**
+   * Marca el recordatorio actual como completado
+   */
+  completarActual(
+    idAgente: number,
+    resultado?: string,
+    uuidLlamada?: string,
+    observaciones?: string
+  ): Observable<CompletarRecordatorioResponse> {
+    let params = '';
+    const queryParams: string[] = [];
+
+    if (resultado) queryParams.push(`resultado=${resultado}`);
+    if (uuidLlamada) queryParams.push(`uuidLlamada=${uuidLlamada}`);
+    if (observaciones) queryParams.push(`observaciones=${encodeURIComponent(observaciones)}`);
+
+    if (queryParams.length > 0) {
+      params = '?' + queryParams.join('&');
+    }
+
+    return this.http.post<CompletarRecordatorioResponse>(
+      `${this.baseUrl}/dialer/completar/${idAgente}${params}`,
+      {}
+    );
+  }
+
+  /**
+   * Detiene el discado de recordatorios
+   */
+  detenerDialer(idAgente: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/dialer/detener/${idAgente}`);
+  }
+
+  /**
+   * Obtiene el estado actual del dialer
+   */
+  obtenerEstadoDialer(idAgente: number): Observable<EstadoDialerResponse> {
+    return this.http.get<EstadoDialerResponse>(`${this.baseUrl}/dialer/estado/${idAgente}`);
   }
 }

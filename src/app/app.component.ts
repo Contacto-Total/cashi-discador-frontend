@@ -319,13 +319,23 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
           if (pendientes > 0) {
             console.log(`🔔 Mostrando modal de recordatorios: ${pendientes} pendientes`);
-            this.dialog.open(RecordatoriosModalComponent, {
-              width: '420px',
+            const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
+              width: '450px',
+              disableClose: true,
               data: {
                 cantidad: recordatorios.length,
-                pendientes: pendientes
+                pendientes: pendientes,
+                idAgente: user.id
               },
               panelClass: 'recordatorios-modal'
+            });
+
+            // Manejar el resultado del modal
+            dialogRef.afterClosed().subscribe((result) => {
+              if (result?.action === 'call' && result.recordatorio) {
+                console.log('📞 Iniciando llamada de recordatorio:', result.recordatorio);
+                this.iniciarLlamadaRecordatorio(result.recordatorio, user.id);
+              }
             });
           }
         },
@@ -334,6 +344,35 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       });
     }, 2000); // Esperar 2 segundos después de conectar
+  }
+
+  /**
+   * Inicia una llamada de recordatorio de promesa de pago
+   */
+  private iniciarLlamadaRecordatorio(recordatorio: any, idAgente: number): void {
+    const telefono = recordatorio.telefono;
+
+    if (!telefono) {
+      console.error('❌ No hay teléfono para el recordatorio');
+      return;
+    }
+
+    console.log(`📞 Llamando a ${recordatorio.nombreCliente} (${telefono}) para recordatorio de cuota ${recordatorio.numeroCuota}`);
+
+    // Guardar datos del recordatorio para usarlos después de la tipificación
+    sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
+      idCuota: recordatorio.idCuota,
+      idAgente: idAgente,
+      idCliente: recordatorio.idCliente,
+      nombreCliente: recordatorio.nombreCliente,
+      telefono: telefono,
+      monto: recordatorio.monto,
+      numeroCuota: recordatorio.numeroCuota,
+      totalCuotas: recordatorio.totalCuotas
+    }));
+
+    // Iniciar la llamada usando el SIP service
+    this.sipService.call(telefono);
   }
 
 
