@@ -32,7 +32,7 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Gestión Manual</span>
       </a>
 
-      <a routerLink="/recordatorios" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Recordatorios' : ''">
+      <a routerLink="/recordatorios" routerLinkActive="active" class="sidebar-item" *ngIf="isAgent()" [title]="isSidebarCollapsed ? 'Recordatorios' : ''">
         <lucide-angular name="bell-ring" [size]="20"></lucide-angular>
         <span class="item-text" *ngIf="!isSidebarCollapsed">Recordatorios</span>
       </a>
