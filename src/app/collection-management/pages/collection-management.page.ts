@@ -37,6 +37,9 @@ import { SelectSupervisorModalComponent } from '../../shared/components/select-s
 import { RecordatoriosService } from '../../core/services/recordatorios.service';
 import { MatDialog } from '@angular/material/dialog';
 import { RecordatoriosModalComponent } from '../../shared/components/recordatorios-modal/recordatorios-modal.component';
+import { ComprobanteService } from '../services/comprobante.service';
+import { ComprobanteUploadDialogComponent, ComprobanteUploadDialogData, ComprobanteUploadDialogResult } from '../components/comprobante-upload-dialog/comprobante-upload-dialog.component';
+import { ComprobanteUploadResponse } from '../models/comprobante.model';
 
 @Component({
   selector: 'app-collection-management',
@@ -537,6 +540,53 @@ import { RecordatoriosModalComponent } from '../../shared/components/recordatori
                   <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Botón para subir comprobante (opcional) -->
+            @if (isCancellationTypification() && selectedInstallmentForCancellation()) {
+              <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">📎</span>
+                    <div>
+                      <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Comprobante de Pago</h4>
+                      <p class="text-[9px] text-purple-600 dark:text-purple-300">Opcional: Sube una imagen del voucher para validación OCR</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="openComprobanteUploadDialog()"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+                    [class]="uploadedComprobante()
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
+                  >
+                    @if (uploadedComprobante()) {
+                      ✅ Comprobante Subido
+                    } @else {
+                      📤 Subir Comprobante
+                    }
+                  </button>
+                </div>
+                @if (uploadedComprobante()) {
+                  <div class="mt-2 p-2 bg-white dark:bg-gray-800 rounded text-[10px] space-y-1">
+                    <p class="text-gray-600 dark:text-gray-400">{{ uploadedComprobante()?.mensaje }}</p>
+                    @if (uploadedComprobante()?.ocrResult?.monto) {
+                      <p><strong>Monto detectado:</strong> S/ {{ uploadedComprobante()?.ocrResult?.monto | number:'1.2-2' }}</p>
+                    }
+                    @if (uploadedComprobante()?.ocrResult?.banco) {
+                      <p><strong>Banco:</strong> {{ uploadedComprobante()?.ocrResult?.banco }}</p>
+                    }
+                    <button
+                      type="button"
+                      (click)="uploadedComprobante.set(null)"
+                      class="text-red-500 hover:text-red-700 text-[9px] underline"
+                    >
+                      Quitar comprobante
+                    </button>
                   </div>
                 }
               </div>
@@ -1157,6 +1207,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Cuota seleccionada para cancelación/pago
   selectedInstallmentForCancellation = signal<any | null>(null);
 
+  // Comprobante subido para la cancelación (opcional)
+  uploadedComprobante = signal<ComprobanteUploadResponse | null>(null);
+
   // Computed para detectar si la tipificación seleccionada es de tipo Cancelación (código CA)
   isCancellationTypification = computed(() => {
     const selected = this.selectedClassification();
@@ -1350,7 +1403,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private authService: AuthService,
     private autorizacionService: AutorizacionService,
     private recordatoriosService: RecordatoriosService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private comprobanteService: ComprobanteService
   ) {}
 
   ngOnInit() {
@@ -3963,5 +4017,46 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       case CallState.ENDED: return 'FINALIZADA';
       default: return 'DESCONOCIDO';
     }
+  }
+
+  /**
+   * Abre el modal para subir comprobante de pago
+   */
+  openComprobanteUploadDialog(): void {
+    const cuota = this.selectedInstallmentForCancellation();
+    const customer = this.customerData();
+    const currentUser = this.authService.getCurrentUser();
+
+    if (!cuota || !customer) {
+      console.warn('[COMPROBANTE] No hay cuota o cliente seleccionado');
+      return;
+    }
+
+    const dialogData: ComprobanteUploadDialogData = {
+      idCuota: cuota.id,
+      montoEsperado: cuota.monto || 0,
+      documentoEsperado: customer.numero_documento || '',
+      nombreCliente: customer.nombre_completo || '',
+      idAgente: currentUser?.id || 1
+    };
+
+    const dialogRef = this.dialog.open(ComprobanteUploadDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      data: dialogData,
+      disableClose: false
+    });
+
+    dialogRef.afterClosed().subscribe((result: ComprobanteUploadDialogResult) => {
+      if (result?.uploaded && result.response) {
+        console.log('[COMPROBANTE] Comprobante subido:', result.response);
+        this.uploadedComprobante.set(result.response);
+
+        // Mostrar advertencia si no coincide
+        if (!result.validacionesOk) {
+          console.warn('[COMPROBANTE] El comprobante tiene diferencias con los datos esperados');
+        }
+      }
+    });
   }
 }
