@@ -238,22 +238,30 @@ export class PaymentScheduleComponent implements OnInit {
     // Primer día del próximo mes
     const firstDayNextMonth = new Date(currentYear, currentMonth + 1, 1);
 
+    // Helper para formatear sin timezone issues
+    const formatDate = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     switch (restriccion) {
       case 'DENTRO_MES':
         return {
-          minDate: today.toISOString().split('T')[0],
-          maxDate: lastDayOfMonth.toISOString().split('T')[0],
+          minDate: formatDate(today),
+          maxDate: formatDate(lastDayOfMonth),
           message: `Solo fechas dentro del mes actual (hasta ${lastDayOfMonth.toLocaleDateString('es-PE')})`
         };
       case 'FUERA_MES':
         return {
-          minDate: firstDayNextMonth.toISOString().split('T')[0],
+          minDate: formatDate(firstDayNextMonth),
           maxDate: undefined,
           message: `Solo fechas a partir del ${firstDayNextMonth.toLocaleDateString('es-PE')}`
         };
       default:
         return {
-          minDate: today.toISOString().split('T')[0],
+          minDate: formatDate(today),
           maxDate: undefined,
           message: undefined
         };
@@ -284,7 +292,7 @@ export class PaymentScheduleComponent implements OnInit {
   ngOnInit(): void {
     this.installmentOptions = Array.from({ length: this.maxInstallments }, (_, i) => i + 1);
     const today = new Date();
-    this.minDate = today.toISOString().split('T')[0];
+    this.minDate = this.formatDateToYYYYMMDD(today);
   }
 
   isCustomAmount(): boolean {
@@ -393,7 +401,7 @@ export class PaymentScheduleComponent implements OnInit {
       newInstallments.push({
         numeroCuota: i + 1,
         monto: installmentAmount,
-        fechaPago: dueDate.toISOString().split('T')[0]
+        fechaPago: this.formatDateToYYYYMMDD(dueDate)
       });
     }
 
@@ -512,5 +520,16 @@ export class PaymentScheduleComponent implements OnInit {
       style: 'currency',
       currency: 'PEN'
     }).format(value);
+  }
+
+  /**
+   * Formatea una fecha a YYYY-MM-DD sin conversión a UTC
+   * Evita el bug de timezone donde toISOString() resta un día
+   */
+  private formatDateToYYYYMMDD(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
