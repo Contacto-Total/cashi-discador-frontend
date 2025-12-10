@@ -4051,10 +4051,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     };
 
     const dialogRef = this.dialog.open(ComprobanteUploadDialogComponent, {
-      width: '500px',
+      width: '640px',
       maxWidth: '95vw',
       data: dialogData,
-      disableClose: false
+      disableClose: false,
+      backdropClass: 'comprobante-modal-backdrop',
+      panelClass: 'comprobante-modal-panel'
     });
 
     dialogRef.afterClosed().subscribe((result: ComprobanteUploadDialogResult) => {

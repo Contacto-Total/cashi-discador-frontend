@@ -2964,6 +2964,42 @@ body.light-theme {
 }
 
 /* ============================================
+   COMPROBANTE UPLOAD MODAL - Backdrop difuminado
+   ============================================ */
+.comprobante-modal-backdrop {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.comprobante-modal-panel {
+  border-radius: 20px !important;
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out;
+}
+
+.comprobante-modal-panel .mat-mdc-dialog-container {
+  border-radius: 20px !important;
+  background-color: #ffffff !important;
+}
+
+.comprobante-modal-panel .mat-mdc-dialog-surface {
+  border-radius: 20px !important;
+  background-color: #ffffff !important;
+}
+
+/* Soporte para temas oscuros */
+:root.dark .comprobante-modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+}
+
+:root.dark .comprobante-modal-panel .mat-mdc-dialog-container,
+:root.dark .comprobante-modal-panel .mat-mdc-dialog-surface {
+  background-color: #1e293b !important; /* slate-800 */
+}
+
+/* ============================================
    Collection Management - THEME-AWARE STYLING
    ============================================ */
 
