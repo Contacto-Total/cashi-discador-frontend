@@ -47,11 +47,11 @@ export interface ComprobanteUploadDialogResult {
       </div>
     </div>
 
-    <mat-dialog-content class="!min-w-[520px] !max-w-[600px]">
+    <mat-dialog-content class="!overflow-x-hidden" [class]="uploadResponse() ? '!min-w-[800px] !max-w-[900px]' : '!min-w-[500px] !max-w-[560px]'">
       <!-- Info de la cuota compacta -->
       <div class="mb-4 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div class="grid grid-cols-3 gap-3">
-          <div>
+          <div class="min-w-0">
             <p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-semibold mb-0.5">Cliente</p>
             <p class="font-semibold text-sm text-slate-800 dark:text-slate-100 truncate">{{ data.nombreCliente }}</p>
           </div>
@@ -83,12 +83,12 @@ export interface ComprobanteUploadDialogResult {
           <p class="text-slate-500 dark:text-slate-400 text-sm">
             o <span class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">haz clic para seleccionar</span>
           </p>
-          <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">JPG, PNG, WebP • Máximo 5MB</p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">JPG, PNG, WebP - Máximo 5MB</p>
         </div>
         <input #fileInput type="file" accept="image/jpeg,image/png,image/webp" class="hidden" (change)="onFileSelected($event)" />
       }
 
-      <!-- Preview de imagen compacto -->
+      <!-- Preview de imagen antes de subir -->
       @if (selectedFile() && !isUploading() && !uploadResponse()) {
         <div class="relative rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 shadow-sm">
           <img [src]="previewUrl()" alt="Preview" class="w-full max-h-48 object-contain p-2" />
@@ -97,10 +97,10 @@ export interface ComprobanteUploadDialogResult {
           </button>
           <div class="px-3 py-2 bg-slate-100 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
             <p class="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-              <mat-icon class="!text-sm text-slate-500">insert_drive_file</mat-icon>
-              {{ selectedFile()?.name }}
-              <span class="text-slate-400">•</span>
-              <span class="text-slate-500">{{ formatFileSize(selectedFile()?.size || 0) }}</span>
+              <mat-icon class="!text-sm text-slate-500 dark:text-slate-400">insert_drive_file</mat-icon>
+              <span class="truncate">{{ selectedFile()?.name }}</span>
+              <span class="text-slate-400 dark:text-slate-500 flex-shrink-0">-</span>
+              <span class="text-slate-500 dark:text-slate-400 flex-shrink-0">{{ formatFileSize(selectedFile()?.size || 0) }}</span>
             </p>
           </div>
         </div>
@@ -125,23 +125,25 @@ export interface ComprobanteUploadDialogResult {
         </div>
       }
 
-      <!-- Resultado del OCR compacto -->
+      <!-- Resultado del OCR con imagen a la derecha -->
       @if (uploadResponse()) {
-        <div class="space-y-3">
-          <!-- Mensaje general compacto -->
-          <div class="p-3 rounded-xl flex items-center gap-3" [class]="getResultBgClass()">
-            <div class="p-2 rounded-lg" [class]="getResultIconBgClass()">
-              <mat-icon class="!text-xl">{{ getResultIcon() }}</mat-icon>
+        <div class="flex gap-4">
+          <!-- Columna izquierda: Resultados -->
+          <div class="flex-1 min-w-0 space-y-3">
+            <!-- Mensaje general compacto -->
+            <div class="p-3 rounded-xl flex items-center gap-3" [class]="getResultBgClass()">
+              <div class="p-2 rounded-lg flex-shrink-0" [class]="getResultIconBgClass()">
+                <mat-icon class="!text-xl">{{ getResultIcon() }}</mat-icon>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-sm">{{ getResultTitle() }}</p>
+                <p class="text-xs opacity-80 truncate">{{ uploadResponse()?.mensaje }}</p>
+              </div>
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="font-bold text-sm">{{ getResultTitle() }}</p>
-              <p class="text-xs opacity-80 truncate">{{ uploadResponse()?.mensaje }}</p>
-            </div>
-          </div>
 
-          <!-- Grid de validaciones 3 columnas -->
-          @if (uploadResponse()?.ocrResult?.success) {
-            <div class="grid grid-cols-3 gap-2">
+            <!-- Grid de validaciones 3 columnas -->
+            @if (uploadResponse()?.ocrResult?.success) {
+              <div class="grid grid-cols-3 gap-2">
               <!-- Monto -->
               <div class="p-3 rounded-xl border-2 transition-all" [class]="getValidationCardClass(uploadResponse()?.validacionMonto)">
                 <div class="flex items-center justify-between mb-1">
@@ -154,8 +156,9 @@ export interface ComprobanteUploadDialogResult {
                 </div>
                 <p class="text-lg font-bold text-slate-800 dark:text-slate-100">S/ {{ uploadResponse()?.ocrResult?.monto | number:'1.2-2' }}</p>
                 @if (uploadResponse()?.validacionMonto) {
-                  <p class="text-[10px] mt-1 font-medium" [class]="uploadResponse()?.validacionMonto?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
-                    {{ uploadResponse()?.validacionMonto?.coincide ? '✓ OK' : '⚠ No coincide' }}
+                  <p class="text-[10px] mt-1 font-medium flex items-center gap-0.5" [class]="uploadResponse()?.validacionMonto?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
+                    <mat-icon class="!text-xs">{{ uploadResponse()?.validacionMonto?.coincide ? 'check' : 'priority_high' }}</mat-icon>
+                    {{ uploadResponse()?.validacionMonto?.coincide ? 'OK' : 'No coincide' }}
                   </p>
                 }
               </div>
@@ -172,8 +175,9 @@ export interface ComprobanteUploadDialogResult {
                 </div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{{ uploadResponse()?.ocrResult?.documento || '-' }}</p>
                 @if (uploadResponse()?.validacionDocumento) {
-                  <p class="text-[10px] mt-1 font-medium" [class]="uploadResponse()?.validacionDocumento?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
-                    {{ uploadResponse()?.validacionDocumento?.coincide ? '✓ OK' : '⚠ No coincide' }}
+                  <p class="text-[10px] mt-1 font-medium flex items-center gap-0.5" [class]="uploadResponse()?.validacionDocumento?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
+                    <mat-icon class="!text-xs">{{ uploadResponse()?.validacionDocumento?.coincide ? 'check' : 'priority_high' }}</mat-icon>
+                    {{ uploadResponse()?.validacionDocumento?.coincide ? 'OK' : 'No coincide' }}
                   </p>
                 }
               </div>
@@ -190,8 +194,9 @@ export interface ComprobanteUploadDialogResult {
                 </div>
                 <p class="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{{ uploadResponse()?.ocrResult?.nombre || '-' }}</p>
                 @if (uploadResponse()?.validacionNombre) {
-                  <p class="text-[10px] mt-1 font-medium" [class]="uploadResponse()?.validacionNombre?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
-                    {{ uploadResponse()?.validacionNombre?.coincide ? '✓ OK' : '⚠ No coincide' }}
+                  <p class="text-[10px] mt-1 font-medium flex items-center gap-0.5" [class]="uploadResponse()?.validacionNombre?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
+                    <mat-icon class="!text-xs">{{ uploadResponse()?.validacionNombre?.coincide ? 'check' : 'priority_high' }}</mat-icon>
+                    {{ uploadResponse()?.validacionNombre?.coincide ? 'OK' : 'No coincide' }}
                   </p>
                 }
               </div>
@@ -229,16 +234,47 @@ export interface ComprobanteUploadDialogResult {
             </div>
           }
 
-          <!-- Advertencia compacta -->
-          @if (showWarning()) {
-            <div class="p-3 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl flex items-center gap-3">
-              <mat-icon class="text-amber-600 dark:text-amber-400">warning</mat-icon>
-              <div>
-                <p class="text-amber-800 dark:text-amber-200 font-semibold text-sm">Hay diferencias en la validación</p>
-                <p class="text-amber-700 dark:text-amber-300 text-xs">Verifica visualmente el comprobante.</p>
+            <!-- Advertencia compacta -->
+            @if (showWarning()) {
+              <div class="p-3 bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl flex items-center gap-3">
+                <mat-icon class="text-amber-600 dark:text-amber-400">warning</mat-icon>
+                <div>
+                  <p class="text-amber-800 dark:text-amber-200 font-semibold text-sm">Hay diferencias en la validación</p>
+                  <p class="text-amber-700 dark:text-amber-300 text-xs">Verifica visualmente el comprobante.</p>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Columna derecha: Imagen con zoom -->
+          <div class="w-72 flex-shrink-0">
+            <div class="sticky top-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+              <div class="p-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Comprobante</span>
+                <div class="flex items-center gap-1">
+                  <button mat-icon-button class="!w-7 !h-7" (click)="zoomOut()" [disabled]="zoomLevel() <= 0.5">
+                    <mat-icon class="!text-base text-slate-500 dark:text-slate-400">remove</mat-icon>
+                  </button>
+                  <span class="text-xs text-slate-500 dark:text-slate-400 w-10 text-center">{{ (zoomLevel() * 100) | number:'1.0-0' }}%</span>
+                  <button mat-icon-button class="!w-7 !h-7" (click)="zoomIn()" [disabled]="zoomLevel() >= 3">
+                    <mat-icon class="!text-base text-slate-500 dark:text-slate-400">add</mat-icon>
+                  </button>
+                  <button mat-icon-button class="!w-7 !h-7" (click)="resetZoom()">
+                    <mat-icon class="!text-base text-slate-500 dark:text-slate-400">fit_screen</mat-icon>
+                  </button>
+                </div>
+              </div>
+              <div class="overflow-auto max-h-80 bg-white dark:bg-slate-900"
+                   (wheel)="onWheel($event)"
+                   style="cursor: grab;">
+                <img [src]="previewUrl()"
+                     alt="Comprobante"
+                     class="transition-transform duration-150"
+                     [style.transform]="'scale(' + zoomLevel() + ')'"
+                     [style.transform-origin]="'top left'" />
               </div>
             </div>
-          }
+          </div>
         </div>
       }
 
@@ -288,6 +324,7 @@ export class ComprobanteUploadDialogComponent {
   isUploading = signal(false);
   uploadResponse = signal<ComprobanteUploadResponse | null>(null);
   errorMessage = signal<string>('');
+  zoomLevel = signal<number>(1);
 
   // Computed
   showWarning = computed(() => {
@@ -447,5 +484,31 @@ export class ComprobanteUploadDialogComponent {
     return validation.coincide
       ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-950/30'
       : 'border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-950/30';
+  }
+
+  // Zoom methods
+  zoomIn(): void {
+    if (this.zoomLevel() < 3) {
+      this.zoomLevel.update(z => Math.min(3, z + 0.25));
+    }
+  }
+
+  zoomOut(): void {
+    if (this.zoomLevel() > 0.5) {
+      this.zoomLevel.update(z => Math.max(0.5, z - 0.25));
+    }
+  }
+
+  resetZoom(): void {
+    this.zoomLevel.set(1);
+  }
+
+  onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    if (event.deltaY < 0) {
+      this.zoomIn();
+    } else {
+      this.zoomOut();
+    }
   }
 }
