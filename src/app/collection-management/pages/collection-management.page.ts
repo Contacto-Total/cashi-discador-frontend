@@ -4062,7 +4062,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     };
 
     const dialogRef = this.dialog.open(ComprobanteUploadDialogComponent, {
-      width: '640px',
+      width: '1100px',
       maxWidth: '95vw',
       data: dialogData,
       disableClose: false,
