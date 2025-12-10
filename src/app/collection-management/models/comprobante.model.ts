@@ -9,6 +9,7 @@ export interface OcrResult {
   fecha?: string;
   numeroOperacion?: string;
   banco?: string;
+  nombre?: string;
   textoCompleto?: string;
   tiempoProcesamiento?: number;
   error?: string;
@@ -35,6 +36,7 @@ export interface ComprobanteUploadResponse {
   ocrResult?: OcrResult;
   validacionMonto?: ValidationResult;
   validacionDocumento?: ValidationResult;
+  validacionNombre?: ValidationResult;
   mensaje?: string;
   error?: string;
 }
@@ -46,6 +48,7 @@ export interface ComprobanteUploadRequest {
   idCuota: number;
   montoEsperado?: number;
   documentoEsperado?: string;
+  nombreEsperado?: string;
   idAgente: number;
   idGestion?: number;
   descripcion?: string;

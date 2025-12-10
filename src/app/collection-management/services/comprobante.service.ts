@@ -38,6 +38,9 @@ export class ComprobanteService {
     if (request.documentoEsperado) {
       formData.append('documentoEsperado', request.documentoEsperado);
     }
+    if (request.nombreEsperado) {
+      formData.append('nombreEsperado', request.nombreEsperado);
+    }
     if (request.idGestion !== undefined) {
       formData.append('idGestion', request.idGestion.toString());
     }

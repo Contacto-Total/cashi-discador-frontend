@@ -205,6 +205,28 @@ export interface ComprobanteUploadDialogResult {
               </div>
             </div>
 
+            <!-- Nombre extraído -->
+            @if (uploadResponse()?.ocrResult?.nombre || uploadResponse()?.validacionNombre) {
+              <div class="p-5 rounded-2xl border-2 transition-all" [class]="getValidationCardClass(uploadResponse()?.validacionNombre)">
+                <div class="flex items-center justify-between mb-3">
+                  <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Nombre extraído</span>
+                  @if (uploadResponse()?.validacionNombre) {
+                    <mat-icon class="!text-xl" [class]="uploadResponse()?.validacionNombre?.coincide ? 'text-green-500' : 'text-amber-500'">
+                      {{ uploadResponse()?.validacionNombre?.coincide ? 'check_circle' : 'warning' }}
+                    </mat-icon>
+                  }
+                </div>
+                <p class="text-xl font-bold text-slate-800 dark:text-slate-100">
+                  {{ uploadResponse()?.ocrResult?.nombre || 'No detectado' }}
+                </p>
+                @if (uploadResponse()?.validacionNombre) {
+                  <p class="text-xs mt-3 font-medium" [class]="uploadResponse()?.validacionNombre?.coincide ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'">
+                    {{ uploadResponse()?.validacionNombre?.coincide ? '✓ ' + uploadResponse()?.validacionNombre?.mensaje : uploadResponse()?.validacionNombre?.mensaje }}
+                  </p>
+                }
+              </div>
+            }
+
             <!-- Info adicional del OCR mejorada -->
             @if (uploadResponse()?.ocrResult?.banco || uploadResponse()?.ocrResult?.numeroOperacion || uploadResponse()?.ocrResult?.fecha) {
               <div class="p-5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
@@ -331,7 +353,8 @@ export class ComprobanteUploadDialogComponent {
     if (!response) return false;
     return (
       (response.validacionMonto && !response.validacionMonto.coincide) ||
-      (response.validacionDocumento && !response.validacionDocumento.coincide)
+      (response.validacionDocumento && !response.validacionDocumento.coincide) ||
+      (response.validacionNombre && !response.validacionNombre.coincide)
     );
   });
 
@@ -405,6 +428,7 @@ export class ComprobanteUploadDialogComponent {
       idCuota: this.data.idCuota,
       montoEsperado: this.data.montoEsperado,
       documentoEsperado: this.data.documentoEsperado,
+      nombreEsperado: this.data.nombreCliente,
       idAgente: this.data.idAgente
     }).subscribe({
       next: (response) => {
