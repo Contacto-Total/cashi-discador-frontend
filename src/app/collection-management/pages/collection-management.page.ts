@@ -413,7 +413,7 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                           <div class="flex items-center justify-between text-[10px] bg-gray-50 dark:bg-gray-900 p-1.5 rounded">
                             <div class="flex items-center gap-2">
                               <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
-                              <span class="text-gray-500 dark:text-gray-400">Vence: {{ installment.dueDate }}</span>
+                              <span class="text-gray-500 dark:text-gray-400">Vence: {{ formatDate(installment.dueDate) }}</span>
                             </div>
                             <span class="font-bold text-purple-700 dark:text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
                           </div>
@@ -3751,12 +3751,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Formatea una fecha para mostrar en la UI
+   * Usa parseDateLocal para fechas string YYYY-MM-DD para evitar bug de timezone
    */
   formatDate(dateValue: string | Date): string {
     if (!dateValue) return '-';
 
     try {
-      const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+      let date: Date;
+      if (typeof dateValue === 'string') {
+        // Si es formato YYYY-MM-DD, usar parseDateLocal para evitar bug de timezone
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+          date = this.parseDateLocal(dateValue);
+        } else {
+          date = new Date(dateValue);
+        }
+      } else {
+        date = dateValue;
+      }
       return date.toLocaleDateString('es-PE', {
         day: '2-digit',
         month: '2-digit',
