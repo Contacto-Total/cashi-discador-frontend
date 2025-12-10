@@ -47,7 +47,7 @@ export interface ComprobanteUploadDialogResult {
       </div>
     </div>
 
-    <mat-dialog-content class="!overflow-x-hidden" [class]="uploadResponse() ? '!min-w-[800px] !max-w-[900px]' : '!min-w-[500px] !max-w-[560px]'">
+    <mat-dialog-content class="!overflow-x-hidden !overflow-y-auto" [class]="uploadResponse() ? '!w-[950px] !max-w-[95vw]' : '!w-[500px] !max-w-[90vw]'">
       <!-- Info de la cuota compacta -->
       <div class="mb-4 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
         <div class="grid grid-cols-3 gap-3">
