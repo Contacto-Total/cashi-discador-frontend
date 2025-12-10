@@ -16,7 +16,7 @@ import {
 })
 export class ComprobanteService {
   private http = inject(HttpClient);
-  private baseUrl = `${environment.apiUrl}/api/v2/comprobantes`;
+  private baseUrl = `${environment.apiUrl}/v2/comprobantes`;
 
   /**
    * Sube un comprobante de pago y lo valida con OCR
