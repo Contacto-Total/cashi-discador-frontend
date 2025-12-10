@@ -1237,8 +1237,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             // Validar que la fecha de pago no haya pasado
             const fechaPago = cuota.dueDate || cuota.fechaPago;
             if (fechaPago) {
-              const fechaPagoDate = new Date(fechaPago);
-              fechaPagoDate.setHours(0, 0, 0, 0);
+              // Usar parseDateLocal para evitar bug de timezone
+              const fechaPagoDate = this.parseDateLocal(fechaPago);
               // Solo incluir si la fecha de pago es hoy o futura
               if (fechaPagoDate >= today) {
                 allPending.push({
@@ -1277,8 +1277,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           } else if (estado === 'PENDIENTE') {
             const fechaPago = cuota.dueDate || cuota.fechaPago;
             if (fechaPago) {
-              const fechaPagoDate = new Date(fechaPago);
-              fechaPagoDate.setHours(0, 0, 0, 0);
+              // Usar parseDateLocal para evitar bug de timezone
+              const fechaPagoDate = this.parseDateLocal(fechaPago);
               // Si la fecha de pago ya pasó, está vencida
               if (fechaPagoDate < today) {
                 overdue.push({
@@ -2963,6 +2963,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       style: 'currency',
       currency: 'PEN'
     }).format(value);
+  }
+
+  /**
+   * Parsea una fecha string (YYYY-MM-DD) a Date en timezone local.
+   * Evita el bug de timezone donde new Date("YYYY-MM-DD") interpreta como UTC.
+   */
+  private parseDateLocal(dateString: string): Date {
+    if (!dateString) return new Date();
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day);
   }
 
   /**
