@@ -872,7 +872,7 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
 
     this.comprobanteService.uploadComprobante(file, {
       idCuota: cuota.id,
-      montoEsperado: cuota.monto,
+      montoEsperado: this.getSaldoPendiente(cuota),
       documentoEsperado: this.data.documentoCliente,
       nombreEsperado: this.data.nombreCliente,
       idAgente: this.data.idAgente
