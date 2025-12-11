@@ -222,6 +222,7 @@ export class PaymentScheduleComponent implements OnInit {
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
   private _isCustomAmount = signal<boolean>(false);
+  private montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
 
   // Computed
   amountOptions = computed(() => this.availableAmounts());
@@ -304,6 +305,7 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
     this.selectedRestriccion.set(restriccion || 'SIN_RESTRICCION');
+    this.montoBase.set(amount);  // Guardar monto original del campo
     this.generateInstallments();
     this.customAmountSelected.emit(false);
   }
@@ -317,6 +319,7 @@ export class PaymentScheduleComponent implements OnInit {
   enableCustomAmount(): void {
     this._isCustomAmount.set(true);
     this.selectedField.set(undefined);
+    this.montoBase.set(undefined);  // Monto libre no tiene base
     this.customAmountSelected.emit(true);
     if (this.customAmountValue > 0) {
       this.selectedAmount.set(this.customAmountValue);
@@ -509,7 +512,8 @@ export class PaymentScheduleComponent implements OnInit {
       montoTotal: this.selectedAmount(),
       numeroCuotas: this.numberOfInstallments(),
       cuotas: installments,
-      campoMontoOrigen: this.selectedField()
+      campoMontoOrigen: this.selectedField(),
+      montoBase: this.montoBase()  // Monto original del campo (undefined si es monto libre)
     };
 
     this.scheduleChange.emit(config);

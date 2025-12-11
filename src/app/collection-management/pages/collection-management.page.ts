@@ -2373,6 +2373,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       montoTotal: paymentScheduleData.montoTotal,
       numeroCuotas: paymentScheduleData.numeroCuotas,
       campoMontoOrigen: paymentScheduleData.campoMontoOrigen,
+      montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción)
       cuotas: paymentScheduleData.cuotas.map((c: any) => ({
         numeroCuota: c.numeroCuota,
         monto: c.monto,
@@ -3335,6 +3336,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         observaciones: this.managementForm.observaciones,
         metodoContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
+        montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
           numeroCuotas: paymentScheduleData.numeroCuotas,

@@ -196,6 +196,7 @@ export interface PaymentScheduleConfig {
   cuotas: PaymentInstallment[];
   grupoPromesaUuid?: string;
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora)
+  montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
 }
 
 export interface PaymentScheduleRequest {

@@ -159,6 +159,7 @@ export interface PaymentScheduleRequest {
   observaciones?: string;
   metodoContacto?: string;
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
+  montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   schedule: {
     montoTotal: number;
     numeroCuotas: number;

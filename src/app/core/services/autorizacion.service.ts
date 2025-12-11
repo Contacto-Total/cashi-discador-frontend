@@ -59,6 +59,7 @@ export interface SolicitudAutorizacion {
   montoTotal: number;
   numeroCuotas: number;
   campoMontoOrigen?: string;
+  montoBase?: number;  // Monto original del campo (antes de excepción). null = monto libre
   cuotas?: CuotaSolicitud[];
 
   // Observaciones
@@ -91,6 +92,7 @@ export interface CrearSolicitudRequest {
   montoTotal: number;
   numeroCuotas: number;
   campoMontoOrigen?: string;
+  montoBase?: number;  // Monto original del campo (antes de excepción). null = monto libre
   cuotas: CuotaSolicitud[];
   observacionesAgente?: string;
 }
