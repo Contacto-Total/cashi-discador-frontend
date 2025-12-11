@@ -4270,6 +4270,34 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Guardar el comprobante subido
         if (result.ocrResponse) {
           this.uploadedComprobante.set(result.ocrResponse);
+
+          // Auto-llenar monto y fecha con los valores del OCR
+          const ocrResult = result.ocrResponse.ocrResult;
+          if (ocrResult) {
+            // Actualizar monto si fue detectado
+            if (ocrResult.monto && ocrResult.monto > 0) {
+              console.log('[VOUCHER] Actualizando monto con OCR:', ocrResult.monto);
+              this.montoPagoEditable.set(ocrResult.monto);
+            } else {
+              // Si no hay monto OCR, usar el monto de la cuota seleccionada
+              this.montoPagoEditable.set(result.autoSelect.cuotaSeleccionada.monto || 0);
+            }
+
+            // Actualizar fecha si fue detectada
+            if (ocrResult.fecha) {
+              console.log('[VOUCHER] Actualizando fecha con OCR:', ocrResult.fecha);
+              const fechaParsed = this.parseFechaOcr(ocrResult.fecha);
+              if (fechaParsed) {
+                this.fechaPagoEditable.set(fechaParsed);
+              } else {
+                // Si no se pudo parsear, usar fecha de hoy
+                this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
+              }
+            } else {
+              // Si no hay fecha OCR, usar fecha de hoy
+              this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
+            }
+          }
         }
 
         // Mostrar mensaje de éxito
