@@ -285,6 +285,7 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                             <span class="font-bold">C{{ cuota.numeroCuota }}</span>
                             <span class="opacity-70">|</span>
                             @if (tienePagoParcial(cuota)) {
+                              <span class="text-[11px] opacity-60">S/ {{ cuota.monto?.toFixed(2) }}</span>
                               <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
                             } @else {
                               <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
@@ -514,7 +515,14 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                             }
                           </div>
                         </div>
-                        <span class="font-bold text-sm">S/ {{ tienePagoParcial(cuota) ? getSaldoPendienteCuota(cuota).toFixed(2) : (cuota.monto?.toFixed(2) || '0.00') }}</span>
+                        <div class="text-right">
+                          @if (tienePagoParcial(cuota)) {
+                            <span class="text-[11px] opacity-60 mr-1">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                            <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                          } @else {
+                            <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                          }
+                        </div>
                       </label>
                     }
                   </div>
