@@ -4181,6 +4181,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         console.log('[COMPROBANTE] Comprobante subido:', result.response);
         this.uploadedComprobante.set(result.response);
 
+        // Actualizar campos editables con los valores detectados por OCR
+        const ocrResult = result.response.ocrResult;
+        if (ocrResult) {
+          // Actualizar monto si fue detectado
+          if (ocrResult.monto && ocrResult.monto > 0) {
+            console.log('[COMPROBANTE] Actualizando monto con OCR:', ocrResult.monto);
+            this.montoPagoEditable.set(ocrResult.monto);
+          }
+
+          // Actualizar fecha si fue detectada (formato esperado: YYYY-MM-DD o similar)
+          if (ocrResult.fecha) {
+            console.log('[COMPROBANTE] Actualizando fecha con OCR:', ocrResult.fecha);
+            // Intentar parsear la fecha del OCR
+            const fechaOcr = this.parseFechaOcr(ocrResult.fecha);
+            if (fechaOcr) {
+              this.fechaPagoEditable.set(fechaOcr);
+            }
+          }
+        }
+
         // Mostrar advertencia si no coincide
         if (!result.validacionesOk) {
           console.warn('[COMPROBANTE] El comprobante tiene diferencias con los datos esperados');
@@ -4349,5 +4369,42 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   onFechaPagoChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.fechaPagoEditable.set(input.value);
+  }
+
+  /**
+   * Parsea la fecha del OCR a formato YYYY-MM-DD
+   * Soporta formatos comunes: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, DD/MM/YY
+   */
+  private parseFechaOcr(fechaStr: string): string | null {
+    if (!fechaStr) return null;
+
+    // Limpiar espacios
+    fechaStr = fechaStr.trim();
+
+    // Si ya está en formato YYYY-MM-DD, devolverlo
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+      return fechaStr;
+    }
+
+    // Formato DD/MM/YYYY o DD-MM-YYYY
+    let match = fechaStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (match) {
+      const day = match[1].padStart(2, '0');
+      const month = match[2].padStart(2, '0');
+      const year = match[3];
+      return `${year}-${month}-${day}`;
+    }
+
+    // Formato DD/MM/YY
+    match = fechaStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+    if (match) {
+      const day = match[1].padStart(2, '0');
+      const month = match[2].padStart(2, '0');
+      const year = parseInt(match[3]) > 50 ? `19${match[3]}` : `20${match[3]}`;
+      return `${year}-${month}-${day}`;
+    }
+
+    console.warn('[COMPROBANTE] No se pudo parsear la fecha OCR:', fechaStr);
+    return null;
   }
 }
