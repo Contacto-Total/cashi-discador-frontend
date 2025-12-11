@@ -53,7 +53,7 @@ export interface AmountOption {
               type="button"
               [class]="'flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ' +
                 (isCustomAmount()
-                  ? 'border-purple-500 bg-purple-500 dark:bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                  ? 'col-span-2 border-purple-500 bg-purple-500 dark:bg-purple-600 text-white shadow-lg shadow-purple-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-600')"
               (click)="enableCustomAmount()"
             >
@@ -61,7 +61,7 @@ export interface AmountOption {
               @if (isCustomAmount()) {
                 <input
                   type="number"
-                  class="w-full mt-1 px-2 py-1 border border-white/30 rounded text-center text-sm font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white"
+                  class="w-full mt-1 px-3 py-1.5 border border-white/30 rounded text-center text-base font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white min-w-[120px]"
                   [(ngModel)]="customAmountValue"
                   (ngModelChange)="onCustomAmountChange($event)"
                   (click)="$event.stopPropagation()"
