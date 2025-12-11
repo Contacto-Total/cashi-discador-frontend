@@ -4162,7 +4162,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Auto-selecciona la clasificación jerárquica por códigos
+   * Auto-selecciona la clasificación jerárquica por códigos o labels
    */
   private autoSelectClassification(categoriaCode: string, detalleCode: string): void {
     const levels = this.hierarchyLevels();
@@ -4171,27 +4171,45 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Buscar la categoría (nivel 0) por código
-    const categoria = levels[0]?.find((opt: any) => opt.codigo === categoriaCode);
+    console.log('[VOUCHER] Niveles disponibles:', levels);
+    console.log('[VOUCHER] Buscando categoría:', categoriaCode, 'y detalle:', detalleCode);
+
+    // Buscar la categoría (nivel 0) por código o por label que contenga "CONTACTO DIRECTO"
+    const categoria = levels[0]?.find((opt: any) =>
+      opt.codigo === categoriaCode ||
+      opt.codigo?.toUpperCase() === categoriaCode ||
+      opt.label?.toUpperCase().includes('CONTACTO DIRECTO') ||
+      opt.label?.toUpperCase().includes('CONTACTO_DIRECTO')
+    );
+
     if (categoria) {
       this.onClassificationLevelChange(0, categoria.id);
-      console.log('[VOUCHER] Categoría seleccionada:', categoria.label);
+      console.log('[VOUCHER] Categoría seleccionada:', categoria.label, '(id:', categoria.id, ')');
 
       // Esperar a que se carguen los detalles y seleccionar
       setTimeout(() => {
         const updatedLevels = this.hierarchyLevels();
+        console.log('[VOUCHER] Niveles actualizados:', updatedLevels);
+
         if (updatedLevels && updatedLevels.length > 1) {
-          const detalle = updatedLevels[1]?.find((opt: any) => opt.codigo === detalleCode);
+          // Buscar detalle por código o por label que contenga "CANCELACION"
+          const detalle = updatedLevels[1]?.find((opt: any) =>
+            opt.codigo === detalleCode ||
+            opt.codigo?.toUpperCase() === detalleCode ||
+            opt.label?.toUpperCase().includes('CANCELACION') ||
+            opt.label?.toUpperCase().includes('CANCELACIÓN')
+          );
+
           if (detalle) {
             this.onClassificationLevelChange(1, detalle.id);
-            console.log('[VOUCHER] Detalle seleccionado:', detalle.label);
+            console.log('[VOUCHER] Detalle seleccionado:', detalle.label, '(id:', detalle.id, ')');
           } else {
-            console.warn('[VOUCHER] No se encontró detalle con código:', detalleCode);
+            console.warn('[VOUCHER] No se encontró detalle. Opciones disponibles:', updatedLevels[1]);
           }
         }
-      }, 100);
+      }, 200);
     } else {
-      console.warn('[VOUCHER] No se encontró categoría con código:', categoriaCode);
+      console.warn('[VOUCHER] No se encontró categoría. Opciones disponibles:', levels[0]);
     }
   }
 }
