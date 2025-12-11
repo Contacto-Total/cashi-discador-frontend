@@ -284,7 +284,12 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                           <div class="flex items-center gap-2 text-xs bg-white/20 rounded-lg px-3 py-2">
                             <span class="font-bold">C{{ cuota.numeroCuota }}</span>
                             <span class="opacity-70">|</span>
-                            <span class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            @if (tienePagoParcial(cuota)) {
+                              <span class="opacity-50 line-through text-[10px]">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-semibold">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                            } @else {
+                              <span class="font-semibold">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            }
                             <span class="opacity-70">|</span>
                             <span class="font-medium flex items-center gap-1">
                               <lucide-angular name="calendar" [size]="12"></lucide-angular>
@@ -292,6 +297,8 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                             </span>
                             @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
                               <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
+                            } @else if (cuota.status === 'PARCIAL') {
+                              <span class="bg-amber-500 text-[10px] px-1.5 py-0.5 rounded font-semibold">Parcial</span>
                             } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
                               <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
@@ -503,9 +510,19 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                             <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
                               Vence: {{ formatDate(cuota.dueDate) }}
                             </span>
+                            @if (tienePagoParcial(cuota)) {
+                              <span class="text-[9px] ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-green-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                            }
                           </div>
                         </div>
-                        <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                        <div class="text-right">
+                          @if (tienePagoParcial(cuota)) {
+                            <span class="text-[10px] line-through opacity-50 mr-1">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                            <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                          } @else {
+                            <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                          }
+                        </div>
                       </label>
                     }
                   </div>
@@ -576,7 +593,12 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                           />
                         </div>
                         <p class="text-[9px] text-green-600 dark:text-green-400 mt-0.5">
-                          Cuota: S/ {{ selectedInstallmentForCancellation()?.monto?.toFixed(2) }}
+                          @if (tienePagoParcial(selectedInstallmentForCancellation())) {
+                            Pendiente: S/ {{ getSaldoPendienteCuota(selectedInstallmentForCancellation()).toFixed(2) }}
+                            <span class="opacity-50">(Total: S/ {{ selectedInstallmentForCancellation()?.monto?.toFixed(2) }})</span>
+                          } @else {
+                            Cuota: S/ {{ selectedInstallmentForCancellation()?.monto?.toFixed(2) }}
+                          }
                         </p>
                       </div>
                       <!-- Fecha del pago -->
@@ -3883,6 +3905,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     } catch {
       return String(dateValue);
     }
+  }
+
+  /**
+   * Calcula el saldo pendiente de una cuota
+   * saldoPendiente = monto - montoPagadoReal
+   */
+  getSaldoPendienteCuota(cuota: any): number {
+    const pagado = cuota?.montoPagadoReal || 0;
+    return Math.max(0, (cuota?.monto || 0) - pagado);
+  }
+
+  /**
+   * Verifica si una cuota tiene pago parcial
+   */
+  tienePagoParcial(cuota: any): boolean {
+    return (cuota?.montoPagadoReal || 0) > 0;
   }
 
   /**
