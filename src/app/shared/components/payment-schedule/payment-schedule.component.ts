@@ -75,6 +75,32 @@ export interface AmountOption {
             </button>
           }
         </div>
+
+        <!-- Selector de campo base para "Otro monto" -->
+        @if (isCustomAmount() && customAmountValue > 0) {
+          <div class="mt-3 flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <lucide-angular name="link" [size]="16" class="text-purple-500 flex-shrink-0"></lucide-angular>
+            <span class="text-xs text-purple-700 dark:text-purple-300">Campo base:</span>
+            <select
+              class="flex-1 px-2 py-1.5 text-sm border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              [ngModel]="selectedBaseField()"
+              (ngModelChange)="onBaseFieldChange($event)"
+            >
+              <option value="">Ninguno (monto libre)</option>
+              @for (option of regularAmountOptions(); track option.field) {
+                <option [value]="option.field">{{ option.label }} ({{ formatCurrency(option.value) }})</option>
+              }
+            </select>
+            @if (selectedBaseField() && getDiscountInfo().hasDiscount) {
+              <span class="text-xs font-medium px-2 py-1 rounded-full"
+                [class]="getDiscountInfo().isDiscount
+                  ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+                  : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'">
+                {{ getDiscountInfo().isDiscount ? '-' : '+' }}{{ getDiscountInfo().percentage }}%
+              </span>
+            }
+          </div>
+        }
       </div>
 
       <!-- Selector de Cuotas -->
@@ -223,6 +249,7 @@ export class PaymentScheduleComponent implements OnInit {
   customAmountValue: number = 0;
   private _isCustomAmount = signal<boolean>(false);
   private montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
+  selectedBaseField = signal<string>('');  // Campo base seleccionado para "Otro monto"
 
   // Computed
   amountOptions = computed(() => this.availableAmounts());
@@ -320,6 +347,7 @@ export class PaymentScheduleComponent implements OnInit {
     this._isCustomAmount.set(true);
     this.selectedField.set(undefined);
     this.montoBase.set(undefined);  // Monto libre no tiene base
+    this.selectedBaseField.set('');  // Resetear campo base
     this.customAmountSelected.emit(true);
     if (this.customAmountValue > 0) {
       this.selectedAmount.set(this.customAmountValue);
@@ -330,7 +358,57 @@ export class PaymentScheduleComponent implements OnInit {
   onCustomAmountChange(value: number): void {
     this.customAmountValue = value;
     this.selectedAmount.set(value);
+    // Re-calcular montoBase si hay campo base seleccionado
+    if (this.selectedBaseField()) {
+      const option = this.availableAmounts().find(o => o.field === this.selectedBaseField());
+      if (option) {
+        this.montoBase.set(option.value);
+        this.selectedField.set(option.field);
+      }
+    }
     this.generateInstallments();
+  }
+
+  /**
+   * Cuando el usuario selecciona un campo base para "Otro monto"
+   */
+  onBaseFieldChange(fieldValue: string): void {
+    this.selectedBaseField.set(fieldValue);
+
+    if (fieldValue) {
+      // Buscar la opción seleccionada
+      const option = this.availableAmounts().find(o => o.field === fieldValue);
+      if (option) {
+        this.montoBase.set(option.value);
+        this.selectedField.set(option.field);
+      }
+    } else {
+      // "Ninguno" - monto libre
+      this.montoBase.set(undefined);
+      this.selectedField.set(undefined);
+    }
+    this.emitChange();
+  }
+
+  /**
+   * Calcula info del descuento para mostrar en el UI
+   */
+  getDiscountInfo(): { hasDiscount: boolean; isDiscount: boolean; percentage: number } {
+    const base = this.montoBase();
+    const actual = this.customAmountValue;
+
+    if (!base || !actual || base === actual) {
+      return { hasDiscount: false, isDiscount: false, percentage: 0 };
+    }
+
+    const diff = base - actual;
+    const percentage = Math.abs(Math.round((diff / base) * 100));
+
+    return {
+      hasDiscount: true,
+      isDiscount: diff > 0,  // true = descuento, false = exceso
+      percentage
+    };
   }
 
   setInstallments(num: number): void {
