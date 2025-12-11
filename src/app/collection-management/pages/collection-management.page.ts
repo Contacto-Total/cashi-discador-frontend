@@ -4165,17 +4165,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Auto-selecciona la clasificación jerárquica por códigos o labels
    */
   private autoSelectClassification(categoriaCode: string, detalleCode: string): void {
-    const levels = this.hierarchyLevels();
-    if (!levels || levels.length < 2) {
-      console.warn('[VOUCHER] No hay niveles de clasificación disponibles');
+    // Usar directamente managementClassifications en lugar de hierarchyLevels
+    // porque hierarchyLevels depende de selecciones previas
+    const allClassifications: any[] = this.managementClassifications() as any[];
+
+    if (!allClassifications || allClassifications.length === 0) {
+      console.warn('[VOUCHER] No hay clasificaciones disponibles');
       return;
     }
 
-    console.log('[VOUCHER] Niveles disponibles:', levels);
+    // Obtener los roots (nivel 1)
+    const roots = allClassifications.filter(c => c.hierarchyLevel === 1 || !c.parentId);
+
+    console.log('[VOUCHER] Total clasificaciones:', allClassifications.length);
+    console.log('[VOUCHER] Roots disponibles:', roots.map(r => `${r.codigo}: ${r.label}`));
     console.log('[VOUCHER] Buscando categoría:', categoriaCode, 'y detalle:', detalleCode);
 
     // Buscar la categoría (nivel 0) por código o por label que contenga "CONTACTO DIRECTO"
-    const categoria = levels[0]?.find((opt: any) =>
+    const categoria = roots.find((opt: any) =>
       opt.codigo === categoriaCode ||
       opt.codigo?.toUpperCase() === categoriaCode ||
       opt.label?.toUpperCase().includes('CONTACTO DIRECTO') ||
@@ -4186,14 +4193,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.onClassificationLevelChange(0, categoria.id);
       console.log('[VOUCHER] Categoría seleccionada:', categoria.label, '(id:', categoria.id, ')');
 
-      // Esperar a que se carguen los detalles y seleccionar
+      // Esperar a que se actualice el signal y buscar los hijos directamente
       setTimeout(() => {
-        const updatedLevels = this.hierarchyLevels();
-        console.log('[VOUCHER] Niveles actualizados:', updatedLevels);
+        // Buscar hijos del padre seleccionado directamente en allClassifications
+        const children = allClassifications.filter((c: any) =>
+          c.parentId && Number(c.parentId) === Number(categoria.id)
+        );
 
-        if (updatedLevels && updatedLevels.length > 1) {
+        console.log('[VOUCHER] Hijos disponibles:', children.map(c => `${c.codigo}: ${c.label}`));
+
+        if (children.length > 0) {
           // Buscar detalle por código o por label que contenga "CANCELACION"
-          const detalle = updatedLevels[1]?.find((opt: any) =>
+          const detalle = children.find((opt: any) =>
             opt.codigo === detalleCode ||
             opt.codigo?.toUpperCase() === detalleCode ||
             opt.label?.toUpperCase().includes('CANCELACION') ||
@@ -4204,12 +4215,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             this.onClassificationLevelChange(1, detalle.id);
             console.log('[VOUCHER] Detalle seleccionado:', detalle.label, '(id:', detalle.id, ')');
           } else {
-            console.warn('[VOUCHER] No se encontró detalle. Opciones disponibles:', updatedLevels[1]);
+            console.warn('[VOUCHER] No se encontró detalle "CANCELACION". Opciones:', children.map(c => c.label));
           }
+        } else {
+          console.warn('[VOUCHER] No se encontraron hijos para categoría:', categoria.id);
         }
-      }, 200);
+      }, 150);
     } else {
-      console.warn('[VOUCHER] No se encontró categoría. Opciones disponibles:', levels[0]);
+      console.warn('[VOUCHER] No se encontró categoría "CONTACTO DIRECTO". Opciones:', roots.map(r => r.label));
     }
   }
 }
