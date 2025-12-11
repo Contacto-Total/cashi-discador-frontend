@@ -280,7 +280,8 @@ export class ManagementService {
           dueDate: cuota.fechaPago,
           fechaPago: cuota.fechaPago,
           paidDate: cuota.fechaPagoReal || null,
-          status: cuota.estado || 'PENDIENTE'
+          status: cuota.estado || 'PENDIENTE',
+          montoPagadoReal: cuota.montoPagadoReal || 0
         })),
         paidAmount,
         pendingAmount,

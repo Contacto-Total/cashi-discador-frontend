@@ -22,6 +22,7 @@ export interface CuotaPromesa {
   monto: number;
   dueDate: string;
   status: string;
+  montoPagadoReal?: number;
 }
 
 export interface VoucherPaymentDialogResult {
@@ -101,14 +102,24 @@ export interface VoucherPaymentDialogResult {
                   @for (cuota of cuotasPendientes(); track cuota.numeroCuota) {
                     <div class="installment-chip" [class.active]="cuota.numeroCuota === cuotaMasProxima()?.numeroCuota">
                       <span class="chip-number">C{{ cuota.numeroCuota }}</span>
-                      <span class="chip-amount">S/{{ cuota.monto | number:'1.2-2' }}</span>
+                      @if (cuota.montoPagadoReal && cuota.montoPagadoReal > 0) {
+                        <span class="chip-amount-original">S/{{ cuota.monto | number:'1.2-2' }}</span>
+                        <span class="chip-amount">S/{{ getSaldoPendiente(cuota) | number:'1.2-2' }}</span>
+                      } @else {
+                        <span class="chip-amount">S/{{ cuota.monto | number:'1.2-2' }}</span>
+                      }
                     </div>
                   }
                 </div>
                 <div class="next-installment">
                   <mat-icon>arrow_forward</mat-icon>
                   <span>Próxima cuota:</span>
-                  <strong>C{{ cuotaMasProxima()?.numeroCuota }} - S/{{ cuotaMasProxima()?.monto | number:'1.2-2' }}</strong>
+                  @if (cuotaMasProxima()?.montoPagadoReal && cuotaMasProxima()!.montoPagadoReal! > 0) {
+                    <strong>C{{ cuotaMasProxima()?.numeroCuota }} - S/{{ getSaldoPendiente(cuotaMasProxima()!) | number:'1.2-2' }}</strong>
+                    <span class="partial-badge">Parcial</span>
+                  } @else {
+                    <strong>C{{ cuotaMasProxima()?.numeroCuota }} - S/{{ cuotaMasProxima()?.monto | number:'1.2-2' }}</strong>
+                  }
                   <span class="date-badge">{{ formatDate(cuotaMasProxima()?.dueDate) }}</span>
                 </div>
               </div>
@@ -412,6 +423,19 @@ export interface VoucherPaymentDialogResult {
     .dark-mode .chip-amount { color: #e2e8f0; }
     .installment-chip.active .chip-amount { color: #15803d; }
     .dark-mode .installment-chip.active .chip-amount { color: #86efac; }
+
+    .chip-amount-original { font-size: 11px; color: #94a3b8; text-decoration: line-through; margin-right: 4px; }
+    .dark-mode .chip-amount-original { color: #64748b; }
+    .installment-chip.active .chip-amount-original { color: #86efac; opacity: 0.6; }
+
+    .partial-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 6px;
+      background: #f59e0b;
+      color: white;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
 
     .next-installment {
       display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -935,6 +959,15 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
   getValidationClass(v?: ValidationResult): string {
     if (!v) return 'neutral';
     return v.coincide ? 'success' : 'warning';
+  }
+
+  /**
+   * Calcula el saldo pendiente de una cuota
+   * saldoPendiente = monto - montoPagadoReal
+   */
+  getSaldoPendiente(cuota: CuotaPromesa): number {
+    const pagado = cuota.montoPagadoReal || 0;
+    return Math.max(0, cuota.monto - pagado);
   }
 
   zoomIn(): void { if (this.zoomLevel() < 3) this.zoomLevel.update(z => z + 0.25); }

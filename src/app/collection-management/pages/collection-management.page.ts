@@ -4233,7 +4233,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       numeroCuota: c.numeroCuota,
       monto: c.monto,
       dueDate: c.dueDate,
-      status: c.status
+      status: c.status,
+      montoPagadoReal: c.montoPagadoReal || 0
     }));
 
     const dialogData: VoucherPaymentDialogData = {
