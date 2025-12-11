@@ -91,13 +91,71 @@ export interface AmountOption {
                 <option [value]="option.field">{{ option.label }} ({{ formatCurrency(option.value) }})</option>
               }
             </select>
-            @if (selectedBaseField() && getDiscountInfo().hasDiscount) {
-              <span class="text-xs font-medium px-2 py-1 rounded-full"
-                [class]="getDiscountInfo().isDiscount
-                  ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'
-                  : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'">
-                {{ getDiscountInfo().isDiscount ? '-' : '+' }}{{ getDiscountInfo().percentage }}%
-              </span>
+            @if (selectedBaseField()) {
+              <div class="relative">
+                <!-- Badge clickeable -->
+                <button
+                  type="button"
+                  class="text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-md"
+                  [class]="getDiscountInfo().isDiscount
+                    ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800/50'
+                    : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800/50'"
+                  (click)="togglePercentageEditor($event)"
+                >
+                  {{ getDiscountInfo().isDiscount ? '-' : '+' }}{{ getDiscountInfo().percentage }}%
+                </button>
+
+                <!-- Popover para editar porcentaje -->
+                @if (showPercentageEditor()) {
+                  <!-- Overlay para cerrar al hacer click fuera -->
+                  <div class="fixed inset-0 z-40" (click)="showPercentageEditor.set(false)"></div>
+                  <div class="absolute right-0 top-full mt-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-600 p-3 min-w-[180px]">
+                      <!-- Flecha -->
+                      <div class="absolute -top-2 right-4 w-4 h-4 bg-white dark:bg-slate-800 border-l border-t border-slate-200 dark:border-slate-600 transform rotate-45"></div>
+
+                      <div class="relative">
+                        <label class="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wide font-medium">Ajuste %</label>
+                        <div class="flex items-center gap-2 mt-1.5">
+                          <button
+                            type="button"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                            [class]="isDiscountMode()
+                              ? 'bg-red-500 text-white'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-red-100 dark:hover:bg-red-900/30'"
+                            (click)="setDiscountMode(true)"
+                          >
+                            <lucide-angular name="minus" [size]="14"></lucide-angular>
+                          </button>
+                          <input
+                            type="number"
+                            class="flex-1 w-16 px-2 py-1.5 text-center text-sm font-bold border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            [ngModel]="editablePercentage()"
+                            (ngModelChange)="onPercentageChange($event)"
+                            (click)="$event.stopPropagation()"
+                            min="0"
+                            max="100"
+                            step="1"
+                          >
+                          <button
+                            type="button"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
+                            [class]="!isDiscountMode()
+                              ? 'bg-green-500 text-white'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-green-100 dark:hover:bg-green-900/30'"
+                            (click)="setDiscountMode(false)"
+                          >
+                            <lucide-angular name="plus" [size]="14"></lucide-angular>
+                          </button>
+                        </div>
+                        <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-2 text-center">
+                          Base: {{ formatCurrency(montoBase() || 0) }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
             }
           </div>
         }
@@ -248,8 +306,13 @@ export class PaymentScheduleComponent implements OnInit {
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
   private _isCustomAmount = signal<boolean>(false);
-  private montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
+  montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
   selectedBaseField = signal<string>('');  // Campo base seleccionado para "Otro monto"
+
+  // Signals para editor de porcentaje
+  showPercentageEditor = signal<boolean>(false);
+  editablePercentage = signal<number>(0);
+  isDiscountMode = signal<boolean>(true);  // true = descuento (-), false = aumento (+)
 
   // Computed
   amountOptions = computed(() => this.availableAmounts());
@@ -409,6 +472,61 @@ export class PaymentScheduleComponent implements OnInit {
       isDiscount: diff > 0,  // true = descuento, false = exceso
       percentage
     };
+  }
+
+  /**
+   * Abre/cierra el editor de porcentaje
+   */
+  togglePercentageEditor(event: Event): void {
+    event.stopPropagation();
+    const isOpen = !this.showPercentageEditor();
+    this.showPercentageEditor.set(isOpen);
+
+    if (isOpen) {
+      // Sincronizar valores al abrir
+      const info = this.getDiscountInfo();
+      this.editablePercentage.set(info.percentage);
+      this.isDiscountMode.set(info.isDiscount);
+    }
+  }
+
+  /**
+   * Cambia entre modo descuento (-) y aumento (+)
+   */
+  setDiscountMode(isDiscount: boolean): void {
+    this.isDiscountMode.set(isDiscount);
+    // Recalcular monto con el nuevo modo
+    this.applyPercentageToAmount(this.editablePercentage());
+  }
+
+  /**
+   * Cuando el usuario cambia el porcentaje manualmente
+   */
+  onPercentageChange(percentage: number): void {
+    this.editablePercentage.set(percentage);
+    this.applyPercentageToAmount(percentage);
+  }
+
+  /**
+   * Aplica el porcentaje al monto base y actualiza customAmountValue
+   */
+  private applyPercentageToAmount(percentage: number): void {
+    const base = this.montoBase();
+    if (!base) return;
+
+    let newAmount: number;
+    if (this.isDiscountMode()) {
+      // Descuento: restar porcentaje del base
+      newAmount = base * (1 - percentage / 100);
+    } else {
+      // Aumento: sumar porcentaje al base
+      newAmount = base * (1 + percentage / 100);
+    }
+
+    // Redondear a 2 decimales
+    this.customAmountValue = Math.round(newAmount * 100) / 100;
+    this.selectedAmount.set(this.customAmountValue);
+    this.generateInstallments();
   }
 
   setInstallments(num: number): void {
