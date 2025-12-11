@@ -39,6 +39,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { RecordatoriosModalComponent } from '../../shared/components/recordatorios-modal/recordatorios-modal.component';
 import { ComprobanteService } from '../services/comprobante.service';
 import { ComprobanteUploadDialogComponent, ComprobanteUploadDialogData, ComprobanteUploadDialogResult } from '../components/comprobante-upload-dialog/comprobante-upload-dialog.component';
+import { VoucherPaymentDialogComponent, VoucherPaymentDialogData, VoucherPaymentDialogResult } from '../components/voucher-payment-dialog/voucher-payment-dialog.component';
 import { ComprobanteUploadResponse } from '../models/comprobante.model';
 
 @Component({
@@ -261,9 +262,17 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                           <div class="text-xs opacity-80">No puede registrar otra promesa</div>
                         </div>
                       </div>
-                      <div class="text-right">
-                        <div class="text-xl font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
-                        <div class="text-xs opacity-80">Total</div>
+                      <div class="flex items-center gap-3">
+                        <button
+                          (click)="openVoucherPaymentDialog(schedule)"
+                          class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/30">
+                          <lucide-angular name="receipt" [size]="14"></lucide-angular>
+                          Registrar Pago
+                        </button>
+                        <div class="text-right">
+                          <div class="text-xl font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
+                          <div class="text-xs opacity-80">Total</div>
+                        </div>
                       </div>
                     </div>
                     <!-- Detalle de cuotas -->
@@ -4081,5 +4090,108 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  /**
+   * Abre el modal para registrar pago con voucher (flujo nuevo)
+   * Auto-selecciona: Contacto Directo + Cancelación + Cuota más próxima
+   */
+  openVoucherPaymentDialog(schedule: any): void {
+    const customer = this.customerData();
+    const currentUser = this.authService.getCurrentUser();
+
+    if (!customer) {
+      console.warn('[VOUCHER] No hay cliente seleccionado');
+      return;
+    }
+
+    if (!schedule.installments || schedule.installments.length === 0) {
+      console.warn('[VOUCHER] No hay cuotas en el cronograma');
+      return;
+    }
+
+    // Preparar cuotas para el diálogo
+    const cuotas = schedule.installments.map((c: any) => ({
+      id: c.id,
+      numeroCuota: c.numeroCuota,
+      monto: c.monto,
+      dueDate: c.dueDate,
+      status: c.status
+    }));
+
+    const dialogData: VoucherPaymentDialogData = {
+      nombreCliente: customer.nombre_completo || '',
+      documentoCliente: customer.numero_documento || '',
+      idCliente: customer.id || 0,
+      idAgente: currentUser?.id || 1,
+      cuotas: cuotas,
+      grupoPromesaUuid: schedule.grupoPromesaUuid || schedule.id
+    };
+
+    const dialogRef = this.dialog.open(VoucherPaymentDialogComponent, {
+      width: '1100px',
+      maxWidth: '95vw',
+      data: dialogData,
+      disableClose: false,
+      backdropClass: 'voucher-modal-backdrop',
+      panelClass: 'voucher-modal-panel'
+    });
+
+    dialogRef.afterClosed().subscribe((result: VoucherPaymentDialogResult) => {
+      if (result?.confirmed && result.autoSelect) {
+        console.log('[VOUCHER] Pago confirmado, auto-seleccionando:', result.autoSelect);
+
+        // Auto-seleccionar la clasificación: Contacto Directo
+        this.autoSelectClassification(result.autoSelect.categoriaId, result.autoSelect.detalleId);
+
+        // Auto-seleccionar la cuota
+        this.selectedInstallmentForCancellation.set(result.autoSelect.cuotaSeleccionada);
+
+        // Auto-llenar observaciones
+        this.managementForm.observaciones = result.autoSelect.observaciones;
+
+        // Guardar el comprobante subido
+        if (result.ocrResponse) {
+          this.uploadedComprobante.set(result.ocrResponse);
+        }
+
+        // Mostrar mensaje de éxito
+        console.log('[VOUCHER] Formulario auto-completado. Listo para guardar.');
+      }
+    });
+  }
+
+  /**
+   * Auto-selecciona la clasificación jerárquica por códigos
+   */
+  private autoSelectClassification(categoriaCode: string, detalleCode: string): void {
+    const levels = this.hierarchyLevels();
+    if (!levels || levels.length < 2) {
+      console.warn('[VOUCHER] No hay niveles de clasificación disponibles');
+      return;
+    }
+
+    // Buscar la categoría (nivel 0) por código
+    const categoria = levels[0]?.find((opt: any) => opt.codigo === categoriaCode);
+    if (categoria) {
+      this.onClassificationLevelChange(0, categoria.id);
+      console.log('[VOUCHER] Categoría seleccionada:', categoria.label);
+
+      // Esperar a que se carguen los detalles y seleccionar
+      setTimeout(() => {
+        const updatedLevels = this.hierarchyLevels();
+        if (updatedLevels && updatedLevels.length > 1) {
+          const detalle = updatedLevels[1]?.find((opt: any) => opt.codigo === detalleCode);
+          if (detalle) {
+            this.onClassificationLevelChange(1, detalle.id);
+            console.log('[VOUCHER] Detalle seleccionado:', detalle.label);
+          } else {
+            console.warn('[VOUCHER] No se encontró detalle con código:', detalleCode);
+          }
+        }
+      }, 100);
+    } else {
+      console.warn('[VOUCHER] No se encontró categoría con código:', categoriaCode);
+    }
   }
 }
