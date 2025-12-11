@@ -265,9 +265,10 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                       <div class="flex items-center gap-3">
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
-                          class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/30">
-                          <lucide-angular name="receipt" [size]="14"></lucide-angular>
-                          Registrar Pago
+                          class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/30"
+                          title="Validar voucher con IA">
+                          <lucide-angular name="scan-line" [size]="14"></lucide-angular>
+                          Voucher IA
                         </button>
                         <div class="text-right">
                           <div class="text-xl font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
@@ -494,7 +495,7 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                             name="cuotaCancelacion"
                             [value]="cuota"
                             [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
-                            (change)="selectedInstallmentForCancellation.set(cuota)"
+                            (change)="onSelectCuotaForCancellation(cuota)"
                             class="w-4 h-4 text-green-600"
                           />
                           <div>
@@ -549,6 +550,68 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
                   <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
+                  </div>
+                }
+
+                <!-- Campos editables de monto y fecha cuando hay cuota seleccionada -->
+                @if (selectedInstallmentForCancellation()) {
+                  <div class="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="text-sm">✏️</span>
+                      <span class="text-[10px] font-bold text-green-800 dark:text-green-300">Datos del Pago (editables)</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                      <!-- Monto pagado -->
+                      <div>
+                        <label class="block text-[10px] font-semibold text-green-700 dark:text-green-300 mb-1">Monto Pagado</label>
+                        <div class="relative">
+                          <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">S/</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            [value]="montoPagoEditable()"
+                            (input)="onMontoPagoChange($event)"
+                            class="w-full pl-7 pr-2 py-1.5 text-sm font-semibold rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          />
+                        </div>
+                        <p class="text-[9px] text-green-600 dark:text-green-400 mt-0.5">
+                          Cuota: S/ {{ selectedInstallmentForCancellation()?.monto?.toFixed(2) }}
+                        </p>
+                      </div>
+                      <!-- Fecha del pago -->
+                      <div>
+                        <label class="block text-[10px] font-semibold text-green-700 dark:text-green-300 mb-1">Fecha del Pago</label>
+                        <input
+                          type="date"
+                          [value]="fechaPagoEditable()"
+                          (input)="onFechaPagoChange($event)"
+                          class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        />
+                        <p class="text-[9px] text-green-600 dark:text-green-400 mt-0.5">
+                          Por defecto: hoy
+                        </p>
+                      </div>
+                    </div>
+                    <!-- Info de distribución si el monto es diferente -->
+                    @if (montoPagoEditable() !== selectedInstallmentForCancellation()?.monto) {
+                      <div class="mt-2 p-2 rounded-lg text-[10px]"
+                           [class]="montoPagoEditable() < selectedInstallmentForCancellation()?.monto
+                             ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700'
+                             : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'">
+                        @if (montoPagoEditable() < selectedInstallmentForCancellation()?.monto) {
+                          <span class="flex items-center gap-1">
+                            <span>⚠️</span>
+                            <span><strong>Pago parcial:</strong> La cuota quedará con saldo pendiente de S/ {{ (selectedInstallmentForCancellation()?.monto - montoPagoEditable()).toFixed(2) }}</span>
+                          </span>
+                        } @else {
+                          <span class="flex items-center gap-1">
+                            <span>ℹ️</span>
+                            <span><strong>Pago mayor:</strong> El excedente de S/ {{ (montoPagoEditable() - selectedInstallmentForCancellation()?.monto).toFixed(2) }} se aplicará a las siguientes cuotas</span>
+                          </span>
+                        }
+                      </div>
+                    }
                   </div>
                 }
               </div>
@@ -1215,6 +1278,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Cuota seleccionada para cancelación/pago
   selectedInstallmentForCancellation = signal<any | null>(null);
+
+  // Campos editables para el pago
+  montoPagoEditable = signal<number>(0);
+  fechaPagoEditable = signal<string>('');
 
   // Comprobante subido para la cancelación (opcional)
   uploadedComprobante = signal<ComprobanteUploadResponse | null>(null);
@@ -3324,23 +3391,54 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             this.registerCallToBackend(response.id);
           }
 
-          // Si es una cancelación y hay cuota seleccionada, cancelarla (marcar como PAGADA)
-          // Usa el nuevo endpoint que valida que la fecha de pago no haya pasado
+          // Si es una cancelación y hay cuota seleccionada, registrar el pago
+          // Usa el nuevo endpoint que distribuye automáticamente entre cuotas
           const selectedCuota = this.selectedInstallmentForCancellation();
           if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
-            console.log('💰 Cancelando cuota (marcando como PAGADA):', selectedCuota);
+            // Usar los valores editables (monto y fecha)
+            const montoPago = this.montoPagoEditable() || selectedCuota.monto;
+            const fechaPago = this.fechaPagoEditable() || new Date().toISOString().split('T')[0];
 
-            const today = new Date().toISOString().split('T')[0]; // Formato YYYY-MM-DD
-            this.managementService.cancelarCuota(
-              selectedCuota.id,
-              selectedCuota.monto,
-              today,
-              this.managementForm.observaciones || undefined
-            ).subscribe({
+            console.log('💰 Registrando pago:', {
+              cuota: selectedCuota.numeroCuota,
+              montoOriginal: selectedCuota.monto,
+              montoPagado: montoPago,
+              fecha: fechaPago
+            });
+
+            // Buscar el grupoPromesaUuid de la cuota
+            const schedule = this.activePaymentSchedules().find(s =>
+              s.installments?.some((c: any) => c.id === selectedCuota.id)
+            );
+            const grupoPromesaUuid = schedule?.grupoPromesaUuid || schedule?.id;
+
+            if (!grupoPromesaUuid) {
+              console.error('No se encontró el grupoPromesaUuid');
+              this.selectedInstallmentForCancellation.set(null);
+              this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+              return;
+            }
+
+            const currentUser = this.authService.getCurrentUser();
+
+            // Usar el nuevo endpoint de pagos
+            this.http.post<any>(`${environment.apiUrl}/api/pagos/registrar`, {
+              grupoPromesaUuid: grupoPromesaUuid,
+              monto: montoPago,
+              fechaPago: fechaPago,
+              banco: null,
+              numeroOperacion: null,
+              agenteId: currentUser?.id || 1,
+              metodoRegistro: 'MANUAL',
+              observaciones: this.managementForm.observaciones || 'Pago registrado desde gestión',
+              comprobanteUrl: null
+            }).subscribe({
               next: (result) => {
-                console.log('✅ Cuota cancelada exitosamente:', result);
-                // Limpiar la selección
+                console.log('✅ Pago registrado exitosamente:', result);
+                // Limpiar la selección y campos editables
                 this.selectedInstallmentForCancellation.set(null);
+                this.montoPagoEditable.set(0);
+                this.fechaPagoEditable.set('');
                 // Recargar los cronogramas activos para reflejar el cambio
                 const customerId = this.customerData().id;
                 if (customerId) {
@@ -3349,12 +3447,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               },
               error: (err) => {
-                console.error('⚠️ Error cancelando cuota:', err);
-                // Si el error es porque la fecha ya pasó, mostrar mensaje específico
+                console.error('⚠️ Error registrando pago:', err);
                 if (err.error?.error || err.error?.mensaje) {
-                  alert(`⚠️ ${err.error.mensaje || 'No se puede cancelar esta cuota. La fecha de pago ya pasó.'}`);
+                  alert(`⚠️ ${err.error.error || err.error.mensaje || 'Error al registrar el pago.'}`);
                 }
-                // Aunque falle la cancelación, la gestión ya se guardó
+                // Aunque falle el pago, la gestión ya se guardó
                 this.selectedInstallmentForCancellation.set(null);
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               }
@@ -4224,5 +4321,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     } else {
       console.warn('[VOUCHER] No se encontró categoría "CONTACTO DIRECTO". Opciones:', roots.map(r => r.label));
     }
+  }
+
+  /**
+   * Selecciona una cuota para cancelación e inicializa los campos editables
+   */
+  onSelectCuotaForCancellation(cuota: any): void {
+    this.selectedInstallmentForCancellation.set(cuota);
+    // Inicializar monto con el valor de la cuota
+    this.montoPagoEditable.set(cuota.monto || 0);
+    // Inicializar fecha con hoy
+    this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
+  }
+
+  /**
+   * Maneja cambios en el monto del pago editable
+   */
+  onMontoPagoChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = parseFloat(input.value) || 0;
+    this.montoPagoEditable.set(value);
+  }
+
+  /**
+   * Maneja cambios en la fecha del pago editable
+   */
+  onFechaPagoChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.fechaPagoEditable.set(input.value);
   }
 }
