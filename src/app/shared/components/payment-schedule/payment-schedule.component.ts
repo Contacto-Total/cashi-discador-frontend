@@ -77,7 +77,7 @@ export interface AmountOption {
         </div>
 
         <!-- Selector de campo base para "Otro monto" -->
-        @if (isCustomAmount() && customAmountValue > 0) {
+        @if (isCustomAmount()) {
           <div class="mt-3 flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
             <lucide-angular name="link" [size]="16" class="text-purple-500 flex-shrink-0"></lucide-angular>
             <span class="text-xs text-purple-700 dark:text-purple-300">Campo base:</span>
@@ -94,8 +94,8 @@ export interface AmountOption {
             @if (selectedBaseField() && getDiscountInfo().hasDiscount) {
               <span class="text-xs font-medium px-2 py-1 rounded-full"
                 [class]="getDiscountInfo().isDiscount
-                  ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
-                  : 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'">
+                  ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300'
+                  : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'">
                 {{ getDiscountInfo().isDiscount ? '-' : '+' }}{{ getDiscountInfo().percentage }}%
               </span>
             }
