@@ -424,9 +424,9 @@ export interface VoucherPaymentDialogResult {
     .installment-chip.active .chip-amount { color: #15803d; }
     .dark-mode .installment-chip.active .chip-amount { color: #86efac; }
 
-    .chip-amount-original { font-size: 11px; color: #94a3b8; text-decoration: line-through; margin-right: 4px; }
-    .dark-mode .chip-amount-original { color: #64748b; }
-    .installment-chip.active .chip-amount-original { color: #86efac; opacity: 0.6; }
+    .chip-amount-original { font-size: 12px; color: #64748b; margin-right: 4px; opacity: 0.8; }
+    .dark-mode .chip-amount-original { color: #94a3b8; }
+    .installment-chip.active .chip-amount-original { color: #22c55e; opacity: 0.7; }
 
     .partial-badge {
       font-size: 10px; font-weight: 600;
