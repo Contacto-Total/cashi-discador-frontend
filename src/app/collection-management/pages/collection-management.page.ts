@@ -2102,7 +2102,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               monto: c.monto,
               // La fecha de pago viene de CuotaPromesa.fechaPago
               dueDate: c.fechaPago || null,
-              status: c.estado || 'PENDIENTE'
+              status: c.estado || 'PENDIENTE',
+              montoPagadoReal: c.montoPagadoReal || 0
             })),
             nextDueDate: nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
