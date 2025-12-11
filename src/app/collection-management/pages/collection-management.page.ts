@@ -3422,7 +3422,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             const currentUser = this.authService.getCurrentUser();
 
             // Usar el nuevo endpoint de pagos
-            this.http.post<any>(`${environment.apiUrl}/api/pagos/registrar`, {
+            this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, {
               grupoPromesaUuid: grupoPromesaUuid,
               monto: montoPago,
               fechaPago: fechaPago,
