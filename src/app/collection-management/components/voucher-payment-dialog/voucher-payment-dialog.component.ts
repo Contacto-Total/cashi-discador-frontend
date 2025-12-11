@@ -746,11 +746,27 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
   showWarning = computed(() => {
     const response = this.uploadResponse();
     if (!response) return false;
-    return (
+
+    // Advertencia si alguna validación no coincide
+    const validacionFalla = (
       (response.validacionMonto && !response.validacionMonto.coincide) ||
       (response.validacionDocumento && !response.validacionDocumento.coincide) ||
       (response.validacionNombre && !response.validacionNombre.coincide)
     );
+
+    // Advertencia si no se detectaron datos importantes del OCR
+    const ocrResult = response.ocrResult;
+    const sinDatosOcr = !ocrResult?.monto && !ocrResult?.documento && !ocrResult?.nombre;
+
+    return validacionFalla || sinDatosOcr;
+  });
+
+  // Computed para detectar si no se encontraron datos
+  noDataDetected = computed(() => {
+    const response = this.uploadResponse();
+    if (!response?.ocrResult) return true;
+    const ocr = response.ocrResult;
+    return !ocr.monto && !ocr.documento && !ocr.nombre;
   });
 
   constructor(
@@ -903,6 +919,7 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
   getResultTitle(): string {
     const r = this.uploadResponse();
     if (!r?.success) return 'Error al procesar';
+    if (this.noDataDetected()) return 'No se detectaron datos';
     if (this.showWarning()) return 'Voucher con advertencias';
     return 'Voucher validado correctamente';
   }
@@ -910,6 +927,7 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
   getResultSubtitle(): string {
     const r = this.uploadResponse();
     if (!r?.success) return 'No se pudo analizar el voucher';
+    if (this.noDataDetected()) return 'La imagen no parece ser un comprobante de pago válido';
     if (this.showWarning()) return 'Algunos datos no coinciden exactamente';
     return 'Todos los datos coinciden con el cliente';
   }
