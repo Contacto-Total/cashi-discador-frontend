@@ -22,19 +22,14 @@ export interface RegistroGestionV2 {
   fechaGestion?: string;
   duracionSegundos?: number;
   tipificacion: { id: number };
-  tipificacionNivel1?: { id: number };
-  tipificacionNivel2?: { id: number };
-  tipificacionNivel3?: { id: number };
-  tipificacionNivel4?: { id: number };
+  rutaNivel1?: string;
+  rutaNivel2?: string;
+  rutaNivel3?: string;
+  rutaNivel4?: string;
   observaciones?: string;
-  notasPrivadas?: string;
   metodoContacto?: string;
   canalContacto?: string;
   estadoGestion?: string;
-  fechaSeguimiento?: string;
-  requiereSeguimiento?: boolean;
-  fechaCreacion?: string;
-  rutaJerarquia?: string;
   nombreAgente?: string;
   userAgent?: string;
 }
@@ -114,8 +109,10 @@ export interface CreateManagementRequest {
   observations?: string;
 
   // Campos adicionales para registro completo
-  metodoContacto?: 'LLAMADA_SALIENTE' | 'LLAMADA_ENTRANTE' | 'WHATSAPP' | 'SMS' | 'EMAIL' | 'PRESENCIAL' | 'GESTION_MANUAL';
-  canalContacto?: 'TELEFONO' | 'WHATSAPP' | 'SMS' | 'EMAIL' | 'PRESENCIAL' | 'SISTEMA';
+  // metodoContacto: QUIÉN/QUÉ originó la gestión
+  metodoContacto?: 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | 'GESTION_AUTOMATICA';
+  // canalContacto: POR QUÉ MEDIO se contactó
+  canalContacto?: 'LLAMADA_SALIENTE' | 'LLAMADA_ENTRANTE' | 'SMS' | 'WHATSAPP' | 'EMAIL';
   idCampana?: number | null;
   idLlamada?: number | null;
   duracionSegundos?: number | null;
@@ -157,7 +154,8 @@ export interface PaymentScheduleRequest {
   idCampana?: number;
   idTipificacion: number;
   observaciones?: string;
-  metodoContacto?: string;
+  metodoContacto?: string;  // GESTION_MANUAL, GESTION_PROGRESIVO, etc.
+  canalContacto?: string;   // LLAMADA_SALIENTE, LLAMADA_ENTRANTE, SMS, etc.
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   schedule: {
@@ -423,11 +421,10 @@ export class ManagementService {
       idAgente: this.extractAgentId(request.advisorId),
       tipificacion: { id: finalTypificationId },
       observaciones: request.observations || '',
-      // Campos corregidos
-      canalContacto: request.canalContacto || 'SISTEMA',
+      // Campos de contacto
+      canalContacto: request.canalContacto || undefined,
       metodoContacto: request.metodoContacto || 'GESTION_MANUAL',
       estadoGestion: 'COMPLETADA',
-      rutaJerarquia: rutaJerarquia || undefined,
       // Campos opcionales de llamada
       idCampana: request.idCampana || undefined,
       idLlamada: request.idLlamada || undefined,
@@ -437,16 +434,8 @@ export class ManagementService {
       userAgent: request.userAgent || undefined
     };
 
-    // Agregar niveles jerárquicos si existen
-    if (request.level1Id) {
-      backendRequest.tipificacionNivel1 = { id: request.level1Id };
-    }
-    if (request.level2Id) {
-      backendRequest.tipificacionNivel2 = { id: request.level2Id };
-    }
-    if (request.level3Id) {
-      backendRequest.tipificacionNivel3 = { id: request.level3Id };
-    }
+    // Nota: Los niveles jerárquicos (rutaNivel1, rutaNivel2, etc.) se calculan
+    // automáticamente en el backend basándose en la tipificación principal
 
     return backendRequest;
   }
@@ -466,12 +455,12 @@ export class ManagementService {
       subPortfolioId: record.idSubcartera,
       subPortfolioName: '',
       phone: record.canalContacto || '',
-      level1Id: record.tipificacionNivel1?.id || (record.tipificacion as any)?.id || 0,
-      level1Name: originalRequest?.level1Name || (record.tipificacionNivel1 as any)?.nombre || '',
-      level2Id: record.tipificacionNivel2?.id,
-      level2Name: originalRequest?.level2Name || (record.tipificacionNivel2 as any)?.nombre || '',
-      level3Id: record.tipificacionNivel3?.id,
-      level3Name: originalRequest?.level3Name || (record.tipificacionNivel3 as any)?.nombre || '',
+      level1Id: (record.tipificacion as any)?.id || 0,
+      level1Name: originalRequest?.level1Name || record.rutaNivel1 || '',
+      level2Id: undefined,
+      level2Name: originalRequest?.level2Name || record.rutaNivel2 || '',
+      level3Id: undefined,
+      level3Name: originalRequest?.level3Name || record.rutaNivel3 || '',
       observations: record.observaciones,
       managementDate: record.fechaGestion?.split('T')[0],
       managementTime: record.fechaGestion?.split('T')[1]?.substring(0, 8)

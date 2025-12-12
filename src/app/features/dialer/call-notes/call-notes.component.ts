@@ -401,18 +401,15 @@ export class CallNotesComponent implements OnInit {
       idAgente: user.id,
       idCampana: null, // TODO: Obtener de la campaña activa si existe
       observaciones: this.notesForm.value.notes,
-      metodoContacto: 'LLAMADA_SALIENTE',
-      canalContacto: this.call.phoneNumber,
+      metodoContacto: 'GESTION_PROGRESIVO',
+      canalContacto: 'LLAMADA_SALIENTE',
       duracionSegundos: this.call.duration,
       fechaSeguimiento: this.notesForm.value.scheduleCallback || null,
       estadoGestion: 'COMPLETADA',
       tipificacion: {
         id: this.getSelectedTipificacionId()
       },
-      tipificacionNivel1: this.notesForm.value.nivel1 ? { id: this.notesForm.value.nivel1 } : null,
-      tipificacionNivel2: this.notesForm.value.nivel2 ? { id: this.notesForm.value.nivel2 } : null,
-      tipificacionNivel3: this.notesForm.value.nivel3 ? { id: this.notesForm.value.nivel3 } : null,
-      tipificacionNivel4: this.notesForm.value.nivel4 ? { id: this.notesForm.value.nivel4 } : null,
+      // Nota: rutaNivel1, rutaNivel2, etc. se calculan automáticamente en el backend
       valoresCamposAdicionales: this.getAdditionalFieldValues()
     };
 
@@ -430,7 +427,8 @@ export class CallNotesComponent implements OnInit {
             idCampana: null,
             idTipificacion: this.getSelectedTipificacionId(),
             observaciones: this.notesForm.value.notes,
-            metodoContacto: 'LLAMADA_SALIENTE',
+            metodoContacto: 'GESTION_PROGRESIVO',
+            canalContacto: 'LLAMADA_SALIENTE',
             schedule: this.paymentScheduleConfig
           };
 

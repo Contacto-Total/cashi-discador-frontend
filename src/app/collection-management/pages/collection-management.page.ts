@@ -3334,7 +3334,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idSubcartera: 1,
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones,
-        metodoContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
+        metodoContacto: isActiveCallSchedule ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
+        canalContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
         schedule: {
@@ -3394,8 +3395,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         observations: this.managementForm.observaciones,
 
         // Campos de contexto de gestión
-        metodoContacto: isActiveCall ? 'LLAMADA_SALIENTE' : 'GESTION_MANUAL',
-        canalContacto: isActiveCall ? 'TELEFONO' : 'SISTEMA',
+        metodoContacto: isActiveCall ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
+        canalContacto: isActiveCall ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
         idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
         duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null,
