@@ -135,4 +135,17 @@ export class AgentStatusService {
   getCurrentStatus(): AgentStatus | null {
     return this.currentStatusSubject.value;
   }
+
+  /**
+   * Finaliza la tipificación y cambia a DISPONIBLE
+   * Se llama después de guardar la gestión
+   */
+  finalizarTipificacion(idUsuario: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${idUsuario}/sistema/finalizar-tipificacion`, {}).pipe(
+      tap(() => {
+        console.log(`[AgentStatusService] Tipificación finalizada para agente ${idUsuario}`);
+        this.getAgentStatus(idUsuario).subscribe();
+      })
+    );
+  }
 }

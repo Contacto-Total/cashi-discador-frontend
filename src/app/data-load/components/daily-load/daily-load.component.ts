@@ -15,6 +15,38 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
+    <!-- Loading Overlay Modal -->
+    @if (isLoading()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center">
+        <!-- Backdrop with blur -->
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+        <!-- Modal Content -->
+        <div class="relative bg-slate-800 rounded-2xl p-8 shadow-2xl border border-slate-700 max-w-md w-full mx-4">
+          <div class="flex flex-col items-center gap-6">
+            <!-- Spinner Animation -->
+            <div class="relative">
+              <div class="w-16 h-16 border-4 border-slate-600 rounded-full"></div>
+              <div class="absolute top-0 left-0 w-16 h-16 border-4 border-green-500 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+
+            <!-- Loading Text -->
+            <div class="text-center">
+              <h3 class="text-xl font-bold text-white mb-2">Importando datos...</h3>
+              <p class="text-gray-400 text-sm">Por favor espere, este proceso puede tardar varios minutos dependiendo de la cantidad de registros.</p>
+            </div>
+
+            <!-- Progress indicator -->
+            <div class="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+              <div class="bg-gradient-to-r from-green-500 to-emerald-400 h-full rounded-full animate-pulse" style="width: 100%"></div>
+            </div>
+
+            <p class="text-xs text-gray-500">No cierre esta ventana</p>
+          </div>
+        </div>
+      </div>
+    }
+
     <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
       <div class="max-w-7xl mx-auto">
         <!-- Header -->
@@ -342,6 +374,7 @@ export class DailyLoadComponent implements OnInit {
   validData = signal<any[]>([]);
   invalidData = signal<{error: string, data: any}[]>([]);
   backendErrors = signal<string[]>([]);
+  isLoading = signal(false);
 
   constructor(
     private tenantService: TenantService,
@@ -993,9 +1026,14 @@ export class DailyLoadComponent implements OnInit {
     console.log('Datos transformados listos para importar:', dataToImport);
     console.log('Subcartera ID:', this.selectedSubPortfolioId);
 
+    // Mostrar spinner
+    this.isLoading.set(true);
+    this.backendErrors.set([]);
+
     // Daily load usa ACTUALIZACION
     this.headerConfigService.importData(this.selectedSubPortfolioId, 'ACTUALIZACION', dataToImport).subscribe({
       next: (response: any) => {
+        this.isLoading.set(false);
         console.log('Respuesta del servidor:', response);
 
         // Verificar si hay errores en la respuesta del backend
@@ -1012,6 +1050,7 @@ export class DailyLoadComponent implements OnInit {
         }
       },
       error: (error) => {
+        this.isLoading.set(false);
         console.error('Error HTTP al importar datos:', error);
 
         // Si el error tiene estructura de errores del backend, mostrarlos

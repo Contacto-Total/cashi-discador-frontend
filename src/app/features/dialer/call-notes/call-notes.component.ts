@@ -12,6 +12,7 @@ import { CallService } from '../../../core/services/call.service';
 import { Call, CallDisposition, CompleteCallRequest } from '../../../core/models/call.model';
 import { Contact } from '../../../core/models/contact.model';
 import { AuthService } from '../../../core/services/auth.service';
+import { AgentStatusService } from '../../../core/services/agent-status.service';
 import { TypificationService } from '../../../maintenance/services/typification.service';
 import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
 import { TypificationCatalog, AdditionalField, FieldType } from '../../../maintenance/models/typification.model';
@@ -72,6 +73,7 @@ export class CallNotesComponent implements OnInit {
     private fb: FormBuilder,
     private callService: CallService,
     private authService: AuthService,
+    private agentStatusService: AgentStatusService,
     private typificationService: TypificationService,
     private typificationV2Service: TypificationV2Service
   ) {}
@@ -435,26 +437,22 @@ export class CallNotesComponent implements OnInit {
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
             next: (record) => {
               console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas);
-              this.loading = false;
-              this.notesComplete.emit();
+              this.finalizarTipificacionYSalir(user.id);
             },
             error: (error) => {
               console.error('Error creating payment schedule:', error);
-              this.loading = false;
-              this.notesComplete.emit();
+              this.finalizarTipificacionYSalir(user.id);
             }
           });
         } else {
           // Guardar registro de gestión normal
           this.typificationService.saveManagementRecord(managementRecord).subscribe({
             next: () => {
-              this.loading = false;
-              this.notesComplete.emit();
+              this.finalizarTipificacionYSalir(user.id);
             },
             error: (error) => {
               console.error('Error saving management record:', error);
-              this.loading = false;
-              this.notesComplete.emit();
+              this.finalizarTipificacionYSalir(user.id);
             }
           });
         }
@@ -493,6 +491,26 @@ export class CallNotesComponent implements OnInit {
     });
 
     return valores;
+  }
+
+  /**
+   * Finaliza la tipificación y emite el evento de completado
+   * Cambia el estado del agente de TIPIFICANDO a DISPONIBLE
+   */
+  private finalizarTipificacionYSalir(userId: number): void {
+    this.agentStatusService.finalizarTipificacion(userId).subscribe({
+      next: (response) => {
+        console.log('Tipificación finalizada, agente ahora DISPONIBLE:', response);
+        this.loading = false;
+        this.notesComplete.emit();
+      },
+      error: (error) => {
+        console.error('Error finalizando tipificación:', error);
+        // Aunque falle, seguir adelante
+        this.loading = false;
+        this.notesComplete.emit();
+      }
+    });
   }
 
   onSkip(): void {
