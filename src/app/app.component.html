@@ -237,6 +237,65 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">{{ (authService.currentUser$ | async)?.username }}</span>
       </div>
 
+      <!-- Notificaciones (solo ADMIN) -->
+      <div class="sidebar-group relative" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
+        <button type="button" class="sidebar-item" (click)="toggleNotificacionesDropdown()" [title]="isSidebarCollapsed ? 'Notificaciones' : ''">
+          <div class="relative">
+            <lucide-angular name="bell" [size]="20"></lucide-angular>
+            <span *ngIf="notificacionesCount > 0"
+                  class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+              {{ notificacionesCount > 9 ? '9+' : notificacionesCount }}
+            </span>
+          </div>
+          <span class="item-text" *ngIf="!isSidebarCollapsed">Notificaciones</span>
+        </button>
+
+        <!-- Dropdown de notificaciones -->
+        <div *ngIf="isNotificacionesDropdownOpen"
+             class="absolute bottom-full left-0 mb-2 w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden"
+             [class.left-full]="isSidebarCollapsed"
+             [class.ml-2]="isSidebarCollapsed">
+
+          <!-- Header -->
+          <div class="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-900">
+            <span class="font-semibold text-white">Notificaciones</span>
+            <button *ngIf="notificacionesCount > 0"
+                    (click)="marcarTodasLeidas()"
+                    class="text-xs text-blue-400 hover:text-blue-300">
+              Marcar todas como leídas
+            </button>
+          </div>
+
+          <!-- Lista de notificaciones -->
+          <div class="max-h-72 overflow-y-auto">
+            <div *ngIf="notificaciones.length === 0" class="p-4 text-center text-gray-500">
+              No hay notificaciones
+            </div>
+
+            <div *ngFor="let notif of notificaciones"
+                 (click)="marcarNotificacionLeida(notif)"
+                 class="px-4 py-3 border-b border-slate-700/50 hover:bg-slate-700/50 cursor-pointer transition-colors"
+                 [class.bg-slate-700/30]="!notif.leida">
+
+              <div class="flex items-start gap-3">
+                <lucide-angular [name]="getNotificacionIcon(notif.tipo)"
+                                [size]="18"
+                                [class]="getNotificacionColor(notif.tipo)">
+                </lucide-angular>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-white text-sm truncate">{{ notif.titulo }}</span>
+                    <span *ngIf="!notif.leida" class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></span>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1 line-clamp-2">{{ notif.mensaje }}</p>
+                  <span class="text-xs text-gray-500 mt-1 block">{{ notif.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Theme Toggle -->
       <button type="button" class="sidebar-item" (click)="toggleTheme()" [title]="isSidebarCollapsed ? (isDarkMode() ? 'Modo Claro' : 'Modo Oscuro') : ''">
         <lucide-angular *ngIf="isDarkMode(); else lightMode" name="sun" [size]="20"></lucide-angular>

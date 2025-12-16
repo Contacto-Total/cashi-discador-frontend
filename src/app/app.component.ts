@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { RouterOutlet, RouterModule, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
@@ -10,6 +10,7 @@ import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
+import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
 import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
@@ -23,6 +24,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
+    DatePipe,
     RouterOutlet,
     RouterModule,
     LucideAngularModule,
@@ -56,6 +58,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   isBlacklistDropdownOpen = false;
   isCartasDropdownOpen = false;
 
+  // Notificaciones
+  isNotificacionesDropdownOpen = false;
+  notificaciones: NotificacionSistema[] = [];
+  notificacionesCount = 0;
+
   constructor(
     public authService: AuthService,
     public themeService: ThemeService,
@@ -65,9 +72,69 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private sessionConfig: SessionConfigService,
     private agentStatusService: AgentStatusService,
     private recordatoriosService: RecordatoriosService,
+    private notificacionesService: NotificacionesSistemaService,
     private dialog: MatDialog,
     private router: Router
   ) {}
+
+  // Notificaciones methods
+  toggleNotificacionesDropdown(): void {
+    this.isNotificacionesDropdownOpen = !this.isNotificacionesDropdownOpen;
+
+    if (this.isNotificacionesDropdownOpen) {
+      this.loadNotificaciones();
+    }
+  }
+
+  loadNotificaciones(): void {
+    this.notificacionesService.getAll().subscribe({
+      next: (data) => this.notificaciones = data,
+      error: (err) => console.error('Error cargando notificaciones:', err)
+    });
+  }
+
+  refreshNotificacionesCount(): void {
+    this.notificacionesService.getCount().subscribe({
+      next: (response) => this.notificacionesCount = response.count,
+      error: (err) => console.error('Error obteniendo count:', err)
+    });
+  }
+
+  marcarNotificacionLeida(notif: NotificacionSistema): void {
+    if (!notif.leida) {
+      this.notificacionesService.marcarComoLeida(notif.id).subscribe({
+        next: () => {
+          notif.leida = true;
+          this.notificacionesCount = Math.max(0, this.notificacionesCount - 1);
+        }
+      });
+    }
+  }
+
+  marcarTodasLeidas(): void {
+    this.notificacionesService.marcarTodasComoLeidas().subscribe({
+      next: () => {
+        this.notificaciones.forEach(n => n.leida = true);
+        this.notificacionesCount = 0;
+      }
+    });
+  }
+
+  getNotificacionIcon(tipo: string): string {
+    switch (tipo) {
+      case 'ARCHIVADO_MENSUAL': return 'archive';
+      case 'ERROR': return 'alert-circle';
+      default: return 'bell';
+    }
+  }
+
+  getNotificacionColor(tipo: string): string {
+    switch (tipo) {
+      case 'ARCHIVADO_MENSUAL': return 'text-green-400';
+      case 'ERROR': return 'text-red-400';
+      default: return 'text-blue-400';
+    }
+  }
 
   ngOnInit(): void {
     // Cargar configuraciones de sesión
@@ -82,6 +149,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Conectar a FreeSWITCH automáticamente
         this.conectarFreeSWITCH(user);
+
+        // Cargar contador de notificaciones (solo para admin)
+        if (user.role === 'ADMIN') {
+          this.refreshNotificacionesCount();
+        }
       } else {
         // Usuario no autenticado - detener servicios
         this.inactivityService.detener();
