@@ -41,6 +41,8 @@ import { ComprobanteService } from '../services/comprobante.service';
 import { ComprobanteUploadDialogComponent, ComprobanteUploadDialogData, ComprobanteUploadDialogResult } from '../components/comprobante-upload-dialog/comprobante-upload-dialog.component';
 import { VoucherPaymentDialogComponent, VoucherPaymentDialogData, VoucherPaymentDialogResult } from '../components/voucher-payment-dialog/voucher-payment-dialog.component';
 import { ComprobanteUploadResponse } from '../models/comprobante.model';
+import { CartaAcuerdoService } from '../../core/services/carta-acuerdo.service';
+import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/confirm-carta-dialog/confirm-carta-dialog.component';
 
 @Component({
   selector: 'app-collection-management',
@@ -1497,7 +1499,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private autorizacionService: AutorizacionService,
     private recordatoriosService: RecordatoriosService,
     private dialog: MatDialog,
-    private comprobanteService: ComprobanteService
+    private comprobanteService: ComprobanteService,
+    private cartaAcuerdoService: CartaAcuerdoService
   ) {}
 
   ngOnInit() {
@@ -3356,7 +3359,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.managementService.createPaymentSchedule(scheduleRequest).subscribe({
         next: (records) => {
           console.log('[SAVE] Payment schedule created successfully:', records);
-          this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+          // Mostrar modal para generar Carta de Acuerdo
+          // records puede ser un array o un objeto con id
+          const idGestion = Array.isArray(records) && records.length > 0 ? records[0].id : records?.id;
+          if (idGestion) {
+            this.mostrarModalGenerarCarta(idGestion, contactClassification?.label || '', managementClassification?.label || '-');
+          } else {
+            this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+          }
         },
         error: (error) => {
           console.error('Error al guardar cronograma de pago:', error);
@@ -4474,5 +4484,56 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     console.warn('[COMPROBANTE] No se pudo parsear la fecha OCR:', fechaStr);
     return null;
+  }
+
+  // ==================== CARTA DE ACUERDO ====================
+
+  /**
+   * Muestra el modal de confirmación para generar Carta de Acuerdo después de guardar promesa
+   */
+  private mostrarModalGenerarCarta(idGestion: number, contactLabel: string, managementLabel: string): void {
+    const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
+      width: '400px',
+      disableClose: true,
+      data: { idGestion }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === 'generate') {
+        // Generar carta y luego finalizar
+        this.generarCartaYFinalizar(idGestion, contactLabel, managementLabel);
+      } else {
+        // Usuario eligió "Ahora no", solo finalizar
+        this.onSaveSuccess(contactLabel, managementLabel);
+      }
+    });
+  }
+
+  /**
+   * Genera la carta de acuerdo y luego finaliza la gestión
+   */
+  private generarCartaYFinalizar(idGestion: number, contactLabel: string, managementLabel: string): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      alert('⚠️ No se puede generar la carta: usuario no encontrado');
+      this.onSaveSuccess(contactLabel, managementLabel);
+      return;
+    }
+
+    console.log('📄 Generando Carta de Acuerdo para gestión:', idGestion);
+
+    this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
+      next: (blob) => {
+        this.cartaAcuerdoService.descargarPdf(blob, `carta_acuerdo_${idGestion}.pdf`);
+        console.log('✅ Carta de Acuerdo generada exitosamente');
+        alert('✅ Carta de Acuerdo generada exitosamente');
+        this.onSaveSuccess(contactLabel, managementLabel);
+      },
+      error: (error) => {
+        console.error('❌ Error generando carta:', error);
+        alert('⚠️ Error al generar la Carta de Acuerdo. La gestión se guardó correctamente.');
+        this.onSaveSuccess(contactLabel, managementLabel);
+      }
+    });
   }
 }
