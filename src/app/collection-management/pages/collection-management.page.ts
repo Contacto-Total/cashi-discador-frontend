@@ -1711,20 +1711,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   /**
    * Carga los datos de un cliente desde la tabla dinámica ini_
    * @param client Datos del cliente desde la tabla dinámica
-   * @param contactId ID del contacto (opcional) - usar cuando viene de llamada activa
+   * IMPORTANTE: Siempre usa client.id (ini_*.id) para consistencia entre flujos
    */
-  private loadCustomerFromDynamicTable(client: any, contactId?: number) {
+  private loadCustomerFromDynamicTable(client: any) {
     // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
     this.rawClientData.set(client);
-    console.log('[PAYMENT] Raw client data from ini_* table:', client);
-    console.log('[PAYMENT] Using contactId:', contactId, 'client.id:', client.id);
+    console.log('[CUSTOMER] Raw client data from ini_* table:', client);
 
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
 
-    // Usar contactId si está disponible, de lo contrario usar client.id
-    const customerId = contactId || client.id || 0;
-    console.log('[PAYMENT] Final customerId to use:', customerId);
+    // SIEMPRE usar client.id (ini_*.id) - es consistente entre llamada activa y gestión manual
+    const customerId = client.id || 0;
+    console.log('[CUSTOMER] Using ini_*.id as customerId:', customerId);
 
     // Mapear los datos de la tabla dinámica al formato de CustomerData
     this.customerData.set({
@@ -1994,7 +1993,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           if (!tenantId || !portfolioId || !subPortfolioId) {
             console.error('❌ No se pudo obtener asignación completa del usuario:', { tenantId, portfolioId, subPortfolioId });
             // Fallback: usar datos limitados del clienteDetalle
-            this.loadClienteDetalleFallback(clienteDetalle, contactId);
+            this.loadClienteDetalleFallback(clienteDetalle);
             return;
           }
 
@@ -2004,19 +2003,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             next: (clienteCompleto) => {
               if (clienteCompleto) {
                 console.log('✅ Datos completos del cliente obtenidos:', clienteCompleto);
-                // Usar loadCustomerFromDynamicTable para datos raw de tabla ini_*
-                // Pasar contactId para usarlo como ID del cliente
-                this.loadCustomerFromDynamicTable(clienteCompleto, contactId);
+                // Usar loadCustomerFromDynamicTable - siempre usa ini_*.id
+                this.loadCustomerFromDynamicTable(clienteCompleto);
               } else {
                 console.warn('⚠️ No se encontró cliente con documento:', clienteDetalle.documento);
                 // Fallback: usar datos limitados del clienteDetalle
-                this.loadClienteDetalleFallback(clienteDetalle, contactId);
+                this.loadClienteDetalleFallback(clienteDetalle);
               }
             },
             error: (error) => {
               console.error('❌ Error buscando datos completos del cliente:', error);
               // Fallback: usar datos limitados del clienteDetalle
-              this.loadClienteDetalleFallback(clienteDetalle, contactId);
+              this.loadClienteDetalleFallback(clienteDetalle);
             }
           });
         } else {
@@ -2028,23 +2026,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Fallback: carga datos limitados del cliente cuando no se puede obtener datos completos
+   * ADVERTENCIA: En este modo NO tenemos el ini_*.id, las gestiones pueden no guardarse correctamente
    * @param clienteDetalle Datos básicos del cliente
-   * @param contactId ID del contacto (opcional) - usar cuando viene de llamada activa
    */
-  private loadClienteDetalleFallback(clienteDetalle: any, contactId?: number) {
-    console.warn('⚠️ Usando fallback con datos limitados del cliente');
+  private loadClienteDetalleFallback(clienteDetalle: any) {
+    console.warn('⚠️ FALLBACK: No se pudo obtener datos de tabla dinámica');
+    console.warn('⚠️ Las gestiones guardadas pueden no tener el ID correcto del cliente');
 
     // Guardar los datos raw del cliente
     this.rawClientData.set(clienteDetalle);
-    console.log('[PAYMENT] Raw client data from detalle (fallback):', clienteDetalle);
-    console.log('[PAYMENT] Using contactId:', contactId, 'clienteDetalle.idCliente:', clienteDetalle.idCliente);
+    console.log('[FALLBACK] Raw client data from detalle:', clienteDetalle);
 
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
 
-    // Usar contactId si está disponible, de lo contrario usar clienteDetalle.idCliente
-    const customerId = contactId || clienteDetalle.idCliente;
-    console.log('[PAYMENT] Final customerId to use (fallback):', customerId);
+    // FALLBACK: usar clienteDetalle.idCliente (NO es ini_*.id, puede causar inconsistencias)
+    const customerId = clienteDetalle.idCliente || 0;
+    console.warn('[FALLBACK] Using clienteDetalle.idCliente as customerId:', customerId, '(NOT ini_*.id)');
 
     // Mapear los datos del backend al formato del signal
     this.customerData.set({
@@ -2082,9 +2080,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     });
 
-    console.log('✅ Datos del cliente actualizados en la UI (fallback), customerId:', customerId);
+    console.warn('⚠️ Datos del cliente cargados en modo FALLBACK, customerId:', customerId);
 
-    // 📅 Cargar cronogramas de promesas de pago activos usando el customerId correcto
+    // 📅 Cargar cronogramas de promesas de pago activos (puede no encontrar resultados correctos)
     this.loadActivePaymentSchedules(customerId);
   }
 
