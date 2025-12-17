@@ -21,7 +21,7 @@ export interface CartaGeneradaHistorial {
   providedIn: 'root'
 })
 export class CartaAcuerdoService {
-  private apiUrl = `${environment.apiUrl}/api/cartas`;
+  private apiUrl = `${environment.apiUrl}/cartas`;
 
   constructor(private http: HttpClient) {}
 
