@@ -57,6 +57,7 @@ export interface ManagementResource {
   level2Name?: string;
   level3Id?: number;
   level3Name?: string;
+  level4Name?: string;
 
   observations?: string;
   typificationRequiresPayment?: boolean;
@@ -65,6 +66,12 @@ export interface ManagementResource {
   // Automatic timestamp fields
   managementDate?: string;  // Fecha de gestión (YYYY-MM-DD)
   managementTime?: string;  // Hora de gestión (HH:mm:ss)
+
+  // Additional fields for history display
+  canalContacto?: string;     // Channel (LLAMADA, WHATSAPP, etc.)
+  metodoContacto?: string;    // Method (OUTBOUND, INBOUND, etc.)
+  nombreAgente?: string;      // Agent name (human readable)
+  duracionSegundos?: number;  // Duration in seconds
 }
 
 export interface CallDetailResource {
@@ -461,9 +468,15 @@ export class ManagementService {
       level2Name: originalRequest?.level2Name || record.rutaNivel2 || '',
       level3Id: undefined,
       level3Name: originalRequest?.level3Name || record.rutaNivel3 || '',
+      level4Name: record.rutaNivel4 || '',
       observations: record.observaciones,
       managementDate: record.fechaGestion?.split('T')[0],
-      managementTime: record.fechaGestion?.split('T')[1]?.substring(0, 8)
+      managementTime: record.fechaGestion?.split('T')[1]?.substring(0, 8),
+      // Additional fields for history
+      canalContacto: record.canalContacto || 'N/A',
+      metodoContacto: record.metodoContacto || 'N/A',
+      nombreAgente: record.nombreAgente || record.userAgent || `Agente ${record.idAgente}`,
+      duracionSegundos: record.duracionSegundos || 0
     };
   }
 

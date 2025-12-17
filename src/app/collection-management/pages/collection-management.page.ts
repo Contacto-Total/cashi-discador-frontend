@@ -112,9 +112,11 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
         </div>
       </div>
 
-      <!-- Contenido Principal - LAYOUT 3 COLUMNAS -->
-      <div class="flex-1 flex overflow-hidden">
-        <!-- PANEL IZQUIERDO - Info Cliente -->
+      <!-- Contenido Principal - LAYOUT 3 COLUMNAS + HISTORIAL -->
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Upper section with 3 columns -->
+        <div class="flex-1 flex overflow-hidden min-h-0">
+          <!-- PANEL IZQUIERDO - Info Cliente -->
         <div class="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Tabs -->
           <div class="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
@@ -801,6 +803,86 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             }
           </div>
         </div>
+        </div>
+
+        <!-- SECCION DE HISTORIAL DE GESTIONES - Compacto -->
+        <div class="h-44 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-colors duration-300">
+          <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-sm">📋</span>
+              <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
+              <span class="text-[10px] text-slate-500 dark:text-slate-400">({{ historialGestiones().length }} registros)</span>
+            </div>
+            <button (click)="loadManagementHistory()" class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+              <span>↻</span> Actualizar
+            </button>
+          </div>
+          <div class="flex-1 overflow-auto">
+            @if (historialGestiones().length === 0) {
+              <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
+                Sin gestiones registradas para este cliente
+              </div>
+            } @else {
+              <table class="w-full text-[10px]">
+                <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                  <tr class="text-left text-slate-600 dark:text-slate-300">
+                    <th class="px-2 py-1 font-semibold">Fecha</th>
+                    <th class="px-2 py-1 font-semibold">Agente</th>
+                    <th class="px-2 py-1 font-semibold">Tipificación</th>
+                    <th class="px-2 py-1 font-semibold">Canal</th>
+                    <th class="px-2 py-1 font-semibold">Método</th>
+                    <th class="px-2 py-1 font-semibold">Duración</th>
+                    <th class="px-2 py-1 font-semibold">Observación</th>
+                    <th class="px-2 py-1 font-semibold text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (gestion of historialGestiones(); track gestion.id) {
+                    <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
+                      <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap">{{ gestion.nombreAgente }}</td>
+                      <td class="px-2 py-1.5 max-w-[200px]">
+                        <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                          {{ gestion.tipificacionCompleta }}
+                        </span>
+                      </td>
+                      <td class="px-2 py-1.5">
+                        <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
+                          (gestion.canal === 'LLAMADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                           gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                           'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                          {{ gestion.canal }}
+                        </span>
+                      </td>
+                      <td class="px-2 py-1.5">
+                        <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
+                          (gestion.metodo === 'OUTBOUND' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                           gestion.metodo === 'INBOUND' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                           'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                          {{ gestion.metodo }}
+                        </span>
+                      </td>
+                      <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap">{{ gestion.duracion }}</td>
+                      <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[150px] truncate" [title]="gestion.observacion">
+                        {{ gestion.observacion }}
+                      </td>
+                      <td class="px-2 py-1.5 text-center">
+                        @if (gestion.hasSchedule) {
+                          <button (click)="openScheduleDetail(gestion.id)"
+                            class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold hover:bg-purple-200 dark:hover:bg-purple-800/40 transition-colors">
+                            📅 Cronograma
+                          </button>
+                        } @else {
+                          <span class="text-slate-400 dark:text-slate-600">-</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            }
+          </div>
+        </div>
       </div>
 
       <!-- Modal de Cronograma Detallado -->
@@ -912,8 +994,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     id: number;
     fecha: string;
     asesor: string;
+    nombreAgente: string;
     resultado: string;
     gestion: string;
+    tipificacionCompleta: string;
+    canal: string;
+    metodo: string;
     observacion: string;
     duracion: string;
     hasSchedule: boolean;
@@ -2193,14 +2279,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             ? `${m.managementDate} ${m.managementTime}`
             : new Date().toLocaleString('es-PE');
 
+          // Construir ruta completa de tipificación
+          const tipificacionParts = [m.level1Name, m.level2Name, m.level3Name, m.level4Name].filter(Boolean);
+          const tipificacionCompleta = tipificacionParts.join(' > ') || '-';
+
+          // Formatear duración
+          const duracionSeg = m.duracionSegundos || 0;
+          const duracionFormatted = this.formatTime(duracionSeg);
+
           const historyItem = {
             id: m.id,
             fecha: fechaHora,
             asesor: m.advisorId,
+            nombreAgente: m.nombreAgente || `Agente ${m.advisorId}`,
             resultado: 'Gestión realizada',
             gestion: m.level3Name || m.level2Name || m.level1Name || '-',
+            tipificacionCompleta: tipificacionCompleta,
+            canal: m.canalContacto || 'N/A',
+            metodo: m.metodoContacto || 'N/A',
             observacion: m.observations || 'Sin observaciones',
-            duracion: '00:00:00', // TEMPORAL: No hay callDetail en el nuevo modelo
+            duracion: duracionFormatted,
             hasSchedule: m.typificationRequiresSchedule || false,
             schedule: null as any
           };
