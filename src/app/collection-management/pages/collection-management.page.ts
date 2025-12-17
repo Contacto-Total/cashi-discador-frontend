@@ -3336,7 +3336,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idAgente: currentUserSchedule?.id || 1,
         idTenant: this.selectedTenantId!,
         idCartera: this.selectedPortfolioId || 1,
-        idSubcartera: 1,
+        idSubcartera: this.selectedSubPortfolioId,
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones,
         metodoContacto: isActiveCallSchedule ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
