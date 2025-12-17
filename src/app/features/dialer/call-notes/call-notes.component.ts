@@ -8,17 +8,23 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CallService } from '../../../core/services/call.service';
 import { Call, CallDisposition, CompleteCallRequest } from '../../../core/models/call.model';
 import { Contact } from '../../../core/models/contact.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { AgentStatusService } from '../../../core/services/agent-status.service';
+import { CartaAcuerdoService } from '../../../core/services/carta-acuerdo.service';
 import { TypificationService } from '../../../maintenance/services/typification.service';
 import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
 import { TypificationCatalog, AdditionalField, FieldType } from '../../../maintenance/models/typification.model';
 import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2, PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 import { ChipSelectComponent, ChipOption } from '../../../shared/components/chip-select/chip-select.component';
 import { PaymentScheduleComponent, AmountOption } from '../../../shared/components/payment-schedule/payment-schedule.component';
+import { ConfirmCartaDialogComponent } from './confirm-carta-dialog/confirm-carta-dialog.component';
 
 @Component({
   selector: 'app-call-notes',
@@ -33,6 +39,10 @@ import { PaymentScheduleComponent, AmountOption } from '../../../shared/componen
     MatButtonModule,
     MatDatepickerModule,
     MatNativeDateModule,
+    MatDialogModule,
+    MatIconModule,
+    MatSnackBarModule,
+    MatProgressSpinnerModule,
     ChipSelectComponent,
     PaymentScheduleComponent
   ],
@@ -69,18 +79,27 @@ export class CallNotesComponent implements OnInit {
   // Cronograma de pagos
   paymentScheduleConfig: PaymentScheduleConfig | null = null;
 
+  // Carta de acuerdo
+  tienePromesaPendiente = false;
+  idGestionPendiente: number | null = null;
+  generandoCarta = false;
+
   constructor(
     private fb: FormBuilder,
     private callService: CallService,
     private authService: AuthService,
     private agentStatusService: AgentStatusService,
     private typificationService: TypificationService,
-    private typificationV2Service: TypificationV2Service
+    private typificationV2Service: TypificationV2Service,
+    private cartaAcuerdoService: CartaAcuerdoService,
+    private dialog: MatDialog,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
     this.initForm();
     this.loadTypifications();
+    this.verificarPromesaPendiente();
   }
 
   initForm(): void {
@@ -437,6 +456,8 @@ export class CallNotesComponent implements OnInit {
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
             next: (record) => {
               console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas);
+              // Mostrar modal para generar carta de acuerdo
+              this.mostrarModalGenerarCarta(record.id);
               this.finalizarTipificacionYSalir(user.id);
             },
             error: (error) => {
@@ -517,5 +538,68 @@ export class CallNotesComponent implements OnInit {
     if (confirm('Skip saving notes? The call will be marked without detailed notes.')) {
       this.notesComplete.emit();
     }
+  }
+
+  // ==================== CARTA DE ACUERDO ====================
+
+  /**
+   * Verifica si el cliente tiene una promesa de pago pendiente
+   */
+  verificarPromesaPendiente(): void {
+    if (!this.contact?.id) return;
+
+    this.cartaAcuerdoService.verificarPromesaPendiente(this.contact.id).subscribe({
+      next: (response) => {
+        this.tienePromesaPendiente = response.tienePromesaPendiente;
+        this.idGestionPendiente = response.idGestion || null;
+      },
+      error: (error) => {
+        console.error('Error verificando promesa pendiente:', error);
+        this.tienePromesaPendiente = false;
+      }
+    });
+  }
+
+  /**
+   * Genera la carta de acuerdo para la promesa pendiente
+   */
+  generarCartaAcuerdo(): void {
+    const user = this.authService.getCurrentUser();
+    if (!user || !this.idGestionPendiente) {
+      this.snackBar.open('No se puede generar la carta', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.generandoCarta = true;
+    this.cartaAcuerdoService.generarCarta(this.idGestionPendiente, user.id).subscribe({
+      next: (blob) => {
+        this.cartaAcuerdoService.descargarPdf(blob, `carta_acuerdo_${this.idGestionPendiente}.pdf`);
+        this.snackBar.open('Carta generada exitosamente', 'Cerrar', { duration: 3000 });
+        this.generandoCarta = false;
+      },
+      error: (error) => {
+        console.error('Error generando carta:', error);
+        this.snackBar.open('Error al generar la carta', 'Cerrar', { duration: 3000 });
+        this.generandoCarta = false;
+      }
+    });
+  }
+
+  /**
+   * Muestra el modal de confirmación para generar carta después de guardar promesa
+   */
+  mostrarModalGenerarCarta(idGestion: number): void {
+    const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
+      width: '400px',
+      disableClose: true,
+      data: { idGestion }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === 'generate') {
+        this.idGestionPendiente = idGestion;
+        this.generarCartaAcuerdo();
+      }
+    });
   }
 }

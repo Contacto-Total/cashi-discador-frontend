@@ -3,6 +3,26 @@
     <mat-card-title>Call Notes & Disposition</mat-card-title>
   </mat-card-header>
 
+  <!-- Botón Generar Carta de Acuerdo - Solo visible si hay promesa pendiente -->
+  @if (tienePromesaPendiente && idGestionPendiente) {
+    <div class="carta-acuerdo-section">
+      <button
+        mat-raised-button
+        color="accent"
+        (click)="generarCartaAcuerdo()"
+        [disabled]="generandoCarta"
+        class="btn-generar-carta">
+        @if (generandoCarta) {
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Generando...</span>
+        } @else {
+          <mat-icon>description</mat-icon>
+          <span>Generar Carta de Acuerdo</span>
+        }
+      </button>
+    </div>
+  }
+
   <mat-card-content>
     <form [formGroup]="notesForm" (ngSubmit)="onSubmit()">
       <div class="form-section">

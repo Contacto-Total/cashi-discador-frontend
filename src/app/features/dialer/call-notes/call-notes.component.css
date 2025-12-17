@@ -55,3 +55,31 @@
   color: #666;
   font-style: italic;
 }
+
+/* Carta de Acuerdo */
+.carta-acuerdo-section {
+  padding: 16px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 8px;
+  margin: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-generar-carta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  padding: 8px 24px;
+}
+
+.btn-generar-carta mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.btn-generar-carta mat-spinner {
+  margin-right: 8px;
+}
