@@ -4554,3 +4554,122 @@ html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-g
   background-color: #4b5563 !important;
 }
 
+/* ===============================================
+   AGENT DASHBOARD - LIGHT MODE FIXES
+   =============================================== */
+
+/* Contenedor principal - fondo claro */
+html:not(.dark) app-agent-status-dashboard .dashboard-container,
+body.light-theme .dashboard-container {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #f8fafc) !important;
+}
+
+/* Header */
+html:not(.dark) app-agent-status-dashboard .dashboard-header,
+body.light-theme .dashboard-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) app-agent-status-dashboard .dashboard-header h1,
+body.light-theme .dashboard-header h1 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) app-agent-status-dashboard .agent-name,
+body.light-theme .agent-name {
+  color: #475569 !important;
+}
+
+/* Cards - Status Card, Change Status, Manual Calling, Info Card */
+html:not(.dark) app-agent-status-dashboard .status-card,
+html:not(.dark) app-agent-status-dashboard .change-status-section,
+html:not(.dark) app-agent-status-dashboard .manual-calling-section,
+html:not(.dark) app-agent-status-dashboard .info-card,
+body.light-theme .status-card,
+body.light-theme .change-status-section,
+body.light-theme .manual-calling-section,
+body.light-theme .info-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Títulos en las cards */
+html:not(.dark) app-agent-status-dashboard .status-card h2,
+html:not(.dark) app-agent-status-dashboard .change-status-section h2,
+html:not(.dark) app-agent-status-dashboard .manual-calling-section h2,
+html:not(.dark) app-agent-status-dashboard .info-card h3,
+body.light-theme .status-card h2,
+body.light-theme .change-status-section h2,
+body.light-theme .manual-calling-section h2,
+body.light-theme .info-card h3 {
+  color: #0f172a !important;
+}
+
+/* Subtítulos */
+html:not(.dark) app-agent-status-dashboard .section-subtitle,
+body.light-theme .section-subtitle {
+  color: #64748b !important;
+}
+
+/* Botones de estado */
+html:not(.dark) app-agent-status-dashboard .status-btn,
+body.light-theme .status-btn {
+  background: #f8fafc !important;
+  border: 2px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+html:not(.dark) app-agent-status-dashboard .status-btn:hover:not(.disabled),
+body.light-theme .status-btn:hover:not(.disabled) {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #059669 !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15) !important;
+}
+
+html:not(.dark) app-agent-status-dashboard .status-btn.active,
+body.light-theme .status-btn.active {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #059669 !important;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2) !important;
+}
+
+/* Info card list items */
+html:not(.dark) app-agent-status-dashboard .info-card li,
+body.light-theme .info-card li {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-agent-status-dashboard .info-card li strong,
+body.light-theme .info-card li strong {
+  color: #059669 !important;
+}
+
+/* Manual call note */
+html:not(.dark) app-agent-status-dashboard .manual-call-note,
+body.light-theme .manual-call-note {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #059669 !important;
+}
+
+/* Loading state */
+html:not(.dark) app-agent-status-dashboard .loading-state,
+body.light-theme .loading-state {
+  color: #64748b !important;
+}
+
+html:not(.dark) app-agent-status-dashboard .spinner,
+body.light-theme .spinner {
+  border: 4px solid #e2e8f0 !important;
+  border-top-color: #10B981 !important;
+}
+
+/* Error state */
+html:not(.dark) app-agent-status-dashboard .error-state,
+body.light-theme .error-state {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+
