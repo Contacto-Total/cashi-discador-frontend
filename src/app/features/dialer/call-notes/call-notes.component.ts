@@ -456,9 +456,8 @@ export class CallNotesComponent implements OnInit {
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
             next: (record) => {
               console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas);
-              // Mostrar modal para generar carta de acuerdo
-              this.mostrarModalGenerarCarta(record.id);
-              this.finalizarTipificacionYSalir(user.id);
+              // Mostrar modal para generar carta de acuerdo y esperar a que se cierre
+              this.mostrarModalGenerarCarta(record.id, user.id);
             },
             error: (error) => {
               console.error('Error creating payment schedule:', error);
@@ -587,8 +586,10 @@ export class CallNotesComponent implements OnInit {
 
   /**
    * Muestra el modal de confirmación para generar carta después de guardar promesa
+   * @param idGestion ID de la gestión recién creada
+   * @param userId ID del usuario (opcional, si se pasa se finaliza tipificación después del modal)
    */
-  mostrarModalGenerarCarta(idGestion: number): void {
+  mostrarModalGenerarCarta(idGestion: number, userId?: number): void {
     const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
       width: '400px',
       disableClose: true,
@@ -598,7 +599,47 @@ export class CallNotesComponent implements OnInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result === 'generate') {
         this.idGestionPendiente = idGestion;
-        this.generarCartaAcuerdo();
+        // Generar carta y luego finalizar tipificación
+        this.generarCartaYFinalizar(idGestion, userId);
+      } else {
+        // Usuario eligió "Ahora no", solo finalizar tipificación
+        if (userId) {
+          this.finalizarTipificacionYSalir(userId);
+        }
+      }
+    });
+  }
+
+  /**
+   * Genera la carta de acuerdo y luego finaliza la tipificación
+   */
+  private generarCartaYFinalizar(idGestion: number, userId?: number): void {
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      this.snackBar.open('No se puede generar la carta', 'Cerrar', { duration: 3000 });
+      if (userId) this.finalizarTipificacionYSalir(userId);
+      return;
+    }
+
+    this.generandoCarta = true;
+    this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
+      next: (blob) => {
+        this.cartaAcuerdoService.descargarPdf(blob, `carta_acuerdo_${idGestion}.pdf`);
+        this.snackBar.open('Carta generada exitosamente', 'Cerrar', { duration: 3000 });
+        this.generandoCarta = false;
+        // Finalizar tipificación después de generar carta
+        if (userId) {
+          this.finalizarTipificacionYSalir(userId);
+        }
+      },
+      error: (error) => {
+        console.error('Error generando carta:', error);
+        this.snackBar.open('Error al generar la carta', 'Cerrar', { duration: 3000 });
+        this.generandoCarta = false;
+        // Finalizar tipificación aunque falle la carta
+        if (userId) {
+          this.finalizarTipificacionYSalir(userId);
+        }
       }
     });
   }
