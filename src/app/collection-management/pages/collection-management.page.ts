@@ -2101,9 +2101,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Calcular monto total sumando todas las cuotas
           const totalAmount = cuotasPromesa.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
 
-          // Encontrar cuotas pendientes
+          // Encontrar cuotas pendientes (excluir PAGADAS, VENCIDAS y CANCELADAS)
+          // VENCIDA = promesa rota, el cliente puede crear una nueva
           const pendingCuotas = cuotasPromesa.filter((c: any) =>
-            c.estado !== 'PAGADA' && c.estado !== 'PAGADO' && c.estado !== 'CUMPLIDO' && c.estado !== 'CANCELADA'
+            c.estado !== 'PAGADA' && c.estado !== 'PAGADO' && c.estado !== 'CUMPLIDO' &&
+            c.estado !== 'CANCELADA' && c.estado !== 'VENCIDA'
           );
           const nextCuota = pendingCuotas[0] || cuotasPromesa[0];
 
