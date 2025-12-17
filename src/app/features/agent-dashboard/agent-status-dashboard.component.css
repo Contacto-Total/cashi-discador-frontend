@@ -360,3 +360,115 @@
     padding: 0.6rem 1.5rem;
   }
 }
+
+/* ===============================================
+   LIGHT MODE - Usando :host-context para detectar tema
+   =============================================== */
+
+/* Contenedor principal */
+:host-context(body.light-theme) .dashboard-container,
+:host-context(html:not(.dark)) .dashboard-container {
+  background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #f8fafc);
+}
+
+/* Header */
+:host-context(body.light-theme) .dashboard-header,
+:host-context(html:not(.dark)) .dashboard-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+:host-context(body.light-theme) .dashboard-header h1,
+:host-context(html:not(.dark)) .dashboard-header h1 {
+  color: #0f172a;
+}
+
+:host-context(body.light-theme) .agent-name,
+:host-context(html:not(.dark)) .agent-name {
+  color: #475569;
+}
+
+/* Cards */
+:host-context(body.light-theme) .status-card,
+:host-context(body.light-theme) .change-status-section,
+:host-context(body.light-theme) .manual-calling-section,
+:host-context(body.light-theme) .info-card,
+:host-context(html:not(.dark)) .status-card,
+:host-context(html:not(.dark)) .change-status-section,
+:host-context(html:not(.dark)) .manual-calling-section,
+:host-context(html:not(.dark)) .info-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Títulos en cards */
+:host-context(body.light-theme) .status-card h2,
+:host-context(body.light-theme) .change-status-section h2,
+:host-context(body.light-theme) .manual-calling-section h2,
+:host-context(body.light-theme) .info-card h3,
+:host-context(html:not(.dark)) .status-card h2,
+:host-context(html:not(.dark)) .change-status-section h2,
+:host-context(html:not(.dark)) .manual-calling-section h2,
+:host-context(html:not(.dark)) .info-card h3 {
+  color: #0f172a;
+}
+
+/* Subtítulos */
+:host-context(body.light-theme) .section-subtitle,
+:host-context(html:not(.dark)) .section-subtitle {
+  color: #64748b;
+}
+
+/* Botones de estado */
+:host-context(body.light-theme) .status-btn,
+:host-context(html:not(.dark)) .status-btn {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  color: #475569;
+}
+
+:host-context(body.light-theme) .status-btn:hover:not(.disabled),
+:host-context(html:not(.dark)) .status-btn:hover:not(.disabled) {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+:host-context(body.light-theme) .status-btn.active,
+:host-context(html:not(.dark)) .status-btn.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+}
+
+/* Info card items */
+:host-context(body.light-theme) .info-card li,
+:host-context(html:not(.dark)) .info-card li {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .info-card li strong,
+:host-context(html:not(.dark)) .info-card li strong {
+  color: #059669;
+}
+
+/* Loading state */
+:host-context(body.light-theme) .loading-state,
+:host-context(html:not(.dark)) .loading-state {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .spinner,
+:host-context(html:not(.dark)) .spinner {
+  border: 4px solid #e2e8f0;
+  border-top-color: #10B981;
+}
+
+/* Error state */
+:host-context(body.light-theme) .error-state,
+:host-context(html:not(.dark)) .error-state {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
