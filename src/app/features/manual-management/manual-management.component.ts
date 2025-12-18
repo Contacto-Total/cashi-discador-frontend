@@ -60,7 +60,8 @@ export class ManualManagementComponent implements OnInit {
     this.loadingTenants.set(true);
     this.tenantService.getAllTenants().subscribe({
       next: (tenants) => {
-        this.tenants = tenants.filter(t => t.isActive);
+        // Mostrar todos los inquilinos (igual que typification-maintenance)
+        this.tenants = tenants;
         this.loadingTenants.set(false);
       },
       error: (err) => {
