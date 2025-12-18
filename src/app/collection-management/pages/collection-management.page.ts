@@ -2252,15 +2252,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   loadManagementHistory() {
-    const customerIdRaw = this.customerData()?.id;
-    if (!customerIdRaw) {
-      console.log('[HISTORIAL] No hay cliente cargado, omitiendo carga de historial');
+    // Usar documento en lugar de ID para buscar el historial
+    // El documento es el identificador único real del cliente
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) {
+      console.log('[HISTORIAL] No hay documento del cliente, omitiendo carga de historial');
       return;
     }
-    const customerId = String(customerIdRaw);
-    console.log('[HISTORIAL] Cargando historial para cliente ID:', customerId);
+    console.log('[HISTORIAL] Cargando historial para documento:', documento);
 
-    this.managementService.getManagementsByCustomer(customerId).subscribe({
+    this.managementService.getManagementsByDocumento(documento).subscribe({
       next: (managements) => {
         console.log('[HISTORIAL] Gestiones recibidas del backend:', managements);
         console.log('[HISTORIAL] Total de gestiones:', managements.length);
@@ -2811,11 +2812,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Loads active payment schedules for the current customer
    */
   private loadActiveSchedules() {
-    const customerId = String(this.customerData().id);
-    console.log('[SCHEDULE] Loading active schedules for customer ID:', customerId);
+    // Usar documento en lugar de ID para buscar cronogramas
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) {
+      console.log('[SCHEDULE] No hay documento del cliente, omitiendo carga de cronogramas');
+      return;
+    }
+    console.log('[SCHEDULE] Loading active schedules for documento:', documento);
 
     this.isLoadingSchedules.set(true);
-    this.managementService.getActiveSchedulesByCustomer(customerId).subscribe({
+    this.managementService.getActiveSchedulesByDocumento(documento).subscribe({
       next: (schedules) => {
         console.log('[SCHEDULE] Active schedules loaded:', schedules);
         this.activeSchedules.set(schedules);

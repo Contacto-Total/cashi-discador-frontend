@@ -225,10 +225,22 @@ export class ManagementService {
   }
 
   /**
-   * Obtiene todas las gestiones de un cliente
+   * Obtiene todas las gestiones de un cliente por ID
+   * @deprecated Usar getManagementsByDocumento para mayor robustez
    */
   getManagementsByCustomer(customerId: string): Observable<ManagementResource[]> {
     return this.http.get<RegistroGestionV2[]>(`${this.baseUrl}/client/${customerId}`).pipe(
+      map(records => records.map(r => this.transformToFrontendFormat(r)))
+    );
+  }
+
+  /**
+   * Obtiene todas las gestiones de un cliente por documento.
+   * Más robusto que buscar por ID ya que el documento es el identificador único.
+   */
+  getManagementsByDocumento(documento: string): Observable<ManagementResource[]> {
+    console.log('[MANAGEMENT] Fetching managements by documento:', documento);
+    return this.http.get<RegistroGestionV2[]>(`${this.baseUrl}/documento/${documento}`).pipe(
       map(records => records.map(r => this.transformToFrontendFormat(r)))
     );
   }
@@ -243,6 +255,17 @@ export class ManagementService {
     console.log('[SCHEDULE] Fetching active schedules for customer:', customerId);
     // Usar el nuevo endpoint del backend discador que devuelve cabeceras con cuotas
     return this.http.get<any[]>(`${this.baseUrl}/payment-schedule/client/${customerId}/active`).pipe(
+      map(records => this.transformToPaymentSchedules(records))
+    );
+  }
+
+  /**
+   * Obtiene cronogramas de pago activos por documento del cliente.
+   * Más robusto que buscar por ID.
+   */
+  getActiveSchedulesByDocumento(documento: string): Observable<PaymentSchedule[]> {
+    console.log('[SCHEDULE] Fetching active schedules for documento:', documento);
+    return this.http.get<any[]>(`${this.baseUrl}/payment-schedule/documento/${documento}/active`).pipe(
       map(records => this.transformToPaymentSchedules(records))
     );
   }
