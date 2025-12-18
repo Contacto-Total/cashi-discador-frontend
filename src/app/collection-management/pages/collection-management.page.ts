@@ -75,19 +75,12 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
       <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
         <div class="relative px-4 py-2">
           <div class="flex items-center justify-between">
-            <!-- Lado Izquierdo: Título y Asesor -->
-            <div class="flex items-center gap-4">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-blue-500/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
-                  <lucide-angular name="clipboard-list" [size]="18" class="text-white"></lucide-angular>
-                </div>
-                <h1 class="text-base font-bold">Gestión de Cobranza</h1>
+            <!-- Lado Izquierdo: Título -->
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 bg-blue-500/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
+                <lucide-angular name="clipboard-list" [size]="18" class="text-white"></lucide-angular>
               </div>
-              <div class="h-6 w-px bg-white/20"></div>
-              <div>
-                <div class="text-blue-200 dark:text-blue-300 text-[10px]">Asesor</div>
-                <div class="font-semibold text-white text-sm">María González Castro</div>
-              </div>
+              <h1 class="text-base font-bold">Gestión de Cobranza</h1>
             </div>
 
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
