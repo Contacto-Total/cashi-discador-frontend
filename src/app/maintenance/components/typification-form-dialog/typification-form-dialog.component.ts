@@ -8,8 +8,7 @@ import {
   ClassificationTypeV2,
   CreateTypificationCommandV2,
   UpdateTypificationCommandV2,
-  AdditionalFieldV2,
-  FieldTypeV2
+  AdditionalFieldV2
 } from '../../models/typification-v2.model';
 import { FieldConfigDialogComponent } from '../field-config-dialog/field-config-dialog.component';
 import { MetadataSchema, FieldConfig, FieldType } from '../../models/field-config.model';
@@ -489,28 +488,30 @@ export class TypificationFormDialogComponent implements OnInit {
   }
 
   /**
-   * Mapea FieldTypeV2 a FieldType para el editor
+   * Mapea tipo del backend a FieldType para el editor
    */
-  private mapFieldTypeV2ToFieldType(type: FieldTypeV2): FieldType {
+  private mapFieldTypeV2ToFieldType(type: string): FieldType {
+    const typeStr = String(type).toUpperCase();
     const typeMap: Record<string, FieldType> = {
-      [FieldTypeV2.TEXT]: 'text',
-      [FieldTypeV2.TEXTAREA]: 'textarea',
-      [FieldTypeV2.NUMBER]: 'number',
-      [FieldTypeV2.DECIMAL]: 'decimal',
-      [FieldTypeV2.CURRENCY]: 'currency',
-      [FieldTypeV2.DATE]: 'date',
-      [FieldTypeV2.TIME]: 'time',
-      [FieldTypeV2.DATETIME]: 'datetime',
-      [FieldTypeV2.CHECKBOX]: 'checkbox',
-      [FieldTypeV2.SELECT]: 'select',
-      [FieldTypeV2.MULTISELECT]: 'multiselect',
-      [FieldTypeV2.EMAIL]: 'email',
-      [FieldTypeV2.PHONE]: 'phone',
-      [FieldTypeV2.URL]: 'url',
-      [FieldTypeV2.TABLE]: 'table',
-      [FieldTypeV2.PAYMENT_SCHEDULE]: 'payment_schedule'
+      'TEXT': 'text',
+      'TEXTAREA': 'textarea',
+      'NUMBER': 'number',
+      'DECIMAL': 'decimal',
+      'CURRENCY': 'currency',
+      'DATE': 'date',
+      'TIME': 'time',
+      'DATETIME': 'datetime',
+      'CHECKBOX': 'checkbox',
+      'SELECT': 'select',
+      'CHIP_SELECT': 'select',
+      'MULTISELECT': 'multiselect',
+      'EMAIL': 'email',
+      'PHONE': 'phone',
+      'URL': 'url',
+      'TABLE': 'table',
+      'PAYMENT_SCHEDULE': 'payment_schedule'
     };
-    return typeMap[type] || 'text';
+    return typeMap[typeStr] || 'text';
   }
 
   validate(): boolean {
@@ -656,28 +657,11 @@ export class TypificationFormDialogComponent implements OnInit {
   }
 
   /**
-   * Mapea tipos de FieldConfig a FieldTypeV2
+   * Mapea tipos de FieldConfig a string para el backend
    */
-  private mapFieldType(type: FieldType): FieldTypeV2 {
-    const typeMap: Record<string, FieldTypeV2> = {
-      'text': FieldTypeV2.TEXT,
-      'textarea': FieldTypeV2.TEXTAREA,
-      'number': FieldTypeV2.NUMBER,
-      'decimal': FieldTypeV2.DECIMAL,
-      'currency': FieldTypeV2.CURRENCY,
-      'date': FieldTypeV2.DATE,
-      'time': FieldTypeV2.TIME,
-      'datetime': FieldTypeV2.DATETIME,
-      'checkbox': FieldTypeV2.CHECKBOX,
-      'select': FieldTypeV2.SELECT,
-      'multiselect': FieldTypeV2.MULTISELECT,
-      'email': FieldTypeV2.EMAIL,
-      'phone': FieldTypeV2.PHONE,
-      'url': FieldTypeV2.URL,
-      'table': FieldTypeV2.TABLE,
-      'payment_schedule': FieldTypeV2.PAYMENT_SCHEDULE
-    };
-    return typeMap[type] || FieldTypeV2.TEXT;
+  private mapFieldType(type: FieldType): string {
+    // El backend usa strings en mayúsculas
+    return type.toUpperCase().replace('_', '_');
   }
 
   onCancel() {

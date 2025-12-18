@@ -119,7 +119,7 @@ export enum FieldDataSourceV2 {
 export interface AdditionalFieldV2 {
   id: number;
   nombreCampo: string;
-  tipoCampo: FieldTypeV2;
+  tipoCampo: FieldTypeV2 | string;  // Backend usa String, no enum
   labelCampo: string;
   esRequerido: boolean;
   ordenVisualizacion: number;
