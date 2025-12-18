@@ -93,7 +93,8 @@ export class WebsocketService {
         // Wait for connection then subscribe
         const subscription = this.connectionStatus$.subscribe(connected => {
           console.log(`[WebSocket] connectionStatus$ emitted: ${connected} for pending topic ${topic}`);
-          if (connected && this.stompClient) {
+          // Double-check that the client is actually connected
+          if (connected && this.stompClient?.connected) {
             this.subscribeToTopic(topic, subject);
             subscription.unsubscribe();
           }
@@ -105,17 +106,27 @@ export class WebsocketService {
   }
 
   private subscribeToTopic(topic: string, subject: Subject<any>): void {
-    console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
-    this.stompClient?.subscribe(topic, (message: IMessage) => {
-      try {
-        console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
-        const payload = JSON.parse(message.body);
-        console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
-        subject.next(payload);
-      } catch (e) {
-        console.error('Error parsing WebSocket message:', e);
-      }
-    });
+    // Guard against calling subscribe when not connected
+    if (!this.stompClient?.connected) {
+      console.warn(`[WebSocket] Cannot subscribe to ${topic}: STOMP client not connected`);
+      return;
+    }
+
+    try {
+      console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
+      this.stompClient.subscribe(topic, (message: IMessage) => {
+        try {
+          console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
+          const payload = JSON.parse(message.body);
+          console.log(`[WebSocket] 📦 Parsed payload on ${topic}:`, payload);
+          subject.next(payload);
+        } catch (e) {
+          console.error('Error parsing WebSocket message:', e);
+        }
+      });
+    } catch (error) {
+      console.error(`[WebSocket] Error subscribing to ${topic}:`, error);
+    }
   }
 
   send(destination: string, body: any): void {
