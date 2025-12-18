@@ -7,10 +7,13 @@ import {
   TypificationCatalogV2,
   ClassificationTypeV2,
   CreateTypificationCommandV2,
-  UpdateTypificationCommandV2
+  UpdateTypificationCommandV2,
+  AdditionalFieldV2,
+  FieldTypeV2
 } from '../../models/typification-v2.model';
 import { FieldConfigDialogComponent } from '../field-config-dialog/field-config-dialog.component';
-import { MetadataSchema } from '../../models/field-config.model';
+import { MetadataSchema, FieldConfig, FieldType } from '../../models/field-config.model';
+import { forkJoin } from 'rxjs';
 
 interface ClassificationFormV2 {
   codigo: string;
@@ -442,7 +445,72 @@ export class TypificationFormDialogComponent implements OnInit {
         colorSugerido: this.typification.colorSugerido || '#3B82F6',
         estaActiva: this.typification.estaActiva
       };
+
+      // Cargar campos adicionales existentes
+      this.loadExistingFields();
     }
+  }
+
+  /**
+   * Carga los campos adicionales existentes de la tipificación
+   */
+  private loadExistingFields() {
+    if (!this.typification?.id) return;
+
+    this.classificationService.getAdditionalFields(this.typification.id).subscribe({
+      next: (fields) => {
+        if (fields && fields.length > 0) {
+          this.form.metadataSchema = this.convertAdditionalFieldsToMetadata(fields);
+          console.log('✅ Campos existentes cargados:', fields.length);
+        }
+      },
+      error: (error) => {
+        console.warn('No se pudieron cargar campos existentes:', error);
+      }
+    });
+  }
+
+  /**
+   * Convierte AdditionalFieldV2[] a MetadataSchema para el editor
+   */
+  private convertAdditionalFieldsToMetadata(fields: AdditionalFieldV2[]): MetadataSchema {
+    return {
+      fields: fields.map(field => ({
+        id: field.nombreCampo,
+        label: field.labelCampo,
+        type: this.mapFieldTypeV2ToFieldType(field.tipoCampo),
+        required: field.esRequerido,
+        displayOrder: field.ordenVisualizacion,
+        min: field.valorMinimo,
+        max: field.valorMaximo,
+        maxLength: field.longitudMaxima
+      }))
+    };
+  }
+
+  /**
+   * Mapea FieldTypeV2 a FieldType para el editor
+   */
+  private mapFieldTypeV2ToFieldType(type: FieldTypeV2): FieldType {
+    const typeMap: Record<string, FieldType> = {
+      [FieldTypeV2.TEXT]: 'text',
+      [FieldTypeV2.TEXTAREA]: 'textarea',
+      [FieldTypeV2.NUMBER]: 'number',
+      [FieldTypeV2.DECIMAL]: 'decimal',
+      [FieldTypeV2.CURRENCY]: 'currency',
+      [FieldTypeV2.DATE]: 'date',
+      [FieldTypeV2.TIME]: 'time',
+      [FieldTypeV2.DATETIME]: 'datetime',
+      [FieldTypeV2.CHECKBOX]: 'checkbox',
+      [FieldTypeV2.SELECT]: 'select',
+      [FieldTypeV2.MULTISELECT]: 'multiselect',
+      [FieldTypeV2.EMAIL]: 'email',
+      [FieldTypeV2.PHONE]: 'phone',
+      [FieldTypeV2.URL]: 'url',
+      [FieldTypeV2.TABLE]: 'table',
+      [FieldTypeV2.PAYMENT_SCHEDULE]: 'payment_schedule'
+    };
+    return typeMap[type] || 'text';
   }
 
   validate(): boolean {
@@ -538,10 +606,29 @@ export class TypificationFormDialogComponent implements OnInit {
       estaActiva: this.form.estaActiva
     };
 
+    // Actualizar tipificación
     this.classificationService.updateTypification(this.typification.id, command).subscribe({
       next: (updated: TypificationCatalogV2) => {
-        this.saving.set(false);
-        this.save.emit(updated);
+        // Si hay campos configurados, guardarlos también
+        if (this.form.metadataSchema?.fields?.length) {
+          const additionalFields = this.convertMetadataToAdditionalFields(this.form.metadataSchema);
+          this.classificationService.saveAdditionalFields(this.typification!.id, additionalFields).subscribe({
+            next: () => {
+              console.log('✅ Campos adicionales guardados');
+              this.saving.set(false);
+              this.save.emit(updated);
+            },
+            error: (error: any) => {
+              console.error('⚠️ Error al guardar campos adicionales:', error);
+              // La tipificación se actualizó pero los campos fallaron
+              this.saving.set(false);
+              this.save.emit(updated);
+            }
+          });
+        } else {
+          this.saving.set(false);
+          this.save.emit(updated);
+        }
       },
       error: (error: any) => {
         console.error('Error al actualizar tipificación:', error);
@@ -549,6 +636,48 @@ export class TypificationFormDialogComponent implements OnInit {
         alert('Error al actualizar la tipificación.');
       }
     });
+  }
+
+  /**
+   * Convierte MetadataSchema a AdditionalFieldV2[] para el backend
+   */
+  private convertMetadataToAdditionalFields(schema: MetadataSchema): AdditionalFieldV2[] {
+    return schema.fields.map((field, index) => ({
+      id: 0, // El backend asignará el ID
+      nombreCampo: field.id,
+      tipoCampo: this.mapFieldType(field.type),
+      labelCampo: field.label,
+      esRequerido: field.required || false,
+      ordenVisualizacion: field.displayOrder ?? index * 10,
+      valorMinimo: field.min,
+      valorMaximo: field.max,
+      longitudMaxima: field.maxLength
+    }));
+  }
+
+  /**
+   * Mapea tipos de FieldConfig a FieldTypeV2
+   */
+  private mapFieldType(type: FieldType): FieldTypeV2 {
+    const typeMap: Record<string, FieldTypeV2> = {
+      'text': FieldTypeV2.TEXT,
+      'textarea': FieldTypeV2.TEXTAREA,
+      'number': FieldTypeV2.NUMBER,
+      'decimal': FieldTypeV2.DECIMAL,
+      'currency': FieldTypeV2.CURRENCY,
+      'date': FieldTypeV2.DATE,
+      'time': FieldTypeV2.TIME,
+      'datetime': FieldTypeV2.DATETIME,
+      'checkbox': FieldTypeV2.CHECKBOX,
+      'select': FieldTypeV2.SELECT,
+      'multiselect': FieldTypeV2.MULTISELECT,
+      'email': FieldTypeV2.EMAIL,
+      'phone': FieldTypeV2.PHONE,
+      'url': FieldTypeV2.URL,
+      'table': FieldTypeV2.TABLE,
+      'payment_schedule': FieldTypeV2.PAYMENT_SCHEDULE
+    };
+    return typeMap[type] || FieldTypeV2.TEXT;
   }
 
   onCancel() {
