@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, interval } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, BehaviorSubject, interval, of } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface NotificacionSistema {
@@ -32,9 +32,12 @@ export class NotificacionesSistemaService {
 
   /**
    * Obtener todas las notificaciones
+   * Maneja silenciosamente el error si el endpoint no existe
    */
   getAll(): Observable<NotificacionSistema[]> {
-    return this.http.get<NotificacionSistema[]>(this.apiUrl);
+    return this.http.get<NotificacionSistema[]>(this.apiUrl).pipe(
+      catchError(() => of([]))
+    );
   }
 
   /**
@@ -46,10 +49,15 @@ export class NotificacionesSistemaService {
 
   /**
    * Obtener el conteo de no leídas
+   * Maneja silenciosamente el error 404 si el endpoint no existe
    */
   getCount(): Observable<{ count: number }> {
     return this.http.get<{ count: number }>(`${this.apiUrl}/count`).pipe(
-      tap(response => this.countSubject.next(response.count))
+      tap(response => this.countSubject.next(response.count)),
+      catchError(() => {
+        // Si el endpoint no existe, retornar count 0 silenciosamente
+        return of({ count: 0 });
+      })
     );
   }
 
