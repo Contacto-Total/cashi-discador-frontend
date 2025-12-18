@@ -8,8 +8,8 @@ import { Tenant } from '../models/tenant.model';
   providedIn: 'root'
 })
 export class TenantService {
-  // Usar tipificacionUrl que tiene los tenants con datos configurados en discador
-  private apiUrl = `${environment.tipificacionUrl}/system-config/tenants`;
+  // Usar webServiceUrl para obtener todos los tenants
+  private apiUrl = `${environment.webServiceUrl}/v1/system-config/tenants`;
 
   constructor(private http: HttpClient) {}
 
