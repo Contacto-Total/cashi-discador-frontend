@@ -481,7 +481,7 @@ export class TypificationFormDialogComponent implements OnInit {
       codigo: this.form.codigo.trim(),
       nombre: this.form.nombre.trim(),
       tipoClasificacion: this.form.tipoClasificacion as ClassificationTypeV2,
-      idTipificacionPadre: this.parentClassification ? this.parentClassification.id : undefined,
+      parentTypificationId: this.parentClassification ? this.parentClassification.id : undefined,
       descripcion: this.form.descripcion.trim() || undefined,
       ordenVisualizacion: this.form.ordenVisualizacion,
       iconoSugerido: this.form.iconoSugerido.trim() || undefined,

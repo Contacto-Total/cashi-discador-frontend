@@ -65,7 +65,7 @@ export interface CreateTypificationCommandV2 {
   nombre: string;
   descripcion?: string;
   tipoClasificacion: ClassificationTypeV2;
-  idTipificacionPadre?: number;
+  parentTypificationId?: number;  // Nombre que espera el backend (@JsonProperty)
   ordenVisualizacion?: number;
   esEstadoFinal?: boolean;
   requiereObservaciones?: boolean;
