@@ -8,7 +8,8 @@ import { Tenant } from '../models/tenant.model';
   providedIn: 'root'
 })
 export class TenantService {
-  private apiUrl = `${environment.tipificacionUrl}/system-config/tenants`;
+  // Usar webServiceUrl para obtener todos los tenants (igual que TypificationV2Service)
+  private apiUrl = `${environment.webServiceUrl}/v1/system-config/tenants`;
 
   constructor(private http: HttpClient) {}
 
