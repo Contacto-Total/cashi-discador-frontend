@@ -1610,7 +1610,7 @@ body.light-theme .snowflake,
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Punta del gorro - CONECTADA Y CAYENDO */
+/* Punta del gorro - CONECTADA Y DETRÁS DEL MENSAJE */
 .hat-tip {
   position: absolute;
   top: 5px;
@@ -1623,6 +1623,7 @@ body.light-theme .snowflake,
   transform: rotate(15deg);
   animation: tipSwing 3s ease-in-out infinite;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+  z-index: -1;
 }
 
 @keyframes tipSwing {
@@ -1642,6 +1643,7 @@ body.light-theme .snowflake,
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   transform-origin: -42px center;
   animation: pompomFollow 3s ease-in-out infinite;
+  z-index: -1;
 }
 
 @keyframes pompomFollow {
