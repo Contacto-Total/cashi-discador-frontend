@@ -34,10 +34,12 @@ export class LoginComponent implements OnInit, AfterViewInit {
   showBubble = false;
   private typingTimeout: any;
 
-  // ========== NAVIDAD ==========
-  // Cambiar a false para quitar el gorrito
-  showChristmasHat = true;
-  // ==============================
+  // ========== TEMAS ESTACIONALES (automático por fecha) ==========
+  // Navidad: 1 dic 12:00 - 25 dic 23:59
+  // Año Nuevo: 26 dic 12:00 - 1 ene 23:59
+  showChristmasHat = false;
+  showNewYearTheme = false;
+  // ================================================================
 
   constructor(
     private fb: FormBuilder,
@@ -47,7 +49,50 @@ export class LoginComponent implements OnInit, AfterViewInit {
     private elementRef: ElementRef
   ) {}
 
+  /**
+   * Detecta el tema estacional basado en la fecha actual
+   * - Navidad: 1 dic 12:00 - 25 dic 23:59
+   * - Año Nuevo: 26 dic 12:00 - 1 ene 23:59
+   */
+  private detectSeasonalTheme(): void {
+    const now = new Date();
+    const month = now.getMonth(); // 0-11 (0 = enero, 11 = diciembre)
+    const day = now.getDate();
+    const hour = now.getHours();
+
+    // Navidad: 1 dic 12:00 - 25 dic 23:59
+    // month === 11 es diciembre
+    if (month === 11) {
+      if ((day === 1 && hour >= 12) || (day > 1 && day <= 25)) {
+        this.showChristmasHat = true;
+        this.showNewYearTheme = false;
+        return;
+      }
+      // Año Nuevo: 26 dic 12:00 - 31 dic 23:59
+      if ((day === 26 && hour >= 12) || (day > 26 && day <= 31)) {
+        this.showChristmasHat = false;
+        this.showNewYearTheme = true;
+        return;
+      }
+    }
+
+    // Año Nuevo: 1 ene 00:00 - 1 ene 23:59
+    // month === 0 es enero
+    if (month === 0 && day === 1) {
+      this.showChristmasHat = false;
+      this.showNewYearTheme = true;
+      return;
+    }
+
+    // Fuera de temporada
+    this.showChristmasHat = false;
+    this.showNewYearTheme = false;
+  }
+
   ngOnInit(): void {
+    // Detectar tema estacional por fecha
+    this.detectSeasonalTheme();
+
     // Initialize form first
     this.loginForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
