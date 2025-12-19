@@ -2958,3 +2958,305 @@ body.light-theme .snowflake,
     font-size: 20px;
   }
 }
+
+/* ========================================
+   ARBOLITO DE NAVIDAD
+   ======================================== */
+
+.christmas-tree-container {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.christmas-tree {
+  position: relative;
+  width: 80px;
+  height: 120px;
+}
+
+/* Estrella en la punta */
+.tree-star {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 24px;
+  color: #fbbf24;
+  text-shadow: 0 0 10px #fbbf24, 0 0 20px #f59e0b, 0 0 30px #f59e0b;
+  animation: starGlow 1.5s ease-in-out infinite alternate;
+  z-index: 10;
+}
+
+@keyframes starGlow {
+  0% {
+    transform: translateX(-50%) scale(1) rotate(0deg);
+    text-shadow: 0 0 10px #fbbf24, 0 0 20px #f59e0b;
+  }
+  100% {
+    transform: translateX(-50%) scale(1.2) rotate(10deg);
+    text-shadow: 0 0 15px #fbbf24, 0 0 30px #f59e0b, 0 0 40px #fcd34d;
+  }
+}
+
+/* Capas del árbol (triángulos) */
+.tree-layer {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.tree-layer.layer-1 {
+  top: 15px;
+  border-width: 0 25px 35px 25px;
+  border-color: transparent transparent #166534 transparent;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+}
+
+.tree-layer.layer-2 {
+  top: 35px;
+  border-width: 0 32px 40px 32px;
+  border-color: transparent transparent #15803d transparent;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));
+}
+
+.tree-layer.layer-3 {
+  top: 58px;
+  border-width: 0 40px 50px 40px;
+  border-color: transparent transparent #22c55e transparent;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,0.3));
+}
+
+/* Tronco */
+.tree-trunk {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 18px;
+  background: linear-gradient(90deg, #78350f 0%, #92400e 50%, #78350f 100%);
+  border-radius: 2px;
+  box-shadow: 0 3px 5px rgba(0,0,0,0.3);
+}
+
+/* Contenedor de luces */
+.tree-lights {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* Luces individuales */
+.tree-light {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: lightBlink 1s ease-in-out infinite;
+}
+
+.tree-light.light-1 {
+  top: 35px;
+  left: 35px;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444, 0 0 10px #ef4444;
+  animation-delay: 0s;
+}
+
+.tree-light.light-2 {
+  top: 40px;
+  left: 52px;
+  background: #3b82f6;
+  box-shadow: 0 0 6px #3b82f6, 0 0 10px #3b82f6;
+  animation-delay: 0.2s;
+}
+
+.tree-light.light-3 {
+  top: 55px;
+  left: 25px;
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24, 0 0 10px #fbbf24;
+  animation-delay: 0.4s;
+}
+
+.tree-light.light-4 {
+  top: 60px;
+  left: 55px;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e, 0 0 10px #22c55e;
+  animation-delay: 0.6s;
+}
+
+.tree-light.light-5 {
+  top: 75px;
+  left: 18px;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444, 0 0 10px #ef4444;
+  animation-delay: 0.1s;
+}
+
+.tree-light.light-6 {
+  top: 78px;
+  left: 62px;
+  background: #3b82f6;
+  box-shadow: 0 0 6px #3b82f6, 0 0 10px #3b82f6;
+  animation-delay: 0.3s;
+}
+
+.tree-light.light-7 {
+  top: 90px;
+  left: 30px;
+  background: #fbbf24;
+  box-shadow: 0 0 6px #fbbf24, 0 0 10px #fbbf24;
+  animation-delay: 0.5s;
+}
+
+.tree-light.light-8 {
+  top: 95px;
+  left: 50px;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e, 0 0 10px #22c55e;
+  animation-delay: 0.7s;
+}
+
+@keyframes lightBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* Esferas/Ornamentos */
+.tree-ornaments {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ornament {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: inset -2px -2px 4px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.ornament-1 {
+  top: 45px;
+  left: 42px;
+  background: radial-gradient(circle at 30% 30%, #fca5a5, #dc2626);
+}
+
+.ornament-2 {
+  top: 65px;
+  left: 30px;
+  background: radial-gradient(circle at 30% 30%, #93c5fd, #2563eb);
+}
+
+.ornament-3 {
+  top: 70px;
+  left: 48px;
+  background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
+}
+
+.ornament-4 {
+  top: 88px;
+  left: 22px;
+  background: radial-gradient(circle at 30% 30%, #c4b5fd, #7c3aed);
+}
+
+.ornament-5 {
+  top: 92px;
+  left: 55px;
+  background: radial-gradient(circle at 30% 30%, #fca5a5, #dc2626);
+}
+
+/* Regalos debajo del árbol */
+.tree-gifts {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+}
+
+.gift {
+  position: relative;
+  border-radius: 3px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.gift-1 {
+  width: 22px;
+  height: 18px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.gift-2 {
+  width: 18px;
+  height: 15px;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  margin-top: 3px;
+}
+
+.gift-ribbon {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 100%;
+  background: #fbbf24;
+}
+
+.gift-ribbon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 4px;
+  background: #fbbf24;
+  left: -100%;
+  width: 300%;
+}
+
+.gift-ribbon::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 8px;
+  background: #fbbf24;
+  border-radius: 50% 50% 0 0;
+  clip-path: polygon(0 100%, 20% 0, 50% 60%, 80% 0, 100% 100%);
+}
+
+/* Responsive - ocultar en pantallas pequeñas */
+@media (max-width: 600px) {
+  .christmas-tree-container {
+    transform: scale(0.7);
+    bottom: 10px;
+    left: 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  .christmas-tree-container {
+    display: none;
+  }
+}
