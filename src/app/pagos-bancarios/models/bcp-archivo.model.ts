@@ -51,3 +51,30 @@ export interface BcpArchivoResultado {
   archivoId: number | null;
   duplicadosOmitidos: number;
 }
+
+/**
+ * DTO para registro manual de pago
+ */
+export interface BcpPagoManualRequest {
+  documento: string;
+  nombreDepositante?: string;
+  fechaPago: string;
+  monto: number;
+  numeroOperacion: string;
+  sucursal?: string;
+  agencia?: string;
+  medioAtencion?: string;
+  observaciones?: string;
+}
+
+/**
+ * Respuesta del registro manual
+ */
+export interface BcpPagoManualResponse {
+  exitoso: boolean;
+  mensaje: string;
+  pagoId?: number;
+  documento?: string;
+  monto?: number;
+  numeroOperacion?: string;
+}

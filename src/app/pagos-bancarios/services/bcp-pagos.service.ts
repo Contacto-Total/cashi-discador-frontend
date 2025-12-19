@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BcpArchivoResultado } from '../models/bcp-archivo.model';
+import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from '../models/bcp-archivo.model';
 
 @Injectable({
   providedIn: 'root'
@@ -25,6 +25,16 @@ export class BcpPagosService {
     console.log('[BCP] Cargando archivo:', file.name);
 
     return this.http.post<BcpArchivoResultado>(`${this.baseUrl}/cargar-archivo`, formData);
+  }
+
+  /**
+   * Registra un pago de forma manual
+   * @param pago Datos del pago manual
+   * @returns Resultado del registro
+   */
+  registrarPagoManual(pago: BcpPagoManualRequest): Observable<BcpPagoManualResponse> {
+    console.log('[BCP] Registrando pago manual:', pago);
+    return this.http.post<BcpPagoManualResponse>(`${this.baseUrl}/registrar-manual`, pago);
   }
 
   /**
