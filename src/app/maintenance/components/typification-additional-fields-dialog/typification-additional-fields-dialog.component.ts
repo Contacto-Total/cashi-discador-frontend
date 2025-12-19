@@ -149,9 +149,10 @@ interface ConfiguracionCabecera {
                           </div>
                         </div>
 
-                        <!-- Row 2: Restricción de Fecha (solo si está habilitada) -->
+                        <!-- Row 2: Restricción de Fecha y Genera Carta (solo si está habilitada) -->
                         @if (opcion.estaHabilitada) {
-                          <div class="mt-2 pt-2 border-t border-green-200 dark:border-green-800" (click)="$event.stopPropagation()">
+                          <div class="mt-2 pt-2 border-t border-green-200 dark:border-green-800 space-y-2" (click)="$event.stopPropagation()">
+                            <!-- Restricción de fecha -->
                             <div class="flex items-center gap-2">
                               <lucide-angular name="calendar" [size]="14" class="text-blue-600"></lucide-angular>
                               <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Restricción de fecha:</span>
@@ -164,6 +165,23 @@ interface ConfiguracionCabecera {
                                 <option value="DENTRO_MES">Solo dentro del mes actual</option>
                                 <option value="FUERA_MES">Solo fuera del mes (próximo mes+)</option>
                               </select>
+                            </div>
+                            <!-- Genera Carta de Acuerdo -->
+                            <div class="flex items-center gap-2">
+                              <lucide-angular name="file-text" [size]="14" class="text-purple-600"></lucide-angular>
+                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Genera Carta de Acuerdo:</span>
+                              <label class="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  [checked]="opcion.generaCartaAcuerdo"
+                                  (change)="onGeneraCartaChange(opcion.codigoOpcion, $event)"
+                                  class="sr-only peer"
+                                >
+                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                              </label>
+                              <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ opcion.generaCartaAcuerdo ? 'Sí' : 'No' }}
+                              </span>
                             </div>
                           </div>
                         }
@@ -455,6 +473,17 @@ export class TypificationAdditionalFieldsDialogComponent {
     }
   }
 
+  onGeneraCartaChange(codigoOpcion: string, event: Event) {
+    const checkbox = event.target as HTMLInputElement;
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (opcion) {
+      opcion.generaCartaAcuerdo = checkbox.checked;
+      // Forzar actualización del signal
+      this.opciones.set([...opciones]);
+    }
+  }
+
   getOpcionesHabilitadasCount(): number {
     return this.opciones().filter(o => o.estaHabilitada).length;
   }
@@ -484,7 +513,8 @@ export class TypificationAdditionalFieldsDialogComponent {
         codigoOpcion: o.codigoOpcion,
         estaHabilitada: o.estaHabilitada,
         ordenVisualizacion: o.ordenVisualizacion,
-        restriccionFecha: o.restriccionFecha || RestriccionFecha.SIN_RESTRICCION
+        restriccionFecha: o.restriccionFecha || RestriccionFecha.SIN_RESTRICCION,
+        generaCartaAcuerdo: o.generaCartaAcuerdo || false
       }))
     };
 

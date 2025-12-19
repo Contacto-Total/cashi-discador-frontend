@@ -151,6 +151,7 @@ export interface CampoOpcionDTO {
   estaHabilitada: boolean;
   ordenVisualizacion: number;
   restriccionFecha?: RestriccionFecha | string;  // Restricción de fecha para promesas de pago
+  generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
 }
 
 export interface ConfigurarOpcionesCampoRequest {
@@ -163,6 +164,7 @@ export interface OpcionToggleDTO {
   estaHabilitada: boolean;
   ordenVisualizacion?: number;
   restriccionFecha?: RestriccionFecha | string;  // Restricción de fecha para promesas de pago
+  generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
 }
 
 export interface CampoConOpcionesResponse {
@@ -197,6 +199,7 @@ export interface PaymentScheduleConfig {
   grupoPromesaUuid?: string;
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
+  generaCartaAcuerdo?: boolean;  // Si el monto seleccionado genera carta de acuerdo
 }
 
 export interface PaymentScheduleRequest {

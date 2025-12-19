@@ -9,6 +9,7 @@ export interface AmountOption {
   value: number;
   field?: string;
   restriccionFecha?: 'SIN_RESTRICCION' | 'DENTRO_MES' | 'FUERA_MES' | string;
+  generaCartaAcuerdo?: boolean;  // Indica si al seleccionar este monto se genera carta de acuerdo
 }
 
 @Component({
@@ -33,7 +34,7 @@ export interface AmountOption {
                 (selectedField() === option.field && !isCustomAmount()
                   ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
-              (click)="selectAmount(option.value, option.field, option.restriccionFecha)"
+              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo)"
             >
               <span class="text-[10px] opacity-70 leading-tight text-center">{{ option.label }}</span>
               <span class="text-sm font-bold mt-1">{{ formatCurrency(option.value) }}</span>
@@ -302,6 +303,7 @@ export class PaymentScheduleComponent implements OnInit {
   selectedAmount = signal<number>(0);
   selectedField = signal<string | undefined>(undefined);
   selectedRestriccion = signal<string>('SIN_RESTRICCION');
+  selectedGeneraCartaAcuerdo = signal<boolean>(false);  // Si la opción seleccionada genera carta de acuerdo
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
@@ -390,11 +392,12 @@ export class PaymentScheduleComponent implements OnInit {
     return this._isCustomAmount();
   }
 
-  selectAmount(amount: number, field?: string, restriccion?: string): void {
+  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean): void {
     this._isCustomAmount.set(false);
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
     this.selectedRestriccion.set(restriccion || 'SIN_RESTRICCION');
+    this.selectedGeneraCartaAcuerdo.set(generaCartaAcuerdo || false);  // Guardar si genera carta
     this.montoBase.set(amount);  // Guardar monto original del campo
     this.generateInstallments();
     this.customAmountSelected.emit(false);
@@ -709,7 +712,8 @@ export class PaymentScheduleComponent implements OnInit {
       numeroCuotas: this.numberOfInstallments(),
       cuotas: installments,
       campoMontoOrigen: this.selectedField(),
-      montoBase: this.montoBase()  // Monto original del campo (undefined si es monto libre)
+      montoBase: this.montoBase(),  // Monto original del campo (undefined si es monto libre)
+      generaCartaAcuerdo: this.selectedGeneraCartaAcuerdo()  // Si el monto seleccionado genera carta
     };
 
     this.scheduleChange.emit(config);

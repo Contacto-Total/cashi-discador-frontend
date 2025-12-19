@@ -3471,12 +3471,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.managementService.createPaymentSchedule(scheduleRequest).subscribe({
         next: (records) => {
           console.log('[SAVE] Payment schedule created successfully:', records);
-          // Mostrar modal para generar Carta de Acuerdo
+          // Mostrar modal para generar Carta de Acuerdo SOLO si el monto seleccionado tiene generaCartaAcuerdo = true
           // records puede ser un array o un objeto con id
           const idGestion = Array.isArray(records) && records.length > 0 ? records[0].id : records?.id;
-          if (idGestion) {
+          const debeGenerarCarta = paymentScheduleData.generaCartaAcuerdo === true;
+
+          if (idGestion && debeGenerarCarta) {
+            console.log('[CARTA] Monto seleccionado requiere carta de acuerdo, mostrando modal...');
             this.mostrarModalGenerarCarta(idGestion, contactClassification?.label || '', managementClassification?.label || '-');
           } else {
+            if (idGestion && !debeGenerarCarta) {
+              console.log('[CARTA] Monto seleccionado NO requiere carta de acuerdo, omitiendo modal.');
+            }
             this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
           }
         },
