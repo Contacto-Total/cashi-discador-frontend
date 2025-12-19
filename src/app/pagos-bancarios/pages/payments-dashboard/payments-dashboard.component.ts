@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, effect, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, effect, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { BaseChartDirective } from 'ng2-charts';
@@ -170,7 +170,7 @@ Chart.register(
               Estado de Conciliación
             </h3>
             <div class="h-64 flex items-center justify-center">
-              @if (chartKey()) {
+              @if (showCharts()) {
                 <canvas baseChart
                   [type]="'doughnut'"
                   [data]="conciliacionChartData"
@@ -202,7 +202,7 @@ Chart.register(
               Estado de Promesas
             </h3>
             <div class="h-64 flex items-center justify-center">
-              @if (chartKey()) {
+              @if (showCharts()) {
                 <canvas baseChart
                   [type]="'doughnut'"
                   [data]="promesasChartData"
@@ -237,7 +237,7 @@ Chart.register(
               Tendencia de Pagos (Últimos 30 días)
             </h3>
             <div class="h-64">
-              @if (chartKey()) {
+              @if (showCharts()) {
                 <canvas baseChart
                   [type]="'line'"
                   [data]="tendenciaChartData"
@@ -291,7 +291,7 @@ Chart.register(
             Distribución por Banco
           </h3>
           <div class="h-64">
-            @if (chartKey()) {
+            @if (showCharts()) {
               <canvas baseChart
                 [type]="'bar'"
                 [data]="bancosChartData"
@@ -315,13 +315,13 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
   loading = signal(true);
   error = signal<string | null>(null);
 
+  // Signal para forzar recreación de gráficos - toggle false/true
+  showCharts = signal(true);
+
   private pollingSubscription?: Subscription;
 
-  // Key que cambia cuando cambia el tema - fuerza recrear los gráficos
-  chartKey = computed(() => {
-    const isDark = this.themeService.isDarkMode();
-    return isDark ? 'dark' : 'light';
-  });
+  // Detecta tema actual
+  private isDark = computed(() => this.themeService.isDarkMode());
 
   // Opciones de gráficos computadas - se recalculan cuando cambia el tema
   doughnutChartOptions = computed<ChartConfiguration<'doughnut'>['options']>(() => {
@@ -453,8 +453,24 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private dashboardService: PaymentsDashboardService,
-    private themeService: ThemeService
-  ) {}
+    private themeService: ThemeService,
+    private cdr: ChangeDetectorRef
+  ) {
+    // Efecto para recrear gráficos cuando cambia el tema
+    effect(() => {
+      const isDark = this.themeService.isDarkMode();
+      console.log('[DASHBOARD] Tema detectado:', isDark ? 'dark' : 'light');
+
+      // Forzar recreación de gráficos: ocultar, esperar, mostrar
+      this.showCharts.set(false);
+      this.cdr.detectChanges();
+
+      setTimeout(() => {
+        this.showCharts.set(true);
+        this.cdr.detectChanges();
+      }, 50);
+    });
+  }
 
   ngOnInit(): void {
     this.loadDashboard();
