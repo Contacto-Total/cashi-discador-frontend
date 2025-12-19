@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
 import { CommonModule, DecimalPipe, CurrencyPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { BaseChartDirective } from 'ng2-charts';
@@ -7,6 +7,7 @@ import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
 import { PaymentsDashboardService, PaymentsDashboard, AgenteMetrica, PagosDiario } from '../../services/payments-dashboard.service';
+import { ThemeService } from '../../../shared/services/theme.service';
 
 // Registrar componentes de Chart.js
 Chart.register(
@@ -308,72 +309,125 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
 
   private pollingSubscription?: Subscription;
 
+  // Colores según el tema
+  private get isDark(): boolean {
+    return this.themeService.isDarkMode();
+  }
+
+  private get textColor(): string {
+    return this.isDark ? '#e2e8f0' : '#374151';
+  }
+
+  private get gridColor(): string {
+    return this.isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(156, 163, 175, 0.3)';
+  }
+
   // Configuración de gráfico de dona
-  doughnutChartOptions: ChartConfiguration<'doughnut'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (context) => {
-            const value = context.parsed || 0;
-            const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
-            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
-            return `${context.label}: ${value} (${percentage}%)`;
+  get doughnutChartOptions(): ChartConfiguration<'doughnut'>['options'] {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: this.isDark ? '#1e293b' : '#ffffff',
+          titleColor: this.textColor,
+          bodyColor: this.textColor,
+          borderColor: this.isDark ? '#334155' : '#e5e7eb',
+          borderWidth: 1,
+          callbacks: {
+            label: (context) => {
+              const value = context.parsed || 0;
+              const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
+              const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+              return `${context.label}: ${value} (${percentage}%)`;
+            }
           }
         }
       }
-    }
-  };
+    };
+  }
 
   // Configuración de gráfico de línea
-  lineChartOptions: ChartConfiguration<'line'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: true,
-        position: 'top'
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(156, 163, 175, 0.2)'
+  get lineChartOptions(): ChartConfiguration<'line'>['options'] {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            color: this.textColor
+          }
+        },
+        tooltip: {
+          backgroundColor: this.isDark ? '#1e293b' : '#ffffff',
+          titleColor: this.textColor,
+          bodyColor: this.textColor,
+          borderColor: this.isDark ? '#334155' : '#e5e7eb',
+          borderWidth: 1
         }
       },
-      x: {
-        grid: {
-          display: false
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: {
+            color: this.gridColor
+          },
+          ticks: {
+            color: this.textColor
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: this.textColor
+          }
         }
       }
-    }
-  };
+    };
+  }
 
   // Configuración de gráfico de barras
-  barChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y',
-    plugins: {
-      legend: { display: false }
-    },
-    scales: {
-      x: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(156, 163, 175, 0.2)'
+  get barChartOptions(): ChartConfiguration<'bar'>['options'] {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: this.isDark ? '#1e293b' : '#ffffff',
+          titleColor: this.textColor,
+          bodyColor: this.textColor,
+          borderColor: this.isDark ? '#334155' : '#e5e7eb',
+          borderWidth: 1
         }
       },
-      y: {
-        grid: {
-          display: false
+      scales: {
+        x: {
+          beginAtZero: true,
+          grid: {
+            color: this.gridColor
+          },
+          ticks: {
+            color: this.textColor
+          }
+        },
+        y: {
+          grid: {
+            display: false
+          },
+          ticks: {
+            color: this.textColor
+          }
         }
       }
-    }
-  };
+    };
+  }
 
   // Datos de gráficos
   conciliacionChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
@@ -381,7 +435,20 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
   tendenciaChartData: ChartData<'line'> = { labels: [], datasets: [] };
   bancosChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
-  constructor(private dashboardService: PaymentsDashboardService) {}
+  constructor(
+    private dashboardService: PaymentsDashboardService,
+    private themeService: ThemeService
+  ) {
+    // Efecto para actualizar gráficos cuando cambia el tema
+    effect(() => {
+      const isDark = this.themeService.isDarkMode();
+      // Forzar re-render de los gráficos al cambiar tema
+      const data = this.dashboard();
+      if (data) {
+        this.updateCharts(data);
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.loadDashboard();
