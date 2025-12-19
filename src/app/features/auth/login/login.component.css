@@ -1589,11 +1589,11 @@ body.light-theme .snowflake,
 
 .christmas-hat {
   position: absolute;
-  top: -40px;
+  top: -35px;
   left: 50%;
   transform: translateX(-50%);
   width: 90px;
-  height: 65px;
+  height: 60px;
   z-index: 20;
 }
 
@@ -1604,48 +1604,49 @@ body.light-theme .snowflake,
   left: 50%;
   transform: translateX(-50%);
   width: 88px;
-  height: 40px;
+  height: 42px;
   background: #dc2626;
   border-radius: 50% 50% 0 0;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Punta del gorro - COLGANDO HACIA UN LADO */
+/* Punta del gorro - CONECTADA Y CAYENDO */
 .hat-tip {
   position: absolute;
-  top: -5px;
-  right: -25px;
-  width: 55px;
-  height: 25px;
+  top: 5px;
+  left: 50%;
+  width: 45px;
+  height: 20px;
   background: #dc2626;
-  border-radius: 50% 80% 80% 50%;
-  transform: rotate(25deg);
+  border-radius: 0 80% 80% 0;
   transform-origin: left center;
+  transform: rotate(15deg);
   animation: tipSwing 3s ease-in-out infinite;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 @keyframes tipSwing {
-  0%, 100% { transform: rotate(25deg); }
-  50% { transform: rotate(35deg); }
+  0%, 100% { transform: rotate(15deg); }
+  50% { transform: rotate(25deg); }
 }
 
 /* Pompom blanco al final de la punta */
 .hat-pompom {
   position: absolute;
-  top: -12px;
-  right: -45px;
-  width: 20px;
-  height: 20px;
+  top: 0px;
+  left: calc(50% + 42px);
+  width: 18px;
+  height: 18px;
   background: #ffffff;
   border-radius: 50%;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  animation: pompomSwing 3s ease-in-out infinite;
+  transform-origin: -42px center;
+  animation: pompomFollow 3s ease-in-out infinite;
 }
 
-@keyframes pompomSwing {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(3px); }
+@keyframes pompomFollow {
+  0%, 100% { transform: rotate(15deg); }
+  50% { transform: rotate(25deg); }
 }
 
 /* Borde blanco del gorro - SIMPLE */
