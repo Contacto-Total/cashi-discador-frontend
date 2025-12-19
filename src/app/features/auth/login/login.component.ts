@@ -48,6 +48,9 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   isNewYearArrived = false; // true cuando ya es 1 de enero o después
   private countdownInterval: any;
 
+  // Modo fullscreen del contador
+  showFullscreenCountdown = false;
+
   // Getter para el año nuevo
   get newYear(): number {
     const now = new Date();
@@ -416,6 +419,18 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
+  }
+
+  // Abrir contador fullscreen
+  openFullscreenCountdown(): void {
+    this.showFullscreenCountdown = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Cerrar contador fullscreen
+  closeFullscreenCountdown(): void {
+    this.showFullscreenCountdown = false;
+    document.body.style.overflow = '';
   }
 
   @HostListener('document:mousemove', ['$event'])

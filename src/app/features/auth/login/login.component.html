@@ -99,8 +99,9 @@
     <div class="confetti"></div>
   </div>
 
-  <!-- Contador de Año Nuevo -->
-  <div class="newyear-countdown" *ngIf="showNewYearTheme && !isNewYearArrived">
+  <!-- Contador de Año Nuevo (click para fullscreen) -->
+  <div class="newyear-countdown" *ngIf="showNewYearTheme && !isNewYearArrived" (click)="openFullscreenCountdown()">
+    <div class="countdown-hint">Click para expandir</div>
     <div class="countdown-title">AÑO NUEVO {{ newYear }}</div>
     <div class="countdown-timer">
       <div class="countdown-item">
@@ -128,6 +129,85 @@
   <!-- Mensaje de Feliz Año Nuevo (después de medianoche) -->
   <div class="newyear-celebration" *ngIf="showNewYearTheme && isNewYearArrived">
     <div class="celebration-text">¡FELIZ AÑO NUEVO {{ newYear }}!</div>
+  </div>
+
+  <!-- FULLSCREEN COUNTDOWN EXPERIENCE -->
+  <div class="fullscreen-countdown-overlay" *ngIf="showFullscreenCountdown" (click)="closeFullscreenCountdown()">
+    <!-- Partículas de fondo -->
+    <div class="fs-particles">
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+      <div class="fs-particle"></div>
+    </div>
+
+    <!-- Fuegos artificiales grandes -->
+    <div class="fs-fireworks">
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+      <div class="fs-firework"></div>
+    </div>
+
+    <!-- Contenido central -->
+    <div class="fs-content" (click)="$event.stopPropagation()">
+      <div class="fs-title">
+        <span class="fs-title-text">AÑO NUEVO</span>
+        <span class="fs-year">{{ newYear }}</span>
+      </div>
+
+      <div class="fs-countdown">
+        <div class="fs-countdown-item">
+          <div class="fs-countdown-value">{{ countdownDays.toString().padStart(2, '0') }}</div>
+          <div class="fs-countdown-label">DÍAS</div>
+        </div>
+        <div class="fs-countdown-separator">:</div>
+        <div class="fs-countdown-item">
+          <div class="fs-countdown-value">{{ countdownHours.toString().padStart(2, '0') }}</div>
+          <div class="fs-countdown-label">HORAS</div>
+        </div>
+        <div class="fs-countdown-separator">:</div>
+        <div class="fs-countdown-item">
+          <div class="fs-countdown-value">{{ countdownMinutes.toString().padStart(2, '0') }}</div>
+          <div class="fs-countdown-label">MINUTOS</div>
+        </div>
+        <div class="fs-countdown-separator">:</div>
+        <div class="fs-countdown-item">
+          <div class="fs-countdown-value">{{ countdownSeconds.toString().padStart(2, '0') }}</div>
+          <div class="fs-countdown-label">SEGUNDOS</div>
+        </div>
+      </div>
+
+      <div class="fs-message">¡Prepárate para celebrar!</div>
+    </div>
+
+    <!-- Botón cerrar -->
+    <button class="fs-close" (click)="closeFullscreenCountdown()">
+      <span>✕</span>
+    </button>
+
+    <!-- Instrucción -->
+    <div class="fs-instruction">Click en cualquier lugar para cerrar</div>
   </div>
 
   <div class="login-card">
