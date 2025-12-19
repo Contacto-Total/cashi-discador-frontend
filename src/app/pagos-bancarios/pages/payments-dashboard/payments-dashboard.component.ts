@@ -1,12 +1,12 @@
-import { Component, OnInit, OnDestroy, signal, computed, effect } from '@angular/core';
-import { CommonModule, DecimalPipe, CurrencyPipe } from '@angular/common';
+import { Component, OnInit, OnDestroy, signal, effect, ViewChildren, QueryList, AfterViewInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, DoughnutController, ArcElement, Tooltip, Legend, BarController, BarElement, CategoryScale, LinearScale, LineController, LineElement, PointElement } from 'chart.js';
 import { interval, Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 
-import { PaymentsDashboardService, PaymentsDashboard, AgenteMetrica, PagosDiario } from '../../services/payments-dashboard.service';
+import { PaymentsDashboardService, PaymentsDashboard } from '../../services/payments-dashboard.service';
 import { ThemeService } from '../../../shared/services/theme.service';
 
 // Registrar componentes de Chart.js
@@ -301,39 +301,73 @@ Chart.register(
     }
   `]
 })
-export class PaymentsDashboardComponent implements OnInit, OnDestroy {
+export class PaymentsDashboardComponent implements OnInit, OnDestroy, AfterViewInit {
+
+  @ViewChildren(BaseChartDirective) charts!: QueryList<BaseChartDirective>;
 
   dashboard = signal<PaymentsDashboard | null>(null);
   loading = signal(true);
   error = signal<string | null>(null);
 
   private pollingSubscription?: Subscription;
+  private chartsReady = false;
 
-  // Colores según el tema
-  private get isDark(): boolean {
-    return this.themeService.isDarkMode();
+  // Opciones de gráficos (se actualizan con el tema)
+  doughnutChartOptions: ChartConfiguration<'doughnut'>['options'] = {};
+  lineChartOptions: ChartConfiguration<'line'>['options'] = {};
+  barChartOptions: ChartConfiguration<'bar'>['options'] = {};
+
+  // Datos de gráficos
+  conciliacionChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
+  promesasChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
+  tendenciaChartData: ChartData<'line'> = { labels: [], datasets: [] };
+  bancosChartData: ChartData<'bar'> = { labels: [], datasets: [] };
+
+  constructor(
+    private dashboardService: PaymentsDashboardService,
+    private themeService: ThemeService
+  ) {
+    // Inicializar opciones de gráficos
+    this.buildChartOptions();
+
+    // Efecto para actualizar gráficos cuando cambia el tema
+    effect(() => {
+      const isDark = this.themeService.isDarkMode();
+      console.log('[DASHBOARD] Tema cambiado:', isDark ? 'dark' : 'light');
+      // Reconstruir opciones con nuevos colores
+      this.buildChartOptions();
+      // Forzar re-render de los gráficos
+      if (this.chartsReady) {
+        this.forceChartsUpdate();
+      }
+    });
   }
 
-  private get textColor(): string {
-    return this.isDark ? '#e2e8f0' : '#374151';
+  ngAfterViewInit(): void {
+    this.chartsReady = true;
   }
 
-  private get gridColor(): string {
-    return this.isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(156, 163, 175, 0.3)';
-  }
+  /**
+   * Construye todas las opciones de gráficos basándose en el tema actual
+   */
+  private buildChartOptions(): void {
+    const isDark = this.themeService.isDarkMode();
+    const textColor = isDark ? '#e2e8f0' : '#374151';
+    const gridColor = isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(156, 163, 175, 0.3)';
+    const tooltipBg = isDark ? '#1e293b' : '#ffffff';
+    const tooltipBorder = isDark ? '#334155' : '#e5e7eb';
 
-  // Configuración de gráfico de dona
-  get doughnutChartOptions(): ChartConfiguration<'doughnut'>['options'] {
-    return {
+    // Opciones de gráfico de dona
+    this.doughnutChartOptions = {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: this.isDark ? '#1e293b' : '#ffffff',
-          titleColor: this.textColor,
-          bodyColor: this.textColor,
-          borderColor: this.isDark ? '#334155' : '#e5e7eb',
+          backgroundColor: tooltipBg,
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor: tooltipBorder,
           borderWidth: 1,
           callbacks: {
             label: (context) => {
@@ -346,11 +380,9 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
         }
       }
     };
-  }
 
-  // Configuración de gráfico de línea
-  get lineChartOptions(): ChartConfiguration<'line'>['options'] {
-    return {
+    // Opciones de gráfico de línea
+    this.lineChartOptions = {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -358,14 +390,14 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
           display: true,
           position: 'top',
           labels: {
-            color: this.textColor
+            color: textColor
           }
         },
         tooltip: {
-          backgroundColor: this.isDark ? '#1e293b' : '#ffffff',
-          titleColor: this.textColor,
-          bodyColor: this.textColor,
-          borderColor: this.isDark ? '#334155' : '#e5e7eb',
+          backgroundColor: tooltipBg,
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor: tooltipBorder,
           borderWidth: 1
         }
       },
@@ -373,10 +405,10 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
         y: {
           beginAtZero: true,
           grid: {
-            color: this.gridColor
+            color: gridColor
           },
           ticks: {
-            color: this.textColor
+            color: textColor
           }
         },
         x: {
@@ -384,26 +416,24 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
             display: false
           },
           ticks: {
-            color: this.textColor
+            color: textColor
           }
         }
       }
     };
-  }
 
-  // Configuración de gráfico de barras
-  get barChartOptions(): ChartConfiguration<'bar'>['options'] {
-    return {
+    // Opciones de gráfico de barras
+    this.barChartOptions = {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: 'y',
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: this.isDark ? '#1e293b' : '#ffffff',
-          titleColor: this.textColor,
-          bodyColor: this.textColor,
-          borderColor: this.isDark ? '#334155' : '#e5e7eb',
+          backgroundColor: tooltipBg,
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor: tooltipBorder,
           borderWidth: 1
         }
       },
@@ -411,10 +441,10 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
         x: {
           beginAtZero: true,
           grid: {
-            color: this.gridColor
+            color: gridColor
           },
           ticks: {
-            color: this.textColor
+            color: textColor
           }
         },
         y: {
@@ -422,32 +452,61 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
             display: false
           },
           ticks: {
-            color: this.textColor
+            color: textColor
           }
         }
       }
     };
   }
 
-  // Datos de gráficos
-  conciliacionChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  promesasChartData: ChartData<'doughnut'> = { labels: [], datasets: [] };
-  tendenciaChartData: ChartData<'line'> = { labels: [], datasets: [] };
-  bancosChartData: ChartData<'bar'> = { labels: [], datasets: [] };
-
-  constructor(
-    private dashboardService: PaymentsDashboardService,
-    private themeService: ThemeService
-  ) {
-    // Efecto para actualizar gráficos cuando cambia el tema
-    effect(() => {
+  /**
+   * Fuerza la actualización de todos los gráficos con las nuevas opciones
+   */
+  private forceChartsUpdate(): void {
+    if (this.charts) {
       const isDark = this.themeService.isDarkMode();
-      // Forzar re-render de los gráficos al cambiar tema
-      const data = this.dashboard();
-      if (data) {
-        this.updateCharts(data);
-      }
-    });
+      const textColor = isDark ? '#e2e8f0' : '#374151';
+      const gridColor = isDark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(156, 163, 175, 0.3)';
+      const tooltipBg = isDark ? '#1e293b' : '#ffffff';
+      const tooltipBorder = isDark ? '#334155' : '#e5e7eb';
+
+      this.charts.forEach(chartDirective => {
+        if (chartDirective.chart) {
+          const chart = chartDirective.chart;
+
+          // Actualizar opciones directamente en el chart instance
+          if (chart.options.plugins?.tooltip) {
+            chart.options.plugins.tooltip.backgroundColor = tooltipBg;
+            chart.options.plugins.tooltip.titleColor = textColor;
+            chart.options.plugins.tooltip.bodyColor = textColor;
+            chart.options.plugins.tooltip.borderColor = tooltipBorder;
+          }
+
+          if (chart.options.plugins?.legend?.labels) {
+            chart.options.plugins.legend.labels.color = textColor;
+          }
+
+          // Actualizar scales si existen (line y bar charts tienen scales)
+          const scales = chart.options.scales as any;
+          if (scales) {
+            if (scales.x) {
+              scales.x.ticks = { ...scales.x.ticks, color: textColor };
+              if (scales.x.grid) {
+                scales.x.grid.color = gridColor;
+              }
+            }
+            if (scales.y) {
+              scales.y.ticks = { ...scales.y.ticks, color: textColor };
+              if (scales.y.grid) {
+                scales.y.grid.color = gridColor;
+              }
+            }
+          }
+
+          chart.update('none'); // 'none' = no animation for faster update
+        }
+      });
+    }
   }
 
   ngOnInit(): void {
