@@ -2160,7 +2160,7 @@ body.light-theme .snowflake,
 }
 
 /* ========================================
-   FUEGOS ARTIFICIALES
+   FUEGOS ARTIFICIALES REALISTAS
    ======================================== */
 
 .fireworks-container {
@@ -2174,147 +2174,176 @@ body.light-theme .snowflake,
   overflow: hidden;
 }
 
+/* Cada firework es una explosión completa */
 .firework {
   position: absolute;
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  animation: firework-launch 4s ease-out infinite;
+  box-shadow:
+    /* Centro */
+    0 0 #fff,
+    /* Explosión radial - 12 rayos */
+    0 -70px 0 2px var(--c1, #FFD700),
+    35px -60px 0 2px var(--c2, #FFA500),
+    60px -35px 0 2px var(--c1, #FFD700),
+    70px 0 0 2px var(--c2, #FFA500),
+    60px 35px 0 2px var(--c1, #FFD700),
+    35px 60px 0 2px var(--c2, #FFA500),
+    0 70px 0 2px var(--c1, #FFD700),
+    -35px 60px 0 2px var(--c2, #FFA500),
+    -60px 35px 0 2px var(--c1, #FFD700),
+    -70px 0 0 2px var(--c2, #FFA500),
+    -60px -35px 0 2px var(--c1, #FFD700),
+    -35px -60px 0 2px var(--c2, #FFA500),
+    /* Segundo anillo más pequeño */
+    0 -40px 0 1px var(--c2, #FFA500),
+    28px -28px 0 1px var(--c1, #FFD700),
+    40px 0 0 1px var(--c2, #FFA500),
+    28px 28px 0 1px var(--c1, #FFD700),
+    0 40px 0 1px var(--c2, #FFA500),
+    -28px 28px 0 1px var(--c1, #FFD700),
+    -40px 0 0 1px var(--c2, #FFA500),
+    -28px -28px 0 1px var(--c1, #FFD700);
+  animation: firework-burst 3s ease-out infinite;
+  opacity: 0;
 }
 
-.firework::before,
+/* Trail del cohete subiendo */
+.firework::before {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 20px;
+  background: linear-gradient(to top, transparent, var(--c1, #FFD700), #fff);
+  border-radius: 50%;
+  transform: translateX(-50%);
+  animation: firework-trail 3s ease-out infinite;
+}
+
+/* Chispas extras */
 .firework::after {
   content: '';
   position: absolute;
-  width: 100%;
-  height: 100%;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  animation: firework-explode 4s ease-out infinite;
+  box-shadow:
+    20px -50px 0 1px var(--c1, #FFD700),
+    -25px -45px 0 1px var(--c2, #FFA500),
+    45px -25px 0 1px var(--c1, #FFD700),
+    -50px -20px 0 1px var(--c2, #FFA500),
+    50px 20px 0 1px var(--c1, #FFD700),
+    -45px 30px 0 1px var(--c2, #FFA500),
+    15px 50px 0 1px var(--c1, #FFD700),
+    -20px 45px 0 1px var(--c2, #FFA500);
+  animation: firework-sparkle 3s ease-out infinite;
+  opacity: 0;
 }
 
 .firework:nth-child(1) {
-  left: 10%;
-  background: #FFD700;
+  --c1: #FFD700;
+  --c2: #FFA500;
+  left: 15%;
+  top: 35%;
   animation-delay: 0s;
 }
-.firework:nth-child(1)::before { background: #FFA500; }
-.firework:nth-child(1)::after { background: #FF8C00; }
 
 .firework:nth-child(2) {
-  left: 25%;
-  background: #FFA500;
-  animation-delay: 0.8s;
+  --c1: #FFA500;
+  --c2: #FF8C00;
+  left: 80%;
+  top: 25%;
+  animation-delay: 1s;
 }
-.firework:nth-child(2)::before { background: #FFD700; }
-.firework:nth-child(2)::after { background: #FFCC00; }
 
 .firework:nth-child(3) {
+  --c1: #FFCC00;
+  --c2: #FFD700;
   left: 50%;
-  background: #FFD700;
-  animation-delay: 1.6s;
-}
-.firework:nth-child(3)::before { background: #FF8C00; }
-.firework:nth-child(3)::after { background: #FFA500; }
-
-.firework:nth-child(4) {
-  left: 70%;
-  background: #FFCC00;
-  animation-delay: 2.4s;
-}
-.firework:nth-child(4)::before { background: #FFD700; }
-.firework:nth-child(4)::after { background: #FFA500; }
-
-.firework:nth-child(5) {
-  left: 85%;
-  background: #FFA500;
-  animation-delay: 3.2s;
-}
-.firework:nth-child(5)::before { background: #FFD700; }
-.firework:nth-child(5)::after { background: #FF8C00; }
-
-.firework:nth-child(6) {
-  left: 40%;
-  background: #FFD700;
+  top: 40%;
   animation-delay: 2s;
 }
-.firework:nth-child(6)::before { background: #FFCC00; }
-.firework:nth-child(6)::after { background: #FFA500; }
 
-@keyframes firework-launch {
+.firework:nth-child(4) {
+  --c1: #FFD700;
+  --c2: #FFCC00;
+  left: 25%;
+  top: 20%;
+  animation-delay: 1.5s;
+}
+
+.firework:nth-child(5) {
+  --c1: #FFA500;
+  --c2: #FFD700;
+  left: 70%;
+  top: 45%;
+  animation-delay: 2.5s;
+}
+
+.firework:nth-child(6) {
+  --c1: #FF8C00;
+  --c2: #FFA500;
+  left: 40%;
+  top: 30%;
+  animation-delay: 0.5s;
+}
+
+@keyframes firework-trail {
   0% {
-    bottom: -10px;
-    transform: scale(1);
     opacity: 1;
+    transform: translateX(-50%) translateY(100vh);
   }
   30% {
-    bottom: 50%;
-    transform: scale(1);
     opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  35%, 100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes firework-burst {
+  0%, 30% {
+    opacity: 0;
+    transform: scale(0);
   }
   35% {
-    bottom: 55%;
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 1;
     transform: scale(1);
-    opacity: 1;
-  }
-  40%, 100% {
-    bottom: 55%;
-    transform: scale(0);
-    opacity: 0;
-  }
-}
-
-@keyframes firework-explode {
-  0%, 35% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-  40% {
-    transform: translate(0, 0) scale(1);
-    opacity: 1;
-  }
-  45% {
-    transform: translate(var(--tx, 30px), var(--ty, -30px)) scale(1.5);
-    opacity: 1;
   }
   70% {
-    transform: translate(calc(var(--tx, 30px) * 2), calc(var(--ty, -30px) * 2 + 20px)) scale(0.5);
     opacity: 0.6;
+    transform: scale(1.2);
   }
   100% {
-    transform: translate(calc(var(--tx, 30px) * 2.5), calc(var(--ty, -30px) * 2 + 50px)) scale(0);
     opacity: 0;
+    transform: scale(1.4);
   }
 }
 
-.firework::before {
-  --tx: -40px;
-  --ty: -20px;
-}
-
-.firework::after {
-  --tx: 40px;
-  --ty: -25px;
-}
-
-/* Partículas adicionales de fuegos */
-.firework:nth-child(odd)::before {
-  --tx: -50px;
-  --ty: -40px;
-}
-
-.firework:nth-child(odd)::after {
-  --tx: 50px;
-  --ty: -35px;
-}
-
-.firework:nth-child(even)::before {
-  --tx: -35px;
-  --ty: -50px;
-}
-
-.firework:nth-child(even)::after {
-  --tx: 45px;
-  --ty: -45px;
+@keyframes firework-sparkle {
+  0%, 30% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  60% {
+    opacity: 0.8;
+    transform: scale(1.5) translateY(10px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5) translateY(40px);
+  }
 }
 
 /* ========================================
