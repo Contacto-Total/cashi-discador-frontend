@@ -2975,7 +2975,7 @@ body.light-theme .snowflake,
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding-bottom: 30px;
+  padding-bottom: 40px;
   z-index: 50;
   pointer-events: none;
   overflow: hidden;
@@ -2983,17 +2983,17 @@ body.light-theme .snowflake,
 
 .christmas-tree {
   position: relative;
-  width: 320px;
-  height: 480px;
+  width: 340px;
+  height: 500px;
 }
 
 /* Estrella dorada elegante en la punta */
 .tree-star {
   position: absolute;
-  top: -15px;
+  top: 5px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 60px;
+  font-size: 55px;
   color: #fbbf24;
   text-shadow:
     0 0 20px #fbbf24,
@@ -3015,75 +3015,191 @@ body.light-theme .snowflake,
   }
 }
 
-/* Capas del árbol (triángulos elegantes) */
+/* Capas del árbol - Forma de pino curveado y realista */
 .tree-layer {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-style: solid;
+  background: linear-gradient(180deg, #166534 0%, #15803d 50%, #22c55e 100%);
+  filter: drop-shadow(3px 6px 10px rgba(0,0,0,0.35));
 }
 
+/* Capa 1 - Punta superior (pequeña y elegante) */
 .tree-layer.layer-1 {
-  top: 40px;
-  border-width: 0 70px 100px 70px;
-  border-color: transparent transparent #14532d transparent;
-  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+  top: 50px;
+  width: 100px;
+  height: 90px;
+  background: linear-gradient(180deg, #14532d 0%, #166534 60%, #15803d 100%);
+  clip-path: polygon(
+    50% 0%,
+    20% 100%,
+    8% 95%,
+    0% 100%,
+    100% 100%,
+    92% 95%,
+    80% 100%
+  );
+  border-radius: 50% 50% 0 0;
 }
 
-.tree-layer.layer-1::after {
+/* Efecto de ramas para layer-1 */
+.tree-layer.layer-1::before {
   content: '';
   position: absolute;
-  top: 20px;
-  left: -50px;
-  border-width: 0 50px 70px 50px;
-  border-style: solid;
-  border-color: transparent transparent rgba(255,255,255,0.05) transparent;
+  top: 15px;
+  left: 10%;
+  width: 80%;
+  height: 70%;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
 }
 
+/* Capa 2 - Segunda sección */
 .tree-layer.layer-2 {
-  top: 100px;
-  border-width: 0 100px 130px 100px;
-  border-color: transparent transparent #166534 transparent;
-  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+  top: 115px;
+  width: 160px;
+  height: 110px;
+  background: linear-gradient(180deg, #15803d 0%, #166534 40%, #14532d 100%);
+  clip-path: polygon(
+    50% 0%,
+    35% 25%,
+    15% 70%,
+    5% 85%,
+    0% 100%,
+    100% 100%,
+    95% 85%,
+    85% 70%,
+    65% 25%
+  );
 }
 
+.tree-layer.layer-2::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 30% 20% at 25% 40%, rgba(34, 197, 94, 0.3) 0%, transparent 70%),
+    radial-gradient(ellipse 30% 20% at 75% 50%, rgba(34, 197, 94, 0.25) 0%, transparent 70%);
+}
+
+/* Capa 3 - Tercera sección más ancha */
 .tree-layer.layer-3 {
-  top: 180px;
-  border-width: 0 130px 160px 130px;
-  border-color: transparent transparent #15803d transparent;
-  filter: drop-shadow(3px 6px 10px rgba(0,0,0,0.4));
+  top: 195px;
+  width: 220px;
+  height: 130px;
+  background: linear-gradient(180deg, #166534 0%, #15803d 50%, #14532d 100%);
+  clip-path: polygon(
+    50% 0%,
+    40% 15%,
+    25% 40%,
+    12% 65%,
+    5% 85%,
+    0% 100%,
+    100% 100%,
+    95% 85%,
+    88% 65%,
+    75% 40%,
+    60% 15%
+  );
 }
 
+.tree-layer.layer-3::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 25% 15% at 20% 35%, rgba(34, 197, 94, 0.25) 0%, transparent 70%),
+    radial-gradient(ellipse 25% 15% at 80% 45%, rgba(34, 197, 94, 0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 20% 15% at 50% 70%, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+}
+
+/* Capa 4 - Base del árbol (más grande y curveada) */
 .tree-layer.layer-4 {
-  top: 280px;
-  border-width: 0 155px 180px 155px;
-  border-color: transparent transparent #22c55e transparent;
-  filter: drop-shadow(3px 6px 10px rgba(0,0,0,0.4));
+  top: 290px;
+  width: 290px;
+  height: 160px;
+  background: linear-gradient(180deg, #15803d 0%, #166534 40%, #14532d 80%, #052e16 100%);
+  clip-path: polygon(
+    50% 0%,
+    42% 10%,
+    32% 25%,
+    22% 45%,
+    12% 65%,
+    5% 82%,
+    0% 100%,
+    100% 100%,
+    95% 82%,
+    88% 65%,
+    78% 45%,
+    68% 25%,
+    58% 10%
+  );
 }
 
-/* Tronco elegante */
+.tree-layer.layer-4::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 20% 12% at 15% 30%, rgba(34, 197, 94, 0.2) 0%, transparent 70%),
+    radial-gradient(ellipse 20% 12% at 85% 35%, rgba(34, 197, 94, 0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 18% 12% at 30% 60%, rgba(34, 197, 94, 0.15) 0%, transparent 70%),
+    radial-gradient(ellipse 18% 12% at 70% 65%, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+}
+
+/* Tronco elegante con textura de madera */
 .tree-trunk {
   position: absolute;
-  bottom: 0;
+  bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
-  width: 60px;
-  height: 50px;
-  background: linear-gradient(90deg, #451a03 0%, #78350f 30%, #92400e 50%, #78350f 70%, #451a03 100%);
-  border-radius: 5px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+  width: 55px;
+  height: 55px;
+  background: linear-gradient(90deg,
+    #3d1f0d 0%,
+    #5c3317 15%,
+    #78350f 30%,
+    #92400e 50%,
+    #78350f 70%,
+    #5c3317 85%,
+    #3d1f0d 100%
+  );
+  border-radius: 4px 4px 8px 8px;
+  box-shadow:
+    0 8px 20px rgba(0,0,0,0.5),
+    inset 0 -5px 15px rgba(0,0,0,0.3);
 }
 
+/* Textura del tronco */
 .tree-trunk::before {
   content: '';
   position: absolute;
-  top: 5px;
-  left: 10px;
-  width: 8px;
-  height: 30px;
-  background: rgba(0,0,0,0.2);
+  top: 8px;
+  left: 12px;
+  width: 6px;
+  height: 35px;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.3) 0%,
+    rgba(0,0,0,0.15) 50%,
+    rgba(0,0,0,0.25) 100%
+  );
+  border-radius: 2px;
+}
+
+.tree-trunk::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 10px;
+  width: 4px;
+  height: 25px;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.2) 0%,
+    rgba(0,0,0,0.1) 100%
+  );
   border-radius: 2px;
 }
 
@@ -3108,34 +3224,34 @@ body.light-theme .snowflake,
   animation: lightPulse 2s ease-in-out infinite;
 }
 
-/* Fila 1 - cerca de la punta */
-.tree-light.light-1 { top: 90px; left: 140px; animation-delay: 0s; }
-.tree-light.light-2 { top: 100px; left: 175px; animation-delay: 0.3s; }
+/* Fila 1 - cerca de la punta (layer 1) */
+.tree-light.light-1 { top: 95px; left: 155px; animation-delay: 0s; }
+.tree-light.light-2 { top: 105px; left: 180px; animation-delay: 0.3s; }
 
-/* Fila 2 */
-.tree-light.light-3 { top: 150px; left: 115px; animation-delay: 0.1s; }
-.tree-light.light-4 { top: 160px; left: 160px; animation-delay: 0.4s; }
-.tree-light.light-5 { top: 155px; left: 200px; animation-delay: 0.7s; }
+/* Fila 2 - layer 2 */
+.tree-light.light-3 { top: 155px; left: 125px; animation-delay: 0.1s; }
+.tree-light.light-4 { top: 165px; left: 165px; animation-delay: 0.4s; }
+.tree-light.light-5 { top: 160px; left: 205px; animation-delay: 0.7s; }
 
-/* Fila 3 */
-.tree-light.light-6 { top: 220px; left: 95px; animation-delay: 0.2s; }
-.tree-light.light-7 { top: 230px; left: 145px; animation-delay: 0.5s; }
-.tree-light.light-8 { top: 225px; left: 195px; animation-delay: 0.8s; }
-.tree-light.light-9 { top: 235px; left: 235px; animation-delay: 0.15s; }
+/* Fila 3 - layer 3 */
+.tree-light.light-6 { top: 230px; left: 100px; animation-delay: 0.2s; }
+.tree-light.light-7 { top: 245px; left: 145px; animation-delay: 0.5s; }
+.tree-light.light-8 { top: 240px; left: 190px; animation-delay: 0.8s; }
+.tree-light.light-9 { top: 250px; left: 235px; animation-delay: 0.15s; }
 
-/* Fila 4 */
-.tree-light.light-10 { top: 300px; left: 75px; animation-delay: 0.35s; }
-.tree-light.light-11 { top: 310px; left: 130px; animation-delay: 0.6s; }
-.tree-light.light-12 { top: 305px; left: 180px; animation-delay: 0.25s; }
-.tree-light.light-13 { top: 315px; left: 230px; animation-delay: 0.55s; }
-.tree-light.light-14 { top: 300px; left: 260px; animation-delay: 0.85s; }
+/* Fila 4 - layer 4 superior */
+.tree-light.light-10 { top: 320px; left: 75px; animation-delay: 0.35s; }
+.tree-light.light-11 { top: 335px; left: 125px; animation-delay: 0.6s; }
+.tree-light.light-12 { top: 330px; left: 170px; animation-delay: 0.25s; }
+.tree-light.light-13 { top: 340px; left: 215px; animation-delay: 0.55s; }
+.tree-light.light-14 { top: 325px; left: 260px; animation-delay: 0.85s; }
 
-/* Fila 5 - base */
-.tree-light.light-15 { top: 380px; left: 60px; animation-delay: 0.45s; }
-.tree-light.light-16 { top: 390px; left: 115px; animation-delay: 0.75s; }
-.tree-light.light-17 { top: 385px; left: 165px; animation-delay: 0.2s; }
-.tree-light.light-18 { top: 395px; left: 215px; animation-delay: 0.5s; }
-.tree-light.light-19 { top: 385px; left: 260px; animation-delay: 0.9s; }
+/* Fila 5 - base del árbol */
+.tree-light.light-15 { top: 395px; left: 55px; animation-delay: 0.45s; }
+.tree-light.light-16 { top: 410px; left: 110px; animation-delay: 0.75s; }
+.tree-light.light-17 { top: 405px; left: 165px; animation-delay: 0.2s; }
+.tree-light.light-18 { top: 415px; left: 220px; animation-delay: 0.5s; }
+.tree-light.light-19 { top: 400px; left: 275px; animation-delay: 0.9s; }
 
 @keyframes lightPulse {
   0%, 100% {
@@ -3202,21 +3318,21 @@ body.light-theme .snowflake,
   background: radial-gradient(circle at 35% 35%, #f8fafc, #94a3b8 50%, #475569);
 }
 
-/* Posiciones de los ornamentos */
-.ornament-1 { top: 115px; left: 152px; }
-.ornament-2 { top: 165px; left: 125px; }
-.ornament-3 { top: 175px; left: 185px; }
-.ornament-4 { top: 235px; left: 100px; }
-.ornament-5 { top: 245px; left: 160px; }
-.ornament-6 { top: 240px; left: 215px; }
-.ornament-7 { top: 315px; left: 85px; }
-.ornament-8 { top: 330px; left: 150px; }
-.ornament-9 { top: 320px; left: 210px; }
-.ornament-10 { top: 335px; left: 265px; }
-.ornament-11 { top: 400px; left: 75px; }
-.ornament-12 { top: 410px; left: 140px; }
-.ornament-13 { top: 405px; left: 200px; }
-.ornament-14 { top: 415px; left: 255px; }
+/* Posiciones de los ornamentos - ajustadas al árbol curvo */
+.ornament-1 { top: 120px; left: 160px; }
+.ornament-2 { top: 175px; left: 130px; }
+.ornament-3 { top: 180px; left: 195px; }
+.ornament-4 { top: 255px; left: 105px; }
+.ornament-5 { top: 265px; left: 165px; }
+.ornament-6 { top: 260px; left: 225px; }
+.ornament-7 { top: 345px; left: 80px; }
+.ornament-8 { top: 360px; left: 145px; }
+.ornament-9 { top: 355px; left: 200px; }
+.ornament-10 { top: 365px; left: 255px; }
+.ornament-11 { top: 425px; left: 70px; }
+.ornament-12 { top: 435px; left: 135px; }
+.ornament-13 { top: 430px; left: 195px; }
+.ornament-14 { top: 440px; left: 260px; }
 
 /* Regalos elegantes debajo del árbol */
 .tree-gifts {
