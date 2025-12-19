@@ -155,25 +155,25 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                   <thead class="bg-slate-50 dark:bg-slate-700/50">
                     <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">#</th>
                       <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Documento</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nombre</th>
                       <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
                       <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase">Monto</th>
                       <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nro. Op.</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Medio</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Sucursal</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Terminal</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Agencia</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                     @for (d of resultado()?.detalles; track d.numeroFila) {
                       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-3 py-2 text-sm text-slate-500">{{ d.numeroFila }}</td>
                         <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento || d.codigoDepositante }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 max-w-[150px] truncate">{{ d.datoAdicionalDepositante }}</td>
                         <td class="px-3 py-2 text-sm text-slate-600">{{ d.fechaPago }}</td>
                         <td class="px-3 py-2 text-sm font-medium text-green-600 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
                         <td class="px-3 py-2 text-sm text-slate-600">{{ d.numeroOperacion }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.medioAtencion }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.sucursal }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.terminal }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.agencia }}</td>
                       </tr>
                     }
                   </tbody>
