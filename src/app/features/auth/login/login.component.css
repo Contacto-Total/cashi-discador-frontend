@@ -1321,29 +1321,155 @@ body.light-theme .login-card .toggle-password mat-icon,
   display: none;
 }
 
-/* Nieve cayendo */
-.login-container.christmas::before {
-  content: '';
-  position: absolute;
+/* ========================================
+   COPOS DE NIEVE DINÁMICOS
+   ======================================== */
+
+.snowflakes {
+  position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Ccircle fill='%23fff' cx='50' cy='50' r='4'/%3E%3Ccircle fill='%23fff' cx='150' cy='120' r='3'/%3E%3Ccircle fill='%23fff' cx='250' cy='80' r='5'/%3E%3Ccircle fill='%23fff' cx='350' cy='200' r='3'/%3E%3Ccircle fill='%23fff' cx='450' cy='150' r='4'/%3E%3Ccircle fill='%23fff' cx='550' cy='100' r='3'/%3E%3Ccircle fill='%23fff' cx='650' cy='180' r='5'/%3E%3Ccircle fill='%23fff' cx='750' cy='60' r='3'/%3E%3Ccircle fill='%23fff' cx='850' cy='140' r='4'/%3E%3Ccircle fill='%23fff' cx='950' cy='90' r='3'/%3E%3Ccircle fill='%23fff' cx='100' cy='300' r='3'/%3E%3Ccircle fill='%23fff' cx='200' cy='350' r='5'/%3E%3Ccircle fill='%23fff' cx='300' cy='280' r='4'/%3E%3Ccircle fill='%23fff' cx='400' cy='400' r='3'/%3E%3Ccircle fill='%23fff' cx='500' cy='320' r='4'/%3E%3Ccircle fill='%23fff' cx='600' cy='380' r='3'/%3E%3Ccircle fill='%23fff' cx='700' cy='290' r='5'/%3E%3Ccircle fill='%23fff' cx='800' cy='360' r='4'/%3E%3Ccircle fill='%23fff' cx='900' cy='310' r='3'/%3E%3Ccircle fill='%23fff' cx='80' cy='500' r='4'/%3E%3Ccircle fill='%23fff' cx='180' cy='550' r='3'/%3E%3Ccircle fill='%23fff' cx='280' cy='480' r='5'/%3E%3Ccircle fill='%23fff' cx='380' cy='600' r='3'/%3E%3Ccircle fill='%23fff' cx='480' cy='520' r='4'/%3E%3Ccircle fill='%23fff' cx='580' cy='580' r='3'/%3E%3Ccircle fill='%23fff' cx='680' cy='490' r='5'/%3E%3Ccircle fill='%23fff' cx='780' cy='560' r='4'/%3E%3Ccircle fill='%23fff' cx='880' cy='510' r='3'/%3E%3Ccircle fill='%23fff' cx='60' cy='700' r='3'/%3E%3Ccircle fill='%23fff' cx='160' cy='750' r='5'/%3E%3Ccircle fill='%23fff' cx='260' cy='680' r='4'/%3E%3Ccircle fill='%23fff' cx='360' cy='800' r='3'/%3E%3Ccircle fill='%23fff' cx='460' cy='720' r='4'/%3E%3Ccircle fill='%23fff' cx='560' cy='780' r='3'/%3E%3Ccircle fill='%23fff' cx='660' cy='690' r='5'/%3E%3Ccircle fill='%23fff' cx='760' cy='760' r='4'/%3E%3Ccircle fill='%23fff' cx='860' cy='710' r='3'/%3E%3Ccircle fill='%23fff' cx='960' cy='740' r='4'/%3E%3Ccircle fill='%23fff' cx='120' cy='900' r='4'/%3E%3Ccircle fill='%23fff' cx='220' cy='950' r='3'/%3E%3Ccircle fill='%23fff' cx='320' cy='880' r='5'/%3E%3Ccircle fill='%23fff' cx='420' cy='1000' r='3'/%3E%3Ccircle fill='%23fff' cx='520' cy='920' r='4'/%3E%3Ccircle fill='%23fff' cx='620' cy='980' r='3'/%3E%3Ccircle fill='%23fff' cx='720' cy='890' r='5'/%3E%3Ccircle fill='%23fff' cx='820' cy='960' r='4'/%3E%3Ccircle fill='%23fff' cx='920' cy='910' r='3'/%3E%3C/svg%3E");
-  background-size: 400px 400px;
-  animation: snowfall 15s linear infinite;
-  opacity: 0.7;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
   z-index: 1;
+  overflow: hidden;
+}
+
+.snowflake {
+  position: absolute;
+  top: -50px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.5rem;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  animation: snowfall linear infinite;
+  user-select: none;
+}
+
+/* Modo claro - copos azulados */
+body.light-theme .snowflake,
+:root.light .snowflake {
+  color: rgba(59, 130, 246, 0.6);
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+/* Posiciones y tiempos aleatorios para cada copo */
+.snowflake:nth-child(1) {
+  left: 5%;
+  font-size: 1.2rem;
+  animation-duration: 8s;
+  animation-delay: 0s;
+  opacity: 0.8;
+}
+
+.snowflake:nth-child(2) {
+  left: 15%;
+  font-size: 2rem;
+  animation-duration: 12s;
+  animation-delay: 2s;
+  opacity: 0.9;
+}
+
+.snowflake:nth-child(3) {
+  left: 25%;
+  font-size: 1rem;
+  animation-duration: 10s;
+  animation-delay: 4s;
+  opacity: 0.7;
+}
+
+.snowflake:nth-child(4) {
+  left: 35%;
+  font-size: 1.8rem;
+  animation-duration: 14s;
+  animation-delay: 1s;
+  opacity: 0.85;
+}
+
+.snowflake:nth-child(5) {
+  left: 45%;
+  font-size: 1.4rem;
+  animation-duration: 9s;
+  animation-delay: 3s;
+  opacity: 0.75;
+}
+
+.snowflake:nth-child(6) {
+  left: 55%;
+  font-size: 2.2rem;
+  animation-duration: 11s;
+  animation-delay: 5s;
+  opacity: 0.95;
+}
+
+.snowflake:nth-child(7) {
+  left: 65%;
+  font-size: 1.1rem;
+  animation-duration: 13s;
+  animation-delay: 0.5s;
+  opacity: 0.7;
+}
+
+.snowflake:nth-child(8) {
+  left: 75%;
+  font-size: 1.6rem;
+  animation-duration: 10s;
+  animation-delay: 2.5s;
+  opacity: 0.8;
+}
+
+.snowflake:nth-child(9) {
+  left: 85%;
+  font-size: 1.3rem;
+  animation-duration: 15s;
+  animation-delay: 4.5s;
+  opacity: 0.85;
+}
+
+.snowflake:nth-child(10) {
+  left: 92%;
+  font-size: 1.9rem;
+  animation-duration: 8s;
+  animation-delay: 1.5s;
+  opacity: 0.9;
+}
+
+.snowflake:nth-child(11) {
+  left: 10%;
+  font-size: 1rem;
+  animation-duration: 11s;
+  animation-delay: 6s;
+  opacity: 0.65;
+}
+
+.snowflake:nth-child(12) {
+  left: 50%;
+  font-size: 2.5rem;
+  animation-duration: 16s;
+  animation-delay: 3.5s;
+  opacity: 1;
 }
 
 @keyframes snowfall {
   0% {
-    background-position: 0 -400px;
+    top: -50px;
+    transform: translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(15px) rotate(90deg);
+  }
+  50% {
+    transform: translateX(-10px) rotate(180deg);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateX(20px) rotate(270deg);
   }
   100% {
-    background-position: 200px 400px;
+    top: 100vh;
+    transform: translateX(-15px) rotate(360deg);
+    opacity: 0.3;
   }
 }
 
@@ -1419,14 +1545,14 @@ body.light-theme .login-card .toggle-password mat-icon,
   filter: blur(3px);
 }
 
-/* Punta del gorro - MÁS LARGA Y 3D */
+/* Punta del gorro - COLGANDO HACIA ATRÁS */
 .hat-tip {
   position: absolute;
-  top: 0;
-  left: 55%;
+  top: -60px;
+  left: 0;
   transform: translateX(-50%);
-  width: 35px;
-  height: 50px;
+  width: 30px;
+  height: 80px;
   background: linear-gradient(
     90deg,
     #991b1b 0%,
@@ -1435,36 +1561,37 @@ body.light-theme .login-card .toggle-password mat-icon,
     #dc2626 70%,
     #991b1b 100%
   );
-  border-radius: 50% 50% 30% 30%;
+  border-radius: 40% 40% 50% 50%;
   transform-origin: bottom center;
-  animation: tipWiggle 3s ease-in-out infinite;
+  animation: tipHang 4s ease-in-out infinite;
   box-shadow:
     inset 3px 0 10px rgba(255, 255, 255, 0.2),
     inset -3px 0 10px rgba(0, 0, 0, 0.2);
+  z-index: -1;
 }
 
 .hat-tip::before {
   content: '';
   position: absolute;
-  top: 5px;
-  left: 8px;
+  top: 10px;
+  left: 6px;
   width: 10px;
-  height: 20px;
+  height: 25px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
   border-radius: 50%;
   filter: blur(2px);
 }
 
-@keyframes tipWiggle {
-  0%, 100% { transform: translateX(-50%) rotate(20deg) skewX(-5deg); }
-  50% { transform: translateX(-50%) rotate(35deg) skewX(-8deg); }
+@keyframes tipHang {
+  0%, 100% { transform: translateX(-50%) rotate(-150deg); }
+  50% { transform: translateX(-50%) rotate(-140deg); }
 }
 
-/* Pompom blanco - MÁS GRANDE Y PELUDO */
+/* Pompom en la punta colgante */
 .hat-pompom {
   position: absolute;
-  top: -5px;
-  right: -5px;
+  top: -75px;
+  left: -20px;
   width: 24px;
   height: 24px;
   background: radial-gradient(
@@ -1479,7 +1606,8 @@ body.light-theme .login-card .toggle-password mat-icon,
     0 4px 12px rgba(0, 0, 0, 0.25),
     inset 0 -4px 8px rgba(0, 0, 0, 0.1),
     inset 3px 3px 6px rgba(255, 255, 255, 0.8);
-  animation: pompomBounce 1.5s ease-in-out infinite;
+  animation: pompomSwing 4s ease-in-out infinite;
+  z-index: -1;
 }
 
 /* Textura peluda del pompom */
@@ -1491,11 +1619,9 @@ body.light-theme .login-card .toggle-password mat-icon,
   border-radius: 50%;
 }
 
-@keyframes pompomBounce {
-  0%, 100% { transform: scale(1) rotate(0deg); }
-  25% { transform: scale(1.05) rotate(-5deg); }
-  50% { transform: scale(1.1) rotate(0deg); }
-  75% { transform: scale(1.05) rotate(5deg); }
+@keyframes pompomSwing {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.05) translateY(3px); }
 }
 
 /* Borde blanco peludo - MÁS GRUESO Y 3D */
