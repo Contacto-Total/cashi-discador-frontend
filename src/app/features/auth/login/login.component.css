@@ -2618,7 +2618,9 @@ body.light-theme .snowflake,
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a15 50%, #000 100%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 10000;
   display: flex;
   align-items: center;
