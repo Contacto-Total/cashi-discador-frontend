@@ -270,7 +270,6 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
                   <option value="AGENTE BCP">Agente BCP</option>
                   <option value="APP">App BCP</option>
                   <option value="BANCA POR INTERNET">Banca por Internet</option>
-                  <option value="YAPE">Yape</option>
                   <option value="OTRO">Otro</option>
                 </select>
               </div>
