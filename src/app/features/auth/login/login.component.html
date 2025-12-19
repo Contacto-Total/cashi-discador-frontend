@@ -27,6 +27,34 @@
     <div class="snowflake">&#10053;</div>
   </div>
 
+  <!-- 2026 grande en el fondo -->
+  <div class="year-background" *ngIf="showNewYearTheme">
+    <span class="year-digit">2</span>
+    <span class="year-digit">0</span>
+    <span class="year-digit">2</span>
+    <span class="year-digit">6</span>
+  </div>
+
+  <!-- Fuegos artificiales -->
+  <div class="fireworks-container" *ngIf="showNewYearTheme">
+    <div class="firework"></div>
+    <div class="firework"></div>
+    <div class="firework"></div>
+    <div class="firework"></div>
+    <div class="firework"></div>
+    <div class="firework"></div>
+  </div>
+
+  <!-- Serpentinas -->
+  <div class="streamers-container" *ngIf="showNewYearTheme">
+    <div class="streamer left"></div>
+    <div class="streamer left"></div>
+    <div class="streamer left"></div>
+    <div class="streamer right"></div>
+    <div class="streamer right"></div>
+    <div class="streamer right"></div>
+  </div>
+
   <!-- Confeti dorado (Año Nuevo) - 40 piezas -->
   <div class="confetti-container" *ngIf="showNewYearTheme">
     <div class="confetti"></div>

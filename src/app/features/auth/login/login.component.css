@@ -1795,16 +1795,38 @@ body.light-theme .snowflake,
   z-index: 100;
   text-align: center;
   padding: 24px 20px;
-  background: linear-gradient(145deg, rgba(15, 15, 25, 0.98) 0%, rgba(5, 5, 15, 0.99) 100%);
-  border: 1px solid rgba(255, 215, 0, 0.3);
+  background: rgba(10, 10, 20, 0.6);
+  border: 1px solid rgba(255, 215, 0, 0.4);
   border-radius: 20px;
   box-shadow:
     0 0 0 1px rgba(255, 215, 0, 0.1),
-    0 10px 40px rgba(0, 0, 0, 0.5),
-    0 0 80px rgba(255, 215, 0, 0.15),
-    inset 0 1px 0 rgba(255, 215, 0, 0.1);
-  backdrop-filter: blur(20px);
+    0 10px 40px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(255, 215, 0, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   animation: countdown-float 4s ease-in-out infinite;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efecto hover en el contador */
+.newyear-countdown:hover {
+  transform: translateY(-50%) scale(1.05);
+  background: rgba(10, 10, 20, 0.75);
+  border-color: rgba(255, 215, 0, 0.7);
+  box-shadow:
+    0 0 0 2px rgba(255, 215, 0, 0.2),
+    0 15px 50px rgba(0, 0, 0, 0.4),
+    0 0 100px rgba(255, 215, 0, 0.3),
+    inset 0 0 30px rgba(255, 215, 0, 0.05);
+}
+
+.newyear-countdown:hover .countdown-value {
+  animation: value-glow-intense 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes value-glow-intense {
+  0% { filter: drop-shadow(0 2px 8px rgba(255, 165, 0, 0.6)); transform: scale(1); }
+  100% { filter: drop-shadow(0 4px 16px rgba(255, 165, 0, 1)); transform: scale(1.05); }
 }
 
 /* Borde dorado animado */
@@ -2097,6 +2119,313 @@ body.light-theme .snowflake,
 .login-container.newyear .mascot-container {
   gap: 16px;
   margin-bottom: 12px;
+}
+
+/* ========================================
+   2026 GRANDE EN EL FONDO
+   ======================================== */
+
+.year-background {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 10px;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.06;
+}
+
+.year-digit {
+  font-size: 28vw;
+  font-weight: 900;
+  font-family: 'Arial Black', sans-serif;
+  background: linear-gradient(180deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 0.85;
+  animation: digit-pulse 4s ease-in-out infinite;
+}
+
+.year-digit:nth-child(1) { animation-delay: 0s; }
+.year-digit:nth-child(2) { animation-delay: 0.5s; }
+.year-digit:nth-child(3) { animation-delay: 1s; }
+.year-digit:nth-child(4) { animation-delay: 1.5s; }
+
+@keyframes digit-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.02); }
+}
+
+/* ========================================
+   FUEGOS ARTIFICIALES
+   ======================================== */
+
+.fireworks-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.firework {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  animation: firework-launch 4s ease-out infinite;
+}
+
+.firework::before,
+.firework::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  animation: firework-explode 4s ease-out infinite;
+}
+
+.firework:nth-child(1) {
+  left: 10%;
+  background: #FFD700;
+  animation-delay: 0s;
+}
+.firework:nth-child(1)::before { background: #FFA500; }
+.firework:nth-child(1)::after { background: #FF8C00; }
+
+.firework:nth-child(2) {
+  left: 25%;
+  background: #FFA500;
+  animation-delay: 0.8s;
+}
+.firework:nth-child(2)::before { background: #FFD700; }
+.firework:nth-child(2)::after { background: #FFCC00; }
+
+.firework:nth-child(3) {
+  left: 50%;
+  background: #FFD700;
+  animation-delay: 1.6s;
+}
+.firework:nth-child(3)::before { background: #FF8C00; }
+.firework:nth-child(3)::after { background: #FFA500; }
+
+.firework:nth-child(4) {
+  left: 70%;
+  background: #FFCC00;
+  animation-delay: 2.4s;
+}
+.firework:nth-child(4)::before { background: #FFD700; }
+.firework:nth-child(4)::after { background: #FFA500; }
+
+.firework:nth-child(5) {
+  left: 85%;
+  background: #FFA500;
+  animation-delay: 3.2s;
+}
+.firework:nth-child(5)::before { background: #FFD700; }
+.firework:nth-child(5)::after { background: #FF8C00; }
+
+.firework:nth-child(6) {
+  left: 40%;
+  background: #FFD700;
+  animation-delay: 2s;
+}
+.firework:nth-child(6)::before { background: #FFCC00; }
+.firework:nth-child(6)::after { background: #FFA500; }
+
+@keyframes firework-launch {
+  0% {
+    bottom: -10px;
+    transform: scale(1);
+    opacity: 1;
+  }
+  30% {
+    bottom: 50%;
+    transform: scale(1);
+    opacity: 1;
+  }
+  35% {
+    bottom: 55%;
+    transform: scale(1);
+    opacity: 1;
+  }
+  40%, 100% {
+    bottom: 55%;
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes firework-explode {
+  0%, 35% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+  40% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(var(--tx, 30px), var(--ty, -30px)) scale(1.5);
+    opacity: 1;
+  }
+  70% {
+    transform: translate(calc(var(--tx, 30px) * 2), calc(var(--ty, -30px) * 2 + 20px)) scale(0.5);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(calc(var(--tx, 30px) * 2.5), calc(var(--ty, -30px) * 2 + 50px)) scale(0);
+    opacity: 0;
+  }
+}
+
+.firework::before {
+  --tx: -40px;
+  --ty: -20px;
+}
+
+.firework::after {
+  --tx: 40px;
+  --ty: -25px;
+}
+
+/* Partículas adicionales de fuegos */
+.firework:nth-child(odd)::before {
+  --tx: -50px;
+  --ty: -40px;
+}
+
+.firework:nth-child(odd)::after {
+  --tx: 50px;
+  --ty: -35px;
+}
+
+.firework:nth-child(even)::before {
+  --tx: -35px;
+  --ty: -50px;
+}
+
+.firework:nth-child(even)::after {
+  --tx: 45px;
+  --ty: -45px;
+}
+
+/* ========================================
+   SERPENTINAS
+   ======================================== */
+
+.streamers-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.streamer {
+  position: absolute;
+  width: 8px;
+  height: 100px;
+  border-radius: 4px;
+  animation: streamer-fall 8s linear infinite;
+}
+
+.streamer.left {
+  left: 0;
+  transform-origin: top left;
+}
+
+.streamer.right {
+  right: 0;
+  transform-origin: top right;
+}
+
+.streamer:nth-child(1) {
+  background: linear-gradient(180deg, #FFD700, #FFA500, #FFD700);
+  top: -100px;
+  left: 5%;
+  animation-delay: 0s;
+  animation-duration: 7s;
+}
+
+.streamer:nth-child(2) {
+  background: linear-gradient(180deg, #FFA500, #FF8C00, #FFA500);
+  top: -100px;
+  left: 12%;
+  animation-delay: 2s;
+  animation-duration: 9s;
+  width: 6px;
+}
+
+.streamer:nth-child(3) {
+  background: linear-gradient(180deg, #C0C0C0, #A0A0A0, #C0C0C0);
+  top: -100px;
+  left: 8%;
+  animation-delay: 4s;
+  animation-duration: 8s;
+  width: 5px;
+}
+
+.streamer:nth-child(4) {
+  background: linear-gradient(180deg, #FFD700, #FFCC00, #FFD700);
+  top: -100px;
+  right: 5%;
+  left: auto;
+  animation-delay: 1s;
+  animation-duration: 8s;
+}
+
+.streamer:nth-child(5) {
+  background: linear-gradient(180deg, #FFA500, #FFD700, #FFA500);
+  top: -100px;
+  right: 10%;
+  left: auto;
+  animation-delay: 3s;
+  animation-duration: 7s;
+  width: 7px;
+}
+
+.streamer:nth-child(6) {
+  background: linear-gradient(180deg, #C0C0C0, #D4AF37, #C0C0C0);
+  top: -100px;
+  right: 15%;
+  left: auto;
+  animation-delay: 5s;
+  animation-duration: 9s;
+  width: 5px;
+}
+
+@keyframes streamer-fall {
+  0% {
+    top: -100px;
+    transform: rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  25% {
+    transform: rotate(15deg) translateX(30px);
+  }
+  50% {
+    transform: rotate(-10deg) translateX(-20px);
+    opacity: 0.8;
+  }
+  75% {
+    transform: rotate(20deg) translateX(40px);
+  }
+  100% {
+    top: 100vh;
+    transform: rotate(-5deg) translateX(-10px);
+    opacity: 0.3;
+  }
 }
 
 /* ========================================
