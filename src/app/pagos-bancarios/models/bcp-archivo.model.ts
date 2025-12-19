@@ -18,6 +18,7 @@ export interface BcpArchivoCabecera {
 export interface BcpArchivoDetalle {
   numeroFila: number;
   codigoDepositante: string;
+  documento: string;
   datoAdicionalDepositante: string;
   fechaPago: string;
   montoPagado: number;
@@ -48,4 +49,5 @@ export interface BcpArchivoResultado {
   erroresEncontrados: number;
   errores: string[];
   archivoId: number | null;
+  duplicadosOmitidos: number;
 }

@@ -109,7 +109,27 @@ import { BcpArchivoResultado, BcpArchivoCabecera, BcpArchivoDetalle } from '../m
               <p class="font-medium text-green-800 dark:text-green-300">Archivo guardado correctamente</p>
               <p class="text-sm text-green-700 dark:text-green-400">
                 ID de carga: <span class="font-mono font-bold">{{ resultado()?.archivoId }}</span> -
-                {{ resultado()?.registrosProcesados }} registros procesados
+                {{ resultado()?.registrosProcesados }} registros insertados
+                @if (resultado()?.duplicadosOmitidos && resultado()!.duplicadosOmitidos > 0) {
+                  <span class="text-amber-600 dark:text-amber-400">
+                    ({{ resultado()?.duplicadosOmitidos }} duplicados omitidos)
+                  </span>
+                }
+              </p>
+            </div>
+          </div>
+        }
+
+        <!-- Warning: All duplicates -->
+        @if (!resultado()?.exitoso && resultado()?.duplicadosOmitidos && resultado()!.duplicadosOmitidos > 0 && resultado()?.registrosProcesados === 0) {
+          <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
+            <svg class="w-6 h-6 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div>
+              <p class="font-medium text-amber-800 dark:text-amber-300">Archivo ya procesado</p>
+              <p class="text-sm text-amber-700 dark:text-amber-400">
+                Todos los {{ resultado()?.duplicadosOmitidos }} registros ya existen en la base de datos
               </p>
             </div>
           </div>
@@ -183,8 +203,8 @@ import { BcpArchivoResultado, BcpArchivoCabecera, BcpArchivoDetalle } from '../m
               <thead class="bg-slate-50 dark:bg-slate-700/50">
                 <tr>
                   <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">#</th>
-                  <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Código Depositante</th>
-                  <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Dato Adicional</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Documento</th>
+                  <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Nombre/Adicional</th>
                   <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Fecha Pago</th>
                   <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monto</th>
                   <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Sucursal</th>
@@ -203,8 +223,8 @@ import { BcpArchivoResultado, BcpArchivoCabecera, BcpArchivoDetalle } from '../m
                     <td class="px-3 py-2 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
                       {{ detalle.numeroFila }}
                     </td>
-                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-white">
-                      {{ detalle.codigoDepositante }}
+                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-slate-800 dark:text-white" [title]="'Original: ' + detalle.codigoDepositante">
+                      {{ detalle.documento || detalle.codigoDepositante }}
                     </td>
                     <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300 max-w-[200px] truncate" [title]="detalle.datoAdicionalDepositante">
                       {{ detalle.datoAdicionalDepositante }}
