@@ -1,5 +1,5 @@
-<div class="login-container" [class.christmas]="showChristmasHat">
-  <!-- Copos de nieve dinámicos -->
+<div class="login-container" [class.christmas]="showChristmasHat" [class.newyear]="showNewYearTheme">
+  <!-- Copos de nieve dinámicos (Navidad) -->
   <div class="snowflakes" *ngIf="showChristmasHat">
     <div class="snowflake">&#10052;</div>
     <div class="snowflake">&#10053;</div>
@@ -26,6 +26,62 @@
     <div class="snowflake">&#10052;</div>
     <div class="snowflake">&#10053;</div>
   </div>
+
+  <!-- Confeti dorado (Año Nuevo) -->
+  <div class="confetti-container" *ngIf="showNewYearTheme">
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+    <div class="confetti"></div>
+  </div>
+
+  <!-- Contador de Año Nuevo -->
+  <div class="newyear-countdown" *ngIf="showNewYearTheme && !isNewYearArrived">
+    <div class="countdown-title">AÑO NUEVO {{ newYear }}</div>
+    <div class="countdown-timer">
+      <div class="countdown-item">
+        <span class="countdown-value">{{ countdownDays.toString().padStart(2, '0') }}</span>
+        <span class="countdown-label">DÍAS</span>
+      </div>
+      <div class="countdown-separator">:</div>
+      <div class="countdown-item">
+        <span class="countdown-value">{{ countdownHours.toString().padStart(2, '0') }}</span>
+        <span class="countdown-label">HORAS</span>
+      </div>
+      <div class="countdown-separator">:</div>
+      <div class="countdown-item">
+        <span class="countdown-value">{{ countdownMinutes.toString().padStart(2, '0') }}</span>
+        <span class="countdown-label">MIN</span>
+      </div>
+      <div class="countdown-separator">:</div>
+      <div class="countdown-item">
+        <span class="countdown-value">{{ countdownSeconds.toString().padStart(2, '0') }}</span>
+        <span class="countdown-label">SEG</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mensaje de Feliz Año Nuevo (después de medianoche) -->
+  <div class="newyear-celebration" *ngIf="showNewYearTheme && isNewYearArrived">
+    <div class="celebration-text">¡FELIZ AÑO NUEVO {{ newYear }}!</div>
+  </div>
+
   <div class="login-card">
     <div class="login-header">
       <div class="mascot-container">
@@ -37,13 +93,20 @@
           </div>
         </div>
         <div class="mascot-body">
-          <div class="mascot-antenna" [class.hidden]="showChristmasHat"></div>
+          <div class="mascot-antenna" [class.hidden]="showChristmasHat || showNewYearTheme"></div>
           <!-- Gorrito navideño -->
           <div class="christmas-hat" *ngIf="showChristmasHat">
             <div class="hat-base"></div>
             <div class="hat-tip"></div>
             <div class="hat-pompom"></div>
             <div class="hat-trim"></div>
+          </div>
+          <!-- Gorrito de fiesta (Año Nuevo) -->
+          <div class="party-hat" *ngIf="showNewYearTheme">
+            <div class="party-hat-cone"></div>
+            <div class="party-hat-pompom"></div>
+            <div class="party-hat-band"></div>
+            <div class="party-hat-stripes"></div>
           </div>
           <div class="mascot-head">
             <div class="mascot-eyes" [class.hiding]="!isGreeting && hidePassword && passwordFocused">

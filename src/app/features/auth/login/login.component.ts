@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ViewEncapsulation, HostListener, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ViewEncapsulation, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -17,7 +17,7 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrls: ['./login.component.css'],
   encapsulation: ViewEncapsulation.None
 })
-export class LoginComponent implements OnInit, AfterViewInit {
+export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   loginForm!: FormGroup;
   loading = false;
   errorMessage = '';
@@ -36,9 +36,24 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   // ========== TEMAS ESTACIONALES (automático por fecha) ==========
   // Navidad: 1 dic 12:00 - 25 dic 23:59
-  // Año Nuevo: 26 dic 12:00 - 1 ene 23:59
+  // Año Nuevo: 26 dic 12:00 - 3 ene 23:59
   showChristmasHat = false;
   showNewYearTheme = false;
+
+  // Contador de Año Nuevo
+  countdownDays = 0;
+  countdownHours = 0;
+  countdownMinutes = 0;
+  countdownSeconds = 0;
+  isNewYearArrived = false; // true cuando ya es 1 de enero o después
+  private countdownInterval: any;
+
+  // Getter para el año nuevo
+  get newYear(): number {
+    const now = new Date();
+    // Si estamos en enero, es el año actual; si no, es el próximo
+    return now.getMonth() === 0 ? now.getFullYear() : now.getFullYear() + 1;
+  }
   // ================================================================
 
   constructor(
@@ -52,7 +67,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   /**
    * Detecta el tema estacional basado en la fecha actual
    * - Navidad: 1 dic 12:00 - 25 dic 23:59
-   * - Año Nuevo: 26 dic 12:00 - 1 ene 23:59
+   * - Año Nuevo: 26 dic 12:00 - 3 ene 23:59
    */
   private detectSeasonalTheme(): void {
     const now = new Date();
@@ -76,9 +91,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
       }
     }
 
-    // Año Nuevo: 1 ene 00:00 - 1 ene 23:59
+    // Año Nuevo: 1 ene 00:00 - 3 ene 23:59
     // month === 0 es enero
-    if (month === 0 && day === 1) {
+    if (month === 0 && day >= 1 && day <= 3) {
       this.showChristmasHat = false;
       this.showNewYearTheme = true;
       return;
@@ -89,9 +104,67 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.showNewYearTheme = false;
   }
 
+  /**
+   * Inicia el contador regresivo para Año Nuevo
+   */
+  private startNewYearCountdown(): void {
+    // Determinar el año objetivo (si estamos en enero, el año nuevo ya llegó)
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    // Si estamos en enero (mes 0), ya llegó el año nuevo
+    if (currentMonth === 0) {
+      this.isNewYearArrived = true;
+      return;
+    }
+
+    // Fecha objetivo: 1 de enero del próximo año a las 00:00:00
+    const targetYear = currentYear + 1;
+    const newYearDate = new Date(targetYear, 0, 1, 0, 0, 0);
+
+    // Actualizar contador cada segundo
+    this.updateCountdown(newYearDate);
+    this.countdownInterval = setInterval(() => {
+      this.updateCountdown(newYearDate);
+    }, 1000);
+  }
+
+  /**
+   * Actualiza los valores del contador
+   */
+  private updateCountdown(targetDate: Date): void {
+    const now = new Date();
+    const diff = targetDate.getTime() - now.getTime();
+
+    if (diff <= 0) {
+      // ¡Llegó el Año Nuevo!
+      this.isNewYearArrived = true;
+      this.countdownDays = 0;
+      this.countdownHours = 0;
+      this.countdownMinutes = 0;
+      this.countdownSeconds = 0;
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+      }
+      return;
+    }
+
+    // Calcular días, horas, minutos, segundos
+    this.countdownDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+    this.countdownHours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    this.countdownMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    this.countdownSeconds = Math.floor((diff % (1000 * 60)) / 1000);
+  }
+
   ngOnInit(): void {
     // Detectar tema estacional por fecha
     this.detectSeasonalTheme();
+
+    // Si es tema de Año Nuevo, iniciar el contador
+    if (this.showNewYearTheme) {
+      this.startNewYearCountdown();
+    }
 
     // Initialize form first
     this.loginForm = this.fb.group({
@@ -135,6 +208,16 @@ export class LoginComponent implements OnInit, AfterViewInit {
         this.updateRobotMessage();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar intervalos
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
   }
 
   private updateRobotMessage(): void {

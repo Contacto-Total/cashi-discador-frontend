@@ -1688,3 +1688,367 @@ body.light-theme .snowflake,
     inset 0 -2px 4px rgba(0, 0, 0, 0.05);
   z-index: 4;
 }
+
+/* ========================================
+   TEMA AÑO NUEVO
+   Activo del 26 dic al 3 ene
+   ======================================== */
+
+/* ========================================
+   CONFETI DORADO
+   ======================================== */
+
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.confetti {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -20px;
+  animation: confetti-fall linear infinite;
+}
+
+/* Diferentes formas y colores para cada confeti */
+.confetti:nth-child(1) { left: 5%; width: 8px; height: 8px; background: #FFD700; animation-duration: 6s; animation-delay: 0s; border-radius: 50%; }
+.confetti:nth-child(2) { left: 10%; width: 12px; height: 4px; background: #FFA500; animation-duration: 8s; animation-delay: 1s; border-radius: 2px; }
+.confetti:nth-child(3) { left: 15%; width: 6px; height: 6px; background: #C0C0C0; animation-duration: 7s; animation-delay: 2s; border-radius: 50%; }
+.confetti:nth-child(4) { left: 20%; width: 10px; height: 3px; background: #FFD700; animation-duration: 9s; animation-delay: 0.5s; border-radius: 2px; }
+.confetti:nth-child(5) { left: 28%; width: 8px; height: 8px; background: #FFA500; animation-duration: 6.5s; animation-delay: 3s; border-radius: 50%; }
+.confetti:nth-child(6) { left: 35%; width: 14px; height: 5px; background: #FFD700; animation-duration: 10s; animation-delay: 1.5s; border-radius: 2px; }
+.confetti:nth-child(7) { left: 42%; width: 7px; height: 7px; background: #C0C0C0; animation-duration: 7.5s; animation-delay: 4s; border-radius: 50%; }
+.confetti:nth-child(8) { left: 50%; width: 11px; height: 4px; background: #FFA500; animation-duration: 8.5s; animation-delay: 2.5s; border-radius: 2px; }
+.confetti:nth-child(9) { left: 58%; width: 9px; height: 9px; background: #FFD700; animation-duration: 6s; animation-delay: 5s; border-radius: 50%; }
+.confetti:nth-child(10) { left: 65%; width: 13px; height: 4px; background: #C0C0C0; animation-duration: 9.5s; animation-delay: 0.8s; border-radius: 2px; }
+.confetti:nth-child(11) { left: 72%; width: 6px; height: 6px; background: #FFD700; animation-duration: 7s; animation-delay: 3.5s; border-radius: 50%; }
+.confetti:nth-child(12) { left: 78%; width: 10px; height: 3px; background: #FFA500; animation-duration: 8s; animation-delay: 6s; border-radius: 2px; }
+.confetti:nth-child(13) { left: 83%; width: 8px; height: 8px; background: #C0C0C0; animation-duration: 6.8s; animation-delay: 1.2s; border-radius: 50%; }
+.confetti:nth-child(14) { left: 88%; width: 12px; height: 5px; background: #FFD700; animation-duration: 9s; animation-delay: 4.5s; border-radius: 2px; }
+.confetti:nth-child(15) { left: 93%; width: 7px; height: 7px; background: #FFA500; animation-duration: 7.2s; animation-delay: 2s; border-radius: 50%; }
+.confetti:nth-child(16) { left: 25%; width: 9px; height: 3px; background: #C0C0C0; animation-duration: 8.2s; animation-delay: 5.5s; border-radius: 2px; }
+.confetti:nth-child(17) { left: 45%; width: 10px; height: 10px; background: #FFD700; animation-duration: 6.3s; animation-delay: 0.3s; border-radius: 50%; }
+.confetti:nth-child(18) { left: 55%; width: 8px; height: 4px; background: #FFA500; animation-duration: 9.2s; animation-delay: 3.8s; border-radius: 2px; }
+.confetti:nth-child(19) { left: 70%; width: 11px; height: 11px; background: #C0C0C0; animation-duration: 7.8s; animation-delay: 1.8s; border-radius: 50%; }
+.confetti:nth-child(20) { left: 95%; width: 6px; height: 3px; background: #FFD700; animation-duration: 8.8s; animation-delay: 4.2s; border-radius: 2px; }
+
+@keyframes confetti-fall {
+  0% {
+    top: -20px;
+    transform: translateX(0) rotateZ(0deg);
+    opacity: 1;
+  }
+  25% {
+    transform: translateX(15px) rotateZ(90deg);
+  }
+  50% {
+    transform: translateX(-10px) rotateZ(180deg);
+    opacity: 0.8;
+  }
+  75% {
+    transform: translateX(20px) rotateZ(270deg);
+  }
+  100% {
+    top: 100vh;
+    transform: translateX(-5px) rotateZ(360deg);
+    opacity: 0.3;
+  }
+}
+
+/* ========================================
+   CONTADOR DE AÑO NUEVO
+   ======================================== */
+
+.newyear-countdown {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  text-align: center;
+  padding: 16px 28px;
+  background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
+  border: 2px solid transparent;
+  border-image: linear-gradient(135deg, #FFD700, #FFA500, #FFD700) 1;
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(255, 215, 0, 0.3),
+    0 0 60px rgba(255, 165, 0, 0.15),
+    inset 0 1px 1px rgba(255, 215, 0, 0.1);
+  backdrop-filter: blur(20px);
+  animation: countdown-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes countdown-glow {
+  0% { box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3), 0 0 60px rgba(255, 165, 0, 0.15); }
+  100% { box-shadow: 0 8px 40px rgba(255, 215, 0, 0.5), 0 0 80px rgba(255, 165, 0, 0.25); }
+}
+
+.countdown-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+}
+
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.countdown-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 50px;
+}
+
+.countdown-value {
+  font-size: 32px;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+  background: linear-gradient(180deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  line-height: 1;
+  animation: value-pulse 1s ease-in-out infinite;
+}
+
+@keyframes value-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.countdown-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.countdown-separator {
+  font-size: 28px;
+  font-weight: 900;
+  color: #FFD700;
+  margin-bottom: 16px;
+  animation: separator-blink 1s step-end infinite;
+}
+
+@keyframes separator-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+/* ========================================
+   MENSAJE FELIZ AÑO NUEVO
+   ======================================== */
+
+.newyear-celebration {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  text-align: center;
+  padding: 20px 40px;
+  background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
+  border: 2px solid #FFD700;
+  border-radius: 20px;
+  box-shadow:
+    0 8px 40px rgba(255, 215, 0, 0.4),
+    0 0 80px rgba(255, 165, 0, 0.2);
+  backdrop-filter: blur(20px);
+  animation: celebration-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes celebration-bounce {
+  0% { transform: translateX(-50%) scale(0); opacity: 0; }
+  60% { transform: translateX(-50%) scale(1.1); }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+.celebration-text {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 30%, #FFD700 60%, #FFA500 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shine 2s linear infinite;
+}
+
+@keyframes shine {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ========================================
+   GORRITO DE FIESTA
+   ======================================== */
+
+.party-hat {
+  position: absolute;
+  top: -55px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 70px;
+  z-index: 5;
+  animation: party-hat-bob 2s ease-in-out infinite;
+}
+
+@keyframes party-hat-bob {
+  0%, 100% { transform: translateX(-50%) rotate(-5deg); }
+  50% { transform: translateX(-50%) rotate(5deg); }
+}
+
+/* Cono del gorrito */
+.party-hat-cone {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 30px solid transparent;
+  border-right: 30px solid transparent;
+  border-bottom: 55px solid #FFD700;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+/* Rayas del gorrito */
+.party-hat-stripes {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 30px solid transparent;
+  border-right: 30px solid transparent;
+  border-bottom: 55px solid transparent;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 5px,
+    rgba(255, 165, 0, 0.6) 5px,
+    rgba(255, 165, 0, 0.6) 10px
+  );
+  -webkit-mask: linear-gradient(to top, black, black);
+  mask: linear-gradient(to top, black, black);
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  width: 60px;
+  height: 55px;
+}
+
+/* Pompom del gorrito */
+.party-hat-pompom {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle, #FF6B6B 0%, #FF4757 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.5);
+  animation: pompom-bounce 0.5s ease-in-out infinite;
+}
+
+@keyframes pompom-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(-3px); }
+}
+
+/* Banda elástica */
+.party-hat-band {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 8px;
+  background: linear-gradient(90deg, #FFA500, #FFD700, #FFA500);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* ========================================
+   BURBUJA DORADA (AÑO NUEVO)
+   ======================================== */
+
+.login-container.newyear .speech-bubble {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%) !important;
+  box-shadow:
+    0 4px 16px rgba(255, 215, 0, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4) !important;
+}
+
+.login-container.newyear .speech-bubble::after {
+  border-top-color: #FFA500 !important;
+}
+
+.login-container.newyear .speech-bubble .typing-char {
+  color: #1a1a2e !important;
+  -webkit-text-fill-color: #1a1a2e !important;
+  text-shadow: none;
+}
+
+/* Ajuste del mascot container para año nuevo */
+.login-container.newyear .mascot-container {
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+/* Responsive para el contador */
+@media (max-width: 480px) {
+  .newyear-countdown {
+    padding: 12px 16px;
+    top: 10px;
+  }
+
+  .countdown-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+
+  .countdown-value {
+    font-size: 24px;
+  }
+
+  .countdown-item {
+    min-width: 40px;
+  }
+
+  .countdown-separator {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .newyear-celebration {
+    padding: 16px 24px;
+  }
+
+  .celebration-text {
+    font-size: 16px;
+  }
+}
