@@ -1311,3 +1311,117 @@ body.light-theme .login-card .toggle-password mat-icon,
     border: 2px solid transparent;
   }
 }
+
+/* ========================================
+   GORRITO NAVIDEÑO - TEMPORAL
+   Para quitar: showChristmasHat = false
+   ======================================== */
+
+.mascot-antenna.hidden {
+  display: none;
+}
+
+.christmas-hat {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 50px;
+  z-index: 20;
+  animation: hatBounce 3s ease-in-out infinite;
+}
+
+@keyframes hatBounce {
+  0%, 100% { transform: translateX(-50%) rotate(-5deg); }
+  50% { transform: translateX(-50%) rotate(5deg); }
+}
+
+/* Base del gorro (parte roja principal) */
+.hat-base {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 65px;
+  height: 35px;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-radius: 50% 50% 0 0;
+  box-shadow:
+    0 4px 12px rgba(185, 28, 28, 0.4),
+    inset 0 -5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Punta del gorro */
+.hat-tip {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-30%);
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 30px solid #dc2626;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+  transform-origin: bottom center;
+  animation: tipWiggle 2s ease-in-out infinite;
+}
+
+@keyframes tipWiggle {
+  0%, 100% { transform: translateX(-30%) rotate(15deg); }
+  50% { transform: translateX(-30%) rotate(25deg); }
+}
+
+/* Pompom blanco */
+.hat-pompom {
+  position: absolute;
+  top: -2px;
+  right: 5px;
+  width: 16px;
+  height: 16px;
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #e5e7eb 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  animation: pompomBounce 1s ease-in-out infinite;
+}
+
+@keyframes pompomBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Borde blanco peludo */
+.hat-trim {
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 75px;
+  height: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #e5e7eb 100%);
+  border-radius: 6px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Textura peluda del borde */
+.hat-trim::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 5px;
+  right: 5px;
+  height: 100%;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.03) 3px,
+    rgba(0, 0, 0, 0.03) 6px
+  );
+  border-radius: 6px;
+}

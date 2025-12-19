@@ -10,7 +10,14 @@
           </div>
         </div>
         <div class="mascot-body">
-          <div class="mascot-antenna"></div>
+          <div class="mascot-antenna" [class.hidden]="showChristmasHat"></div>
+          <!-- Gorrito navideño -->
+          <div class="christmas-hat" *ngIf="showChristmasHat">
+            <div class="hat-base"></div>
+            <div class="hat-tip"></div>
+            <div class="hat-pompom"></div>
+            <div class="hat-trim"></div>
+          </div>
           <div class="mascot-head">
             <div class="mascot-eyes" [class.hiding]="!isGreeting && hidePassword && passwordFocused">
               <div class="eye left-eye">

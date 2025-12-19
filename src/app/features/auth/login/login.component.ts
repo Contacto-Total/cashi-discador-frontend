@@ -34,6 +34,11 @@ export class LoginComponent implements OnInit, AfterViewInit {
   showBubble = false;
   private typingTimeout: any;
 
+  // ========== NAVIDAD ==========
+  // Cambiar a false para quitar el gorrito
+  showChristmasHat = true;
+  // ==============================
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
