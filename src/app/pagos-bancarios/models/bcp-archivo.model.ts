@@ -65,6 +65,8 @@ export interface BcpPagoManualRequest {
   agencia?: string;
   medioAtencion?: string;
   observaciones?: string;
+  /** Banco donde se realizó el pago: BCP, INTERBANK, BBVA, SCOTIABANK, BANBIF, OTRO */
+  banco?: string;
 }
 
 /**

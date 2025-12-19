@@ -255,6 +255,27 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
                 />
               </div>
 
+              <!-- Banco -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Banco <span class="text-red-500">*</span>
+                </label>
+                <select
+                  [(ngModel)]="pagoManual.banco"
+                  name="banco"
+                  required
+                  class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="BCP">BCP - Banco de Crédito</option>
+                  <option value="INTERBANK">Interbank</option>
+                  <option value="BBVA">BBVA Continental</option>
+                  <option value="SCOTIABANK">Scotiabank</option>
+                  <option value="BANBIF">BanBif</option>
+                  <option value="BANCO DE LA NACION">Banco de la Nación</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+
               <!-- Medio de Atención -->
               <div>
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -360,7 +381,8 @@ export class PagosBancariosPage {
     monto: 0,
     numeroOperacion: '',
     medioAtencion: '',
-    observaciones: ''
+    observaciones: '',
+    banco: 'BCP'
   };
   isLoadingManual = signal(false);
   resultadoManual = signal<BcpPagoManualResponse | null>(null);
@@ -434,7 +456,8 @@ export class PagosBancariosPage {
             monto: 0,
             numeroOperacion: '',
             medioAtencion: '',
-            observaciones: ''
+            observaciones: '',
+            banco: 'BCP'
           };
         }
         this.isLoadingManual.set(false);
