@@ -164,11 +164,6 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     // Detectar tema estacional por fecha
     this.detectSeasonalTheme();
 
-    // TODO: TEMPORAL - Forzar tema de Año Nuevo para pruebas
-    this.showChristmasHat = false;
-    this.showNewYearTheme = true;
-    // FIN TEMPORAL
-
     // Si es tema de Año Nuevo, iniciar el contador
     if (this.showNewYearTheme) {
       this.startNewYearCountdown();
