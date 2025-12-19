@@ -1717,7 +1717,7 @@ body.light-theme .snowflake,
   animation: confetti-fall linear infinite;
 }
 
-/* Diferentes formas y colores para cada confeti */
+/* Diferentes formas y colores para cada confeti - 40 piezas */
 .confetti:nth-child(1) { left: 5%; width: 8px; height: 8px; background: #FFD700; animation-duration: 6s; animation-delay: 0s; border-radius: 50%; }
 .confetti:nth-child(2) { left: 10%; width: 12px; height: 4px; background: #FFA500; animation-duration: 8s; animation-delay: 1s; border-radius: 2px; }
 .confetti:nth-child(3) { left: 15%; width: 6px; height: 6px; background: #C0C0C0; animation-duration: 7s; animation-delay: 2s; border-radius: 50%; }
@@ -1738,6 +1738,27 @@ body.light-theme .snowflake,
 .confetti:nth-child(18) { left: 55%; width: 8px; height: 4px; background: #FFA500; animation-duration: 9.2s; animation-delay: 3.8s; border-radius: 2px; }
 .confetti:nth-child(19) { left: 70%; width: 11px; height: 11px; background: #C0C0C0; animation-duration: 7.8s; animation-delay: 1.8s; border-radius: 50%; }
 .confetti:nth-child(20) { left: 95%; width: 6px; height: 3px; background: #FFD700; animation-duration: 8.8s; animation-delay: 4.2s; border-radius: 2px; }
+/* Confeti adicional 21-40 */
+.confetti:nth-child(21) { left: 3%; width: 7px; height: 7px; background: #FF6B6B; animation-duration: 7.1s; animation-delay: 0.7s; border-radius: 50%; }
+.confetti:nth-child(22) { left: 8%; width: 11px; height: 4px; background: #FFD700; animation-duration: 8.3s; animation-delay: 2.2s; border-radius: 2px; }
+.confetti:nth-child(23) { left: 13%; width: 9px; height: 9px; background: #FFA500; animation-duration: 6.7s; animation-delay: 4.1s; border-radius: 50%; }
+.confetti:nth-child(24) { left: 18%; width: 8px; height: 3px; background: #C0C0C0; animation-duration: 9.4s; animation-delay: 1.3s; border-radius: 2px; }
+.confetti:nth-child(25) { left: 23%; width: 6px; height: 6px; background: #FF6B6B; animation-duration: 7.6s; animation-delay: 3.2s; border-radius: 50%; }
+.confetti:nth-child(26) { left: 32%; width: 13px; height: 5px; background: #FFD700; animation-duration: 8.9s; animation-delay: 5.1s; border-radius: 2px; }
+.confetti:nth-child(27) { left: 38%; width: 8px; height: 8px; background: #FFA500; animation-duration: 6.4s; animation-delay: 0.9s; border-radius: 50%; }
+.confetti:nth-child(28) { left: 48%; width: 10px; height: 4px; background: #C0C0C0; animation-duration: 9.1s; animation-delay: 2.8s; border-radius: 2px; }
+.confetti:nth-child(29) { left: 53%; width: 7px; height: 7px; background: #FF6B6B; animation-duration: 7.3s; animation-delay: 4.6s; border-radius: 50%; }
+.confetti:nth-child(30) { left: 62%; width: 12px; height: 4px; background: #FFD700; animation-duration: 8.6s; animation-delay: 1.6s; border-radius: 2px; }
+.confetti:nth-child(31) { left: 68%; width: 9px; height: 9px; background: #FFA500; animation-duration: 6.9s; animation-delay: 3.7s; border-radius: 50%; }
+.confetti:nth-child(32) { left: 75%; width: 8px; height: 3px; background: #C0C0C0; animation-duration: 9.3s; animation-delay: 5.4s; border-radius: 2px; }
+.confetti:nth-child(33) { left: 80%; width: 6px; height: 6px; background: #FF6B6B; animation-duration: 7.4s; animation-delay: 0.4s; border-radius: 50%; }
+.confetti:nth-child(34) { left: 86%; width: 11px; height: 5px; background: #FFD700; animation-duration: 8.1s; animation-delay: 2.6s; border-radius: 2px; }
+.confetti:nth-child(35) { left: 91%; width: 8px; height: 8px; background: #FFA500; animation-duration: 6.6s; animation-delay: 4.3s; border-radius: 50%; }
+.confetti:nth-child(36) { left: 97%; width: 9px; height: 3px; background: #C0C0C0; animation-duration: 9.6s; animation-delay: 1.1s; border-radius: 2px; }
+.confetti:nth-child(37) { left: 2%; width: 10px; height: 10px; background: #FF6B6B; animation-duration: 7.7s; animation-delay: 3.4s; border-radius: 50%; }
+.confetti:nth-child(38) { left: 40%; width: 7px; height: 4px; background: #FFD700; animation-duration: 8.4s; animation-delay: 5.8s; border-radius: 2px; }
+.confetti:nth-child(39) { left: 60%; width: 8px; height: 8px; background: #FFA500; animation-duration: 6.2s; animation-delay: 0.6s; border-radius: 50%; }
+.confetti:nth-child(40) { left: 85%; width: 12px; height: 4px; background: #C0C0C0; animation-duration: 9.8s; animation-delay: 2.4s; border-radius: 2px; }
 
 @keyframes confetti-fall {
   0% {
@@ -1763,97 +1784,156 @@ body.light-theme .snowflake,
 }
 
 /* ========================================
-   CONTADOR DE AÑO NUEVO
+   CONTADOR DE AÑO NUEVO - DISEÑO PREMIUM
    ======================================== */
 
 .newyear-countdown {
   position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  left: 30px;
+  transform: translateY(-50%);
   z-index: 100;
   text-align: center;
-  padding: 16px 28px;
-  background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
-  border: 2px solid transparent;
-  border-image: linear-gradient(135deg, #FFD700, #FFA500, #FFD700) 1;
-  border-radius: 16px;
+  padding: 24px 20px;
+  background: linear-gradient(145deg, rgba(15, 15, 25, 0.98) 0%, rgba(5, 5, 15, 0.99) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 20px;
   box-shadow:
-    0 8px 32px rgba(255, 215, 0, 0.3),
-    0 0 60px rgba(255, 165, 0, 0.15),
-    inset 0 1px 1px rgba(255, 215, 0, 0.1);
+    0 0 0 1px rgba(255, 215, 0, 0.1),
+    0 10px 40px rgba(0, 0, 0, 0.5),
+    0 0 80px rgba(255, 215, 0, 0.15),
+    inset 0 1px 0 rgba(255, 215, 0, 0.1);
   backdrop-filter: blur(20px);
-  animation: countdown-glow 2s ease-in-out infinite alternate;
+  animation: countdown-float 4s ease-in-out infinite;
 }
 
-@keyframes countdown-glow {
-  0% { box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3), 0 0 60px rgba(255, 165, 0, 0.15); }
-  100% { box-shadow: 0 8px 40px rgba(255, 215, 0, 0.5), 0 0 80px rgba(255, 165, 0, 0.25); }
+/* Borde dorado animado */
+.newyear-countdown::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, #FFD700, #FFA500, #FFD700, #FFA500);
+  background-size: 300% 300%;
+  border-radius: 22px;
+  z-index: -1;
+  animation: border-glow 3s ease infinite;
+  opacity: 0.7;
+}
+
+.newyear-countdown::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(145deg, rgba(15, 15, 25, 0.98) 0%, rgba(5, 5, 15, 0.99) 100%);
+  border-radius: 20px;
+  z-index: -1;
+}
+
+@keyframes border-glow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes countdown-float {
+  0%, 100% { transform: translateY(-50%) translateX(0); }
+  50% { transform: translateY(-50%) translateX(5px); }
 }
 
 .countdown-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 3px;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FFD700 100%);
+  letter-spacing: 4px;
+  margin-bottom: 16px;
+  background: linear-gradient(90deg, #FFD700, #FFF8DC, #FFD700);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
+  animation: shimmer 3s linear infinite;
+  position: relative;
+}
+
+.countdown-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #FFD700, transparent);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
 }
 
 .countdown-timer {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .countdown-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 50px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 165, 0, 0.05) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  min-width: 70px;
+  position: relative;
+  overflow: hidden;
+}
+
+.countdown-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.2), transparent);
+  animation: item-shine 2s ease-in-out infinite;
+}
+
+@keyframes item-shine {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
 }
 
 .countdown-value {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 900;
-  font-family: 'Courier New', monospace;
-  background: linear-gradient(180deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+  font-family: 'Arial Black', sans-serif;
+  background: linear-gradient(180deg, #FFD700 0%, #FFA500 40%, #FF8C00 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
   line-height: 1;
-  animation: value-pulse 1s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(255, 165, 0, 0.4));
+  animation: value-glow 1s ease-in-out infinite alternate;
 }
 
-@keyframes value-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+@keyframes value-glow {
+  0% { filter: drop-shadow(0 2px 4px rgba(255, 165, 0, 0.4)); }
+  100% { filter: drop-shadow(0 2px 8px rgba(255, 165, 0, 0.8)); }
 }
 
 .countdown-label {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: #888;
+  letter-spacing: 2px;
+  color: rgba(255, 215, 0, 0.7);
   margin-top: 4px;
+  text-transform: uppercase;
 }
 
 .countdown-separator {
-  font-size: 28px;
-  font-weight: 900;
-  color: #FFD700;
-  margin-bottom: 16px;
-  animation: separator-blink 1s step-end infinite;
-}
-
-@keyframes separator-blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0.3; }
+  display: none;
 }
 
 /* ========================================
@@ -2019,29 +2099,126 @@ body.light-theme .snowflake,
   margin-bottom: 12px;
 }
 
+/* ========================================
+   GAFAS 2026
+   ======================================== */
+
+.newyear-glasses {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  animation: glasses-bounce 2s ease-in-out infinite;
+}
+
+@keyframes glasses-bounce {
+  0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+  50% { transform: translateX(-50%) rotate(2deg); }
+}
+
+.glasses-frame {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.glasses-digit {
+  width: 18px;
+  height: 22px;
+  background: linear-gradient(180deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #1a1a2e;
+  font-family: 'Arial Black', sans-serif;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+
+/* Hueco para los ojos en el 0 y 6 */
+.glasses-digit:nth-child(2)::after,
+.glasses-digit:nth-child(4)::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.glasses-bridge {
+  width: 8px;
+  height: 4px;
+  background: linear-gradient(180deg, #FFD700, #FFA500);
+  border-radius: 2px;
+  margin: 0 1px;
+}
+
+.glasses-arms {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.glasses-arm {
+  width: 20px;
+  height: 3px;
+  background: linear-gradient(90deg, #FFD700, #FFA500);
+  border-radius: 2px;
+}
+
+.glasses-arm.left {
+  transform: rotate(-15deg) translateX(-8px);
+  transform-origin: right center;
+}
+
+.glasses-arm.right {
+  transform: rotate(15deg) translateX(8px);
+  transform-origin: left center;
+}
+
 /* Responsive para el contador */
 @media (max-width: 480px) {
   .newyear-countdown {
-    padding: 12px 16px;
+    position: fixed;
     top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 16px;
   }
 
-  .countdown-title {
-    font-size: 10px;
-    letter-spacing: 2px;
+  .countdown-timer {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .countdown-item {
+    min-width: 55px;
+    padding: 6px 10px;
   }
 
   .countdown-value {
     font-size: 24px;
   }
 
-  .countdown-item {
-    min-width: 40px;
-  }
-
-  .countdown-separator {
-    font-size: 20px;
-    margin-bottom: 12px;
+  .countdown-title {
+    font-size: 9px;
+    letter-spacing: 2px;
   }
 
   .newyear-celebration {
@@ -2050,5 +2227,17 @@ body.light-theme .snowflake,
 
   .celebration-text {
     font-size: 16px;
+  }
+
+  .newyear-glasses {
+    transform: translateX(-50%) scale(0.85);
+  }
+}
+
+@media (max-width: 768px) {
+  .newyear-countdown {
+    left: 50%;
+    transform: translateX(-50%);
+    top: 15px;
   }
 }
