@@ -2193,8 +2193,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Ordenar cuotas por número
           cuotasPromesa.sort((a: any, b: any) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
 
-          // Calcular monto total sumando todas las cuotas
-          const totalAmount = cuotasPromesa.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
+          // Calcular monto total sumando todas las cuotas (usando montoPromesa del backend)
+          const totalAmount = cuotasPromesa.reduce((sum: number, c: any) => sum + (c.montoPromesa || c.monto || 0), 0);
 
           // Encontrar cuotas pendientes (excluir PAGADAS, VENCIDAS y CANCELADAS)
           // VENCIDA = promesa rota, el cliente puede crear una nueva
@@ -2213,13 +2213,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             installments: cuotasPromesa.map((c: any) => ({
               id: c.id,
               numeroCuota: c.numeroCuota,
-              monto: c.monto,
-              // La fecha de pago viene de CuotaPromesa.fechaPago
-              dueDate: c.fechaPago || null,
+              monto: c.montoPromesa || c.monto,
+              montoPromesa: c.montoPromesa || c.monto,
+              // La fecha de pago viene de CuotaPromesa.fechaPromesa
+              dueDate: c.fechaPromesa || c.fechaPago || null,
+              fechaPromesa: c.fechaPromesa || c.fechaPago,
               status: c.estado || 'PENDIENTE',
               montoPagadoReal: c.montoPagadoReal || 0
             })),
-            nextDueDate: nextCuota?.fechaPago,
+            nextDueDate: nextCuota?.fechaPromesa || nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
         });
