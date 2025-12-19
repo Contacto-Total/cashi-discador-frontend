@@ -1092,7 +1092,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           amounts.push({
             label: 'Otro monto',
             value: -1, // Special marker for custom amount
-            field: 'personalizado'
+            field: 'personalizado',
+            generaCartaAcuerdo: option.generaCartaAcuerdo || false
           });
           continue;
         }
@@ -1118,7 +1119,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             label: visualName,
             value: numValue,
             field: fieldName,
-            restriccionFecha: option.restriccionFecha || 'SIN_RESTRICCION'
+            restriccionFecha: option.restriccionFecha || 'SIN_RESTRICCION',
+            generaCartaAcuerdo: option.generaCartaAcuerdo || false
           });
         }
       }
@@ -1141,7 +1143,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           amounts.push({
             label: visualName,
             value: numValue,
-            field: key
+            field: key,
+            generaCartaAcuerdo: false  // Sin config, por defecto no genera carta
           });
         }
       }
@@ -1152,7 +1155,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       amounts.push({
         label: 'Otro monto',
         value: -1, // Special marker for custom amount
-        field: 'personalizado'
+        field: 'personalizado',
+        generaCartaAcuerdo: false  // Fallback no genera carta
       });
     }
 
