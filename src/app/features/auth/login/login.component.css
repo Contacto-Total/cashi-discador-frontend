@@ -1591,77 +1591,100 @@ body.light-theme .snowflake,
 
 .christmas-hat {
   position: absolute;
-  top: -35px;
+  top: -32px;
   left: 50%;
   transform: translateX(-50%);
   width: 90px;
-  height: 60px;
+  height: 70px;
   z-index: 5;
+  animation: hatBob 3s ease-in-out infinite;
 }
 
-/* Base del gorro - SIMPLE Y LIMPIO */
+@keyframes hatBob {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  50% { transform: translateX(-50%) rotate(2deg); }
+}
+
+/* Base del gorro - forma de cono suave */
 .hat-base {
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 88px;
-  height: 42px;
+  width: 85px;
+  height: 45px;
   background: #dc2626;
-  border-radius: 50% 50% 0 0;
+  border-radius: 50% 50% 5px 5px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Punta del gorro - CONECTADA Y DETRÁS DEL MENSAJE */
+/* Parte superior del gorro que se curva - CONECTADA al base */
 .hat-tip {
   position: absolute;
-  top: 5px;
-  left: 50%;
-  width: 45px;
-  height: 20px;
-  background: #dc2626;
-  border-radius: 0 80% 80% 0;
-  transform-origin: left center;
-  transform: rotate(15deg);
-  animation: tipSwing 3s ease-in-out infinite;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-  z-index: -1;
-}
-
-@keyframes tipSwing {
-  0%, 100% { transform: rotate(15deg); }
-  50% { transform: rotate(25deg); }
-}
-
-/* Pompom blanco al final de la punta */
-.hat-pompom {
-  position: absolute;
-  top: 0px;
-  left: calc(50% + 42px);
-  width: 18px;
-  height: 18px;
-  background: #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-  transform-origin: -42px center;
-  animation: pompomFollow 3s ease-in-out infinite;
-  z-index: -1;
-}
-
-@keyframes pompomFollow {
-  0%, 100% { transform: rotate(15deg); }
-  50% { transform: rotate(25deg); }
-}
-
-/* Borde blanco del gorro - SIMPLE */
-.hat-trim {
-  position: absolute;
-  bottom: -4px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 96px;
-  height: 14px;
-  background: #ffffff;
-  border-radius: 8px;
+  width: 50px;
+  height: 35px;
+  background: #dc2626;
+  border-radius: 50% 80% 50% 50%;
+  transform-origin: center bottom;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  z-index: 2;
+}
+
+/* Extensión curva que cae hacia el lado */
+.hat-tip::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: -25px;
+  width: 40px;
+  height: 25px;
+  background: #dc2626;
+  border-radius: 50%;
+  animation: tipDroop 3s ease-in-out infinite;
+  transform-origin: left center;
+}
+
+@keyframes tipDroop {
+  0%, 100% { transform: rotate(10deg) translateY(0); }
+  50% { transform: rotate(20deg) translateY(3px); }
+}
+
+/* Pompom blanco al final */
+.hat-pompom {
+  position: absolute;
+  top: -2px;
+  right: -12px;
+  width: 20px;
+  height: 20px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.1);
+  animation: pompomBounce 3s ease-in-out infinite;
+  z-index: 3;
+}
+
+@keyframes pompomBounce {
+  0%, 100% { transform: translate(0, 0) rotate(10deg); }
+  50% { transform: translate(8px, 5px) rotate(20deg); }
+}
+
+/* Borde blanco peludo del gorro */
+.hat-trim {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 94px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.15),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 4;
 }
