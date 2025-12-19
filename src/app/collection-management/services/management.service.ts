@@ -277,11 +277,11 @@ export class ManagementService {
     return records.map(record => {
       const cuotas = record.cuotasPromesa || [];
 
-      // Calcular totales
-      const totalAmount = cuotas.reduce((sum: number, c: any) => sum + (c.monto || 0), 0);
+      // Calcular totales (usando montoPromesa que es el nuevo nombre del campo)
+      const totalAmount = cuotas.reduce((sum: number, c: any) => sum + (c.montoPromesa || c.monto || 0), 0);
       const paidAmount = cuotas
         .filter((c: any) => c.estado === 'PAGADA' || c.estado === 'CUMPLIDO')
-        .reduce((sum: number, c: any) => sum + (c.montoPagadoReal || c.monto || 0), 0);
+        .reduce((sum: number, c: any) => sum + (c.montoPagadoReal || c.montoPromesa || c.monto || 0), 0);
       const pendingAmount = totalAmount - paidAmount;
 
       const paidInstallments = cuotas.filter((c: any) => c.estado === 'PAGADA' || c.estado === 'CUMPLIDO').length;
@@ -304,10 +304,12 @@ export class ManagementService {
           id: cuota.id,
           installmentNumber: cuota.numeroCuota,
           numeroCuota: cuota.numeroCuota,
-          amount: cuota.monto,
-          monto: cuota.monto,
-          dueDate: cuota.fechaPago,
-          fechaPago: cuota.fechaPago,
+          amount: cuota.montoPromesa || cuota.monto,
+          monto: cuota.montoPromesa || cuota.monto,
+          montoPromesa: cuota.montoPromesa || cuota.monto,
+          dueDate: cuota.fechaPromesa || cuota.fechaPago,
+          fechaPago: cuota.fechaPromesa || cuota.fechaPago,
+          fechaPromesa: cuota.fechaPromesa || cuota.fechaPago,
           paidDate: cuota.fechaPagoReal || null,
           status: cuota.estado || 'PENDIENTE',
           montoPagadoReal: cuota.montoPagadoReal || 0
