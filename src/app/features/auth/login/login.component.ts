@@ -1,9 +1,10 @@
-import { Component, OnInit, AfterViewInit, OnDestroy, ViewEncapsulation, HostListener, ElementRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy, ViewEncapsulation, HostListener, ElementRef, ViewChild, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
+import * as THREE from 'three';
 
 @Component({
   selector: 'app-login',
@@ -59,12 +60,25 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // ================================================================
 
+  // ========== THREE.JS - Árbol 3D Realista ==========
+  @ViewChild('treeCanvas', { static: false }) treeCanvasRef!: ElementRef<HTMLCanvasElement>;
+  private renderer!: THREE.WebGLRenderer;
+  private scene!: THREE.Scene;
+  private camera!: THREE.PerspectiveCamera;
+  private animationFrameId: number = 0;
+  private ornaments: THREE.Mesh[] = [];
+  private lights3D: THREE.PointLight[] = [];
+  private snowParticles!: THREE.Points;
+  private star!: THREE.Mesh;
+  // ===================================================
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private elementRef: ElementRef
+    private elementRef: ElementRef,
+    private ngZone: NgZone
   ) {}
 
   /**
@@ -221,7 +235,323 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
     }
+    // Limpiar Three.js
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+    if (this.renderer) {
+      this.renderer.dispose();
+    }
   }
+
+  // ========== THREE.JS - Inicialización del Árbol 3D ==========
+  private initThreeJS(): void {
+    if (!this.treeCanvasRef || !this.showChristmasHat) return;
+
+    const canvas = this.treeCanvasRef.nativeElement;
+    const width = canvas.clientWidth || 400;
+    const height = canvas.clientHeight || 600;
+
+    // Escena
+    this.scene = new THREE.Scene();
+
+    // Cámara
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    this.camera.position.set(0, 2, 8);
+    this.camera.lookAt(0, 1.5, 0);
+
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      alpha: true
+    });
+    this.renderer.setSize(width, height);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Luces ambientales
+    const ambientLight = new THREE.AmbientLight(0x404060, 0.4);
+    this.scene.add(ambientLight);
+
+    // Luz direccional principal (simula luz de ventana)
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    mainLight.position.set(5, 10, 5);
+    mainLight.castShadow = true;
+    this.scene.add(mainLight);
+
+    // Crear el árbol
+    this.createTree();
+
+    // Crear ornamentos
+    this.createOrnaments();
+
+    // Crear luces del árbol
+    this.createTreeLights();
+
+    // Crear estrella
+    this.createStar();
+
+    // Crear nieve
+    this.createSnow();
+
+    // Iniciar animación
+    this.ngZone.runOutsideAngular(() => {
+      this.animate();
+    });
+  }
+
+  private createTree(): void {
+    // Material del árbol con textura de pino
+    const treeMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1a5c2e,
+      roughness: 0.8,
+      metalness: 0.1,
+      flatShading: false
+    });
+
+    // Crear múltiples capas de conos para el árbol
+    const layers = [
+      { radius: 0.4, height: 0.8, y: 3.2 },
+      { radius: 0.7, height: 1.0, y: 2.6 },
+      { radius: 1.0, height: 1.2, y: 1.8 },
+      { radius: 1.3, height: 1.4, y: 0.9 },
+      { radius: 1.6, height: 1.5, y: 0.0 }
+    ];
+
+    layers.forEach((layer, index) => {
+      const geometry = new THREE.ConeGeometry(layer.radius, layer.height, 32);
+      const mesh = new THREE.Mesh(geometry, treeMaterial.clone());
+
+      // Variar el color ligeramente por capa
+      const hue = 0.35 + (index * 0.02);
+      const saturation = 0.7 - (index * 0.05);
+      const lightness = 0.25 + (index * 0.03);
+      (mesh.material as THREE.MeshStandardMaterial).color.setHSL(hue, saturation, lightness);
+
+      mesh.position.y = layer.y;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      this.scene.add(mesh);
+    });
+
+    // Tronco
+    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.25, 0.6, 16);
+    const trunkMaterial = new THREE.MeshStandardMaterial({
+      color: 0x4a2810,
+      roughness: 0.9,
+      metalness: 0.0
+    });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.y = -0.55;
+    trunk.castShadow = true;
+    this.scene.add(trunk);
+
+    // Base/Maceta
+    const potGeometry = new THREE.CylinderGeometry(0.5, 0.4, 0.4, 16);
+    const potMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8B0000,
+      roughness: 0.6,
+      metalness: 0.2
+    });
+    const pot = new THREE.Mesh(potGeometry, potMaterial);
+    pot.position.y = -1.0;
+    pot.castShadow = true;
+    this.scene.add(pot);
+  }
+
+  private createOrnaments(): void {
+    const ornamentPositions = [
+      // Capa superior
+      { x: 0.25, y: 2.9, z: 0.2, color: 0xff0000, size: 0.08 },
+      { x: -0.2, y: 2.7, z: 0.25, color: 0xffd700, size: 0.08 },
+      // Segunda capa
+      { x: 0.5, y: 2.3, z: 0.3, color: 0xc0c0c0, size: 0.1 },
+      { x: -0.4, y: 2.1, z: 0.4, color: 0xff0000, size: 0.1 },
+      { x: 0.1, y: 2.0, z: 0.5, color: 0xffd700, size: 0.09 },
+      // Tercera capa
+      { x: 0.7, y: 1.5, z: 0.4, color: 0xff0000, size: 0.12 },
+      { x: -0.6, y: 1.6, z: 0.5, color: 0xc0c0c0, size: 0.11 },
+      { x: 0.3, y: 1.4, z: 0.7, color: 0xffd700, size: 0.1 },
+      { x: -0.2, y: 1.3, z: 0.6, color: 0xff0000, size: 0.12 },
+      // Cuarta capa
+      { x: 0.9, y: 0.8, z: 0.5, color: 0xffd700, size: 0.13 },
+      { x: -0.8, y: 0.9, z: 0.6, color: 0xff0000, size: 0.12 },
+      { x: 0.5, y: 0.7, z: 0.9, color: 0xc0c0c0, size: 0.13 },
+      { x: -0.4, y: 0.6, z: 0.8, color: 0xffd700, size: 0.11 },
+      // Capa base
+      { x: 1.1, y: 0.2, z: 0.6, color: 0xff0000, size: 0.14 },
+      { x: -1.0, y: 0.3, z: 0.7, color: 0xc0c0c0, size: 0.13 },
+      { x: 0.7, y: 0.1, z: 1.0, color: 0xffd700, size: 0.14 },
+      { x: -0.5, y: 0.0, z: 1.1, color: 0xff0000, size: 0.12 }
+    ];
+
+    ornamentPositions.forEach(pos => {
+      const geometry = new THREE.SphereGeometry(pos.size, 32, 32);
+      const material = new THREE.MeshStandardMaterial({
+        color: pos.color,
+        roughness: 0.2,
+        metalness: 0.8,
+        envMapIntensity: 1
+      });
+      const ornament = new THREE.Mesh(geometry, material);
+      ornament.position.set(pos.x, pos.y, pos.z);
+      ornament.castShadow = true;
+      this.ornaments.push(ornament);
+      this.scene.add(ornament);
+    });
+  }
+
+  private createTreeLights(): void {
+    const lightPositions = [
+      { x: 0.3, y: 3.0, z: 0.15 },
+      { x: -0.35, y: 2.5, z: 0.3 },
+      { x: 0.55, y: 2.0, z: 0.45 },
+      { x: -0.5, y: 1.5, z: 0.55 },
+      { x: 0.75, y: 1.0, z: 0.65 },
+      { x: -0.7, y: 0.5, z: 0.75 },
+      { x: 0.95, y: 0.2, z: 0.85 },
+      { x: -0.9, y: 0.0, z: 0.9 }
+    ];
+
+    lightPositions.forEach((pos, index) => {
+      // Punto de luz
+      const light = new THREE.PointLight(0xffdd44, 0.5, 2);
+      light.position.set(pos.x, pos.y, pos.z);
+      this.lights3D.push(light);
+      this.scene.add(light);
+
+      // Esfera brillante para visualizar la luz
+      const bulbGeometry = new THREE.SphereGeometry(0.04, 16, 16);
+      const bulbMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffee88,
+        transparent: true,
+        opacity: 0.9
+      });
+      const bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
+      bulb.position.copy(light.position);
+      this.scene.add(bulb);
+    });
+  }
+
+  private createStar(): void {
+    // Crear forma de estrella
+    const starShape = new THREE.Shape();
+    const outerRadius = 0.25;
+    const innerRadius = 0.1;
+    const spikes = 5;
+
+    for (let i = 0; i < spikes * 2; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = (i * Math.PI) / spikes - Math.PI / 2;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      if (i === 0) {
+        starShape.moveTo(x, y);
+      } else {
+        starShape.lineTo(x, y);
+      }
+    }
+    starShape.closePath();
+
+    const extrudeSettings = {
+      depth: 0.08,
+      bevelEnabled: true,
+      bevelThickness: 0.02,
+      bevelSize: 0.02,
+      bevelSegments: 2
+    };
+
+    const starGeometry = new THREE.ExtrudeGeometry(starShape, extrudeSettings);
+    const starMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd700,
+      roughness: 0.2,
+      metalness: 0.9,
+      emissive: 0xffaa00,
+      emissiveIntensity: 0.5
+    });
+
+    this.star = new THREE.Mesh(starGeometry, starMaterial);
+    this.star.position.set(0, 3.7, 0);
+    this.star.rotation.x = -0.2;
+    this.scene.add(this.star);
+
+    // Luz de la estrella
+    const starLight = new THREE.PointLight(0xffdd00, 1, 3);
+    starLight.position.set(0, 3.7, 0.2);
+    this.scene.add(starLight);
+  }
+
+  private createSnow(): void {
+    const particleCount = 200;
+    const positions = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 8;
+      positions[i * 3 + 1] = Math.random() * 10;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 8;
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const material = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.05,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending
+    });
+
+    this.snowParticles = new THREE.Points(geometry, material);
+    this.scene.add(this.snowParticles);
+  }
+
+  private animate(): void {
+    this.animationFrameId = requestAnimationFrame(() => this.animate());
+
+    const time = Date.now() * 0.001;
+
+    // Animar ornamentos (sutil balanceo)
+    this.ornaments.forEach((ornament, index) => {
+      ornament.position.y += Math.sin(time * 2 + index) * 0.0005;
+    });
+
+    // Animar luces (parpadeo)
+    this.lights3D.forEach((light, index) => {
+      light.intensity = 0.3 + Math.sin(time * 3 + index * 0.5) * 0.3;
+    });
+
+    // Animar estrella (rotación y brillo)
+    if (this.star) {
+      this.star.rotation.z = Math.sin(time * 0.5) * 0.1;
+      (this.star.material as THREE.MeshStandardMaterial).emissiveIntensity =
+        0.4 + Math.sin(time * 2) * 0.2;
+    }
+
+    // Animar nieve (caída)
+    if (this.snowParticles) {
+      const positions = this.snowParticles.geometry.attributes['position'].array as Float32Array;
+      for (let i = 0; i < positions.length; i += 3) {
+        positions[i + 1] -= 0.02; // Velocidad de caída
+        positions[i] += Math.sin(time + i) * 0.002; // Movimiento lateral
+
+        // Reiniciar partículas que caen muy abajo
+        if (positions[i + 1] < -2) {
+          positions[i + 1] = 8;
+          positions[i] = (Math.random() - 0.5) * 8;
+        }
+      }
+      this.snowParticles.geometry.attributes['position'].needsUpdate = true;
+    }
+
+    // Rotar ligeramente la cámara
+    this.camera.position.x = Math.sin(time * 0.2) * 0.3;
+
+    this.renderer.render(this.scene, this.camera);
+  }
+  // ================================================================
 
   private updateRobotMessage(): void {
     const username = this.loginForm.get('username')?.value;
@@ -281,6 +611,13 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     // Usar polling continuo para detectar autocompletado
     this.startAutofillPolling();
+
+    // Inicializar Three.js para el árbol 3D (solo en Navidad)
+    if (this.showChristmasHat) {
+      setTimeout(() => {
+        this.initThreeJS();
+      }, 100);
+    }
   }
 
   private startAutofillPolling(): void {
