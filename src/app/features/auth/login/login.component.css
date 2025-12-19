@@ -1321,107 +1321,230 @@ body.light-theme .login-card .toggle-password mat-icon,
   display: none;
 }
 
+/* Nieve cayendo */
+.login-container.christmas::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Ccircle fill='%23fff' cx='50' cy='50' r='4'/%3E%3Ccircle fill='%23fff' cx='150' cy='120' r='3'/%3E%3Ccircle fill='%23fff' cx='250' cy='80' r='5'/%3E%3Ccircle fill='%23fff' cx='350' cy='200' r='3'/%3E%3Ccircle fill='%23fff' cx='450' cy='150' r='4'/%3E%3Ccircle fill='%23fff' cx='550' cy='100' r='3'/%3E%3Ccircle fill='%23fff' cx='650' cy='180' r='5'/%3E%3Ccircle fill='%23fff' cx='750' cy='60' r='3'/%3E%3Ccircle fill='%23fff' cx='850' cy='140' r='4'/%3E%3Ccircle fill='%23fff' cx='950' cy='90' r='3'/%3E%3Ccircle fill='%23fff' cx='100' cy='300' r='3'/%3E%3Ccircle fill='%23fff' cx='200' cy='350' r='5'/%3E%3Ccircle fill='%23fff' cx='300' cy='280' r='4'/%3E%3Ccircle fill='%23fff' cx='400' cy='400' r='3'/%3E%3Ccircle fill='%23fff' cx='500' cy='320' r='4'/%3E%3Ccircle fill='%23fff' cx='600' cy='380' r='3'/%3E%3Ccircle fill='%23fff' cx='700' cy='290' r='5'/%3E%3Ccircle fill='%23fff' cx='800' cy='360' r='4'/%3E%3Ccircle fill='%23fff' cx='900' cy='310' r='3'/%3E%3Ccircle fill='%23fff' cx='80' cy='500' r='4'/%3E%3Ccircle fill='%23fff' cx='180' cy='550' r='3'/%3E%3Ccircle fill='%23fff' cx='280' cy='480' r='5'/%3E%3Ccircle fill='%23fff' cx='380' cy='600' r='3'/%3E%3Ccircle fill='%23fff' cx='480' cy='520' r='4'/%3E%3Ccircle fill='%23fff' cx='580' cy='580' r='3'/%3E%3Ccircle fill='%23fff' cx='680' cy='490' r='5'/%3E%3Ccircle fill='%23fff' cx='780' cy='560' r='4'/%3E%3Ccircle fill='%23fff' cx='880' cy='510' r='3'/%3E%3Ccircle fill='%23fff' cx='60' cy='700' r='3'/%3E%3Ccircle fill='%23fff' cx='160' cy='750' r='5'/%3E%3Ccircle fill='%23fff' cx='260' cy='680' r='4'/%3E%3Ccircle fill='%23fff' cx='360' cy='800' r='3'/%3E%3Ccircle fill='%23fff' cx='460' cy='720' r='4'/%3E%3Ccircle fill='%23fff' cx='560' cy='780' r='3'/%3E%3Ccircle fill='%23fff' cx='660' cy='690' r='5'/%3E%3Ccircle fill='%23fff' cx='760' cy='760' r='4'/%3E%3Ccircle fill='%23fff' cx='860' cy='710' r='3'/%3E%3Ccircle fill='%23fff' cx='960' cy='740' r='4'/%3E%3Ccircle fill='%23fff' cx='120' cy='900' r='4'/%3E%3Ccircle fill='%23fff' cx='220' cy='950' r='3'/%3E%3Ccircle fill='%23fff' cx='320' cy='880' r='5'/%3E%3Ccircle fill='%23fff' cx='420' cy='1000' r='3'/%3E%3Ccircle fill='%23fff' cx='520' cy='920' r='4'/%3E%3Ccircle fill='%23fff' cx='620' cy='980' r='3'/%3E%3Ccircle fill='%23fff' cx='720' cy='890' r='5'/%3E%3Ccircle fill='%23fff' cx='820' cy='960' r='4'/%3E%3Ccircle fill='%23fff' cx='920' cy='910' r='3'/%3E%3C/svg%3E");
+  background-size: 400px 400px;
+  animation: snowfall 15s linear infinite;
+  opacity: 0.7;
+  pointer-events: none;
+  z-index: 1;
+}
+
+@keyframes snowfall {
+  0% {
+    background-position: 0 -400px;
+  }
+  100% {
+    background-position: 200px 400px;
+  }
+}
+
+/* Burbuja navideña roja */
+.login-container.christmas .speech-bubble {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+  box-shadow:
+    0 4px 16px rgba(220, 38, 38, 0.4),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3) !important;
+}
+
+.login-container.christmas .speech-bubble::after {
+  border-top-color: #b91c1c !important;
+}
+
+/* Ajustar espacio para el gorro grande */
+.login-container.christmas .mascot-container {
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
 .christmas-hat {
   position: absolute;
-  top: -35px;
+  top: -45px;
   left: 50%;
   transform: translateX(-50%);
-  width: 70px;
-  height: 50px;
+  width: 95px;
+  height: 70px;
   z-index: 20;
-  animation: hatBounce 3s ease-in-out infinite;
+  animation: hatBounce 4s ease-in-out infinite;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
 }
 
 @keyframes hatBounce {
-  0%, 100% { transform: translateX(-50%) rotate(-5deg); }
-  50% { transform: translateX(-50%) rotate(5deg); }
+  0%, 100% { transform: translateX(-50%) rotate(-3deg); }
+  50% { transform: translateX(-50%) rotate(3deg); }
 }
 
-/* Base del gorro (parte roja principal) */
+/* Base del gorro (parte roja principal) - MÁS 3D */
 .hat-base {
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 65px;
-  height: 35px;
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  border-radius: 50% 50% 0 0;
+  width: 90px;
+  height: 45px;
+  background: linear-gradient(
+    180deg,
+    #ef4444 0%,
+    #dc2626 30%,
+    #b91c1c 70%,
+    #991b1b 100%
+  );
+  border-radius: 60% 60% 0 0;
   box-shadow:
-    0 4px 12px rgba(185, 28, 28, 0.4),
-    inset 0 -5px 15px rgba(0, 0, 0, 0.2);
+    0 6px 20px rgba(153, 27, 27, 0.5),
+    inset 0 10px 20px rgba(255, 255, 255, 0.15),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.25),
+    inset 5px 0 15px rgba(255, 255, 255, 0.1),
+    inset -5px 0 15px rgba(0, 0, 0, 0.15);
 }
 
-/* Punta del gorro */
+/* Brillo del gorro */
+.hat-base::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 15px;
+  width: 25px;
+  height: 15px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(3px);
+}
+
+/* Punta del gorro - MÁS LARGA Y 3D */
 .hat-tip {
   position: absolute;
-  top: 5px;
-  left: 50%;
-  transform: translateX(-30%);
-  width: 0;
-  height: 0;
-  border-left: 20px solid transparent;
-  border-right: 20px solid transparent;
-  border-bottom: 30px solid #dc2626;
-  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
+  top: 0;
+  left: 55%;
+  transform: translateX(-50%);
+  width: 35px;
+  height: 50px;
+  background: linear-gradient(
+    90deg,
+    #991b1b 0%,
+    #dc2626 30%,
+    #ef4444 50%,
+    #dc2626 70%,
+    #991b1b 100%
+  );
+  border-radius: 50% 50% 30% 30%;
   transform-origin: bottom center;
-  animation: tipWiggle 2s ease-in-out infinite;
+  animation: tipWiggle 3s ease-in-out infinite;
+  box-shadow:
+    inset 3px 0 10px rgba(255, 255, 255, 0.2),
+    inset -3px 0 10px rgba(0, 0, 0, 0.2);
+}
+
+.hat-tip::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  width: 10px;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(2px);
 }
 
 @keyframes tipWiggle {
-  0%, 100% { transform: translateX(-30%) rotate(15deg); }
-  50% { transform: translateX(-30%) rotate(25deg); }
+  0%, 100% { transform: translateX(-50%) rotate(20deg) skewX(-5deg); }
+  50% { transform: translateX(-50%) rotate(35deg) skewX(-8deg); }
 }
 
-/* Pompom blanco */
+/* Pompom blanco - MÁS GRANDE Y PELUDO */
 .hat-pompom {
   position: absolute;
-  top: -2px;
-  right: 5px;
-  width: 16px;
-  height: 16px;
-  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #e5e7eb 100%);
+  top: -5px;
+  right: -5px;
+  width: 24px;
+  height: 24px;
+  background: radial-gradient(
+    circle at 35% 35%,
+    #ffffff 0%,
+    #f3f4f6 40%,
+    #e5e7eb 70%,
+    #d1d5db 100%
+  );
   border-radius: 50%;
   box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
-  animation: pompomBounce 1s ease-in-out infinite;
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.1),
+    inset 3px 3px 6px rgba(255, 255, 255, 0.8);
+  animation: pompomBounce 1.5s ease-in-out infinite;
+}
+
+/* Textura peluda del pompom */
+.hat-pompom::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8) 0%, transparent 50%);
+  border-radius: 50%;
 }
 
 @keyframes pompomBounce {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.05) rotate(-5deg); }
+  50% { transform: scale(1.1) rotate(0deg); }
+  75% { transform: scale(1.05) rotate(5deg); }
 }
 
-/* Borde blanco peludo */
+/* Borde blanco peludo - MÁS GRUESO Y 3D */
 .hat-trim {
   position: absolute;
-  bottom: -2px;
+  bottom: -5px;
   left: 50%;
   transform: translateX(-50%);
-  width: 75px;
-  height: 12px;
-  background: linear-gradient(180deg, #ffffff 0%, #e5e7eb 100%);
-  border-radius: 6px;
+  width: 100px;
+  height: 18px;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f9fafb 30%,
+    #f3f4f6 60%,
+    #e5e7eb 100%
+  );
+  border-radius: 10px;
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.15),
-    inset 0 1px 2px rgba(255, 255, 255, 0.8);
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(255, 255, 255, 1),
+    inset 0 -3px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Textura peluda del borde */
+/* Textura peluda del borde - MEJORADA */
 .hat-trim::before {
   content: '';
   position: absolute;
-  top: 0;
+  top: 2px;
+  left: 8px;
+  right: 8px;
+  height: 8px;
+  background:
+    radial-gradient(circle at 10% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 30%),
+    radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 30%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 30%),
+    radial-gradient(circle at 70% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 30%),
+    radial-gradient(circle at 90% 50%, rgba(255, 255, 255, 0.9) 0%, transparent 30%);
+  border-radius: 10px;
+}
+
+/* Efecto de profundidad adicional */
+.hat-trim::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
   left: 5px;
   right: 5px;
-  height: 100%;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent,
-    transparent 3px,
-    rgba(0, 0, 0, 0.03) 3px,
-    rgba(0, 0, 0, 0.03) 6px
-  );
-  border-radius: 6px;
+  height: 6px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.08) 100%);
+  border-radius: 0 0 8px 8px;
 }
