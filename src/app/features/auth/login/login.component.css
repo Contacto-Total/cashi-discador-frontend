@@ -153,6 +153,7 @@ body.light-theme .login-card > *,
 /* Burbuja de diálogo del robot */
 .speech-bubble {
   position: relative;
+  z-index: 50;
   background: linear-gradient(135deg, #10B981 0%, #059669 100%);
   padding: 8px 14px;
   border-radius: 16px;
@@ -280,6 +281,7 @@ body.light-theme .speech-bubble,
   position: relative;
   width: 100px;
   height: 100px;
+  z-index: 1; /* Lower than speech-bubble (z-index: 50) so hat appears behind message */
 }
 
 .mascot-antenna {
@@ -1594,7 +1596,7 @@ body.light-theme .snowflake,
   transform: translateX(-50%);
   width: 90px;
   height: 60px;
-  z-index: 20;
+  z-index: 5;
 }
 
 /* Base del gorro - SIMPLE Y LIMPIO */
