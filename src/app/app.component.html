@@ -73,6 +73,12 @@
         </div>
       </div>
 
+      <!-- Pagos Bancarios (Admin/Supervisor) -->
+      <a routerLink="/pagos-bancarios" routerLinkActive="active" class="sidebar-item" *ngIf="isAdminOrSupervisor()" [title]="isSidebarCollapsed ? 'Pagos Bancarios' : ''">
+        <lucide-angular name="landmark" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Pagos Bancarios</span>
+      </a>
+
       <!-- Mantenimiento Dropdown -->
       <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
         <button type="button" class="sidebar-item" [class.active]="isMantenimientoActive()" (click)="toggleMantenimientoDropdown()" [title]="isSidebarCollapsed ? 'Mantenimiento' : ''">

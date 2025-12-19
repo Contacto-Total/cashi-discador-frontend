@@ -219,6 +219,16 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/typification-maintenance/typification-maintenance.component').then(m => m.TypificationMaintenanceComponent),
     canActivate: [authGuard, adminGuard]
   },
+
+  // ========================================
+  // PAGOS BANCARIOS
+  // ========================================
+  {
+    path: 'pagos-bancarios',
+    loadComponent: () => import('./pagos-bancarios/pages/pagos-bancarios.page').then(m => m.PagosBancariosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
   {
     path: 'admin/cartas-cesion',
     loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
