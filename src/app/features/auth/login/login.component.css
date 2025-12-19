@@ -1795,15 +1795,15 @@ body.light-theme .snowflake,
   z-index: 100;
   text-align: center;
   padding: 24px 20px;
-  background: rgba(10, 10, 20, 0.6);
-  border: 1px solid rgba(255, 215, 0, 0.4);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 215, 0, 0.5);
   border-radius: 20px;
   box-shadow:
-    0 0 0 1px rgba(255, 215, 0, 0.1),
-    0 10px 40px rgba(0, 0, 0, 0.3),
-    0 0 60px rgba(255, 215, 0, 0.1);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+    0 0 0 1px rgba(255, 215, 0, 0.15),
+    0 10px 40px rgba(0, 0, 0, 0.2),
+    0 0 40px rgba(255, 215, 0, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   animation: countdown-float 4s ease-in-out infinite;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1811,13 +1811,12 @@ body.light-theme .snowflake,
 /* Efecto hover en el contador */
 .newyear-countdown:hover {
   transform: translateY(-50%) scale(1.05);
-  background: rgba(10, 10, 20, 0.75);
-  border-color: rgba(255, 215, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 215, 0, 0.8);
   box-shadow:
-    0 0 0 2px rgba(255, 215, 0, 0.2),
-    0 15px 50px rgba(0, 0, 0, 0.4),
-    0 0 100px rgba(255, 215, 0, 0.3),
-    inset 0 0 30px rgba(255, 215, 0, 0.05);
+    0 0 0 2px rgba(255, 215, 0, 0.3),
+    0 15px 50px rgba(0, 0, 0, 0.3),
+    0 0 80px rgba(255, 215, 0, 0.25);
 }
 
 .newyear-countdown:hover .countdown-value {
@@ -1837,18 +1836,9 @@ body.light-theme .snowflake,
   background: linear-gradient(45deg, #FFD700, #FFA500, #FFD700, #FFA500);
   background-size: 300% 300%;
   border-radius: 22px;
-  z-index: -1;
+  z-index: -2;
   animation: border-glow 3s ease infinite;
-  opacity: 0.7;
-}
-
-.newyear-countdown::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(145deg, rgba(15, 15, 25, 0.98) 0%, rgba(5, 5, 15, 0.99) 100%);
-  border-radius: 20px;
-  z-index: -1;
+  opacity: 0.5;
 }
 
 @keyframes border-glow {
