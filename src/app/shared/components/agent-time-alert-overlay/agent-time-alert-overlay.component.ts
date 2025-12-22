@@ -153,6 +153,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
 
   private readonly SOUND_STORAGE_KEY = 'agent_sound_enabled';
   private statusSubscription?: Subscription;
+  private localTimerSubscription?: Subscription; // Timer local para conteo fluido
   private lastAlertState = ''; // Para evitar repetir la misma alerta
   private userId: number | null = null;
   private userName = '';
@@ -198,17 +199,23 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   private startStatusPolling(): void {
     if (!this.userId) return;
 
-    // Polling cada 5 segundos
+    // Timer LOCAL cada 1 segundo para conteo fluido
+    this.localTimerSubscription = interval(1000).subscribe(() => {
+      // Solo incrementar si está visible y hay un estado activo
+      if (this.isVisible && this.estadoActual) {
+        this.segundosEnEstado++;
+      }
+    });
+
+    // Polling al servidor cada 5 segundos para sincronizar valor real
     this.statusSubscription = interval(5000).pipe(
       startWith(0),
       switchMap(() => this.agentStatusService.getAgentStatus(this.userId!))
     ).subscribe({
       next: (response) => {
-        const prevColor = this.colorIndicador;
-        const prevExcedido = this.excedeTiempoMaximo;
-
         this.colorIndicador = response.colorIndicador || 'verde';
         this.excedeTiempoMaximo = response.excedeTiempoMaximo || false;
+        // Sincronizar con el valor real del servidor
         this.segundosEnEstado = response.segundosEnEstado || 0;
         this.estadoActual = response.estadoActual;
         this.estadoTexto = this.getEstadoTexto(response.estadoActual);
@@ -232,6 +239,10 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   }
 
   private stopStatusPolling(): void {
+    if (this.localTimerSubscription) {
+      this.localTimerSubscription.unsubscribe();
+      this.localTimerSubscription = undefined;
+    }
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
       this.statusSubscription = undefined;
