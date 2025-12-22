@@ -790,8 +790,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 @for (field of clientAmountFields(); track field.field; let i = $index) {
                   <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
                        [class]="getAmountRowClass(i)">
-                    <span class="truncate mr-2 font-medium">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm">
+                    <span class="truncate mr-2 font-medium text-black dark:text-red-300">{{ field.label }}</span>
+                    <span class="font-bold whitespace-nowrap text-sm text-black dark:text-red-300">
                       {{ formatCurrency(field.value) }}
                     </span>
                   </div>
