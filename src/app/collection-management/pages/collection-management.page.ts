@@ -3233,8 +3233,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   getAmountRowClass(index: number): string {
     const colors = [
-      'bg-red-800 text-white dark:bg-red-950/30 dark:text-red-300',
-      'bg-slate-100 text-slate-800 dark:bg-gray-800 dark:text-gray-200',
+      'bg-red-700 text-white dark:bg-red-900/40 dark:text-red-300',
+      'bg-red-100 text-red-800 dark:bg-red-950/20 dark:text-red-400',
     ];
     return colors[index % colors.length];
   }
