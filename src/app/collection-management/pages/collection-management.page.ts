@@ -132,14 +132,16 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             <div>
               @if (activeTab() === 'cliente') {
                 <div class="space-y-2">
-                  <!-- Lista vertical de campos -->
+                  <!-- Lista vertical de campos (excluyendo contacto que va abajo) -->
                   @for (field of customerOutputFields(); track field.id) {
-                    <div class="pb-1.5 border-b border-slate-100 dark:border-slate-800">
-                      <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">{{ field.label }}</div>
-                      <div class="text-[12px] font-semibold text-slate-800 dark:text-white break-words">
-                        {{ formatFieldValue(getFieldValue(field.field), field.format) }}
+                    @if (!isContactField(field.field)) {
+                      <div class="pb-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">{{ field.label }}</div>
+                        <div class="text-[12px] font-semibold text-slate-800 dark:text-white break-words">
+                          {{ formatFieldValue(getFieldValue(field.field), field.format) }}
+                        </div>
                       </div>
-                    </div>
+                    }
                   }
                   @if (customerOutputFields().length === 0) {
                     <div class="text-center py-2 text-slate-400 text-[10px]">
@@ -4007,6 +4009,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       default:
         return String(value);
     }
+  }
+
+  /**
+   * Verifica si un campo es de contacto (para excluirlo de la lista principal)
+   * ya que estos campos se muestran en la sección de Contacto
+   */
+  isContactField(fieldName: string): boolean {
+    const contactFields = [
+      'celular',
+      'telefono',
+      'telefono_principal',
+      'telefono_alternativo',
+      'telefono_trabajo',
+      'email',
+      'correo',
+      'direccion',
+      'address'
+    ];
+    const lowerField = fieldName.toLowerCase();
+    return contactFields.some(cf => lowerField.includes(cf));
   }
 
   /**
