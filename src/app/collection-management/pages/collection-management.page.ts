@@ -1133,37 +1133,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       console.log('[PAYMENT] Amounts from CONFIG (enabled only):', amounts.length);
     } else {
-      // No hay configuración: mostrar todas las columnas numéricas como fallback
-      const excludeFields = ['id', 'tenant_id', 'portfolio_id', 'sub_portfolio_id', 'created_at', 'updated_at'];
+      // No hay configuración: usar montoCabeceras si están disponibles
+      if (cabeceras.length > 0) {
+        // Usar solo los campos definidos en cabeceras (montos reales)
+        for (const cabecera of cabeceras) {
+          const lowerCodigo = cabecera.codigo.toLowerCase();
+          const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
 
-      for (const [key, value] of Object.entries(rawData)) {
-        if (excludeFields.includes(key.toLowerCase())) continue;
-
-        const numValue = typeof value === 'number' ? value : parseFloat(String(value));
-
-        if (!isNaN(numValue) && numValue > 0) {
-          // Usar nombre visual de cabeceras si existe, sino formatFieldLabel
-          const visualName = codigoToNombre.get(key.toLowerCase())
-            || this.formatFieldLabel(key);
-
-          amounts.push({
-            label: visualName,
-            value: numValue,
-            field: key,
-            generaCartaAcuerdo: false  // Sin config, por defecto no genera carta
-          });
+          if (value !== undefined && value !== null) {
+            const numValue = typeof value === 'number' ? value : parseFloat(value);
+            if (!isNaN(numValue) && numValue >= 0) {
+              amounts.push({
+                label: cabecera.nombre,
+                value: numValue,
+                field: lowerCodigo,
+                generaCartaAcuerdo: false
+              });
+            }
+          }
         }
+        console.log('[PAYMENT] Amounts FALLBACK (from cabeceras):', amounts.length);
+      } else {
+        // Sin cabeceras ni config: no mostrar nada para evitar datos incorrectos
+        console.log('[PAYMENT] No config and no cabeceras - showing empty');
       }
-
-      console.log('[PAYMENT] Amounts FALLBACK (no config, all numeric):', amounts.length);
-
-      // En modo fallback, siempre agregar la opción "Otro monto" para permitir autorización
-      amounts.push({
-        label: 'Otro monto',
-        value: -1, // Special marker for custom amount
-        field: 'personalizado',
-        generaCartaAcuerdo: false  // Fallback no genera carta
-      });
     }
 
     // Ordenar por valor descendente (montos más altos primero, pero "personalizado" va al final)
