@@ -1544,7 +1544,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Cabeceras de configuración para mostrar nombres visuales
-  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string }[]>([]);
+  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisible?: number; ordenVisualizacion?: number }[]>([]);
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
