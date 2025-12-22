@@ -44,4 +44,10 @@ export class BlacklistService {
         catchError((error) => this.handleError(error))
       );
   }
+
+  getEntidadByDocumento(documento: string): Observable<string> {
+    return this.http
+      .get(this.baseUrl + '/entidad/' + documento, { responseType: 'text' })
+      .pipe(catchError((error) => this.handleError(error)));
+  }
 }

@@ -57,4 +57,10 @@ export class BlacklistMainService {
       .get<BlacklistResponse[]>(this.baseUrl + '/all', this.httpOptions)
       .pipe(retry(2), catchError(this.handleErrorGet));
   }
+
+  getEntidadByDocumento(documento: string): Observable<string> {
+    return this.http
+      .get(this.baseUrl + '/entidad/' + documento, { responseType: 'text' })
+      .pipe(catchError(this.handleError));
+  }
 }

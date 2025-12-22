@@ -12,19 +12,6 @@
     </span>
   </div>
 
-  <div class="form-group" *ngIf="showEntidadSelect">
-    <label for="entidad" class="form-label">Entidad *</label>
-    <app-custom-select
-      formControlName="selectedEntidad"
-      [options]="entidades"
-      placeholder="Selecciona una entidad"
-      id="entidad">
-    </app-custom-select>
-    <span *ngIf="isFieldInvalid('selectedEntidad')" class="error-message">
-      {{ getFieldError('selectedEntidad') }}
-    </span>
-  </div>
-
   <div class="form-group">
     <label for="documento" class="form-label">Documento *</label>
     <input

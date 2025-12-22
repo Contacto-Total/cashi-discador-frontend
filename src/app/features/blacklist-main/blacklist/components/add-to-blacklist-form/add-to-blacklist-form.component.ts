@@ -20,9 +20,7 @@ export class AddToBlacklistFormComponent implements OnInit {
 
   formGroup: FormGroup = new FormGroup({});
   proveedores: SelectOption[] = [];
-  entidades: SelectOption[] = [];
   isLoading = false;
-  showEntidadSelect = false;
 
   constructor(
     private blacklistService: BlacklistMainService,
@@ -38,13 +36,8 @@ export class AddToBlacklistFormComponent implements OnInit {
   private initializeForm(): void {
     this.formGroup = new FormGroup({
       selectedProveedor: new FormControl<string | null>(null, Validators.required),
-      selectedEntidad: new FormControl<string | null>(null),
       documento: new FormControl<string>('', [Validators.required, Validators.pattern(/^\d+$/)]),
       fechaFin: new FormControl<string>('', [Validators.required, this.validateFutureDate.bind(this)])
-    });
-
-    this.formGroup.get('selectedProveedor')?.valueChanges.subscribe((value) => {
-      this.onProveedorChange(value);
     });
   }
 
@@ -53,28 +46,6 @@ export class AddToBlacklistFormComponent implements OnInit {
       { label: 'FINANCIERA OH', value: 'FINANCIERA_OH' },
       { label: 'TRAMO PROPIO', value: 'TRAMO_PROPIO' }
     ];
-
-    this.entidades = [
-      { label: 'ATC', value: 'ATC' },
-      { label: 'CR COBRANZAS', value: 'CR_COBRANZAS' },
-      { label: 'GLOBAL', value: 'GLOBAL' },
-      { label: 'GALICIA', value: 'GALICIA' },
-      { label: 'BIZNESCOB', value: 'BIZNESCOB' },
-      { label: 'INCOBRO', value: 'INCOBRO' }
-    ];
-  }
-
-  private onProveedorChange(proveedor: string | null): void {
-    const entidadControl = this.formGroup.get('selectedEntidad');
-    if (proveedor === 'TRAMO_PROPIO') {
-      this.showEntidadSelect = true;
-      entidadControl?.setValidators(Validators.required);
-    } else {
-      this.showEntidadSelect = false;
-      entidadControl?.clearValidators();
-      entidadControl?.setValue(null);
-    }
-    entidadControl?.updateValueAndValidity();
   }
 
   private validateFutureDate(control: FormControl): { [key: string]: boolean } | null {
@@ -98,22 +69,43 @@ export class AddToBlacklistFormComponent implements OnInit {
     }
 
     const selectedProveedor = this.formGroup.value.selectedProveedor;
-    const selectedEntidad = this.formGroup.value.selectedEntidad;
-    const { cartera, subcartera, entidad } = this.mapProveedorToConfig(selectedProveedor, selectedEntidad);
-
-    const fechaFin = new Date(this.formGroup.value.fechaFin).toISOString().split('T')[0];
     const dni = this.formGroup.value.documento;
+    const fechaFin = new Date(this.formGroup.value.fechaFin).toISOString().split('T')[0];
+
+    this.isLoading = true;
+
+    if (selectedProveedor === 'TRAMO_PROPIO') {
+      // Buscar entidad automáticamente
+      this.blacklistService.getEntidadByDocumento(dni).subscribe({
+        next: (entidad) => {
+          this.procesarBlacklist(selectedProveedor, dni, fechaFin, entidad);
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.errorModalService.showError(
+            error?.message || 'Documento no encontrado en Tramo Propio',
+            'Error',
+            undefined
+          );
+        }
+      });
+    } else {
+      // FINANCIERA_OH
+      this.procesarBlacklist(selectedProveedor, dni, fechaFin, 'FUNO');
+    }
+  }
+
+  private procesarBlacklist(proveedor: string, dni: string, fechaFin: string, entidad: string): void {
+    const { cartera, subcartera } = this.mapProveedorToConfig(proveedor);
 
     const blacklistTemp: BlacklistRequest = {
-      empresa: selectedProveedor,
+      empresa: proveedor,
       cartera,
       subcartera,
       documento: dni,
       fechaFin,
       entidad
     };
-
-    this.isLoading = true;
 
     this.blacklistService.insertBlacklist(blacklistTemp).subscribe({
       next: () => {
@@ -130,7 +122,6 @@ export class AddToBlacklistFormComponent implements OnInit {
       error: (error) => {
         this.isLoading = false;
 
-        // Extraer mensaje de error
         let errorMessage = 'Error al agregar a la blacklist';
         let errorDetails = undefined;
 
@@ -140,14 +131,12 @@ export class AddToBlacklistFormComponent implements OnInit {
           errorMessage = error.message;
         }
 
-        // Si hay detalles técnicos, agregarlos
         if (error?.error?.details) {
           errorDetails = error.error.details;
         } else if (error?.status) {
           errorDetails = `Código de error: ${error.status}`;
         }
 
-        // Mostrar popup de error con fondo difuminado
         this.errorModalService.showError(
           errorMessage,
           'Error al agregar a Blacklist',
@@ -157,27 +146,16 @@ export class AddToBlacklistFormComponent implements OnInit {
     });
   }
 
-  private mapProveedorToConfig(
-    proveedor: string,
-    entidadSeleccionada: string | null
-  ): { cartera: string; subcartera: string; entidad: string } {
+  private mapProveedorToConfig(proveedor: string): { cartera: string; subcartera: string } {
     if (proveedor === 'FINANCIERA_OH') {
       return {
         cartera: 'FO_TRAMO 5',
-        subcartera: 'FO_TRAMO_5',
-        entidad: 'FUNO'
-      };
-    } else if (proveedor === 'TRAMO_PROPIO' && entidadSeleccionada) {
-      return {
-        cartera: 'TRAMO_PROPIO',
-        subcartera: 'TRAMO_PROPIO',
-        entidad: entidadSeleccionada
+        subcartera: 'FO_TRAMO_5'
       };
     } else {
       return {
-        cartera: 'PROVEEDOR',
-        subcartera: 'PROVEEDOR',
-        entidad: 'PROVEEDOR'
+        cartera: 'TRAMO_PROPIO',
+        subcartera: 'TRAMO_PROPIO'
       };
     }
   }

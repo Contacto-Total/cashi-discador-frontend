@@ -14,19 +14,6 @@
       </span>
     </div>
 
-    <div class="flex-1" *ngIf="showEntidadSelect">
-      <label for="entidad" class="block text-xs text-slate-400 mb-1.5">Entidad *</label>
-      <app-custom-select
-        formControlName="selectedEntidad"
-        [options]="entidades"
-        placeholder="Selecciona una entidad"
-        id="entidad">
-      </app-custom-select>
-      <span *ngIf="isFieldInvalid('selectedEntidad')" class="text-xs text-red-400 mt-1 block">
-        {{ getFieldError('selectedEntidad') }}
-      </span>
-    </div>
-
     <div class="flex-1">
       <label for="documento" class="block text-xs text-slate-400 mb-1.5">Documento *</label>
       <input
