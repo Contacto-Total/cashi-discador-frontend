@@ -188,6 +188,7 @@ export interface ConfiguracionCabecera {
   tipoDato: string;    // TEXTO, NUMERICO, FECHA
   tipoSql: string;     // decimal(18,2), int, etc.
   ordenVisualizacion?: number;
+  esVisible?: number;  // 1 = visible, 0 = oculto
 }
 
 @Injectable({
@@ -427,6 +428,21 @@ export class ManagementService {
   getMontoCabeceras(idSubcartera: number): Observable<ConfiguracionCabecera[]> {
     console.log('[CABECERAS] Fetching monto cabeceras for subcartera:', idSubcartera);
     return this.http.get<ConfiguracionCabecera[]>(`${this.cabecerasUrl}/subcartera/${idSubcartera}/montos`);
+  }
+
+  /**
+   * Actualiza la visibilidad y orden de visualización de múltiples cabeceras
+   * Usado para configurar qué campos de montos se muestran en la gestión de cobranza
+   */
+  updateAmountVisibility(
+    idSubcartera: number,
+    updates: { id: number; esVisible: number; ordenVisualizacion: number }[]
+  ): Observable<ConfiguracionCabecera[]> {
+    console.log('[CABECERAS] Updating visibility for subcartera:', idSubcartera, updates);
+    return this.http.put<ConfiguracionCabecera[]>(
+      `${this.cabecerasUrl}/subcartera/${idSubcartera}/visibility`,
+      updates
+    );
   }
 
   /**

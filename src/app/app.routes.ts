@@ -219,6 +219,11 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/typification-maintenance/typification-maintenance.component').then(m => m.TypificationMaintenanceComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/maintenance/amount-display',
+    loadComponent: () => import('./maintenance/components/amount-display-config/amount-display-config.component').then(m => m.AmountDisplayConfigComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   // ========================================
   // PAGOS BANCARIOS

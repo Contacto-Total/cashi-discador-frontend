@@ -1,0 +1,435 @@
+import { Component, OnInit, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { LucideAngularModule } from 'lucide-angular';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { TypificationService } from '../../services/typification.service';
+import { PortfolioService } from '../../services/portfolio.service';
+import { ManagementService, ConfiguracionCabecera } from '../../../collection-management/services/management.service';
+import { Tenant } from '../../models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../models/portfolio.model';
+
+interface AmountFieldConfig extends ConfiguracionCabecera {
+  isVisible: boolean;
+}
+
+@Component({
+  selector: 'app-amount-display-config',
+  standalone: true,
+  imports: [CommonModule, FormsModule, LucideAngularModule, DragDropModule],
+  template: `
+    <div class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+      <!-- Header -->
+      <div class="max-w-5xl mx-auto mb-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-8 h-8 bg-amber-600 rounded-lg flex items-center justify-center">
+                <lucide-angular name="eye" [size]="16" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h1 class="text-lg font-bold text-white">Campos de Montos a Mostrar</h1>
+                <p class="text-xs text-gray-400">Configure qué campos de importes se muestran en el panel de deuda</p>
+              </div>
+            </div>
+          </div>
+
+          <button (click)="saveChanges()"
+                  [disabled]="!hasChanges() || saving()"
+                  class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-lg font-semibold hover:shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 cursor-pointer">
+            @if (saving()) {
+              <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Guardando...</span>
+            } @else {
+              <lucide-angular name="save" [size]="18"></lucide-angular>
+              <span>Guardar Cambios</span>
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- Selectors -->
+      <div class="max-w-5xl mx-auto mb-6">
+        <div class="bg-slate-900 rounded-xl p-4 shadow-sm border border-slate-800">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Tenant Selector -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-300 mb-2">
+                Proveedor
+              </label>
+              <select [(ngModel)]="selectedTenantId"
+                      (ngModelChange)="onTenantChange()"
+                      class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <option [value]="0">Seleccione un proveedor...</option>
+                @for (tenant of tenants(); track tenant.id) {
+                  <option [value]="tenant.id">{{ tenant.tenantName }} ({{ tenant.tenantCode }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- Portfolio Selector -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-300 mb-2">
+                Cartera
+              </label>
+              <select [(ngModel)]="selectedPortfolioId"
+                      (ngModelChange)="onPortfolioChange()"
+                      [disabled]="selectedTenantId === 0"
+                      class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <option [value]="0">Seleccione una cartera...</option>
+                @for (portfolio of portfolios(); track portfolio.id) {
+                  <option [value]="portfolio.id">{{ portfolio.portfolioName }} ({{ portfolio.portfolioCode }})</option>
+                }
+              </select>
+            </div>
+
+            <!-- SubPortfolio Selector -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-300 mb-2">
+                Subcartera
+              </label>
+              <select [(ngModel)]="selectedSubPortfolioId"
+                      (ngModelChange)="onSubPortfolioChange()"
+                      [disabled]="selectedPortfolioId === 0"
+                      class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                <option [value]="0">Seleccione una subcartera...</option>
+                @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                  <option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }} ({{ subPortfolio.subPortfolioCode }})</option>
+                }
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Card -->
+      @if (selectedSubPortfolioId > 0) {
+        <div class="max-w-5xl mx-auto mb-6">
+          <div class="bg-amber-900/20 border border-amber-700/50 rounded-xl p-4">
+            <div class="flex items-start gap-3">
+              <lucide-angular name="info" [size]="20" class="text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+              <div>
+                <p class="text-amber-200 text-sm font-medium">Instrucciones</p>
+                <ul class="text-amber-200/70 text-sm mt-1 space-y-1">
+                  <li>Use los toggles para mostrar u ocultar cada campo de monto en el panel de deuda</li>
+                  <li>Arrastre los campos para cambiar el orden de visualización</li>
+                  <li>Los cambios se guardan al hacer clic en "Guardar Cambios"</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fields List -->
+        <div class="max-w-5xl mx-auto">
+          <div class="bg-slate-900 rounded-xl shadow-sm border border-slate-800 overflow-hidden">
+            @if (loading()) {
+              <div class="p-12 text-center">
+                <div class="inline-block w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="mt-4 text-gray-400">Cargando campos de montos...</p>
+              </div>
+            } @else if (amountFields().length === 0) {
+              <div class="p-12 text-center">
+                <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <lucide-angular name="dollar-sign" [size]="32" class="text-gray-600"></lucide-angular>
+                </div>
+                <p class="text-gray-300 mb-2">No se encontraron campos de montos</p>
+                <p class="text-sm text-gray-500">
+                  Esta subcartera no tiene campos numéricos decimales configurados
+                </p>
+              </div>
+            } @else {
+              <!-- Header -->
+              <div class="bg-slate-800 border-b border-slate-700 px-6 py-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-semibold text-gray-300">
+                    {{ amountFields().length }} campos de montos encontrados
+                  </span>
+                  <div class="flex items-center gap-4">
+                    <button (click)="toggleAll(true)"
+                            class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                      Mostrar todos
+                    </button>
+                    <button (click)="toggleAll(false)"
+                            class="text-xs text-red-400 hover:text-red-300 transition-colors">
+                      Ocultar todos
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Draggable List -->
+              <div cdkDropList
+                   (cdkDropListDropped)="drop($event)"
+                   class="divide-y divide-slate-800">
+                @for (field of amountFields(); track field.id; let i = $index) {
+                  <div cdkDrag
+                       class="flex items-center justify-between px-6 py-4 hover:bg-slate-800/50 transition-colors cursor-move">
+                    <!-- Drag Handle -->
+                    <div class="flex items-center gap-4 flex-1">
+                      <div cdkDragHandle class="text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing">
+                        <lucide-angular name="grip-vertical" [size]="20"></lucide-angular>
+                      </div>
+
+                      <!-- Order Number -->
+                      <div class="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center text-sm font-bold text-slate-400">
+                        {{ i + 1 }}
+                      </div>
+
+                      <!-- Field Info -->
+                      <div class="flex-1">
+                        <div class="font-medium text-white">{{ field.nombre }}</div>
+                        <div class="text-xs text-gray-500 font-mono">{{ field.codigo }}</div>
+                      </div>
+
+                      <!-- Data Type Badge -->
+                      <div class="px-2 py-1 bg-slate-800 rounded text-xs text-gray-400">
+                        {{ field.tipoSql }}
+                      </div>
+                    </div>
+
+                    <!-- Toggle -->
+                    <label class="relative inline-flex items-center cursor-pointer ml-4">
+                      <input type="checkbox"
+                             [checked]="field.isVisible"
+                             (change)="toggleVisibility(field)"
+                             class="sr-only peer">
+                      <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                      <span class="ml-3 text-sm font-medium" [class]="field.isVisible ? 'text-amber-400' : 'text-gray-500'">
+                        {{ field.isVisible ? 'Visible' : 'Oculto' }}
+                      </span>
+                    </label>
+
+                    <!-- Drag Placeholder -->
+                    <div *cdkDragPlaceholder class="bg-amber-900/20 border-2 border-dashed border-amber-500 rounded-lg h-16"></div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Success Toast -->
+      @if (showSuccess()) {
+        <div class="fixed bottom-6 right-6 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in">
+          <lucide-angular name="check-circle" [size]="20"></lucide-angular>
+          <span>Cambios guardados exitosamente</span>
+        </div>
+      }
+    </div>
+  `,
+  styles: [`
+    @keyframes slide-in {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .animate-slide-in {
+      animation: slide-in 0.3s ease-out;
+    }
+
+    .cdk-drag-preview {
+      background: #1e293b;
+      border-radius: 0.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      border: 1px solid #334155;
+    }
+
+    .cdk-drag-animating {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    .cdk-drop-list-dragging .cdk-drag {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+  `]
+})
+export class AmountDisplayConfigComponent implements OnInit {
+  tenants = signal<Tenant[]>([]);
+  portfolios = signal<Portfolio[]>([]);
+  subPortfolios = signal<SubPortfolio[]>([]);
+  amountFields = signal<AmountFieldConfig[]>([]);
+  originalFields = signal<AmountFieldConfig[]>([]);
+
+  loading = signal(false);
+  saving = signal(false);
+  showSuccess = signal(false);
+
+  selectedTenantId = 0;
+  selectedPortfolioId = 0;
+  selectedSubPortfolioId = 0;
+
+  constructor(
+    private typificationService: TypificationService,
+    private portfolioService: PortfolioService,
+    private managementService: ManagementService
+  ) {}
+
+  ngOnInit() {
+    this.loadTenants();
+  }
+
+  loadTenants() {
+    this.typificationService.getAllTenants().subscribe({
+      next: (tenants) => {
+        this.tenants.set(tenants);
+      },
+      error: (error) => {
+        console.error('Error loading tenants:', error);
+      }
+    });
+  }
+
+  onTenantChange() {
+    this.selectedPortfolioId = 0;
+    this.selectedSubPortfolioId = 0;
+    this.portfolios.set([]);
+    this.subPortfolios.set([]);
+    this.amountFields.set([]);
+    this.originalFields.set([]);
+
+    if (this.selectedTenantId > 0) {
+      this.loadPortfolios();
+    }
+  }
+
+  loadPortfolios() {
+    this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
+      next: (portfolios) => {
+        this.portfolios.set(portfolios);
+      },
+      error: (error) => {
+        console.error('Error loading portfolios:', error);
+      }
+    });
+  }
+
+  onPortfolioChange() {
+    this.selectedSubPortfolioId = 0;
+    this.subPortfolios.set([]);
+    this.amountFields.set([]);
+    this.originalFields.set([]);
+
+    if (this.selectedPortfolioId > 0) {
+      this.loadSubPortfolios();
+    }
+  }
+
+  loadSubPortfolios() {
+    this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
+      next: (subPortfolios) => {
+        this.subPortfolios.set(subPortfolios);
+      },
+      error: (error) => {
+        console.error('Error loading subportfolios:', error);
+      }
+    });
+  }
+
+  onSubPortfolioChange() {
+    this.amountFields.set([]);
+    this.originalFields.set([]);
+
+    if (this.selectedSubPortfolioId > 0) {
+      this.loadAmountFields();
+    }
+  }
+
+  loadAmountFields() {
+    this.loading.set(true);
+
+    this.managementService.getMontoCabeceras(this.selectedSubPortfolioId).subscribe({
+      next: (cabeceras) => {
+        // Sort by ordenVisualizacion, then map to AmountFieldConfig
+        const sorted = [...cabeceras].sort((a, b) =>
+          (a.ordenVisualizacion || 0) - (b.ordenVisualizacion || 0)
+        );
+
+        const fields: AmountFieldConfig[] = sorted.map(c => ({
+          ...c,
+          isVisible: c.esVisible === 1 || c.esVisible === undefined || c.esVisible === null
+        }));
+
+        this.amountFields.set(fields);
+        // Deep copy for comparison
+        this.originalFields.set(JSON.parse(JSON.stringify(fields)));
+        this.loading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading amount fields:', error);
+        this.loading.set(false);
+      }
+    });
+  }
+
+  toggleVisibility(field: AmountFieldConfig) {
+    field.isVisible = !field.isVisible;
+    this.amountFields.set([...this.amountFields()]);
+  }
+
+  toggleAll(visible: boolean) {
+    const fields = this.amountFields().map(f => ({
+      ...f,
+      isVisible: visible
+    }));
+    this.amountFields.set(fields);
+  }
+
+  drop(event: CdkDragDrop<AmountFieldConfig[]>) {
+    const fields = [...this.amountFields()];
+    moveItemInArray(fields, event.previousIndex, event.currentIndex);
+    this.amountFields.set(fields);
+  }
+
+  hasChanges(): boolean {
+    const current = this.amountFields();
+    const original = this.originalFields();
+
+    if (current.length !== original.length) return true;
+
+    for (let i = 0; i < current.length; i++) {
+      if (current[i].id !== original[i].id) return true;
+      if (current[i].isVisible !== original[i].isVisible) return true;
+    }
+
+    return false;
+  }
+
+  saveChanges() {
+    if (!this.hasChanges() || this.saving()) return;
+
+    this.saving.set(true);
+
+    const updates = this.amountFields().map((field, index) => ({
+      id: field.id,
+      esVisible: field.isVisible ? 1 : 0,
+      ordenVisualizacion: index * 10 // Espaciado de 10 para permitir inserciones futuras
+    }));
+
+    this.managementService.updateAmountVisibility(this.selectedSubPortfolioId, updates).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.showSuccessMessage();
+        // Update original to current
+        this.originalFields.set(JSON.parse(JSON.stringify(this.amountFields())));
+      },
+      error: (error) => {
+        console.error('Error saving changes:', error);
+        this.saving.set(false);
+        alert('Error al guardar los cambios');
+      }
+    });
+  }
+
+  showSuccessMessage() {
+    this.showSuccess.set(true);
+    setTimeout(() => this.showSuccess.set(false), 3000);
+  }
+}

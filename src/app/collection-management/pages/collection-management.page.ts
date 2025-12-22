@@ -1478,11 +1478,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
   clientAmountFields = computed(() => {
     const rawData = this.rawClientData();
-    const cabeceras = this.montoCabeceras();
+    const allCabeceras = this.montoCabeceras();
     const amountFields: { label: string; value: number; field: string }[] = [];
 
     // Si tenemos cabeceras configuradas, usarlas para filtrar solo montos
-    if (cabeceras.length > 0) {
+    if (allCabeceras.length > 0) {
+      // Filtrar solo cabeceras visibles y ordenar por ordenVisualizacion
+      const cabeceras = allCabeceras
+        .filter(c => c.esVisible === 1 || c.esVisible === undefined || c.esVisible === null)
+        .sort((a, b) => (a.ordenVisualizacion || 0) - (b.ordenVisualizacion || 0));
+
       for (const cabecera of cabeceras) {
         const lowerCodigo = cabecera.codigo.toLowerCase();
         const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
