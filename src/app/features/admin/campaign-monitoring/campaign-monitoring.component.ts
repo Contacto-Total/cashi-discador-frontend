@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
@@ -40,6 +40,9 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   llamadasEnTiempoReal: LlamadaTiempoReal[] = [];
   private llamadasSubscription?: Subscription;
 
+  // Timer local para conteo fluido de segundos
+  private localTimerSubscription?: Subscription;
+
   // Sistema de alertas
   alertaActiva: AgentAlert | null = null;
   alertasDismissed: Set<string> = new Set(); // IDs de alertas ya cerradas (agente-estado)
@@ -60,6 +63,22 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.startAutoDialerPolling();
     this.startAgentesPolling();
     this.startLlamadasPolling();
+    this.startLocalTimer(); // Timer local para conteo fluido
+  }
+
+  /**
+   * Timer local que incrementa los segundos cada 1 segundo
+   * para que el conteo sea fluido en lugar de saltar cada 3-5 segundos
+   */
+  private startLocalTimer(): void {
+    this.localTimerSubscription = interval(1000).subscribe(() => {
+      // Incrementar segundos de cada agente
+      this.agentesMonitoreo.forEach(agente => {
+        if (agente.segundosEnEstado !== undefined) {
+          agente.segundosEnEstado++;
+        }
+      });
+    });
   }
 
   /**
@@ -78,6 +97,9 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.localTimerSubscription) {
+      this.localTimerSubscription.unsubscribe();
+    }
     if (this.autoDialerSubscription) {
       this.autoDialerSubscription.unsubscribe();
     }
