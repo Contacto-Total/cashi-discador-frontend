@@ -777,9 +777,9 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-100 dark:bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] text-red-900 dark:text-red-400 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
-              <div class="text-xl font-black text-red-900 dark:text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-[11px] text-orange-800 dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
+              <div class="text-[9px] text-black dark:text-red-400 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xl font-black text-black dark:text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+              <div class="text-[11px] text-black dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
@@ -3233,8 +3233,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   getAmountRowClass(index: number): string {
     const colors = [
-      'bg-red-50 text-red-900 dark:bg-red-950/30 dark:text-red-300',
-      'bg-white text-red-800 dark:bg-gray-800 dark:text-red-400',
+      'bg-red-50 text-black dark:bg-red-950/30 dark:text-red-300',
+      'bg-white text-black dark:bg-gray-800 dark:text-red-400',
     ];
     return colors[index % colors.length];
   }
