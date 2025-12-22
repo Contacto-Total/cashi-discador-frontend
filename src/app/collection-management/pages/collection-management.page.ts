@@ -297,71 +297,71 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             </div>
             }
 
-            <!-- Alerta de Promesa de Pago Activa - Empuja el contenido hacia abajo -->
+            <!-- Alerta de Promesa de Pago Activa - Compacto -->
             @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
               <div class="animate-[slideInDown_0.3s_ease-out]">
                 @for (schedule of activePaymentSchedules(); track schedule.id) {
-                  <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-lg shadow-lg mb-2 overflow-hidden border-2 border-amber-400 dark:border-amber-500">
+                  <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-amber-400 dark:border-amber-500">
                     <!-- Header -->
-                    <div class="px-4 py-3 bg-black/10 flex items-center justify-between">
-                      <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <span class="text-lg">⚠</span>
+                    <div class="px-2.5 py-1.5 bg-black/10 flex items-center justify-between">
+                      <div class="flex items-center gap-2">
+                        <div class="w-5 h-5 bg-white/20 rounded flex items-center justify-center">
+                          <lucide-angular name="alert-triangle" [size]="12" class="text-white"></lucide-angular>
                         </div>
                         <div>
-                          <div class="font-bold text-sm">PROMESA DE PAGO ACTIVA</div>
-                          <div class="text-xs opacity-80">No puede registrar otra promesa</div>
+                          <div class="font-bold text-[11px]">PROMESA DE PAGO ACTIVA</div>
+                          <div class="text-[9px] opacity-80">No puede registrar otra promesa</div>
                         </div>
                       </div>
-                      <div class="flex items-center gap-3">
+                      <div class="flex items-center gap-2">
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
-                          class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 border border-white/30"
+                          class="px-2 py-1 bg-white/20 hover:bg-white/30 rounded text-[10px] font-semibold transition-all flex items-center gap-1 border border-white/30"
                           title="Validar voucher con IA">
-                          <lucide-angular name="scan-line" [size]="14"></lucide-angular>
-                          Voucher IA
+                          <lucide-angular name="scan-line" [size]="11"></lucide-angular>
+                          Voucher
                         </button>
                         <div class="text-right">
-                          <div class="text-xl font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
-                          <div class="text-xs opacity-80">Total</div>
+                          <div class="text-sm font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
+                          <div class="text-[9px] opacity-80">Total</div>
                         </div>
                       </div>
                     </div>
                     <!-- Detalle de cuotas -->
-                    <div class="px-4 py-3 bg-black/5">
-                      <div class="text-xs font-semibold mb-2 opacity-90">DETALLE DE CUOTAS:</div>
-                      <div class="flex flex-wrap gap-2">
+                    <div class="px-2.5 py-1.5 bg-black/5">
+                      <div class="text-[9px] font-semibold mb-1 opacity-90">DETALLE DE CUOTAS:</div>
+                      <div class="flex flex-wrap gap-1">
                         @for (cuota of schedule.installments; track cuota.numeroCuota) {
-                          <div class="flex items-center gap-2 text-xs bg-white/20 rounded-lg px-3 py-2">
+                          <div class="flex items-center gap-1 text-[10px] bg-white/20 rounded px-2 py-1">
                             <span class="font-bold">C{{ cuota.numeroCuota }}</span>
                             <span class="opacity-70">|</span>
                             @if (tienePagoParcial(cuota)) {
-                              <span class="text-xs opacity-70">S/ {{ cuota.monto?.toFixed(2) }}</span>
-                              <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                              <span class="text-[9px] opacity-70">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-[11px]">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
                             } @else {
-                              <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                              <span class="font-bold text-[11px]">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
                             }
                             <span class="opacity-70">|</span>
-                            <span class="font-medium flex items-center gap-1">
-                              <lucide-angular name="calendar" [size]="12"></lucide-angular>
+                            <span class="font-medium flex items-center gap-0.5">
+                              <lucide-angular name="calendar" [size]="10"></lucide-angular>
                               {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                              <span class="bg-green-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
+                              <span class="bg-green-600 text-[9px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="9"></lucide-angular></span>
                             } @else if (cuota.status === 'PARCIAL') {
-                              <span class="bg-amber-500 text-[10px] px-1.5 py-0.5 rounded font-semibold">Parcial</span>
+                              <span class="bg-amber-500 text-[9px] px-1 py-0.5 rounded font-semibold">Parcial</span>
                             } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                              <span class="bg-red-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
+                              <span class="bg-red-600 text-[9px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="9"></lucide-angular></span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-                              <span class="bg-gray-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
+                              <span class="bg-gray-600 text-[9px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="9"></lucide-angular></span>
                             } @else {
-                              <span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
+                              <span class="bg-blue-600 text-[9px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="9"></lucide-angular></span>
                             }
                           </div>
                         }
                       </div>
                       @if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
-                        <div class="mt-2 text-xs opacity-80">
+                        <div class="mt-1 text-[9px] opacity-80">
                           <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
                         </div>
                       }
