@@ -1879,7 +1879,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         codigo: c.codigo,
         nombre: c.nombre,
         tipoDato: c.tipoDato,
-        tipoSql: c.tipoSql
+        tipoSql: c.tipoSql,
+        esVisibleMonto: c.esVisibleMonto,
+        ordenMonto: c.ordenMonto
       })));
     });
   }
