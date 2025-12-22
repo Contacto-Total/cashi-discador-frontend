@@ -298,14 +298,8 @@
           </tr>
         </table>
 
-        <div class="instructions text-black">
-          <ng-container *ngIf="selectedEntidad === 'financiera_oh'">
-            Acercarse con su DNI, tarjeta Oh! y este documento; Indicar en los cajeros que va a realizar un <strong>pago o abono</strong> a su Tarjeta Oh por el monto <strong>APROBADO</strong>, en caso de no tener la tarjeta puede pagar con el número de cuenta de su tarjeta consignada en la parte superior de este documento.
-          </ng-container>
-          <ng-container *ngIf="selectedEntidad === 'nsoluciones'">
-            Acercarse a cualquier agencia o Agente BCP, realice el pago al Número de cuenta corriente BCP Soles: 1931851985017 <br>
-            El Número de cuenta interbancaria es 00219300185198501718. Una vez realizado el depósito enviar el voucher de pago número telefonico 915326798 para iniciar el tramite de la Carta de no adeudo.
-          </ng-container>
+        <div class="instructions text-black" *ngIf="selectedEntidad === 'financiera_oh'">
+          Acercarse con su DNI, tarjeta Oh! y este documento; Indicar en los cajeros que va a realizar un <strong>pago o abono</strong> a su Tarjeta Oh por el monto <strong>APROBADO</strong>, en caso de no tener la tarjeta puede pagar con el número de cuenta de su tarjeta consignada en la parte superior de este documento.
         </div>
 
         <div class="section-header bg-[#e0e0e0] text-black">CENTROS DE PAGO VIRTUAL:</div>
