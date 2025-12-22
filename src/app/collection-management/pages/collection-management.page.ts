@@ -777,9 +777,9 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-100 dark:bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] !text-black dark:!text-red-400 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
-              <div class="text-xl font-black !text-black dark:!text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-[11px] !text-black dark:!text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
+              <div class="text-[9px] uppercase font-bold" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-gray-900'">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xl font-black" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-gray-900'">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+              <div class="text-[11px] font-semibold" [ngClass]="themeService.isDarkMode() ? 'text-orange-400' : 'text-gray-900'">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
@@ -790,8 +790,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 @for (field of clientAmountFields(); track field.field; let i = $index) {
                   <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
                        [class]="getAmountRowClass(i)">
-                    <span class="truncate mr-2 font-medium text-black dark:text-red-300">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm text-black dark:text-red-300">
+                    <span class="truncate mr-2 font-medium" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-gray-900'">{{ field.label }}</span>
+                    <span class="font-bold whitespace-nowrap text-sm" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-gray-900'">
                       {{ formatCurrency(field.value) }}
                     </span>
                   </div>
