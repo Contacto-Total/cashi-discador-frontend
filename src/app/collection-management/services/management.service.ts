@@ -187,8 +187,8 @@ export interface ConfiguracionCabecera {
   nombre: string;      // Nombre visual (ej: "Saldo mora")
   tipoDato: string;    // TEXTO, NUMERICO, FECHA
   tipoSql: string;     // decimal(18,2), int, etc.
-  ordenVisualizacion?: number;
-  esVisible?: number;  // 1 = visible, 0 = oculto
+  esVisibleMonto?: number;  // 1 = visible, 0 = oculto
+  ordenMonto?: number;      // Orden de visualización
 }
 
 @Injectable({
@@ -436,7 +436,7 @@ export class ManagementService {
    */
   updateAmountVisibility(
     idSubcartera: number,
-    updates: { id: number; esVisible: number; ordenVisualizacion: number }[]
+    updates: { id: number; esVisibleMonto: number; ordenMonto: number }[]
   ): Observable<ConfiguracionCabecera[]> {
     console.log('[CABECERAS] Updating visibility for subcartera:', idSubcartera, updates);
     return this.http.put<ConfiguracionCabecera[]>(

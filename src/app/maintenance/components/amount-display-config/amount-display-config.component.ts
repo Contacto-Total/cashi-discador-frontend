@@ -347,14 +347,14 @@ export class AmountDisplayConfigComponent implements OnInit {
 
     this.managementService.getMontoCabeceras(this.selectedSubPortfolioId).subscribe({
       next: (cabeceras) => {
-        // Sort by ordenVisualizacion, then map to AmountFieldConfig
+        // Sort by ordenMonto, then map to AmountFieldConfig
         const sorted = [...cabeceras].sort((a, b) =>
-          (a.ordenVisualizacion || 0) - (b.ordenVisualizacion || 0)
+          (a.ordenMonto || 0) - (b.ordenMonto || 0)
         );
 
         const fields: AmountFieldConfig[] = sorted.map(c => ({
           ...c,
-          isVisible: c.esVisible === 1 || c.esVisible === undefined || c.esVisible === null
+          isVisible: c.esVisibleMonto === 1 || c.esVisibleMonto === undefined || c.esVisibleMonto === null
         }));
 
         this.amountFields.set(fields);
@@ -409,8 +409,8 @@ export class AmountDisplayConfigComponent implements OnInit {
 
     const updates = this.amountFields().map((field, index) => ({
       id: field.id,
-      esVisible: field.isVisible ? 1 : 0,
-      ordenVisualizacion: index * 10 // Espaciado de 10 para permitir inserciones futuras
+      esVisibleMonto: field.isVisible ? 1 : 0,
+      ordenMonto: index * 10 // Espaciado de 10 para permitir inserciones futuras
     }));
 
     this.managementService.updateAmountVisibility(this.selectedSubPortfolioId, updates).subscribe({

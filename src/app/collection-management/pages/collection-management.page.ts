@@ -1483,10 +1483,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     // Si tenemos cabeceras configuradas, usarlas para filtrar solo montos
     if (allCabeceras.length > 0) {
-      // Filtrar solo cabeceras visibles y ordenar por ordenVisualizacion
+      // Filtrar solo cabeceras visibles y ordenar por ordenMonto
       const cabeceras = allCabeceras
-        .filter(c => c.esVisible === 1 || c.esVisible === undefined || c.esVisible === null)
-        .sort((a, b) => (a.ordenVisualizacion || 0) - (b.ordenVisualizacion || 0));
+        .filter(c => c.esVisibleMonto === 1 || c.esVisibleMonto === undefined || c.esVisibleMonto === null)
+        .sort((a, b) => (a.ordenMonto || 0) - (b.ordenMonto || 0));
 
       for (const cabecera of cabeceras) {
         const lowerCodigo = cabecera.codigo.toLowerCase();
@@ -1544,7 +1544,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Cabeceras de configuración para mostrar nombres visuales
-  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisible?: number; ordenVisualizacion?: number }[]>([]);
+  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisibleMonto?: number; ordenMonto?: number }[]>([]);
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
