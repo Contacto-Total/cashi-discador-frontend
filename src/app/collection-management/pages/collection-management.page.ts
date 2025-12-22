@@ -775,11 +775,11 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
         <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           <!-- Resumen Rápido Deuda -->
-          <div class="p-2 bg-red-600 dark:bg-red-950/20">
+          <div class="p-2 bg-red-700 dark:bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] text-red-100 dark:text-red-400 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-[9px] text-white dark:text-red-400 uppercase font-bold">{{ getPrimaryAmountLabel() }}</div>
               <div class="text-xl font-black text-white dark:text-red-400">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-[11px] text-orange-200 dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
+              <div class="text-[11px] text-yellow-300 dark:text-orange-400 font-semibold">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
@@ -3233,8 +3233,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   getAmountRowClass(index: number): string {
     const colors = [
-      'bg-red-500 dark:bg-red-950/30 text-white dark:text-red-300',
-      'bg-red-100 dark:bg-gray-800 text-red-900 dark:text-gray-200',
+      'bg-red-700 dark:bg-red-950/30 text-white dark:text-red-300',
+      'bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-gray-200',
     ];
     return colors[index % colors.length];
   }
