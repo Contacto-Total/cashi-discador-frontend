@@ -146,6 +146,55 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       Sin campos configurados
                     </div>
                   }
+
+                  <!-- Sección de Contacto -->
+                  <div class="pt-2 mt-2 border-t-2 border-slate-300 dark:border-slate-600">
+                    <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">Contacto</div>
+                    <div class="space-y-1.5">
+                      <!-- Teléfono Principal -->
+                      <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
+                        <span class="text-green-600 dark:text-green-400 text-sm">📱</span>
+                        <div class="flex-1 min-w-0">
+                          <div class="text-[9px] text-green-600 dark:text-green-400">Principal</div>
+                          <div class="text-[11px] font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
+                        </div>
+                      </div>
+                      <!-- Teléfono Alternativo -->
+                      @if (customerData().contacto.telefono_alternativo) {
+                        <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                          <span class="text-slate-500 text-sm">📞</span>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-[9px] text-slate-500 dark:text-slate-400">Alternativo</div>
+                            <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
+                          </div>
+                        </div>
+                      }
+                      <!-- Teléfono Trabajo -->
+                      @if (customerData().contacto.telefono_trabajo) {
+                        <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                          <span class="text-slate-500 text-sm">🏢</span>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-[9px] text-slate-500 dark:text-slate-400">Trabajo</div>
+                            <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
+                          </div>
+                        </div>
+                      }
+                      <!-- Email -->
+                      @if (customerData().contacto.email) {
+                        <div class="flex items-start gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                          <span class="text-blue-500 text-sm">✉️</span>
+                          <div class="text-[10px] text-blue-700 dark:text-blue-300 break-all">{{ customerData().contacto.email }}</div>
+                        </div>
+                      }
+                      <!-- Dirección -->
+                      @if (customerData().contacto.direccion) {
+                        <div class="flex items-start gap-2 p-1.5 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
+                          <span class="text-orange-500 text-sm">📍</span>
+                          <div class="text-[10px] text-orange-700 dark:text-orange-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
+                        </div>
+                      }
+                    </div>
+                  </div>
                 </div>
               }
 
@@ -718,58 +767,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           </div>
         </div>
 
-        <!-- PANEL DERECHO - Contactos y Acciones Rápidas -->
+        <!-- PANEL DERECHO - Resumen Deuda y Montos -->
         <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
-          <!-- Teléfonos -->
-          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
-            <div class="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Contacto</div>
-            <div class="space-y-1">
-              <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/40 transition-colors">
-                <span class="text-green-600 dark:text-green-400 text-sm">📱</span>
-                <div class="flex-1 min-w-0">
-                  <div class="text-[9px] text-green-600 dark:text-green-400">Principal</div>
-                  <div class="text-[11px] font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
-                </div>
-              </div>
-              @if (customerData().contacto.telefono_alternativo) {
-                <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                  <span class="text-slate-500 text-sm">📞</span>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-[9px] text-slate-500 dark:text-slate-400">Alternativo</div>
-                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
-                  </div>
-                </div>
-              }
-              @if (customerData().contacto.telefono_trabajo) {
-                <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                  <span class="text-slate-500 text-sm">🏢</span>
-                  <div class="flex-1 min-w-0">
-                    <div class="text-[9px] text-slate-500 dark:text-slate-400">Trabajo</div>
-                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Email y Dirección -->
-          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
-            <div class="space-y-1">
-              @if (customerData().contacto.email) {
-                <div class="flex items-start gap-2">
-                  <span class="text-blue-500 text-sm">✉️</span>
-                  <div class="text-[10px] text-gray-600 dark:text-gray-300 break-all">{{ customerData().contacto.email }}</div>
-                </div>
-              }
-              @if (customerData().contacto.direccion) {
-                <div class="flex items-start gap-2">
-                  <span class="text-orange-500 text-sm">📍</span>
-                  <div class="text-[10px] text-gray-600 dark:text-gray-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
-                </div>
-              }
-            </div>
-          </div>
-
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-50 dark:bg-red-950/20">
             <div class="text-center">
