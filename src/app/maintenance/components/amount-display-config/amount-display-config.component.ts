@@ -112,6 +112,7 @@ interface AmountFieldConfig extends ConfiguracionCabecera {
                 <p class="text-amber-200 text-sm font-medium">Instrucciones</p>
                 <ul class="text-amber-200/70 text-sm mt-1 space-y-1">
                   <li>Use los toggles para mostrar u ocultar cada campo de monto en el panel de deuda</li>
+                  <li>Haga clic en el nombre para editarlo y personalizar cómo se muestra</li>
                   <li>Arrastre los campos para cambiar el orden de visualización</li>
                   <li>Los cambios se guardan al hacer clic en "Guardar Cambios"</li>
                 </ul>
@@ -177,9 +178,13 @@ interface AmountFieldConfig extends ConfiguracionCabecera {
                       </div>
 
                       <!-- Field Info -->
-                      <div class="flex-1">
-                        <div class="font-medium text-white">{{ field.nombre }}</div>
-                        <div class="text-xs text-gray-500 font-mono">{{ field.codigo }}</div>
+                      <div class="flex-1 min-w-0">
+                        <input type="text"
+                               [(ngModel)]="field.nombre"
+                               (ngModelChange)="onNameChange(field)"
+                               class="w-full bg-transparent border-b border-transparent hover:border-slate-600 focus:border-amber-500 focus:outline-none font-medium text-white px-1 py-0.5 -ml-1 transition-colors"
+                               [title]="'Editar nombre: ' + field.nombre">
+                        <div class="text-xs text-gray-500 font-mono mt-0.5">{{ field.codigo }}</div>
                       </div>
 
                       <!-- Data Type Badge -->
@@ -374,6 +379,11 @@ export class AmountDisplayConfigComponent implements OnInit {
     this.amountFields.set([...this.amountFields()]);
   }
 
+  onNameChange(field: AmountFieldConfig) {
+    // Trigger change detection
+    this.amountFields.set([...this.amountFields()]);
+  }
+
   toggleAll(visible: boolean) {
     const fields = this.amountFields().map(f => ({
       ...f,
@@ -397,6 +407,7 @@ export class AmountDisplayConfigComponent implements OnInit {
     for (let i = 0; i < current.length; i++) {
       if (current[i].id !== original[i].id) return true;
       if (current[i].isVisible !== original[i].isVisible) return true;
+      if (current[i].nombre !== original[i].nombre) return true;
     }
 
     return false;
@@ -410,7 +421,8 @@ export class AmountDisplayConfigComponent implements OnInit {
     const updates = this.amountFields().map((field, index) => ({
       id: field.id,
       esVisibleMonto: field.isVisible ? 1 : 0,
-      ordenMonto: index * 10 // Espaciado de 10 para permitir inserciones futuras
+      ordenMonto: index * 10, // Espaciado de 10 para permitir inserciones futuras
+      nombre: field.nombre
     }));
 
     this.managementService.updateAmountVisibility(this.selectedSubPortfolioId, updates).subscribe({
