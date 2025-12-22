@@ -785,16 +785,18 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
           <!-- Montos de la Cuenta -->
           <div class="p-2 flex-1 overflow-y-auto">
-            @if (clientAmountFields().length > 0) {
+            @if (customerPaymentAmounts().length > 0) {
               <div class="space-y-1.5">
-                @for (field of clientAmountFields(); track field.field; let i = $index) {
-                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
-                       [class]="getAmountRowClass(i)">
-                    <span class="truncate mr-2 font-medium" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-red-800'">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-red-800'">
-                      {{ formatCurrency(field.value) }}
-                    </span>
-                  </div>
+                @for (field of customerPaymentAmounts(); track field.field; let i = $index) {
+                  @if (field.value >= 0) {
+                    <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
+                         [class]="getAmountRowClass(i)">
+                      <span class="truncate mr-2 font-medium" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-red-800'">{{ field.label }}</span>
+                      <span class="font-bold whitespace-nowrap text-sm" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-red-800'">
+                        {{ formatCurrency(field.value) }}
+                      </span>
+                    </div>
+                  }
                 }
               </div>
             }
