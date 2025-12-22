@@ -33,10 +33,14 @@
             ],
             "tsConfig": "tsconfig.app.json",
             "assets": [
-              "src/favicon.ico",
               "src/assets",
               {
                 "glob": "_redirects",
+                "input": "public",
+                "output": "/"
+              },
+              {
+                "glob": "favicon.svg",
                 "input": "public",
                 "output": "/"
               }
