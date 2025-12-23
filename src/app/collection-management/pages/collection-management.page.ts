@@ -215,9 +215,9 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5">
                         <div class="flex justify-between items-center text-[9px]">
                           <span class="font-bold text-gray-600 dark:text-gray-300">{{ gestion.fecha }}</span>
-                          <span class="text-gray-400">{{ gestion.asesor }}</span>
+                          <span class="text-gray-400">{{ gestion.nombreAgente }}</span>
                         </div>
-                        <div class="text-[10px] font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.gestion }}</div>
+                        <div class="text-[10px] font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.tipificacionCompleta }}</div>
                         <div class="text-[9px] text-gray-500 dark:text-gray-400 truncate">{{ gestion.observacion }}</div>
                         @if (gestion.schedule) {
                           <button (click)="openScheduleDetail(gestion.id)" class="text-[8px] text-purple-600 dark:text-purple-400 mt-0.5 hover:underline">
@@ -1013,8 +1013,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     canalDisplay: string;
     metodo: string;
     metodoDisplay: string;
-    montoPromesa: number | null;
-    estadoPago: string | null;
+    montoPromesa?: number;
+    estadoPago?: string;
     estadoPagoDisplay: string;
     hasSchedule: boolean;
     schedule: any;
@@ -2324,8 +2324,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             canalDisplay: canalDisplay,
             metodo: m.metodoContacto || '',
             metodoDisplay: metodoDisplay,
-            montoPromesa: m.montoPromesa || null,
-            estadoPago: m.estadoPago || null,
+            montoPromesa: m.montoPromesa || undefined,
+            estadoPago: m.estadoPago || undefined,
             estadoPagoDisplay: estadoPagoDisplay,
             hasSchedule: m.typificationRequiresSchedule || false,
             schedule: null as any

@@ -535,8 +535,8 @@ export class ManagementService {
       nombreAgente: record.nombreAgente || record.userAgent || `Agente ${record.idAgente}`,
       duracionSegundos: record.duracionSegundos || 0,
       // Promesa de pago
-      montoPromesa: record.montoPromesa || null,
-      estadoPago: record.estadoPago || null
+      montoPromesa: record.montoPromesa || undefined,
+      estadoPago: record.estadoPago || undefined
     };
   }
 
