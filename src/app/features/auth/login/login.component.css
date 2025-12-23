@@ -2969,10 +2969,11 @@ body.light-theme .snowflake,
 .christmas-tree-container {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   width: 50%;
   height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 50;
@@ -2982,8 +2983,107 @@ body.light-theme .snowflake,
 
 .tree-canvas {
   width: 100%;
-  height: 100%;
+  height: 60%;
   display: block;
+}
+
+/* ========== MENSAJE NAVIDEÑO ========== */
+.christmas-greeting {
+  position: relative;
+  text-align: center;
+  padding: 1.5rem 2rem;
+  margin-top: -2rem;
+  pointer-events: auto;
+  animation: greetingFadeIn 1.5s ease-out forwards;
+  animation-delay: 0.5s;
+  opacity: 0;
+}
+
+@keyframes greetingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.greeting-stars {
+  font-size: 1.2rem;
+  color: #fbbf24;
+  letter-spacing: 0.5rem;
+  margin-bottom: 0.5rem;
+  animation: starsSparkle 2s ease-in-out infinite;
+}
+
+@keyframes starsSparkle {
+  0%, 100% { opacity: 1; text-shadow: 0 0 10px #fbbf24; }
+  50% { opacity: 0.6; text-shadow: 0 0 20px #fbbf24, 0 0 30px #f59e0b; }
+}
+
+.greeting-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  margin: 0;
+  letter-spacing: 0.05em;
+  animation: titleGlow 3s ease-in-out infinite;
+}
+
+@keyframes titleGlow {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(220, 38, 38, 0.5)); }
+  50% { filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.8)) drop-shadow(0 0 30px rgba(251, 191, 36, 0.4)); }
+}
+
+.greeting-subtitle {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  margin: 0.3rem 0;
+  font-style: italic;
+}
+
+.greeting-company {
+  margin: 0.5rem 0;
+}
+
+.company-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7, #34d399, #10b981);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: companyShine 3s linear infinite;
+}
+
+@keyframes companyShine {
+  to { background-position: 200% center; }
+}
+
+.greeting-ornament {
+  font-size: 2rem;
+  margin: 0.5rem 0;
+  animation: ornamentBounce 2s ease-in-out infinite;
+}
+
+@keyframes ornamentBounce {
+  0%, 100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-5px) rotate(5deg); }
+}
+
+.greeting-wish {
+  font-size: 0.9rem;
+  color: #cbd5e1;
+  max-width: 280px;
+  margin: 0.5rem auto 0;
+  line-height: 1.4;
 }
 
 /* ========== ESTRELLA 3D ULTRA REALISTA ========== */
@@ -3695,6 +3795,12 @@ body.light-theme .snowflake,
     height: 420px;
     transform: scale(0.85);
   }
+  .greeting-title {
+    font-size: 2rem;
+  }
+  .company-name {
+    font-size: 1.5rem;
+  }
 }
 
 @media (max-width: 900px) {
@@ -3703,6 +3809,15 @@ body.light-theme .snowflake,
   }
   .christmas-tree {
     transform: scale(0.7);
+  }
+  .greeting-title {
+    font-size: 1.6rem;
+  }
+  .company-name {
+    font-size: 1.3rem;
+  }
+  .greeting-wish {
+    display: none;
   }
 }
 
