@@ -32,6 +32,10 @@ export interface RegistroGestionV2 {
   estadoGestion?: string;
   nombreAgente?: string;
   userAgent?: string;
+  // Campos adicionales
+  telefonoContacto?: string;
+  montoPromesa?: number;
+  estadoPago?: string;
 }
 
 export interface ManagementResource {
@@ -49,6 +53,7 @@ export interface ManagementResource {
 
   // Contact info
   phone: string;
+  telefonoContacto?: string;  // Teléfono de contacto usado
 
   // Hierarchical categorization
   level1Id: number;
@@ -68,10 +73,14 @@ export interface ManagementResource {
   managementTime?: string;  // Hora de gestión (HH:mm:ss)
 
   // Additional fields for history display
-  canalContacto?: string;     // Channel (LLAMADA, WHATSAPP, etc.)
-  metodoContacto?: string;    // Method (OUTBOUND, INBOUND, etc.)
+  canalContacto?: string;     // Channel (LLAMADA_SALIENTE, WHATSAPP, etc.)
+  metodoContacto?: string;    // Method (GESTION_MANUAL, GESTION_PROGRESIVO, etc.)
   nombreAgente?: string;      // Agent name (human readable)
   duracionSegundos?: number;  // Duration in seconds
+
+  // Promesa de pago
+  montoPromesa?: number;      // Monto prometido
+  estadoPago?: string;        // Estado del pago (PENDIENTE, PAGADA, VENCIDA, etc.)
 }
 
 export interface CallDetailResource {
@@ -492,6 +501,12 @@ export class ManagementService {
    * Transforma la respuesta del backend al formato del frontend
    */
   private transformToFrontendFormat(record: RegistroGestionV2, originalRequest?: CreateManagementRequest): ManagementResource {
+    // Extraer fecha sin hora
+    let managementDate = record.fechaGestion;
+    if (managementDate && managementDate.includes('T')) {
+      managementDate = managementDate.split('T')[0];
+    }
+
     return {
       id: record.id || 0,
       customerId: String(record.idCliente),
@@ -502,7 +517,8 @@ export class ManagementService {
       portfolioName: '',
       subPortfolioId: record.idSubcartera,
       subPortfolioName: '',
-      phone: record.canalContacto || '',
+      phone: record.telefonoContacto || '',
+      telefonoContacto: record.telefonoContacto || '',
       level1Id: (record.tipificacion as any)?.id || 0,
       level1Name: originalRequest?.level1Name || record.rutaNivel1 || '',
       level2Id: undefined,
@@ -511,13 +527,16 @@ export class ManagementService {
       level3Name: originalRequest?.level3Name || record.rutaNivel3 || '',
       level4Name: record.rutaNivel4 || '',
       observations: record.observaciones,
-      managementDate: record.fechaGestion?.split('T')[0],
-      managementTime: record.fechaGestion?.split('T')[1]?.substring(0, 8),
+      managementDate: managementDate,
+      managementTime: undefined,
       // Additional fields for history
-      canalContacto: record.canalContacto || 'N/A',
-      metodoContacto: record.metodoContacto || 'N/A',
+      canalContacto: record.canalContacto || '',
+      metodoContacto: record.metodoContacto || '',
       nombreAgente: record.nombreAgente || record.userAgent || `Agente ${record.idAgente}`,
-      duracionSegundos: record.duracionSegundos || 0
+      duracionSegundos: record.duracionSegundos || 0,
+      // Promesa de pago
+      montoPromesa: record.montoPromesa || null,
+      estadoPago: record.estadoPago || null
     };
   }
 

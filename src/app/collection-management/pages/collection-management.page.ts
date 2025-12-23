@@ -826,49 +826,64 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     <th class="px-2 py-1 font-semibold">Fecha</th>
                     <th class="px-2 py-1 font-semibold">Agente</th>
                     <th class="px-2 py-1 font-semibold">Tipificación</th>
+                    <th class="px-2 py-1 font-semibold">Teléfono</th>
+                    <th class="px-2 py-1 font-semibold">Observación</th>
                     <th class="px-2 py-1 font-semibold">Canal</th>
                     <th class="px-2 py-1 font-semibold">Método</th>
-                    <th class="px-2 py-1 font-semibold">Duración</th>
-                    <th class="px-2 py-1 font-semibold">Observación</th>
-                    <th class="px-2 py-1 font-semibold text-center">Acciones</th>
+                    <th class="px-2 py-1 font-semibold text-right">Monto Promesa</th>
+                    <th class="px-2 py-1 font-semibold text-center">Estado Pago</th>
                   </tr>
                 </thead>
                 <tbody>
                   @for (gestion of historialGestiones(); track gestion.id) {
                     <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                       <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
-                      <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap">{{ gestion.nombreAgente }}</td>
-                      <td class="px-2 py-1.5 max-w-[200px]">
+                      <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                      <td class="px-2 py-1.5 max-w-[180px]">
                         <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
                           {{ gestion.tipificacionCompleta }}
                         </span>
                       </td>
+                      <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">{{ gestion.telefono || '-' }}</td>
+                      <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[120px] truncate" [title]="gestion.observacion">
+                        {{ gestion.observacion || '-' }}
+                      </td>
                       <td class="px-2 py-1.5">
                         <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
-                          (gestion.canal === 'LLAMADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                          (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                           gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
                            gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                           gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
                            'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                          {{ gestion.canal }}
+                          {{ gestion.canalDisplay }}
                         </span>
                       </td>
                       <td class="px-2 py-1.5">
                         <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
-                          (gestion.metodo === 'OUTBOUND' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                           gestion.metodo === 'INBOUND' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                          (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                           gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                           gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
                            'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                          {{ gestion.metodo }}
+                          {{ gestion.metodoDisplay }}
                         </span>
                       </td>
-                      <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap">{{ gestion.duracion }}</td>
-                      <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[150px] truncate" [title]="gestion.observacion">
-                        {{ gestion.observacion }}
+                      <td class="px-2 py-1.5 text-right font-mono whitespace-nowrap">
+                        @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
+                          <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
+                        } @else {
+                          <span class="text-slate-400 dark:text-slate-600">-</span>
+                        }
                       </td>
                       <td class="px-2 py-1.5 text-center">
-                        @if (gestion.hasSchedule) {
-                          <button (click)="openScheduleDetail(gestion.id)"
-                            class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-[9px] font-semibold hover:bg-purple-200 dark:hover:bg-purple-800/40 transition-colors">
-                            📅 Cronograma
-                          </button>
+                        @if (gestion.estadoPago) {
+                          <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
+                            (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                             gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                             gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                             gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                            {{ gestion.estadoPagoDisplay }}
+                          </span>
                         } @else {
                           <span class="text-slate-400 dark:text-slate-600">-</span>
                         }
@@ -990,15 +1005,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialGestiones = signal<Array<{
     id: number;
     fecha: string;
-    asesor: string;
     nombreAgente: string;
-    resultado: string;
-    gestion: string;
     tipificacionCompleta: string;
-    canal: string;
-    metodo: string;
+    telefono: string;
     observacion: string;
-    duracion: string;
+    canal: string;
+    canalDisplay: string;
+    metodo: string;
+    metodoDisplay: string;
+    montoPromesa: number | null;
+    estadoPago: string | null;
+    estadoPagoDisplay: string;
     hasSchedule: boolean;
     schedule: any;
   }>>([]);
@@ -2276,33 +2293,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         console.log('[HISTORIAL] Gestiones recibidas del backend:', managements);
         console.log('[HISTORIAL] Total de gestiones:', managements.length);
 
-        // Mapear gestiones y cargar cronogramas
+        // Mapear gestiones
         const historial = managements.map(m => {
-          // Formatear fecha y hora desde los campos de la gestión
-          const fechaHora = m.managementDate && m.managementTime
-            ? `${m.managementDate} ${m.managementTime}`
-            : new Date().toLocaleString('es-PE');
+          // Formatear solo fecha (sin hora)
+          const fecha = m.managementDate
+            ? this.formatDateOnly(m.managementDate)
+            : '-';
 
           // Construir ruta completa de tipificación
           const tipificacionParts = [m.level1Name, m.level2Name, m.level3Name, m.level4Name].filter(Boolean);
           const tipificacionCompleta = tipificacionParts.join(' > ') || '-';
 
-          // Formatear duración
-          const duracionSeg = m.duracionSegundos || 0;
-          const duracionFormatted = this.formatTime(duracionSeg);
+          // Formatear canal para display
+          const canalDisplay = this.formatCanalDisplay(m.canalContacto);
+
+          // Formatear método para display
+          const metodoDisplay = this.formatMetodoDisplay(m.metodoContacto);
+
+          // Formatear estado de pago para display
+          const estadoPagoDisplay = this.formatEstadoPagoDisplay(m.estadoPago);
 
           const historyItem = {
             id: m.id,
-            fecha: fechaHora,
-            asesor: m.advisorId,
+            fecha: fecha,
             nombreAgente: m.nombreAgente || `Agente ${m.advisorId}`,
-            resultado: 'Gestión realizada',
-            gestion: m.level3Name || m.level2Name || m.level1Name || '-',
             tipificacionCompleta: tipificacionCompleta,
-            canal: m.canalContacto || 'N/A',
-            metodo: m.metodoContacto || 'N/A',
-            observacion: m.observations || 'Sin observaciones',
-            duracion: duracionFormatted,
+            telefono: m.telefonoContacto || '',
+            observacion: m.observations || '',
+            canal: m.canalContacto || '',
+            canalDisplay: canalDisplay,
+            metodo: m.metodoContacto || '',
+            metodoDisplay: metodoDisplay,
+            montoPromesa: m.montoPromesa || null,
+            estadoPago: m.estadoPago || null,
+            estadoPagoDisplay: estadoPagoDisplay,
             hasSchedule: m.typificationRequiresSchedule || false,
             schedule: null as any
           };
@@ -2610,6 +2634,75 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Formatea una fecha ISO (YYYY-MM-DD) a formato legible (DD/MM/YYYY)
+   */
+  private formatDateOnly(dateStr: string): string {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dateStr;
+  }
+
+  /**
+   * Formatea el canal de contacto para mostrar
+   */
+  private formatCanalDisplay(canal: string | undefined): string {
+    if (!canal) return '-';
+    const canalMap: { [key: string]: string } = {
+      'LLAMADA_SALIENTE': 'Llamada Saliente',
+      'LLAMADA_ENTRANTE': 'Llamada Entrante',
+      'SMS': 'SMS',
+      'WHATSAPP': 'WhatsApp',
+      'EMAIL': 'Email'
+    };
+    return canalMap[canal] || this.formatSnakeCase(canal);
+  }
+
+  /**
+   * Formatea el método de contacto para mostrar
+   */
+  private formatMetodoDisplay(metodo: string | undefined): string {
+    if (!metodo) return '-';
+    const metodoMap: { [key: string]: string } = {
+      'GESTION_MANUAL': 'Manual',
+      'GESTION_PROGRESIVO': 'Progresivo',
+      'GESTION_PREDICTIVO': 'Predictivo',
+      'GESTION_AUTOMATICA': 'Automática'
+    };
+    return metodoMap[metodo] || this.formatSnakeCase(metodo);
+  }
+
+  /**
+   * Formatea el estado de pago para mostrar
+   */
+  private formatEstadoPagoDisplay(estado: string | undefined | null): string {
+    if (!estado) return '-';
+    const estadoMap: { [key: string]: string } = {
+      'PENDIENTE': 'Pendiente',
+      'PAGADA': 'Pagada',
+      'VENCIDA': 'Vencida',
+      'PARCIAL': 'Parcial',
+      'CANCELADA': 'Cancelada'
+    };
+    return estadoMap[estado] || this.formatSnakeCase(estado);
+  }
+
+  /**
+   * Convierte SNAKE_CASE a Title Case
+   * Ejemplo: "LLAMADA_SALIENTE" -> "Llamada Saliente"
+   */
+  private formatSnakeCase(value: string): string {
+    if (!value) return '-';
+    return value
+      .toLowerCase()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   onContactResultChange() {
