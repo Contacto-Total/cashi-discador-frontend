@@ -3097,6 +3097,23 @@ body.light-theme .snowflake,
   line-height: 1.4;
 }
 
+/* Light mode - Christmas greeting */
+body.light-theme .greeting-subtitle,
+:root.light .greeting-subtitle {
+  color: #475569;
+}
+
+body.light-theme .greeting-wish,
+:root.light .greeting-wish {
+  color: #64748b;
+}
+
+body.light-theme .snowflake,
+:root.light .snowflake {
+  color: rgba(100, 116, 139, 0.7);
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
 /* ========== ESTRELLA 3D ULTRA REALISTA ========== */
 .tree-star {
   position: absolute;
