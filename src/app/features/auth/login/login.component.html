@@ -1,4 +1,7 @@
 <div class="login-container" [class.christmas]="showChristmasHat" [class.newyear]="showNewYearTheme">
+  <!-- Nieve 3D fullscreen -->
+  <canvas #snowCanvas class="snow-canvas-fullscreen" *ngIf="showChristmasHat"></canvas>
+
   <!-- Mensaje Navideño (IZQUIERDA) -->
   <div class="christmas-greeting-container" *ngIf="showChristmasHat">
     <div class="christmas-greeting">

@@ -2965,6 +2965,17 @@ body.light-theme .snowflake,
    Colores de adornos: Rojo, Dorado, Plateado
    ======================================== */
 
+/* ========== NIEVE 3D FULLSCREEN ========== */
+.snow-canvas-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+}
+
 /* ========== MENSAJE NAVIDEÑO (IZQUIERDA) ========== */
 .christmas-greeting-container {
   position: fixed;

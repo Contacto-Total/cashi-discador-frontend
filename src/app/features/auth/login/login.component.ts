@@ -72,6 +72,15 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private star!: THREE.Mesh;
   // ===================================================
 
+  // ========== THREE.JS - Nieve Fullscreen ==========
+  @ViewChild('snowCanvas', { static: false }) snowCanvasRef!: ElementRef<HTMLCanvasElement>;
+  private snowRenderer!: THREE.WebGLRenderer;
+  private snowScene!: THREE.Scene;
+  private snowCamera!: THREE.PerspectiveCamera;
+  private snowAnimationId: number = 0;
+  private fullscreenSnow!: THREE.Points;
+  // =================================================
+
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
@@ -235,12 +244,19 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
     }
-    // Limpiar Three.js
+    // Limpiar Three.js - Árbol
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
     if (this.renderer) {
       this.renderer.dispose();
+    }
+    // Limpiar Three.js - Nieve fullscreen
+    if (this.snowAnimationId) {
+      cancelAnimationFrame(this.snowAnimationId);
+    }
+    if (this.snowRenderer) {
+      this.snowRenderer.dispose();
     }
   }
 
@@ -553,6 +569,108 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // ================================================================
 
+  // ========== THREE.JS - Nieve Fullscreen ==========
+  private initFullscreenSnow(): void {
+    if (!this.snowCanvasRef || !this.showChristmasHat) return;
+
+    const canvas = this.snowCanvasRef.nativeElement;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Escena
+    this.snowScene = new THREE.Scene();
+
+    // Cámara ortográfica para efecto 2D
+    this.snowCamera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+    this.snowCamera.position.z = 5;
+
+    // Renderer
+    this.snowRenderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      alpha: true
+    });
+    this.snowRenderer.setSize(width, height);
+    this.snowRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.snowRenderer.setClearColor(0x000000, 0);
+
+    // Crear partículas de nieve
+    const particleCount = 500;
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 20;     // X: ancho de pantalla
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 15; // Y: alto de pantalla
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 10; // Z: profundidad
+      velocities[i] = 0.01 + Math.random() * 0.02;       // Velocidad individual
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 1));
+
+    const material = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.08,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true
+    });
+
+    this.fullscreenSnow = new THREE.Points(geometry, material);
+    this.snowScene.add(this.fullscreenSnow);
+
+    // Listener para resize
+    window.addEventListener('resize', () => this.onSnowResize());
+
+    // Iniciar animación
+    this.ngZone.runOutsideAngular(() => {
+      this.animateFullscreenSnow();
+    });
+  }
+
+  private onSnowResize(): void {
+    if (!this.snowRenderer || !this.snowCamera) return;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    this.snowCamera.aspect = width / height;
+    this.snowCamera.updateProjectionMatrix();
+    this.snowRenderer.setSize(width, height);
+  }
+
+  private animateFullscreenSnow(): void {
+    this.snowAnimationId = requestAnimationFrame(() => this.animateFullscreenSnow());
+
+    if (!this.fullscreenSnow) return;
+
+    const positions = this.fullscreenSnow.geometry.attributes['position'].array as Float32Array;
+    const velocities = this.fullscreenSnow.geometry.attributes['velocity'].array as Float32Array;
+    const time = Date.now() * 0.001;
+
+    for (let i = 0; i < positions.length; i += 3) {
+      const idx = i / 3;
+      // Caída con velocidad individual
+      positions[i + 1] -= velocities[idx];
+      // Movimiento lateral suave (viento)
+      positions[i] += Math.sin(time + idx * 0.1) * 0.003;
+
+      // Reiniciar partículas que caen abajo
+      if (positions[i + 1] < -8) {
+        positions[i + 1] = 8;
+        positions[i] = (Math.random() - 0.5) * 20;
+      }
+    }
+    this.fullscreenSnow.geometry.attributes['position'].needsUpdate = true;
+
+    // Rotación muy sutil
+    this.fullscreenSnow.rotation.y = Math.sin(time * 0.1) * 0.05;
+
+    this.snowRenderer.render(this.snowScene, this.snowCamera);
+  }
+  // =================================================
+
   private updateRobotMessage(): void {
     const username = this.loginForm.get('username')?.value;
     const password = this.loginForm.get('password')?.value;
@@ -612,10 +730,11 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     // Usar polling continuo para detectar autocompletado
     this.startAutofillPolling();
 
-    // Inicializar Three.js para el árbol 3D (solo en Navidad)
+    // Inicializar Three.js para el árbol 3D y nieve fullscreen (solo en Navidad)
     if (this.showChristmasHat) {
       setTimeout(() => {
         this.initThreeJS();
+        this.initFullscreenSnow();
       }, 100);
     }
   }
