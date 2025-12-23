@@ -1334,7 +1334,7 @@ body.light-theme .login-card .toggle-password mat-icon,
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: 100;
   overflow: hidden;
 }
 
@@ -2965,15 +2965,38 @@ body.light-theme .snowflake,
    Colores de adornos: Rojo, Dorado, Plateado
    ======================================== */
 
-/* ========== ÁRBOL 3D CON THREE.JS ========== */
-.christmas-tree-container {
+/* ========== MENSAJE NAVIDEÑO (IZQUIERDA) ========== */
+.christmas-greeting-container {
   position: fixed;
   top: 0;
   left: 0;
-  width: 50%;
+  width: 30%;
   height: 100vh;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  pointer-events: none;
+}
+
+.christmas-greeting {
+  position: relative;
+  text-align: center;
+  padding: 2rem;
+  pointer-events: auto;
+  animation: greetingFadeIn 1.5s ease-out forwards;
+  animation-delay: 0.5s;
+  opacity: 0;
+}
+
+/* ========== ÁRBOL 3D CON THREE.JS (DERECHA) ========== */
+.christmas-tree-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 40%;
+  height: 100vh;
+  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
@@ -2983,20 +3006,8 @@ body.light-theme .snowflake,
 
 .tree-canvas {
   width: 100%;
-  height: 60%;
+  height: 100%;
   display: block;
-}
-
-/* ========== MENSAJE NAVIDEÑO ========== */
-.christmas-greeting {
-  position: relative;
-  text-align: center;
-  padding: 1.5rem 2rem;
-  margin-top: -2rem;
-  pointer-events: auto;
-  animation: greetingFadeIn 1.5s ease-out forwards;
-  animation-delay: 0.5s;
-  opacity: 0;
 }
 
 @keyframes greetingFadeIn {
@@ -3788,7 +3799,10 @@ body.light-theme .snowflake,
 /* Responsive */
 @media (max-width: 1200px) {
   .christmas-tree-container {
-    width: 45%;
+    width: 35%;
+  }
+  .christmas-greeting-container {
+    width: 25%;
   }
   .christmas-tree {
     width: 280px;
@@ -3805,7 +3819,10 @@ body.light-theme .snowflake,
 
 @media (max-width: 900px) {
   .christmas-tree-container {
-    width: 40%;
+    width: 30%;
+  }
+  .christmas-greeting-container {
+    display: none;
   }
   .christmas-tree {
     transform: scale(0.7);
@@ -3823,6 +3840,9 @@ body.light-theme .snowflake,
 
 @media (max-width: 700px) {
   .christmas-tree-container {
+    display: none;
+  }
+  .christmas-greeting-container {
     display: none;
   }
 }

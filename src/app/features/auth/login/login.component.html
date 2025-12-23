@@ -1,8 +1,6 @@
 <div class="login-container" [class.christmas]="showChristmasHat" [class.newyear]="showNewYearTheme">
-  <!-- Árbol de Navidad 3D con Three.js -->
-  <div class="christmas-tree-container" *ngIf="showChristmasHat">
-    <canvas #treeCanvas class="tree-canvas"></canvas>
-    <!-- Mensaje Navideño -->
+  <!-- Mensaje Navideño (IZQUIERDA) -->
+  <div class="christmas-greeting-container" *ngIf="showChristmasHat">
     <div class="christmas-greeting">
       <div class="greeting-stars">✦ ✦ ✦</div>
       <h2 class="greeting-title">¡Feliz Navidad!</h2>
@@ -13,6 +11,11 @@
       <div class="greeting-ornament">🎄</div>
       <p class="greeting-wish">Que esta temporada esté llena de paz, alegría y éxito</p>
     </div>
+  </div>
+
+  <!-- Árbol de Navidad 3D con Three.js (DERECHA) -->
+  <div class="christmas-tree-container" *ngIf="showChristmasHat">
+    <canvas #treeCanvas class="tree-canvas"></canvas>
   </div>
 
   <!-- Copos de nieve dinámicos (Navidad) -->
