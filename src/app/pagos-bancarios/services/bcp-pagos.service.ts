@@ -1,8 +1,14 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from '../models/bcp-archivo.model';
+import {
+  BcpArchivoResultado,
+  BcpPagoManualRequest,
+  BcpPagoManualResponse,
+  BcpPagoManualFiltros,
+  BcpPagoManualListResponse
+} from '../models/bcp-archivo.model';
 
 @Injectable({
   providedIn: 'root'
@@ -42,5 +48,41 @@ export class BcpPagosService {
    */
   verificarEstado(): Observable<{ servicio: string; estado: string; version: string }> {
     return this.http.get<{ servicio: string; estado: string; version: string }>(`${this.baseUrl}/status`);
+  }
+
+  // ============== PAGOS MANUALES ==============
+
+  /**
+   * Lista pagos manuales con filtros y paginación
+   */
+  listarPagosManuales(filtros: BcpPagoManualFiltros = {}): Observable<BcpPagoManualListResponse> {
+    let params = new HttpParams();
+
+    if (filtros.documento) params = params.set('documento', filtros.documento);
+    if (filtros.banco) params = params.set('banco', filtros.banco);
+    if (filtros.medioAtencion) params = params.set('medioAtencion', filtros.medioAtencion);
+    if (filtros.fechaDesde) params = params.set('fechaDesde', filtros.fechaDesde);
+    if (filtros.fechaHasta) params = params.set('fechaHasta', filtros.fechaHasta);
+    if (filtros.page) params = params.set('page', filtros.page.toString());
+    if (filtros.size) params = params.set('size', filtros.size.toString());
+
+    console.log('[BCP] Listando pagos manuales con filtros:', filtros);
+    return this.http.get<BcpPagoManualListResponse>(`${this.baseUrl}/manuales`, { params });
+  }
+
+  /**
+   * Actualiza un pago manual
+   */
+  actualizarPagoManual(id: number, pago: BcpPagoManualRequest): Observable<BcpPagoManualResponse> {
+    console.log('[BCP] Actualizando pago manual ID:', id, pago);
+    return this.http.put<BcpPagoManualResponse>(`${this.baseUrl}/manuales/${id}`, pago);
+  }
+
+  /**
+   * Elimina un pago manual
+   */
+  eliminarPagoManual(id: number): Observable<BcpPagoManualResponse> {
+    console.log('[BCP] Eliminando pago manual ID:', id);
+    return this.http.delete<BcpPagoManualResponse>(`${this.baseUrl}/manuales/${id}`);
   }
 }

@@ -80,3 +80,49 @@ export interface BcpPagoManualResponse {
   monto?: number;
   numeroOperacion?: string;
 }
+
+/**
+ * Pago manual almacenado en BD
+ */
+export interface BcpPagoManual {
+  id: number;
+  documento: string;
+  codigoDepositante: string;
+  datoAdicionalDepositante?: string;
+  fechaBanco: string;
+  montoBanco: number;
+  numeroOperacion: string;
+  sucursal?: string;
+  agencia?: string;
+  terminal?: string;
+  medioAtencion?: string;
+  horaAtencion?: string;
+  banco: string;
+  procesado: boolean;
+  cuotaAplicadaId?: number;
+  referencia?: string;
+}
+
+/**
+ * Filtros para buscar pagos manuales
+ */
+export interface BcpPagoManualFiltros {
+  documento?: string;
+  banco?: string;
+  medioAtencion?: string;
+  fechaDesde?: string;
+  fechaHasta?: string;
+  page?: number;
+  size?: number;
+}
+
+/**
+ * Respuesta paginada de pagos manuales
+ */
+export interface BcpPagoManualListResponse {
+  data: BcpPagoManual[];
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+}

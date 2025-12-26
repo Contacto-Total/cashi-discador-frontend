@@ -1,8 +1,14 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BcpPagosService } from '../services/bcp-pagos.service';
-import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from '../models/bcp-archivo.model';
+import {
+  BcpArchivoResultado,
+  BcpPagoManualRequest,
+  BcpPagoManualResponse,
+  BcpPagoManual,
+  BcpPagoManualFiltros
+} from '../models/bcp-archivo.model';
 
 @Component({
   selector: 'app-pagos-bancarios',
@@ -37,7 +43,7 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
               Carga Masiva
             </button>
             <button
-              (click)="activeTab.set('manual')"
+              (click)="activeTab.set('manual'); cargarPagosManuales()"
               [class]="activeTab() === 'manual'
                 ? 'border-blue-500 text-blue-600 dark:text-blue-400'
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
@@ -186,12 +192,13 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
 
       <!-- Tab: Ingreso Manual -->
       @if (activeTab() === 'manual') {
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <!-- Formulario de registro -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
           <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-            Registrar Pago Manual
+            {{ editingPago() ? 'Editar Pago Manual' : 'Registrar Pago Manual' }}
           </h2>
 
-          <form (ngSubmit)="registrarPagoManual()" class="space-y-4">
+          <form (ngSubmit)="editingPago() ? actualizarPago() : registrarPagoManual()" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <!-- Documento -->
               <div>
@@ -289,7 +296,7 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
                   <option value="">Seleccionar...</option>
                   <option value="VENTANILLA">Ventanilla</option>
                   <option value="AGENTE BCP">Agente BCP</option>
-                  <option value="APP">App BCP</option>
+                  <option value="APP">App Móvil</option>
                   <option value="BANCA POR INTERNET">Banca por Internet</option>
                   <option value="OTRO">Otro</option>
                 </select>
@@ -310,24 +317,34 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
               </div>
             </div>
 
-            <!-- Botón Guardar -->
-            <div class="flex justify-end pt-4">
+            <!-- Botones -->
+            <div class="flex justify-end gap-3 pt-4">
+              @if (editingPago()) {
+                <button
+                  type="button"
+                  (click)="cancelarEdicion()"
+                  class="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancelar
+                </button>
+              }
               <button
                 type="submit"
                 [disabled]="isLoadingManual() || !pagoManual.documento || !pagoManual.fechaPago || !pagoManual.monto || !pagoManual.numeroOperacion"
-                class="px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                class="px-6 py-2.5 text-white rounded-lg font-medium disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                [class]="editingPago() ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'"
               >
                 @if (isLoadingManual()) {
                   <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                   </svg>
-                  Guardando...
+                  {{ editingPago() ? 'Actualizando...' : 'Guardando...' }}
                 } @else {
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                   </svg>
-                  Registrar Pago
+                  {{ editingPago() ? 'Actualizar Pago' : 'Registrar Pago' }}
                 }
               </button>
             </div>
@@ -345,11 +362,13 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
                 </svg>
                 <div>
                   <p class="font-medium text-green-800 dark:text-green-300">{{ resultadoManual()?.mensaje }}</p>
-                  <p class="text-sm text-green-700 dark:text-green-400">
-                    ID: <span class="font-mono font-bold">{{ resultadoManual()?.pagoId }}</span> -
-                    Doc: {{ resultadoManual()?.documento }} -
-                    S/ {{ formatMonto(resultadoManual()?.monto) }}
-                  </p>
+                  @if (resultadoManual()?.pagoId) {
+                    <p class="text-sm text-green-700 dark:text-green-400">
+                      ID: <span class="font-mono font-bold">{{ resultadoManual()?.pagoId }}</span> -
+                      Doc: {{ resultadoManual()?.documento }} -
+                      S/ {{ formatMonto(resultadoManual()?.monto) }}
+                    </p>
+                  }
                 </div>
               } @else {
                 <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -360,11 +379,253 @@ import { BcpArchivoResultado, BcpPagoManualRequest, BcpPagoManualResponse } from
             </div>
           }
         </div>
+
+        <!-- Historial de Pagos Manuales -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+            <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
+              Historial de Pagos Manuales
+            </h2>
+
+            <!-- Filtros -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Documento</label>
+                <input
+                  type="text"
+                  [(ngModel)]="filtros.documento"
+                  placeholder="Buscar DNI..."
+                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Desde</label>
+                <input
+                  type="date"
+                  [(ngModel)]="filtros.fechaDesde"
+                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+                <input
+                  type="date"
+                  [(ngModel)]="filtros.fechaHasta"
+                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Banco</label>
+                <select
+                  [(ngModel)]="filtros.banco"
+                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                >
+                  <option value="">Todos</option>
+                  <option value="BCP">BCP</option>
+                  <option value="INTERBANK">Interbank</option>
+                  <option value="BBVA">BBVA</option>
+                  <option value="SCOTIABANK">Scotiabank</option>
+                  <option value="BANBIF">BanBif</option>
+                  <option value="BANCO DE LA NACION">Banco de la Nación</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1">Medio</label>
+                <select
+                  [(ngModel)]="filtros.medioAtencion"
+                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                >
+                  <option value="">Todos</option>
+                  <option value="VENTANILLA">Ventanilla</option>
+                  <option value="AGENTE BCP">Agente BCP</option>
+                  <option value="APP">App Móvil</option>
+                  <option value="BANCA POR INTERNET">Banca por Internet</option>
+                  <option value="MANUAL">Manual</option>
+                  <option value="OTRO">Otro</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Botones de filtro -->
+            <div class="flex gap-2 mt-4">
+              <button
+                (click)="cargarPagosManuales()"
+                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                Buscar
+              </button>
+              <button
+                (click)="limpiarFiltros()"
+                class="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+
+          <!-- Contador de registros -->
+          <div class="px-4 py-2 bg-slate-50 dark:bg-slate-700/30 border-b border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400">
+            Mostrando {{ pagosManuales().length }} de {{ totalRegistros() }} registros
+          </div>
+
+          <!-- Tabla -->
+          @if (isLoadingList()) {
+            <div class="p-8 text-center">
+              <svg class="animate-spin h-8 w-8 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <p class="mt-2 text-slate-500">Cargando...</p>
+            </div>
+          } @else if (pagosManuales().length === 0) {
+            <div class="p-8 text-center text-slate-500">
+              <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              No hay pagos manuales registrados
+            </div>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-50 dark:bg-slate-700/50">
+                  <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Documento</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase">Monto</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nro. Op.</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Banco</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Medio</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                  @for (pago of pagosManuales(); track pago.id) {
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ pago.documento }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.fechaBanco }}</td>
+                      <td class="px-3 py-2 text-sm font-medium text-green-600 text-right">S/ {{ formatMonto(pago.montoBanco) }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.numeroOperacion }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.banco }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.medioAtencion || '-' }}</td>
+                      <td class="px-3 py-2 text-center">
+                        @if (pago.cuotaAplicadaId) {
+                          <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+                            Conciliado
+                          </span>
+                        } @else if (pago.procesado) {
+                          <span class="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
+                            Procesado
+                          </span>
+                        } @else {
+                          <span class="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 rounded-full">
+                            Pendiente
+                          </span>
+                        }
+                      </td>
+                      <td class="px-3 py-2 text-center">
+                        <div class="flex justify-center gap-1">
+                          <button
+                            (click)="editarPago(pago)"
+                            class="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                            title="Editar"
+                          >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                          </button>
+                          <button
+                            (click)="confirmarEliminar(pago)"
+                            [disabled]="pago.cuotaAplicadaId !== null && pago.cuotaAplicadaId !== undefined"
+                            class="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Eliminar"
+                          >
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Paginación -->
+            @if (totalPages() > 1) {
+              <div class="px-4 py-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <button
+                  (click)="cambiarPagina(currentPage() - 1)"
+                  [disabled]="currentPage() <= 1"
+                  class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Anterior
+                </button>
+                <span class="text-sm text-slate-600 dark:text-slate-400">
+                  Página {{ currentPage() }} de {{ totalPages() }}
+                </span>
+                <button
+                  (click)="cambiarPagina(currentPage() + 1)"
+                  [disabled]="currentPage() >= totalPages()"
+                  class="px-3 py-1.5 text-sm border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Siguiente
+                </button>
+              </div>
+            }
+          }
+        </div>
+      }
+
+      <!-- Modal de confirmación de eliminación -->
+      @if (showDeleteModal()) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div class="flex items-center gap-3 mb-4">
+              <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+              </div>
+              <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Confirmar eliminación</h3>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-6">
+              ¿Estás seguro de eliminar el pago de <strong>{{ pagoAEliminar()?.documento }}</strong> por <strong>S/ {{ formatMonto(pagoAEliminar()?.montoBanco) }}</strong>?
+              Esta acción no se puede deshacer.
+            </p>
+            <div class="flex justify-end gap-3">
+              <button
+                (click)="cancelarEliminar()"
+                class="px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                (click)="eliminarPago()"
+                [disabled]="isDeleting()"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 transition-colors flex items-center gap-2"
+              >
+                @if (isDeleting()) {
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                }
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
       }
     </div>
   `
 })
-export class PagosBancariosPage {
+export class PagosBancariosPage implements OnInit {
   // Tab activa
   activeTab = signal<'masiva' | 'manual'>('masiva');
 
@@ -386,8 +647,38 @@ export class PagosBancariosPage {
   };
   isLoadingManual = signal(false);
   resultadoManual = signal<BcpPagoManualResponse | null>(null);
+  editingPago = signal<BcpPagoManual | null>(null);
+
+  // Listado de pagos manuales
+  pagosManuales = signal<BcpPagoManual[]>([]);
+  isLoadingList = signal(false);
+  totalRegistros = signal(0);
+  currentPage = signal(1);
+  totalPages = signal(1);
+  pageSize = 25;
+
+  // Filtros
+  filtros: BcpPagoManualFiltros = {
+    documento: '',
+    banco: '',
+    medioAtencion: '',
+    fechaDesde: '',
+    fechaHasta: ''
+  };
+
+  // Modal de eliminación
+  showDeleteModal = signal(false);
+  pagoAEliminar = signal<BcpPagoManual | null>(null);
+  isDeleting = signal(false);
 
   constructor(private bcpService: BcpPagosService) {}
+
+  ngOnInit(): void {
+    // Cargar lista si estamos en el tab manual
+    if (this.activeTab() === 'manual') {
+      this.cargarPagosManuales();
+    }
+  }
 
   // === Carga Masiva ===
   onFileSelected(event: Event): void {
@@ -449,16 +740,8 @@ export class PagosBancariosPage {
       next: (resultado) => {
         this.resultadoManual.set(resultado);
         if (resultado.exitoso) {
-          // Limpiar formulario
-          this.pagoManual = {
-            documento: '',
-            fechaPago: '',
-            monto: 0,
-            numeroOperacion: '',
-            medioAtencion: '',
-            observaciones: '',
-            banco: 'BCP'
-          };
+          this.limpiarFormulario();
+          this.cargarPagosManuales();
         }
         this.isLoadingManual.set(false);
       },
@@ -468,6 +751,176 @@ export class PagosBancariosPage {
           mensaje: error.error?.mensaje || error.message || 'Error al registrar pago'
         });
         this.isLoadingManual.set(false);
+      }
+    });
+  }
+
+  // === Listado de pagos manuales ===
+  cargarPagosManuales(): void {
+    this.isLoadingList.set(true);
+
+    const filtros: BcpPagoManualFiltros = {
+      ...this.filtros,
+      page: this.currentPage(),
+      size: this.pageSize
+    };
+
+    // Limpiar filtros vacíos
+    if (!filtros.documento) delete filtros.documento;
+    if (!filtros.banco) delete filtros.banco;
+    if (!filtros.medioAtencion) delete filtros.medioAtencion;
+    if (!filtros.fechaDesde) delete filtros.fechaDesde;
+    if (!filtros.fechaHasta) delete filtros.fechaHasta;
+
+    this.bcpService.listarPagosManuales(filtros).subscribe({
+      next: (response) => {
+        this.pagosManuales.set(response.data);
+        this.totalRegistros.set(response.total);
+        this.totalPages.set(response.totalPages);
+        this.isLoadingList.set(false);
+      },
+      error: (error) => {
+        console.error('Error cargando pagos manuales:', error);
+        this.isLoadingList.set(false);
+      }
+    });
+  }
+
+  limpiarFiltros(): void {
+    this.filtros = {
+      documento: '',
+      banco: '',
+      medioAtencion: '',
+      fechaDesde: '',
+      fechaHasta: ''
+    };
+    this.currentPage.set(1);
+    this.cargarPagosManuales();
+  }
+
+  cambiarPagina(page: number): void {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
+      this.cargarPagosManuales();
+    }
+  }
+
+  // === Edición ===
+  editarPago(pago: BcpPagoManual): void {
+    this.editingPago.set(pago);
+
+    // Convertir fecha de dd/mm/yyyy a yyyy-mm-dd para el input date
+    let fechaFormateada = '';
+    if (pago.fechaBanco) {
+      const parts = pago.fechaBanco.split('/');
+      if (parts.length === 3) {
+        fechaFormateada = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    this.pagoManual = {
+      documento: pago.documento,
+      fechaPago: fechaFormateada,
+      monto: pago.montoBanco,
+      numeroOperacion: pago.numeroOperacion,
+      banco: pago.banco || 'BCP',
+      medioAtencion: pago.medioAtencion || '',
+      observaciones: pago.referencia || ''
+    };
+
+    this.resultadoManual.set(null);
+
+    // Scroll al formulario
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  actualizarPago(): void {
+    const pago = this.editingPago();
+    if (!pago) return;
+
+    this.isLoadingManual.set(true);
+    this.resultadoManual.set(null);
+
+    // Convertir fecha de yyyy-mm-dd a dd/mm/yyyy
+    const fechaParts = this.pagoManual.fechaPago.split('-');
+    const fechaFormateada = `${fechaParts[2]}/${fechaParts[1]}/${fechaParts[0]}`;
+
+    const request: BcpPagoManualRequest = {
+      ...this.pagoManual,
+      fechaPago: fechaFormateada
+    };
+
+    this.bcpService.actualizarPagoManual(pago.id, request).subscribe({
+      next: (resultado) => {
+        this.resultadoManual.set(resultado);
+        if (resultado.exitoso) {
+          this.cancelarEdicion();
+          this.cargarPagosManuales();
+        }
+        this.isLoadingManual.set(false);
+      },
+      error: (error) => {
+        this.resultadoManual.set({
+          exitoso: false,
+          mensaje: error.error?.mensaje || error.message || 'Error al actualizar pago'
+        });
+        this.isLoadingManual.set(false);
+      }
+    });
+  }
+
+  cancelarEdicion(): void {
+    this.editingPago.set(null);
+    this.limpiarFormulario();
+  }
+
+  limpiarFormulario(): void {
+    this.pagoManual = {
+      documento: '',
+      fechaPago: '',
+      monto: 0,
+      numeroOperacion: '',
+      medioAtencion: '',
+      observaciones: '',
+      banco: 'BCP'
+    };
+  }
+
+  // === Eliminación ===
+  confirmarEliminar(pago: BcpPagoManual): void {
+    this.pagoAEliminar.set(pago);
+    this.showDeleteModal.set(true);
+  }
+
+  cancelarEliminar(): void {
+    this.pagoAEliminar.set(null);
+    this.showDeleteModal.set(false);
+  }
+
+  eliminarPago(): void {
+    const pago = this.pagoAEliminar();
+    if (!pago) return;
+
+    this.isDeleting.set(true);
+
+    this.bcpService.eliminarPagoManual(pago.id).subscribe({
+      next: (resultado) => {
+        if (resultado.exitoso) {
+          this.cargarPagosManuales();
+          this.resultadoManual.set({ exitoso: true, mensaje: 'Pago eliminado correctamente' });
+        } else {
+          this.resultadoManual.set(resultado);
+        }
+        this.isDeleting.set(false);
+        this.cancelarEliminar();
+      },
+      error: (error) => {
+        this.resultadoManual.set({
+          exitoso: false,
+          mensaje: error.error?.mensaje || error.message || 'Error al eliminar pago'
+        });
+        this.isDeleting.set(false);
+        this.cancelarEliminar();
       }
     });
   }
