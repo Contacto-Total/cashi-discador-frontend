@@ -37,7 +37,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ========== TEMAS ESTACIONALES (automático por fecha) ==========
   // Navidad: 1 dic 12:00 - 25 dic 23:59
-  // Año Nuevo: 26 dic 12:00 - 3 ene 23:59
+  // Año Nuevo: 26 dic 00:00 - 3 ene 23:59
   showChristmasHat = false;
   showNewYearTheme = false;
 
@@ -109,8 +109,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
         this.showNewYearTheme = false;
         return;
       }
-      // Año Nuevo: 26 dic 12:00 - 31 dic 23:59
-      if ((day === 26 && hour >= 12) || (day > 26 && day <= 31)) {
+      // Año Nuevo: 26 dic 00:00 - 31 dic 23:59
+      if (day >= 26 && day <= 31) {
         this.showChristmasHat = false;
         this.showNewYearTheme = true;
         return;
