@@ -34,6 +34,20 @@ export class BcpPagosService {
   }
 
   /**
+   * Carga y procesa un archivo Excel de Financiera OH
+   * @param file Archivo Excel a procesar
+   * @returns Resultado con detalles de pagos
+   */
+  cargarArchivoOh(file: File): Observable<BcpArchivoResultado> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    console.log('[OH] Cargando archivo Excel:', file.name);
+
+    return this.http.post<BcpArchivoResultado>(`${this.baseUrl}/cargar-archivo-oh`, formData);
+  }
+
+  /**
    * Registra un pago de forma manual
    * @param pago Datos del pago manual
    * @returns Resultado del registro

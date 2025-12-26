@@ -22,7 +22,7 @@ import {
           Pagos Bancarios
         </h1>
         <p class="text-slate-600 dark:text-slate-400">
-          Registra pagos del BCP de forma manual o masiva
+          Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
         </p>
       </div>
 
@@ -53,6 +53,18 @@ import {
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
               Ingreso Manual
+            </button>
+            <button
+              (click)="activeTab.set('oh')"
+              [class]="activeTab() === 'oh'
+                ? 'border-purple-500 text-purple-600 dark:text-purple-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Carga OH
             </button>
           </nav>
         </div>
@@ -613,6 +625,137 @@ import {
         </div>
       }
 
+      <!-- Tab: Carga OH -->
+      @if (activeTab() === 'oh') {
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
+          <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+            <span class="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 text-xs font-medium rounded">
+              Financiera OH
+            </span>
+            Cargar Archivo Excel de Pagos
+          </h2>
+
+          <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div class="flex-1">
+              <label
+                for="file-upload-oh"
+                class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer
+                       border-purple-300 dark:border-purple-600 hover:border-purple-400 dark:hover:border-purple-500
+                       bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+              >
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg class="w-8 h-8 mb-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                  @if (selectedFileOh()) {
+                    <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">{{ selectedFileOh()?.name }}</p>
+                    <p class="text-xs text-slate-500">{{ formatFileSize(selectedFileOh()?.size || 0) }}</p>
+                  } @else {
+                    <p class="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                      <span class="font-semibold">Click para seleccionar</span> o arrastra el archivo
+                    </p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Archivos Excel (.xlsx, .xls)</p>
+                  }
+                </div>
+                <input id="file-upload-oh" type="file" class="hidden" accept=".xlsx,.xls" (change)="onFileSelectedOh($event)" />
+              </label>
+            </div>
+
+            <button
+              (click)="procesarArchivoOh()"
+              [disabled]="!selectedFileOh() || isLoadingOh()"
+              class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            >
+              @if (isLoadingOh()) {
+                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+                Procesando...
+              } @else {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Procesar Archivo
+              }
+            </button>
+          </div>
+
+          @if (errorMessageOh()) {
+            <div class="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p class="text-red-700 dark:text-red-400">{{ errorMessageOh() }}</p>
+            </div>
+          }
+        </div>
+
+        <!-- Resultados de carga OH -->
+        @if (resultadoOh()) {
+          @if (resultadoOh()?.exitoso && resultadoOh()?.archivoId) {
+            <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-3">
+              <svg class="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-green-800 dark:text-green-300">Archivo procesado correctamente</p>
+                <p class="text-sm text-green-700 dark:text-green-400">
+                  ID: <span class="font-mono font-bold">{{ resultadoOh()?.archivoId }}</span> - {{ resultadoOh()?.registrosProcesados }} registros
+                  @if (resultadoOh()?.duplicadosOmitidos && resultadoOh()!.duplicadosOmitidos > 0) {
+                    <span class="text-amber-600 dark:text-amber-400">({{ resultadoOh()?.duplicadosOmitidos }} duplicados omitidos)</span>
+                  }
+                </p>
+              </div>
+            </div>
+          }
+
+          @if (!resultadoOh()?.exitoso && resultadoOh()?.duplicadosOmitidos && resultadoOh()!.duplicadosOmitidos > 0) {
+            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
+              <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-amber-800 dark:text-amber-300">Todos los registros ya existen</p>
+                <p class="text-sm text-amber-700 dark:text-amber-400">{{ resultadoOh()?.duplicadosOmitidos }} registros duplicados</p>
+              </div>
+            </div>
+          }
+
+          <!-- Tabla de detalles OH -->
+          @if (resultadoOh()?.detalles && resultadoOh()!.detalles.length > 0) {
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos OH</h2>
+                <span class="text-sm text-slate-500">{{ resultadoOh()?.detalles?.length }} registros</span>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                  <thead class="bg-purple-50 dark:bg-purple-900/20">
+                    <tr>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">DNI</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Cuenta</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
+                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase">Monto</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Canal</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+                    @for (d of resultadoOh()?.detalles; track d.numeroFila) {
+                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ d.codigoDepositante }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ d.fechaPago }}</td>
+                        <td class="px-3 py-2 text-sm font-medium text-green-600 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ d.medioAtencion }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          }
+        }
+      }
+
       <!-- Modal de confirmación de eliminación -->
       @if (showDeleteModal()) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -658,13 +801,19 @@ import {
 })
 export class PagosBancariosPage implements OnInit {
   // Tab activa
-  activeTab = signal<'masiva' | 'manual'>('masiva');
+  activeTab = signal<'masiva' | 'manual' | 'oh'>('masiva');
 
-  // Carga Masiva
+  // Carga Masiva BCP
   selectedFile = signal<File | null>(null);
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   resultado = signal<BcpArchivoResultado | null>(null);
+
+  // Carga OH
+  selectedFileOh = signal<File | null>(null);
+  isLoadingOh = signal(false);
+  errorMessageOh = signal<string | null>(null);
+  resultadoOh = signal<BcpArchivoResultado | null>(null);
 
   // Ingreso Manual
   pagoManual: BcpPagoManualRequest = {
@@ -746,6 +895,45 @@ export class PagosBancariosPage implements OnInit {
       error: (error) => {
         this.errorMessage.set('Error: ' + (error.error?.message || error.message));
         this.isLoading.set(false);
+      }
+    });
+  }
+
+  // === Carga OH ===
+  onFileSelectedOh(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      const ext = file.name.toLowerCase();
+      if (!ext.endsWith('.xlsx') && !ext.endsWith('.xls')) {
+        this.errorMessageOh.set('Por favor seleccione un archivo Excel (.xlsx o .xls)');
+        this.selectedFileOh.set(null);
+        return;
+      }
+      this.selectedFileOh.set(file);
+      this.errorMessageOh.set(null);
+      this.resultadoOh.set(null);
+    }
+  }
+
+  procesarArchivoOh(): void {
+    const file = this.selectedFileOh();
+    if (!file) return;
+
+    this.isLoadingOh.set(true);
+    this.errorMessageOh.set(null);
+
+    this.bcpService.cargarArchivoOh(file).subscribe({
+      next: (resultado) => {
+        this.resultadoOh.set(resultado);
+        if (!resultado.exitoso) {
+          this.errorMessageOh.set(resultado.mensaje);
+        }
+        this.isLoadingOh.set(false);
+      },
+      error: (error) => {
+        this.errorMessageOh.set('Error: ' + (error.error?.message || error.message));
+        this.isLoadingOh.set(false);
       }
     });
   }
