@@ -233,6 +233,15 @@ export const routes: Routes = [
     loadComponent: () => import('./pagos-bancarios/pages/pagos-bancarios.page').then(m => m.PagosBancariosPage),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+
+  // ========================================
+  // COMISIONES
+  // ========================================
+  {
+    path: 'comisiones',
+    loadComponent: () => import('./comisiones/pages/comisiones.page').then(m => m.ComisionesPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
   {
     path: 'dashboard/payments',
     loadComponent: () => import('./pagos-bancarios/pages/payments-dashboard/payments-dashboard.component').then(m => m.PaymentsDashboardComponent),
