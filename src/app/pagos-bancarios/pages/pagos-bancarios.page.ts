@@ -192,13 +192,42 @@ import {
 
       <!-- Tab: Ingreso Manual -->
       @if (activeTab() === 'manual') {
-        <!-- Formulario de registro -->
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-          <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
-            {{ editingPago() ? 'Editar Pago Manual' : 'Registrar Pago Manual' }}
-          </h2>
+        <!-- Formulario de registro (colapsable) -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-6 overflow-hidden">
+          <!-- Header colapsable -->
+          <button
+            type="button"
+            (click)="toggleFormulario()"
+            class="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded-lg" [class]="editingPago() ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-100 dark:bg-blue-900/30'">
+                <svg class="w-5 h-5" [class]="editingPago() ? 'text-amber-600' : 'text-blue-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </div>
+              <div class="text-left">
+                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">
+                  {{ editingPago() ? 'Editar Pago Manual' : 'Registrar Pago Manual' }}
+                </h2>
+                <p class="text-sm text-slate-500">
+                  {{ formExpanded() ? 'Clic para minimizar' : 'Clic para expandir' }}
+                </p>
+              </div>
+            </div>
+            <svg
+              class="w-5 h-5 text-slate-400 transition-transform duration-200"
+              [class.rotate-180]="formExpanded()"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
 
-          <form (ngSubmit)="editingPago() ? actualizarPago() : registrarPagoManual()" class="space-y-4">
+          <!-- Contenido del formulario -->
+          @if (formExpanded()) {
+            <div class="px-6 pb-6 border-t border-slate-200 dark:border-slate-700">
+              <form (ngSubmit)="editingPago() ? actualizarPago() : registrarPagoManual()" class="space-y-4 pt-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <!-- Documento -->
               <div>
@@ -376,6 +405,8 @@ import {
                 </svg>
                 <p class="font-medium text-red-800 dark:text-red-300">{{ resultadoManual()?.mensaje }}</p>
               }
+            </div>
+          }
             </div>
           }
         </div>
@@ -648,6 +679,7 @@ export class PagosBancariosPage implements OnInit {
   isLoadingManual = signal(false);
   resultadoManual = signal<BcpPagoManualResponse | null>(null);
   editingPago = signal<BcpPagoManual | null>(null);
+  formExpanded = signal(false);
 
   // Listado de pagos manuales
   pagosManuales = signal<BcpPagoManual[]>([]);
@@ -719,6 +751,10 @@ export class PagosBancariosPage implements OnInit {
   }
 
   // === Ingreso Manual ===
+  toggleFormulario(): void {
+    this.formExpanded.set(!this.formExpanded());
+  }
+
   registrarPagoManual(): void {
     if (!this.pagoManual.documento || !this.pagoManual.fechaPago || !this.pagoManual.monto || !this.pagoManual.numeroOperacion) {
       return;
@@ -742,6 +778,7 @@ export class PagosBancariosPage implements OnInit {
         if (resultado.exitoso) {
           this.limpiarFormulario();
           this.cargarPagosManuales();
+          this.formExpanded.set(false);
         }
         this.isLoadingManual.set(false);
       },
@@ -808,6 +845,7 @@ export class PagosBancariosPage implements OnInit {
   // === Edición ===
   editarPago(pago: BcpPagoManual): void {
     this.editingPago.set(pago);
+    this.formExpanded.set(true);
 
     // Convertir fecha de dd/mm/yyyy a yyyy-mm-dd para el input date
     let fechaFormateada = '';
@@ -872,6 +910,7 @@ export class PagosBancariosPage implements OnInit {
   cancelarEdicion(): void {
     this.editingPago.set(null);
     this.limpiarFormulario();
+    this.formExpanded.set(false);
   }
 
   limpiarFormulario(): void {
