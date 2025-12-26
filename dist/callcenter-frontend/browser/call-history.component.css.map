@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/dialer/call-history/call-history.component.css"],
+  "sourcesContent": [".call-history-card {\r\n  height: 100%;\r\n}\r\n\r\n.no-history {\r\n  display: flex;\r\n  flex-direction: column;\r\n  align-items: center;\r\n  justify-content: center;\r\n  padding: 40px 20px;\r\n  color: #999;\r\n  gap: 12px;\r\n}\r\n\r\n.no-history mat-icon {\r\n  font-size: 48px;\r\n  width: 48px;\r\n  height: 48px;\r\n}\r\n\r\n.history-table {\r\n  width: 100%;\r\n  font-size: 13px;\r\n}\r\n\r\n.history-table td,\r\n.history-table th {\r\n  padding: 8px;\r\n}\r\n\r\n.history-table mat-icon {\r\n  font-size: 20px;\r\n  width: 20px;\r\n  height: 20px;\r\n}\r\n"],
+  "mappings": ";AAAA,CAAA;AACE,UAAA;AACF;AAEA,CAAA;AACE,WAAA;AACA,kBAAA;AACA,eAAA;AACA,mBAAA;AACA,WAAA,KAAA;AACA,SAAA;AACA,OAAA;AACF;AAEA,CAVA,WAUA;AACE,aAAA;AACA,SAAA;AACA,UAAA;AACF;AAEA,CAAA;AACE,SAAA;AACA,aAAA;AACF;AAEA,CALA,cAKA;CALA;AAOE,WAAA;AACF;AAEA,CAVA,cAUA;AACE,aAAA;AACA,SAAA;AACA,UAAA;AACF;",
+  "names": []
+}

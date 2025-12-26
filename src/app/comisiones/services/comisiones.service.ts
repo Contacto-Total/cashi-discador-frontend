@@ -7,6 +7,8 @@ import {
   ComisionBono,
   ComisionReporte,
   ComisionConfigResumen,
+  Inquilino,
+  Cartera,
   Subcartera
 } from '../models/comision.model';
 
@@ -19,13 +21,29 @@ export class ComisionesService {
 
   constructor(private http: HttpClient) {}
 
-  // ==================== SUBCARTERAS ====================
+  // ==================== INQUILINOS / CARTERAS / SUBCARTERAS ====================
 
   /**
-   * Obtener subcarteras disponibles
+   * Obtener inquilinos disponibles
    */
-  obtenerSubcarteras(): Observable<Subcartera[]> {
-    return this.http.get<Subcartera[]>(`${this.baseUrl}/subcarteras`);
+  obtenerInquilinos(): Observable<Inquilino[]> {
+    return this.http.get<Inquilino[]>(`${this.baseUrl}/inquilinos`);
+  }
+
+  /**
+   * Obtener carteras de un inquilino
+   */
+  obtenerCarteras(idInquilino: number): Observable<Cartera[]> {
+    const params = new HttpParams().set('idInquilino', idInquilino.toString());
+    return this.http.get<Cartera[]>(`${this.baseUrl}/carteras`, { params });
+  }
+
+  /**
+   * Obtener subcarteras de una cartera
+   */
+  obtenerSubcarteras(idCartera: number): Observable<Subcartera[]> {
+    const params = new HttpParams().set('idCartera', idCartera.toString());
+    return this.http.get<Subcartera[]>(`${this.baseUrl}/subcarteras`, { params });
   }
 
   // ==================== METAS ====================

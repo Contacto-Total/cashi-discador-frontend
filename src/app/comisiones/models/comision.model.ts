@@ -1,4 +1,27 @@
 /**
+ * Inquilino (tenant) para dropdown
+ */
+export interface Inquilino {
+  id: number;
+  codigoInquilino?: string;
+  nombreInquilino: string;
+  razonSocial?: string;
+  estaActivo?: boolean;
+}
+
+/**
+ * Cartera (portfolio) para dropdown
+ */
+export interface Cartera {
+  id: number;
+  codigoCartera?: string;
+  nombreCartera: string;
+  descripcion?: string;
+  idInquilino?: number;
+  estaActivo?: boolean;
+}
+
+/**
  * Subcartera para dropdown
  */
 export interface Subcartera {
@@ -6,6 +29,7 @@ export interface Subcartera {
   codigoSubcartera?: string;
   nombreSubcartera: string;
   descripcion?: string;
+  idCartera?: number;
   estaActivo?: boolean;
 }
 

@@ -9,6 +9,8 @@ import {
   ComisionBonoEscala,
   ComisionReporte,
   ComisionAgente,
+  Inquilino,
+  Cartera,
   Subcartera
 } from '../models/comision.model';
 
@@ -107,11 +109,29 @@ import {
               <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
                 {{ metaEditando()?.id ? 'Editar Meta' : 'Nueva Meta' }}
               </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
+                  <select [(ngModel)]="selectedInquilino" (change)="onInquilinoChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                    <option [value]="0">Seleccionar...</option>
+                    @for (inq of inquilinos(); track inq.id) {
+                      <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
+                    }
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+                  <select [(ngModel)]="selectedCartera" (change)="onCarteraChange()" [disabled]="!selectedInquilino" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                    <option [value]="0">Seleccionar...</option>
+                    @for (car of carteras(); track car.id) {
+                      <option [value]="car.id">{{ car.nombreCartera }}</option>
+                    }
+                  </select>
+                </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
-                  <select [(ngModel)]="metaEditando()!.idSubcartera" (change)="onSubcarteraChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
-                    <option [value]="0">Seleccionar subcartera...</option>
+                  <select [(ngModel)]="metaEditando()!.idSubcartera" (change)="onSubcarteraChange()" [disabled]="!selectedCartera" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                    <option [value]="0">Seleccionar...</option>
                     @for (sub of subcarteras(); track sub.id) {
                       <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
                     }
@@ -533,8 +553,12 @@ export class ComisionesPage implements OnInit {
   mensaje = signal('');
   mensajeError = signal(false);
 
-  // Subcarteras
+  // Inquilinos / Carteras / Subcarteras
+  inquilinos = signal<Inquilino[]>([]);
+  carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
+  selectedInquilino = 0;
+  selectedCartera = 0;
 
   // Metas
   metas = signal<ComisionMeta[]>([]);
@@ -574,18 +598,48 @@ export class ComisionesPage implements OnInit {
   constructor(public comisionesService: ComisionesService) {}
 
   ngOnInit() {
-    this.cargarSubcarteras();
+    this.cargarInquilinos();
     this.cargarMetas();
     this.cargarCamposDisponibles();
   }
 
-  // ==================== SUBCARTERAS ====================
+  // ==================== INQUILINOS / CARTERAS / SUBCARTERAS ====================
 
-  cargarSubcarteras() {
-    this.comisionesService.obtenerSubcarteras().subscribe({
-      next: (data) => this.subcarteras.set(data),
-      error: (err) => console.error('Error al cargar subcarteras:', err)
+  cargarInquilinos() {
+    this.comisionesService.obtenerInquilinos().subscribe({
+      next: (data) => this.inquilinos.set(data),
+      error: (err) => console.error('Error al cargar inquilinos:', err)
     });
+  }
+
+  onInquilinoChange() {
+    this.carteras.set([]);
+    this.subcarteras.set([]);
+    this.selectedCartera = 0;
+    if (this.metaEditando()) {
+      this.metaEditando.set({ ...this.metaEditando()!, idSubcartera: 0, nombreSubcartera: '' });
+    }
+
+    if (this.selectedInquilino) {
+      this.comisionesService.obtenerCarteras(this.selectedInquilino).subscribe({
+        next: (data) => this.carteras.set(data),
+        error: (err) => console.error('Error al cargar carteras:', err)
+      });
+    }
+  }
+
+  onCarteraChange() {
+    this.subcarteras.set([]);
+    if (this.metaEditando()) {
+      this.metaEditando.set({ ...this.metaEditando()!, idSubcartera: 0, nombreSubcartera: '' });
+    }
+
+    if (this.selectedCartera) {
+      this.comisionesService.obtenerSubcarteras(this.selectedCartera).subscribe({
+        next: (data) => this.subcarteras.set(data),
+        error: (err) => console.error('Error al cargar subcarteras:', err)
+      });
+    }
   }
 
   // ==================== METAS ====================
@@ -598,6 +652,10 @@ export class ComisionesPage implements OnInit {
   }
 
   nuevaMeta() {
+    this.selectedInquilino = 0;
+    this.selectedCartera = 0;
+    this.carteras.set([]);
+    this.subcarteras.set([]);
     this.metaEditando.set({
       idSubcartera: 0,
       nombreSubcartera: '',
@@ -675,6 +733,10 @@ export class ComisionesPage implements OnInit {
   cancelarMeta() {
     this.metaEditando.set(null);
     this.mostrarFormMeta.set(false);
+    this.selectedInquilino = 0;
+    this.selectedCartera = 0;
+    this.carteras.set([]);
+    this.subcarteras.set([]);
   }
 
   // ==================== BONOS ====================

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["payments-dashboard.component.ts"],
+  "sourcesContent": ["\n    :host {\n      display: block;\n    }\n  "],
+  "mappings": ";AACI;AACE,WAAA;AACF;",
+  "names": []
+}

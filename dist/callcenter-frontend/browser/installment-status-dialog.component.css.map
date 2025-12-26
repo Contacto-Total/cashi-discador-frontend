@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["installment-status-dialog.component.ts"],
+  "sourcesContent": ["\n    @keyframes fadeIn {\n      from { opacity: 0; }\n      to { opacity: 1; }\n    }\n\n    @keyframes slideInUp {\n      from {\n        opacity: 0;\n        transform: translateY(20px);\n      }\n      to {\n        opacity: 1;\n        transform: translateY(0);\n      }\n    }\n\n    .animate-fadeIn {\n      animation: fadeIn 0.2s ease-out;\n    }\n\n    .animate-slideInUp {\n      animation: slideInUp 0.3s ease-out;\n    }\n  "],
+  "mappings": ";AACI,WAAA;AACE;AAAO,aAAA;AAAY;AACnB;AAAK,aAAA;AAAY;AACnB;AAEA,WAAA;AACE;AACE,aAAA;AACA,eAAA,WAAA;AACF;AACA;AACE,aAAA;AACA,eAAA,WAAA;AACF;AACF;AAEA,CAAA;AACE,aAAA,OAAA,KAAA;AACF;AAEA,CAAA;AACE,aAAA,UAAA,KAAA;AACF;",
+  "names": []
+}
