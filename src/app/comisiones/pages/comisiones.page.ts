@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ComisionesService } from '../services/comisiones.service';
 import {
   ComisionMeta,
+  ComisionMetaEscala,
   ComisionBono,
   ComisionBonoEscala,
   ComisionReporte,
-  ComisionAgente
+  ComisionAgente,
+  Subcartera
 } from '../models/comision.model';
 
 @Component({
@@ -105,25 +107,59 @@ import {
               <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
                 {{ metaEditando()?.id ? 'Editar Meta' : 'Nueva Meta' }}
               </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera ID</label>
-                  <input type="number" [(ngModel)]="metaEditando()!.idSubcartera" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="ID Subcartera">
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre Subcartera</label>
-                  <input type="text" [(ngModel)]="metaEditando()!.nombreSubcartera" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Nombre">
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+                  <select [(ngModel)]="metaEditando()!.idSubcartera" (change)="onSubcarteraChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                    <option [value]="0">Seleccionar subcartera...</option>
+                    @for (sub of subcarteras(); track sub.id) {
+                      <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
+                    }
+                  </select>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Meta Grupal (S/)</label>
                   <input type="number" [(ngModel)]="metaEditando()!.metaGrupal" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="0.00">
                 </div>
-                <div>
-                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">% Comisión</label>
-                  <input type="number" step="0.01" [(ngModel)]="metaEditando()!.porcentajeComision" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="2.5">
+              </div>
+
+              <!-- Escalas de comisión -->
+              <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Escalas de Comisión (por % de cumplimiento)
+                  </label>
+                  <button (click)="agregarEscalaMeta()" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Agregar escala
+                  </button>
+                </div>
+                <div class="space-y-2">
+                  @for (escala of metaEditando()!.escalas; track $index; let i = $index) {
+                    <div class="flex gap-2 items-center flex-wrap">
+                      <span class="text-slate-500 text-sm">Desde</span>
+                      <input type="number" [(ngModel)]="escala.porcentajeDesde" class="w-20 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm" placeholder="0">
+                      <span class="text-slate-500 text-sm">% hasta</span>
+                      <input type="number" [(ngModel)]="escala.porcentajeHasta" class="w-20 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm" placeholder="100">
+                      <span class="text-slate-500 text-sm">% =</span>
+                      <span class="text-slate-500 text-sm">S/</span>
+                      <input type="number" step="0.01" [(ngModel)]="escala.montoComision" class="w-24 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm" placeholder="0.00">
+                      <button (click)="eliminarEscalaMeta(i)" class="text-red-500 hover:text-red-700 p-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  }
+                  @if (metaEditando()!.escalas.length === 0) {
+                    <p class="text-sm text-slate-400 italic">No hay escalas configuradas. Agrega al menos una escala.</p>
+                  }
                 </div>
               </div>
-              <div class="mt-4 flex gap-2">
+
+              <div class="flex gap-2">
                 <button (click)="guardarMeta()" [disabled]="isLoading()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-400 transition-colors">
                   {{ isLoading() ? 'Guardando...' : 'Guardar' }}
                 </button>
@@ -142,7 +178,7 @@ import {
                   <tr>
                     <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Subcartera</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Meta Grupal</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">% Comisión</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Escalas de Comisión</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
                   </tr>
@@ -156,8 +192,17 @@ import {
                       <td class="px-4 py-3 text-sm text-right text-green-600 font-semibold">
                         S/ {{ formatMonto(meta.metaGrupal) }}
                       </td>
-                      <td class="px-4 py-3 text-sm text-right text-slate-600 dark:text-slate-400">
-                        {{ meta.porcentajeComision || 0 }}%
+                      <td class="px-4 py-3 text-sm">
+                        <div class="flex flex-wrap gap-1">
+                          @for (escala of meta.escalas || []; track escala.id) {
+                            <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300">
+                              {{ escala.porcentajeDesde }}-{{ escala.porcentajeHasta || '100+' }}% = S/{{ escala.montoComision }}
+                            </span>
+                          }
+                          @if (!meta.escalas || meta.escalas.length === 0) {
+                            <span class="text-slate-400 italic text-xs">Sin escalas</span>
+                          }
+                        </div>
                       </td>
                       <td class="px-4 py-3 text-center">
                         <span [class]="meta.activo ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400'" class="px-2 py-1 rounded-full text-xs font-medium">
@@ -488,6 +533,9 @@ export class ComisionesPage implements OnInit {
   mensaje = signal('');
   mensajeError = signal(false);
 
+  // Subcarteras
+  subcarteras = signal<Subcartera[]>([]);
+
   // Metas
   metas = signal<ComisionMeta[]>([]);
   mostrarFormMeta = signal(false);
@@ -526,8 +574,18 @@ export class ComisionesPage implements OnInit {
   constructor(public comisionesService: ComisionesService) {}
 
   ngOnInit() {
+    this.cargarSubcarteras();
     this.cargarMetas();
     this.cargarCamposDisponibles();
+  }
+
+  // ==================== SUBCARTERAS ====================
+
+  cargarSubcarteras() {
+    this.comisionesService.obtenerSubcarteras().subscribe({
+      next: (data) => this.subcarteras.set(data),
+      error: (err) => console.error('Error al cargar subcarteras:', err)
+    });
   }
 
   // ==================== METAS ====================
@@ -546,15 +604,45 @@ export class ComisionesPage implements OnInit {
       anio: this.filtroAnio,
       mes: this.filtroMes,
       metaGrupal: 0,
-      porcentajeComision: 2.5,
+      escalas: [],
       activo: true
     });
     this.mostrarFormMeta.set(true);
   }
 
   editarMeta(meta: ComisionMeta) {
-    this.metaEditando.set({ ...meta });
+    this.metaEditando.set({
+      ...meta,
+      escalas: meta.escalas ? [...meta.escalas] : []
+    });
     this.mostrarFormMeta.set(true);
+  }
+
+  onSubcarteraChange() {
+    if (!this.metaEditando()) return;
+    const subcartera = this.subcarteras().find(s => s.id == this.metaEditando()!.idSubcartera);
+    if (subcartera) {
+      this.metaEditando.set({
+        ...this.metaEditando()!,
+        nombreSubcartera: subcartera.nombreSubcartera
+      });
+    }
+  }
+
+  agregarEscalaMeta() {
+    if (!this.metaEditando()) return;
+    const escalas = [...this.metaEditando()!.escalas, {
+      porcentajeDesde: 0,
+      porcentajeHasta: undefined,
+      montoComision: 0
+    }];
+    this.metaEditando.set({ ...this.metaEditando()!, escalas });
+  }
+
+  eliminarEscalaMeta(index: number) {
+    if (!this.metaEditando()) return;
+    const escalas = this.metaEditando()!.escalas.filter((_, i) => i !== index);
+    this.metaEditando.set({ ...this.metaEditando()!, escalas });
   }
 
   guardarMeta() {

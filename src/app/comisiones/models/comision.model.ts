@@ -1,4 +1,25 @@
 /**
+ * Subcartera para dropdown
+ */
+export interface Subcartera {
+  id: number;
+  codigoSubcartera?: string;
+  nombreSubcartera: string;
+  descripcion?: string;
+  estaActivo?: boolean;
+}
+
+/**
+ * Escala de comisión por porcentaje de cumplimiento de meta
+ */
+export interface ComisionMetaEscala {
+  id?: number;
+  porcentajeDesde: number;
+  porcentajeHasta?: number;
+  montoComision: number;
+}
+
+/**
  * Meta de comisión por subcartera/período
  */
 export interface ComisionMeta {
@@ -8,7 +29,7 @@ export interface ComisionMeta {
   anio: number;
   mes: number;
   metaGrupal: number;
-  porcentajeComision?: number;
+  escalas: ComisionMetaEscala[];
   activo?: boolean;
   fechaCreacion?: string;
   fechaActualizacion?: string;

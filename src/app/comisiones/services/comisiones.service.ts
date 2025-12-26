@@ -6,7 +6,8 @@ import {
   ComisionMeta,
   ComisionBono,
   ComisionReporte,
-  ComisionConfigResumen
+  ComisionConfigResumen,
+  Subcartera
 } from '../models/comision.model';
 
 @Injectable({
@@ -17,6 +18,15 @@ export class ComisionesService {
   private readonly baseUrl = `${environment.gatewayUrl}/comisiones`;
 
   constructor(private http: HttpClient) {}
+
+  // ==================== SUBCARTERAS ====================
+
+  /**
+   * Obtener subcarteras disponibles
+   */
+  obtenerSubcarteras(): Observable<Subcartera[]> {
+    return this.http.get<Subcartera[]>(`${this.baseUrl}/subcarteras`);
+  }
 
   // ==================== METAS ====================
 
