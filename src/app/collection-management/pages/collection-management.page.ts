@@ -3605,7 +3605,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         customerId: String(this.customerData().id),
         customerName: this.customerData().nombre_completo || '',
         customerDocument: this.customerData().numero_documento || '',
-        advisorId: 'ADV-001',
+        advisorId: String(currentUser?.id || 1),
+        idAgente: currentUser?.id || 1,
 
         // Multi-tenant fields
         tenantId: this.selectedTenantId!,

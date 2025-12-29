@@ -105,6 +105,7 @@ export interface CreateManagementRequest {
   customerName?: string;
   customerDocument?: string;
   advisorId: string;
+  idAgente?: number;  // ID numérico del agente para el backend
 
   // Multi-tenant fields
   tenantId: number;
