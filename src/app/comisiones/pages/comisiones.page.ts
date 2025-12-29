@@ -14,7 +14,6 @@ import {
   Subcartera
 } from '../models/comision.model';
 import * as XLSX from 'xlsx';
-import html2canvas from 'html2canvas-pro';
 
 @Component({
   selector: 'app-comisiones',
@@ -1006,121 +1005,29 @@ export class ComisionesPage implements OnInit {
     this.mostrarMensaje('Excel exportado correctamente', false);
   }
 
-  async exportarPdf() {
+  exportarPdf() {
     if (!this.reporte()) return;
 
-    const mes = this.mesesDisponibles.find(m => m.value === this.filtroMes)?.label || '';
+    this.isLoading.set(true);
+    const idSubcartera = this.reporteSubcartera || undefined;
 
-    // Crear contenedor temporal
-    const container = document.createElement('div');
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.top = '0';
-    container.style.width = '800px';
-    container.style.background = '#fff';
-    container.style.padding = '30px';
-    container.style.fontFamily = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
+    this.comisionesService.exportarPdf(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
+      next: (blob) => {
+        // Crear URL del blob y descargar
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Comisiones_${this.filtroAnio}_${this.filtroMes}.pdf`;
+        link.click();
+        window.URL.revokeObjectURL(url);
 
-    // Generar filas de la tabla
-    const filas = this.reporte()!.agentes.map(a => `
-      <tr>
-        <td style="padding: 10px; border: 1px solid #e2e8f0;">${a.nombreAgente || 'Agente ' + a.idAgente}</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0;">${a.nombreSubcartera || ''}</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">S/ ${this.formatMonto(a.recaudoTotal)}</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">S/ ${this.formatMonto(a.metaIndividual)}</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center;">${a.porcentajeCumplimiento?.toFixed(1)}%</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; color: #16a34a; font-weight: 600;">S/ ${this.formatMonto(a.comisionBase)}</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; color: #d97706;">S/ ${this.formatMonto(a.totalBonos)}</td>
-        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #7c3aed;">S/ ${this.formatMonto(a.totalComision)}</td>
-      </tr>
-    `).join('');
-
-    container.innerHTML = `
-      <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #7c3aed;">
-        <h1 style="color: #1e293b; font-size: 24px; margin: 0 0 5px 0;">Reporte de Comisiones</h1>
-        <p style="color: #64748b; font-size: 14px; margin: 0;">${mes} ${this.filtroAnio}</p>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; margin-bottom: 25px; gap: 15px;">
-        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #dbeafe; border: 1px solid #3b82f6;">
-          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Total Recaudo</div>
-          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</div>
-        </div>
-        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #dcfce7; border: 1px solid #22c55e;">
-          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Total Comisiones</div>
-          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</div>
-        </div>
-        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #fef3c7; border: 1px solid #f59e0b;">
-          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Total Bonos</div>
-          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</div>
-        </div>
-        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #f3e8ff; border: 1px solid #a855f7;">
-          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Agentes</div>
-          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">${this.reporte()!.totalAgentes}</div>
-        </div>
-      </div>
-
-      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-          <tr>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase;">Agente</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase;">Subcartera</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Recaudo</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Meta</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: center; font-size: 12px; text-transform: uppercase;">% Cumpl.</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Comision</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Bonos</th>
-            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filas}
-          <tr style="background: #1e293b; color: white; font-weight: bold;">
-            <td colspan="2" style="padding: 12px 10px; border: none;">TOTALES</td>
-            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</td>
-            <td style="padding: 12px 10px; border: none;"></td>
-            <td style="padding: 12px 10px; border: none;"></td>
-            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</td>
-            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</td>
-            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones + this.reporte()!.totalBonos)}</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 11px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-        Generado el ${new Date().toLocaleDateString('es-PE')} a las ${new Date().toLocaleTimeString('es-PE')}
-      </div>
-    `;
-
-    document.body.appendChild(container);
-
-    try {
-      // Capturar como imagen
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      // Crear PDF con la imagen usando jsPDF dinámico
-      const { jsPDF } = await import('jspdf');
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [canvas.width / 2, canvas.height / 2]
-      });
-
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
-      pdf.save(`Comisiones_${this.filtroAnio}_${this.filtroMes}.pdf`);
-
-      this.mostrarMensaje('PDF exportado correctamente', false);
-    } catch (error) {
-      console.error('Error al generar PDF:', error);
-      this.mostrarMensaje('Error al generar PDF', true);
-    } finally {
-      document.body.removeChild(container);
-    }
+        this.mostrarMensaje('PDF exportado correctamente', false);
+      },
+      error: (err) => {
+        console.error('Error al exportar PDF:', err);
+        this.mostrarMensaje('Error al exportar PDF', true);
+      },
+      complete: () => this.isLoading.set(false)
+    });
   }
 }

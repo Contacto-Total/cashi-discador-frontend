@@ -193,4 +193,24 @@ export class ComisionesService {
     ];
     return meses[mes - 1] || '';
   }
+
+  // ==================== EXPORTAR ====================
+
+  /**
+   * Exportar reporte de comisiones en PDF
+   */
+  exportarPdf(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
+    let params = new HttpParams()
+      .set('anio', anio.toString())
+      .set('mes', mes.toString());
+
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera.toString());
+    }
+
+    return this.http.get(`${this.baseUrl}/exportar-pdf`, {
+      params,
+      responseType: 'blob'
+    });
+  }
 }
