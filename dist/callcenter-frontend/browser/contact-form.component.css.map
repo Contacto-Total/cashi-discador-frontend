@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["contact-form.component.ts"],
-  "sourcesContent": [".container { padding: 24px; max-width: 800px; margin: 0 auto; } .full-width { width: 100%; display: block; margin-bottom: 16px; } .actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }"],
-  "mappings": ";AAAA,CAAA;AAAa,WAAA;AAAe,aAAA;AAAkB,UAAA,EAAA;AAAgB;AAAE,CAAA;AAAc,SAAA;AAAa,WAAA;AAAgB,iBAAA;AAAqB;AAAE,CAAA;AAAW,WAAA;AAAe,mBAAA;AAA2B,OAAA;AAAW,cAAA;AAAkB;",
-  "names": []
-}

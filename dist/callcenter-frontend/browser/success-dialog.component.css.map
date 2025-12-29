@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["success-dialog.component.ts"],
-  "sourcesContent": ["\n  .wrap{padding:28px 24px 24px; text-align:center; min-width:260px}\n  .icon{display:flex; justify-content:center; margin-bottom:10px}\n  .ring{fill:#e8f5ef; stroke:#2ea56a; stroke-width:0.5}\n  .tick{fill:none; stroke:#2ea56a; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round}\n  .title{margin:8px 0 4px; font-weight:700}\n  .msg{margin:0; color:#555}\n  "],
-  "mappings": ";AACE,CAAA;AAAM,WAAA,KAAA,KAAA;AAAwB,cAAA;AAAmB,aAAA;AAAe;AAChE,CAAA;AAAM,WAAA;AAAc,mBAAA;AAAwB,iBAAA;AAAkB;AAC9D,CAAA;AAAM,QAAA;AAAc,UAAA;AAAgB,gBAAA;AAAgB;AACpD,CAAA;AAAM,QAAA;AAAW,UAAA;AAAgB,gBAAA;AAAkB,kBAAA;AAAsB,mBAAA;AAAqB;AAC9F,CAAA;AAAO,UAAA,IAAA,EAAA;AAAkB,eAAA;AAAe;AACxC,CAAA;AAAK,UAAA;AAAU,SAAA;AAAU;",
-  "names": []
-}

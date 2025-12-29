@@ -14,8 +14,8 @@ import {
   Subcartera
 } from '../models/comision.model';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 @Component({
   selector: 'app-comisiones',
@@ -1036,7 +1036,7 @@ export class ComisionesPage implements OnInit {
       `S/ ${this.formatMonto(a.totalComision)}`
     ]);
 
-    autoTable(doc, {
+    (doc as any).autoTable({
       startY: 55,
       head: [['Agente', 'Subcartera', 'Recaudo', 'Meta', '% Cumpl.', 'Comisión', 'Bonos', 'Total']],
       body: tableData,

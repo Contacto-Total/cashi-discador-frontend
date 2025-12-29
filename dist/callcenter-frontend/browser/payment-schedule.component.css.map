@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["payment-schedule.component.ts"],
-  "sourcesContent": ["\n    @keyframes fadeIn {\n      from {\n        opacity: 0;\n        transform: translateY(-5px);\n      }\n      to {\n        opacity: 1;\n        transform: translateY(0);\n      }\n    }\n\n    .animate-fade-in {\n      animation: fadeIn 0.3s ease-out forwards;\n    }\n\n    /* Date input styling for dark mode */\n    input[type=\"date\"]::-webkit-calendar-picker-indicator {\n      filter: invert(0);\n    }\n\n    :host-context(html.dark) input[type=\"date\"]::-webkit-calendar-picker-indicator {\n      filter: invert(1);\n    }\n\n    /* Number input arrows */\n    input[type=\"number\"]::-webkit-inner-spin-button,\n    input[type=\"number\"]::-webkit-outer-spin-button {\n      opacity: 1;\n    }\n  "],
-  "mappings": ";AACI,WAAA;AACE;AACE,aAAA;AACA,eAAA,WAAA;AACF;AACA;AACE,aAAA;AACA,eAAA,WAAA;AACF;AACF;AAEA,CAAA;AACE,aAAA,OAAA,KAAA,SAAA;AACF;AAGA,KAAA,CAAA,UAAA;AACE,UAAA,OAAA;AACF;AAEA,cAAA,IAAA,CAAA,MAAA,KAAA,CAAA,UAAA;AACE,UAAA,OAAA;AACF;AAGA,KAAA,CAAA,YAAA;;AAEE,WAAA;AACF;",
-  "names": []
-}

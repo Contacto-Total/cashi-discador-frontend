@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["src/environments/environment.ts"],
-  "sourcesContent": ["export const environment = {\r\n  production: true,\r\n\r\n  // API Gateway - URLs absolutas para producción\r\n  apiUrl: 'https://cobranza.contactototal.com.pe/api',\r\n  gatewayUrl: 'https://cobranza.contactototal.com.pe/api',\r\n  wsUrl: 'https://cobranza.contactototal.com.pe/ws',\r\n\r\n  // Web Service Backend (catch-all route)\r\n  webServiceUrl: 'https://cobranza.contactototal.com.pe/web-service',\r\n\r\n  // Tipificación Backend\r\n  tipificacionUrl: 'https://cobranza.contactototal.com.pe/api/tipificacion/v1',\r\n\r\n  // WhatsApp Backend\r\n  whatsappApiUrl: 'https://cobranza.contactototal.com.pe/wsp-api',\r\n  whatsappWsUrl: 'https://cobranza.contactototal.com.pe/wsp-ws',\r\n\r\n  // Legacy API - Módulos antiguos (campaña, reportes, SMS, etc.)\r\n  legacyApiUrl: 'https://huge-only-marmoset.ngrok-free.app/api',\r\n\r\n  // FreeSWITCH on AWS - WebSocket SIP over SSL (port 7443)\r\n  freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',\r\n  freeswitchDomain: 'cobranza.contactototal.com.pe',\r\n\r\n  // Scraper Service\r\n  scraperServiceUrl: 'cobranza.contactototal.com.pe:8090'\r\n};\r\n\r\n"],
-  "mappings": ";AAAO,IAAM,cAAc;EACzB,YAAY;;EAGZ,QAAQ;EACR,YAAY;EACZ,OAAO;;EAGP,eAAe;;EAGf,iBAAiB;;EAGjB,gBAAgB;EAChB,eAAe;;EAGf,cAAc;;EAGd,iBAAiB;EACjB,kBAAkB;;EAGlB,mBAAmB;;",
-  "names": []
-}

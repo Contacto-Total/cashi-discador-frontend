@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["session-warning-modal.component.ts"],
-  "sourcesContent": ["\n    .session-warning-dialog {\n      min-width: 400px;\n      padding: 20px;\n    }\n\n    .warning-header {\n      display: flex;\n      align-items: center;\n      gap: 12px;\n      margin-bottom: 16px;\n    }\n\n    .warning-icon {\n      font-size: 48px;\n      width: 48px;\n      height: 48px;\n      color: #ff9800;\n    }\n\n    h2 {\n      margin: 0;\n      color: #333;\n    }\n\n    .warning-message {\n      font-size: 16px;\n      margin-bottom: 12px;\n      color: #555;\n    }\n\n    .countdown {\n      font-size: 18px;\n      margin: 16px 0;\n      text-align: center;\n    }\n\n    .countdown strong {\n      color: #f44336;\n      font-size: 24px;\n    }\n\n    mat-progress-bar {\n      margin: 16px 0;\n    }\n\n    mat-dialog-actions {\n      padding-top: 16px;\n      gap: 8px;\n    }\n\n    button mat-icon {\n      margin-right: 8px;\n    }\n  "],
-  "mappings": ";AACI,CAAA;AACE,aAAA;AACA,WAAA;AACF;AAEA,CAAA;AACE,WAAA;AACA,eAAA;AACA,OAAA;AACA,iBAAA;AACF;AAEA,CAAA;AACE,aAAA;AACA,SAAA;AACA,UAAA;AACA,SAAA;AACF;AAEA;AACE,UAAA;AACA,SAAA;AACF;AAEA,CAAA;AACE,aAAA;AACA,iBAAA;AACA,SAAA;AACF;AAEA,CAAA;AACE,aAAA;AACA,UAAA,KAAA;AACA,cAAA;AACF;AAEA,CANA,UAMA;AACE,SAAA;AACA,aAAA;AACF;AAEA;AACE,UAAA,KAAA;AACF;AAEA;AACE,eAAA;AACA,OAAA;AACF;AAEA,OAAA;AACE,gBAAA;AACF;",
-  "names": []
-}
