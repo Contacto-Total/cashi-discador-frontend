@@ -409,6 +409,33 @@ import {
                 }
               </select>
             </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
+              <select [(ngModel)]="reporteInquilino" (change)="onReporteInquilinoChange()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                <option [value]="0">Todos</option>
+                @for (inq of inquilinos(); track inq.id) {
+                  <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+              <select [(ngModel)]="reporteCartera" (change)="onReporteCarteraChange()" [disabled]="!reporteInquilino" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                <option [value]="0">Todas</option>
+                @for (car of reporteCarteras(); track car.id) {
+                  <option [value]="car.id">{{ car.nombreCartera }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+              <select [(ngModel)]="reporteSubcartera" [disabled]="!reporteCartera" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                <option [value]="0">Todas</option>
+                @for (sub of reporteSubcarteras(); track sub.id) {
+                  <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
+                }
+              </select>
+            </div>
             <button (click)="calcularComisiones()" [disabled]="isLoading()" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-slate-400 transition-colors flex items-center gap-2">
               @if (isLoading()) {
                 <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
@@ -574,6 +601,11 @@ export class ComisionesPage implements OnInit {
   // Reporte
   reporte = signal<ComisionReporte | null>(null);
   agenteExpandido = signal<number | null>(null);
+  reporteInquilino = 0;
+  reporteCartera = 0;
+  reporteSubcartera = 0;
+  reporteCarteras = signal<Cartera[]>([]);
+  reporteSubcarteras = signal<Subcartera[]>([]);
 
   // Filtros
   filtroAnio = new Date().getFullYear();
@@ -637,6 +669,34 @@ export class ComisionesPage implements OnInit {
     if (this.selectedCartera) {
       this.comisionesService.obtenerSubcarteras(this.selectedCartera).subscribe({
         next: (data) => this.subcarteras.set(data),
+        error: (err) => console.error('Error al cargar subcarteras:', err)
+      });
+    }
+  }
+
+  // ==================== REPORTE FILTROS ====================
+
+  onReporteInquilinoChange() {
+    this.reporteCarteras.set([]);
+    this.reporteSubcarteras.set([]);
+    this.reporteCartera = 0;
+    this.reporteSubcartera = 0;
+
+    if (this.reporteInquilino) {
+      this.comisionesService.obtenerCarteras(this.reporteInquilino).subscribe({
+        next: (data) => this.reporteCarteras.set(data),
+        error: (err) => console.error('Error al cargar carteras:', err)
+      });
+    }
+  }
+
+  onReporteCarteraChange() {
+    this.reporteSubcarteras.set([]);
+    this.reporteSubcartera = 0;
+
+    if (this.reporteCartera) {
+      this.comisionesService.obtenerSubcarteras(this.reporteCartera).subscribe({
+        next: (data) => this.reporteSubcarteras.set(data),
         error: (err) => console.error('Error al cargar subcarteras:', err)
       });
     }
@@ -825,7 +885,8 @@ export class ComisionesPage implements OnInit {
     this.isLoading.set(true);
     this.reporte.set(null);
 
-    this.comisionesService.calcularComisiones(this.filtroAnio, this.filtroMes).subscribe({
+    const idSubcartera = this.reporteSubcartera || undefined;
+    this.comisionesService.calcularComisiones(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
       next: (data) => {
         this.reporte.set(data);
         if (data.agentes.length === 0) {
