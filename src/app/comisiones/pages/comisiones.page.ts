@@ -766,8 +766,14 @@ export class ComisionesPage implements OnInit {
   guardarMeta() {
     if (!this.metaEditando()) return;
 
+    // Asegurar que idSubcartera sea número (select devuelve string)
+    const meta = {
+      ...this.metaEditando()!,
+      idSubcartera: Number(this.metaEditando()!.idSubcartera)
+    };
+
     this.isLoading.set(true);
-    this.comisionesService.guardarMeta(this.metaEditando()!).subscribe({
+    this.comisionesService.guardarMeta(meta).subscribe({
       next: () => {
         this.mostrarMensaje('Meta guardada correctamente', false);
         this.cargarMetas();
