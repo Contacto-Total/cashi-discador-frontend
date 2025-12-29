@@ -13,7 +13,6 @@ import {
   Cartera,
   Subcartera
 } from '../models/comision.model';
-import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-comisiones',
@@ -972,37 +971,26 @@ export class ComisionesPage implements OnInit {
   exportarExcel() {
     if (!this.reporte()) return;
 
-    const data = this.reporte()!.agentes.map(a => ({
-      'Agente': a.nombreAgente || `Agente ${a.idAgente}`,
-      'Subcartera': a.nombreSubcartera || '',
-      'Recaudo (S/)': a.recaudoTotal,
-      'Meta (S/)': a.metaIndividual,
-      '% Cumplimiento': a.porcentajeCumplimiento,
-      'Comisión Base (S/)': a.comisionBase,
-      'Bonos (S/)': a.totalBonos,
-      'Total (S/)': a.totalComision
-    }));
+    this.isLoading.set(true);
+    const idSubcartera = this.reporteSubcartera || undefined;
 
-    // Agregar fila de totales
-    data.push({
-      'Agente': 'TOTALES',
-      'Subcartera': '',
-      'Recaudo (S/)': this.reporte()!.totalRecaudo,
-      'Meta (S/)': 0,
-      '% Cumplimiento': 0,
-      'Comisión Base (S/)': this.reporte()!.totalComisiones,
-      'Bonos (S/)': this.reporte()!.totalBonos,
-      'Total (S/)': this.reporte()!.totalComisiones + this.reporte()!.totalBonos
+    this.comisionesService.exportarExcel(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Comisiones_${this.filtroAnio}_${this.filtroMes}.xlsx`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+
+        this.mostrarMensaje('Excel exportado correctamente', false);
+      },
+      error: (err) => {
+        console.error('Error al exportar Excel:', err);
+        this.mostrarMensaje('Error al exportar Excel', true);
+      },
+      complete: () => this.isLoading.set(false)
     });
-
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Comisiones');
-
-    const nombreArchivo = `Comisiones_${this.filtroAnio}_${this.filtroMes}.xlsx`;
-    XLSX.writeFile(wb, nombreArchivo);
-
-    this.mostrarMensaje('Excel exportado correctamente', false);
   }
 
   exportarPdf() {

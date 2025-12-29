@@ -213,4 +213,22 @@ export class ComisionesService {
       responseType: 'blob'
     });
   }
+
+  /**
+   * Exportar reporte de comisiones en Excel
+   */
+  exportarExcel(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
+    let params = new HttpParams()
+      .set('anio', anio.toString())
+      .set('mes', mes.toString());
+
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera.toString());
+    }
+
+    return this.http.get(`${this.baseUrl}/exportar-excel`, {
+      params,
+      responseType: 'blob'
+    });
+  }
 }
