@@ -79,6 +79,7 @@ export interface ComisionBono {
   campoEvaluar: string;
   valorBuscar: string;
   idSubcartera?: number;
+  nombreSubcartera?: string;
   activo?: boolean;
   escalas: ComisionBonoEscala[];
   fechaCreacion?: string;

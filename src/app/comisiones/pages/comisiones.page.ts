@@ -289,7 +289,7 @@ import {
               <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
                 {{ bonoEditando()?.id ? 'Editar Bono' : 'Nuevo Bono' }}
               </h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nombre del Bono</label>
                   <input type="text" [(ngModel)]="bonoEditando()!.nombre" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Ej: Bono LTD T5">
@@ -297,6 +297,33 @@ import {
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción</label>
                   <input type="text" [(ngModel)]="bonoEditando()!.descripcion" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Descripción opcional">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
+                  <select [(ngModel)]="bonoSelectedInquilino" (change)="onBonoInquilinoChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                    <option [value]="0">Todos (aplica a todas)</option>
+                    @for (inq of inquilinos(); track inq.id) {
+                      <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
+                    }
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+                  <select [(ngModel)]="bonoSelectedCartera" (change)="onBonoCarteraChange()" [disabled]="!bonoSelectedInquilino" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                    <option [value]="0">Seleccionar...</option>
+                    @for (car of bonoCarteras(); track car.id) {
+                      <option [value]="car.id">{{ car.nombreCartera }}</option>
+                    }
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+                  <select [(ngModel)]="bonoEditando()!.idSubcartera" (change)="onBonoSubcarteraChange()" [disabled]="!bonoSelectedCartera" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                    <option [value]="0">Todas (aplica a todas)</option>
+                    @for (sub of bonoSubcarteras(); track sub.id) {
+                      <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
+                    }
+                  </select>
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Campo a Evaluar</label>
@@ -359,7 +386,18 @@ import {
                 <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4">
                   <div class="flex justify-between items-start">
                     <div>
-                      <h4 class="font-semibold text-slate-800 dark:text-white">{{ bono.nombre }}</h4>
+                      <div class="flex items-center gap-2">
+                        <h4 class="font-semibold text-slate-800 dark:text-white">{{ bono.nombre }}</h4>
+                        @if (bono.nombreSubcartera) {
+                          <span class="px-2 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded text-xs">
+                            {{ bono.nombreSubcartera }}
+                          </span>
+                        } @else {
+                          <span class="px-2 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 rounded text-xs">
+                            Todas las subcarteras
+                          </span>
+                        }
+                      </div>
                       <p class="text-sm text-slate-600 dark:text-slate-400">
                         {{ comisionesService.getNombreCampo(bono.campoEvaluar) }} = "{{ bono.valorBuscar }}"
                       </p>
@@ -629,6 +667,10 @@ export class ComisionesPage implements OnInit {
   mostrarFormBono = signal(false);
   bonoEditando = signal<ComisionBono | null>(null);
   camposDisponibles = signal<string[]>([]);
+  bonoSelectedInquilino = 0;
+  bonoSelectedCartera = 0;
+  bonoCarteras = signal<Cartera[]>([]);
+  bonoSubcarteras = signal<Subcartera[]>([]);
 
   // Reporte
   reporte = signal<ComisionReporte | null>(null);
@@ -884,11 +926,17 @@ export class ComisionesPage implements OnInit {
   }
 
   nuevoBono() {
+    this.bonoSelectedInquilino = 0;
+    this.bonoSelectedCartera = 0;
+    this.bonoCarteras.set([]);
+    this.bonoSubcarteras.set([]);
     this.bonoEditando.set({
       nombre: '',
       descripcion: '',
       campoEvaluar: '',
       valorBuscar: '',
+      idSubcartera: undefined,
+      nombreSubcartera: undefined,
       activo: true,
       escalas: []
     });
@@ -901,6 +949,36 @@ export class ComisionesPage implements OnInit {
       escalas: bono.escalas ? [...bono.escalas] : []
     });
     this.mostrarFormBono.set(true);
+
+    // Cargar jerarquía para pre-seleccionar inquilino/cartera
+    if (bono.idSubcartera) {
+      this.comisionesService.obtenerJerarquiaSubcartera(bono.idSubcartera).subscribe({
+        next: (jerarquia) => {
+          this.bonoSelectedInquilino = jerarquia.idInquilino;
+          this.bonoSelectedCartera = jerarquia.idCartera;
+
+          // Cargar carteras del inquilino
+          this.comisionesService.obtenerCarteras(jerarquia.idInquilino).subscribe({
+            next: (carteras) => {
+              this.bonoCarteras.set(carteras);
+
+              // Cargar subcarteras de la cartera
+              this.comisionesService.obtenerSubcarteras(jerarquia.idCartera).subscribe({
+                next: (subcarteras) => this.bonoSubcarteras.set(subcarteras),
+                error: (err) => console.error('Error al cargar subcarteras:', err)
+              });
+            },
+            error: (err) => console.error('Error al cargar carteras:', err)
+          });
+        },
+        error: (err) => console.error('Error al cargar jerarquía:', err)
+      });
+    } else {
+      this.bonoSelectedInquilino = 0;
+      this.bonoSelectedCartera = 0;
+      this.bonoCarteras.set([]);
+      this.bonoSubcarteras.set([]);
+    }
   }
 
   agregarEscala() {
@@ -918,8 +996,15 @@ export class ComisionesPage implements OnInit {
   guardarBono() {
     if (!this.bonoEditando()) return;
 
+    // Convertir idSubcartera 0 a null para que aplique a todas
+    const bono = {
+      ...this.bonoEditando()!,
+      idSubcartera: this.bonoEditando()!.idSubcartera ? Number(this.bonoEditando()!.idSubcartera) : null,
+      nombreSubcartera: this.bonoEditando()!.idSubcartera ? this.bonoEditando()!.nombreSubcartera : null
+    };
+
     this.isLoading.set(true);
-    this.comisionesService.guardarBono(this.bonoEditando()!).subscribe({
+    this.comisionesService.guardarBono(bono).subscribe({
       next: () => {
         this.mostrarMensaje('Bono guardado correctamente', false);
         this.cargarBonos();
@@ -945,6 +1030,57 @@ export class ComisionesPage implements OnInit {
   cancelarBono() {
     this.bonoEditando.set(null);
     this.mostrarFormBono.set(false);
+    this.bonoSelectedInquilino = 0;
+    this.bonoSelectedCartera = 0;
+    this.bonoCarteras.set([]);
+    this.bonoSubcarteras.set([]);
+  }
+
+  onBonoInquilinoChange() {
+    this.bonoCarteras.set([]);
+    this.bonoSubcarteras.set([]);
+    this.bonoSelectedCartera = 0;
+    if (this.bonoEditando()) {
+      this.bonoEditando.set({ ...this.bonoEditando()!, idSubcartera: undefined, nombreSubcartera: undefined });
+    }
+
+    if (this.bonoSelectedInquilino) {
+      this.comisionesService.obtenerCarteras(this.bonoSelectedInquilino).subscribe({
+        next: (data) => this.bonoCarteras.set(data),
+        error: (err) => console.error('Error al cargar carteras:', err)
+      });
+    }
+  }
+
+  onBonoCarteraChange() {
+    this.bonoSubcarteras.set([]);
+    if (this.bonoEditando()) {
+      this.bonoEditando.set({ ...this.bonoEditando()!, idSubcartera: undefined, nombreSubcartera: undefined });
+    }
+
+    if (this.bonoSelectedCartera) {
+      this.comisionesService.obtenerSubcarteras(this.bonoSelectedCartera).subscribe({
+        next: (data) => this.bonoSubcarteras.set(data),
+        error: (err) => console.error('Error al cargar subcarteras:', err)
+      });
+    }
+  }
+
+  onBonoSubcarteraChange() {
+    if (!this.bonoEditando()) return;
+    const subcartera = this.bonoSubcarteras().find(s => s.id == this.bonoEditando()!.idSubcartera);
+    if (subcartera) {
+      this.bonoEditando.set({
+        ...this.bonoEditando()!,
+        nombreSubcartera: subcartera.nombreSubcartera
+      });
+    } else {
+      this.bonoEditando.set({
+        ...this.bonoEditando()!,
+        idSubcartera: undefined,
+        nombreSubcartera: undefined
+      });
+    }
   }
 
   // ==================== REPORTE ====================
