@@ -474,13 +474,19 @@ import * as XLSX from 'xlsx';
               </div>
             </div>
 
-            <!-- Botón de exportación -->
+            <!-- Botones de exportación -->
             <div class="flex gap-2 mb-4">
               <button (click)="exportarExcel()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 Exportar Excel
+              </button>
+              <button (click)="exportarPdf()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                Exportar PDF
               </button>
             </div>
 
@@ -997,5 +1003,128 @@ export class ComisionesPage implements OnInit {
     XLSX.writeFile(wb, nombreArchivo);
 
     this.mostrarMensaje('Excel exportado correctamente', false);
+  }
+
+  exportarPdf() {
+    if (!this.reporte()) return;
+
+    const mes = this.mesesDisponibles.find(m => m.value === this.filtroMes)?.label || '';
+
+    // Generar filas de la tabla
+    const filas = this.reporte()!.agentes.map(a => `
+      <tr>
+        <td style="padding: 10px; border: 1px solid #e2e8f0;">${a.nombreAgente || 'Agente ' + a.idAgente}</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0;">${a.nombreSubcartera || ''}</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">S/ ${this.formatMonto(a.recaudoTotal)}</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right;">S/ ${this.formatMonto(a.metaIndividual)}</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: center;">${a.porcentajeCumplimiento?.toFixed(1)}%</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; color: #16a34a; font-weight: 600;">S/ ${this.formatMonto(a.comisionBase)}</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; color: #d97706;">S/ ${this.formatMonto(a.totalBonos)}</td>
+        <td style="padding: 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #7c3aed;">S/ ${this.formatMonto(a.totalComision)}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Reporte de Comisiones - ${mes} ${this.filtroAnio}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background: #fff; }
+          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #7c3aed; }
+          .header h1 { color: #1e293b; font-size: 24px; margin-bottom: 5px; }
+          .header p { color: #64748b; font-size: 14px; }
+          .summary { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 15px; }
+          .summary-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; }
+          .summary-card.recaudo { background: #dbeafe; border: 1px solid #3b82f6; }
+          .summary-card.comision { background: #dcfce7; border: 1px solid #22c55e; }
+          .summary-card.bonos { background: #fef3c7; border: 1px solid #f59e0b; }
+          .summary-card.agentes { background: #f3e8ff; border: 1px solid #a855f7; }
+          .summary-card .label { font-size: 12px; color: #475569; margin-bottom: 5px; }
+          .summary-card .value { font-size: 20px; font-weight: bold; color: #1e293b; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th { background: #7c3aed; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase; }
+          th:nth-child(n+3) { text-align: right; }
+          th:nth-child(5) { text-align: center; }
+          tr:nth-child(even) { background: #f8fafc; }
+          tr:hover { background: #f1f5f9; }
+          .footer { margin-top: 30px; text-align: center; color: #94a3b8; font-size: 11px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+          .totals-row { background: #1e293b !important; color: white; font-weight: bold; }
+          .totals-row td { padding: 12px 10px; border: none; }
+          @media print {
+            body { padding: 15px; }
+            .summary-card { padding: 10px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Reporte de Comisiones</h1>
+          <p>${mes} ${this.filtroAnio}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-card recaudo">
+            <div class="label">Total Recaudo</div>
+            <div class="value">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</div>
+          </div>
+          <div class="summary-card comision">
+            <div class="label">Total Comisiones</div>
+            <div class="value">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</div>
+          </div>
+          <div class="summary-card bonos">
+            <div class="label">Total Bonos</div>
+            <div class="value">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</div>
+          </div>
+          <div class="summary-card agentes">
+            <div class="label">Agentes</div>
+            <div class="value">${this.reporte()!.totalAgentes}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th>Subcartera</th>
+              <th>Recaudo</th>
+              <th>Meta</th>
+              <th>% Cumpl.</th>
+              <th>Comision</th>
+              <th>Bonos</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filas}
+            <tr class="totals-row">
+              <td colspan="2">TOTALES</td>
+              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</td>
+              <td></td>
+              <td></td>
+              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</td>
+              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</td>
+              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones + this.reporte()!.totalBonos)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generado el ${new Date().toLocaleDateString('es-PE')} a las ${new Date().toLocaleTimeString('es-PE')}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Abrir ventana de impresión
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
   }
 }
