@@ -13,6 +13,9 @@ import {
   Cartera,
   Subcartera
 } from '../models/comision.model';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
   selector: 'app-comisiones',
@@ -471,6 +474,22 @@ import {
                 <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Agentes</p>
                 <p class="text-2xl font-bold text-purple-800 dark:text-purple-300">{{ reporte()!.totalAgentes }}</p>
               </div>
+            </div>
+
+            <!-- Botones de exportación -->
+            <div class="flex gap-2 mb-4">
+              <button (click)="exportarExcel()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Exportar Excel
+              </button>
+              <button (click)="exportarPdf()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+                Exportar PDF
+              </button>
             </div>
 
             <!-- Tabla de agentes -->
@@ -948,5 +967,86 @@ export class ComisionesPage implements OnInit {
     this.mensaje.set(msg);
     this.mensajeError.set(error);
     setTimeout(() => this.mensaje.set(''), 4000);
+  }
+
+  // ==================== EXPORTACIÓN ====================
+
+  exportarExcel() {
+    if (!this.reporte()) return;
+
+    const data = this.reporte()!.agentes.map(a => ({
+      'Agente': a.nombreAgente || `Agente ${a.idAgente}`,
+      'Subcartera': a.nombreSubcartera || '',
+      'Recaudo (S/)': a.recaudoTotal,
+      'Meta (S/)': a.metaIndividual,
+      '% Cumplimiento': a.porcentajeCumplimiento,
+      'Comisión Base (S/)': a.comisionBase,
+      'Bonos (S/)': a.totalBonos,
+      'Total (S/)': a.totalComision
+    }));
+
+    // Agregar fila de totales
+    data.push({
+      'Agente': 'TOTALES',
+      'Subcartera': '',
+      'Recaudo (S/)': this.reporte()!.totalRecaudo,
+      'Meta (S/)': 0,
+      '% Cumplimiento': 0,
+      'Comisión Base (S/)': this.reporte()!.totalComisiones,
+      'Bonos (S/)': this.reporte()!.totalBonos,
+      'Total (S/)': this.reporte()!.totalComisiones + this.reporte()!.totalBonos
+    });
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Comisiones');
+
+    const nombreArchivo = `Comisiones_${this.filtroAnio}_${this.filtroMes}.xlsx`;
+    XLSX.writeFile(wb, nombreArchivo);
+
+    this.mostrarMensaje('Excel exportado correctamente', false);
+  }
+
+  exportarPdf() {
+    if (!this.reporte()) return;
+
+    const doc = new jsPDF();
+    const mes = this.mesesDisponibles.find(m => m.value === this.filtroMes)?.label || '';
+
+    // Título
+    doc.setFontSize(16);
+    doc.text(`Reporte de Comisiones - ${mes} ${this.filtroAnio}`, 14, 20);
+
+    // Resumen
+    doc.setFontSize(10);
+    doc.text(`Total Recaudo: S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}`, 14, 30);
+    doc.text(`Total Comisiones: S/ ${this.formatMonto(this.reporte()!.totalComisiones)}`, 14, 36);
+    doc.text(`Total Bonos: S/ ${this.formatMonto(this.reporte()!.totalBonos)}`, 14, 42);
+    doc.text(`Total Agentes: ${this.reporte()!.totalAgentes}`, 14, 48);
+
+    // Tabla
+    const tableData = this.reporte()!.agentes.map(a => [
+      a.nombreAgente || `Agente ${a.idAgente}`,
+      a.nombreSubcartera || '',
+      `S/ ${this.formatMonto(a.recaudoTotal)}`,
+      `S/ ${this.formatMonto(a.metaIndividual)}`,
+      `${a.porcentajeCumplimiento?.toFixed(1)}%`,
+      `S/ ${this.formatMonto(a.comisionBase)}`,
+      `S/ ${this.formatMonto(a.totalBonos)}`,
+      `S/ ${this.formatMonto(a.totalComision)}`
+    ]);
+
+    autoTable(doc, {
+      startY: 55,
+      head: [['Agente', 'Subcartera', 'Recaudo', 'Meta', '% Cumpl.', 'Comisión', 'Bonos', 'Total']],
+      body: tableData,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [79, 70, 229] }
+    });
+
+    const nombreArchivo = `Comisiones_${this.filtroAnio}_${this.filtroMes}.pdf`;
+    doc.save(nombreArchivo);
+
+    this.mostrarMensaje('PDF exportado correctamente', false);
   }
 }
