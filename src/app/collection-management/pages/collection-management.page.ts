@@ -3610,7 +3610,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Multi-tenant fields
         tenantId: this.selectedTenantId!,
         portfolioId: this.selectedPortfolioId || 1,
-        subPortfolioId: 1,
+        subPortfolioId: this.selectedSubPortfolioId || 1,
 
         // Phone from customer data
         phone: this.customerData().contacto?.telefono_principal || '',
