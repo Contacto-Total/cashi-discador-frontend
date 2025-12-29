@@ -14,6 +14,7 @@ import {
   Subcartera
 } from '../models/comision.model';
 import * as XLSX from 'xlsx';
+import html2canvas from 'html2canvas-pro';
 
 @Component({
   selector: 'app-comisiones',
@@ -1005,10 +1006,20 @@ export class ComisionesPage implements OnInit {
     this.mostrarMensaje('Excel exportado correctamente', false);
   }
 
-  exportarPdf() {
+  async exportarPdf() {
     if (!this.reporte()) return;
 
     const mes = this.mesesDisponibles.find(m => m.value === this.filtroMes)?.label || '';
+
+    // Crear contenedor temporal
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '800px';
+    container.style.background = '#fff';
+    container.style.padding = '30px';
+    container.style.fontFamily = 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif';
 
     // Generar filas de la tabla
     const filas = this.reporte()!.agentes.map(a => `
@@ -1024,107 +1035,92 @@ export class ComisionesPage implements OnInit {
       </tr>
     `).join('');
 
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Reporte de Comisiones - ${mes} ${this.filtroAnio}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background: #fff; }
-          .header { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #7c3aed; }
-          .header h1 { color: #1e293b; font-size: 24px; margin-bottom: 5px; }
-          .header p { color: #64748b; font-size: 14px; }
-          .summary { display: flex; justify-content: space-between; margin-bottom: 25px; gap: 15px; }
-          .summary-card { flex: 1; padding: 15px; border-radius: 8px; text-align: center; }
-          .summary-card.recaudo { background: #dbeafe; border: 1px solid #3b82f6; }
-          .summary-card.comision { background: #dcfce7; border: 1px solid #22c55e; }
-          .summary-card.bonos { background: #fef3c7; border: 1px solid #f59e0b; }
-          .summary-card.agentes { background: #f3e8ff; border: 1px solid #a855f7; }
-          .summary-card .label { font-size: 12px; color: #475569; margin-bottom: 5px; }
-          .summary-card .value { font-size: 20px; font-weight: bold; color: #1e293b; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #7c3aed; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase; }
-          th:nth-child(n+3) { text-align: right; }
-          th:nth-child(5) { text-align: center; }
-          tr:nth-child(even) { background: #f8fafc; }
-          tr:hover { background: #f1f5f9; }
-          .footer { margin-top: 30px; text-align: center; color: #94a3b8; font-size: 11px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-          .totals-row { background: #1e293b !important; color: white; font-weight: bold; }
-          .totals-row td { padding: 12px 10px; border: none; }
-          @media print {
-            body { padding: 15px; }
-            .summary-card { padding: 10px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>Reporte de Comisiones</h1>
-          <p>${mes} ${this.filtroAnio}</p>
-        </div>
+    container.innerHTML = `
+      <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #7c3aed;">
+        <h1 style="color: #1e293b; font-size: 24px; margin: 0 0 5px 0;">Reporte de Comisiones</h1>
+        <p style="color: #64748b; font-size: 14px; margin: 0;">${mes} ${this.filtroAnio}</p>
+      </div>
 
-        <div class="summary">
-          <div class="summary-card recaudo">
-            <div class="label">Total Recaudo</div>
-            <div class="value">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</div>
-          </div>
-          <div class="summary-card comision">
-            <div class="label">Total Comisiones</div>
-            <div class="value">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</div>
-          </div>
-          <div class="summary-card bonos">
-            <div class="label">Total Bonos</div>
-            <div class="value">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</div>
-          </div>
-          <div class="summary-card agentes">
-            <div class="label">Agentes</div>
-            <div class="value">${this.reporte()!.totalAgentes}</div>
-          </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 25px; gap: 15px;">
+        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #dbeafe; border: 1px solid #3b82f6;">
+          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Total Recaudo</div>
+          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</div>
         </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>Agente</th>
-              <th>Subcartera</th>
-              <th>Recaudo</th>
-              <th>Meta</th>
-              <th>% Cumpl.</th>
-              <th>Comision</th>
-              <th>Bonos</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filas}
-            <tr class="totals-row">
-              <td colspan="2">TOTALES</td>
-              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</td>
-              <td></td>
-              <td></td>
-              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</td>
-              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</td>
-              <td style="text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones + this.reporte()!.totalBonos)}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="footer">
-          Generado el ${new Date().toLocaleDateString('es-PE')} a las ${new Date().toLocaleTimeString('es-PE')}
+        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #dcfce7; border: 1px solid #22c55e;">
+          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Total Comisiones</div>
+          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</div>
         </div>
-      </body>
-      </html>
+        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #fef3c7; border: 1px solid #f59e0b;">
+          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Total Bonos</div>
+          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</div>
+        </div>
+        <div style="flex: 1; padding: 15px; border-radius: 8px; text-align: center; background: #f3e8ff; border: 1px solid #a855f7;">
+          <div style="font-size: 12px; color: #475569; margin-bottom: 5px;">Agentes</div>
+          <div style="font-size: 20px; font-weight: bold; color: #1e293b;">${this.reporte()!.totalAgentes}</div>
+        </div>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+        <thead>
+          <tr>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase;">Agente</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: left; font-size: 12px; text-transform: uppercase;">Subcartera</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Recaudo</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Meta</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: center; font-size: 12px; text-transform: uppercase;">% Cumpl.</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Comision</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Bonos</th>
+            <th style="background: #7c3aed; color: white; padding: 12px 10px; text-align: right; font-size: 12px; text-transform: uppercase;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filas}
+          <tr style="background: #1e293b; color: white; font-weight: bold;">
+            <td colspan="2" style="padding: 12px 10px; border: none;">TOTALES</td>
+            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalRecaudo)}</td>
+            <td style="padding: 12px 10px; border: none;"></td>
+            <td style="padding: 12px 10px; border: none;"></td>
+            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones)}</td>
+            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalBonos)}</td>
+            <td style="padding: 12px 10px; border: none; text-align: right;">S/ ${this.formatMonto(this.reporte()!.totalComisiones + this.reporte()!.totalBonos)}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top: 30px; text-align: center; color: #94a3b8; font-size: 11px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+        Generado el ${new Date().toLocaleDateString('es-PE')} a las ${new Date().toLocaleTimeString('es-PE')}
+      </div>
     `;
 
-    // Abrir ventana de impresión
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+    document.body.appendChild(container);
+
+    try {
+      // Capturar como imagen
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+
+      // Crear PDF con la imagen usando jsPDF dinámico
+      const { jsPDF } = await import('jspdf');
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'px',
+        format: [canvas.width / 2, canvas.height / 2]
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`Comisiones_${this.filtroAnio}_${this.filtroMes}.pdf`);
+
+      this.mostrarMensaje('PDF exportado correctamente', false);
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      this.mostrarMensaje('Error al generar PDF', true);
+    } finally {
+      document.body.removeChild(container);
     }
   }
 }
