@@ -53,6 +53,7 @@ export interface ComisionMeta {
   anio: number;
   mes: number;
   metaGrupal: number;
+  tipoMetrica?: string; // RECAUDO, CAPITAL_LIBERADO
   escalas: ComisionMetaEscala[];
   activo?: boolean;
   fechaCreacion?: string;

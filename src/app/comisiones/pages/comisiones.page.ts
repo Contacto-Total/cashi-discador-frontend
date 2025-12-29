@@ -141,6 +141,14 @@ import {
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Meta Grupal (S/)</label>
                   <input type="number" [(ngModel)]="metaEditando()!.metaGrupal" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="0.00">
                 </div>
+                <div>
+                  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tipo de Metrica</label>
+                  <select [(ngModel)]="metaEditando()!.tipoMetrica" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                    @for (tipo of tiposMetrica; track tipo.value) {
+                      <option [value]="tipo.value">{{ tipo.label }}</option>
+                    }
+                  </select>
+                </div>
               </div>
 
               <!-- Escalas de comisión -->
@@ -198,6 +206,7 @@ import {
                   <tr>
                     <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Subcartera</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Meta Grupal</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Tipo</th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Escalas de Comisión</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
                     <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
@@ -211,6 +220,13 @@ import {
                       </td>
                       <td class="px-4 py-3 text-sm text-right text-green-600 font-semibold">
                         S/ {{ formatMonto(meta.metaGrupal) }}
+                      </td>
+                      <td class="px-4 py-3 text-sm text-center">
+                        <span [class]="meta.tipoMetrica === 'CAPITAL_LIBERADO'
+                          ? 'px-2 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded-full text-xs font-medium'
+                          : 'px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full text-xs font-medium'">
+                          {{ meta.tipoMetrica === 'CAPITAL_LIBERADO' ? 'Capital' : 'Recaudo' }}
+                        </span>
                       </td>
                       <td class="px-4 py-3 text-sm">
                         <div class="flex flex-wrap gap-1">
@@ -628,6 +644,10 @@ export class ComisionesPage implements OnInit {
   filtroMes = new Date().getMonth() + 1;
 
   aniosDisponibles = [2024, 2025, 2026];
+  tiposMetrica = [
+    { value: 'RECAUDO', label: 'Recaudo (Pagos Validados)' },
+    { value: 'CAPITAL_LIBERADO', label: 'Capital Liberado (PDP Pagadas)' }
+  ];
   mesesDisponibles = [
     { value: 1, label: 'Enero' },
     { value: 2, label: 'Febrero' },
@@ -738,6 +758,7 @@ export class ComisionesPage implements OnInit {
       anio: this.filtroAnio,
       mes: this.filtroMes,
       metaGrupal: 0,
+      tipoMetrica: 'RECAUDO',
       escalas: [],
       activo: true
     });
