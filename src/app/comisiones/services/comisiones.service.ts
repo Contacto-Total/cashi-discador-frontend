@@ -134,6 +134,14 @@ export class ComisionesService {
     return this.http.get<string[]>(`${this.baseUrl}/bonos/campos-disponibles`);
   }
 
+  /**
+   * Obtener valores únicos de un campo para el dropdown de bonos
+   */
+  obtenerValoresCampo(campo: string): Observable<string[]> {
+    const params = new HttpParams().set('campo', campo);
+    return this.http.get<string[]>(`${this.baseUrl}/bonos/valores-campo`, { params });
+  }
+
   // ==================== CÁLCULO ====================
 
   /**

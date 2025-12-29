@@ -327,7 +327,7 @@ import {
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Campo a Evaluar</label>
-                  <select [(ngModel)]="bonoEditando()!.campoEvaluar" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                  <select [(ngModel)]="bonoEditando()!.campoEvaluar" (change)="onCampoEvaluarChange()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
                     <option value="">Seleccionar campo...</option>
                     @for (campo of camposDisponibles(); track campo) {
                       <option [value]="campo">{{ comisionesService.getNombreCampo(campo) }}</option>
@@ -336,7 +336,18 @@ import {
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Valor a Buscar</label>
-                  <input type="text" [(ngModel)]="bonoEditando()!.valorBuscar" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white" placeholder="Ej: ltd_t5">
+                  <select [(ngModel)]="bonoEditando()!.valorBuscar" [disabled]="!bonoEditando()!.campoEvaluar || cargandoValores()" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                    @if (cargandoValores()) {
+                      <option value="">Cargando valores...</option>
+                    } @else if (!bonoEditando()!.campoEvaluar) {
+                      <option value="">Primero seleccione un campo</option>
+                    } @else {
+                      <option value="">Seleccionar valor...</option>
+                      @for (valor of valoresCampo(); track valor) {
+                        <option [value]="valor">{{ valor }}</option>
+                      }
+                    }
+                  </select>
                 </div>
               </div>
 
@@ -667,6 +678,8 @@ export class ComisionesPage implements OnInit {
   mostrarFormBono = signal(false);
   bonoEditando = signal<ComisionBono | null>(null);
   camposDisponibles = signal<string[]>([]);
+  valoresCampo = signal<string[]>([]);
+  cargandoValores = signal(false);
   bonoSelectedInquilino = 0;
   bonoSelectedCartera = 0;
   bonoCarteras = signal<Cartera[]>([]);
@@ -930,6 +943,7 @@ export class ComisionesPage implements OnInit {
     this.bonoSelectedCartera = 0;
     this.bonoCarteras.set([]);
     this.bonoSubcarteras.set([]);
+    this.valoresCampo.set([]);
     this.bonoEditando.set({
       nombre: '',
       descripcion: '',
@@ -949,6 +963,23 @@ export class ComisionesPage implements OnInit {
       escalas: bono.escalas ? [...bono.escalas] : []
     });
     this.mostrarFormBono.set(true);
+
+    // Cargar valores del campo si existe
+    if (bono.campoEvaluar) {
+      this.cargandoValores.set(true);
+      this.comisionesService.obtenerValoresCampo(bono.campoEvaluar).subscribe({
+        next: (valores) => {
+          this.valoresCampo.set(valores);
+          this.cargandoValores.set(false);
+        },
+        error: (err) => {
+          console.error('Error al cargar valores del campo:', err);
+          this.cargandoValores.set(false);
+        }
+      });
+    } else {
+      this.valoresCampo.set([]);
+    }
 
     // Cargar jerarquía para pre-seleccionar inquilino/cartera
     if (bono.idSubcartera) {
@@ -1034,6 +1065,7 @@ export class ComisionesPage implements OnInit {
     this.bonoSelectedCartera = 0;
     this.bonoCarteras.set([]);
     this.bonoSubcarteras.set([]);
+    this.valoresCampo.set([]);
   }
 
   onBonoInquilinoChange() {
@@ -1079,6 +1111,30 @@ export class ComisionesPage implements OnInit {
         ...this.bonoEditando()!,
         idSubcartera: undefined,
         nombreSubcartera: undefined
+      });
+    }
+  }
+
+  onCampoEvaluarChange() {
+    if (!this.bonoEditando()) return;
+
+    const campo = this.bonoEditando()!.campoEvaluar;
+
+    // Limpiar valor anterior y lista de valores
+    this.bonoEditando.set({ ...this.bonoEditando()!, valorBuscar: '' });
+    this.valoresCampo.set([]);
+
+    if (campo) {
+      this.cargandoValores.set(true);
+      this.comisionesService.obtenerValoresCampo(campo).subscribe({
+        next: (valores) => {
+          this.valoresCampo.set(valores);
+          this.cargandoValores.set(false);
+        },
+        error: (err) => {
+          console.error('Error al cargar valores del campo:', err);
+          this.cargandoValores.set(false);
+        }
       });
     }
   }
