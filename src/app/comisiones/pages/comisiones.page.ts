@@ -996,11 +996,11 @@ export class ComisionesPage implements OnInit {
   guardarBono() {
     if (!this.bonoEditando()) return;
 
-    // Convertir idSubcartera 0 a null para que aplique a todas
+    // Convertir idSubcartera 0 a undefined para que aplique a todas
     const bono = {
       ...this.bonoEditando()!,
-      idSubcartera: this.bonoEditando()!.idSubcartera ? Number(this.bonoEditando()!.idSubcartera) : null,
-      nombreSubcartera: this.bonoEditando()!.idSubcartera ? this.bonoEditando()!.nombreSubcartera : null
+      idSubcartera: this.bonoEditando()!.idSubcartera ? Number(this.bonoEditando()!.idSubcartera) : undefined,
+      nombreSubcartera: this.bonoEditando()!.idSubcartera ? this.bonoEditando()!.nombreSubcartera : undefined
     };
 
     this.isLoading.set(true);
