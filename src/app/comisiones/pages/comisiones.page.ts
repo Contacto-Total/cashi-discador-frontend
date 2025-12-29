@@ -734,6 +734,31 @@ export class ComisionesPage implements OnInit {
       escalas: meta.escalas ? [...meta.escalas] : []
     });
     this.mostrarFormMeta.set(true);
+
+    // Cargar jerarquía para pre-seleccionar inquilino/cartera
+    if (meta.idSubcartera) {
+      this.comisionesService.obtenerJerarquiaSubcartera(meta.idSubcartera).subscribe({
+        next: (jerarquia) => {
+          this.selectedInquilino = jerarquia.idInquilino;
+          this.selectedCartera = jerarquia.idCartera;
+
+          // Cargar carteras del inquilino
+          this.comisionesService.obtenerCarteras(jerarquia.idInquilino).subscribe({
+            next: (carteras) => {
+              this.carteras.set(carteras);
+
+              // Cargar subcarteras de la cartera
+              this.comisionesService.obtenerSubcarteras(jerarquia.idCartera).subscribe({
+                next: (subcarteras) => this.subcarteras.set(subcarteras),
+                error: (err) => console.error('Error al cargar subcarteras:', err)
+              });
+            },
+            error: (err) => console.error('Error al cargar carteras:', err)
+          });
+        },
+        error: (err) => console.error('Error al cargar jerarquía:', err)
+      });
+    }
   }
 
   onSubcarteraChange() {

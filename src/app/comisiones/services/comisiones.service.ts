@@ -46,6 +46,13 @@ export class ComisionesService {
     return this.http.get<Subcartera[]>(`${this.baseUrl}/subcarteras`, { params });
   }
 
+  /**
+   * Obtener jerarquía de una subcartera (inquilino y cartera padre)
+   */
+  obtenerJerarquiaSubcartera(idSubcartera: number): Observable<{ idInquilino: number; idCartera: number }> {
+    return this.http.get<{ idInquilino: number; idCartera: number }>(`${this.baseUrl}/subcarteras/${idSubcartera}/jerarquia`);
+  }
+
   // ==================== METAS ====================
 
   /**
