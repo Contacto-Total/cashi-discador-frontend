@@ -245,12 +245,16 @@ export class ComisionesService {
   /**
    * Agregar promesas pagadas al envío del período
    */
-  agregarEnvioBaseAjuste(anio: number, mes: number): Observable<{ registrosAgregados: number; fechaEnvio: string; mensaje: string }> {
-    const params = new HttpParams()
+  agregarEnvioBaseAjuste(anio: number, mes: number, idSubcartera?: number): Observable<{ registrosAgregados: number; fechaEnvio: string; mensaje: string }> {
+    let params = new HttpParams()
       .set('anio', anio.toString())
       .set('mes', mes.toString());
 
-    console.log('[COMISIONES] Agregando envío Base Ajuste:', { anio, mes });
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera.toString());
+    }
+
+    console.log('[COMISIONES] Agregando envío Base Ajuste:', { anio, mes, idSubcartera });
     return this.http.post<{ registrosAgregados: number; fechaEnvio: string; mensaje: string }>(
       `${this.baseUrl}/base-ajuste/agregar-envio`,
       null,
@@ -261,7 +265,7 @@ export class ComisionesService {
   /**
    * Obtener estadísticas de Base de Ajuste
    */
-  obtenerEstadisticasBaseAjuste(anio: number, mes: number): Observable<{
+  obtenerEstadisticasBaseAjuste(anio: number, mes: number, idSubcartera?: number): Observable<{
     total_registros: number;
     total_envios: number;
     total_asesores: number;
@@ -269,9 +273,13 @@ export class ComisionesService {
     primer_envio: string;
     ultimo_envio: string;
   }> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('anio', anio.toString())
       .set('mes', mes.toString());
+
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera.toString());
+    }
 
     return this.http.get<any>(`${this.baseUrl}/base-ajuste/estadisticas`, { params });
   }
@@ -279,10 +287,14 @@ export class ComisionesService {
   /**
    * Exportar Base de Ajuste en Excel
    */
-  exportarBaseAjusteExcel(anio: number, mes: number): Observable<Blob> {
-    const params = new HttpParams()
+  exportarBaseAjusteExcel(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
+    let params = new HttpParams()
       .set('anio', anio.toString())
       .set('mes', mes.toString());
+
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera.toString());
+    }
 
     return this.http.get(`${this.baseUrl}/base-ajuste/exportar-excel`, {
       params,

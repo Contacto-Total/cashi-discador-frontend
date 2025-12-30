@@ -684,6 +684,33 @@ import {
                 }
               </select>
             </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Inquilino</label>
+              <select [(ngModel)]="baseAjusteInquilino" (change)="onBaseAjusteInquilinoChange()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                <option [value]="0">Todos</option>
+                @for (inq of inquilinos(); track inq.id) {
+                  <option [value]="inq.id">{{ inq.nombreInquilino }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+              <select [(ngModel)]="baseAjusteCartera" (change)="onBaseAjusteCarteraChange()" [disabled]="!baseAjusteInquilino" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                <option [value]="0">Todas</option>
+                @for (car of baseAjusteCarteras(); track car.id) {
+                  <option [value]="car.id">{{ car.nombreCartera }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+              <select [(ngModel)]="baseAjusteSubcartera" (change)="onBaseAjusteSubcarteraChange()" [disabled]="!baseAjusteCartera" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white disabled:opacity-50">
+                <option [value]="0">Todas</option>
+                @for (sub of baseAjusteSubcarteras(); track sub.id) {
+                  <option [value]="sub.id">{{ sub.nombreSubcartera }}</option>
+                }
+              </select>
+            </div>
             <button
               (click)="agregarEnvioBaseAjuste()"
               [disabled]="isLoading()"
@@ -806,6 +833,11 @@ export class ComisionesPage implements OnInit {
     primer_envio: string;
     ultimo_envio: string;
   } | null>(null);
+  baseAjusteInquilino = 0;
+  baseAjusteCartera = 0;
+  baseAjusteSubcartera = 0;
+  baseAjusteCarteras = signal<Cartera[]>([]);
+  baseAjusteSubcarteras = signal<Subcartera[]>([]);
 
   // Inquilinos / Carteras / Subcarteras
   inquilinos = signal<Inquilino[]>([]);
@@ -1380,8 +1412,41 @@ export class ComisionesPage implements OnInit {
 
   // ==================== BASE DE AJUSTE ====================
 
+  onBaseAjusteInquilinoChange() {
+    this.baseAjusteCarteras.set([]);
+    this.baseAjusteSubcarteras.set([]);
+    this.baseAjusteCartera = 0;
+    this.baseAjusteSubcartera = 0;
+
+    if (this.baseAjusteInquilino) {
+      this.comisionesService.obtenerCarteras(this.baseAjusteInquilino).subscribe({
+        next: (data) => this.baseAjusteCarteras.set(data),
+        error: (err) => console.error('Error al cargar carteras:', err)
+      });
+    }
+    this.cargarEstadisticasBaseAjuste();
+  }
+
+  onBaseAjusteCarteraChange() {
+    this.baseAjusteSubcarteras.set([]);
+    this.baseAjusteSubcartera = 0;
+
+    if (this.baseAjusteCartera) {
+      this.comisionesService.obtenerSubcarteras(this.baseAjusteCartera).subscribe({
+        next: (data) => this.baseAjusteSubcarteras.set(data),
+        error: (err) => console.error('Error al cargar subcarteras:', err)
+      });
+    }
+    this.cargarEstadisticasBaseAjuste();
+  }
+
+  onBaseAjusteSubcarteraChange() {
+    this.cargarEstadisticasBaseAjuste();
+  }
+
   cargarEstadisticasBaseAjuste() {
-    this.comisionesService.obtenerEstadisticasBaseAjuste(this.filtroAnio, this.filtroMes).subscribe({
+    const idSubcartera = this.baseAjusteSubcartera || undefined;
+    this.comisionesService.obtenerEstadisticasBaseAjuste(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
       next: (data) => {
         this.estadisticasBaseAjuste.set(data);
       },
@@ -1394,8 +1459,9 @@ export class ComisionesPage implements OnInit {
 
   agregarEnvioBaseAjuste() {
     this.isLoading.set(true);
+    const idSubcartera = this.baseAjusteSubcartera || undefined;
 
-    this.comisionesService.agregarEnvioBaseAjuste(this.filtroAnio, this.filtroMes).subscribe({
+    this.comisionesService.agregarEnvioBaseAjuste(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
       next: (resultado) => {
         this.mostrarMensaje(resultado.mensaje, false);
         this.cargarEstadisticasBaseAjuste();
@@ -1410,8 +1476,9 @@ export class ComisionesPage implements OnInit {
 
   exportarBaseAjusteExcel() {
     this.isLoading.set(true);
+    const idSubcartera = this.baseAjusteSubcartera || undefined;
 
-    this.comisionesService.exportarBaseAjusteExcel(this.filtroAnio, this.filtroMes).subscribe({
+    this.comisionesService.exportarBaseAjusteExcel(this.filtroAnio, this.filtroMes, idSubcartera).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
