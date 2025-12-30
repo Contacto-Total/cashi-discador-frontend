@@ -70,6 +70,18 @@ import {
               </svg>
               Reporte
             </button>
+            <button
+              (click)="activeTab.set('baseAjuste'); cargarEstadisticasBaseAjuste()"
+              [class]="activeTab() === 'baseAjuste'
+                ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Base de Ajuste
+            </button>
           </nav>
         </div>
       </div>
@@ -642,6 +654,130 @@ import {
         </div>
       }
 
+      <!-- ==================== TAB: BASE DE AJUSTE ==================== -->
+      @if (activeTab() === 'baseAjuste') {
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Base de Ajuste</h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Reporte de promesas pagadas con fecha de envío para control de ajustes
+              </p>
+            </div>
+          </div>
+
+          <!-- Filtros y acciones -->
+          <div class="flex flex-wrap gap-4 items-end mb-6">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año</label>
+              <select [(ngModel)]="filtroAnio" (change)="cargarEstadisticasBaseAjuste()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                @for (a of aniosDisponibles; track a) {
+                  <option [value]="a">{{ a }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes</label>
+              <select [(ngModel)]="filtroMes" (change)="cargarEstadisticasBaseAjuste()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                @for (m of mesesDisponibles; track m.value) {
+                  <option [value]="m.value">{{ m.label }}</option>
+                }
+              </select>
+            </div>
+            <button
+              (click)="agregarEnvioBaseAjuste()"
+              [disabled]="isLoading()"
+              class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-slate-400 transition-colors flex items-center gap-2"
+            >
+              @if (isLoading()) {
+                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                </svg>
+              } @else {
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+              }
+              Agregar al Envío
+            </button>
+            <button
+              (click)="exportarBaseAjusteExcel()"
+              [disabled]="isLoading() || !estadisticasBaseAjuste() || estadisticasBaseAjuste()!.total_registros === 0"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-slate-400 transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Exportar Excel
+            </button>
+          </div>
+
+          <!-- Estadísticas -->
+          @if (estadisticasBaseAjuste()) {
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div class="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+                <p class="text-sm text-orange-600 dark:text-orange-400 font-medium">Total Registros</p>
+                <p class="text-2xl font-bold text-orange-800 dark:text-orange-300">{{ estadisticasBaseAjuste()!.total_registros }}</p>
+              </div>
+              <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Envíos</p>
+                <p class="text-2xl font-bold text-blue-800 dark:text-blue-300">{{ estadisticasBaseAjuste()!.total_envios }}</p>
+              </div>
+              <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+                <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Asesores</p>
+                <p class="text-2xl font-bold text-purple-800 dark:text-purple-300">{{ estadisticasBaseAjuste()!.total_asesores }}</p>
+              </div>
+              <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                <p class="text-sm text-green-600 dark:text-green-400 font-medium">Monto Total</p>
+                <p class="text-2xl font-bold text-green-800 dark:text-green-300">S/ {{ formatMonto(estadisticasBaseAjuste()!.monto_total) }}</p>
+              </div>
+            </div>
+
+            @if (estadisticasBaseAjuste()!.primer_envio) {
+              <div class="bg-slate-50 dark:bg-slate-700/30 rounded-lg p-4 mb-4">
+                <div class="flex flex-wrap gap-6">
+                  <div>
+                    <span class="text-sm text-slate-500 dark:text-slate-400">Primer envío:</span>
+                    <span class="ml-2 font-medium text-slate-700 dark:text-slate-300">{{ estadisticasBaseAjuste()!.primer_envio }}</span>
+                  </div>
+                  <div>
+                    <span class="text-sm text-slate-500 dark:text-slate-400">Último envío:</span>
+                    <span class="ml-2 font-medium text-slate-700 dark:text-slate-300">{{ estadisticasBaseAjuste()!.ultimo_envio }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="text-center py-12 text-slate-500 dark:text-slate-400">
+              <svg class="w-12 h-12 mx-auto mb-4 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <p>No hay envíos registrados para este período</p>
+              <p class="text-sm mt-2">Haz clic en "Agregar al Envío" para incluir las promesas pagadas del mes</p>
+            </div>
+          }
+
+          <!-- Información -->
+          <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <div class="flex gap-3">
+              <svg class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              <div class="text-sm text-amber-700 dark:text-amber-300">
+                <p class="font-medium mb-1">¿Cómo funciona?</p>
+                <ul class="list-disc list-inside space-y-1 text-amber-600 dark:text-amber-400">
+                  <li>Al hacer clic en "Agregar al Envío", se buscan promesas con estado PAGADA del mes seleccionado</li>
+                  <li>Los nuevos registros se marcan con la fecha de hoy como "Fecha de Envío"</li>
+                  <li>Los registros ya agregados mantienen su fecha de envío original</li>
+                  <li>El Excel incluye: Asesor, Fecha Envío, DNI, Fecha Pago, Monto, Concepto, Capital, Deuda Total, Período, Tramo y Canal de Pago</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Mensajes -->
       @if (mensaje()) {
         <div [class]="mensajeError() ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800' : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'"
@@ -656,10 +792,20 @@ import {
 })
 export class ComisionesPage implements OnInit {
 
-  activeTab = signal<'metas' | 'bonos' | 'reporte'>('metas');
+  activeTab = signal<'metas' | 'bonos' | 'reporte' | 'baseAjuste'>('metas');
   isLoading = signal(false);
   mensaje = signal('');
   mensajeError = signal(false);
+
+  // Base de Ajuste
+  estadisticasBaseAjuste = signal<{
+    total_registros: number;
+    total_envios: number;
+    total_asesores: number;
+    monto_total: number;
+    primer_envio: string;
+    ultimo_envio: string;
+  } | null>(null);
 
   // Inquilinos / Carteras / Subcarteras
   inquilinos = signal<Inquilino[]>([]);
@@ -1227,6 +1373,58 @@ export class ComisionesPage implements OnInit {
       error: (err) => {
         console.error('Error al exportar PDF:', err);
         this.mostrarMensaje('Error al exportar PDF', true);
+      },
+      complete: () => this.isLoading.set(false)
+    });
+  }
+
+  // ==================== BASE DE AJUSTE ====================
+
+  cargarEstadisticasBaseAjuste() {
+    this.comisionesService.obtenerEstadisticasBaseAjuste(this.filtroAnio, this.filtroMes).subscribe({
+      next: (data) => {
+        this.estadisticasBaseAjuste.set(data);
+      },
+      error: (err) => {
+        console.error('Error al cargar estadísticas:', err);
+        this.estadisticasBaseAjuste.set(null);
+      }
+    });
+  }
+
+  agregarEnvioBaseAjuste() {
+    this.isLoading.set(true);
+
+    this.comisionesService.agregarEnvioBaseAjuste(this.filtroAnio, this.filtroMes).subscribe({
+      next: (resultado) => {
+        this.mostrarMensaje(resultado.mensaje, false);
+        this.cargarEstadisticasBaseAjuste();
+      },
+      error: (err) => {
+        console.error('Error al agregar envío:', err);
+        this.mostrarMensaje('Error al agregar envío: ' + (err.error?.error || err.message), true);
+      },
+      complete: () => this.isLoading.set(false)
+    });
+  }
+
+  exportarBaseAjusteExcel() {
+    this.isLoading.set(true);
+
+    this.comisionesService.exportarBaseAjusteExcel(this.filtroAnio, this.filtroMes).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Base_Ajuste_${this.filtroAnio}_${String(this.filtroMes).padStart(2, '0')}.xlsx`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+
+        this.mostrarMensaje('Excel exportado correctamente', false);
+      },
+      error: (err) => {
+        console.error('Error al exportar Excel:', err);
+        this.mostrarMensaje('Error al exportar Excel', true);
       },
       complete: () => this.isLoading.set(false)
     });
