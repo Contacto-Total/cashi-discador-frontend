@@ -414,6 +414,9 @@ export class CallNotesComponent implements OnInit {
     };
 
     // Guardar tipificaciones V2 y campos adicionales
+    console.log('📞 DEBUG - contact:', this.contact);
+    console.log('📞 DEBUG - phoneNumber:', this.contact?.phoneNumber);
+
     const managementRecord = {
       idTenant: user.tenantId,
       idCartera: user.portfolioId,
@@ -421,7 +424,7 @@ export class CallNotesComponent implements OnInit {
       idCliente: this.contact.id,
       idAgente: user.id,
       idCampana: null, // TODO: Obtener de la campaña activa si existe
-      telefonoContacto: this.contact.phoneNumber, // Teléfono del contacto
+      telefonoContacto: this.contact?.phoneNumber || null, // Teléfono del contacto
       observaciones: this.notesForm.value.notes,
       metodoContacto: 'GESTION_PROGRESIVO',
       canalContacto: 'LLAMADA_SALIENTE',
