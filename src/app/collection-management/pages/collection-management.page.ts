@@ -3613,8 +3613,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         portfolioId: this.selectedPortfolioId || 1,
         subPortfolioId: this.selectedSubPortfolioId || 1,
 
-        // Phone from customer data
-        phone: this.customerData().contacto?.telefono_principal || '',
+        // Phone from customer data (buscar en orden de prioridad)
+        phone: this.customerData().telefono_celular ||
+               this.customerData().telefono_domicilio ||
+               this.customerData().telefono_laboral ||
+               this.customerData().telf_referencia_1 ||
+               this.customerData().telf_referencia_2 ||
+               this.customerData().contacto?.telefono_principal || '',
 
         // Hierarchy levels with IDs and names
         level1Id: typificationLevel1Id,

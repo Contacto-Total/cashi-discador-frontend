@@ -480,6 +480,7 @@ export class ManagementService {
       tipificacion: { id: finalTypificationId },
       observaciones: request.observations || '',
       // Campos de contacto
+      telefonoContacto: request.phone || undefined,
       canalContacto: request.canalContacto || undefined,
       metodoContacto: request.metodoContacto || 'GESTION_MANUAL',
       estadoGestion: 'COMPLETADA',
