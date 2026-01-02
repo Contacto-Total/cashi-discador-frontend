@@ -129,6 +129,7 @@
             id="subportfolio"
             [(ngModel)]="selectedSubPortfolioId"
             name="subportfolio"
+            (ngModelChange)="onSubPortfolioChange()"
             [disabled]="selectedPortfolioId === 0"
             class="form-select"
             required>
@@ -137,6 +138,92 @@
               {{ sp.subPortfolioCode }} - {{ sp.subPortfolioName }}
             </option>
           </select>
+        </div>
+      </div>
+
+      <!-- Filtros de Segmentación -->
+      <div class="form-section" *ngIf="selectedSubPortfolioId > 0">
+        <h2>
+          <lucide-angular name="filter" [size]="20"></lucide-angular>
+          Filtros de Segmentación
+        </h2>
+        <p class="section-description">
+          Define rangos para filtrar clientes al importar. Múltiples rangos del mismo campo se combinan con OR. Rangos de diferentes campos se combinan con AND.
+        </p>
+
+        <!-- Agregar nuevo filtro -->
+        <div class="filter-add-section" *ngIf="filterableFields.length > 0">
+          <div class="form-row filter-row">
+            <div class="form-group">
+              <label for="filterField">Campo</label>
+              <select
+                id="filterField"
+                [(ngModel)]="selectedFieldId"
+                name="filterField"
+                class="form-select">
+                <option [ngValue]="0">Seleccione un campo...</option>
+                <option *ngFor="let field of filterableFields" [ngValue]="field.id">
+                  {{ field.fieldName }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="minValue">Valor Mínimo</label>
+              <input
+                type="number"
+                id="minValue"
+                [(ngModel)]="newFilterMinValue"
+                name="minValue"
+                class="form-input"
+                placeholder="Ej: 400">
+            </div>
+
+            <div class="form-group">
+              <label for="maxValue">Valor Máximo</label>
+              <input
+                type="number"
+                id="maxValue"
+                [(ngModel)]="newFilterMaxValue"
+                name="maxValue"
+                class="form-input"
+                placeholder="Ej: 1000">
+            </div>
+
+            <div class="form-group filter-btn-group">
+              <button type="button" class="btn-add-filter" (click)="addFilter()">
+                <lucide-angular name="plus" [size]="16"></lucide-angular>
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="filterableFields.length === 0" class="no-fields-message">
+          <lucide-angular name="info" [size]="16"></lucide-angular>
+          No hay campos numéricos configurados para esta subcartera.
+        </div>
+
+        <!-- Lista de filtros agregados -->
+        <div class="filters-list" *ngIf="campaignFilters.length > 0">
+          <h3>Filtros configurados:</h3>
+          <div class="filter-chips">
+            <div class="filter-chip" *ngFor="let filter of campaignFilters; let i = index">
+              <span class="filter-field">{{ filter.fieldName }}</span>
+              <span class="filter-range">
+                <span *ngIf="filter.minValue !== undefined && filter.minValue !== null">
+                  {{ filter.minValue | number }}
+                </span>
+                <span *ngIf="filter.minValue !== undefined && filter.maxValue !== undefined"> - </span>
+                <span *ngIf="filter.maxValue !== undefined && filter.maxValue !== null">
+                  {{ filter.maxValue | number }}
+                </span>
+              </span>
+              <button type="button" class="btn-remove-filter" (click)="removeFilter(i)">
+                <lucide-angular name="x" [size]="14"></lucide-angular>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

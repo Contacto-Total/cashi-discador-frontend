@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -47,6 +47,13 @@ export class CampaignFormComponent implements OnInit {
   // Strings para los campos de fecha (datetime-local requiere formato específico)
   startDateString: string = '';
   endDateString: string = '';
+
+  // Filtros de rango
+  filterableFields: FilterableField[] = [];
+  campaignFilters: CampaignFilterRange[] = [];
+  selectedFieldId: number = 0;
+  newFilterMinValue: number | null = null;
+  newFilterMaxValue: number | null = null;
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -97,6 +104,7 @@ export class CampaignFormComponent implements OnInit {
   onPortfolioChange(): void {
     this.selectedSubPortfolioId = 0;
     this.subPortfolios = [];
+    this.filterableFields = [];
 
     if (this.selectedPortfolioId > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
@@ -106,6 +114,73 @@ export class CampaignFormComponent implements OnInit {
         error: (err) => console.error('Error loading sub-portfolios:', err)
       });
     }
+  }
+
+  onSubPortfolioChange(): void {
+    this.filterableFields = [];
+    if (this.selectedSubPortfolioId > 0) {
+      this.loadFilterableFields(this.selectedSubPortfolioId);
+    }
+  }
+
+  loadFilterableFields(subcarteraId: number): void {
+    this.campaignService.getFilterableFieldsBySubcartera(subcarteraId).subscribe({
+      next: (fields) => {
+        this.filterableFields = fields;
+        console.log('Campos filtrables cargados:', fields);
+      },
+      error: (err) => console.error('Error loading filterable fields:', err)
+    });
+  }
+
+  loadCampaignFilters(campaignId: number): void {
+    this.campaignService.getCampaignFilters(campaignId).subscribe({
+      next: (filters) => {
+        this.campaignFilters = filters;
+        console.log('Filtros de campaña cargados:', filters);
+      },
+      error: (err) => console.error('Error loading campaign filters:', err)
+    });
+  }
+
+  addFilter(): void {
+    if (this.selectedFieldId === 0) {
+      this.error = 'Seleccione un campo para filtrar';
+      return;
+    }
+
+    if (this.newFilterMinValue === null && this.newFilterMaxValue === null) {
+      this.error = 'Ingrese al menos un valor (mínimo o máximo)';
+      return;
+    }
+
+    const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
+    if (!selectedField) return;
+
+    const newFilter: CampaignFilterRange = {
+      fieldDefinitionId: selectedField.id,
+      fieldCode: selectedField.fieldCode,
+      fieldName: selectedField.fieldName,
+      minValue: this.newFilterMinValue ?? undefined,
+      maxValue: this.newFilterMaxValue ?? undefined
+    };
+
+    this.campaignFilters.push(newFilter);
+
+    // Limpiar inputs
+    this.selectedFieldId = 0;
+    this.newFilterMinValue = null;
+    this.newFilterMaxValue = null;
+    this.error = null;
+  }
+
+  removeFilter(index: number): void {
+    this.campaignFilters.splice(index, 1);
+  }
+
+  getFieldNameByCode(fieldCode: string): string {
+    const field = this.filterableFields.find(f => f.fieldCode === fieldCode);
+    return field?.fieldName || fieldCode;
   }
 
   loadCampaign(id: number): void {
@@ -159,6 +234,14 @@ export class CampaignFormComponent implements OnInit {
                 selectedSubPortfolioId: this.selectedSubPortfolioId
               });
 
+              // Cargar campos filtrables y filtros existentes
+              if (campaign.subPortfolioId) {
+                this.loadFilterableFields(campaign.subPortfolioId);
+              }
+              if (campaign.id) {
+                this.loadCampaignFilters(campaign.id);
+              }
+
               this.loading = false;
             },
             error: (err) => {
@@ -211,7 +294,8 @@ export class CampaignFormComponent implements OnInit {
       // Actualizar campaña existente
       this.campaignService.updateCampaign(this.campaignId, this.campaign).subscribe({
         next: () => {
-          this.router.navigate(['/admin/campaigns']);
+          // Guardar filtros después de actualizar la campaña
+          this.saveFiltersAndNavigate(this.campaignId!);
         },
         error: (err) => {
           console.error('Error updating campaign:', err);
@@ -222,8 +306,14 @@ export class CampaignFormComponent implements OnInit {
     } else {
       // Crear nueva campaña
       this.campaignService.createCampaign(this.campaign).subscribe({
-        next: () => {
-          this.router.navigate(['/admin/campaigns']);
+        next: (response: any) => {
+          // Guardar filtros después de crear la campaña
+          const newCampaignId = response.id || response;
+          if (newCampaignId && this.campaignFilters.length > 0) {
+            this.saveFiltersAndNavigate(newCampaignId);
+          } else {
+            this.router.navigate(['/admin/campaigns']);
+          }
         },
         error: (err) => {
           console.error('Error creating campaign:', err);
@@ -232,6 +322,29 @@ export class CampaignFormComponent implements OnInit {
         }
       });
     }
+  }
+
+  private saveFiltersAndNavigate(campaignId: number): void {
+    if (this.campaignFilters.length === 0) {
+      // Si no hay filtros, eliminar los existentes y navegar
+      this.campaignService.deleteAllFilters(campaignId).subscribe({
+        next: () => this.router.navigate(['/admin/campaigns']),
+        error: () => this.router.navigate(['/admin/campaigns'])
+      });
+      return;
+    }
+
+    this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters).subscribe({
+      next: () => {
+        console.log('Filtros guardados correctamente');
+        this.router.navigate(['/admin/campaigns']);
+      },
+      error: (err) => {
+        console.error('Error guardando filtros:', err);
+        // Navegar de todos modos aunque fallen los filtros
+        this.router.navigate(['/admin/campaigns']);
+      }
+    });
   }
 
   onCancel(): void {

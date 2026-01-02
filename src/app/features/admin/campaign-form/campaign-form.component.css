@@ -213,3 +213,130 @@
   background: #93c5fd;
   cursor: not-allowed;
 }
+
+/* Estilos para filtros de segmentación */
+.section-description {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.filter-add-section {
+  background: var(--bg-tertiary);
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.filter-row {
+  grid-template-columns: 2fr 1fr 1fr auto;
+  align-items: end;
+}
+
+.filter-btn-group {
+  margin-bottom: 0;
+}
+
+.btn-add-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-add-filter:hover {
+  background: #059669;
+}
+
+.no-fields-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+.filters-list {
+  margin-top: 1.5rem;
+}
+
+.filters-list h3 {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.filter-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: white;
+}
+
+.filter-field {
+  font-weight: 500;
+}
+
+.filter-range {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
+.btn-remove-filter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+}
+
+.btn-remove-filter:hover {
+  background: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-btn-group {
+    margin-top: 0.5rem;
+  }
+
+  .btn-add-filter {
+    width: 100%;
+    justify-content: center;
+  }
+}

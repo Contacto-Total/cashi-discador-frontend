@@ -96,6 +96,24 @@ export interface CampaignCallsResponse {
   pageSize: number;
 }
 
+export interface FilterableField {
+  id: number;
+  fieldCode: string;
+  fieldName: string;
+  dataType: string;
+  format?: string;
+}
+
+export interface CampaignFilterRange {
+  id?: number;
+  campaignId?: number;
+  fieldDefinitionId: number;
+  fieldCode: string;
+  fieldName: string;
+  minValue?: number;
+  maxValue?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -238,5 +256,57 @@ export class CampaignAdminService {
       url += `&search=${encodeURIComponent(search)}`;
     }
     return this.http.get<CampaignCallsResponse>(url, { headers: this.getHeaders() });
+  }
+
+  // ========================================
+  // FILTROS DE CAMPAÑA
+  // ========================================
+
+  /**
+   * Obtiene los campos numéricos disponibles para filtrar según la subcartera
+   */
+  getFilterableFieldsBySubcartera(subcarteraId: number): Observable<FilterableField[]> {
+    return this.http.get<FilterableField[]>(
+      `${this.apiUrl}/filterable-fields/by-subcartera/${subcarteraId}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Obtiene los campos numéricos disponibles para filtrar según la campaña
+   */
+  getFilterableFields(campaignId: number): Observable<FilterableField[]> {
+    return this.http.get<FilterableField[]>(
+      `${this.apiUrl}/${campaignId}/filterable-fields`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Obtiene los filtros actuales de una campaña
+   */
+  getCampaignFilters(campaignId: number): Observable<CampaignFilterRange[]> {
+    return this.http.get<CampaignFilterRange[]>(
+      `${this.apiUrl}/${campaignId}/filters`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Guarda filtros para una campaña (reemplaza los existentes)
+   */
+  saveCampaignFilters(campaignId: number, filters: CampaignFilterRange[]): Observable<CampaignFilterRange[]> {
+    return this.http.post<CampaignFilterRange[]>(
+      `${this.apiUrl}/${campaignId}/filters`,
+      filters,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
+   * Elimina todos los filtros de una campaña
+   */
+  deleteAllFilters(campaignId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/${campaignId}/filters`, { headers: this.getHeaders() });
   }
 }
