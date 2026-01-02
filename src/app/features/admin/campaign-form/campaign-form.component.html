@@ -2,125 +2,122 @@
   <!-- Header -->
   <div class="form-header">
     <h1>
-      <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="24" class="header-icon"></lucide-angular>
+      <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="18" class="header-icon"></lucide-angular>
       {{ isEditMode ? 'Editar Campaña' : 'Nueva Campaña' }}
     </h1>
     <button class="btn-back" (click)="onCancel()">
-      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
+      <lucide-angular name="arrow-left" [size]="14"></lucide-angular>
       <span>Volver</span>
     </button>
   </div>
 
   <!-- Error Message -->
   <div *ngIf="error" class="error-message">
-    <lucide-angular name="x-circle" [size]="20"></lucide-angular>
+    <lucide-angular name="x-circle" [size]="16"></lucide-angular>
     {{ error }}
   </div>
 
   <!-- Loading State -->
   <div *ngIf="loading" class="loading-state">
     <div class="spinner"></div>
-    <p>{{ isEditMode ? 'Cargando campaña...' : 'Guardando...' }}</p>
+    <p>{{ isEditMode ? 'Cargando...' : 'Guardando...' }}</p>
   </div>
 
   <!-- Form -->
-  <div *ngIf="!loading" class="form-content">
-    <form (ngSubmit)="onSubmit()">
-      <!-- Información Básica -->
-      <div class="form-section">
-        <h2>
-          <lucide-angular name="file-text" [size]="20"></lucide-angular>
-          Información Básica
-        </h2>
+  <form *ngIf="!loading" (ngSubmit)="onSubmit()" class="form-content">
 
-        <div class="form-group">
-          <label for="name">Nombre de la Campaña *</label>
-          <input
-            type="text"
-            id="name"
-            [(ngModel)]="campaign.name"
-            name="name"
-            placeholder="Ej: Campaña Cobranza Enero 2025"
-            class="form-input"
-            required>
-        </div>
+    <!-- Columna Izquierda: Información Básica -->
+    <div class="form-section">
+      <h2>
+        <lucide-angular name="file-text" [size]="16"></lucide-angular>
+        Información Básica
+      </h2>
 
-        <div class="form-group">
-          <label for="description">Descripción</label>
-          <textarea
-            id="description"
-            [(ngModel)]="campaign.description"
-            name="description"
-            placeholder="Descripción de la campaña..."
-            class="form-textarea"
-            rows="3"></textarea>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="startDate">Fecha de Inicio</label>
-            <input
-              type="datetime-local"
-              id="startDate"
-              [(ngModel)]="startDateString"
-              name="startDate"
-              class="form-input">
-            <small>Fecha y hora de inicio de la campaña</small>
-          </div>
-
-          <div class="form-group">
-            <label for="endDate">Fecha de Fin</label>
-            <input
-              type="datetime-local"
-              id="endDate"
-              [(ngModel)]="endDateString"
-              name="endDate"
-              class="form-input">
-            <small>Fecha y hora de finalización de la campaña</small>
-          </div>
-        </div>
+      <div class="form-group">
+        <label for="name">Nombre *</label>
+        <input
+          type="text"
+          id="name"
+          [(ngModel)]="campaign.name"
+          name="name"
+          placeholder="Ej: Campaña Cobranza Enero 2025"
+          class="form-input"
+          required>
       </div>
 
-      <!-- Asignación -->
-      <div class="form-section">
-        <h2>
-          <lucide-angular name="building-2" [size]="20"></lucide-angular>
-          Asignación
-        </h2>
+      <div class="form-group">
+        <label for="description">Descripción</label>
+        <textarea
+          id="description"
+          [(ngModel)]="campaign.description"
+          name="description"
+          placeholder="Descripción breve..."
+          class="form-textarea"
+          rows="2"></textarea>
+      </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="tenant">Proveedor (Inquilino) *</label>
-            <select
-              id="tenant"
-              [(ngModel)]="selectedTenantId"
-              name="tenant"
-              (ngModelChange)="onTenantChange()"
-              class="form-select"
-              required>
-              <option [ngValue]="0">Seleccione un proveedor...</option>
-              <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
-                {{ tenant.tenantCode }} - {{ tenant.tenantName }}
-              </option>
-            </select>
-          </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="startDate">Fecha Inicio</label>
+          <input
+            type="datetime-local"
+            id="startDate"
+            [(ngModel)]="startDateString"
+            name="startDate"
+            class="form-input">
+        </div>
 
-          <div class="form-group">
-            <label for="portfolio">Cartera *</label>
-            <select
-              id="portfolio"
-              [(ngModel)]="selectedPortfolioId"
-              name="portfolio"
-              (ngModelChange)="onPortfolioChange()"
-              [disabled]="selectedTenantId === 0"
-              class="form-select"
-              required>
-              <option [ngValue]="0">Seleccione una cartera...</option>
-              <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
-                {{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}
-              </option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="endDate">Fecha Fin</label>
+          <input
+            type="datetime-local"
+            id="endDate"
+            [(ngModel)]="endDateString"
+            name="endDate"
+            class="form-input">
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Asignación -->
+    <div class="form-section">
+      <h2>
+        <lucide-angular name="building-2" [size]="16"></lucide-angular>
+        Asignación
+      </h2>
+
+      <div class="form-group">
+        <label for="tenant">Proveedor *</label>
+        <select
+          id="tenant"
+          [(ngModel)]="selectedTenantId"
+          name="tenant"
+          (ngModelChange)="onTenantChange()"
+          class="form-select"
+          required>
+          <option [ngValue]="0">Seleccione...</option>
+          <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">
+            {{ tenant.tenantCode }} - {{ tenant.tenantName }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="portfolio">Cartera *</label>
+          <select
+            id="portfolio"
+            [(ngModel)]="selectedPortfolioId"
+            name="portfolio"
+            (ngModelChange)="onPortfolioChange()"
+            [disabled]="selectedTenantId === 0"
+            class="form-select"
+            required>
+            <option [ngValue]="0">Seleccione...</option>
+            <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">
+              {{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}
+            </option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -133,24 +130,85 @@
             [disabled]="selectedPortfolioId === 0"
             class="form-select"
             required>
-            <option [ngValue]="0">Seleccione una subcartera...</option>
+            <option [ngValue]="0">Seleccione...</option>
             <option *ngFor="let sp of subPortfolios" [ngValue]="sp.id">
               {{ sp.subPortfolioCode }} - {{ sp.subPortfolioName }}
             </option>
           </select>
         </div>
       </div>
+    </div>
 
-      <!-- Filtros de Segmentación -->
-      <div class="form-section" *ngIf="selectedSubPortfolioId > 0">
-        <h2>
-          <lucide-angular name="filter" [size]="20"></lucide-angular>
-          Filtros de Segmentación
-        </h2>
-        <p class="section-description">
-          Define rangos para filtrar clientes al importar. Múltiples rangos del mismo campo se combinan con OR. Rangos de diferentes campos se combinan con AND.
-        </p>
+    <!-- Columna Izquierda: Configuración de Discado -->
+    <div class="form-section">
+      <h2>
+        <lucide-angular name="phone-call" [size]="16"></lucide-angular>
+        Configuración de Discado
+      </h2>
 
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dialMode">Modo</label>
+          <select
+            id="dialMode"
+            [(ngModel)]="campaign.dialMode"
+            name="dialMode"
+            class="form-select">
+            <option value="MANUAL">Manual</option>
+            <option value="PROGRESSIVE">Progresivo</option>
+            <option value="PREDICTIVE">Predictivo</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="maxAttempts">Intentos Máx.</label>
+          <input
+            type="number"
+            id="maxAttempts"
+            [(ngModel)]="campaign.maxAttempts"
+            name="maxAttempts"
+            class="form-input"
+            min="1"
+            max="10">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="retryInterval">Intervalo (min)</label>
+          <input
+            type="number"
+            id="retryInterval"
+            [(ngModel)]="campaign.retryInterval"
+            name="retryInterval"
+            class="form-input"
+            min="1">
+        </div>
+
+        <div class="form-group">
+          <label for="intensidad">Intensidad</label>
+          <input
+            type="number"
+            id="intensidad"
+            [(ngModel)]="campaign.intensidad"
+            name="intensidad"
+            class="form-input"
+            min="1"
+            max="100"
+            placeholder="50">
+          <small>Llamadas simultáneas (1-100)</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Columna Derecha: Filtros de Segmentación -->
+    <div class="form-section">
+      <h2>
+        <lucide-angular name="filter" [size]="16"></lucide-angular>
+        Filtros de Segmentación
+      </h2>
+
+      <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
         <div class="filter-add-section" *ngIf="filterableFields.length > 0">
           <div class="form-row filter-row">
@@ -161,7 +219,7 @@
                 [(ngModel)]="selectedFieldId"
                 name="filterField"
                 class="form-select">
-                <option [ngValue]="0">Seleccione un campo...</option>
+                <option [ngValue]="0">Seleccione...</option>
                 <option *ngFor="let field of filterableFields" [ngValue]="field.id">
                   {{ field.fieldName }}
                 </option>
@@ -169,44 +227,43 @@
             </div>
 
             <div class="form-group">
-              <label for="minValue">Valor Mínimo</label>
+              <label for="minValue">Mín</label>
               <input
                 type="number"
                 id="minValue"
                 [(ngModel)]="newFilterMinValue"
                 name="minValue"
                 class="form-input"
-                placeholder="Ej: 400">
+                placeholder="400">
             </div>
 
             <div class="form-group">
-              <label for="maxValue">Valor Máximo</label>
+              <label for="maxValue">Máx</label>
               <input
                 type="number"
                 id="maxValue"
                 [(ngModel)]="newFilterMaxValue"
                 name="maxValue"
                 class="form-input"
-                placeholder="Ej: 1000">
+                placeholder="1000">
             </div>
 
             <div class="form-group filter-btn-group">
               <button type="button" class="btn-add-filter" (click)="addFilter()">
-                <lucide-angular name="plus" [size]="16"></lucide-angular>
-                Agregar
+                <lucide-angular name="plus" [size]="14"></lucide-angular>
               </button>
             </div>
           </div>
         </div>
 
         <div *ngIf="filterableFields.length === 0" class="no-fields-message">
-          <lucide-angular name="info" [size]="16"></lucide-angular>
-          No hay campos numéricos configurados para esta subcartera.
+          <lucide-angular name="info" [size]="14"></lucide-angular>
+          Sin campos numéricos configurados.
         </div>
 
         <!-- Lista de filtros agregados -->
         <div class="filters-list" *ngIf="campaignFilters.length > 0">
-          <h3>Filtros configurados:</h3>
+          <h3>Filtros activos:</h3>
           <div class="filter-chips">
             <div class="filter-chip" *ngFor="let filter of campaignFilters; let i = index">
               <span class="filter-field">{{ filter.fieldName }}</span>
@@ -220,86 +277,28 @@
                 </span>
               </span>
               <button type="button" class="btn-remove-filter" (click)="removeFilter(i)">
-                <lucide-angular name="x" [size]="14"></lucide-angular>
+                <lucide-angular name="x" [size]="12"></lucide-angular>
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </ng-container>
 
-      <!-- Configuración de Discado -->
-      <div class="form-section">
-        <h2>
-          <lucide-angular name="phone-call" [size]="20"></lucide-angular>
-          Configuración de Discado
-        </h2>
+      <ng-template #noSubcartera>
+        <p class="section-description">
+          Selecciona una subcartera para ver los campos disponibles para filtrar.
+        </p>
+      </ng-template>
+    </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="dialMode">Modo de Discado</label>
-            <select
-              id="dialMode"
-              [(ngModel)]="campaign.dialMode"
-              name="dialMode"
-              class="form-select">
-              <option value="MANUAL">Manual</option>
-              <option value="PROGRESSIVE">Progresivo</option>
-              <option value="PREDICTIVE">Predictivo</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="maxAttempts">Intentos Máximos</label>
-            <input
-              type="number"
-              id="maxAttempts"
-              [(ngModel)]="campaign.maxAttempts"
-              name="maxAttempts"
-              class="form-input"
-              min="1"
-              max="10">
-            <small>Número máximo de intentos por contacto (1-10)</small>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="retryInterval">Intervalo de Reintento (minutos)</label>
-            <input
-              type="number"
-              id="retryInterval"
-              [(ngModel)]="campaign.retryInterval"
-              name="retryInterval"
-              class="form-input"
-              min="1">
-            <small>Tiempo de espera entre reintentos</small>
-          </div>
-
-          <div class="form-group">
-            <label for="intensidad">Intensidad de Discado</label>
-            <input
-              type="number"
-              id="intensidad"
-              [(ngModel)]="campaign.intensidad"
-              name="intensidad"
-              class="form-input"
-              min="1"
-              max="100"
-              placeholder="50">
-            <small>Llamadas simultáneas por agente (1-100). Ej: 50 con 10 agentes = 5 llamadas/agente</small>
-          </div>
-        </div>
-      </div>
-
-      <!-- Botones de Acción -->
-      <div class="form-actions">
-        <button type="button" class="btn-cancel" (click)="onCancel()">
-          Cancelar
-        </button>
-        <button type="submit" class="btn-submit" [disabled]="loading">
-          {{ isEditMode ? 'Actualizar Campaña' : 'Crear Campaña' }}
-        </button>
-      </div>
-    </form>
-  </div>
+    <!-- Botones de Acción (ocupa todo el ancho) -->
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" (click)="onCancel()">
+        Cancelar
+      </button>
+      <button type="submit" class="btn-submit" [disabled]="loading">
+        {{ isEditMode ? 'Actualizar' : 'Crear Campaña' }}
+      </button>
+    </div>
+  </form>
 </div>
