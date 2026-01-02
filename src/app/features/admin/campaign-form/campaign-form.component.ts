@@ -307,11 +307,12 @@ export class CampaignFormComponent implements OnInit {
       // Crear nueva campaña
       this.campaignService.createCampaign(this.campaign).subscribe({
         next: (response: any) => {
-          // Guardar filtros después de crear la campaña
+          // Guardar filtros después de crear la campaña (SIEMPRE, para disparar auto-import)
           const newCampaignId = response.id || response;
-          if (newCampaignId && this.campaignFilters.length > 0) {
+          if (newCampaignId) {
             this.saveFiltersAndNavigate(newCampaignId);
           } else {
+            console.error('No se pudo obtener el ID de la campaña creada');
             this.router.navigate(['/admin/campaigns']);
           }
         },
@@ -325,18 +326,17 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private saveFiltersAndNavigate(campaignId: number): void {
-    if (this.campaignFilters.length === 0) {
-      // Si no hay filtros, eliminar los existentes y navegar
-      this.campaignService.deleteAllFilters(campaignId).subscribe({
-        next: () => this.router.navigate(['/admin/campaigns']),
-        error: () => this.router.navigate(['/admin/campaigns'])
-      });
-      return;
-    }
+    // SIEMPRE llamar a saveCampaignFilters (incluso con array vacío)
+    // Esto dispara el auto-import de contactos en el backend
+    console.log('📤 Enviando filtros para campaña', campaignId, ':', this.campaignFilters);
+    console.log('📋 Cantidad de filtros a enviar:', this.campaignFilters.length);
+    this.campaignFilters.forEach((f, i) => {
+      console.log(`  Filtro[${i}]:`, f.fieldCode, f.fieldName, 'min:', f.minValue, 'max:', f.maxValue);
+    });
 
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters).subscribe({
-      next: () => {
-        console.log('Filtros guardados correctamente');
+      next: (response) => {
+        console.log('✅ Filtros guardados correctamente, respuesta:', response);
         this.router.navigate(['/admin/campaigns']);
       },
       error: (err) => {
