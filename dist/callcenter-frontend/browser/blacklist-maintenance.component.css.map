@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["blacklist-maintenance.component.ts"],
-  "sourcesContent": ["\n    @keyframes slideIn {\n      from {\n        transform: translateY(-100%);\n        opacity: 0;\n      }\n      to {\n        transform: translateY(0);\n        opacity: 1;\n      }\n    }\n    .animate-slide-in {\n      animation: slideIn 0.3s ease-out;\n    }\n  "],
-  "mappings": ";AACI,WAAA;AACE;AACE,eAAA,WAAA;AACA,aAAA;AACF;AACA;AACE,eAAA,WAAA;AACA,aAAA;AACF;AACF;AACA,CAAA;AACE,aAAA,QAAA,KAAA;AACF;",
-  "names": []
-}

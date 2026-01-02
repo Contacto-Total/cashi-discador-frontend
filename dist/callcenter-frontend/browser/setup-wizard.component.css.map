@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["setup-wizard.component.ts"],
-  "sourcesContent": ["\n    :host {\n      display: block;\n    }\n    .line-clamp-2 {\n      display: -webkit-box;\n      -webkit-line-clamp: 2;\n      -webkit-box-orient: vertical;\n      overflow: hidden;\n    }\n  "],
-  "mappings": ";AACI;AACE,WAAA;AACF;AACA,CAAA;AACE,WAAA;AACA,sBAAA;AACA,sBAAA;AACA,YAAA;AACF;",
-  "names": []
-}
