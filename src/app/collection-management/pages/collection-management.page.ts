@@ -3614,11 +3614,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         subPortfolioId: this.selectedSubPortfolioId || 1,
 
         // Phone from customer data (buscar en orden de prioridad)
-        phone: this.customerData().telefono_celular ||
-               this.customerData().telefono_domicilio ||
-               this.customerData().telefono_laboral ||
-               this.customerData().telf_referencia_1 ||
-               this.customerData().telf_referencia_2 ||
+        phone: (this.customerData() as any).telefono_celular ||
+               (this.customerData() as any).telefono_domicilio ||
+               (this.customerData() as any).telefono_laboral ||
+               (this.customerData() as any).telf_referencia_1 ||
+               (this.customerData() as any).telf_referencia_2 ||
                this.customerData().contacto?.telefono_principal || '',
 
         // Hierarchy levels with IDs and names
