@@ -421,6 +421,7 @@ export class CallNotesComponent implements OnInit {
       idCliente: this.contact.id,
       idAgente: user.id,
       idCampana: null, // TODO: Obtener de la campaña activa si existe
+      telefonoContacto: this.contact.phoneNumber, // Teléfono del contacto
       observaciones: this.notesForm.value.notes,
       metodoContacto: 'GESTION_PROGRESIVO',
       canalContacto: 'LLAMADA_SALIENTE',
@@ -446,6 +447,7 @@ export class CallNotesComponent implements OnInit {
             idCartera: user.portfolioId,
             idSubcartera: user.subPortfolioId,
             idCampana: null,
+            telefonoContacto: this.contact!.phoneNumber, // Teléfono del contacto
             idTipificacion: this.getSelectedTipificacionId(),
             observaciones: this.notesForm.value.notes,
             metodoContacto: 'GESTION_PROGRESIVO',

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/legacy/campaign/pages/campaign-page/campaign-page.component.css"],
+  "sourcesContent": [".campaign-page-container {\r\n  padding: 0;\r\n  min-height: 100vh;\r\n  background: #f8f9fa;\r\n}\r\n\r\n.section {\r\n  width: 100%;\r\n}"],
+  "mappings": ";AAAA,CAAA;AACE,WAAA;AACA,cAAA;AACA,cAAA;AACF;AAEA,CAAA;AACE,SAAA;AACF;",
+  "names": []
+}

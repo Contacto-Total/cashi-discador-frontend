@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["amount-display-config.component.ts"],
+  "sourcesContent": ["\n    @keyframes slide-in {\n      from {\n        transform: translateX(100%);\n        opacity: 0;\n      }\n      to {\n        transform: translateX(0);\n        opacity: 1;\n      }\n    }\n\n    .animate-slide-in {\n      animation: slide-in 0.3s ease-out;\n    }\n\n    .cdk-drag-preview {\n      background: #1e293b;\n      border-radius: 0.5rem;\n      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);\n      border: 1px solid #334155;\n    }\n\n    .cdk-drag-animating {\n      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);\n    }\n\n    .cdk-drop-list-dragging .cdk-drag {\n      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);\n    }\n  "],
+  "mappings": ";AACI,WAAA;AACE;AACE,eAAA,WAAA;AACA,aAAA;AACF;AACA;AACE,eAAA,WAAA;AACA,aAAA;AACF;AACF;AAEA,CAAA;AACE,aAAA,SAAA,KAAA;AACF;AAEA,CAAA;AACE,cAAA;AACA,iBAAA;AACA,cAAA,EAAA,KAAA,KAAA,MAAA,KAAA,CAAA,EAAA,CAAA,EAAA,CAAA,EAAA;AACA,UAAA,IAAA,MAAA;AACF;AAEA,CAAA;AACE,cAAA,UAAA,MAAA,aAAA,CAAA,EAAA,CAAA,EAAA,GAAA,EAAA;AACF;AAEA,CAAA,uBAAA,CAAA;AACE,cAAA,UAAA,MAAA,aAAA,CAAA,EAAA,CAAA,EAAA,GAAA,EAAA;AACF;",
+  "names": []
+}

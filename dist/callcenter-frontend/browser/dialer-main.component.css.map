@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["src/app/features/dialer/dialer-main/dialer-main.component.css"],
+  "sourcesContent": ["/* Minimal styles - using Tailwind for everything else */\r\n\r\n/* Hidden Audio Element */\r\naudio {\r\n  position: absolute;\r\n  opacity: 0;\r\n  pointer-events: none;\r\n}\r\n"],
+  "mappings": ";AAGA;AACE,YAAA;AACA,WAAA;AACA,kBAAA;AACF;",
+  "names": []
+}

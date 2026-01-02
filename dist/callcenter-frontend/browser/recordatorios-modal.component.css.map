@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["recordatorios-modal.component.ts"],
+  "sourcesContent": ["\n    :host {\n      display: block;\n    }\n\n    .countdown-number {\n      font-size: 8rem;\n      font-weight: 800;\n      line-height: 1;\n      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);\n    }\n\n    @keyframes pulseRing {\n      0% {\n        transform: scale(1);\n        opacity: 1;\n      }\n      100% {\n        transform: scale(1.5);\n        opacity: 0;\n      }\n    }\n  "],
+  "mappings": ";AACI;AACE,WAAA;AACF;AAEA,CAAA;AACE,aAAA;AACA,eAAA;AACA,eAAA;AACA,eAAA,EAAA,IAAA,KAAA,KAAA,CAAA,EAAA,CAAA,EAAA,CAAA,EAAA;AACF;AAEA,WAAA;AACE;AACE,eAAA,MAAA;AACA,aAAA;AACF;AACA;AACE,eAAA,MAAA;AACA,aAAA;AACF;AACF;",
+  "names": []
+}
