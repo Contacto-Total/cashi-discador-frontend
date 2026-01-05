@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map } from 'rxjs';
+import { Observable, map, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PaymentSchedule } from '../models/payment-schedule.model';
 
@@ -277,6 +277,14 @@ export class ManagementService {
   getActiveSchedulesByDocumento(documento: string): Observable<PaymentSchedule[]> {
     console.log('[SCHEDULE] Fetching active schedules for documento:', documento);
     return this.http.get<any[]>(`${this.baseUrl}/payment-schedule/documento/${documento}/active`).pipe(
+      tap(rawRecords => {
+        console.log('🔍 [SCHEDULE] Datos CRUDOS del backend:', rawRecords);
+        if (rawRecords && rawRecords.length > 0) {
+          rawRecords.forEach((r, i) => {
+            console.log(`🔍 [SCHEDULE] Registro[${i}]: id=${r.id}, documento=${r.documentoCliente}, cuotasPromesa=`, r.cuotasPromesa);
+          });
+        }
+      }),
       map(records => this.transformToPaymentSchedules(records))
     );
   }
