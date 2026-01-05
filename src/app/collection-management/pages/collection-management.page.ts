@@ -2192,11 +2192,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Carga los cronogramas de promesas de pago activos para un cliente
+   * IMPORTANTE: Usa documento en lugar de customerId porque el id_cliente
+   * en registros_gestion se resuelve desde la tabla 'clientes' (diferente al ID de la tabla dinámica)
    */
   private loadActivePaymentSchedules(customerId: number) {
-    console.log(`📅 Cargando cronogramas activos para cliente ${customerId}...`);
+    // Usar documento en lugar de customerId para buscar promesas
+    // El customerId de la tabla dinámica no coincide con id_cliente en registros_gestion
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) {
+      console.warn('⚠️ No hay documento del cliente, no se pueden cargar cronogramas');
+      this.activePaymentSchedules.set([]);
+      return;
+    }
 
-    this.paymentScheduleService.getActiveSchedulesByCustomer(customerId).pipe(
+    console.log(`📅 Cargando cronogramas activos para documento ${documento}...`);
+
+    this.managementService.getActiveSchedulesByDocumento(documento).pipe(
       catchError((error) => {
         console.warn('⚠️ Error cargando cronogramas activos:', error);
         return of([]);
