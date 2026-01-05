@@ -2221,43 +2221,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           return;
         }
 
-        // El backend devuelve cabeceras con cuotasPromesa incluidas
-        // Cada record es una cabecera con su lista de cuotas
-        const schedules = records.map((header: any) => {
-          const cuotasPromesa = header.cuotasPromesa || [];
+        // El servicio ya transforma los datos a PaymentSchedule con installments
+        // Solo necesitamos adaptar el formato para este componente
+        const schedules = records.map((schedule: any) => {
+          // El servicio ya devuelve installments (no cuotasPromesa)
+          const installments = schedule.installments || [];
 
-          // Ordenar cuotas por número
-          cuotasPromesa.sort((a: any, b: any) => (a.numeroCuota || 1) - (b.numeroCuota || 1));
-
-          // Calcular monto total sumando todas las cuotas (usando montoPromesa del backend)
-          const totalAmount = cuotasPromesa.reduce((sum: number, c: any) => sum + (c.montoPromesa || c.monto || 0), 0);
-
-          // Encontrar cuotas pendientes (excluir PAGADAS, VENCIDAS y CANCELADAS)
-          // VENCIDA = promesa rota, el cliente puede crear una nueva
-          const pendingCuotas = cuotasPromesa.filter((c: any) =>
-            c.estado !== 'PAGADA' && c.estado !== 'PAGADO' && c.estado !== 'CUMPLIDO' &&
-            c.estado !== 'CANCELADA' && c.estado !== 'VENCIDA'
+          // Encontrar cuotas pendientes
+          const pendingCuotas = installments.filter((c: any) =>
+            c.status !== 'PAGADA' && c.status !== 'PAGADO' && c.status !== 'CUMPLIDO' &&
+            c.status !== 'CANCELADA' && c.status !== 'VENCIDA'
           );
-          const nextCuota = pendingCuotas[0] || cuotasPromesa[0];
+          const nextCuota = pendingCuotas[0] || installments[0];
 
           return {
-            id: header.grupoPromesaUuid || header.id,
-            grupoPromesaUuid: header.grupoPromesaUuid,
-            totalAmount: totalAmount || header.montoPromesa,
-            numberOfInstallments: header.totalCuotas || cuotasPromesa.length,
-            fechaGestion: header.fechaGestion,
-            installments: cuotasPromesa.map((c: any) => ({
+            id: schedule.scheduleId?.scheduleId || schedule.id,
+            grupoPromesaUuid: schedule.scheduleId?.scheduleId,
+            totalAmount: schedule.totalAmount,
+            numberOfInstallments: schedule.numberOfInstallments || installments.length,
+            fechaGestion: schedule.startDate,
+            installments: installments.map((c: any) => ({
               id: c.id,
-              numeroCuota: c.numeroCuota,
-              monto: c.montoPromesa || c.monto,
-              montoPromesa: c.montoPromesa || c.monto,
-              // La fecha de pago viene de CuotaPromesa.fechaPromesa
-              dueDate: c.fechaPromesa || c.fechaPago || null,
-              fechaPromesa: c.fechaPromesa || c.fechaPago,
-              status: c.estado || 'PENDIENTE',
+              numeroCuota: c.numeroCuota || c.installmentNumber,
+              monto: c.montoPromesa || c.monto || c.amount,
+              montoPromesa: c.montoPromesa || c.monto || c.amount,
+              dueDate: c.fechaPromesa || c.dueDate || c.fechaPago || null,
+              fechaPromesa: c.fechaPromesa || c.dueDate || c.fechaPago,
+              status: c.status || 'PENDIENTE',
               montoPagadoReal: c.montoPagadoReal || 0
             })),
-            nextDueDate: nextCuota?.fechaPromesa || nextCuota?.fechaPago,
+            nextDueDate: nextCuota?.fechaPromesa || nextCuota?.dueDate || nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
         });
