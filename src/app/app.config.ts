@@ -122,6 +122,7 @@ export const appConfig: ApplicationConfig = {
         PhoneMissed,
         PhoneOff,
         PhoneOutgoing,
+        PieChart,
         Play,
         Plus,
         PlusCircle,

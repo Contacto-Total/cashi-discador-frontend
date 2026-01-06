@@ -91,6 +91,12 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Gestión Promesas</span>
       </a>
 
+      <!-- Dashboard de Pagos (Admin/Supervisor) -->
+      <a routerLink="/dashboard/payments" routerLinkActive="active" class="sidebar-item" *ngIf="isAdminOrSupervisor()" [title]="isSidebarCollapsed ? 'Dashboard Pagos' : ''">
+        <lucide-angular name="pie-chart" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Dashboard Pagos</span>
+      </a>
+
       <!-- Mantenimiento Dropdown -->
       <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
         <button type="button" class="sidebar-item" [class.active]="isMantenimientoActive()" (click)="toggleMantenimientoDropdown()" [title]="isSidebarCollapsed ? 'Mantenimiento' : ''">
@@ -131,6 +137,10 @@
           <a routerLink="/admin/maintenance/typifications" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
             <lucide-angular name="tag" [size]="18"></lucide-angular>
             <span class="item-text" title="Tipificaciones">Tipificaciones</span>
+          </a>
+          <a routerLink="/admin/maintenance/amount-display" routerLinkActive="active" class="sidebar-subitem" (click)="closeDropdowns()">
+            <lucide-angular name="dollar-sign" [size]="18"></lucide-angular>
+            <span class="item-text" title="Config. Montos">Config. Montos</span>
           </a>
         </div>
       </div>
