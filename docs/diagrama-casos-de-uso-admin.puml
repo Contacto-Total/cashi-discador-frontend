@@ -1,0 +1,380 @@
+@startuml Diagrama_Flujo_Administrador_CASHI
+
+!theme cerulean-outline
+skinparam backgroundColor #f8fafc
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam ArrowColor #334155
+skinparam ActorBorderColor #1e40af
+skinparam ActorBackgroundColor #dbeafe
+skinparam UseCaseBorderColor #475569
+skinparam UseCaseBackgroundColor #f1f5f9
+skinparam PackageBorderColor #64748b
+skinparam PackageBackgroundColor #ffffff
+
+title Diagrama de Casos de Uso - Panel Administrador CASHI Discador
+
+' ============================================
+' ACTORES
+' ============================================
+actor "Administrador" as Admin #LightBlue
+actor "FreeSWITCH\n(PBX SIP)" as FreeSWITCH #LightGray
+actor "OSIPTEL\n(API Externa)" as OSIPTEL #LightGreen
+actor "WhatsApp\n(API)" as WhatsApp #LightGreen
+actor "Backend\nGateway" as Backend #LightYellow
+
+' ============================================
+' SISTEMA PRINCIPAL
+' ============================================
+rectangle "Sistema CASHI Discador - Panel Administrador" {
+
+    ' ============================================
+    ' MONITOREO
+    ' ============================================
+    package "Monitoreo" as PKG_MONITOREO #e0f2fe {
+        usecase "Ver llamadas activas\nen tiempo real" as UC_VER_LLAMADAS
+        usecase "Modo Espía (SPY)\nSolo escuchar" as UC_SPY
+        usecase "Modo Susurro (WHISPER)\nHablar solo al agente" as UC_WHISPER
+        usecase "Modo Tripartita (BARGE)\nUnirse a la llamada" as UC_BARGE
+        usecase "Ver métricas\nen tiempo real" as UC_METRICAS
+        usecase "Monitorear campaña\nespecífica" as UC_MONITOREAR_CAMPANA
+    }
+
+    ' ============================================
+    ' CARGA DE DATOS
+    ' ============================================
+    package "Carga de Datos" as PKG_CARGA #fef3c7 {
+        usecase "Carga Inicial\n(Excel/CSV)" as UC_CARGA_INICIAL
+        usecase "Carga Diaria\n(Excel/CSV)" as UC_CARGA_DIARIA
+        usecase "Mapear columnas\na campos del sistema" as UC_MAPEAR_COLUMNAS
+        usecase "Seleccionar\nTenant/Cartera/Subcartera" as UC_SELECCIONAR_CONTEXTO
+        usecase "Ver preview\nde datos" as UC_PREVIEW_DATOS
+        usecase "Ejecutar\nimportación" as UC_EJECUTAR_IMPORT
+    }
+
+    ' ============================================
+    ' PAGOS BANCARIOS
+    ' ============================================
+    package "Pagos Bancarios" as PKG_PAGOS #dcfce7 {
+        usecase "Cargar archivo\nBCP CREP" as UC_CARGAR_BCP
+        usecase "Procesar pagos\nautomáticamente" as UC_PROCESAR_PAGOS
+        usecase "Registrar pago\nmanual" as UC_PAGO_MANUAL
+        usecase "Cargar archivo OH\n(Excel)" as UC_CARGAR_OH
+        usecase "Ver historial\nde pagos" as UC_HISTORIAL_PAGOS
+        usecase "Conciliar pagos\ncon promesas" as UC_CONCILIAR
+    }
+
+    ' ============================================
+    ' COMISIONES
+    ' ============================================
+    package "Comisiones" as PKG_COMISIONES #fce7f3 {
+        usecase "Gestionar metas\npor agente" as UC_METAS
+        usecase "Configurar\nbonificaciones" as UC_BONIFICACIONES
+        usecase "Ver reportes\nde comisiones" as UC_REPORTES_COMISIONES
+        usecase "Configurar base\nde ajuste" as UC_BASE_AJUSTE
+        usecase "Definir escalas\nde comisión" as UC_ESCALAS
+    }
+
+    ' ============================================
+    ' MANTENIMIENTO
+    ' ============================================
+    package "Mantenimiento" as PKG_MANTENIMIENTO #e5e7eb {
+        usecase "CRUD Tenants\n(Proveedores)" as UC_TENANTS
+        usecase "CRUD Carteras" as UC_CARTERAS
+        usecase "CRUD Subcarteras" as UC_SUBCARTERAS
+        usecase "Gestionar\nCabeceras" as UC_CABECERAS
+        usecase "CRUD Roles" as UC_ROLES
+        usecase "CRUD Usuarios" as UC_USUARIOS
+        usecase "Gestionar\nBlacklist" as UC_BLACKLIST
+        usecase "Configurar\nTipificaciones V2" as UC_TIPIFICACIONES
+        usecase "Configurar campos\nadicionales" as UC_CAMPOS_ADICIONALES
+    }
+
+    ' ============================================
+    ' CAMPAÑAS
+    ' ============================================
+    package "Campañas" as PKG_CAMPANAS #ddd6fe {
+        usecase "Crear campaña" as UC_CREAR_CAMPANA
+        usecase "Editar campaña" as UC_EDITAR_CAMPANA
+        usecase "Configurar filtros\nde rango" as UC_FILTROS_CAMPANA
+        usecase "Activar/Pausar\ncampaña" as UC_ACTIVAR_CAMPANA
+        usecase "Iniciar/Detener\ndiscado automático" as UC_DIALING
+        usecase "Ver estadísticas\nde campaña" as UC_STATS_CAMPANA
+        usecase "Ver historial\nde llamadas" as UC_HISTORIAL_LLAMADAS
+        usecase "Importar contactos\na campaña" as UC_IMPORTAR_CONTACTOS
+    }
+
+    ' ============================================
+    ' REPORTES
+    ' ============================================
+    package "Reportes" as PKG_REPORTES #fed7aa {
+        usecase "Ver reportes\nGoogle Sheets" as UC_GOOGLE_SHEETS
+        usecase "Ver reportes\nPower BI" as UC_POWER_BI
+        usecase "Exportar datos" as UC_EXPORTAR
+    }
+
+    ' ============================================
+    ' SMS / GESTIÓN DE TENORES
+    ' ============================================
+    package "Gestión de Tenores (SMS)" as PKG_SMS #bfdbfe {
+        usecase "Crear combo SMS" as UC_CREAR_COMBO
+        usecase "Configurar\ncondiciones/filtros" as UC_CONDICIONES_SMS
+        usecase "Definir plantilla\nde mensaje" as UC_PLANTILLA_SMS
+        usecase "Vista previa\nde mensaje" as UC_PREVIEW_SMS
+        usecase "Enviar SMS\nmasivo" as UC_ENVIAR_SMS
+        usecase "Ver historial\nde envíos" as UC_HISTORIAL_SMS
+    }
+
+    ' ============================================
+    ' GRABACIONES
+    ' ============================================
+    package "Grabaciones" as PKG_GRABACIONES #fecaca {
+        usecase "Buscar grabaciones\npor filtros" as UC_BUSCAR_GRABACIONES
+        usecase "Reproducir\ngrabación" as UC_REPRODUCIR
+        usecase "Descargar\ngrabación" as UC_DESCARGAR_GRABACION
+        usecase "Evaluar llamada\n(calidad)" as UC_EVALUAR
+    }
+
+    ' ============================================
+    ' BLACKLIST
+    ' ============================================
+    package "Blacklist" as PKG_BLACKLIST #fecdd3 {
+        usecase "Agregar cliente\na blacklist" as UC_AGREGAR_BLACKLIST
+        usecase "Buscar info\nde contacto" as UC_BUSCAR_CONTACTO
+        usecase "Filtrar blacklist\npor criterios" as UC_FILTRAR_BLACKLIST
+        usecase "Definir período\nde bloqueo" as UC_PERIODO_BLOQUEO
+    }
+
+    ' ============================================
+    ' CONSULTA LÍNEAS (OSIPTEL)
+    ' ============================================
+    package "Consulta Líneas" as PKG_LINEAS #d1fae5 {
+        usecase "Consultar líneas\npor documento" as UC_CONSULTAR_LINEAS
+        usecase "Forzar actualización\n(sin cache)" as UC_FORZAR_CONSULTA
+        usecase "Iniciar consulta\nmasiva (batch)" as UC_BATCH_OSIPTEL
+        usecase "Conectar WhatsApp\npara verificación" as UC_CONECTAR_WA
+        usecase "Ver progreso\ndel batch" as UC_PROGRESO_BATCH
+        usecase "Detener batch" as UC_DETENER_BATCH
+    }
+
+    ' ============================================
+    ' CARTAS
+    ' ============================================
+    package "Cartas" as PKG_CARTAS #fef9c3 {
+        usecase "Generar Carta\nde Acuerdo" as UC_CARTA_ACUERDO
+        usecase "Generar Carta\nde No Adeudo" as UC_CARTA_NO_ADEUDO
+        usecase "Buscar Carta\nde Cesión" as UC_BUSCAR_CESION
+        usecase "Visualizar PDF" as UC_VER_PDF
+        usecase "Descargar PDF" as UC_DESCARGAR_PDF
+        usecase "Configurar\nformas de pago" as UC_FORMAS_PAGO
+    }
+
+    ' ============================================
+    ' EXTENSIONES
+    ' ============================================
+    package "Extensiones SIP" as PKG_EXTENSIONES #e0e7ff {
+        usecase "Ver extensiones\nregistradas" as UC_VER_EXTENSIONES
+        usecase "Ver estado\nde conexión" as UC_ESTADO_EXTENSION
+        usecase "Ver latencia\n(ping)" as UC_PING_EXTENSION
+    }
+
+    ' ============================================
+    ' GESTIÓN MANUAL
+    ' ============================================
+    package "Gestión Manual" as PKG_GESTION_MANUAL #f5f5f4 {
+        usecase "Buscar cliente\npor documento" as UC_BUSCAR_CLIENTE
+        usecase "Ver información\ndel cliente" as UC_INFO_CLIENTE
+        usecase "Ver historial\nde gestiones" as UC_HISTORIAL_GESTIONES
+        usecase "Ver promesas\nde pago" as UC_VER_PROMESAS
+        usecase "Ver cronograma\nde pagos" as UC_VER_CRONOGRAMA
+    }
+}
+
+' ============================================
+' RELACIONES - ADMINISTRADOR CON CASOS DE USO
+' ============================================
+
+' Monitoreo
+Admin --> UC_VER_LLAMADAS
+Admin --> UC_METRICAS
+Admin --> UC_MONITOREAR_CAMPANA
+UC_VER_LLAMADAS ..> UC_SPY : <<extend>>
+UC_VER_LLAMADAS ..> UC_WHISPER : <<extend>>
+UC_VER_LLAMADAS ..> UC_BARGE : <<extend>>
+
+' Carga de Datos
+Admin --> UC_CARGA_INICIAL
+Admin --> UC_CARGA_DIARIA
+UC_CARGA_INICIAL ..> UC_SELECCIONAR_CONTEXTO : <<include>>
+UC_CARGA_DIARIA ..> UC_SELECCIONAR_CONTEXTO : <<include>>
+UC_CARGA_INICIAL ..> UC_MAPEAR_COLUMNAS : <<include>>
+UC_CARGA_DIARIA ..> UC_MAPEAR_COLUMNAS : <<include>>
+UC_MAPEAR_COLUMNAS ..> UC_PREVIEW_DATOS : <<include>>
+UC_PREVIEW_DATOS ..> UC_EJECUTAR_IMPORT : <<include>>
+
+' Pagos Bancarios
+Admin --> UC_CARGAR_BCP
+Admin --> UC_PAGO_MANUAL
+Admin --> UC_CARGAR_OH
+Admin --> UC_HISTORIAL_PAGOS
+UC_CARGAR_BCP ..> UC_PROCESAR_PAGOS : <<include>>
+UC_PROCESAR_PAGOS ..> UC_CONCILIAR : <<include>>
+
+' Comisiones
+Admin --> UC_METAS
+Admin --> UC_BONIFICACIONES
+Admin --> UC_REPORTES_COMISIONES
+Admin --> UC_BASE_AJUSTE
+UC_METAS ..> UC_ESCALAS : <<include>>
+
+' Mantenimiento
+Admin --> UC_TENANTS
+Admin --> UC_CARTERAS
+Admin --> UC_SUBCARTERAS
+Admin --> UC_CABECERAS
+Admin --> UC_ROLES
+Admin --> UC_USUARIOS
+Admin --> UC_BLACKLIST
+Admin --> UC_TIPIFICACIONES
+UC_TIPIFICACIONES ..> UC_CAMPOS_ADICIONALES : <<extend>>
+
+' Campañas
+Admin --> UC_CREAR_CAMPANA
+Admin --> UC_EDITAR_CAMPANA
+Admin --> UC_STATS_CAMPANA
+UC_CREAR_CAMPANA ..> UC_FILTROS_CAMPANA : <<extend>>
+UC_EDITAR_CAMPANA ..> UC_FILTROS_CAMPANA : <<extend>>
+UC_CREAR_CAMPANA ..> UC_IMPORTAR_CONTACTOS : <<include>>
+UC_STATS_CAMPANA ..> UC_HISTORIAL_LLAMADAS : <<extend>>
+UC_ACTIVAR_CAMPANA ..> UC_DIALING : <<include>>
+Admin --> UC_ACTIVAR_CAMPANA
+
+' Reportes
+Admin --> UC_GOOGLE_SHEETS
+Admin --> UC_POWER_BI
+UC_GOOGLE_SHEETS ..> UC_EXPORTAR : <<extend>>
+UC_POWER_BI ..> UC_EXPORTAR : <<extend>>
+
+' SMS
+Admin --> UC_CREAR_COMBO
+UC_CREAR_COMBO ..> UC_CONDICIONES_SMS : <<include>>
+UC_CREAR_COMBO ..> UC_PLANTILLA_SMS : <<include>>
+UC_PLANTILLA_SMS ..> UC_PREVIEW_SMS : <<include>>
+UC_CREAR_COMBO ..> UC_ENVIAR_SMS : <<include>>
+Admin --> UC_HISTORIAL_SMS
+
+' Grabaciones
+Admin --> UC_BUSCAR_GRABACIONES
+UC_BUSCAR_GRABACIONES ..> UC_REPRODUCIR : <<extend>>
+UC_BUSCAR_GRABACIONES ..> UC_DESCARGAR_GRABACION : <<extend>>
+UC_REPRODUCIR ..> UC_EVALUAR : <<extend>>
+
+' Blacklist
+Admin --> UC_AGREGAR_BLACKLIST
+Admin --> UC_FILTRAR_BLACKLIST
+UC_AGREGAR_BLACKLIST ..> UC_BUSCAR_CONTACTO : <<include>>
+UC_AGREGAR_BLACKLIST ..> UC_PERIODO_BLOQUEO : <<include>>
+
+' Consulta Líneas
+Admin --> UC_CONSULTAR_LINEAS
+Admin --> UC_BATCH_OSIPTEL
+UC_CONSULTAR_LINEAS ..> UC_FORZAR_CONSULTA : <<extend>>
+UC_BATCH_OSIPTEL ..> UC_CONECTAR_WA : <<extend>>
+UC_BATCH_OSIPTEL ..> UC_PROGRESO_BATCH : <<include>>
+UC_PROGRESO_BATCH ..> UC_DETENER_BATCH : <<extend>>
+
+' Cartas
+Admin --> UC_CARTA_ACUERDO
+Admin --> UC_CARTA_NO_ADEUDO
+Admin --> UC_BUSCAR_CESION
+UC_CARTA_ACUERDO ..> UC_FORMAS_PAGO : <<include>>
+UC_CARTA_ACUERDO ..> UC_DESCARGAR_PDF : <<include>>
+UC_CARTA_NO_ADEUDO ..> UC_DESCARGAR_PDF : <<include>>
+UC_BUSCAR_CESION ..> UC_VER_PDF : <<include>>
+UC_VER_PDF ..> UC_DESCARGAR_PDF : <<extend>>
+
+' Extensiones
+Admin --> UC_VER_EXTENSIONES
+UC_VER_EXTENSIONES ..> UC_ESTADO_EXTENSION : <<include>>
+UC_VER_EXTENSIONES ..> UC_PING_EXTENSION : <<include>>
+
+' Gestión Manual
+Admin --> UC_BUSCAR_CLIENTE
+UC_BUSCAR_CLIENTE ..> UC_INFO_CLIENTE : <<include>>
+UC_INFO_CLIENTE ..> UC_HISTORIAL_GESTIONES : <<extend>>
+UC_INFO_CLIENTE ..> UC_VER_PROMESAS : <<extend>>
+UC_VER_PROMESAS ..> UC_VER_CRONOGRAMA : <<extend>>
+
+' ============================================
+' RELACIONES CON SISTEMAS EXTERNOS
+' ============================================
+
+' FreeSWITCH
+UC_SPY --> FreeSWITCH
+UC_WHISPER --> FreeSWITCH
+UC_BARGE --> FreeSWITCH
+UC_VER_LLAMADAS --> FreeSWITCH
+UC_VER_EXTENSIONES --> FreeSWITCH
+UC_DIALING --> FreeSWITCH
+
+' OSIPTEL
+UC_CONSULTAR_LINEAS --> OSIPTEL
+UC_FORZAR_CONSULTA --> OSIPTEL
+UC_BATCH_OSIPTEL --> OSIPTEL
+
+' WhatsApp
+UC_CONECTAR_WA --> WhatsApp
+
+' Backend
+UC_EJECUTAR_IMPORT --> Backend
+UC_PROCESAR_PAGOS --> Backend
+UC_IMPORTAR_CONTACTOS --> Backend
+UC_ENVIAR_SMS --> Backend
+UC_CARTA_ACUERDO --> Backend
+UC_CARTA_NO_ADEUDO --> Backend
+
+' ============================================
+' NOTAS
+' ============================================
+note right of PKG_MONITOREO
+  **Monitoreo en Tiempo Real**
+  - Polling cada 3 segundos
+  - WebSocket para actualizaciones
+  - Modos de supervisión SIP
+end note
+
+note right of PKG_CAMPANAS
+  **Gestión de Campañas**
+  - Modos: MANUAL, PROGRESSIVE, PREDICTIVE
+  - Auto-import de contactos
+  - Control de intensidad (1-100)
+end note
+
+note right of PKG_LINEAS
+  **Consulta OSIPTEL**
+  - Cache de consultas
+  - Batch con verificación WhatsApp
+  - Polling de progreso cada 3s
+end note
+
+note bottom of PKG_CARTAS
+  **Generación de PDFs**
+  - Carta Acuerdo: Plan de pagos
+  - Carta No Adeudo: Cancelación
+  - Carta Cesión: Visualización
+end note
+
+' ============================================
+' LEYENDA
+' ============================================
+legend right
+  |= Símbolo |= Significado |
+  | <<include>> | Relación obligatoria |
+  | <<extend>> | Relación opcional |
+  | --> | Asociación directa |
+  | ..> | Dependencia |
+endlegend
+
+@enduml

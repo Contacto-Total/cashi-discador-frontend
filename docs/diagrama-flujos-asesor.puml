@@ -1,0 +1,693 @@
+@startuml Diagrama_Flujos_Detallados_Asesor
+
+!theme cerulean-outline
+skinparam backgroundColor #f8fafc
+skinparam ActivityBackgroundColor #e2e8f0
+skinparam ActivityBorderColor #475569
+skinparam ActivityDiamondBackgroundColor #fef3c7
+skinparam ActivityDiamondBorderColor #d97706
+skinparam ArrowColor #334155
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionBorderColor #94a3b8
+
+title Diagramas de Flujo Detallados - Asesor/Agente CASHI
+
+' ============================================
+' FLUJO 1: INICIO DE SESION Y REGISTRO SIP
+' ============================================
+|#e0f2fe|Inicio de Sesion|
+
+start
+:Ingresar credenciales\n(usuario y contrasena);
+
+if (Credenciales validas?) then (Si)
+  :Obtener token JWT;
+  :Cargar datos del usuario;
+  :Obtener extension SIP\nasignada;
+
+  if (Extension asignada?) then (Si)
+    :Inicializar cliente\nWebRTC (JsSIP);
+    :Configurar URI SIP\n(extension@servidor);
+    :Registrar en FreeSWITCH;
+
+    if (Registro SIP exitoso?) then (Si)
+      :Establecer estado\nDISPONIBLE;
+      :Suscribirse a WebSocket\n(eventos de llamada);
+      #lightgreen:Sesion iniciada\ncorrectamente;
+    else (No)
+      #pink:Error de registro\nSIP;
+      :Mostrar mensaje\nde error;
+      stop
+    endif
+  else (No)
+    #yellow:Usuario sin\nextension;
+    :Modo solo consulta;
+  endif
+else (No)
+  #pink:Credenciales\ninvalidas;
+  stop
+endif
+
+stop
+
+' ============================================
+' FLUJO 2: GESTION DE ESTADOS
+' ============================================
+|#d1fae5|Gestion de Estados|
+
+start
+:Ver estado actual\n(indicador visual);
+
+switch (Accion del agente?)
+case (Disponible)
+  if (Estado actual = EN_LLAMADA?) then (Si)
+    #pink:No puede cambiar\ndurante llamada;
+  else (No)
+    :Enviar cambio a\nDISPONIBLE;
+    :Actualizar backend;
+    #lightgreen:Listo para\nrecibir llamadas;
+  endif
+
+case (Reunion)
+  :Enviar cambio a\nEN_REUNION;
+  :Iniciar cronometro\nde pausa;
+  #lightyellow:Pausado por\nreunion;
+
+case (Refrigerio)
+  :Enviar cambio a\nREFRIGERIO;
+  :Iniciar cronometro\nde pausa;
+  #lightyellow:Pausado por\nrefrigerio;
+
+case (SSHH)
+  :Enviar cambio a\nSSHH;
+  :Iniciar cronometro\nde pausa;
+  #lightyellow:Pausado por\nbano;
+
+case (Modo Manual)
+  :Enviar cambio a\nEN_MANUAL;
+  :Habilitar controles\nde marcacion manual;
+  #lightblue:Modo manual\nactivado;
+endswitch
+
+:Mostrar indicador\nde tiempo en estado;
+
+stop
+
+' ============================================
+' FLUJO 3: RECEPCION DE LLAMADA (AUTO-DIALER)
+' ============================================
+|#fef3c7|Recepcion de Llamada Automatica|
+
+start
+:Estado = DISPONIBLE;
+:Esperando asignacion\ndel Auto-Dialer;
+
+:Recibir evento WebSocket\n(nueva llamada asignada);
+
+:Cargar datos del cliente\n(documento, nombre, deuda);
+
+:Recibir llamada SIP\nentrante (INVITE);
+
+:Contestar automaticamente\n(auto-answer);
+
+:Establecer conexion\nWebRTC;
+
+:Cambiar estado a\nEN_LLAMADA;
+
+:Iniciar cronometro\nde duracion;
+
+:Mostrar panel de\ngestion de cobranza;
+
+fork
+  :Escuchar audio\ndel cliente;
+fork again
+  :Hablar con\nel cliente;
+fork again
+  :Ver informacion\nen pantalla;
+end fork
+
+if (Llamada finalizada?) then (Si)
+  :Ir a flujo de\nTipificacion;
+else (No)
+  :Continuar en\nllamada;
+endif
+
+stop
+
+' ============================================
+' FLUJO 4: LLAMADA MANUAL
+' ============================================
+|#ddd6fe|Llamada Manual|
+
+start
+:Activar modo manual\n(EN_MANUAL);
+
+switch (Tipo de marcacion?)
+case (Numero directo)
+  :Ingresar numero\nde telefono;
+
+  if (Numero valido?) then (Si)
+    :Click en Marcar;
+  else (No)
+    #pink:Numero invalido;
+    stop
+  endif
+
+case (Buscar cliente)
+  :Ingresar documento\ndel cliente;
+  :Buscar en base\nde datos;
+
+  if (Cliente encontrado?) then (Si)
+    :Cargar telefonos\ndel cliente;
+    :Seleccionar telefono\na llamar;
+    :Click en Marcar;
+  else (No)
+    #pink:Cliente no\nencontrado;
+    stop
+  endif
+endswitch
+
+:Iniciar llamada SIP\n(INVITE);
+
+if (Llamada conectada?) then (Si)
+  :Cambiar estado a\nEN_LLAMADA;
+  :Iniciar cronometro;
+  :Mostrar panel de\ngestion;
+  #lightgreen:En llamada\nmanual;
+else (No)
+  if (Motivo?) then (No contesta)
+    #yellow:Sin respuesta;
+  else (Ocupado/Error)
+    #pink:Llamada fallida;
+  endif
+endif
+
+stop
+
+' ============================================
+' FLUJO 5: CONTROL DE LLAMADA
+' ============================================
+|#fecaca|Control Durante Llamada|
+
+start
+:Llamada activa\n(EN_LLAMADA);
+
+repeat
+  switch (Accion?)
+  case (Silenciar)
+    if (Microfono activo?) then (Si)
+      :Enviar MUTE a\nFreeSWITCH;
+      :Mostrar indicador\n"Silenciado";
+      #lightyellow:Microfono\nsilenciado;
+    else (No)
+      :Enviar UNMUTE a\nFreeSWITCH;
+      :Ocultar indicador;
+      #lightgreen:Microfono\nactivo;
+    endif
+
+  case (Ver info)
+    :Mostrar datos\ndel cliente;
+    :Ver deuda total;
+    :Ver historial\nde gestiones;
+
+  case (Colgar)
+    :Enviar BYE a\nFreeSWITCH;
+    :Finalizar sesion\nWebRTC;
+    :Detener cronometro;
+    :Cambiar estado a\nTIPIFICANDO;
+    break
+  endswitch
+repeat while (Continuar llamada?) is (Si)
+->No;
+
+:Ir a flujo de\nTipificacion;
+
+stop
+
+' ============================================
+' FLUJO 6: GESTION DE COBRANZA (DURANTE LLAMADA)
+' ============================================
+|#e0e7ff|Gestion de Cobranza|
+
+start
+:Llamada activa con\ncliente;
+
+:Ver informacion basica\n(nombre, documento);
+
+:Ver deuda y saldos;
+note right
+  - Saldo Mora
+  - Saldo Capital
+  - Deuda Total
+  - Dias de atraso
+end note
+
+fork
+  :Consultar historial\nde gestiones anteriores;
+fork again
+  :Ver promesas de\npago activas;
+fork again
+  :Ver datos de\ncontacto adicionales;
+end fork
+
+if (Cliente tiene promesa activa?) then (Si)
+  :Mostrar cronograma\nde pagos;
+  :Ver estado de\ncada cuota;
+
+  if (Hay cuota vencida?) then (Si)
+    #lightyellow:Recordar pago\npendiente;
+  else (No)
+    #lightgreen:Pagos al dia;
+  endif
+else (No)
+  :Ofrecer opciones\nde pago;
+endif
+
+:Continuar gestion\nsegun conversacion;
+
+stop
+
+' ============================================
+' FLUJO 7: TIPIFICACION (4 NIVELES)
+' ============================================
+|#fef9c3|Tipificacion V2|
+
+start
+:Estado = TIPIFICANDO;
+:Mostrar formulario\nde tipificacion;
+
+:Seleccionar Nivel 1\n(Resultado del contacto);
+note right
+  - CONTACTO_EFECTIVO
+  - CONTACTO_NO_EFECTIVO
+  - NO_CONTACTO
+  - NUMERO_ERRADO
+end note
+
+if (Nivel 1 tiene opciones N2?) then (Si)
+  :Cargar opciones\nNivel 2;
+  :Seleccionar Nivel 2\n(Tipo de gestion);
+
+  if (Nivel 2 tiene opciones N3?) then (Si)
+    :Cargar opciones\nNivel 3;
+    :Seleccionar Nivel 3\n(Modalidad de pago);
+
+    if (Nivel 3 tiene opciones N4?) then (Si)
+      :Cargar opciones\nNivel 4;
+      :Seleccionar Nivel 4\n(Detalle/Fraccionamiento);
+    else (No)
+    endif
+  else (No)
+  endif
+else (No)
+endif
+
+:Verificar campos\nadicionales dinamicos;
+
+if (Hay campos adicionales?) then (Si)
+  repeat
+    :Completar campo\nadicional requerido;
+  repeat while (Mas campos?) is (Si)
+  ->No;
+else (No)
+endif
+
+:Ingresar observaciones\n(comentarios);
+
+if (Tipificacion requiere promesa?) then (Si)
+  :Ir a flujo de\nPromesa de Pago;
+else (No)
+  :Guardar gestion;
+  :Enviar al backend;
+
+  if (Guardado exitoso?) then (Si)
+    :Cambiar estado a\nDISPONIBLE;
+    #lightgreen:Gestion\nregistrada;
+  else (No)
+    #pink:Error al guardar;
+  endif
+endif
+
+stop
+
+' ============================================
+' FLUJO 8: PROMESA DE PAGO SIMPLE
+' ============================================
+|#dcfce7|Promesa de Pago Simple|
+
+start
+:Seleccionar tipo\n"Promesa Simple";
+
+:Seleccionar monto\n(chips dinamicos);
+note right
+  Opciones:
+  - Saldo Mora
+  - Saldo Capital
+  - Deuda Total
+  - Monto personalizado
+end note
+
+if (Monto personalizado?) then (Si)
+  :Ingresar monto\nmanualmente;
+else (No)
+  :Usar monto\nseleccionado;
+endif
+
+:Seleccionar fecha\nde pago;
+
+if (Fecha valida?) then (Si)
+  if (Fecha >= hoy?) then (Si)
+    :Mostrar resumen\nde promesa;
+
+    if (Confirmar?) then (Si)
+      :Guardar promesa;
+      :Crear recordatorio\nautomatico;
+      #lightgreen:Promesa\ncreada;
+    else (No)
+      :Cancelar;
+    endif
+  else (No)
+    #pink:Fecha debe ser\nfutura;
+  endif
+else (No)
+  #pink:Fecha invalida;
+endif
+
+stop
+
+' ============================================
+' FLUJO 9: CRONOGRAMA DE PAGOS (CUOTAS)
+' ============================================
+|#bfdbfe|Cronograma de Pagos|
+
+start
+:Seleccionar tipo\n"Cronograma de Pagos";
+
+:Definir monto total\na fraccionar;
+
+:Definir numero\nde cuotas;
+
+repeat
+  :Agregar cuota;
+  :Ingresar fecha\nde cuota;
+  :Ingresar monto\nde cuota;
+  :Validar que suma\nno exceda total;
+repeat while (Mas cuotas?) is (Si)
+->No;
+
+if (Suma de cuotas = Monto total?) then (Si)
+  :Mostrar resumen\ndel cronograma;
+
+  if (Generar Carta de Acuerdo?) then (Si)
+    :Ir a flujo de\nCarta de Acuerdo;
+  else (No)
+    :Guardar cronograma\nsin carta;
+  endif
+
+  :Guardar cronograma;
+  :Crear recordatorios\npara cada cuota;
+  #lightgreen:Cronograma\ncreado;
+else (No)
+  #pink:La suma de cuotas\nno coincide;
+endif
+
+stop
+
+' ============================================
+' FLUJO 10: CARTA DE ACUERDO
+' ============================================
+|#e5e7eb|Generacion de Carta de Acuerdo|
+
+start
+:Verificar promesa\npendiente;
+
+if (Existe promesa activa?) then (Si)
+  :Cargar datos del\ncliente automaticamente;
+  :Cargar cronograma\nde pagos;
+
+  :Confirmar generacion\nde carta;
+
+  if (Confirmar?) then (Si)
+    :Enviar solicitud\nal backend;
+    :Generar PDF;
+
+    if (PDF generado?) then (Si)
+      :Mostrar preview\ndel PDF;
+      :Habilitar descarga;
+
+      if (Descargar?) then (Si)
+        :Descargar PDF;
+        #lightgreen:Carta\ndescargada;
+      else (No)
+        :Solo visualizar;
+      endif
+    else (No)
+      #pink:Error generando\nPDF;
+    endif
+  else (No)
+    :Cancelar;
+  endif
+else (No)
+  #pink:No hay promesa\nactiva;
+endif
+
+stop
+
+' ============================================
+' FLUJO 11: SUBIR COMPROBANTE DE PAGO
+' ============================================
+|#fce7f3|Comprobante de Pago|
+
+start
+:Acceder a seccion\nComprobantes;
+
+:Seleccionar archivo\n(imagen o PDF);
+
+if (Archivo valido?) then (Si)
+  :Mostrar preview\ndel archivo;
+  :Ingresar datos\ndel pago;
+  note right
+    - Monto
+    - Fecha de pago
+    - Canal (banco, agente, etc.)
+  end note
+
+  :Subir comprobante\nal servidor;
+
+  if (Upload exitoso?) then (Si)
+    :Registrar pago\ncon voucher;
+    :Actualizar estado\nde promesa;
+    #lightgreen:Comprobante\nregistrado;
+  else (No)
+    #pink:Error al subir\narchivo;
+  endif
+else (No)
+  #pink:Formato de\narchivo invalido;
+endif
+
+stop
+
+' ============================================
+' FLUJO 12: RECORDATORIOS (DIALER)
+' ============================================
+|#fed7aa|Dialer de Recordatorios|
+
+start
+:Acceder a modulo\nRecordatorios;
+
+:Cargar promesas que\nvencen hoy;
+
+if (Hay recordatorios pendientes?) then (Si)
+  :Mostrar lista de\nrecordatorios;
+  :Ver cantidad total;
+
+  if (Iniciar dialer?) then (Si)
+    :Click en "Iniciar";
+    :Cargar primer\nrecordatorio;
+
+    repeat
+      :Mostrar countdown\n(5 segundos);
+      :Preparar llamada;
+      :Iniciar llamada\nautomatica;
+
+      if (Llamada conectada?) then (Si)
+        :Gestionar llamada;
+        :Tipificar resultado;
+      else (No)
+        :Marcar como\nno contactado;
+      endif
+
+      :Cargar siguiente\nrecordatorio;
+
+      if (Cancelar dialer?) then (Si)
+        :Detener proceso;
+        break
+      else (No)
+      endif
+    repeat while (Mas recordatorios?) is (Si)
+    ->No;
+
+    #lightgreen:Recordatorios\nfinalizados;
+  else (No)
+    :Ver lista sin\nprocesar;
+  endif
+else (No)
+  #lightblue:Sin recordatorios\npendientes;
+endif
+
+stop
+
+' ============================================
+' FLUJO 13: SOLICITUD DE AUTORIZACION
+' ============================================
+|#f5f5f4|Solicitud de Autorizacion|
+
+start
+:Necesita autorizacion\nespecial;
+
+:Ver supervisores\nen linea;
+
+if (Hay supervisores disponibles?) then (Si)
+  :Seleccionar supervisor;
+  :Redactar solicitud;
+  :Enviar solicitud;
+
+  :Esperar respuesta\n(estado: PENDIENTE);
+
+  switch (Respuesta del supervisor?)
+  case (Aprobada)
+    :Recibir notificacion\nde aprobacion;
+    :Aplicar autorizacion;
+    #lightgreen:Solicitud\naprobada;
+
+  case (Rechazada)
+    :Recibir notificacion\nde rechazo;
+    :Ver motivo;
+    #pink:Solicitud\nrechazada;
+
+  case (Timeout)
+    #yellow:Sin respuesta\ndel supervisor;
+  endswitch
+else (No)
+  #yellow:No hay supervisores\ndisponibles;
+endif
+
+stop
+
+' ============================================
+' FLUJO 14: HISTORIAL Y GRABACIONES
+' ============================================
+|#fecaca|Historial de Llamadas|
+
+start
+:Acceder a Historial;
+
+:Cargar llamadas\npropias del agente;
+
+:Aplicar filtros;
+fork
+  :Filtrar por fecha;
+fork again
+  :Filtrar por documento;
+fork again
+  :Filtrar por resultado;
+end fork
+
+:Mostrar lista de\nllamadas;
+
+if (Seleccionar llamada?) then (Si)
+  :Ver detalle de\nla llamada;
+  :Ver tipificacion\nrealizada;
+
+  if (Tiene grabacion?) then (Si)
+    if (Reproducir?) then (Si)
+      :Cargar audio;
+      :Reproducir grabacion;
+      #lightgreen:Reproduciendo;
+    else (No)
+    endif
+  else (No)
+    #lightblue:Sin grabacion\ndisponible;
+  endif
+else (No)
+endif
+
+stop
+
+' ============================================
+' FLUJO 15: WHATSAPP
+' ============================================
+|#d1fae5|Chat WhatsApp|
+
+start
+:Cliente con WhatsApp;
+
+:Click en icono\nWhatsApp;
+
+:Iniciar conversacion;
+
+if (Numero valido para WhatsApp?) then (Si)
+  :Abrir panel de chat;
+  :Cargar historial\nde mensajes;
+
+  switch (Accion?)
+  case (Enviar mensaje)
+    :Escribir mensaje;
+    :Enviar;
+    #lightgreen:Mensaje\nenviado;
+
+  case (Enviar plantilla)
+    :Seleccionar plantilla\npredefinida;
+    :Personalizar variables;
+    :Enviar plantilla;
+    #lightgreen:Plantilla\nenviada;
+
+  case (Ver conversacion)
+    :Scroll por\nhistorial;
+  endswitch
+else (No)
+  #pink:Numero no tiene\nWhatsApp;
+endif
+
+stop
+
+' ============================================
+' FLUJO 16: CIERRE DE SESION
+' ============================================
+|#e0f2fe|Cierre de Sesion|
+
+start
+:Click en Cerrar Sesion;
+
+if (Tiene llamada activa?) then (Si)
+  #pink:Debe finalizar\nllamada primero;
+  stop
+else (No)
+endif
+
+if (Esta tipificando?) then (Si)
+  #yellow:Guardar o descartar\ngestion pendiente?;
+
+  if (Guardar?) then (Si)
+    :Guardar gestion;
+  else (No)
+    :Descartar cambios;
+  endif
+else (No)
+endif
+
+:Cambiar estado a\nDESCONECTADO;
+
+:Desregistrar SIP\nde FreeSWITCH;
+
+:Cerrar conexion\nWebSocket;
+
+:Limpiar token JWT;
+
+:Redirigir a\npantalla de login;
+
+#lightgreen:Sesion\ncerrada;
+
+stop
+
+@enduml

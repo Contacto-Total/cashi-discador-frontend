@@ -1,0 +1,613 @@
+@startuml Diagrama_Flujos_Detallados_Admin
+
+!theme cerulean-outline
+skinparam backgroundColor #f8fafc
+skinparam ActivityBackgroundColor #e2e8f0
+skinparam ActivityBorderColor #475569
+skinparam ActivityDiamondBackgroundColor #fef3c7
+skinparam ActivityDiamondBorderColor #d97706
+skinparam ArrowColor #334155
+skinparam PartitionBackgroundColor #f1f5f9
+skinparam PartitionBorderColor #94a3b8
+
+title Diagramas de Flujo Detallados - Administrador CASHI
+
+' ============================================
+' FLUJO 1: CARGA DE DATOS
+' ============================================
+|#e0f2fe|Carga de Datos|
+
+start
+:Seleccionar tipo de carga\n(Inicial / Diaria);
+
+if (Tipo de carga?) then (Inicial)
+  :Ir a módulo\nCarga Inicial;
+else (Diaria)
+  :Ir a módulo\nCarga Diaria;
+endif
+
+:Seleccionar archivo\n(Excel/CSV);
+
+if (Archivo válido?) then (Sí)
+  :Mostrar preview\nde columnas;
+else (No)
+  :Mostrar error\nde formato;
+  stop
+endif
+
+:Seleccionar Tenant;
+:Cargar Carteras\ndel Tenant;
+:Seleccionar Cartera;
+:Cargar Subcarteras\nde la Cartera;
+:Seleccionar Subcartera;
+
+:Cargar cabeceras\ndisponibles;
+
+repeat
+  :Mapear columna\ndel archivo a campo;
+repeat while (Más columnas?) is (Sí)
+->No;
+
+:Mostrar preview\nde datos mapeados;
+
+if (Confirmar importación?) then (Sí)
+  :Enviar datos\nal backend;
+  :Procesar importación;
+
+  if (Importación exitosa?) then (Sí)
+    :Mostrar resumen\n(registros importados);
+    #lightgreen:Importación\ncompletada;
+  else (No)
+    :Mostrar errores\nde importación;
+    #pink:Importación\nfallida;
+  endif
+else (No)
+  :Cancelar proceso;
+endif
+
+stop
+
+' ============================================
+' FLUJO 2: GESTIÓN DE CAMPAÑAS
+' ============================================
+|#ddd6fe|Gestión de Campañas|
+
+start
+:Acceder al módulo\nde Campañas;
+
+fork
+  :Ver lista de\ncampañas existentes;
+fork again
+  :Crear nueva\ncampaña;
+end fork
+
+if (Acción?) then (Crear/Editar)
+  :Ingresar datos básicos\n(nombre, descripción);
+  :Seleccionar modo de discado\n(MANUAL/PROGRESSIVE/PREDICTIVE);
+  :Configurar intentos\nmáximos y reintentos;
+  :Seleccionar\nTenant/Cartera/Subcartera;
+
+  if (Agregar filtros?) then (Sí)
+    :Cargar campos\nfiltrables;
+    repeat
+      :Seleccionar campo;
+      :Definir rango\n(mín/máx);
+      :Agregar filtro;
+    repeat while (Más filtros?) is (Sí)
+    ->No;
+  else (No)
+  endif
+
+  :Guardar campaña;
+  :Auto-importar contactos\n(backend);
+
+else (Ver/Monitorear)
+  :Seleccionar campaña;
+
+  fork
+    :Ver estadísticas;
+  fork again
+    :Ver historial\nde llamadas;
+  fork again
+    :Controlar discado;
+  end fork
+endif
+
+if (Controlar discado?) then (Sí)
+  if (Estado actual?) then (Pausada/Draft)
+    :Activar campaña;
+    :Iniciar discado\nautomático;
+    #lightgreen:Discado\nactivo;
+  else (Activa)
+    :Pausar discado;
+    #yellow:Discado\npausado;
+  endif
+else (No)
+endif
+
+stop
+
+' ============================================
+' FLUJO 3: MONITOREO DE LLAMADAS
+' ============================================
+|#fef3c7|Monitoreo de Llamadas|
+
+start
+:Acceder al módulo\nde Monitoreo;
+:Cargar llamadas\nactivas (polling 3s);
+
+if (Hay llamadas activas?) then (Sí)
+  :Mostrar lista de\nllamadas en curso;
+  :Seleccionar llamada\na monitorear;
+
+  switch (Modo de supervisión?)
+  case (SPY - Espía)
+    :Conectar en modo\nsolo escucha;
+    :Escuchar conversación\n(agente + cliente);
+    #lightblue:Modo SPY\nactivo;
+
+  case (WHISPER - Susurro)
+    :Conectar en modo\nsusurro;
+    :Hablar solo\nal agente;
+    #lightyellow:Modo WHISPER\nactivo;
+
+  case (BARGE - Tripartita)
+    :Conectar en modo\ntripartita;
+    :Participar en la\nconversación completa;
+    #lightgreen:Modo BARGE\nactivo;
+  endswitch
+
+  :Monitorear llamada;
+
+  if (Finalizar monitoreo?) then (Sí)
+    :Desconectar de\nla llamada;
+  else (No)
+    :Continuar\nmonitoreando;
+  endif
+
+else (No)
+  :Mostrar mensaje\n"Sin llamadas activas";
+endif
+
+stop
+
+' ============================================
+' FLUJO 4: BLACKLIST
+' ============================================
+|#fecdd3|Gestión de Blacklist|
+
+start
+:Acceder al módulo\nBlacklist;
+
+fork
+  :Ver lista de\nbloqueos actuales;
+  :Aplicar filtros\n(Tenant/Cartera/Documento);
+fork again
+  :Agregar nuevo\nbloqueo;
+end fork
+
+if (Agregar bloqueo?) then (Sí)
+  :Seleccionar Tenant;
+
+  if (Especificar Cartera?) then (Sí)
+    :Seleccionar Cartera;
+    if (Especificar Subcartera?) then (Sí)
+      :Seleccionar Subcartera;
+    else (No)
+    endif
+  else (No)
+  endif
+
+  :Ingresar documento\ndel cliente;
+  :Seleccionar fecha\nde fin del bloqueo;
+
+  if (Fecha válida?) then (Sí)
+    :Buscar información\nde contacto;
+
+    if (Cliente encontrado?) then (Sí)
+      :Mostrar popup\nde confirmación;
+      :Mostrar datos\n(email, teléfono);
+
+      if (Confirmar?) then (Sí)
+        :Crear registro\nen blacklist;
+        #lightgreen:Cliente\nbloqueado;
+      else (No)
+        :Cancelar;
+      endif
+    else (No)
+      #pink:Error: Cliente\nno encontrado;
+    endif
+  else (No)
+    #pink:Error: Fecha\ndebe ser futura;
+  endif
+else (No)
+  :Navegar lista\nde bloqueos;
+endif
+
+stop
+
+' ============================================
+' FLUJO 5: CONSULTA LÍNEAS OSIPTEL
+' ============================================
+|#d1fae5|Consulta Líneas OSIPTEL|
+
+start
+:Acceder al módulo\nConsulta Líneas;
+
+switch (Tipo de consulta?)
+case (Individual)
+  :Ingresar número\nde documento;
+
+  if (Documento válido?) then (Sí)
+    if (Usar cache?) then (Consultar)
+      :Enviar consulta\n(con cache);
+    else (Actualizar)
+      :Forzar nueva\nconsulta OSIPTEL;
+    endif
+
+    :Recibir respuesta;
+
+    if (Éxito?) then (Sí)
+      :Mostrar líneas\nencontradas;
+      :Mostrar operador\nde cada línea;
+      #lightgreen:Consulta\nexitosa;
+    else (No)
+      #pink:Error en\nconsulta;
+    endif
+  else (No)
+    #pink:Documento\ninválido;
+  endif
+
+case (Masiva - Batch)
+  :Click en Consulta\nMasiva OSIPTEL;
+  :Abrir modal\nWhatsApp;
+
+  if (Verificar con WhatsApp?) then (Sí)
+    if (WhatsApp conectado?) then (No)
+      :Generar código QR;
+      :Escanear con\nWhatsApp;
+      :Esperar conexión\n(polling 3s);
+    else (Sí)
+    endif
+    :Iniciar batch\nCON WhatsApp;
+  else (No)
+    :Iniciar batch\nSIN WhatsApp;
+  endif
+
+  :Mostrar progreso\n(barra y contadores);
+
+  repeat
+    :Actualizar estado\n(polling 3s);
+  repeat while (Batch en curso?) is (Sí)
+  ->No;
+
+  if (Completado?) then (Sí)
+    :Mostrar resumen\n(exitosos/fallidos);
+    #lightgreen:Batch\ncompletado;
+  else (Detenido)
+    #yellow:Batch\ndetenido;
+  endif
+endswitch
+
+stop
+
+' ============================================
+' FLUJO 6: GENERACIÓN DE CARTAS
+' ============================================
+|#fef9c3|Generación de Cartas|
+
+start
+:Acceder al módulo\nCartas;
+
+switch (Tipo de carta?)
+case (Acuerdo de Pago)
+  :Buscar cliente\npor DNI;
+
+  if (Cliente encontrado?) then (Sí)
+    :Cargar datos\nautomáticamente;
+    :Detectar tramo\ny entidad;
+    :Mostrar deuda\ntotal y observaciones;
+
+    :Ingresar monto\naprobado;
+    :Calcular descuento\nautomáticamente;
+
+    if (Agregar cuotas?) then (Sí)
+      repeat
+        :Agregar forma\nde pago;
+        :Ingresar fecha\ny monto;
+      repeat while (Más cuotas?) is (Sí)
+      ->No;
+
+      if (Suma = Monto aprobado?) then (Sí)
+        :Validación OK;
+      else (No)
+        #pink:Error: Suma\nno coincide;
+        stop
+      endif
+    else (No)
+    endif
+
+    if (Ocultar deuda real?) then (Sí)
+      :Activar modo\nBlackout;
+      :Usar monto aprobado\ncomo deuda;
+    else (No)
+    endif
+
+    :Generar PDF;
+    :Descargar archivo;
+    #lightgreen:Carta generada;
+  else (No)
+    #pink:Cliente no\nencontrado;
+  endif
+
+case (No Adeudo)
+  :Buscar cliente\npor DNI;
+
+  if (Cliente encontrado?) then (Sí)
+    :Cargar datos\nautomáticamente;
+    :Ingresar fecha\nde cancelación;
+    :Generar PDF;
+    :Descargar archivo;
+    #lightgreen:Carta generada;
+  else (No)
+    #pink:Cliente no\nencontrado;
+  endif
+
+case (Cesión)
+  :Buscar carta\npor DNI;
+
+  if (Carta existe?) then (Sí)
+    :Mostrar info\ndel archivo;
+    :Cargar PDF\nen visor;
+
+    if (Descargar?) then (Sí)
+      :Descargar PDF;
+    else (No)
+      :Visualizar en\niframe;
+    endif
+    #lightgreen:Carta\nencontrada;
+  else (No)
+    #pink:Carta no\nexiste;
+  endif
+endswitch
+
+stop
+
+' ============================================
+' FLUJO 7: SMS MASIVO
+' ============================================
+|#bfdbfe|Gestión de Tenores (SMS)|
+
+start
+:Acceder al módulo\nGestión de Tenores;
+
+:Crear nuevo combo SMS;
+:Ingresar nombre\ny descripción;
+:Seleccionar tramo\n(3/5/CONTACTO_TOTAL);
+
+:Configurar selects\n(filtros de datos);
+
+repeat
+  :Agregar condición;
+  :Seleccionar campo\ny operador;
+  :Definir valor;
+repeat while (Más condiciones?) is (Sí)
+->No;
+
+:Configurar restricciones;
+fork
+  :No contenido;
+fork again
+  :Excluir promesas\nperíodo actual;
+fork again
+  :Excluir compromisos;
+fork again
+  :Excluir blacklist;
+end fork
+
+:Escribir plantilla\nde mensaje;
+:Usar variables\n({NOMBRE}, {MORA}, etc);
+
+:Ver preview\ncon datos reales;
+:Ver contador\nde caracteres;
+
+if (Agregar rangos?) then (Sí)
+  repeat
+    :Definir rango\nde monto;
+    :Escribir mensaje\nespecífico;
+  repeat while (Más rangos?) is (Sí)
+  ->No;
+else (No)
+endif
+
+:Guardar combo;
+
+if (Enviar ahora?) then (Sí)
+  :Calcular destinatarios;
+  :Mostrar confirmación;
+
+  if (Confirmar envío?) then (Sí)
+    :Enviar SMS masivo;
+    :Mostrar progreso;
+    #lightgreen:Envío\ncompletado;
+  else (No)
+    :Cancelar envío;
+  endif
+else (No)
+  :Guardar para\nenvío posterior;
+endif
+
+stop
+
+' ============================================
+' FLUJO 8: PAGOS BANCARIOS
+' ============================================
+|#dcfce7|Pagos Bancarios|
+
+start
+:Acceder al módulo\nPagos Bancarios;
+
+switch (Tipo de operación?)
+case (Cargar BCP)
+  :Seleccionar archivo\nCREP del BCP;
+
+  if (Archivo válido?) then (Sí)
+    :Parsear archivo;
+    :Mostrar preview\nde pagos;
+
+    :Procesar pagos;
+    repeat
+      :Buscar cliente\npor referencia;
+      if (Cliente encontrado?) then (Sí)
+        :Conciliar con\npromesa activa;
+        :Actualizar estado\nde promesa;
+      else (No)
+        :Marcar como\nno conciliado;
+      endif
+    repeat while (Más pagos?) is (Sí)
+    ->No;
+
+    :Mostrar resumen\n(conciliados/pendientes);
+    #lightgreen:Proceso\ncompletado;
+  else (No)
+    #pink:Archivo\ninválido;
+  endif
+
+case (Pago Manual)
+  :Buscar cliente;
+  :Ingresar datos\ndel pago;
+  :Seleccionar canal\nde pago;
+  :Ingresar monto;
+
+  if (Adjuntar comprobante?) then (Sí)
+    :Subir imagen\no PDF;
+  else (No)
+  endif
+
+  :Registrar pago;
+  #lightgreen:Pago\nregistrado;
+
+case (Cargar OH)
+  :Seleccionar archivo\nExcel de OH;
+  :Procesar archivo;
+  :Actualizar registros;
+  #lightgreen:Archivo\nprocesado;
+endswitch
+
+stop
+
+' ============================================
+' FLUJO 9: MANTENIMIENTO
+' ============================================
+|#e5e7eb|Mantenimiento|
+
+start
+:Acceder al módulo\nMantenimiento;
+
+switch (Submódulo?)
+case (Tenants)
+  :Gestionar Proveedores;
+  if (Acción?) then (Crear)
+    :Ingresar datos\ndel tenant;
+    :Guardar tenant;
+  else (Editar/Ver)
+    :Seleccionar tenant;
+    :Modificar datos;
+    :Guardar cambios;
+  endif
+
+case (Carteras)
+  :Seleccionar Tenant;
+  :Gestionar Carteras;
+  if (Acción?) then (Crear)
+    :Ingresar nombre\ny configuración;
+  else (Editar)
+    :Modificar cartera;
+  endif
+  :Guardar;
+
+case (Subcarteras)
+  :Seleccionar Tenant;
+  :Seleccionar Cartera;
+  :Gestionar Subcarteras;
+  :CRUD de subcarteras;
+
+case (Usuarios)
+  :Gestionar Usuarios;
+  if (Acción?) then (Crear)
+    :Ingresar datos\ndel usuario;
+    :Asignar rol;
+    :Asignar extensión SIP;
+    :Asignar tenant;
+  else (Editar)
+    :Modificar usuario;
+  endif
+  :Guardar;
+
+case (Roles)
+  :Gestionar Roles;
+  :Configurar permisos;
+
+case (Tipificaciones)
+  :Seleccionar contexto;
+  :Ver árbol de\ntipificaciones;
+  if (Editar?) then (Sí)
+    :Habilitar/Deshabilitar;
+    :Personalizar nombre\ny color;
+    if (Campos adicionales?) then (Sí)
+      :Configurar campos\ndinámicos;
+    else (No)
+    endif
+  else (No)
+  endif
+  :Guardar configuración;
+endswitch
+
+#lightgreen:Mantenimiento\ncompletado;
+stop
+
+' ============================================
+' FLUJO 10: GRABACIONES
+' ============================================
+|#fecaca|Grabaciones|
+
+start
+:Acceder al módulo\nGrabaciones;
+
+:Configurar filtros\nde búsqueda;
+fork
+  :Filtrar por fecha;
+fork again
+  :Filtrar por documento;
+fork again
+  :Filtrar por agente;
+fork again
+  :Filtrar por cartera;
+end fork
+
+:Buscar grabaciones;
+
+if (Resultados?) then (Sí)
+  :Mostrar lista\nde grabaciones;
+  :Seleccionar grabación;
+
+  fork
+    :Reproducir audio;
+    if (Evaluar?) then (Sí)
+      :Calificar llamada;
+      :Agregar observaciones;
+      :Guardar evaluación;
+    else (No)
+    endif
+  fork again
+    :Descargar archivo\nde audio;
+  end fork
+
+  #lightgreen:Operación\ncompletada;
+else (No)
+  #yellow:Sin resultados;
+endif
+
+stop
+
+@enduml

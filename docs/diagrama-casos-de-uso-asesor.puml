@@ -1,0 +1,359 @@
+@startuml Diagrama_Flujo_Asesor_CASHI
+
+!theme cerulean-outline
+skinparam backgroundColor #f8fafc
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam ArrowColor #334155
+skinparam ActorBorderColor #059669
+skinparam ActorBackgroundColor #d1fae5
+skinparam UseCaseBorderColor #475569
+skinparam UseCaseBackgroundColor #f1f5f9
+skinparam PackageBorderColor #64748b
+skinparam PackageBackgroundColor #ffffff
+
+title Diagrama de Casos de Uso - Asesor/Agente CASHI Discador
+
+' ============================================
+' ACTORES
+' ============================================
+actor "Asesor\n(Agente)" as Asesor #LightGreen
+actor "Supervisor" as Supervisor #LightBlue
+actor "FreeSWITCH\n(PBX SIP)" as FreeSWITCH #LightGray
+actor "Auto-Dialer\n(Sistema)" as AutoDialer #LightYellow
+actor "Cliente\n(Deudor)" as Cliente #LightCoral
+actor "Backend\nGateway" as Backend #LightYellow
+
+' ============================================
+' SISTEMA PRINCIPAL
+' ============================================
+rectangle "Sistema CASHI Discador - Panel Asesor" {
+
+    ' ============================================
+    ' AUTENTICACIÓN Y SESIÓN
+    ' ============================================
+    package "Autenticación" as PKG_AUTH #e0f2fe {
+        usecase "Iniciar sesión" as UC_LOGIN
+        usecase "Registrar extensión\nSIP (WebRTC)" as UC_REGISTRAR_SIP
+        usecase "Cerrar sesión" as UC_LOGOUT
+        usecase "Desconectar estado\ndel sistema" as UC_DESCONECTAR
+    }
+
+    ' ============================================
+    ' GESTIÓN DE ESTADO
+    ' ============================================
+    package "Gestión de Estado" as PKG_ESTADO #d1fae5 {
+        usecase "Ver estado actual" as UC_VER_ESTADO
+        usecase "Cambiar a\nDISPONIBLE" as UC_DISPONIBLE
+        usecase "Cambiar a\nEN_REUNION" as UC_EN_REUNION
+        usecase "Cambiar a\nREFRIGERIO" as UC_REFRIGERIO
+        usecase "Cambiar a\nSSHH (Baño)" as UC_SSHH
+        usecase "Entrar en\nModo Manual" as UC_MODO_MANUAL
+        usecase "Ver indicador\nde tiempo" as UC_INDICADOR_TIEMPO
+    }
+
+    ' ============================================
+    ' RECEPCIÓN DE LLAMADAS (AUTO-DIALER)
+    ' ============================================
+    package "Recepción de Llamadas" as PKG_RECEPCION #fef3c7 {
+        usecase "Recibir llamada\nautomática" as UC_RECIBIR_LLAMADA
+        usecase "Ver datos del\ncliente asignado" as UC_VER_CLIENTE
+        usecase "Conectar llamada\n(WebRTC)" as UC_CONECTAR_LLAMADA
+        usecase "Ver cronómetro\nde llamada" as UC_CRONOMETRO
+    }
+
+    ' ============================================
+    ' LLAMADAS MANUALES
+    ' ============================================
+    package "Llamadas Manuales" as PKG_MANUAL #ddd6fe {
+        usecase "Ingresar número\nmanualmente" as UC_INGRESAR_NUMERO
+        usecase "Marcar número" as UC_MARCAR
+        usecase "Buscar cliente\npor documento" as UC_BUSCAR_CLIENTE
+        usecase "Seleccionar teléfono\ndel cliente" as UC_SELECCIONAR_TELEFONO
+    }
+
+    ' ============================================
+    ' CONTROL DE LLAMADA
+    ' ============================================
+    package "Control de Llamada" as PKG_CONTROL #fecaca {
+        usecase "Silenciar\nmicrófono" as UC_MUTE
+        usecase "Activar\nmicrófono" as UC_UNMUTE
+        usecase "Colgar llamada" as UC_COLGAR
+        usecase "Ver estado\nde la llamada" as UC_ESTADO_LLAMADA
+    }
+
+    ' ============================================
+    ' GESTIÓN DE COBRANZA
+    ' ============================================
+    package "Gestión de Cobranza" as PKG_COBRANZA #e0e7ff {
+        usecase "Ver información\ndel cliente" as UC_INFO_CLIENTE
+        usecase "Ver deuda y\nsaldos" as UC_VER_DEUDA
+        usecase "Ver historial\nde gestiones" as UC_HISTORIAL_GESTIONES
+        usecase "Ver promesas\nde pago activas" as UC_VER_PROMESAS
+        usecase "Ver cronograma\nde pagos" as UC_VER_CRONOGRAMA
+        usecase "Ver datos\nde contacto" as UC_DATOS_CONTACTO
+    }
+
+    ' ============================================
+    ' TIPIFICACIÓN
+    ' ============================================
+    package "Tipificación" as PKG_TIPIFICACION #fef9c3 {
+        usecase "Seleccionar\nNivel 1 (Resultado)" as UC_NIVEL1
+        usecase "Seleccionar\nNivel 2 (Tipo Gestión)" as UC_NIVEL2
+        usecase "Seleccionar\nNivel 3 (Modalidad)" as UC_NIVEL3
+        usecase "Seleccionar\nNivel 4 (Detalle)" as UC_NIVEL4
+        usecase "Completar campos\nadicionales dinámicos" as UC_CAMPOS_ADICIONALES
+        usecase "Ingresar\nobservaciones" as UC_OBSERVACIONES
+        usecase "Guardar gestión" as UC_GUARDAR_GESTION
+    }
+
+    ' ============================================
+    ' PROMESAS DE PAGO
+    ' ============================================
+    package "Promesas de Pago" as PKG_PROMESAS #dcfce7 {
+        usecase "Crear promesa\nde pago simple" as UC_PROMESA_SIMPLE
+        usecase "Crear cronograma\nde pagos (cuotas)" as UC_CRONOGRAMA_PAGOS
+        usecase "Seleccionar monto\n(chips dinámicos)" as UC_SELECCIONAR_MONTO
+        usecase "Definir fechas\nde pago" as UC_FECHAS_PAGO
+        usecase "Agregar cuotas\nadicionales" as UC_AGREGAR_CUOTAS
+    }
+
+    ' ============================================
+    ' CARTA DE ACUERDO
+    ' ============================================
+    package "Carta de Acuerdo" as PKG_CARTA #bfdbfe {
+        usecase "Verificar promesa\npendiente" as UC_VERIFICAR_PROMESA
+        usecase "Generar carta\nde acuerdo (PDF)" as UC_GENERAR_CARTA
+        usecase "Descargar PDF" as UC_DESCARGAR_CARTA
+        usecase "Confirmar generación\nde carta" as UC_CONFIRMAR_CARTA
+    }
+
+    ' ============================================
+    ' COMPROBANTES DE PAGO
+    ' ============================================
+    package "Comprobantes de Pago" as PKG_COMPROBANTES #fce7f3 {
+        usecase "Subir comprobante\n(imagen/PDF)" as UC_SUBIR_COMPROBANTE
+        usecase "Registrar pago\ncon voucher" as UC_REGISTRAR_PAGO_VOUCHER
+        usecase "Ver comprobantes\nsubidos" as UC_VER_COMPROBANTES
+    }
+
+    ' ============================================
+    ' RECORDATORIOS
+    ' ============================================
+    package "Recordatorios" as PKG_RECORDATORIOS #fed7aa {
+        usecase "Ver recordatorios\npendientes" as UC_VER_RECORDATORIOS
+        usecase "Iniciar dialer\nde recordatorios" as UC_INICIAR_RECORDATORIOS
+        usecase "Procesar siguiente\nrecordatorio" as UC_SIGUIENTE_RECORDATORIO
+        usecase "Cancelar dialer\nde recordatorios" as UC_CANCELAR_RECORDATORIOS
+        usecase "Finalizar\nrecordatorios" as UC_FINALIZAR_RECORDATORIOS
+    }
+
+    ' ============================================
+    ' AUTORIZACIÓN
+    ' ============================================
+    package "Solicitud de Autorización" as PKG_AUTORIZACION #e5e7eb {
+        usecase "Ver supervisores\nen línea" as UC_VER_SUPERVISORES
+        usecase "Solicitar autorización\nespecial" as UC_SOLICITAR_AUTH
+        usecase "Ver estado de\nsolicitud" as UC_ESTADO_SOLICITUD
+        usecase "Recibir respuesta\ndel supervisor" as UC_RESPUESTA_AUTH
+    }
+
+    ' ============================================
+    ' HISTORIAL Y CONSULTAS
+    ' ============================================
+    package "Historial y Consultas" as PKG_HISTORIAL #f5f5f4 {
+        usecase "Ver historial\nde llamadas" as UC_HISTORIAL_LLAMADAS
+        usecase "Ver grabaciones\npropias" as UC_VER_GRABACIONES
+        usecase "Reproducir\ngrabación" as UC_REPRODUCIR_GRABACION
+    }
+
+    ' ============================================
+    ' WHATSAPP (OPCIONAL)
+    ' ============================================
+    package "WhatsApp" as PKG_WHATSAPP #d1fae5 {
+        usecase "Iniciar chat\ncon cliente" as UC_INICIAR_CHAT
+        usecase "Enviar mensaje" as UC_ENVIAR_MENSAJE
+        usecase "Ver conversación" as UC_VER_CONVERSACION
+        usecase "Enviar plantilla" as UC_ENVIAR_PLANTILLA
+    }
+}
+
+' ============================================
+' RELACIONES - ASESOR CON CASOS DE USO
+' ============================================
+
+' Autenticación
+Asesor --> UC_LOGIN
+UC_LOGIN ..> UC_REGISTRAR_SIP : <<include>>
+Asesor --> UC_LOGOUT
+UC_LOGOUT ..> UC_DESCONECTAR : <<include>>
+
+' Gestión de Estado
+Asesor --> UC_VER_ESTADO
+Asesor --> UC_DISPONIBLE
+Asesor --> UC_EN_REUNION
+Asesor --> UC_REFRIGERIO
+Asesor --> UC_SSHH
+Asesor --> UC_MODO_MANUAL
+UC_VER_ESTADO ..> UC_INDICADOR_TIEMPO : <<include>>
+
+' Recepción de Llamadas (Auto-dialer asigna)
+AutoDialer --> UC_RECIBIR_LLAMADA
+UC_RECIBIR_LLAMADA ..> UC_VER_CLIENTE : <<include>>
+UC_RECIBIR_LLAMADA ..> UC_CONECTAR_LLAMADA : <<include>>
+UC_CONECTAR_LLAMADA ..> UC_CRONOMETRO : <<include>>
+
+' Llamadas Manuales
+Asesor --> UC_INGRESAR_NUMERO
+Asesor --> UC_BUSCAR_CLIENTE
+UC_INGRESAR_NUMERO ..> UC_MARCAR : <<include>>
+UC_BUSCAR_CLIENTE ..> UC_SELECCIONAR_TELEFONO : <<include>>
+UC_SELECCIONAR_TELEFONO ..> UC_MARCAR : <<include>>
+
+' Control de Llamada
+Asesor --> UC_MUTE
+Asesor --> UC_UNMUTE
+Asesor --> UC_COLGAR
+Asesor --> UC_ESTADO_LLAMADA
+
+' Gestión de Cobranza
+Asesor --> UC_INFO_CLIENTE
+UC_INFO_CLIENTE ..> UC_VER_DEUDA : <<include>>
+UC_INFO_CLIENTE ..> UC_HISTORIAL_GESTIONES : <<extend>>
+UC_INFO_CLIENTE ..> UC_VER_PROMESAS : <<extend>>
+UC_INFO_CLIENTE ..> UC_DATOS_CONTACTO : <<include>>
+UC_VER_PROMESAS ..> UC_VER_CRONOGRAMA : <<extend>>
+
+' Tipificación
+Asesor --> UC_NIVEL1
+UC_NIVEL1 ..> UC_NIVEL2 : <<extend>>
+UC_NIVEL2 ..> UC_NIVEL3 : <<extend>>
+UC_NIVEL3 ..> UC_NIVEL4 : <<extend>>
+UC_NIVEL1 ..> UC_CAMPOS_ADICIONALES : <<extend>>
+UC_NIVEL2 ..> UC_CAMPOS_ADICIONALES : <<extend>>
+UC_NIVEL3 ..> UC_CAMPOS_ADICIONALES : <<extend>>
+UC_NIVEL4 ..> UC_CAMPOS_ADICIONALES : <<extend>>
+Asesor --> UC_OBSERVACIONES
+Asesor --> UC_GUARDAR_GESTION
+
+' Promesas de Pago
+Asesor --> UC_PROMESA_SIMPLE
+Asesor --> UC_CRONOGRAMA_PAGOS
+UC_PROMESA_SIMPLE ..> UC_SELECCIONAR_MONTO : <<include>>
+UC_PROMESA_SIMPLE ..> UC_FECHAS_PAGO : <<include>>
+UC_CRONOGRAMA_PAGOS ..> UC_SELECCIONAR_MONTO : <<include>>
+UC_CRONOGRAMA_PAGOS ..> UC_AGREGAR_CUOTAS : <<include>>
+
+' Carta de Acuerdo
+UC_CRONOGRAMA_PAGOS ..> UC_CONFIRMAR_CARTA : <<extend>>
+UC_CONFIRMAR_CARTA ..> UC_GENERAR_CARTA : <<include>>
+UC_GENERAR_CARTA ..> UC_DESCARGAR_CARTA : <<include>>
+Asesor --> UC_VERIFICAR_PROMESA
+
+' Comprobantes
+Asesor --> UC_SUBIR_COMPROBANTE
+UC_SUBIR_COMPROBANTE ..> UC_REGISTRAR_PAGO_VOUCHER : <<extend>>
+Asesor --> UC_VER_COMPROBANTES
+
+' Recordatorios
+Asesor --> UC_VER_RECORDATORIOS
+UC_VER_RECORDATORIOS ..> UC_INICIAR_RECORDATORIOS : <<extend>>
+UC_INICIAR_RECORDATORIOS ..> UC_SIGUIENTE_RECORDATORIO : <<include>>
+UC_SIGUIENTE_RECORDATORIO ..> UC_FINALIZAR_RECORDATORIOS : <<extend>>
+UC_INICIAR_RECORDATORIOS ..> UC_CANCELAR_RECORDATORIOS : <<extend>>
+
+' Autorización
+Asesor --> UC_VER_SUPERVISORES
+Asesor --> UC_SOLICITAR_AUTH
+UC_SOLICITAR_AUTH ..> UC_ESTADO_SOLICITUD : <<include>>
+UC_ESTADO_SOLICITUD ..> UC_RESPUESTA_AUTH : <<include>>
+
+' Historial
+Asesor --> UC_HISTORIAL_LLAMADAS
+Asesor --> UC_VER_GRABACIONES
+UC_VER_GRABACIONES ..> UC_REPRODUCIR_GRABACION : <<extend>>
+
+' WhatsApp
+Asesor --> UC_INICIAR_CHAT
+UC_INICIAR_CHAT ..> UC_VER_CONVERSACION : <<include>>
+UC_VER_CONVERSACION ..> UC_ENVIAR_MENSAJE : <<include>>
+UC_ENVIAR_MENSAJE ..> UC_ENVIAR_PLANTILLA : <<extend>>
+
+' ============================================
+' RELACIONES CON SISTEMAS EXTERNOS
+' ============================================
+
+' FreeSWITCH
+UC_REGISTRAR_SIP --> FreeSWITCH
+UC_CONECTAR_LLAMADA --> FreeSWITCH
+UC_MARCAR --> FreeSWITCH
+UC_MUTE --> FreeSWITCH
+UC_UNMUTE --> FreeSWITCH
+UC_COLGAR --> FreeSWITCH
+
+' Backend
+UC_GUARDAR_GESTION --> Backend
+UC_GENERAR_CARTA --> Backend
+UC_SUBIR_COMPROBANTE --> Backend
+UC_SOLICITAR_AUTH --> Backend
+
+' Supervisor
+UC_SOLICITAR_AUTH --> Supervisor
+UC_RESPUESTA_AUTH <-- Supervisor
+
+' Cliente
+UC_CONECTAR_LLAMADA --> Cliente
+UC_ENVIAR_MENSAJE --> Cliente
+
+' ============================================
+' NOTAS
+' ============================================
+note right of PKG_ESTADO
+  **Estados del Agente**
+  - DISPONIBLE: Listo para llamadas
+  - EN_LLAMADA: En conversación
+  - TIPIFICANDO: Registrando gestión
+  - REFRIGERIO: Descanso corto
+  - SSHH: Baño
+  - EN_REUNION: Ocupado en reunión
+  - EN_MANUAL: Modo manual activo
+end note
+
+note right of PKG_TIPIFICACION
+  **Tipificación V2 (Cascada)**
+  - Nivel 1: Resultado Contacto
+  - Nivel 2: Tipo de Gestión
+  - Nivel 3: Modalidad de Pago
+  - Nivel 4: Tipo Fraccionamiento
+  - Campos adicionales dinámicos
+end note
+
+note bottom of PKG_PROMESAS
+  **Montos desde Chips Dinámicos**
+  - Saldo Mora
+  - Saldo Capital
+  - Deuda Total
+  - Monto Personalizado
+end note
+
+note right of PKG_RECORDATORIOS
+  **Flujo de Recordatorios**
+  - Promesas que vencen hoy
+  - Countdown antes de llamar
+  - Procesamiento secuencial
+end note
+
+' ============================================
+' LEYENDA
+' ============================================
+legend right
+  |= Símbolo |= Significado |
+  | <<include>> | Relación obligatoria |
+  | <<extend>> | Relación opcional |
+  | --> | Asociación directa |
+  | ..> | Dependencia |
+endlegend
+
+@enduml
