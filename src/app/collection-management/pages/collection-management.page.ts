@@ -86,7 +86,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
             <div class="flex items-center gap-4">
               <div class="text-right">
-                <div class="text-blue-200 dark:text-blue-300 text-[10px]">Estado</div>
+                <div class="text-blue-200 dark:text-blue-300 text-xs">Estado</div>
                 <div [class]="'font-semibold text-sm transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-white/80')">
                   {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
                 </div>
@@ -116,7 +116,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             @for (tab of tabs; track tab.id) {
               <button
                 (click)="activeTab.set(tab.id)"
-                [class]="'flex-1 px-2 py-1.5 text-[11px] font-semibold transition-all relative ' +
+                [class]="'flex-1 px-2 py-1.5 text-xs font-semibold transition-all relative ' +
                   (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')"
               >
                 {{ tab.label }}
@@ -136,15 +136,15 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   @for (field of customerOutputFields(); track field.id) {
                     @if (!isContactField(field.field)) {
                       <div class="pb-1.5 border-b border-slate-100 dark:border-slate-800">
-                        <div class="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-medium">{{ field.label }}</div>
-                        <div class="text-[12px] font-semibold text-slate-800 dark:text-white break-words">
+                        <div class="text-xs text-slate-500 dark:text-slate-400 uppercase font-medium">{{ field.label }}</div>
+                        <div class="text-xs font-semibold text-slate-800 dark:text-white break-words">
                           {{ formatFieldValue(getFieldValue(field.field), field.format) }}
                         </div>
                       </div>
                     }
                   }
                   @if (customerOutputFields().length === 0) {
-                    <div class="text-center py-2 text-slate-400 text-[10px]">
+                    <div class="text-center py-2 text-slate-400 text-xs">
                       Sin campos configurados
                     </div>
                   }
@@ -155,8 +155,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
                       <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
                       <div class="flex-1 min-w-0">
-                        <div class="text-[9px] text-green-600 dark:text-green-400">Principal</div>
-                        <div class="text-[11px] font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
+                        <div class="text-xs text-green-600 dark:text-green-400">Principal</div>
+                        <div class="text-xs font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
                       </div>
                     </div>
                     <!-- Teléfono Alternativo -->
@@ -164,8 +164,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                         <lucide-angular name="phone" [size]="14" class="text-slate-500 dark:text-slate-400"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-[9px] text-slate-500 dark:text-slate-400">Alternativo</div>
-                          <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
+                          <div class="text-xs text-slate-500 dark:text-slate-400">Alternativo</div>
+                          <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
                         </div>
                       </div>
                     }
@@ -174,8 +174,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
                         <lucide-angular name="building-2" [size]="14" class="text-slate-500 dark:text-slate-400"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-[9px] text-slate-500 dark:text-slate-400">Trabajo</div>
-                          <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
+                          <div class="text-xs text-slate-500 dark:text-slate-400">Trabajo</div>
+                          <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
                         </div>
                       </div>
                     }
@@ -184,8 +184,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
                         <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-[9px] text-blue-500 dark:text-blue-400">Email</div>
-                          <div class="text-[11px] font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                          <div class="text-xs text-blue-500 dark:text-blue-400">Email</div>
+                          <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
                         </div>
                       </div>
                     }
@@ -194,8 +194,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       <div class="flex items-center gap-2 p-1.5 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
                         <lucide-angular name="map-pin" [size]="14" class="text-orange-500 dark:text-orange-400 flex-shrink-0"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-[9px] text-orange-500 dark:text-orange-400">Dirección</div>
-                          <div class="text-[11px] font-semibold text-orange-700 dark:text-orange-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
+                          <div class="text-xs text-orange-500 dark:text-orange-400">Dirección</div>
+                          <div class="text-xs font-semibold text-orange-700 dark:text-orange-300 line-clamp-2">{{ customerData().contacto.direccion }}</div>
                         </div>
                       </div>
                     }
@@ -207,20 +207,20 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 <div class="space-y-1">
                   @if (historialGestiones().length === 0) {
                     <div class="text-center py-4">
-                      <p class="text-[10px] text-gray-400">Sin gestiones previas</p>
-                      <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-500 text-white text-[9px] rounded">Recargar</button>
+                      <p class="text-xs text-gray-400">Sin gestiones previas</p>
+                      <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">Recargar</button>
                     </div>
                   } @else {
                     @for (gestion of historialGestiones(); track $index) {
                       <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5">
-                        <div class="flex justify-between items-center text-[9px]">
+                        <div class="flex justify-between items-center text-xs">
                           <span class="font-bold text-gray-600 dark:text-gray-300">{{ gestion.fecha }}</span>
                           <span class="text-gray-400">{{ gestion.nombreAgente }}</span>
                         </div>
-                        <div class="text-[10px] font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.tipificacionCompleta }}</div>
-                        <div class="text-[9px] text-gray-500 dark:text-gray-400 truncate">{{ gestion.observacion }}</div>
+                        <div class="text-xs font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.tipificacionCompleta }}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ gestion.observacion }}</div>
                         @if (gestion.schedule) {
-                          <button (click)="openScheduleDetail(gestion.id)" class="text-[8px] text-purple-600 dark:text-purple-400 mt-0.5 hover:underline">
+                          <button (click)="openScheduleDetail(gestion.id)" class="text-xs text-purple-600 dark:text-purple-400 mt-0.5 hover:underline">
                             Ver cronograma →
                           </button>
                         }
@@ -271,7 +271,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             @if (!usesHierarchicalClassifications()) {
             <!-- Resultado de Contacto - COMPACTO -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-300">
-              <label class="block font-bold text-gray-800 dark:text-white mb-1 text-[11px] flex items-center gap-1">
+              <label class="block font-bold text-gray-800 dark:text-white mb-1 text-xs flex items-center gap-1">
                 <div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                 Resultado de Contacto *
               </label>
@@ -290,7 +290,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 </select>
               </div>
               @if (errors().resultadoContacto) {
-                <div class="text-red-600 text-[10px] mt-1 flex items-center gap-1">
+                <div class="text-red-600 text-xs mt-1 flex items-center gap-1">
                   Requerido
                 </div>
               }
@@ -310,33 +310,33 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         </div>
                         <div>
                           <div class="font-bold text-xs">PROMESA DE PAGO ACTIVA</div>
-                          <div class="text-[10px] opacity-80">No puede registrar otra promesa</div>
+                          <div class="text-xs opacity-80">No puede registrar otra promesa</div>
                         </div>
                       </div>
                       <div class="flex items-center gap-2">
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
-                          class="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded text-[11px] font-semibold transition-all flex items-center gap-1 border border-white/30"
+                          class="px-2.5 py-1 bg-white/20 hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-white/30"
                           title="Validar voucher con IA">
                           <lucide-angular name="scan-line" [size]="12"></lucide-angular>
                           Voucher
                         </button>
                         <div class="text-right">
                           <div class="text-base font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
-                          <div class="text-[10px] opacity-80">Total</div>
+                          <div class="text-xs opacity-80">Total</div>
                         </div>
                       </div>
                     </div>
                     <!-- Detalle de cuotas -->
                     <div class="px-3 py-2 bg-black/5">
-                      <div class="text-[10px] font-semibold mb-1.5 opacity-90">DETALLE DE CUOTAS:</div>
+                      <div class="text-xs font-semibold mb-1.5 opacity-90">DETALLE DE CUOTAS:</div>
                       <div class="flex flex-wrap gap-1.5">
                         @for (cuota of schedule.installments; track cuota.numeroCuota) {
-                          <div class="flex items-center gap-1.5 text-[11px] bg-white/20 rounded px-2 py-1">
+                          <div class="flex items-center gap-1.5 text-xs bg-white/20 rounded px-2 py-1">
                             <span class="font-bold">C{{ cuota.numeroCuota }}</span>
                             <span class="opacity-70">|</span>
                             @if (tienePagoParcial(cuota)) {
-                              <span class="text-[10px] opacity-70">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="text-xs opacity-70">S/ {{ cuota.monto?.toFixed(2) }}</span>
                               <span class="font-bold text-xs">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
                             } @else {
                               <span class="font-bold text-xs">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
@@ -347,21 +347,21 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                               {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                              <span class="bg-green-600 text-[10px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
+                              <span class="bg-green-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'PARCIAL') {
-                              <span class="bg-amber-500 text-[10px] px-1 py-0.5 rounded font-semibold">Parcial</span>
+                              <span class="bg-amber-500 text-xs px-1 py-0.5 rounded font-semibold">Parcial</span>
                             } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                              <span class="bg-red-600 text-[10px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
+                              <span class="bg-red-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-                              <span class="bg-gray-600 text-[10px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
+                              <span class="bg-gray-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
                             } @else {
-                              <span class="bg-blue-600 text-[10px] px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
+                              <span class="bg-blue-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
                           </div>
                         }
                       </div>
                       @if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
-                        <div class="mt-1.5 text-[10px] opacity-80">
+                        <div class="mt-1.5 text-xs opacity-80">
                           <span class="font-semibold">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold">{{ formatDate(schedule.nextDueDate) }}</span>
                         </div>
                       }
@@ -374,18 +374,18 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
             @if (usesHierarchicalClassifications()) {
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-3">
-                <div class="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">Clasificación</div>
+                <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">Clasificación</div>
                 <div class="flex flex-wrap gap-2">
                   @for (level of hierarchyLevels(); track $index) {
                     @if (shouldShowLevel($index)) {
                       <div class="flex-1 min-w-[140px]">
-                        <label class="block text-[9px] text-gray-500 dark:text-gray-400 mb-0.5">
+                        <label class="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">
                           {{ getDynamicLevelLabel($index) }}{{ $index === 0 ? ' *' : '' }}
                         </label>
                         <select
                           [ngModel]="selectedClassifications()[$index]"
                           (ngModelChange)="onClassificationLevelChange($index, $event)"
-                          [class]="'w-full p-1.5 border rounded text-[11px] font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
+                          [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
                             (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white') + ' ' +
                             (selectedClassifications()[$index] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
                         >
@@ -399,7 +399,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   }
                 </div>
                 @if (errors().tipoGestion) {
-                  <div class="text-red-500 text-[9px] mt-1">Seleccione una clasificación</div>
+                  <div class="text-red-500 text-xs mt-1">Seleccione una clasificación</div>
                 }
               </div>
             }
@@ -451,7 +451,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     </div>
                     <div>
                       <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Cronograma Activo Detectado</h4>
-                      <p class="text-[9px] text-purple-600 dark:text-purple-300">Cliente tiene {{ activeSchedules().length }} cronograma(s) pendiente(s)</p>
+                      <p class="text-xs text-purple-600 dark:text-purple-300">Cliente tiene {{ activeSchedules().length }} cronograma(s) pendiente(s)</p>
                     </div>
                   </div>
                 </div>
@@ -464,7 +464,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
                           {{ schedule.scheduleType || 'CRONOGRAMA' }}
                         </div>
-                        <div class="text-[9px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded font-semibold">
+                        <div class="text-xs px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded font-semibold">
                           ACTIVO
                         </div>
                       </div>
@@ -475,10 +475,10 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
                     <!-- Pending Installments -->
                     <div class="space-y-1">
-                      <div class="text-[9px] font-bold text-gray-600 dark:text-gray-300 uppercase">Cuotas Pendientes</div>
+                      <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase">Cuotas Pendientes</div>
                       @for (installment of getPendingInstallments(schedule); track installment.id; let idx = $index) {
                         @if (idx < 3) {
-                          <div class="flex items-center justify-between text-[10px] bg-gray-50 dark:bg-gray-900 p-1.5 rounded">
+                          <div class="flex items-center justify-between text-xs bg-gray-50 dark:bg-gray-900 p-1.5 rounded">
                             <div class="flex items-center gap-2">
                               <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
                               <span class="text-gray-500 dark:text-gray-400">Vence: {{ formatDate(installment.dueDate) }}</span>
@@ -488,7 +488,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         }
                       }
                       @if (getPendingInstallments(schedule).length > 3) {
-                        <div class="text-[9px] text-center text-gray-500 dark:text-gray-400 italic">
+                        <div class="text-xs text-center text-gray-500 dark:text-gray-400 italic">
                           + {{ getPendingInstallments(schedule).length - 3 }} cuotas más
                         </div>
                       }
@@ -501,7 +501,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         <button
                           type="button"
                           (click)="applyNextInstallmentPayment()"
-                          class="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
+                          class="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1">
                           Usar Próxima Cuota
                         </button>
                       }
@@ -511,14 +511,14 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         <button
                           type="button"
                           (click)="applyFullSchedulePayment()"
-                          class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-[10px] font-bold rounded transition-colors flex items-center justify-center gap-1">
+                          class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1">
                           Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
                         </button>
                       }
                     </div>
 
                     <!-- Info Note -->
-                    <div class="text-[9px] text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
+                    <div class="text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
                       <span>El pago se aplicará automáticamente a las cuotas pendientes en orden de vencimiento</span>
                     </div>
                   </div>
@@ -533,7 +533,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   <span class="text-lg">💰</span>
                   <div>
                     <h4 class="text-xs font-bold text-green-900 dark:text-green-100">Seleccionar Cuota a Cancelar</h4>
-                    <p class="text-[9px] text-green-600 dark:text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
+                    <p class="text-xs text-green-600 dark:text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
                   </div>
                 </div>
 
@@ -558,11 +558,11 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                           />
                           <div>
                             <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                            <span class="text-[10px] ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
                               Vence: {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (tienePagoParcial(cuota)) {
-                              <span class="text-[9px] ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-green-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                              <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-green-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
                             }
                           </div>
                         </div>
@@ -584,7 +584,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   <div class="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
                     <div class="flex items-center gap-2 mb-2">
                       <span class="text-sm">⛔</span>
-                      <span class="text-[10px] font-bold text-red-700 dark:text-red-400">CUOTAS VENCIDAS (No se pueden cancelar)</span>
+                      <span class="text-xs font-bold text-red-700 dark:text-red-400">CUOTAS VENCIDAS (No se pueden cancelar)</span>
                     </div>
                     <div class="space-y-1">
                       @for (cuota of overdueInstallments(); track cuota.numeroCuota) {
@@ -593,7 +593,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                             <span class="text-red-500 dark:text-red-400 text-xs">✗</span>
                             <div>
                               <span class="font-bold text-xs text-red-800 dark:text-red-300">Cuota {{ cuota.numeroCuota }}</span>
-                              <span class="text-[10px] ml-2 text-red-600 dark:text-red-400">
+                              <span class="text-xs ml-2 text-red-600 dark:text-red-400">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
                             </div>
@@ -602,7 +602,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         </div>
                       }
                     </div>
-                    <div class="text-[9px] text-red-600 dark:text-red-400 mt-2">
+                    <div class="text-xs text-red-600 dark:text-red-400 mt-2">
                       La fecha de pago ya pasó. Estas cuotas serán marcadas como promesa rota.
                     </div>
                   </div>
@@ -610,12 +610,12 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
                 <!-- Mensaje cuando no hay cuotas disponibles para cancelar -->
                 @if (pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0) {
-                  <div class="text-[10px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center gap-1">
+                  <div class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center gap-1">
                     <span>🚫</span>
                     <span>No hay cuotas disponibles para cancelar. Todas las cuotas están vencidas.</span>
                   </div>
                 } @else if (!selectedInstallmentForCancellation() && pendingInstallmentsForCancellation().length > 0) {
-                  <div class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
+                  <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <span>⚠️</span>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
                   </div>
@@ -626,12 +626,12 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   <div class="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
                     <div class="flex items-center gap-2 mb-2">
                       <span class="text-sm">✏️</span>
-                      <span class="text-[10px] font-bold text-green-800 dark:text-green-300">Datos del Pago (editables)</span>
+                      <span class="text-xs font-bold text-green-800 dark:text-green-300">Datos del Pago (editables)</span>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                       <!-- Monto pagado -->
                       <div>
-                        <label class="block text-[10px] font-semibold text-green-700 dark:text-green-300 mb-1">Monto Pagado</label>
+                        <label class="block text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Monto Pagado</label>
                         <div class="relative">
                           <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">S/</span>
                           <input
@@ -643,27 +643,27 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                             class="w-full pl-7 pr-2 py-1.5 text-sm font-semibold rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                           />
                         </div>
-                        <p class="text-[10px] text-green-700 dark:text-green-300 mt-0.5 font-medium">
+                        <p class="text-xs text-green-700 dark:text-green-300 mt-0.5 font-medium">
                           Pendiente: S/ {{ tienePagoParcial(selectedInstallmentForCancellation()) ? getSaldoPendienteCuota(selectedInstallmentForCancellation()).toFixed(2) : selectedInstallmentForCancellation()?.monto?.toFixed(2) }}
                         </p>
                       </div>
                       <!-- Fecha del pago -->
                       <div>
-                        <label class="block text-[10px] font-semibold text-green-700 dark:text-green-300 mb-1">Fecha del Pago</label>
+                        <label class="block text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Fecha del Pago</label>
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
-                        <p class="text-[9px] text-green-600 dark:text-green-400 mt-0.5">
+                        <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">
                           Por defecto: hoy
                         </p>
                       </div>
                     </div>
                     <!-- Info de distribución si el monto es diferente -->
                     @if (montoPagoEditable() !== selectedInstallmentForCancellation()?.monto) {
-                      <div class="mt-2 p-2 rounded-lg text-[10px]"
+                      <div class="mt-2 p-2 rounded-lg text-xs"
                            [class]="montoPagoEditable() < selectedInstallmentForCancellation()?.monto
                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700'
                              : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'">
@@ -693,7 +693,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     <span class="text-lg">📎</span>
                     <div>
                       <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Comprobante de Pago</h4>
-                      <p class="text-[9px] text-purple-600 dark:text-purple-300">Opcional: Sube una imagen del voucher para validación OCR</p>
+                      <p class="text-xs text-purple-600 dark:text-purple-300">Opcional: Sube una imagen del voucher para validación OCR</p>
                     </div>
                   </div>
                   <button
@@ -712,7 +712,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   </button>
                 </div>
                 @if (uploadedComprobante()) {
-                  <div class="mt-2 p-2 bg-white dark:bg-gray-800 rounded text-[10px] space-y-1">
+                  <div class="mt-2 p-2 bg-white dark:bg-gray-800 rounded text-xs space-y-1">
                     <p class="text-gray-600 dark:text-gray-400">{{ uploadedComprobante()?.mensaje }}</p>
                     @if (uploadedComprobante()?.ocrResult?.monto) {
                       <p><strong>Monto detectado:</strong> S/ {{ uploadedComprobante()?.ocrResult?.monto | number:'1.2-2' }}</p>
@@ -723,7 +723,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     <button
                       type="button"
                       (click)="uploadedComprobante.set(null)"
-                      class="text-red-500 hover:text-red-700 text-[9px] underline"
+                      class="text-red-500 hover:text-red-700 text-xs underline"
                     >
                       Quitar comprobante
                     </button>
@@ -777,9 +777,9 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-100 dark:bg-red-950/20">
             <div class="text-center">
-              <div class="text-[9px] uppercase font-bold" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xs uppercase font-bold" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ getPrimaryAmountLabel() }}</div>
               <div class="text-xl font-black" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-[11px] font-semibold" [ngClass]="themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700'">{{ clientDiasMora() }} días mora</div>
+              <div class="text-xs font-semibold" [ngClass]="themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700'">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
@@ -808,9 +808,9 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             <div class="flex items-center gap-2">
               <span class="text-sm">📋</span>
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
-              <span class="text-[10px] text-slate-500 dark:text-slate-400">({{ historialGestiones().length }} registros)</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestiones().length }} registros)</span>
             </div>
-            <button (click)="loadManagementHistory()" class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+            <button (click)="loadManagementHistory()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
               <span>↻</span> Actualizar
             </button>
           </div>
@@ -820,7 +820,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 Sin gestiones registradas para este cliente
               </div>
             } @else {
-              <table class="w-full text-[10px]">
+              <table class="w-full text-xs">
                 <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                   <tr class="text-left text-slate-600 dark:text-slate-300">
                     <th class="px-2 py-1 font-semibold">Fecha</th>
@@ -849,7 +849,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         {{ gestion.observacion || '-' }}
                       </td>
                       <td class="px-2 py-1.5">
-                        <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
+                        <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                           (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
                            gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
                            gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
@@ -859,7 +859,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                         </span>
                       </td>
                       <td class="px-2 py-1.5">
-                        <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
+                        <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                           (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
                            gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
                            gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
@@ -876,7 +876,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       </td>
                       <td class="px-2 py-1.5 text-center">
                         @if (gestion.estadoPago) {
-                          <span [class]="'px-1.5 py-0.5 rounded text-[9px] font-semibold ' +
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
                              gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
                              gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
