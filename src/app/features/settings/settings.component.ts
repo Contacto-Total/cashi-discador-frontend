@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { FontSizeService } from '../../core/services/font-size.service';
-import { ThemeService, Theme } from '../../core/services/theme.service';
+import { ThemeService, Theme } from '../../shared/services/theme.service';
 
 @Component({
   selector: 'app-settings',
@@ -27,9 +27,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   maxFontSize: number = 24;
   defaultFontSize: number = 16;
 
-  // Theme
-  currentTheme: Theme = 'dark';
-  isDarkMode: boolean = true;
+  // Theme - using getter to read from service signal
+  get isDarkMode(): boolean {
+    return this.themeService.isDarkMode();
+  }
 
   // Preview text
   previewText: string = 'Este es un texto de ejemplo para visualizar el tamaño de la fuente seleccionada.';
@@ -54,14 +55,7 @@ export class SettingsComponent implements OnInit, OnDestroy {
         this.previewFontSize = size;
       })
     );
-
-    // Subscribe to theme changes
-    this.subscriptions.push(
-      this.themeService.theme$.subscribe(theme => {
-        this.currentTheme = theme;
-        this.isDarkMode = theme === 'dark';
-      })
-    );
+    // Theme is read directly from service signal via getter
   }
 
   ngOnDestroy(): void {
