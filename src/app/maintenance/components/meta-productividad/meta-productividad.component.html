@@ -1,0 +1,219 @@
+<div class="meta-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <lucide-angular name="target" [size]="24"></lucide-angular>
+      </div>
+      <div>
+        <h1>Metas de Productividad</h1>
+        <p>Configura las metas de gestiones, promesas y montos por tenant, cartera o subcartera</p>
+      </div>
+    </div>
+    <button class="btn-primary" (click)="openNewModal()">
+      <lucide-angular name="plus" [size]="18"></lucide-angular>
+      <span>Nueva Meta</span>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-spinner">
+      <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+      <span>Cargando...</span>
+    </div>
+  </div>
+
+  <!-- Tabla de Metas -->
+  <div class="table-card" *ngIf="!loading">
+    <div class="table-wrapper">
+      <table class="metas-table">
+        <thead>
+          <tr>
+            <th class="col-scope">Alcance</th>
+            <th class="col-header" colspan="3">Gestiones</th>
+            <th class="col-header" colspan="3">Promesas</th>
+            <th class="col-header" colspan="3">Monto</th>
+            <th class="col-actions">Acciones</th>
+          </tr>
+          <tr class="sub-header">
+            <th></th>
+            <th class="col-value">Diario</th>
+            <th class="col-value">Semanal</th>
+            <th class="col-value">Mensual</th>
+            <th class="col-value">Diario</th>
+            <th class="col-value">Semanal</th>
+            <th class="col-value">Mensual</th>
+            <th class="col-value">Diario</th>
+            <th class="col-value">Semanal</th>
+            <th class="col-value">Mensual</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let meta of metas">
+            <td class="col-scope">
+              <div class="scope-info">
+                <lucide-angular
+                  [name]="meta.idSubcartera ? 'folder-tree' : (meta.idCartera ? 'folder' : (meta.idTenant ? 'building-2' : 'globe'))"
+                  [size]="16">
+                </lucide-angular>
+                <span>{{ getScopeLabel(meta) }}</span>
+              </div>
+            </td>
+            <td class="col-value">{{ formatNumber(meta.metaGestionesDiarias) }}</td>
+            <td class="col-value">{{ formatNumber(meta.metaGestionesSemanales) }}</td>
+            <td class="col-value">{{ formatNumber(meta.metaGestionesMensuales) }}</td>
+            <td class="col-value">{{ formatNumber(meta.metaPromesasDiarias) }}</td>
+            <td class="col-value">{{ formatNumber(meta.metaPromesasSemanales) }}</td>
+            <td class="col-value">{{ formatNumber(meta.metaPromesasMensuales) }}</td>
+            <td class="col-value money">{{ formatMoney(meta.metaMontoDiario) }}</td>
+            <td class="col-value money">{{ formatMoney(meta.metaMontoSemanal) }}</td>
+            <td class="col-value money">{{ formatMoney(meta.metaMontoMensual) }}</td>
+            <td class="col-actions">
+              <button class="btn-icon" (click)="openEditModal(meta)" title="Editar">
+                <lucide-angular name="pencil" [size]="16"></lucide-angular>
+              </button>
+              <button class="btn-icon danger" (click)="deleteMeta(meta)" title="Eliminar">
+                <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="metas.length === 0">
+      <lucide-angular name="target" [size]="48"></lucide-angular>
+      <p>No hay metas configuradas</p>
+      <button class="btn-primary" (click)="openNewModal()">
+        <lucide-angular name="plus" [size]="18"></lucide-angular>
+        Crear primera meta
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar Meta' : 'Nueva Meta' }}</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <lucide-angular name="x" [size]="20"></lucide-angular>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Alcance -->
+        <div class="form-section">
+          <h3>
+            <lucide-angular name="layers" [size]="18"></lucide-angular>
+            Alcance
+          </h3>
+          <p class="section-description">Define a qué nivel aplica esta meta. Deja en blanco para aplicar a todos.</p>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Inquilino</label>
+              <select [(ngModel)]="currentMeta.idTenant" (change)="onTenantChange()">
+                <option [ngValue]="null">Todos los inquilinos</option>
+                <option *ngFor="let t of tenants" [ngValue]="t.id">{{ t.tenantName }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Cartera</label>
+              <select [(ngModel)]="currentMeta.idCartera" (change)="onCarteraChange()" [disabled]="!currentMeta.idTenant">
+                <option [ngValue]="null">Todas las carteras</option>
+                <option *ngFor="let p of filteredPortfolios" [ngValue]="p.id">{{ p.portfolioName }}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Subcartera</label>
+              <select [(ngModel)]="currentMeta.idSubcartera" [disabled]="!currentMeta.idCartera">
+                <option [ngValue]="null">Todas las subcarteras</option>
+                <option *ngFor="let s of filteredSubPortfolios" [ngValue]="s.id">{{ s.subPortfolioName }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metas de Gestiones -->
+        <div class="form-section">
+          <h3>
+            <lucide-angular name="clipboard-list" [size]="18"></lucide-angular>
+            Metas de Gestiones
+          </h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Diario</label>
+              <input type="number" [(ngModel)]="currentMeta.metaGestionesDiarias" placeholder="Ej: 50">
+            </div>
+            <div class="form-group">
+              <label>Semanal</label>
+              <input type="number" [(ngModel)]="currentMeta.metaGestionesSemanales" placeholder="Ej: 250">
+            </div>
+            <div class="form-group">
+              <label>Mensual</label>
+              <input type="number" [(ngModel)]="currentMeta.metaGestionesMensuales" placeholder="Ej: 1000">
+            </div>
+          </div>
+        </div>
+
+        <!-- Metas de Promesas -->
+        <div class="form-section">
+          <h3>
+            <lucide-angular name="handshake" [size]="18"></lucide-angular>
+            Metas de Promesas
+          </h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Diario</label>
+              <input type="number" [(ngModel)]="currentMeta.metaPromesasDiarias" placeholder="Ej: 10">
+            </div>
+            <div class="form-group">
+              <label>Semanal</label>
+              <input type="number" [(ngModel)]="currentMeta.metaPromesasSemanales" placeholder="Ej: 50">
+            </div>
+            <div class="form-group">
+              <label>Mensual</label>
+              <input type="number" [(ngModel)]="currentMeta.metaPromesasMensuales" placeholder="Ej: 200">
+            </div>
+          </div>
+        </div>
+
+        <!-- Metas de Monto -->
+        <div class="form-section">
+          <h3>
+            <lucide-angular name="banknote" [size]="18"></lucide-angular>
+            Metas de Monto (S/)
+          </h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Diario</label>
+              <input type="number" step="0.01" [(ngModel)]="currentMeta.metaMontoDiario" placeholder="Ej: 5000.00">
+            </div>
+            <div class="form-group">
+              <label>Semanal</label>
+              <input type="number" step="0.01" [(ngModel)]="currentMeta.metaMontoSemanal" placeholder="Ej: 25000.00">
+            </div>
+            <div class="form-group">
+              <label>Mensual</label>
+              <input type="number" step="0.01" [(ngModel)]="currentMeta.metaMontoMensual" placeholder="Ej: 100000.00">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+        <button class="btn-primary" (click)="saveMeta()" [disabled]="saving">
+          <lucide-angular *ngIf="saving" name="loader" [size]="16" class="spin"></lucide-angular>
+          <span>{{ saving ? 'Guardando...' : 'Guardar' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
