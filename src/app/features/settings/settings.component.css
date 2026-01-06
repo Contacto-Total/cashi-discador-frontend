@@ -542,6 +542,10 @@
   color: #3b82f6;
 }
 
+:host-context(body.light-theme) .nav-icon {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
 :host-context(body.light-theme) .section-title {
   color: #0f172a;
 }
@@ -564,7 +568,7 @@
 }
 
 :host-context(body.light-theme) .toggle-slider {
-  background-color: #cbd5e1;
+  background-color: #94a3b8;
 }
 
 :host-context(body.light-theme) .toggle-switch input:checked + .toggle-slider {
@@ -603,7 +607,7 @@
 }
 
 :host-context(body.light-theme) .font-slider {
-  background: #e2e8f0;
+  background: #cbd5e1;
 }
 
 :host-context(body.light-theme) .font-slider::-webkit-slider-thumb {
