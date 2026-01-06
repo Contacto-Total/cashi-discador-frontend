@@ -72,7 +72,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
 
       <!-- Header Principal - ULTRA COMPACTO -->
-      <div class="bg-gradient-to-r from-blue-600 via-blue-700 to-blue-600 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
+      <div class="bg-gradient-to-r from-slate-700 via-slate-800 to-slate-700 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
         <div class="relative px-4 py-2">
           <div class="flex items-center justify-between">
             <!-- Lado Izquierdo: Título -->
@@ -616,7 +616,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   </div>
                 } @else if (!selectedInstallmentForCancellation() && pendingInstallmentsForCancellation().length > 0) {
                   <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
-                    <span>⚠️</span>
+                    <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
                   </div>
                 }
@@ -625,7 +625,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 @if (selectedInstallmentForCancellation()) {
                   <div class="mt-3 pt-3 border-t border-green-200 dark:border-green-700">
                     <div class="flex items-center gap-2 mb-2">
-                      <span class="text-sm">✏️</span>
+                      <lucide-angular name="edit" [size]="14"></lucide-angular>
                       <span class="text-xs font-bold text-green-800 dark:text-green-300">Datos del Pago (editables)</span>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
@@ -669,7 +669,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                              : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'">
                         @if (montoPagoEditable() < selectedInstallmentForCancellation()?.monto) {
                           <span class="flex items-center gap-1">
-                            <span>⚠️</span>
+                            <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
                             <span><strong>Pago parcial:</strong> La cuota quedará con saldo pendiente de S/ {{ (selectedInstallmentForCancellation()?.monto - montoPagoEditable()).toFixed(2) }}</span>
                           </span>
                         } @else {
@@ -705,7 +705,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       : 'bg-purple-600 hover:bg-purple-700 text-white'"
                   >
                     @if (uploadedComprobante()) {
-                      ✅ Comprobante Subido
+                      Comprobante Subido
                     } @else {
                       📤 Subir Comprobante
                     }
@@ -753,7 +753,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   (click)="saveManagement()"
                   [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation()) || (isCancellationTypification() && pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0)"
                   [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
-                  class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                  class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
                 >
                   @if (saving()) {
                     Guardando...
