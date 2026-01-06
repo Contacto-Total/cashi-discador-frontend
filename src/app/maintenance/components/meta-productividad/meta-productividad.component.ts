@@ -46,6 +46,15 @@ export class MetaProductividadComponent implements OnInit {
   loadData(): void {
     this.loading = true;
 
+    // Cargar tenants primero
+    this.tenantService.getAllTenants().subscribe({
+      next: (tenants) => {
+        this.tenants = tenants;
+        // Cargar portfolios de cada tenant
+        this.loadPortfoliosForTenants();
+      }
+    });
+
     // Cargar metas
     this.metaService.getAll().subscribe({
       next: (metas) => {
@@ -59,19 +68,20 @@ export class MetaProductividadComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
 
-    // Cargar tenants
-    this.tenantService.getAllTenants().subscribe({
-      next: (tenants) => {
-        this.tenants = tenants;
-      }
-    });
-
-    // Cargar todos los portfolios
-    this.portfolioService.getAllPortfolios().subscribe({
-      next: (portfolios) => {
-        this.portfolios = portfolios;
-      }
+  private loadPortfoliosForTenants(): void {
+    this.portfolios = [];
+    this.tenants.forEach(tenant => {
+      this.portfolioService.getPortfoliosByTenant(tenant.id).subscribe({
+        next: (portfolios: Portfolio[]) => {
+          portfolios.forEach(p => {
+            if (!this.portfolios.find(existing => existing.id === p.id)) {
+              this.portfolios.push(p);
+            }
+          });
+        }
+      });
     });
   }
 
