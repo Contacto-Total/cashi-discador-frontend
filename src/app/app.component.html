@@ -279,6 +279,12 @@
         </button>
       </div>
 
+      <!-- Settings -->
+      <a routerLink="/settings" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Configuración' : ''">
+        <lucide-angular name="sliders" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Configuración</span>
+      </a>
+
       <!-- Theme Toggle -->
       <button type="button" class="sidebar-item" (click)="toggleTheme()" [title]="isSidebarCollapsed ? (isDarkMode() ? 'Modo Claro' : 'Modo Oscuro') : ''">
         <lucide-angular *ngIf="isDarkMode(); else lightMode" name="sun" [size]="20"></lucide-angular>

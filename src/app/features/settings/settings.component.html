@@ -1,0 +1,134 @@
+<div class="settings-container">
+  <!-- Header -->
+  <div class="settings-header">
+    <div class="header-content">
+      <lucide-angular name="settings" [size]="32" class="header-icon"></lucide-angular>
+      <div>
+        <h1 class="header-title">Configuraci&oacute;n</h1>
+        <p class="header-subtitle">Personaliza tu experiencia en la aplicaci&oacute;n</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Content -->
+  <div class="settings-content">
+    <!-- Apariencia Section -->
+    <div class="settings-section">
+      <div class="section-header">
+        <lucide-angular name="palette" [size]="24" class="section-icon"></lucide-angular>
+        <h2 class="section-title">Apariencia</h2>
+      </div>
+
+      <!-- Theme Setting -->
+      <div class="setting-card">
+        <div class="setting-info">
+          <div class="setting-label">
+            <lucide-angular [name]="isDarkMode ? 'moon' : 'sun'" [size]="20" class="setting-icon"></lucide-angular>
+            <span>Tema de la aplicaci&oacute;n</span>
+          </div>
+          <p class="setting-description">Selecciona el modo de color que prefieras</p>
+        </div>
+
+        <div class="theme-selector">
+          <button
+            class="theme-btn"
+            [class.active]="!isDarkMode"
+            (click)="setTheme('light')"
+          >
+            <lucide-angular name="sun" [size]="18"></lucide-angular>
+            <span>Claro</span>
+          </button>
+          <button
+            class="theme-btn"
+            [class.active]="isDarkMode"
+            (click)="setTheme('dark')"
+          >
+            <lucide-angular name="moon" [size]="18"></lucide-angular>
+            <span>Oscuro</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Font Size Setting -->
+      <div class="setting-card">
+        <div class="setting-info">
+          <div class="setting-label">
+            <lucide-angular name="type" [size]="20" class="setting-icon"></lucide-angular>
+            <span>Tama&ntilde;o de letra</span>
+          </div>
+          <p class="setting-description">Ajusta el tama&ntilde;o del texto para mejorar la legibilidad</p>
+        </div>
+
+        <div class="font-size-control">
+          <!-- Size buttons -->
+          <div class="size-buttons">
+            <button
+              class="size-btn"
+              (click)="decreaseFontSize()"
+              [disabled]="currentFontSize <= minFontSize"
+              title="Reducir tama&ntilde;o"
+            >
+              <span class="size-label-small">A</span>
+              <lucide-angular name="minus" [size]="14"></lucide-angular>
+            </button>
+
+            <span class="current-size">{{ currentFontSize }}px</span>
+
+            <button
+              class="size-btn"
+              (click)="increaseFontSize()"
+              [disabled]="currentFontSize >= maxFontSize"
+              title="Aumentar tama&ntilde;o"
+            >
+              <span class="size-label-large">A</span>
+              <lucide-angular name="plus" [size]="14"></lucide-angular>
+            </button>
+          </div>
+
+          <!-- Slider -->
+          <div class="slider-container">
+            <span class="slider-label">{{ minFontSize }}px</span>
+            <input
+              type="range"
+              class="font-slider"
+              [min]="minFontSize"
+              [max]="maxFontSize"
+              [value]="currentFontSize"
+              (input)="onFontSizeChange($event)"
+              [style.--slider-percentage]="getSliderPercentage() + '%'"
+            />
+            <span class="slider-label">{{ maxFontSize }}px</span>
+          </div>
+
+          <!-- Reset button -->
+          <button
+            class="reset-btn"
+            (click)="resetFontSize()"
+            [disabled]="isDefaultFontSize()"
+          >
+            <lucide-angular name="refresh-cw" [size]="16"></lucide-angular>
+            <span>Restablecer ({{ defaultFontSize }}px)</span>
+          </button>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-container">
+          <p class="preview-label">Vista previa:</p>
+          <div class="preview-box">
+            <p class="preview-text">{{ previewText }}</p>
+            <p class="preview-text-small">Texto secundario m&aacute;s peque&ntilde;o para comparar.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="info-section">
+      <lucide-angular name="info" [size]="20" class="info-icon"></lucide-angular>
+      <p class="info-text">
+        Tus preferencias se guardan autom&aacute;ticamente en este navegador.
+        Los cambios se aplicar&aacute;n inmediatamente.
+      </p>
+    </div>
+  </div>
+</div>
