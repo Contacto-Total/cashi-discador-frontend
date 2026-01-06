@@ -258,6 +258,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/promise-management/promise-management.component').then(m => m.PromiseManagementComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'admin/agent-productivity',
+    loadComponent: () => import('./features/admin/agent-productivity/agent-productivity.component').then(m => m.AgentProductivityComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // GESTIÓN MANUAL (Tipificación sin llamada)

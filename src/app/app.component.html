@@ -97,6 +97,12 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Dashboard Pagos</span>
       </a>
 
+      <!-- Productividad Agentes (Admin/Supervisor) -->
+      <a routerLink="/admin/agent-productivity" routerLinkActive="active" class="sidebar-item" *ngIf="isAdminOrSupervisor()" [title]="isSidebarCollapsed ? 'Productividad Agentes' : ''">
+        <lucide-angular name="bar-chart-3" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Productividad Agentes</span>
+      </a>
+
       <!-- Mantenimiento Dropdown -->
       <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
         <button type="button" class="sidebar-item" [class.active]="isMantenimientoActive()" (click)="toggleMantenimientoDropdown()" [title]="isSidebarCollapsed ? 'Mantenimiento' : ''">

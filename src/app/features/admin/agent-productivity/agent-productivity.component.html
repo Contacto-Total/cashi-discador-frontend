@@ -1,0 +1,262 @@
+<div class="productivity-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <lucide-angular name="bar-chart-3" [size]="24"></lucide-angular>
+      </div>
+      <div>
+        <h1>Productividad de Agentes</h1>
+        <p>Analiza el rendimiento y las promesas generadas por cada agente</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <div class="filters-row">
+      <!-- Inquilino -->
+      <div class="filter-group">
+        <label>Inquilino</label>
+        <select [(ngModel)]="selectedTenantId" (change)="onTenantChange()">
+          <option [ngValue]="null">Todos</option>
+          <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">{{ tenant.tenantName }}</option>
+        </select>
+      </div>
+
+      <!-- Cartera -->
+      <div class="filter-group">
+        <label>Cartera</label>
+        <select [(ngModel)]="selectedCarteraId" (change)="onCarteraChange()" [disabled]="!selectedTenantId">
+          <option [ngValue]="null">Todas</option>
+          <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">{{ portfolio.portfolioName }}</option>
+        </select>
+      </div>
+
+      <!-- Subcartera -->
+      <div class="filter-group">
+        <label>Subcartera</label>
+        <select [(ngModel)]="selectedSubcarteraId" [disabled]="!selectedCarteraId">
+          <option [ngValue]="null">Todas</option>
+          <option *ngFor="let sub of subPortfolios" [ngValue]="sub.id">{{ sub.subPortfolioName }}</option>
+        </select>
+      </div>
+
+      <!-- Período -->
+      <div class="filter-group">
+        <label>Periodo</label>
+        <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
+          <option value="today">Hoy</option>
+          <option value="week">Ultimos 7 dias</option>
+          <option value="month">Este mes</option>
+          <option value="lastMonth">Mes anterior</option>
+          <option value="year">Este anio</option>
+          <option value="custom">Personalizado</option>
+        </select>
+      </div>
+
+      <!-- Fechas personalizadas -->
+      <ng-container *ngIf="selectedPeriod === 'custom'">
+        <div class="filter-group">
+          <label>Desde</label>
+          <input type="date" [(ngModel)]="customDateFrom">
+        </div>
+        <div class="filter-group">
+          <label>Hasta</label>
+          <input type="date" [(ngModel)]="customDateTo">
+        </div>
+      </ng-container>
+
+      <!-- Botón buscar -->
+      <div class="filter-group filter-action">
+        <button class="btn-primary" (click)="loadData()" [disabled]="loading">
+          <lucide-angular name="search" [size]="16"></lucide-angular>
+          <span>Buscar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-spinner">
+      <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+      <span>Cargando datos...</span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-message" *ngIf="error">
+    <lucide-angular name="alert-circle" [size]="20"></lucide-angular>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Contenido -->
+  <ng-container *ngIf="!loading && !error && productivityData">
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon blue">
+          <lucide-angular name="clipboard-list" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">{{ summary?.totalGestiones | number }}</span>
+          <span class="kpi-label">Total Gestiones</span>
+          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioGestiones)">
+            {{ formatPercent(summary?.cambioGestiones) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon green">
+          <lucide-angular name="handshake" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">{{ summary?.totalPromesas | number }}</span>
+          <span class="kpi-label">Promesas Generadas</span>
+          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioPromesas)">
+            {{ formatPercent(summary?.cambioPromesas) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon purple">
+          <lucide-angular name="banknote" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">S/ {{ formatMoney(summary?.montoTotalPromesas || 0) }}</span>
+          <span class="kpi-label">Monto Comprometido</span>
+          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioMonto)">
+            {{ formatPercent(summary?.cambioMonto) }}
+          </span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon orange">
+          <lucide-angular name="target" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">{{ summary?.efectividadPromedio | number:'1.1-1' }}%</span>
+          <span class="kpi-label">Efectividad Promedio</span>
+          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividad)">
+            {{ formatPercent(summary?.cambioEfectividad) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-grid">
+      <!-- Gráfico de barras -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Top Agentes por Promesas</h3>
+          <span class="chart-subtitle">{{ getPeriodLabel() }}</span>
+        </div>
+        <div class="chart-container">
+          <canvas #barChart></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico de líneas -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3>Tendencia de Promesas</h3>
+          <span class="chart-subtitle">Por dia</span>
+        </div>
+        <div class="chart-container">
+          <canvas #lineChart></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico de dona -->
+      <div class="chart-card chart-full">
+        <div class="chart-header">
+          <h3>Distribucion de Tipificaciones</h3>
+          <span class="chart-subtitle">Por categoria</span>
+        </div>
+        <div class="chart-container doughnut-container">
+          <canvas #doughnutChart></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de agentes -->
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Detalle por Agente</h3>
+        <span class="agent-count">{{ agents.length }} agentes</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="agents-table">
+          <thead>
+            <tr>
+              <th class="col-rank">#</th>
+              <th class="col-agent">Agente</th>
+              <th class="col-num">Gestiones</th>
+              <th class="col-num">Promesas</th>
+              <th class="col-money">Monto</th>
+              <th class="col-pct">Efectividad</th>
+              <th class="col-status">Estado Promesas</th>
+              <th class="col-trend">Tendencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let agent of agents">
+              <td class="col-rank">
+                <span class="rank-badge" [class.top-3]="agent.ranking <= 3">{{ agent.ranking }}</span>
+              </td>
+              <td class="col-agent">
+                <div class="agent-info">
+                  <div class="agent-avatar">
+                    <lucide-angular name="user" [size]="16"></lucide-angular>
+                  </div>
+                  <span class="agent-name">{{ agent.nombreAgente }}</span>
+                </div>
+              </td>
+              <td class="col-num">{{ agent.totalGestiones | number }}</td>
+              <td class="col-num">
+                <span class="promesas-badge">{{ agent.totalPromesas | number }}</span>
+              </td>
+              <td class="col-money">S/ {{ formatMoney(agent.montoPromesas) }}</td>
+              <td class="col-pct">
+                <div class="efectividad-bar">
+                  <div class="bar-fill" [style.width.%]="agent.efectividad"></div>
+                  <span class="bar-label">{{ agent.efectividad | number:'1.1-1' }}%</span>
+                </div>
+              </td>
+              <td class="col-status">
+                <div class="status-pills">
+                  <span class="pill pending" *ngIf="agent.promesasPendientes > 0">
+                    {{ agent.promesasPendientes }} Pend.
+                  </span>
+                  <span class="pill paid" *ngIf="agent.promesasPagadas > 0">
+                    {{ agent.promesasPagadas }} Pag.
+                  </span>
+                  <span class="pill overdue" *ngIf="agent.promesasVencidas > 0">
+                    {{ agent.promesasVencidas }} Venc.
+                  </span>
+                </div>
+              </td>
+              <td class="col-trend">
+                <div class="trend-indicator" [ngClass]="getTrendClass(agent.trend)">
+                  <lucide-angular [name]="getTrendIcon(agent.trend)" [size]="16"></lucide-angular>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" *ngIf="agents.length === 0">
+        <lucide-angular name="users" [size]="48"></lucide-angular>
+        <p>No hay datos de agentes para el periodo seleccionado</p>
+      </div>
+    </div>
+  </ng-container>
+</div>

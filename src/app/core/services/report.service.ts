@@ -42,6 +42,59 @@ export interface CampaignReport {
   averageDuration: number;
 }
 
+// Interfaces para el dashboard de productividad de agentes
+export interface AgentProductivityResponse {
+  summary: ProductivitySummary;
+  agents: AgentMetrics[];
+  chartData: ChartData;
+}
+
+export interface ProductivitySummary {
+  totalGestiones: number;
+  totalPromesas: number;
+  montoTotalPromesas: number;
+  efectividadPromedio: number;
+  totalAgentes: number;
+  cambioGestiones?: number;
+  cambioPromesas?: number;
+  cambioMonto?: number;
+  cambioEfectividad?: number;
+}
+
+export interface AgentMetrics {
+  idAgente: number;
+  nombreAgente: string;
+  totalGestiones: number;
+  totalPromesas: number;
+  montoPromesas: number;
+  efectividad: number;
+  trend: 'up' | 'down' | 'stable';
+  ranking: number;
+  tipificaciones?: { [key: string]: number };
+  promesasPendientes: number;
+  promesasPagadas: number;
+  promesasVencidas: number;
+}
+
+export interface ChartData {
+  promesasPorDia: TimeSeriesData[];
+  tipificacionesDistribucion: { [key: string]: number };
+  topAgentesPorPromesas: AgentBar[];
+  topAgentesPorMonto: AgentBar[];
+}
+
+export interface TimeSeriesData {
+  fecha: string;
+  cantidad: number;
+  monto: number;
+}
+
+export interface AgentBar {
+  nombre: string;
+  cantidad: number;
+  monto: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -81,5 +134,26 @@ export class ReportService {
     if (dateTo) params = params.set('dateTo', dateTo.toISOString());
 
     return this.http.get<CampaignReport[]>(`${this.apiUrl}/campaign-stats`, { params });
+  }
+
+  /**
+   * Obtiene métricas de productividad de agentes
+   */
+  getAgentProductivity(
+    fechaInicio: string,
+    fechaFin: string,
+    tenantId?: number,
+    carteraId?: number,
+    subcarteraId?: number
+  ): Observable<AgentProductivityResponse> {
+    let params = new HttpParams()
+      .set('fechaInicio', fechaInicio)
+      .set('fechaFin', fechaFin);
+
+    if (tenantId) params = params.set('tenantId', tenantId.toString());
+    if (carteraId) params = params.set('carteraId', carteraId.toString());
+    if (subcarteraId) params = params.set('subcarteraId', subcarteraId.toString());
+
+    return this.http.get<AgentProductivityResponse>(`${this.apiUrl}/agent-productivity`, { params });
   }
 }
