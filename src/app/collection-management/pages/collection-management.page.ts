@@ -77,7 +77,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           <div class="flex items-center justify-between">
             <!-- Lado Izquierdo: Título -->
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 bg-blue-500/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
+              <div class="w-8 h-8 bg-blue-600/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
                 <lucide-angular name="clipboard-list" [size]="18" class="text-white"></lucide-angular>
               </div>
               <h1 class="text-base font-bold">Gestión de Cobranza</h1>
@@ -121,7 +121,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
               >
                 {{ tab.label }}
                 @if (activeTab() === tab.id) {
-                  <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></div>
+                  <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700 dark:bg-blue-500"></div>
                 }
               </button>
             }
@@ -208,7 +208,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   @if (historialGestiones().length === 0) {
                     <div class="text-center py-4">
                       <p class="text-xs text-gray-400">Sin gestiones previas</p>
-                      <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">Recargar</button>
+                      <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-700 text-white dark:bg-blue-500 text-xs rounded">Recargar</button>
                     </div>
                   } @else {
                     @for (gestion of historialGestiones(); track $index) {
@@ -347,15 +347,15 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                               {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-                              <span class="bg-green-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
+                              <span class="bg-green-700 text-xs dark:bg-green-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="check" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'PARCIAL') {
-                              <span class="bg-amber-500 text-xs px-1 py-0.5 rounded font-semibold">Parcial</span>
+                              <span class="bg-amber-600 text-xs dark:bg-amber-500 px-1 py-0.5 rounded font-semibold">Parcial</span>
                             } @else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-                              <span class="bg-red-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
+                              <span class="bg-red-700 text-xs dark:bg-red-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
                               <span class="bg-gray-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
                             } @else {
-                              <span class="bg-blue-600 text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
+                              <span class="bg-blue-700 text-xs dark:bg-blue-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
                           </div>
                         }
@@ -447,7 +447,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
               <div class="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border-2 border-purple-300 dark:border-purple-700 rounded-lg shadow-lg p-3 space-y-2">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <div class="p-1.5 bg-purple-500 dark:bg-purple-600 rounded">
+                    <div class="p-1.5 bg-purple-700 dark:bg-purple-500 rounded">
                     </div>
                     <div>
                       <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Cronograma Activo Detectado</h4>
@@ -544,7 +544,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                       <label
                         class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
                         [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
-                          ? 'bg-green-500 text-white shadow-md'
+                          ? 'bg-green-700 text-white shadow-md dark:bg-green-500'
                           : 'bg-white dark:bg-gray-800 hover:bg-green-100 dark:hover:bg-green-900/30 border border-green-200 dark:border-green-700'"
                       >
                         <div class="flex items-center gap-3">
@@ -701,8 +701,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     (click)="openComprobanteUploadDialog()"
                     class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
                     [class]="uploadedComprobante()
-                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
+                      ? 'bg-green-700 hover:bg-green-800 text-white dark:bg-green-500 dark:hover:bg-green-600'
+                      : 'bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700'"
                   >
                     @if (uploadedComprobante()) {
                       Comprobante Subido
