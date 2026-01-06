@@ -596,8 +596,9 @@ export class CallNotesComponent implements OnInit {
    */
   mostrarModalGenerarCarta(idGestion: number, userId?: number): void {
     const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
-      width: '400px',
+      width: 'auto',
       disableClose: true,
+      panelClass: 'carta-dialog-panel',
       data: { idGestion }
     });
 

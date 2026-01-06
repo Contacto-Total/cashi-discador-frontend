@@ -600,6 +600,10 @@ export interface VoucherPaymentDialogResult {
       background: white !important;
       border: 1px solid #e2e8f0 !important;
       border-radius: 8px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 0 !important;
     }
     .dark-mode .zoom-btn { background: #334155 !important; border-color: #475569 !important; }
     .zoom-btn mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #64748b; }
@@ -616,9 +620,13 @@ export interface VoucherPaymentDialogResult {
       background: #fef2f2 !important;
       border: 1px solid #fecaca !important;
       border-radius: 8px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 0 !important;
     }
     .dark-mode .delete-btn { background: rgba(239, 68, 68, 0.15) !important; border-color: #ef4444 !important; }
-    .delete-btn mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #ef4444; }
+    .delete-btn mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #ef4444; line-height: 1 !important; display: block !important; }
 
     .viewer-body { flex: 1; min-height: 380px; position: relative; background: #f1f5f9; }
     .dark-mode .viewer-body { background: #0f172a; }
