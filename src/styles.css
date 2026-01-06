@@ -4235,9 +4235,9 @@ html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 .text-
   color: #e5e7eb !important;
 }
 
-/* Alerta de promesa de pago - modo claro */
+/* Alerta de promesa de pago - modo claro (más oscuro para contraste) */
 html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 {
-  background: linear-gradient(to bottom right, #f59e0b, #eab308, #f97316) !important;
+  background: linear-gradient(to bottom right, #b45309, #a16207, #c2410c) !important;
 }
 
 html:not(.dark) app-collection-management .bg-gradient-to-br.from-amber-500 .text-white {
@@ -4408,6 +4408,60 @@ html:not(.dark) .collection-management-container .bg-gradient-to-r.from-gray-700
 
 html:not(.dark) .collection-management-container .bg-gradient-to-r.from-gray-700 .text-gray-300 {
   color: #d1d5db !important;
+}
+
+/* ===============================================
+   BOTONES CON COLORES MÁS OSCUROS PARA MODO CLARO
+   =============================================== */
+
+/* Botones verdes (Guardar, etc.) */
+html:not(.dark) app-collection-management .bg-green-700,
+html:not(.dark) app-collection-management .bg-green-600,
+html:not(.dark) app-collection-management .bg-green-500 {
+  background-color: #15803d !important;
+}
+
+html:not(.dark) app-collection-management .bg-emerald-700,
+html:not(.dark) app-collection-management .bg-emerald-600 {
+  background-color: #047857 !important;
+}
+
+html:not(.dark) app-collection-management .from-emerald-700 {
+  --tw-gradient-from: #047857 !important;
+}
+
+/* Botones morados */
+html:not(.dark) app-collection-management .bg-purple-700,
+html:not(.dark) app-collection-management .bg-purple-600 {
+  background-color: #6b21a8 !important;
+}
+
+/* Botones azules */
+html:not(.dark) app-collection-management .bg-blue-700,
+html:not(.dark) app-collection-management .bg-blue-600,
+html:not(.dark) app-collection-management .bg-blue-500 {
+  background-color: #1d4ed8 !important;
+}
+
+/* Badges de estado más oscuros */
+html:not(.dark) app-collection-management .bg-amber-600,
+html:not(.dark) app-collection-management .bg-amber-500 {
+  background-color: #b45309 !important;
+}
+
+html:not(.dark) app-collection-management .bg-red-700,
+html:not(.dark) app-collection-management .bg-red-600 {
+  background-color: #b91c1c !important;
+}
+
+/* Botones grises (Cancelar) */
+html:not(.dark) app-collection-management .bg-gray-500,
+html:not(.dark) app-collection-management .bg-gray-400 {
+  background-color: #4b5563 !important;
+}
+
+html:not(.dark) app-collection-management .from-gray-400 {
+  --tw-gradient-from: #4b5563 !important;
 }
 
 /* ===============================================
