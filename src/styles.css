@@ -1,4 +1,8 @@
 @import "tailwindcss";
+
+/* Configurar dark mode basado en clase .dark (no en preferencia del sistema) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
 
 /* Variables de tema claro (por defecto) */
