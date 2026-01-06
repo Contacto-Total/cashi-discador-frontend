@@ -4220,19 +4220,19 @@ html:not(.dark) app-manual-management .border-red-300 {
    =============================================== */
 
 /* Header principal - modo claro */
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 {
-  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 {
+  background: linear-gradient(to right, #374151, #1f2937, #374151) !important;
 }
 
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 h1,
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .text-white,
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .font-bold,
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .font-semibold {
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 h1,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 .text-white,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 .font-semibold {
   color: #ffffff !important;
 }
 
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-blue-600 .text-blue-100 {
-  color: #dbeafe !important;
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-gray-700 .text-blue-100 {
+  color: #e5e7eb !important;
 }
 
 /* Alerta de promesa de pago - modo claro */
@@ -4402,12 +4402,12 @@ html:not(.dark) app-collection-management .text-red-600 {
 }
 
 /* Fix para garantizar que el header sea visible */
-html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600 * {
+html:not(.dark) .collection-management-container .bg-gradient-to-r.from-gray-700 * {
   color: #ffffff;
 }
 
-html:not(.dark) .collection-management-container .bg-gradient-to-r.from-blue-600 .text-blue-100 {
-  color: #dbeafe !important;
+html:not(.dark) .collection-management-container .bg-gradient-to-r.from-gray-700 .text-gray-300 {
+  color: #d1d5db !important;
 }
 
 /* ===============================================
