@@ -14,6 +14,9 @@ import { ThemeService, Theme } from '../../core/services/theme.service';
   styleUrls: ['./settings.component.css']
 })
 export class SettingsComponent implements OnInit, OnDestroy {
+  // Active section for sidebar navigation
+  activeSection: 'appearance' | 'font' = 'appearance';
+
   // Font size - applied (saved)
   appliedFontSize: number = 16;
 
