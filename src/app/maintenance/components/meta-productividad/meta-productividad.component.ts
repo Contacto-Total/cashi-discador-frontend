@@ -51,6 +51,8 @@ export class MetaProductividadComponent implements OnInit {
       next: (metas) => {
         this.metas = metas;
         this.loading = false;
+        // Cargar subportfolios para las metas que las tienen
+        this.loadSubPortfoliosForMetas();
       },
       error: (err) => {
         console.error('Error loading metas:', err);
@@ -70,6 +72,28 @@ export class MetaProductividadComponent implements OnInit {
       next: (portfolios) => {
         this.portfolios = portfolios;
       }
+    });
+  }
+
+  private loadSubPortfoliosForMetas(): void {
+    // Obtener IDs únicos de carteras que tienen metas con subcartera
+    const carteraIds = [...new Set(
+      this.metas
+        .filter(m => m.idCartera && m.idSubcartera)
+        .map(m => m.idCartera!)
+    )];
+
+    carteraIds.forEach(carteraId => {
+      this.portfolioService.getActiveSubPortfoliosByPortfolio(carteraId).subscribe({
+        next: (subs) => {
+          // Agregar a la lista sin duplicados
+          subs.forEach(sub => {
+            if (!this.subPortfolios.find(s => s.id === sub.id)) {
+              this.subPortfolios.push(sub);
+            }
+          });
+        }
+      });
     });
   }
 
@@ -192,14 +216,24 @@ export class MetaProductividadComponent implements OnInit {
   }
 
   getScopeLabel(meta: MetaProductividad): string {
-    if (meta.idSubcartera) {
-      return `${meta.tenantName} > ${meta.carteraName} > ${meta.subcarteraName}`;
+    const tenantName = meta.idTenant
+      ? this.tenants.find(t => t.id === meta.idTenant)?.tenantName || `Tenant ${meta.idTenant}`
+      : null;
+    const carteraName = meta.idCartera
+      ? this.portfolios.find(p => p.id === meta.idCartera)?.portfolioName || `Cartera ${meta.idCartera}`
+      : null;
+    const subcarteraName = meta.idSubcartera
+      ? this.subPortfolios.find(s => s.id === meta.idSubcartera)?.subPortfolioName || `Subcartera ${meta.idSubcartera}`
+      : null;
+
+    if (meta.idSubcartera && tenantName && carteraName && subcarteraName) {
+      return `${tenantName} > ${carteraName} > ${subcarteraName}`;
     }
-    if (meta.idCartera) {
-      return `${meta.tenantName} > ${meta.carteraName}`;
+    if (meta.idCartera && tenantName && carteraName) {
+      return `${tenantName} > ${carteraName}`;
     }
-    if (meta.idTenant) {
-      return meta.tenantName || 'Tenant';
+    if (meta.idTenant && tenantName) {
+      return tenantName;
     }
     return 'Global (Todos)';
   }
