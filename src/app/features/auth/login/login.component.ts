@@ -37,9 +37,11 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ========== TEMAS ESTACIONALES (automático por fecha) ==========
   // Navidad: 1 dic 12:00 - 25 dic 23:59
-  // Año Nuevo: 26 dic 00:00 - 3 ene 23:59
+  // Año Nuevo: 26 dic 00:00 - 6 ene 23:59 (incluye Bajada de Reyes)
+  // Verano: 7 ene 00:00 - 31 ene 23:59
   showChristmasHat = false;
   showNewYearTheme = false;
+  showSummerTheme = false;
 
   // Contador de Año Nuevo
   countdownDays = 0;
@@ -93,7 +95,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * Detecta el tema estacional basado en la fecha actual
    * - Navidad: 1 dic 12:00 - 25 dic 23:59
-   * - Año Nuevo: 26 dic 12:00 - 3 ene 23:59
+   * - Año Nuevo: 26 dic 00:00 - 6 ene 23:59 (incluye Bajada de Reyes)
+   * - Verano: 7 ene 00:00 - 31 ene 23:59
    */
   private detectSeasonalTheme(): void {
     const now = new Date();
@@ -101,33 +104,38 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     const day = now.getDate();
     const hour = now.getHours();
 
+    // Reset all themes
+    this.showChristmasHat = false;
+    this.showNewYearTheme = false;
+    this.showSummerTheme = false;
+
     // Navidad: 1 dic 12:00 - 25 dic 23:59
     // month === 11 es diciembre
     if (month === 11) {
       if ((day === 1 && hour >= 12) || (day > 1 && day <= 25)) {
         this.showChristmasHat = true;
-        this.showNewYearTheme = false;
         return;
       }
       // Año Nuevo: 26 dic 00:00 - 31 dic 23:59
       if (day >= 26 && day <= 31) {
-        this.showChristmasHat = false;
         this.showNewYearTheme = true;
         return;
       }
     }
 
-    // Año Nuevo: 1 ene 00:00 - 3 ene 23:59
     // month === 0 es enero
-    if (month === 0 && day >= 1 && day <= 3) {
-      this.showChristmasHat = false;
-      this.showNewYearTheme = true;
-      return;
+    if (month === 0) {
+      // Año Nuevo + Bajada de Reyes: 1 ene 00:00 - 6 ene 23:59
+      if (day >= 1 && day <= 6) {
+        this.showNewYearTheme = true;
+        return;
+      }
+      // Verano: 7 ene 00:00 - 31 ene 23:59
+      if (day >= 7 && day <= 31) {
+        this.showSummerTheme = true;
+        return;
+      }
     }
-
-    // Fuera de temporada
-    this.showChristmasHat = false;
-    this.showNewYearTheme = false;
   }
 
   /**

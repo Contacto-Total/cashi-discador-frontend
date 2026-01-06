@@ -1,4 +1,4 @@
-<div class="login-container" [class.christmas]="showChristmasHat" [class.newyear]="showNewYearTheme">
+<div class="login-container" [class.christmas]="showChristmasHat" [class.newyear]="showNewYearTheme" [class.summer]="showSummerTheme">
   <!-- Nieve 3D fullscreen -->
   <canvas #snowCanvas class="snow-canvas-fullscreen" *ngIf="showChristmasHat"></canvas>
 
@@ -198,6 +198,53 @@
     <div class="fs-instruction">Click en cualquier lugar para cerrar</div>
   </div>
 
+  <!-- ========== TEMA VERANO ========== -->
+  <!-- Sol animado -->
+  <div class="summer-sun" *ngIf="showSummerTheme">
+    <div class="sun-core"></div>
+    <div class="sun-rays">
+      <div class="ray"></div>
+      <div class="ray"></div>
+      <div class="ray"></div>
+      <div class="ray"></div>
+      <div class="ray"></div>
+      <div class="ray"></div>
+      <div class="ray"></div>
+      <div class="ray"></div>
+    </div>
+  </div>
+
+  <!-- Nubes flotantes -->
+  <div class="summer-clouds" *ngIf="showSummerTheme">
+    <div class="cloud cloud-1">☁</div>
+    <div class="cloud cloud-2">☁</div>
+    <div class="cloud cloud-3">☁</div>
+  </div>
+
+  <!-- Olas del mar -->
+  <div class="summer-waves" *ngIf="showSummerTheme">
+    <div class="wave wave-1"></div>
+    <div class="wave wave-2"></div>
+    <div class="wave wave-3"></div>
+  </div>
+
+  <!-- Palmeras -->
+  <div class="summer-palms" *ngIf="showSummerTheme">
+    <div class="palm palm-left">🌴</div>
+    <div class="palm palm-right">🌴</div>
+  </div>
+
+  <!-- Mensaje de Verano -->
+  <div class="summer-greeting" *ngIf="showSummerTheme">
+    <div class="summer-greeting-content">
+      <div class="summer-icon">☀️</div>
+      <h2 class="summer-title">¡Feliz Verano!</h2>
+      <p class="summer-subtitle">Que estos días estén llenos de energía y buenas vibras</p>
+      <div class="summer-decoration">🏖️ 🌊 🍹</div>
+    </div>
+  </div>
+  <!-- ================================= -->
+
   <div class="login-card">
     <div class="login-header">
       <div class="mascot-container">
@@ -209,7 +256,7 @@
           </div>
         </div>
         <div class="mascot-body">
-          <div class="mascot-antenna" [class.hidden]="showChristmasHat || showNewYearTheme"></div>
+          <div class="mascot-antenna" [class.hidden]="showChristmasHat || showNewYearTheme || showSummerTheme"></div>
           <!-- Gorrito navideño -->
           <div class="christmas-hat" *ngIf="showChristmasHat">
             <div class="hat-base"></div>
@@ -236,6 +283,18 @@
             <div class="glasses-arms">
               <div class="glasses-arm left"></div>
               <div class="glasses-arm right"></div>
+            </div>
+          </div>
+          <!-- Lentes de sol (Verano) -->
+          <div class="summer-sunglasses" *ngIf="showSummerTheme">
+            <div class="sunglasses-frame">
+              <div class="sunglasses-lens left"></div>
+              <div class="sunglasses-bridge"></div>
+              <div class="sunglasses-lens right"></div>
+            </div>
+            <div class="sunglasses-arms">
+              <div class="sunglasses-arm left"></div>
+              <div class="sunglasses-arm right"></div>
             </div>
           </div>
           <div class="mascot-head">

@@ -3874,3 +3874,404 @@ body.light-theme .snowflake,
     display: none;
   }
 }
+
+/* ========================================
+   TEMA VERANO - ENERO
+   ======================================== */
+
+/* Fondo de verano con gradiente de cielo y mar */
+.login-container.summer {
+  background: linear-gradient(180deg,
+    #87CEEB 0%,      /* Cielo celeste */
+    #B0E0E6 30%,     /* Cielo más claro */
+    #E0F7FA 50%,     /* Horizonte */
+    #4DD0E1 70%,     /* Mar claro */
+    #00ACC1 100%     /* Mar profundo */
+  );
+}
+
+.login-container.summer::before {
+  background: none;
+}
+
+/* Sol animado */
+.summer-sun {
+  position: fixed;
+  top: 40px;
+  right: 80px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.sun-core {
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, #FFD700 0%, #FFA500 50%, #FF8C00 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 60px rgba(255, 215, 0, 0.8),
+    0 0 100px rgba(255, 165, 0, 0.5),
+    0 0 150px rgba(255, 140, 0, 0.3);
+  animation: sunPulse 3s ease-in-out infinite;
+}
+
+.sun-rays {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 180px;
+  height: 180px;
+  animation: sunRotate 20s linear infinite;
+}
+
+.sun-rays .ray {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 40px;
+  background: linear-gradient(180deg, #FFD700, transparent);
+  transform-origin: center bottom;
+  border-radius: 2px;
+}
+
+.sun-rays .ray:nth-child(1) { transform: translate(-50%, -100%) rotate(0deg); }
+.sun-rays .ray:nth-child(2) { transform: translate(-50%, -100%) rotate(45deg); }
+.sun-rays .ray:nth-child(3) { transform: translate(-50%, -100%) rotate(90deg); }
+.sun-rays .ray:nth-child(4) { transform: translate(-50%, -100%) rotate(135deg); }
+.sun-rays .ray:nth-child(5) { transform: translate(-50%, -100%) rotate(180deg); }
+.sun-rays .ray:nth-child(6) { transform: translate(-50%, -100%) rotate(225deg); }
+.sun-rays .ray:nth-child(7) { transform: translate(-50%, -100%) rotate(270deg); }
+.sun-rays .ray:nth-child(8) { transform: translate(-50%, -100%) rotate(315deg); }
+
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+@keyframes sunRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Nubes flotantes */
+.summer-clouds {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.cloud {
+  position: absolute;
+  font-size: 80px;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  animation: cloudFloat 30s linear infinite;
+}
+
+.cloud-1 {
+  top: 20px;
+  left: -100px;
+  animation-duration: 35s;
+}
+
+.cloud-2 {
+  top: 60px;
+  left: -200px;
+  animation-duration: 45s;
+  animation-delay: -15s;
+  font-size: 60px;
+  opacity: 0.7;
+}
+
+.cloud-3 {
+  top: 100px;
+  left: -150px;
+  animation-duration: 40s;
+  animation-delay: -25s;
+  font-size: 70px;
+  opacity: 0.8;
+}
+
+@keyframes cloudFloat {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 200px)); }
+}
+
+/* Olas del mar */
+.summer-waves {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+
+.wave {
+  position: absolute;
+  bottom: 0;
+  left: -100%;
+  width: 300%;
+  height: 100%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%2300bcd4' fill-opacity='0.5' d='M0,192L48,197.3C96,203,192,213,288,202.7C384,192,480,160,576,165.3C672,171,768,213,864,218.7C960,224,1056,192,1152,165.3C1248,139,1344,117,1392,106.7L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E") repeat-x;
+  background-size: 50% 100%;
+  animation: waveMove 8s linear infinite;
+}
+
+.wave-1 {
+  opacity: 0.7;
+  animation-duration: 8s;
+}
+
+.wave-2 {
+  bottom: 10px;
+  opacity: 0.5;
+  animation-duration: 10s;
+  animation-delay: -3s;
+}
+
+.wave-3 {
+  bottom: 20px;
+  opacity: 0.3;
+  animation-duration: 12s;
+  animation-delay: -5s;
+}
+
+@keyframes waveMove {
+  from { transform: translateX(0); }
+  to { transform: translateX(33.33%); }
+}
+
+/* Palmeras */
+.summer-palms {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.palm {
+  position: absolute;
+  bottom: 20px;
+  font-size: 120px;
+  animation: palmSway 4s ease-in-out infinite;
+}
+
+.palm-left {
+  left: 5%;
+  transform-origin: bottom center;
+}
+
+.palm-right {
+  right: 5%;
+  transform: scaleX(-1);
+  transform-origin: bottom center;
+  animation-delay: -2s;
+}
+
+@keyframes palmSway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+.palm-right {
+  animation-name: palmSwayRight;
+}
+
+@keyframes palmSwayRight {
+  0%, 100% { transform: scaleX(-1) rotate(-3deg); }
+  50% { transform: scaleX(-1) rotate(3deg); }
+}
+
+/* Mensaje de verano */
+.summer-greeting {
+  position: fixed;
+  left: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.summer-greeting-content {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 30px 40px;
+  border-radius: 20px;
+  text-align: center;
+  box-shadow:
+    0 10px 40px rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(255, 255, 255, 0.5);
+}
+
+.summer-icon {
+  font-size: 60px;
+  margin-bottom: 15px;
+  animation: sunIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes sunIconPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.1) rotate(10deg); }
+}
+
+.summer-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #FF6B35, #F7931E, #FFD700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 10px 0;
+}
+
+.summer-subtitle {
+  font-size: 1rem;
+  color: #555;
+  margin: 0 0 15px 0;
+  line-height: 1.5;
+}
+
+.summer-decoration {
+  font-size: 1.5rem;
+  letter-spacing: 10px;
+}
+
+/* Lentes de sol para el robot */
+.summer-sunglasses {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+}
+
+.sunglasses-frame {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sunglasses-lens {
+  width: 28px;
+  height: 20px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border-radius: 8px 8px 12px 12px;
+  border: 2px solid #2d2d2d;
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.sunglasses-lens.left {
+  border-radius: 10px 6px 12px 8px;
+}
+
+.sunglasses-lens.right {
+  border-radius: 6px 10px 8px 12px;
+}
+
+.sunglasses-bridge {
+  width: 8px;
+  height: 4px;
+  background: #2d2d2d;
+  border-radius: 2px;
+}
+
+.sunglasses-arms {
+  position: absolute;
+  top: 8px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.sunglasses-arm {
+  width: 20px;
+  height: 3px;
+  background: #2d2d2d;
+  border-radius: 1px;
+}
+
+.sunglasses-arm.left {
+  transform: rotate(-15deg);
+  transform-origin: right center;
+  margin-left: -18px;
+}
+
+.sunglasses-arm.right {
+  transform: rotate(15deg);
+  transform-origin: left center;
+  margin-right: -18px;
+}
+
+/* Responsive para verano */
+@media (max-width: 1200px) {
+  .summer-greeting {
+    left: 20px;
+  }
+  .summer-greeting-content {
+    padding: 20px 30px;
+  }
+  .summer-title {
+    font-size: 1.6rem;
+  }
+  .summer-sun {
+    right: 40px;
+  }
+  .sun-core {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+@media (max-width: 900px) {
+  .summer-greeting {
+    display: none;
+  }
+  .palm {
+    font-size: 80px;
+  }
+  .summer-sun {
+    top: 20px;
+    right: 20px;
+  }
+  .sun-core {
+    width: 60px;
+    height: 60px;
+  }
+  .sun-rays {
+    width: 120px;
+    height: 120px;
+  }
+  .sun-rays .ray {
+    height: 25px;
+  }
+}
+
+@media (max-width: 600px) {
+  .summer-sun {
+    top: 10px;
+    right: 10px;
+  }
+  .sun-core {
+    width: 50px;
+    height: 50px;
+  }
+  .palm {
+    font-size: 60px;
+  }
+  .summer-clouds {
+    display: none;
+  }
+}
