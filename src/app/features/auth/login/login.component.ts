@@ -37,8 +37,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
   // ========== TEMAS ESTACIONALES (automático por fecha) ==========
   // Navidad: 1 dic 12:00 - 25 dic 23:59
-  // Año Nuevo: 26 dic 00:00 - 6 ene 23:59 (incluye Bajada de Reyes)
-  // Verano: 7 ene 00:00 - 31 ene 23:59
+  // Año Nuevo: 26 dic 00:00 - 3 ene 23:59
+  // Verano: 4 ene 00:00 - 31 ene 23:59
   showChristmasHat = false;
   showNewYearTheme = false;
   showSummerTheme = false;
@@ -95,8 +95,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   /**
    * Detecta el tema estacional basado en la fecha actual
    * - Navidad: 1 dic 12:00 - 25 dic 23:59
-   * - Año Nuevo: 26 dic 00:00 - 6 ene 23:59 (incluye Bajada de Reyes)
-   * - Verano: 7 ene 00:00 - 31 ene 23:59
+   * - Año Nuevo: 26 dic 00:00 - 3 ene 23:59
+   * - Verano: 4 ene 00:00 - 31 ene 23:59
    */
   private detectSeasonalTheme(): void {
     const now = new Date();
@@ -125,13 +125,13 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // month === 0 es enero
     if (month === 0) {
-      // Año Nuevo + Bajada de Reyes: 1 ene 00:00 - 6 ene 23:59
-      if (day >= 1 && day <= 6) {
+      // Año Nuevo: 1 ene 00:00 - 3 ene 23:59
+      if (day >= 1 && day <= 3) {
         this.showNewYearTheme = true;
         return;
       }
-      // Verano: 7 ene 00:00 - 31 ene 23:59
-      if (day >= 7 && day <= 31) {
+      // Verano: 4 ene 00:00 - 31 ene 23:59
+      if (day >= 4 && day <= 31) {
         this.showSummerTheme = true;
         return;
       }
