@@ -229,6 +229,8 @@
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.3s;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .promesa-card:hover {
@@ -313,7 +315,7 @@
 
 .promesa-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -674,6 +676,12 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .promesa-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .search-bar {
     flex-direction: column;
@@ -686,7 +694,7 @@
   }
 
   .promesa-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .cuota-info {
