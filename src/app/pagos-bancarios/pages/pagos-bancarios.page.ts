@@ -92,12 +92,12 @@ import {
                   </svg>
                   @if (selectedFile()) {
                     <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">{{ selectedFile()?.name }}</p>
-                    <p class="text-xs text-slate-500">{{ formatFileSize(selectedFile()?.size || 0) }}</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400">{{ formatFileSize(selectedFile()?.size || 0) }}</p>
                   } @else {
-                    <p class="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                    <p class="mb-2 text-sm text-slate-600 dark:text-slate-400">
                       <span class="font-semibold">Click para seleccionar</span> o arrastra el archivo
                     </p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Solo archivos TXT</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400">Solo archivos TXT</p>
                   }
                 </div>
                 <input id="file-upload" type="file" class="hidden" accept=".txt" (change)="onFileSelected($event)" />
@@ -167,31 +167,31 @@ import {
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos</h2>
-                <span class="text-sm text-slate-500">{{ resultado()?.detalles?.length }} registros</span>
+                <span class="text-sm text-slate-600 dark:text-slate-400">{{ resultado()?.detalles?.length }} registros</span>
               </div>
               <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-slate-50 dark:bg-slate-700/50">
+                  <thead class="bg-slate-100 dark:bg-slate-700/50">
                     <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Documento</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase">Monto</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nro. Op.</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Sucursal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Terminal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Agencia</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Documento</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Fecha</th>
+                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Monto</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Nro. Op.</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Sucursal</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Terminal</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Agencia</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                     @for (d of resultado()?.detalles; track d.numeroFila) {
                       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento || d.codigoDepositante }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.numeroOperacion }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.sucursal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.terminal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600">{{ d.agencia }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
+                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.numeroOperacion }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.sucursal }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.terminal }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.agencia }}</td>
                       </tr>
                     }
                   </tbody>
@@ -222,7 +222,7 @@ import {
                 <h2 class="text-lg font-semibold text-slate-800 dark:text-white">
                   {{ editingPago() ? 'Editar Pago Manual' : 'Registrar Pago Manual' }}
                 </h2>
-                <p class="text-sm text-slate-500">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
                   {{ formExpanded() ? 'Clic para minimizar' : 'Clic para expandir' }}
                 </p>
               </div>
@@ -433,16 +433,16 @@ import {
             <!-- Filtros -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Documento</label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Documento</label>
                 <input
                   type="text"
                   [(ngModel)]="filtros.documento"
                   placeholder="Buscar DNI..."
-                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
+                  class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white placeholder-slate-400"
                 />
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Desde</label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Desde</label>
                 <input
                   type="date"
                   [(ngModel)]="filtros.fechaDesde"
@@ -450,7 +450,7 @@ import {
                 />
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Hasta</label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Hasta</label>
                 <input
                   type="date"
                   [(ngModel)]="filtros.fechaHasta"
@@ -458,7 +458,7 @@ import {
                 />
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Banco</label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Banco</label>
                 <select
                   [(ngModel)]="filtros.banco"
                   class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
@@ -474,7 +474,7 @@ import {
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-500 mb-1">Medio</label>
+                <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Medio</label>
                 <select
                   [(ngModel)]="filtros.medioAtencion"
                   class="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white"
@@ -511,7 +511,7 @@ import {
           </div>
 
           <!-- Contador de registros -->
-          <div class="px-4 py-2 bg-slate-50 dark:bg-slate-700/30 border-b border-slate-200 dark:border-slate-700 text-sm text-slate-600 dark:text-slate-400">
+          <div class="px-4 py-2 bg-slate-100 dark:bg-slate-700/30 border-b border-slate-200 dark:border-slate-700 text-sm text-slate-700 dark:text-slate-400">
             Mostrando {{ pagosManuales().length }} de {{ totalRegistros() }} registros
           </div>
 
@@ -522,11 +522,11 @@ import {
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              <p class="mt-2 text-slate-500">Cargando...</p>
+              <p class="mt-2 text-slate-600 dark:text-slate-400">Cargando...</p>
             </div>
           } @else if (pagosManuales().length === 0) {
-            <div class="p-8 text-center text-slate-500">
-              <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-8 text-center text-slate-600 dark:text-slate-400">
+              <svg class="w-12 h-12 mx-auto mb-3 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               No hay pagos manuales registrados
@@ -534,27 +534,27 @@ import {
           } @else {
             <div class="overflow-x-auto">
               <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                <thead class="bg-slate-50 dark:bg-slate-700/50">
+                <thead class="bg-slate-100 dark:bg-slate-700/50">
                   <tr>
-                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Documento</th>
-                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
-                    <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase">Monto</th>
-                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Nro. Op.</th>
-                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Banco</th>
-                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Medio</th>
-                    <th class="px-3 py-3 text-center text-xs font-medium text-slate-500 uppercase">Estado</th>
-                    <th class="px-3 py-3 text-center text-xs font-medium text-slate-500 uppercase">Acciones</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Documento</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Fecha</th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Monto</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Nro. Op.</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Banco</th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Medio</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Estado</th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Acciones</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                   @for (pago of pagosManuales(); track pago.id) {
                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                       <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ pago.documento }}</td>
-                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.fechaBanco }}</td>
-                      <td class="px-3 py-2 text-sm font-medium text-green-600 text-right">S/ {{ formatMonto(pago.montoBanco) }}</td>
-                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.numeroOperacion }}</td>
-                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.banco }}</td>
-                      <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ pago.medioAtencion || '-' }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ pago.fechaBanco }}</td>
+                      <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(pago.montoBanco) }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ pago.numeroOperacion }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ pago.banco }}</td>
+                      <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ pago.medioAtencion || '-' }}</td>
                       <td class="px-3 py-2 text-center">
                         @if (pago.cuotaAplicadaId) {
                           <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
@@ -650,12 +650,12 @@ import {
                   </svg>
                   @if (selectedFileOh()) {
                     <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">{{ selectedFileOh()?.name }}</p>
-                    <p class="text-xs text-slate-500">{{ formatFileSize(selectedFileOh()?.size || 0) }}</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400">{{ formatFileSize(selectedFileOh()?.size || 0) }}</p>
                   } @else {
-                    <p class="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                    <p class="mb-2 text-sm text-slate-600 dark:text-slate-400">
                       <span class="font-semibold">Click para seleccionar</span> o arrastra el archivo
                     </p>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Archivos Excel (.xlsx, .xls)</p>
+                    <p class="text-xs text-slate-600 dark:text-slate-400">Archivos Excel (.xlsx, .xls)</p>
                   }
                 </div>
                 <input id="file-upload-oh" type="file" class="hidden" accept=".xlsx,.xls" (change)="onFileSelectedOh($event)" />
@@ -725,27 +725,27 @@ import {
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
                 <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos OH</h2>
-                <span class="text-sm text-slate-500">{{ resultadoOh()?.detalles?.length }} registros</span>
+                <span class="text-sm text-slate-600 dark:text-slate-400">{{ resultadoOh()?.detalles?.length }} registros</span>
               </div>
               <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-purple-50 dark:bg-purple-900/20">
+                  <thead class="bg-purple-100 dark:bg-purple-900/20">
                     <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">DNI</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Cuenta</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-500 uppercase">Monto</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">Canal</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">DNI</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Cuenta</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Fecha</th>
+                      <th class="px-3 py-3 text-right text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Monto</th>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Canal</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                     @for (d of resultadoOh()?.detalles; track d.numeroFila) {
                       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ d.codigoDepositante }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-600 dark:text-slate-300">{{ d.medioAtencion }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.codigoDepositante }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
+                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
+                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.medioAtencion }}</td>
                       </tr>
                     }
                   </tbody>
@@ -768,7 +768,7 @@ import {
               </div>
               <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Confirmar eliminación</h3>
             </div>
-            <p class="text-slate-600 dark:text-slate-400 mb-6">
+            <p class="text-slate-700 dark:text-slate-300 mb-6">
               ¿Estás seguro de eliminar el pago de <strong>{{ pagoAEliminar()?.documento }}</strong> por <strong>S/ {{ formatMonto(pagoAEliminar()?.montoBanco) }}</strong>?
               Esta acción no se puede deshacer.
             </p>
