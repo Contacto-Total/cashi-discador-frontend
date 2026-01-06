@@ -1,124 +1,113 @@
-<div class="settings-container">
+<div class="ios-settings">
   <!-- Header -->
-  <div class="settings-header">
-    <div class="header-content">
-      <lucide-angular name="settings" [size]="28" class="header-icon"></lucide-angular>
-      <div>
-        <h1 class="header-title">Configuraci&oacute;n</h1>
-        <p class="header-subtitle">Personaliza tu experiencia en la aplicaci&oacute;n</p>
-      </div>
-    </div>
+  <div class="ios-header">
+    <h1>Configuraci&oacute;n</h1>
   </div>
 
-  <!-- Settings Grid -->
-  <div class="settings-grid">
-    <!-- Theme Card -->
-    <div class="setting-card">
-      <div class="card-header">
-        <lucide-angular name="palette" [size]="22" class="card-icon"></lucide-angular>
-        <h2 class="card-title">Tema</h2>
-      </div>
-      <p class="card-description">Selecciona el modo de color que prefieras</p>
-
-      <div class="theme-selector">
-        <button
-          class="theme-btn"
-          [class.active]="!isDarkMode"
-          (click)="setTheme('light')"
-        >
-          <lucide-angular name="sun" [size]="20"></lucide-angular>
-          <span>Claro</span>
-        </button>
-        <button
-          class="theme-btn"
-          [class.active]="isDarkMode"
-          (click)="setTheme('dark')"
-        >
-          <lucide-angular name="moon" [size]="20"></lucide-angular>
-          <span>Oscuro</span>
-        </button>
+  <!-- Settings List -->
+  <div class="ios-content">
+    <!-- Apariencia Section -->
+    <div class="ios-section">
+      <div class="ios-section-header">APARIENCIA</div>
+      <div class="ios-card">
+        <!-- Theme Toggle -->
+        <div class="ios-item">
+          <div class="ios-item-icon" style="background: linear-gradient(135deg, #5856d6, #af52de);">
+            <lucide-angular [name]="isDarkMode ? 'moon' : 'sun'" [size]="18"></lucide-angular>
+          </div>
+          <div class="ios-item-content">
+            <span class="ios-item-label">Modo Oscuro</span>
+          </div>
+          <label class="ios-toggle">
+            <input type="checkbox" [checked]="isDarkMode" (change)="toggleTheme()">
+            <span class="ios-toggle-slider"></span>
+          </label>
+        </div>
       </div>
     </div>
 
-    <!-- Font Size Card (includes preview) -->
-    <div class="setting-card font-card">
-      <div class="card-header">
-        <lucide-angular name="type" [size]="22" class="card-icon"></lucide-angular>
-        <h2 class="card-title">Tama&ntilde;o de Letra</h2>
+    <!-- Font Size Section -->
+    <div class="ios-section">
+      <div class="ios-section-header">TAMA&Ntilde;O DE TEXTO</div>
+      <div class="ios-card">
+        <!-- Font Size Slider -->
+        <div class="ios-item ios-item-column">
+          <div class="ios-font-header">
+            <div class="ios-item-icon" style="background: linear-gradient(135deg, #007aff, #5ac8fa);">
+              <lucide-angular name="type" [size]="18"></lucide-angular>
+            </div>
+            <span class="ios-item-label">Tama&ntilde;o de letra</span>
+            <span class="ios-font-value">{{ previewFontSize }}px</span>
+          </div>
+
+          <div class="ios-slider-row">
+            <span class="ios-font-small">A</span>
+            <input
+              type="range"
+              class="ios-slider"
+              [min]="minFontSize"
+              [max]="maxFontSize"
+              [value]="previewFontSize"
+              (input)="onFontSizeChange($event)"
+            />
+            <span class="ios-font-large">A</span>
+          </div>
+        </div>
+
+        <div class="ios-separator"></div>
+
+        <!-- Preview -->
+        <div class="ios-item ios-item-column">
+          <div class="ios-preview">
+            <p class="ios-preview-text" [style.font-size.px]="previewFontSize">{{ previewText }}</p>
+            <p class="ios-preview-small" [style.font-size.px]="previewFontSize * 0.85">Texto secundario de ejemplo.</p>
+          </div>
+        </div>
+
+        <div class="ios-separator"></div>
+
+        <!-- Actions -->
+        <div class="ios-item ios-actions">
+          <button class="ios-btn ios-btn-secondary" (click)="resetFontSize()" [disabled]="isDefaultFontSize()">
+            Restablecer
+          </button>
+          <button class="ios-btn ios-btn-primary" (click)="applyFontSize()" [disabled]="!hasChanges()">
+            Aplicar
+          </button>
+        </div>
       </div>
-      <p class="card-description">Ajusta el tama&ntilde;o del texto para mejorar la legibilidad</p>
 
-      <div class="font-size-control">
-        <div class="size-buttons">
-          <button
-            class="size-btn"
-            (click)="decreaseFontSize()"
-            [disabled]="previewFontSize <= minFontSize"
-            title="Reducir"
-          >
-            <span class="size-label-small">A</span>
-            <lucide-angular name="minus" [size]="14"></lucide-angular>
-          </button>
+      <!-- Change indicator -->
+      <div class="ios-info" *ngIf="hasChanges()">
+        <lucide-angular name="info" [size]="16"></lucide-angular>
+        <span>Tienes cambios sin guardar</span>
+      </div>
+    </div>
 
-          <span class="current-size">{{ previewFontSize }}px</span>
-
-          <button
-            class="size-btn"
-            (click)="increaseFontSize()"
-            [disabled]="previewFontSize >= maxFontSize"
-            title="Aumentar"
-          >
-            <span class="size-label-large">A</span>
-            <lucide-angular name="plus" [size]="14"></lucide-angular>
-          </button>
+    <!-- About Section -->
+    <div class="ios-section">
+      <div class="ios-section-header">INFORMACI&Oacute;N</div>
+      <div class="ios-card">
+        <div class="ios-item">
+          <div class="ios-item-icon" style="background: linear-gradient(135deg, #34c759, #30d158);">
+            <lucide-angular name="hard-drive" [size]="18"></lucide-angular>
+          </div>
+          <div class="ios-item-content">
+            <span class="ios-item-label">Almacenamiento</span>
+            <span class="ios-item-detail">Local (este navegador)</span>
+          </div>
         </div>
 
-        <div class="slider-container">
-          <span class="slider-label">{{ minFontSize }}px</span>
-          <input
-            type="range"
-            class="font-slider"
-            [min]="minFontSize"
-            [max]="maxFontSize"
-            [value]="previewFontSize"
-            (input)="onFontSizeChange($event)"
-            [style.--slider-percentage]="getSliderPercentage() + '%'"
-          />
-          <span class="slider-label">{{ maxFontSize }}px</span>
-        </div>
+        <div class="ios-separator"></div>
 
-        <!-- Preview Box -->
-        <div class="preview-box">
-          <span class="preview-label">Vista previa:</span>
-          <p class="preview-text" [style.font-size.px]="previewFontSize">{{ previewText }}</p>
-          <p class="preview-text-small" [style.font-size.px]="previewFontSize * 0.85">Texto secundario m&aacute;s peque&ntilde;o.</p>
-        </div>
-
-        <!-- Action buttons -->
-        <div class="action-buttons">
-          <button
-            class="reset-btn"
-            (click)="resetFontSize()"
-            [disabled]="isDefaultFontSize()"
-          >
-            <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
-            <span>Restablecer</span>
-          </button>
-
-          <button
-            class="apply-btn"
-            (click)="applyFontSize()"
-            [disabled]="!hasChanges()"
-          >
-            <lucide-angular name="check" [size]="14"></lucide-angular>
-            <span>Aplicar</span>
-          </button>
-        </div>
-
-        <!-- Change indicator -->
-        <div class="change-indicator" *ngIf="hasChanges()">
-          <lucide-angular name="info" [size]="14"></lucide-angular>
-          <span>Cambios sin guardar. Presiona "Aplicar" para guardar.</span>
+        <div class="ios-item">
+          <div class="ios-item-icon" style="background: linear-gradient(135deg, #ff9500, #ffcc00);">
+            <lucide-angular name="zap" [size]="18"></lucide-angular>
+          </div>
+          <div class="ios-item-content">
+            <span class="ios-item-label">Aplicaci&oacute;n</span>
+            <span class="ios-item-detail">Cambios inmediatos</span>
+          </div>
         </div>
       </div>
     </div>
