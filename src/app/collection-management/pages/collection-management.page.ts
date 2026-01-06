@@ -72,7 +72,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
 
       <!-- Header Principal - ULTRA COMPACTO -->
-      <div class="bg-gradient-to-r from-slate-700 via-slate-800 to-slate-700 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
+      <div class="bg-gradient-to-r from-gray-700 via-gray-800 to-gray-700 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
         <div class="relative px-4 py-2">
           <div class="flex items-center justify-between">
             <!-- Lado Izquierdo: Título -->
