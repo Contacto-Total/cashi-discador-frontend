@@ -40,8 +40,8 @@
       </div>
     </div>
 
-    <!-- Font Size Card -->
-    <div class="setting-card">
+    <!-- Font Size Card (includes preview) -->
+    <div class="setting-card font-card">
       <div class="card-header">
         <lucide-angular name="type" [size]="22" class="card-icon"></lucide-angular>
         <h2 class="card-title">Tama&ntilde;o de Letra</h2>
@@ -53,19 +53,19 @@
           <button
             class="size-btn"
             (click)="decreaseFontSize()"
-            [disabled]="currentFontSize <= minFontSize"
+            [disabled]="previewFontSize <= minFontSize"
             title="Reducir"
           >
             <span class="size-label-small">A</span>
             <lucide-angular name="minus" [size]="14"></lucide-angular>
           </button>
 
-          <span class="current-size">{{ currentFontSize }}px</span>
+          <span class="current-size">{{ previewFontSize }}px</span>
 
           <button
             class="size-btn"
             (click)="increaseFontSize()"
-            [disabled]="currentFontSize >= maxFontSize"
+            [disabled]="previewFontSize >= maxFontSize"
             title="Aumentar"
           >
             <span class="size-label-large">A</span>
@@ -80,56 +80,45 @@
             class="font-slider"
             [min]="minFontSize"
             [max]="maxFontSize"
-            [value]="currentFontSize"
+            [value]="previewFontSize"
             (input)="onFontSizeChange($event)"
             [style.--slider-percentage]="getSliderPercentage() + '%'"
           />
           <span class="slider-label">{{ maxFontSize }}px</span>
         </div>
 
-        <button
-          class="reset-btn"
-          (click)="resetFontSize()"
-          [disabled]="isDefaultFontSize()"
-        >
-          <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
-          <span>Restablecer</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Preview Card -->
-    <div class="setting-card preview-card">
-      <div class="card-header">
-        <lucide-angular name="eye" [size]="22" class="card-icon"></lucide-angular>
-        <h2 class="card-title">Vista Previa</h2>
-      </div>
-      <p class="card-description">As&iacute; se ver&aacute; el texto con tu configuraci&oacute;n actual</p>
-
-      <div class="preview-box">
-        <p class="preview-text">{{ previewText }}</p>
-        <p class="preview-text-small">Texto secundario m&aacute;s peque&ntilde;o para comparar el tama&ntilde;o relativo.</p>
-      </div>
-    </div>
-
-    <!-- Info Card -->
-    <div class="setting-card info-card">
-      <div class="card-header">
-        <lucide-angular name="info" [size]="22" class="card-icon info-icon"></lucide-angular>
-        <h2 class="card-title">Informaci&oacute;n</h2>
-      </div>
-      <div class="info-content">
-        <div class="info-item">
-          <lucide-angular name="hard-drive" [size]="18"></lucide-angular>
-          <span>Preferencias guardadas en este navegador</span>
+        <!-- Preview Box -->
+        <div class="preview-box">
+          <span class="preview-label">Vista previa:</span>
+          <p class="preview-text" [style.font-size.px]="previewFontSize">{{ previewText }}</p>
+          <p class="preview-text-small" [style.font-size.px]="previewFontSize * 0.85">Texto secundario m&aacute;s peque&ntilde;o.</p>
         </div>
-        <div class="info-item">
-          <lucide-angular name="zap" [size]="18"></lucide-angular>
-          <span>Cambios aplicados inmediatamente</span>
+
+        <!-- Action buttons -->
+        <div class="action-buttons">
+          <button
+            class="reset-btn"
+            (click)="resetFontSize()"
+            [disabled]="isDefaultFontSize()"
+          >
+            <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
+            <span>Restablecer</span>
+          </button>
+
+          <button
+            class="apply-btn"
+            (click)="applyFontSize()"
+            [disabled]="!hasChanges()"
+          >
+            <lucide-angular name="check" [size]="14"></lucide-angular>
+            <span>Aplicar</span>
+          </button>
         </div>
-        <div class="info-item">
-          <lucide-angular name="monitor" [size]="18"></lucide-angular>
-          <span>Configuraci&oacute;n por dispositivo</span>
+
+        <!-- Change indicator -->
+        <div class="change-indicator" *ngIf="hasChanges()">
+          <lucide-angular name="info" [size]="14"></lucide-angular>
+          <span>Cambios sin guardar. Presiona "Aplicar" para guardar.</span>
         </div>
       </div>
     </div>

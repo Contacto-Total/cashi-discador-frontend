@@ -14,8 +14,12 @@ import { ThemeService, Theme } from '../../core/services/theme.service';
   styleUrls: ['./settings.component.css']
 })
 export class SettingsComponent implements OnInit, OnDestroy {
-  // Font size
-  currentFontSize: number = 16;
+  // Font size - applied (saved)
+  appliedFontSize: number = 16;
+
+  // Font size - preview (not saved yet)
+  previewFontSize: number = 16;
+
   minFontSize: number = 14;
   maxFontSize: number = 24;
   defaultFontSize: number = 16;
@@ -43,7 +47,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
     // Subscribe to font size changes
     this.subscriptions.push(
       this.fontSizeService.fontSize$.subscribe(size => {
-        this.currentFontSize = size;
+        this.appliedFontSize = size;
+        this.previewFontSize = size;
       })
     );
 
@@ -61,33 +66,44 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Handle font size slider change
+   * Handle font size slider change - only updates preview
    */
   onFontSizeChange(event: Event): void {
     const target = event.target as HTMLInputElement;
-    const size = parseInt(target.value, 10);
-    this.fontSizeService.setFontSize(size);
+    this.previewFontSize = parseInt(target.value, 10);
+  }
+
+  /**
+   * Increase font size - only preview
+   */
+  increaseFontSize(): void {
+    if (this.previewFontSize < this.maxFontSize) {
+      this.previewFontSize++;
+    }
+  }
+
+  /**
+   * Decrease font size - only preview
+   */
+  decreaseFontSize(): void {
+    if (this.previewFontSize > this.minFontSize) {
+      this.previewFontSize--;
+    }
+  }
+
+  /**
+   * Apply font size changes - saves to localStorage
+   */
+  applyFontSize(): void {
+    this.fontSizeService.setFontSize(this.previewFontSize);
   }
 
   /**
    * Reset font size to default
    */
   resetFontSize(): void {
+    this.previewFontSize = this.defaultFontSize;
     this.fontSizeService.resetFontSize();
-  }
-
-  /**
-   * Increase font size
-   */
-  increaseFontSize(): void {
-    this.fontSizeService.increaseFontSize();
-  }
-
-  /**
-   * Decrease font size
-   */
-  decreaseFontSize(): void {
-    this.fontSizeService.decreaseFontSize();
   }
 
   /**
@@ -105,16 +121,23 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Check if font size is at default
+   * Check if preview font size is at default
    */
   isDefaultFontSize(): boolean {
-    return this.currentFontSize === this.defaultFontSize;
+    return this.previewFontSize === this.defaultFontSize;
+  }
+
+  /**
+   * Check if there are pending changes
+   */
+  hasChanges(): boolean {
+    return this.previewFontSize !== this.appliedFontSize;
   }
 
   /**
    * Get percentage for slider background
    */
   getSliderPercentage(): number {
-    return ((this.currentFontSize - this.minFontSize) / (this.maxFontSize - this.minFontSize)) * 100;
+    return ((this.previewFontSize - this.minFontSize) / (this.maxFontSize - this.minFontSize)) * 100;
   }
 }
