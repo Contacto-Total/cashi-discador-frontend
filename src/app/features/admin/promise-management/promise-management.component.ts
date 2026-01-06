@@ -1,9 +1,10 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { PromiseManagementService } from './services/promise-management.service';
-import { PromesaGestion, CuotaPromesa } from './models/promise.model';
+import { PromesaGestion } from './models/promise.model';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-promise-management',
@@ -37,7 +38,10 @@ export class PromiseManagementComponent implements OnInit {
   // Cuotas expandidas
   expandedPromesas = signal<Set<number>>(new Set());
 
-  constructor(private promiseService: PromiseManagementService) {}
+  constructor(
+    private promiseService: PromiseManagementService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
     this.loadPromesas();
@@ -101,19 +105,28 @@ export class PromiseManagementComponent implements OnInit {
   anularPromesa(): void {
     const promesa = this.selectedPromesa();
     const motivo = this.motivoAnulacion();
+    const currentUser = this.authService.getCurrentUser();
 
     if (!promesa || motivo.length < 10) {
       this.error.set('El motivo debe tener al menos 10 caracteres');
       return;
     }
 
+    if (!currentUser) {
+      this.error.set('No se pudo obtener el usuario actual');
+      return;
+    }
+
     this.anulando.set(true);
     this.error.set(null);
+
+    const userId = currentUser.id;
+    const nombreUsuario = currentUser.fullName || currentUser.username;
 
     this.promiseService.anularPromesa({
       idGestion: promesa.idGestion,
       motivo: motivo
-    }).subscribe({
+    }, userId, nombreUsuario).subscribe({
       next: () => {
         this.successMessage.set(`Promesa del cliente ${promesa.nombreCliente} anulada correctamente`);
         this.closeAnularModal();

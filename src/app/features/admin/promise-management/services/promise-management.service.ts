@@ -52,7 +52,11 @@ export class PromiseManagementService {
   /**
    * Anula una promesa de pago
    */
-  anularPromesa(request: AnularPromesaRequest): Observable<PromesaGestion> {
-    return this.http.post<PromesaGestion>(`${this.apiUrl}/anular`, request);
+  anularPromesa(request: AnularPromesaRequest, userId: number, nombreUsuario: string): Observable<PromesaGestion> {
+    const params = new HttpParams()
+      .set('userId', userId.toString())
+      .set('nombreUsuario', nombreUsuario);
+
+    return this.http.post<PromesaGestion>(`${this.apiUrl}/anular`, request, { params });
   }
 }
