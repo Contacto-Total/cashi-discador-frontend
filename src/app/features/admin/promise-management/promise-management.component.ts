@@ -121,7 +121,7 @@ export class PromiseManagementComponent implements OnInit {
     this.error.set(null);
 
     const userId = currentUser.id;
-    const nombreUsuario = currentUser.fullName || currentUser.username;
+    const nombreUsuario = `${currentUser.firstName} ${currentUser.lastName}`.trim() || currentUser.username;
 
     this.promiseService.anularPromesa({
       idGestion: promesa.idGestion,
