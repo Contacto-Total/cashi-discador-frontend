@@ -253,6 +253,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'admin/promesas',
+    loadComponent: () => import('./features/admin/promise-management/promise-management.component').then(m => m.PromiseManagementComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // GESTIÓN MANUAL (Tipificación sin llamada)

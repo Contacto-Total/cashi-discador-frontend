@@ -1,0 +1,269 @@
+<div class="promise-container">
+  <!-- Header -->
+  <div class="flex items-center gap-2 mb-2">
+    <div class="w-8 h-8 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center">
+      <lucide-angular name="hand-coins" [size]="16" class="text-white"></lucide-angular>
+    </div>
+    <div>
+      <h1 class="text-lg font-bold text-white">Gestion de Promesas</h1>
+      <p class="text-xs text-gray-400">Administracion de promesas de pago activas</p>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="search-bar">
+    <div class="search-input-wrapper">
+      <lucide-angular name="search" [size]="18" class="search-icon"></lucide-angular>
+      <input
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        (keyup.enter)="onSearch()"
+        placeholder="Buscar por documento o nombre del cliente..."
+        class="search-input">
+      <button *ngIf="searchQuery()" class="search-clear" (click)="clearSearch()">
+        <lucide-angular name="x" [size]="16"></lucide-angular>
+      </button>
+    </div>
+    <button class="btn-search" (click)="onSearch()">
+      <lucide-angular name="search" [size]="16"></lucide-angular>
+      Buscar
+    </button>
+  </div>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-item">
+      <lucide-angular name="hand-coins" [size]="20" class="stat-icon amber"></lucide-angular>
+      <div class="stat-info">
+        <span class="stat-value">{{ totalElements() }}</span>
+        <span class="stat-label">Promesas Activas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error / Success Messages -->
+  <div *ngIf="error()" class="error-message">
+    <lucide-angular name="x-circle" [size]="18"></lucide-angular>
+    {{ error() }}
+  </div>
+  <div *ngIf="successMessage()" class="success-message">
+    <lucide-angular name="check-circle" [size]="18"></lucide-angular>
+    {{ successMessage() }}
+  </div>
+
+  <!-- Promesas List Section -->
+  <div class="promesas-section">
+    <h2 class="section-title">
+      <lucide-angular name="list" [size]="20"></lucide-angular>
+      Promesas de Pago
+    </h2>
+
+    <!-- Loading State -->
+    <div *ngIf="loading()" class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando promesas...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading() && promesas().length === 0" class="empty-state">
+      <lucide-angular name="inbox" [size]="48"></lucide-angular>
+      <p>No hay promesas activas</p>
+    </div>
+
+    <!-- Promesas Cards -->
+    <div class="promesas-scrollable" *ngIf="!loading() && promesas().length > 0">
+      <div *ngFor="let promesa of promesas()" class="promesa-card">
+        <!-- Card Header -->
+        <div class="promesa-header">
+          <div class="promesa-title">
+            <div class="cliente-info">
+              <lucide-angular name="user" [size]="16" class="cliente-icon"></lucide-angular>
+              <span class="cliente-nombre">{{ promesa.nombreCliente }}</span>
+              <span class="cliente-documento">{{ promesa.documentoCliente }}</span>
+            </div>
+            <span class="status-badge" [style.background-color]="getEstadoPagoColor(promesa.estadoPago)">
+              {{ promesa.estadoPago }}
+            </span>
+          </div>
+          <div class="promesa-actions">
+            <button
+              class="btn-action-small btn-anular"
+              (click)="openAnularModal(promesa)"
+              title="Anular promesa">
+              <lucide-angular name="ban" [size]="16"></lucide-angular>
+              Anular
+            </button>
+          </div>
+        </div>
+
+        <!-- Card Body -->
+        <div class="promesa-body">
+          <div class="promesa-grid">
+            <div class="promesa-field">
+              <span class="field-label">Monto Promesa</span>
+              <span class="field-value monto">{{ formatMonto(promesa.montoPromesa) }}</span>
+            </div>
+            <div class="promesa-field">
+              <span class="field-label">Fecha Gestion</span>
+              <span class="field-value">{{ formatDate(promesa.fechaGestion) }}</span>
+            </div>
+            <div class="promesa-field">
+              <span class="field-label">Cuotas</span>
+              <span class="field-value">{{ promesa.totalCuotas || 1 }}</span>
+            </div>
+            <div class="promesa-field">
+              <span class="field-label">Agente</span>
+              <span class="field-value">{{ promesa.nombreAgente || '-' }}</span>
+            </div>
+          </div>
+
+          <!-- Meta Info -->
+          <div class="promesa-meta">
+            <span class="meta-item" *ngIf="promesa.nombreCartera">
+              <lucide-angular name="folder" [size]="14"></lucide-angular>
+              {{ promesa.nombreCartera }}
+              <span *ngIf="promesa.nombreSubcartera"> / {{ promesa.nombreSubcartera }}</span>
+            </span>
+            <span class="meta-item" *ngIf="promesa.rutaJerarquia">
+              <lucide-angular name="git-branch" [size]="14"></lucide-angular>
+              {{ promesa.rutaJerarquia }}
+            </span>
+          </div>
+
+          <!-- Observaciones -->
+          <div class="promesa-observaciones" *ngIf="promesa.observaciones">
+            <lucide-angular name="message-square" [size]="14"></lucide-angular>
+            <span>{{ promesa.observaciones }}</span>
+          </div>
+
+          <!-- Toggle Cuotas -->
+          <button
+            *ngIf="promesa.cuotas && promesa.cuotas.length > 0"
+            class="btn-toggle-cuotas"
+            (click)="toggleCuotas(promesa.idGestion)">
+            <lucide-angular
+              [name]="isExpanded(promesa.idGestion) ? 'chevron-up' : 'chevron-down'"
+              [size]="16">
+            </lucide-angular>
+            {{ isExpanded(promesa.idGestion) ? 'Ocultar' : 'Ver' }} Cuotas ({{ promesa.cuotas.length }})
+          </button>
+
+          <!-- Cuotas Detail -->
+          <div class="cuotas-container" *ngIf="isExpanded(promesa.idGestion) && promesa.cuotas">
+            <div *ngFor="let cuota of promesa.cuotas" class="cuota-item">
+              <div class="cuota-numero">Cuota {{ cuota.numeroCuota }}</div>
+              <div class="cuota-info">
+                <span class="cuota-monto">{{ formatMonto(cuota.montoPromesa) }}</span>
+                <span class="cuota-fecha">{{ formatDate(cuota.fechaPromesa) }}</span>
+                <span class="cuota-estado" [style.background-color]="getEstadoCuotaColor(cuota.estado)">
+                  {{ cuota.estado }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages() > 1">
+      <button
+        class="page-btn"
+        [disabled]="currentPage() === 0"
+        (click)="goToPage(0)">
+        <lucide-angular name="chevrons-left" [size]="16"></lucide-angular>
+      </button>
+      <button
+        class="page-btn"
+        [disabled]="currentPage() === 0"
+        (click)="goToPage(currentPage() - 1)">
+        <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+      </button>
+
+      <button
+        *ngFor="let page of pageNumbers"
+        class="page-btn"
+        [class.active]="page === currentPage()"
+        (click)="goToPage(page)">
+        {{ page + 1 }}
+      </button>
+
+      <button
+        class="page-btn"
+        [disabled]="currentPage() === totalPages() - 1"
+        (click)="goToPage(currentPage() + 1)">
+        <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+      </button>
+      <button
+        class="page-btn"
+        [disabled]="currentPage() === totalPages() - 1"
+        (click)="goToPage(totalPages() - 1)">
+        <lucide-angular name="chevrons-right" [size]="16"></lucide-angular>
+      </button>
+
+      <span class="page-info">
+        Pagina {{ currentPage() + 1 }} de {{ totalPages() }} ({{ totalElements() }} promesas)
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Anular Promesa -->
+<div *ngIf="showAnularModal()" class="modal-overlay" (click)="closeAnularModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>
+        <lucide-angular name="ban" [size]="20" class="text-red-500"></lucide-angular>
+        Anular Promesa
+      </h2>
+      <button class="btn-close" (click)="closeAnularModal()">
+        <lucide-angular name="x" [size]="18"></lucide-angular>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedPromesa()">
+      <div class="anular-info">
+        <p><strong>Cliente:</strong> {{ selectedPromesa()!.nombreCliente }}</p>
+        <p><strong>Documento:</strong> {{ selectedPromesa()!.documentoCliente }}</p>
+        <p><strong>Monto:</strong> {{ formatMonto(selectedPromesa()!.montoPromesa) }}</p>
+        <p><strong>Cuotas:</strong> {{ selectedPromesa()!.totalCuotas || 1 }}</p>
+      </div>
+
+      <div class="anular-warning">
+        <lucide-angular name="alert-triangle" [size]="20"></lucide-angular>
+        <span>Esta accion marcara la promesa como ANULADA y todas sus cuotas como CANCELADA. Esta accion no se puede deshacer.</span>
+      </div>
+
+      <div class="form-group">
+        <label for="motivo">Motivo de Anulacion *</label>
+        <textarea
+          id="motivo"
+          [ngModel]="motivoAnulacion()"
+          (ngModelChange)="motivoAnulacion.set($event)"
+          placeholder="Ingrese el motivo de la anulacion (minimo 10 caracteres)..."
+          rows="4"
+          class="form-textarea"
+          [class.error]="motivoAnulacion().length > 0 && motivoAnulacion().length < 10">
+        </textarea>
+        <span class="char-count" [class.error]="motivoAnulacion().length > 0 && motivoAnulacion().length < 10">
+          {{ motivoAnulacion().length }}/10 caracteres minimo
+        </span>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeAnularModal()">
+        Cancelar
+      </button>
+      <button
+        class="btn-anular-confirm"
+        [disabled]="anulando() || motivoAnulacion().length < 10"
+        (click)="anularPromesa()">
+        <lucide-angular *ngIf="anulando()" name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+        <lucide-angular *ngIf="!anulando()" name="ban" [size]="16"></lucide-angular>
+        {{ anulando() ? 'Anulando...' : 'Confirmar Anulacion' }}
+      </button>
+    </div>
+  </div>
+</div>
