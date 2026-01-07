@@ -136,19 +136,21 @@ export class MetaProductividadComponent implements OnInit {
   openEditModal(meta: MetaProductividad): void {
     this.currentMeta = { ...meta };
     this.editMode = true;
+    this.filteredPortfolios = [];
+    this.filteredSubPortfolios = [];
 
     // Cargar portfolios del tenant si existe
     if (meta.idTenant) {
-      this.filteredPortfolios = this.portfolios.filter(p => p.tenantId === meta.idTenant);
-    } else {
-      this.filteredPortfolios = [];
+      this.portfolioService.getPortfoliosByTenant(meta.idTenant).subscribe({
+        next: (portfolios: Portfolio[]) => {
+          this.filteredPortfolios = portfolios;
+        }
+      });
     }
 
     // Cargar subportfolios del portfolio si existe
     if (meta.idCartera) {
       this.loadSubPortfolios(meta.idCartera);
-    } else {
-      this.filteredSubPortfolios = [];
     }
 
     this.showModal = true;
@@ -162,12 +164,20 @@ export class MetaProductividadComponent implements OnInit {
   onTenantChange(): void {
     this.currentMeta.idCartera = null;
     this.currentMeta.idSubcartera = null;
+    this.filteredPortfolios = [];
     this.filteredSubPortfolios = [];
 
     if (this.currentMeta.idTenant) {
-      this.filteredPortfolios = this.portfolios.filter(p => p.tenantId === this.currentMeta.idTenant);
-    } else {
-      this.filteredPortfolios = [];
+      // Cargar portfolios directamente del API para el tenant seleccionado
+      this.portfolioService.getPortfoliosByTenant(this.currentMeta.idTenant).subscribe({
+        next: (portfolios: Portfolio[]) => {
+          this.filteredPortfolios = portfolios;
+        },
+        error: (err) => {
+          console.error('Error loading portfolios:', err);
+          this.filteredPortfolios = [];
+        }
+      });
     }
   }
 
