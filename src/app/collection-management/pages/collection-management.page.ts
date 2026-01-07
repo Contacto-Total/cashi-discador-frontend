@@ -3643,7 +3643,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
         // Información del agente y dispositivo
-        nombreAgente: currentUser?.username || currentUser?.firstName || 'Sistema',
+        nombreAgente: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username : 'Sistema',
         userAgent: navigator.userAgent
       };
 
