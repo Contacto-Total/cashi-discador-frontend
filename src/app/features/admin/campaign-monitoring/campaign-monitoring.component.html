@@ -208,8 +208,10 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row"
-                  [class.alert-row]="agente.excedeTiempoMaximo">
+              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row clickable-row"
+                  [class.alert-row]="agente.excedeTiempoMaximo"
+                  (click)="openChangeStatusModal(agente)"
+                  title="Click para cambiar estado">
                 <td class="agente-info">
                   <div class="agente-extension">SIP/{{ agente.sipExtension }}</div>
                   <div class="agente-nombre">{{ agente.nombreCompleto }}</div>
@@ -294,6 +296,58 @@
       <button class="btn-dismiss" (click)="dismissAlert()">
         Entendido
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Cambio de Estado de Agente -->
+<div class="status-modal-overlay" *ngIf="showChangeStatusModal" (click)="onStatusModalOverlayClick($event)">
+  <div class="status-modal">
+    <button class="status-modal-close" (click)="closeChangeStatusModal()">
+      <lucide-angular name="x" [size]="20"></lucide-angular>
+    </button>
+
+    <div class="status-modal-header">
+      <lucide-angular name="user-cog" [size]="24" class="status-modal-icon"></lucide-angular>
+      <h3>Cambiar Estado</h3>
+    </div>
+
+    <div class="status-modal-agent" *ngIf="selectedAgentForStatusChange">
+      <div class="agent-avatar-large">
+        <lucide-angular name="user" [size]="28"></lucide-angular>
+      </div>
+      <div class="agent-details-large">
+        <span class="agent-name-large">{{ selectedAgentForStatusChange.nombreCompleto }}</span>
+        <span class="agent-extension-large">SIP/{{ selectedAgentForStatusChange.sipExtension }}</span>
+      </div>
+    </div>
+
+    <div class="status-current" *ngIf="selectedAgentForStatusChange">
+      <span class="status-current-label">Estado actual:</span>
+      <span class="status-current-badge" [style.background-color]="getEstadoColor(selectedAgentForStatusChange.estadoActual)">
+        <lucide-angular [name]="getEstadoIcon(selectedAgentForStatusChange.estadoActual)" [size]="14"></lucide-angular>
+        {{ getEstadoTexto(selectedAgentForStatusChange.estadoActual) }}
+      </span>
+    </div>
+
+    <div class="status-options">
+      <button
+        *ngFor="let estado of estadosDisponibles"
+        class="status-option-btn"
+        [class.current]="isCurrentStatus(estado.value)"
+        [class.disabled]="changingStatus"
+        [style.--estado-color]="estado.color"
+        (click)="changeAgentStatus(estado.value)"
+        [disabled]="changingStatus">
+        <lucide-angular [name]="estado.icon" [size]="18"></lucide-angular>
+        <span>{{ estado.label }}</span>
+        <lucide-angular name="check" [size]="16" class="check-icon" *ngIf="isCurrentStatus(estado.value)"></lucide-angular>
+      </button>
+    </div>
+
+    <div class="status-modal-loading" *ngIf="changingStatus">
+      <lucide-angular name="loader" [size]="20" class="spin"></lucide-angular>
+      <span>Cambiando estado...</span>
     </div>
   </div>
 </div>

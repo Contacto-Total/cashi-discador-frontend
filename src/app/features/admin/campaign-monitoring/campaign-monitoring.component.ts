@@ -50,6 +50,18 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   private readonly SOUND_STORAGE_KEY = 'supervisor_sound_enabled';
 
+  // Modal de cambio de estado de agente
+  showChangeStatusModal = false;
+  selectedAgentForStatusChange: AgenteMonitoreo | null = null;
+  changingStatus = false;
+  estadosDisponibles = [
+    { value: 'DISPONIBLE', label: 'Disponible', icon: 'circle', color: '#10B981' },
+    { value: 'EN_REUNION', label: 'En Reunión', icon: 'users', color: '#8B5CF6' },
+    { value: 'REFRIGERIO', label: 'Refrigerio', icon: 'coffee', color: '#F59E0B' },
+    { value: 'SSHH', label: 'SSHH', icon: 'user', color: '#F59E0B' },
+    { value: 'EN_MANUAL', label: 'Modo Manual', icon: 'hand', color: '#6B7280' }
+  ];
+
   constructor(
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
@@ -562,5 +574,82 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   navigateToExtensions(): void {
     this.router.navigate(['/admin/extensions']);
+  }
+
+  // ==================== MODAL CAMBIO DE ESTADO ====================
+
+  /**
+   * Abre el modal para cambiar el estado de un agente
+   */
+  openChangeStatusModal(agente: AgenteMonitoreo): void {
+    this.selectedAgentForStatusChange = agente;
+    this.showChangeStatusModal = true;
+  }
+
+  /**
+   * Cierra el modal de cambio de estado
+   */
+  closeChangeStatusModal(): void {
+    this.showChangeStatusModal = false;
+    this.selectedAgentForStatusChange = null;
+    this.changingStatus = false;
+  }
+
+  /**
+   * Maneja el click en el overlay del modal
+   */
+  onStatusModalOverlayClick(event: MouseEvent): void {
+    if ((event.target as HTMLElement).classList.contains('status-modal-overlay')) {
+      this.closeChangeStatusModal();
+    }
+  }
+
+  /**
+   * Cambia el estado del agente seleccionado
+   */
+  changeAgentStatus(nuevoEstado: string): void {
+    if (!this.selectedAgentForStatusChange || this.changingStatus) return;
+
+    // No permitir cambiar a estados del sistema
+    if (nuevoEstado === 'EN_LLAMADA' || nuevoEstado === 'TIPIFICANDO') {
+      alert('Este estado solo puede ser cambiado por el sistema');
+      return;
+    }
+
+    // No cambiar si ya está en ese estado
+    if (this.selectedAgentForStatusChange.estadoActual === nuevoEstado) {
+      this.closeChangeStatusModal();
+      return;
+    }
+
+    this.changingStatus = true;
+    const idUsuario = this.selectedAgentForStatusChange.idUsuario;
+    const nombreAgente = this.selectedAgentForStatusChange.nombreCompleto;
+
+    this.autoDialerService.cambiarEstadoAgente(idUsuario, nuevoEstado, `Cambiado por supervisor`).subscribe({
+      next: (response) => {
+        console.log(`✅ Estado de ${nombreAgente} cambiado a ${nuevoEstado}`, response);
+
+        // Actualizar el estado localmente para feedback inmediato
+        if (this.selectedAgentForStatusChange) {
+          this.selectedAgentForStatusChange.estadoActual = nuevoEstado;
+          this.selectedAgentForStatusChange.segundosEnEstado = 0;
+        }
+
+        this.closeChangeStatusModal();
+      },
+      error: (error) => {
+        console.error(`❌ Error cambiando estado de ${nombreAgente}:`, error);
+        alert(`Error al cambiar estado: ${error.error?.error || error.message || 'Error desconocido'}`);
+        this.changingStatus = false;
+      }
+    });
+  }
+
+  /**
+   * Verifica si un estado está actualmente seleccionado
+   */
+  isCurrentStatus(estado: string): boolean {
+    return this.selectedAgentForStatusChange?.estadoActual === estado;
   }
 }
