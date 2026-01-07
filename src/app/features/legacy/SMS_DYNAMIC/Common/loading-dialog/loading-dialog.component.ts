@@ -1,4 +1,4 @@
-import { Component, Inject, ChangeDetectionStrategy  } from '@angular/core';
+import { Component, Inject, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 
@@ -12,7 +12,4 @@ import { CommonModule } from '@angular/common';
 })
 export class LoadingDialogComponent {
   constructor(@Inject(MAT_DIALOG_DATA) public data: { title?: string; subtitle?: string } | null) {}
-
-  // Usa el texto que pasaste; si no, “Generating”
-  letters = Array.from('Generando');
 }

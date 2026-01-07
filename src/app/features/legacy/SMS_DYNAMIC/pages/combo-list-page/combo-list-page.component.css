@@ -865,3 +865,25 @@
   border-color: #334155;
   border-top-color: #3b82f6;
 }
+
+/* ============================================
+   Exporting State - Blur Effect on Side Sheet
+   ============================================ */
+
+.preview-sheet.exporting {
+  filter: blur(6px);
+  pointer-events: none;
+  transition: filter 0.3s ease;
+}
+
+.sheet-backdrop.exporting {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+}
+
+/* Dark mode exporting state */
+:host-context(.dark) .sheet-backdrop.exporting {
+  background: rgba(15, 23, 42, 0.7);
+}

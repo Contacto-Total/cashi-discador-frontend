@@ -101,8 +101,8 @@
 </div>
 
 <!-- Side Sheet Preview -->
-<div class="sheet-backdrop" *ngIf="previewOpen()" (click)="closePreview()"></div>
-<aside class="preview-sheet" *ngIf="previewOpen()" (click)="$event.stopPropagation()">
+<div class="sheet-backdrop" [class.exporting]="exporting()" *ngIf="previewOpen()" (click)="closePreview()"></div>
+<aside class="preview-sheet" [class.exporting]="exporting()" *ngIf="previewOpen()" (click)="$event.stopPropagation()">
   <header class="sheet-header">
     <h3 class="sheet-title">{{ previewTitle() }}</h3>
     <div class="sheet-spacer"></div>

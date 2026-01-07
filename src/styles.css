@@ -4736,3 +4736,77 @@ body.light-theme .error-state {
   border: 1px solid rgba(239, 68, 68, 0.2) !important;
 }
 
+/* ============================================
+   Loading Dialog - Backdrop Blur Effect
+   ============================================ */
+
+/* Dark mode backdrop with blur */
+.cdk-overlay-backdrop.cdk-overlay-dark-backdrop {
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Light mode backdrop with blur */
+html:not(.dark) .cdk-overlay-backdrop.cdk-overlay-dark-backdrop,
+body.light-theme .cdk-overlay-backdrop.cdk-overlay-dark-backdrop {
+  background: rgba(241, 245, 249, 0.7) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* Hide scrollbar when loading dialog is open */
+.cdk-global-scrollblock {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+}
+
+/* Loading dialog panel - hide ALL scrollbars */
+.loading-dialog-panel {
+  overflow: hidden !important;
+}
+
+.loading-dialog-panel .mat-mdc-dialog-container {
+  overflow: hidden !important;
+  max-height: none !important;
+}
+
+.loading-dialog-panel .mdc-dialog__surface {
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.loading-dialog-panel .mdc-dialog__surface::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.loading-dialog-panel .mat-mdc-dialog-surface {
+  overflow: hidden !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.loading-dialog-panel .mat-mdc-dialog-surface::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.loading-dialog-panel .mdc-dialog__container {
+  overflow: hidden !important;
+}
+
+.loading-dialog-panel .mdc-dialog__content {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* Ensure overlay pane doesn't show scrollbar */
+.cdk-overlay-pane {
+  overflow: hidden !important;
+}
+

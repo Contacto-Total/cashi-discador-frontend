@@ -1,11 +1,32 @@
-<div class="ldg-container">
-  <div class="loader-wrapper" aria-label="loading animation">
-    <ng-container *ngFor="let ch of letters; let i = index">
-      <span class="loader-letter">{{ ch }}</span>
-    </ng-container>
-    <div class="loader"></div>
-  </div>
+<div class="ldg-overlay">
+  <div class="ldg-container">
+    <!-- Animated Loader -->
+    <div class="loader-wrapper" aria-label="loading animation">
+      <!-- Outer ring -->
+      <div class="loader-ring"></div>
+      <!-- Inner pulsing circle -->
+      <div class="loader-pulse"></div>
+      <!-- Icon in center -->
+      <div class="loader-icon">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </div>
+    </div>
 
-  <h2 class="ldg-title">{{ data?.title || 'Generando…' }}</h2>
-  <p class="ldg-subtitle" *ngIf="data?.subtitle">{{ data?.subtitle }}</p>
+    <!-- Text content -->
+    <div class="ldg-content">
+      <h2 class="ldg-title">{{ data?.title || 'Generando archivo' }}</h2>
+      <p class="ldg-subtitle">{{ data?.subtitle || 'Por favor espera un momento...' }}</p>
+
+      <!-- Animated dots -->
+      <div class="ldg-dots">
+        <span class="ldg-dot"></span>
+        <span class="ldg-dot"></span>
+        <span class="ldg-dot"></span>
+      </div>
+    </div>
+  </div>
 </div>

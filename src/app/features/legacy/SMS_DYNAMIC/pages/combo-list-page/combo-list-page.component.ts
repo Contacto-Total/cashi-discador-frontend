@@ -75,6 +75,9 @@ export class ComboListPageComponent {
 
   selectedCombo = signal<ComboResponse | null>(null);
 
+  // ---- Export loading state ----
+  exporting = signal(false);
+
   // ---- Preview (side sheet) ----
   previewOpen = signal(false);
   previewTitle = signal<string>('');
@@ -260,6 +263,9 @@ export class ComboListPageComponent {
   export(c: ComboResponse) {
     const id = c.id;
 
+    // Activar estado de exportación (blur en side sheet)
+    this.exporting.set(true);
+
     // Abre el loader (hamster)
     const dlg = this.matDialog.open(LoadingDialogComponent, {
       disableClose: true,
@@ -269,6 +275,9 @@ export class ComboListPageComponent {
       width: '460px',
       height: '310px',
     });
+
+    // Desactivar estado de exportación cuando se cierre el dialog
+    dlg.afterClosed().subscribe(() => this.exporting.set(false));
 
     // 1) Precheck del combo (backend calcula usando la plantilla del combo)
     this.api.precheck(id).subscribe({

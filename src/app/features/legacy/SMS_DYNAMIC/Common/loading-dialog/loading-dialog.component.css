@@ -1,114 +1,284 @@
-/* Contenedor centrado y limpio */
-.ldg-container {
-  display: grid;
-  justify-items: center;
-  align-items: center;
-  gap: 10px;
-  padding: 6px;
-  text-align: center;
-  min-width: 220px;  /* evita que “salte” */
-}
+/* ============================================
+   CASHI Design - Loading Dialog
+   Soporta Light y Dark Mode
+   ============================================ */
 
-/* Títulos */
-.ldg-title {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-.ldg-subtitle {
-  margin: 0;
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-/* ===== Tu loader ===== */
-.loader-wrapper {
-  position: relative;
+/* Overlay container */
+.ldg-overlay {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 180px;
-  height: 180px;
-  font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  font-size: 1.2em;
-  font-weight: 300;
-  color: white;
-  border-radius: 50%;
-  background-color: transparent;
-  user-select: none;
+  padding: 2rem 1.5rem;
 }
 
-.loader {
+/* Main container */
+.ldg-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem 2.5rem;
+  min-width: 280px;
+  text-align: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 16px;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+/* Loader wrapper - contains the animated elements */
+.loader-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Outer rotating ring */
+.loader-ring {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  height: 100%;
   border-radius: 50%;
-  background-color: transparent;
-  animation: loader-rotate 2s linear infinite;
-  z-index: 0;
+  border: 3px solid transparent;
+  border-top-color: #10B981;
+  border-right-color: #10B981;
+  animation: ring-rotate 1.2s linear infinite;
 }
 
-@keyframes loader-rotate {
-  0% {
-    transform: rotate(90deg);
-    box-shadow:
-      0 10px 20px 0 #fff inset,
-      0 20px 30px 0 #ad5fff inset,
-      0 60px 60px 0 #471eec inset;
+.loader-ring::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: rgba(16, 185, 129, 0.4);
+  border-left-color: rgba(16, 185, 129, 0.4);
+  animation: ring-rotate 1.8s linear infinite reverse;
+}
+
+@keyframes ring-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Inner pulsing circle */
+.loader-pulse {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%,
+    rgba(16, 185, 129, 0.2) 0%,
+    rgba(16, 185, 129, 0.05) 70%,
+    transparent 100%);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.6;
   }
   50% {
-    transform: rotate(270deg);
-    box-shadow:
-      0 10px 20px 0 #fff inset,
-      0 20px 10px 0 #d60a47 inset,
-      0 40px 60px 0 #311e80 inset;
-  }
-  100% {
-    transform: rotate(450deg);
-    box-shadow:
-      0 10px 20px 0 #fff inset,
-      0 20px 30px 0 #ad5fff inset,
-      0 60px 60px 0 #471eec inset;
+    transform: scale(1.1);
+    opacity: 1;
   }
 }
 
-.loader-letter {
-  color: #111;                 /* antes era blanco */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  display: inline-block;
-  opacity: 0.4;
-  transform: translateY(0);
-  animation: loader-letter-anim 2s infinite;
+/* Center icon */
+.loader-icon {
+  position: relative;
   z-index: 1;
-  border-radius: 50ch;
-  border: none;
+  color: #10B981;
+  animation: icon-bounce 1.5s ease-in-out infinite;
 }
 
-/* Delays progresivos para cada letra */
-.loader-letter:nth-child(1)  { animation-delay: 0s;   }
-.loader-letter:nth-child(2)  { animation-delay: 0.1s; }
-.loader-letter:nth-child(3)  { animation-delay: 0.2s; }
-.loader-letter:nth-child(4)  { animation-delay: 0.3s; }
-.loader-letter:nth-child(5)  { animation-delay: 0.4s; }
-.loader-letter:nth-child(6)  { animation-delay: 0.5s; }
-.loader-letter:nth-child(7)  { animation-delay: 0.6s; }
-.loader-letter:nth-child(8)  { animation-delay: 0.7s; }
-.loader-letter:nth-child(9)  { animation-delay: 0.8s; }
-.loader-letter:nth-child(10) { animation-delay: 0.9s; }
-
-@keyframes loader-letter-anim {
+@keyframes icon-bounce {
   0%, 100% {
-    opacity: 0.4;
     transform: translateY(0);
   }
-  20% {
-    opacity: 1;
-    transform: scale(1.15);
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Text content */
+.ldg-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Title */
+.ldg-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: 0.025em;
+}
+
+/* Subtitle */
+.ldg-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+/* Animated dots */
+.ldg-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 0.5rem;
+}
+
+.ldg-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10B981;
+  animation: dot-bounce 1.4s ease-in-out infinite;
+}
+
+.ldg-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.ldg-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ldg-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-bounce {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
   }
   40% {
-    opacity: 0.7;
-    transform: translateY(0);
+    transform: scale(1);
+    opacity: 1;
   }
+}
+
+/* ============================================
+   LIGHT MODE - Usando :host-context
+   ============================================ */
+
+:host-context(:root:not(.dark)) .ldg-container,
+:host-context(body.light-theme) .ldg-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+}
+
+:host-context(:root:not(.dark)) .ldg-title,
+:host-context(body.light-theme) .ldg-title {
+  color: #0f172a;
+}
+
+:host-context(:root:not(.dark)) .ldg-subtitle,
+:host-context(body.light-theme) .ldg-subtitle {
+  color: #64748b;
+}
+
+:host-context(:root:not(.dark)) .loader-ring,
+:host-context(body.light-theme) .loader-ring {
+  border-top-color: #059669;
+  border-right-color: #059669;
+}
+
+:host-context(:root:not(.dark)) .loader-ring::before,
+:host-context(body.light-theme) .loader-ring::before {
+  border-top-color: rgba(5, 150, 105, 0.4);
+  border-left-color: rgba(5, 150, 105, 0.4);
+}
+
+:host-context(:root:not(.dark)) .loader-pulse,
+:host-context(body.light-theme) .loader-pulse {
+  background: radial-gradient(circle at 30% 30%,
+    rgba(5, 150, 105, 0.15) 0%,
+    rgba(5, 150, 105, 0.05) 70%,
+    transparent 100%);
+}
+
+:host-context(:root:not(.dark)) .loader-icon,
+:host-context(body.light-theme) .loader-icon {
+  color: #059669;
+}
+
+:host-context(:root:not(.dark)) .ldg-dot,
+:host-context(body.light-theme) .ldg-dot {
+  background-color: #059669;
+}
+
+/* ============================================
+   Material Dialog Override - Backdrop Blur
+   ============================================ */
+
+::ng-deep .mat-mdc-dialog-surface {
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+/* Hide ALL scrollbars in loading dialog */
+::ng-deep .loading-dialog-panel {
+  overflow: hidden !important;
+}
+
+::ng-deep .loading-dialog-panel .mat-mdc-dialog-container {
+  overflow: hidden !important;
+}
+
+::ng-deep .loading-dialog-panel .mdc-dialog__surface {
+  overflow: hidden !important;
+}
+
+::ng-deep .loading-dialog-panel .mat-mdc-dialog-surface {
+  overflow: hidden !important;
+}
+
+::ng-deep .loading-dialog-panel .mdc-dialog__container {
+  overflow: hidden !important;
+}
+
+::ng-deep .loading-dialog-panel .mdc-dialog__content {
+  overflow: hidden !important;
+}
+
+/* Hide scrollbar in cdk overlay */
+::ng-deep .cdk-global-scrollblock {
+  overflow: hidden !important;
+}
+
+::ng-deep .cdk-overlay-container {
+  overflow: hidden;
+}
+
+/* Backdrop with blur effect */
+::ng-deep .cdk-overlay-backdrop.cdk-overlay-dark-backdrop {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Light mode backdrop */
+:host-context(:root:not(.dark)) ::ng-deep .cdk-overlay-backdrop.cdk-overlay-dark-backdrop,
+:host-context(body.light-theme) ::ng-deep .cdk-overlay-backdrop.cdk-overlay-dark-backdrop {
+  background: rgba(248, 250, 252, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
