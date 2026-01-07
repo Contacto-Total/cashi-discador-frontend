@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
@@ -13,10 +13,13 @@ export class AuthService {
   private readonly USER_KEY = 'callcenter_user';
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
+  private tokenCheckInterval: any;
+  private isLoggingOut = false;
 
   constructor(
     private http: HttpClient,
-    private router: Router
+    private router: Router,
+    private ngZone: NgZone
   ) {
     let user: User | null = null;
     try {
@@ -30,6 +33,70 @@ export class AuthService {
     }
     this.currentUserSubject = new BehaviorSubject<User | null>(user);
     this.currentUser$ = this.currentUserSubject.asObservable();
+
+    // Escuchar cambios en localStorage (desde otras pestañas)
+    window.addEventListener('storage', (event) => {
+      if (event.key === this.TOKEN_KEY && !event.newValue) {
+        this.ngZone.run(() => {
+          this.handleTokenRemoved();
+        });
+      }
+    });
+
+    // Verificar periódicamente el estado del token (cada 5 segundos)
+    this.startTokenCheck();
+  }
+
+  private startTokenCheck(): void {
+    this.ngZone.runOutsideAngular(() => {
+      this.tokenCheckInterval = setInterval(() => {
+        const token = localStorage.getItem(this.TOKEN_KEY);
+        const currentUser = this.currentUserSubject.value;
+
+        // Si hay usuario en memoria pero no hay token, redirigir
+        if (currentUser && !token) {
+          this.ngZone.run(() => {
+            this.handleTokenRemoved();
+          });
+        }
+
+        // Si el token expiró, redirigir
+        if (token && !this.isAuthenticated()) {
+          this.ngZone.run(() => {
+            this.handleTokenExpired();
+          });
+        }
+      }, 5000);
+    });
+  }
+
+  private handleTokenRemoved(): void {
+    if (this.isLoggingOut) return;
+    this.isLoggingOut = true;
+
+    console.log('[AUTH] Token eliminado del localStorage');
+    this.currentUserSubject.next(null);
+    localStorage.removeItem(this.USER_KEY);
+    localStorage.removeItem('refresh_token');
+
+    if (this.router.url !== '/login') {
+      alert('Tu sesión ha finalizado');
+      this.router.navigate(['/login']).then(() => {
+        this.isLoggingOut = false;
+      });
+    } else {
+      this.isLoggingOut = false;
+    }
+  }
+
+  private handleTokenExpired(): void {
+    if (this.isLoggingOut) return;
+    this.isLoggingOut = true;
+
+    console.log('[AUTH] Token expirado');
+    alert('Tu sesión ha expirado');
+    this.logout();
+    this.isLoggingOut = false;
   }
 
   login(username: string, password: string): Observable<LoginResponse> {
@@ -71,11 +138,20 @@ export class AuthService {
   }
 
   logout(): void {
+    // Limpiar el intervalo de verificación para evitar múltiples alertas
+    if (this.tokenCheckInterval) {
+      clearInterval(this.tokenCheckInterval);
+      this.tokenCheckInterval = null;
+    }
+
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem('refresh_token');
     localStorage.removeItem(this.USER_KEY);
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
+
+    // Reiniciar verificación de token después de logout
+    this.startTokenCheck();
   }
 
   isAuthenticated(): boolean {
