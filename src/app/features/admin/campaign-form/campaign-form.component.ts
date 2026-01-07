@@ -182,6 +182,11 @@ export class CampaignFormComponent implements OnInit {
     this.error = null;
   }
 
+  getTipoFiltroEstadoDescripcion(): string {
+    const tipo = this.tiposFiltroEstado.find(t => t.codigo === this.campaign.tipoFiltroEstado);
+    return tipo?.descripcion || '';
+  }
+
   getTipoContactoNombre(codigo: TipoContacto | undefined): string {
     if (!codigo) return 'Todos';
     const tipo = this.tiposContacto.find(t => t.codigo === codigo);
