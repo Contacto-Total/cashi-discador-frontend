@@ -409,6 +409,36 @@
 }
 
 /* ========================================
+   FILTROS SOLO POR ESTADO
+   ======================================== */
+
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.filter-only-estado {
+  font-style: italic;
+  color: #93c5fd;
+}
+
+.filter-estado-only {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  font-style: italic;
+}
+
+/* ========================================
    BOTONES DE ACCIÓN
    ======================================== */
 

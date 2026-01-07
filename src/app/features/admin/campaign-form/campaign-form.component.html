@@ -246,7 +246,7 @@
 
       <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
-        <div class="filter-add-section" *ngIf="filterableFields.length > 0">
+        <div class="filter-add-section">
           <h3>Agregar Filtro de Rango</h3>
           <div class="filter-add-grid">
             <div class="form-group">
@@ -264,13 +264,13 @@
             </div>
 
             <div class="form-group">
-              <label for="filterField">Campo a Filtrar</label>
+              <label for="filterField">Campo a Filtrar <small>(opcional si solo filtra por estado)</small></label>
               <select
                 id="filterField"
                 [(ngModel)]="selectedFieldId"
                 name="filterField"
                 class="form-select form-select-lg">
-                <option [ngValue]="0">Seleccione un campo...</option>
+                <option [ngValue]="0">Sin filtro de campo</option>
                 <option *ngFor="let field of filterableFields" [ngValue]="field.id">
                   {{ field.fieldName }}
                 </option>
@@ -306,11 +306,11 @@
               </button>
             </div>
           </div>
-        </div>
 
-        <div *ngIf="filterableFields.length === 0" class="no-fields-message">
-          <lucide-angular name="info" [size]="20"></lucide-angular>
-          <span>No hay campos numéricos configurados para esta subcartera.</span>
+          <div *ngIf="filterableFields.length === 0" class="info-message">
+            <lucide-angular name="info" [size]="16"></lucide-angular>
+            <span>No hay campos numéricos. Puede filtrar solo por Tipo de Contacto.</span>
+          </div>
         </div>
 
         <!-- Lista de filtros agregados -->
@@ -325,12 +325,13 @@
                 <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
                   {{ getTipoContactoNombre(filter.tipoContacto) }}
                 </span>
-                <span class="filter-field-name">{{ filter.fieldName }}</span>
+                <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
+                <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
                 <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                 </button>
               </div>
-              <div class="filter-card-body">
+              <div class="filter-card-body" *ngIf="filter.fieldCode">
                 <div class="range-display">
                   <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
                     <span class="range-label">Mínimo</span>
@@ -344,6 +345,9 @@
                     <span class="range-number">{{ filter.maxValue | number }}</span>
                   </div>
                 </div>
+              </div>
+              <div class="filter-card-body filter-estado-only" *ngIf="!filter.fieldCode">
+                <span>Filtra todos los clientes con este estado de contacto</span>
               </div>
             </div>
           </div>

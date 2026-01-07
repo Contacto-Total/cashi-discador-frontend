@@ -150,29 +150,49 @@ export class CampaignFormComponent implements OnInit {
   }
 
   addFilter(): void {
-    if (this.selectedFieldId === 0) {
-      this.error = 'Seleccione un campo para filtrar';
+    // Validar: debe tener tipo de contacto O un campo con rango
+    const tieneRango = this.newFilterMinValue !== null || this.newFilterMaxValue !== null;
+    const tieneCampo = this.selectedFieldId !== 0;
+    const tieneTipoContacto = this.selectedTipoContacto !== null;
+
+    if (!tieneTipoContacto && !tieneCampo) {
+      this.error = 'Seleccione un tipo de contacto o un campo para filtrar';
       return;
     }
 
-    if (this.newFilterMinValue === null && this.newFilterMaxValue === null) {
-      this.error = 'Ingrese al menos un valor (mínimo o máximo)';
+    if (tieneCampo && !tieneRango) {
+      this.error = 'Ingrese al menos un valor (mínimo o máximo) para el campo seleccionado';
       return;
     }
 
-    const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
-    if (!selectedField) return;
+    // Si solo tiene tipo de contacto (sin campo), crear filtro solo con tipoContacto
+    if (tieneTipoContacto && !tieneCampo) {
+      const newFilter: CampaignFilterRange = {
+        fieldDefinitionId: 0,
+        fieldCode: '',
+        fieldName: 'Solo por Estado',
+        minValue: undefined,
+        maxValue: undefined,
+        tipoContacto: this.selectedTipoContacto ?? undefined
+      };
 
-    const newFilter: CampaignFilterRange = {
-      fieldDefinitionId: selectedField.id,
-      fieldCode: selectedField.fieldCode,
-      fieldName: selectedField.fieldName,
-      minValue: this.newFilterMinValue ?? undefined,
-      maxValue: this.newFilterMaxValue ?? undefined,
-      tipoContacto: this.selectedTipoContacto ?? undefined
-    };
+      this.campaignFilters.push(newFilter);
+    } else {
+      // Filtro con campo y opcionalmente tipoContacto
+      const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (!selectedField) return;
 
-    this.campaignFilters.push(newFilter);
+      const newFilter: CampaignFilterRange = {
+        fieldDefinitionId: selectedField.id,
+        fieldCode: selectedField.fieldCode,
+        fieldName: selectedField.fieldName,
+        minValue: this.newFilterMinValue ?? undefined,
+        maxValue: this.newFilterMaxValue ?? undefined,
+        tipoContacto: this.selectedTipoContacto ?? undefined
+      };
+
+      this.campaignFilters.push(newFilter);
+    }
 
     // Limpiar inputs
     this.selectedFieldId = 0;
