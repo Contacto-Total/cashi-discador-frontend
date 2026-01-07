@@ -1000,3 +1000,87 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ============================================
+   Status Modal - LIGHT MODE
+   ============================================ */
+
+:host-context(html:not(.dark)) .status-modal-overlay,
+:host-context(body.light-theme) .status-modal-overlay {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+:host-context(html:not(.dark)) .status-modal,
+:host-context(body.light-theme) .status-modal {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+:host-context(html:not(.dark)) .status-modal-close,
+:host-context(body.light-theme) .status-modal-close {
+  background: rgba(0, 0, 0, 0.05);
+  color: #64748b;
+}
+
+:host-context(html:not(.dark)) .status-modal-close:hover,
+:host-context(body.light-theme) .status-modal-close:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+:host-context(html:not(.dark)) .status-modal-agent,
+:host-context(body.light-theme) .status-modal-agent {
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:host-context(html:not(.dark)) .agent-name-large,
+:host-context(body.light-theme) .agent-name-large {
+  color: #0f172a;
+}
+
+:host-context(html:not(.dark)) .agent-extension-large,
+:host-context(body.light-theme) .agent-extension-large {
+  color: #059669;
+}
+
+:host-context(html:not(.dark)) .status-current,
+:host-context(body.light-theme) .status-current {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:host-context(html:not(.dark)) .status-current-label,
+:host-context(body.light-theme) .status-current-label {
+  color: #64748b;
+}
+
+:host-context(html:not(.dark)) .status-option-btn,
+:host-context(body.light-theme) .status-option-btn {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+:host-context(html:not(.dark)) .status-option-btn:hover:not(.current):not(.disabled),
+:host-context(body.light-theme) .status-option-btn:hover:not(.current):not(.disabled) {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+:host-context(html:not(.dark)) .status-option-btn.current,
+:host-context(body.light-theme) .status-option-btn.current {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: #10B981;
+  color: #059669;
+}
+
+:host-context(html:not(.dark)) .status-option-btn.current lucide-angular:first-child,
+:host-context(body.light-theme) .status-option-btn.current lucide-angular:first-child {
+  color: #059669;
+}
+
+:host-context(html:not(.dark)) .status-modal-loading,
+:host-context(body.light-theme) .status-modal-loading {
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}

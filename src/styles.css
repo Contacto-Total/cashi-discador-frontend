@@ -5230,3 +5230,87 @@ body.light-theme .notif-item-time {
   color: #94a3b8;
 }
 
+/* ============================================
+   Campaign Monitoring - Status Modal LIGHT MODE
+   ============================================ */
+
+html:not(.dark) .status-modal-overlay,
+body.light-theme .status-modal-overlay {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+html:not(.dark) .status-modal,
+body.light-theme .status-modal {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+}
+
+html:not(.dark) .status-modal-close,
+body.light-theme .status-modal-close {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #64748b !important;
+}
+
+html:not(.dark) .status-modal-close:hover,
+body.light-theme .status-modal-close:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #dc2626 !important;
+}
+
+html:not(.dark) .status-modal-agent,
+body.light-theme .status-modal-agent {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .agent-name-large,
+body.light-theme .agent-name-large {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .agent-extension-large,
+body.light-theme .agent-extension-large {
+  color: #059669 !important;
+}
+
+html:not(.dark) .status-current,
+body.light-theme .status-current {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .status-current-label,
+body.light-theme .status-current-label {
+  color: #64748b !important;
+}
+
+html:not(.dark) .status-option-btn,
+body.light-theme .status-option-btn {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) .status-option-btn:hover:not(.current):not(.disabled),
+body.light-theme .status-option-btn:hover:not(.current):not(.disabled) {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+html:not(.dark) .status-option-btn.current,
+body.light-theme .status-option-btn.current {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: #10B981 !important;
+  color: #059669 !important;
+}
+
+html:not(.dark) .status-option-btn.current lucide-angular:first-child,
+body.light-theme .status-option-btn.current lucide-angular:first-child {
+  color: #059669 !important;
+}
+
+html:not(.dark) .status-modal-loading,
+body.light-theme .status-modal-loading {
+  color: #64748b !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
