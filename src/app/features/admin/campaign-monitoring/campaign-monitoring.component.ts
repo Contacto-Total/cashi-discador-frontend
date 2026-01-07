@@ -59,7 +59,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     { value: 'EN_REUNION', label: 'En Reunión', icon: 'users', color: '#8B5CF6' },
     { value: 'REFRIGERIO', label: 'Refrigerio', icon: 'coffee', color: '#F59E0B' },
     { value: 'SSHH', label: 'SSHH', icon: 'user', color: '#F59E0B' },
-    { value: 'EN_MANUAL', label: 'Modo Manual', icon: 'hand', color: '#6B7280' }
+    { value: 'EN_MANUAL', label: 'Modo Manual', icon: 'pencil', color: '#6B7280' }
   ];
 
   constructor(
