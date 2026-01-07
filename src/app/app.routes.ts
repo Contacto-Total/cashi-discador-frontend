@@ -14,11 +14,6 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'contacts',
-    loadComponent: () => import('./features/contacts/contact-list.component').then(m => m.ContactListComponent),
-    canActivate: [authGuard]
-  },
-  {
     path: 'admin/monitoring',
     loadComponent: () => import('./features/admin/admin-monitoring/admin-monitoring.component').then(m => m.AdminMonitoringComponent),
     canActivate: [authGuard]

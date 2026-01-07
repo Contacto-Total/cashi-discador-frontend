@@ -22,11 +22,6 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Cobranza</span>
       </a>
 
-      <a routerLink="/contacts" routerLinkActive="active" class="sidebar-item" *ngIf="isAgent()" [title]="isSidebarCollapsed ? 'Clientes' : ''">
-        <lucide-angular name="users" [size]="20"></lucide-angular>
-        <span class="item-text" *ngIf="!isSidebarCollapsed">Clientes</span>
-      </a>
-
       <a routerLink="/manual-management" routerLinkActive="active" class="sidebar-item" [title]="isSidebarCollapsed ? 'Gestión Manual' : ''">
         <lucide-angular name="clipboard-edit" [size]="20"></lucide-angular>
         <span class="item-text" *ngIf="!isSidebarCollapsed">Gestión Manual</span>
