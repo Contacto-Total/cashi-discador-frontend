@@ -785,3 +785,218 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
+
+/* ==================== MODAL CAMBIO DE ESTADO ==================== */
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.clickable-row:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.status-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.status-modal {
+  background: linear-gradient(145deg, #1E293B 0%, #0F172A 100%);
+  border-radius: 16px;
+  width: 340px;
+  max-width: 90vw;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  position: relative;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.status-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #94A3B8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 1;
+}
+
+.status-modal-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #EF4444;
+}
+
+.status-modal-header {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: 16px 16px 0 0;
+}
+
+.status-modal-icon {
+  color: white;
+}
+
+.status-modal-header h3 {
+  margin: 0;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.status-modal-agent {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid #334155;
+}
+
+.agent-avatar-large {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.agent-details-large {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.agent-name-large {
+  color: #F1F5F9;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.agent-extension-large {
+  color: #10B981;
+  font-size: 0.85rem;
+  font-family: monospace;
+}
+
+.status-current {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #334155;
+}
+
+.status-current-label {
+  color: #94A3B8;
+  font-size: 0.85rem;
+}
+
+.status-current-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 50px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-options {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.status-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: #E2E8F0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.status-option-btn:hover:not(.current):not(.disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--estado-color, #3B82F6);
+  transform: translateX(4px);
+}
+
+.status-option-btn lucide-angular:first-child {
+  color: var(--estado-color, #94A3B8);
+}
+
+.status-option-btn.current {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10B981;
+  color: #10B981;
+}
+
+.status-option-btn.current lucide-angular:first-child {
+  color: #10B981;
+}
+
+.status-option-btn .check-icon {
+  margin-left: auto;
+  color: #10B981;
+}
+
+.status-option-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status-modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: #94A3B8;
+  font-size: 0.9rem;
+  border-top: 1px solid #334155;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

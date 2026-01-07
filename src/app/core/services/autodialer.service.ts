@@ -236,4 +236,15 @@ export class AutoDialerService {
       { headers: this.getHeaders() }
     );
   }
+
+  /**
+   * Cambia el estado de un agente (para uso de supervisores)
+   */
+  cambiarEstadoAgente(idUsuario: number, estado: string, notas?: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.apiUrl}/agent-status/${idUsuario}/cambiar-estado`,
+      { estado, notas: notas || '' },
+      { headers: this.getHeaders() }
+    );
+  }
 }
