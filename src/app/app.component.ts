@@ -239,9 +239,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     this.dialogRef = this.dialog.open(SessionWarningModalComponent, {
-      width: '450px',
+      width: 'auto',
       disableClose: true,
-      hasBackdrop: true
+      hasBackdrop: true,
+      panelClass: 'session-warning-panel'
     });
 
     this.dialogRef.afterClosed().subscribe((result: string) => {
@@ -257,7 +258,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private cerrarSesionPorInactividad(): void {
-    // Evitar múltiples llamadas
+    // Evitar múltiples llamadas - NO resetear este flag
     if (this.sessionClosing) {
       return;
     }
@@ -269,14 +270,16 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.dialogRef = null;
     }
 
-    // Cerrar sesión (esto redirige al login)
+    // Mostrar alerta PRIMERO (bloqueante)
+    alert('Tu sesión ha expirado por inactividad');
+
+    // Cerrar sesión DESPUÉS de que el usuario acepte
     this.logout();
 
-    // Mostrar alerta DESPUÉS de que navegue al login
+    // Resetear flag solo después de que la navegación complete
     setTimeout(() => {
-      alert('Tu sesión ha expirado por inactividad');
       this.sessionClosing = false;
-    }, 500);
+    }, 1000);
   }
 
   /**
