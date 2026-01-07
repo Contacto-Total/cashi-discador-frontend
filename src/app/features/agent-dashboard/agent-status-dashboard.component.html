@@ -31,10 +31,9 @@
     <!-- Status Dashboard -->
     <div *ngIf="currentStatus && !loading" class="status-dashboard">
 
-      <!-- Left Column -->
-      <div class="left-column">
-        <!-- Current Status Card -->
-        <div class="status-card">
+      <!-- Current Status Card - Prominente arriba -->
+      <div class="status-card">
+        <div class="status-card-content">
           <h2>Estado Actual</h2>
           <div class="current-status">
             <div class="status-badge" [style.background-color]="getStateColor(currentStatus.estadoActual)">
@@ -42,20 +41,10 @@
             </div>
           </div>
         </div>
-
-        <!-- Info Card -->
-        <div class="info-card">
-          <h3><lucide-angular name="info" [size]="20"></lucide-angular> Información</h3>
-          <ul>
-            <li><strong>Disponible:</strong> Recibirás llamadas automáticas</li>
-            <li><strong>En Reunión/Refrigerio/Baño:</strong> No recibirás llamadas</li>
-            <li><strong>Modo Manual:</strong> Puedes llamar, pero no recibes automáticas</li>
-          </ul>
-        </div>
       </div>
 
-      <!-- Right Column -->
-      <div class="right-column">
+      <!-- Action Cards Row -->
+      <div class="action-cards">
         <!-- Change Status Section -->
         <div class="change-status-section">
           <h2>Cambiar Estado</h2>
