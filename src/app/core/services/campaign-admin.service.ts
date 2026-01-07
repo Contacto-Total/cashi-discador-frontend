@@ -25,6 +25,9 @@ export interface Campaign {
   portfolioId?: number;
   subPortfolioId?: number;
 
+  // Tipo de filtro de estado para rangos por tipo de contacto
+  tipoFiltroEstado?: 'ULTIMO_ESTADO' | 'MEJOR_ESTADO_MES' | 'MEJOR_ESTADO_HISTORICO';
+
   // Estadísticas (solo para lectura)
   totalContacts?: number;
   pendingContacts?: number;
@@ -33,6 +36,29 @@ export interface Campaign {
   answeredCalls?: number;
   contactRate?: number;
 }
+
+// Tipos de contacto para filtros de campaña
+export type TipoContacto = 'CD' | 'CI' | 'PR' | 'NC';
+
+export interface TipoContactoInfo {
+  codigo: TipoContacto;
+  nombre: string;
+  descripcion: string;
+  color: string;
+}
+
+export const TIPOS_CONTACTO: TipoContactoInfo[] = [
+  { codigo: 'CD', nombre: 'Contacto Directo', descripcion: 'Se contactó directamente con el titular', color: '#10B981' },
+  { codigo: 'CI', nombre: 'Contacto Indirecto', descripcion: 'Se contactó con un tercero', color: '#3B82F6' },
+  { codigo: 'PR', nombre: 'Promesa Rota', descripcion: 'Tenía promesa de pago que venció sin cumplir', color: '#EF4444' },
+  { codigo: 'NC', nombre: 'No Contactado', descripcion: 'No se ha podido contactar', color: '#6B7280' }
+];
+
+export const TIPOS_FILTRO_ESTADO = [
+  { codigo: 'ULTIMO_ESTADO', nombre: 'Último Estado', descripcion: 'Usa la última gestión del cliente' },
+  { codigo: 'MEJOR_ESTADO_MES', nombre: 'Mejor Estado del Mes', descripcion: 'Usa el mejor estado conseguido en el mes actual' },
+  { codigo: 'MEJOR_ESTADO_HISTORICO', nombre: 'Mejor Estado Histórico', descripcion: 'Usa el mejor estado histórico del cliente' }
+];
 
 export interface ImportStats {
   totalClientes: number;
@@ -112,6 +138,7 @@ export interface CampaignFilterRange {
   fieldName: string;
   minValue?: number;
   maxValue?: number;
+  tipoContacto?: TipoContacto; // CD, CI, PR, NC - null = aplica a todos
 }
 
 @Injectable({

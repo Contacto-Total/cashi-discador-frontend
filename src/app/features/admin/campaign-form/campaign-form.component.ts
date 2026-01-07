@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -28,7 +28,8 @@ export class CampaignFormComponent implements OnInit {
     intensidad: 50,
     tenantId: undefined,
     portfolioId: undefined,
-    subPortfolioId: undefined
+    subPortfolioId: undefined,
+    tipoFiltroEstado: 'ULTIMO_ESTADO'
   };
 
   isEditMode: boolean = false;
@@ -54,6 +55,11 @@ export class CampaignFormComponent implements OnInit {
   selectedFieldId: number = 0;
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
+
+  // Tipos de contacto y filtro de estado
+  tiposContacto = TIPOS_CONTACTO;
+  tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
+  selectedTipoContacto: TipoContacto | null = null;
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -162,7 +168,8 @@ export class CampaignFormComponent implements OnInit {
       fieldCode: selectedField.fieldCode,
       fieldName: selectedField.fieldName,
       minValue: this.newFilterMinValue ?? undefined,
-      maxValue: this.newFilterMaxValue ?? undefined
+      maxValue: this.newFilterMaxValue ?? undefined,
+      tipoContacto: this.selectedTipoContacto ?? undefined
     };
 
     this.campaignFilters.push(newFilter);
@@ -171,7 +178,31 @@ export class CampaignFormComponent implements OnInit {
     this.selectedFieldId = 0;
     this.newFilterMinValue = null;
     this.newFilterMaxValue = null;
+    this.selectedTipoContacto = null;
     this.error = null;
+  }
+
+  getTipoContactoNombre(codigo: TipoContacto | undefined): string {
+    if (!codigo) return 'Todos';
+    const tipo = this.tiposContacto.find(t => t.codigo === codigo);
+    return tipo?.nombre || codigo;
+  }
+
+  getTipoContactoColor(codigo: TipoContacto | undefined): string {
+    if (!codigo) return '#6B7280';
+    const tipo = this.tiposContacto.find(t => t.codigo === codigo);
+    return tipo?.color || '#6B7280';
+  }
+
+  getFiltersByTipoContacto(tipoContacto: TipoContacto | null): CampaignFilterRange[] {
+    if (tipoContacto === null) {
+      return this.campaignFilters.filter(f => !f.tipoContacto);
+    }
+    return this.campaignFilters.filter(f => f.tipoContacto === tipoContacto);
+  }
+
+  hasFiltersForTipo(tipoContacto: TipoContacto | null): boolean {
+    return this.getFiltersByTipoContacto(tipoContacto).length > 0;
   }
 
   removeFilter(index: number): void {

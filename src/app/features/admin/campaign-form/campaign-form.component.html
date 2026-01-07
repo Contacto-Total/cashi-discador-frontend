@@ -202,6 +202,41 @@
       </div>
     </div>
 
+    <!-- SECCIÓN: Configuración de Estado de Cliente -->
+    <div class="form-section full-width">
+      <h2>
+        <lucide-angular name="users" [size]="20"></lucide-angular>
+        Segmentación por Estado de Cliente
+      </h2>
+
+      <div class="estado-config-grid">
+        <div class="form-group">
+          <label for="tipoFiltroEstado">Tipo de Filtro de Estado</label>
+          <select
+            id="tipoFiltroEstado"
+            [(ngModel)]="campaign.tipoFiltroEstado"
+            name="tipoFiltroEstado"
+            class="form-select">
+            <option *ngFor="let tipo of tiposFiltroEstado" [value]="tipo.codigo">
+              {{ tipo.nombre }}
+            </option>
+          </select>
+          <small class="help-text">
+            {{ tiposFiltroEstado.find(t => t.codigo === campaign.tipoFiltroEstado)?.descripcion }}
+          </small>
+        </div>
+
+        <div class="tipos-contacto-info">
+          <label>Tipos de Contacto Disponibles:</label>
+          <div class="tipos-badges">
+            <span *ngFor="let tipo of tiposContacto" class="tipo-badge" [style.background-color]="tipo.color">
+              {{ tipo.codigo }} - {{ tipo.nombre }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section">
       <h2>
@@ -214,6 +249,20 @@
         <div class="filter-add-section" *ngIf="filterableFields.length > 0">
           <h3>Agregar Filtro de Rango</h3>
           <div class="filter-add-grid">
+            <div class="form-group">
+              <label for="tipoContacto">Tipo de Contacto</label>
+              <select
+                id="tipoContacto"
+                [(ngModel)]="selectedTipoContacto"
+                name="tipoContacto"
+                class="form-select form-select-lg">
+                <option [ngValue]="null">Todos los tipos</option>
+                <option *ngFor="let tipo of tiposContacto" [ngValue]="tipo.codigo">
+                  {{ tipo.codigo }} - {{ tipo.nombre }}
+                </option>
+              </select>
+            </div>
+
             <div class="form-group">
               <label for="filterField">Campo a Filtrar</label>
               <select
@@ -273,6 +322,9 @@
           <div class="filter-cards">
             <div class="filter-card" *ngFor="let filter of campaignFilters; let i = index">
               <div class="filter-card-header">
+                <span class="tipo-contacto-tag" [style.background-color]="getTipoContactoColor(filter.tipoContacto)">
+                  {{ getTipoContactoNombre(filter.tipoContacto) }}
+                </span>
                 <span class="filter-field-name">{{ filter.fieldName }}</span>
                 <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
