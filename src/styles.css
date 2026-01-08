@@ -5314,3 +5314,76 @@ body.light-theme .status-modal-loading {
   border-top: 1px solid #e2e8f0 !important;
 }
 
+/* ============================================
+   Typification Maintenance - Header CASHI Design
+   ============================================ */
+
+.typification-header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-bottom: 1px solid #334155;
+  padding: 0.875rem 1rem;
+}
+
+.typification-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.typification-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.typification-header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  border-radius: 10px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.typification-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.typification-header-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: -0.01em;
+}
+
+.typification-header-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+/* Typification Header - LIGHT MODE */
+html:not(.dark) .typification-header,
+body.light-theme .typification-header {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+html:not(.dark) .typification-header-title,
+body.light-theme .typification-header-title {
+  color: #0f172a;
+}
+
+html:not(.dark) .typification-header-subtitle,
+body.light-theme .typification-header-subtitle {
+  color: #64748b;
+}
+
