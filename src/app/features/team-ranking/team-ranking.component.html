@@ -54,7 +54,7 @@
         </div>
         <div class="summary-info">
           <span class="summary-value">S/. {{ formatMonto(ranking.totalesEquipo.proyeccionTotal) }}</span>
-          <span class="summary-label">Proyec. Equipo</span>
+          <span class="summary-label">Proyección Equipo</span>
         </div>
       </div>
       <div class="summary-card">
@@ -74,7 +74,7 @@
           <span class="summary-value" [style.color]="getEfectividadColor(ranking.totalesEquipo.efectividadProyeccionEquipo)">
             {{ ranking.totalesEquipo.efectividadProyeccionEquipo | number:'1.0-1' }}%
           </span>
-          <span class="summary-label">Efect. Proyección</span>
+          <span class="summary-label">Efectividad Proyección</span>
         </div>
       </div>
     </div>
@@ -111,7 +111,7 @@
             <span class="metric-value" [style.color]="getEfectividadColor(ranking.miRanking.efectividadProyeccion)">
               {{ ranking.miRanking.efectividadProyeccion | number:'1.0-1' }}%
             </span>
-            <span class="metric-label">% Efect. Proy.</span>
+            <span class="metric-label">% Efectividad Proyección</span>
           </div>
         </div>
       </div>
@@ -194,8 +194,8 @@
             <th class="col-num">Promesas</th>
             <th class="col-money">Proyección</th>
             <th class="col-money">Recaudo</th>
-            <th class="col-percent" title="Efectividad Proyección: (Recaudo / Proyección) × 100">% Efect. Proy.</th>
-            <th class="col-percent" title="Efectividad General: (Promesas / Gestiones) × 100">% Efect. Gral.</th>
+            <th class="col-percent" title="(Recaudo / Proyección) × 100">% Efectividad Proyección</th>
+            <th class="col-percent" title="(Promesas / Gestiones) × 100">% Efectividad General</th>
             <th class="col-trend">Tendencia</th>
           </tr>
         </thead>
