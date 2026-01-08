@@ -274,6 +274,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // TEAM RANKING (Para Agentes)
+  // ========================================
+  {
+    path: 'team-ranking',
+    loadComponent: () => import('./features/team-ranking/team-ranking.component').then(m => m.TeamRankingComponent),
+    canActivate: [authGuard]
+  },
+
+  // ========================================
   // CONFIGURACIÓN DE USUARIO
   // ========================================
   {

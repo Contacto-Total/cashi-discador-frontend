@@ -1,0 +1,200 @@
+<div class="team-ranking-container">
+  <!-- Header -->
+  <div class="ranking-header">
+    <div class="header-title">
+      <lucide-angular name="trophy" [size]="28" color="#FFD700"></lucide-angular>
+      <h1>Ranking del Equipo</h1>
+    </div>
+    <div class="header-actions">
+      <span class="last-update">Actualiza cada 1 min</span>
+      <button class="btn-refresh" (click)="refresh()" [disabled]="loading">
+        <lucide-angular name="refresh-cw" [size]="18" [class.spinning]="loading"></lucide-angular>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading && !ranking" class="loading-container">
+    <div class="spinner"></div>
+    <p>Cargando ranking...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="error-container">
+    <lucide-angular name="alert-circle" [size]="48" color="#EF4444"></lucide-angular>
+    <p>{{ error }}</p>
+    <button class="btn-retry" (click)="refresh()">Reintentar</button>
+  </div>
+
+  <!-- Contenido principal -->
+  <div *ngIf="ranking && !loading" class="ranking-content">
+    <!-- Resumen del equipo -->
+    <div class="team-summary">
+      <div class="summary-card">
+        <div class="summary-icon">
+          <lucide-angular name="users" [size]="24" color="#3B82F6"></lucide-angular>
+        </div>
+        <div class="summary-info">
+          <span class="summary-value">{{ ranking.totalesEquipo.totalAgentes }}</span>
+          <span class="summary-label">Agentes</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-icon">
+          <lucide-angular name="phone-call" [size]="24" color="#10B981"></lucide-angular>
+        </div>
+        <div class="summary-info">
+          <span class="summary-value">{{ ranking.totalesEquipo.totalGestiones }}</span>
+          <span class="summary-label">Gestiones</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-icon">
+          <lucide-angular name="target" [size]="24" color="#8B5CF6"></lucide-angular>
+        </div>
+        <div class="summary-info">
+          <span class="summary-value">S/. {{ formatMonto(ranking.totalesEquipo.proyeccionTotal) }}</span>
+          <span class="summary-label">Proyec. Equipo</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-icon">
+          <lucide-angular name="wallet" [size]="24" color="#F59E0B"></lucide-angular>
+        </div>
+        <div class="summary-info">
+          <span class="summary-value">S/. {{ formatMonto(ranking.totalesEquipo.recaudoTotal) }}</span>
+          <span class="summary-label">Recaudo Equipo</span>
+        </div>
+      </div>
+      <div class="summary-card highlight">
+        <div class="summary-icon">
+          <lucide-angular name="percent" [size]="24" color="#10B981"></lucide-angular>
+        </div>
+        <div class="summary-info">
+          <span class="summary-value" [style.color]="getEfectividadColor(ranking.totalesEquipo.efectividadProyeccionEquipo)">
+            {{ ranking.totalesEquipo.efectividadProyeccionEquipo | number:'1.0-1' }}%
+          </span>
+          <span class="summary-label">Efect. Proyección</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mi posición destacada -->
+    <div *ngIf="ranking.miRanking" class="my-position-card">
+      <div class="my-position-header">
+        <lucide-angular name="user-check" [size]="20" color="#3B82F6"></lucide-angular>
+        <span>Tu Posición</span>
+      </div>
+      <div class="my-position-content">
+        <div class="position-number">
+          <span class="position">#{{ ranking.miRanking.posicion }}</span>
+          <span class="total">de {{ ranking.ranking.length }}</span>
+        </div>
+        <div class="my-metrics">
+          <div class="metric">
+            <span class="metric-value">{{ ranking.miRanking.totalGestiones }}</span>
+            <span class="metric-label">Gestiones</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">{{ ranking.miRanking.totalPromesas }}</span>
+            <span class="metric-label">Promesas</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">S/. {{ formatMonto(ranking.miRanking.proyeccionDia) }}</span>
+            <span class="metric-label">Proyección</span>
+          </div>
+          <div class="metric">
+            <span class="metric-value">S/. {{ formatMonto(ranking.miRanking.recaudoDia) }}</span>
+            <span class="metric-label">Recaudo</span>
+          </div>
+          <div class="metric highlight">
+            <span class="metric-value" [style.color]="getEfectividadColor(ranking.miRanking.efectividadProyeccion)">
+              {{ ranking.miRanking.efectividadProyeccion | number:'1.0-1' }}%
+            </span>
+            <span class="metric-label">% Efect. Proy.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de ranking -->
+    <div class="ranking-table-container">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th class="col-pos">#</th>
+            <th class="col-name">Agente</th>
+            <th class="col-num">Gest.</th>
+            <th class="col-num">Prom.</th>
+            <th class="col-money">Proyec.</th>
+            <th class="col-money">Recaudo</th>
+            <th class="col-percent">% Proy.</th>
+            <th class="col-percent">Efect.</th>
+            <th class="col-trend">Tend.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let agente of ranking.ranking"
+              [class.es-yo]="agente.esYo"
+              [class.top-3]="agente.posicion <= 3">
+            <!-- Posición -->
+            <td class="col-pos">
+              <div class="position-badge" [style.background-color]="getMedalColor(agente.posicion) + '20'">
+                <lucide-angular
+                  [name]="getMedalIcon(agente.posicion)"
+                  [size]="agente.posicion <= 3 ? 18 : 14"
+                  [color]="getMedalColor(agente.posicion)">
+                </lucide-angular>
+                <span [style.color]="getMedalColor(agente.posicion)">{{ agente.posicion }}</span>
+              </div>
+            </td>
+            <!-- Nombre -->
+            <td class="col-name">
+              <div class="agent-name">
+                <span>{{ agente.nombreAgente }}</span>
+                <span *ngIf="agente.esYo" class="badge-yo">TU</span>
+              </div>
+            </td>
+            <!-- Gestiones -->
+            <td class="col-num">{{ agente.totalGestiones }}</td>
+            <!-- Promesas -->
+            <td class="col-num">{{ agente.totalPromesas }}</td>
+            <!-- Proyección -->
+            <td class="col-money">S/. {{ formatMonto(agente.proyeccionDia) }}</td>
+            <!-- Recaudo -->
+            <td class="col-money">S/. {{ formatMonto(agente.recaudoDia) }}</td>
+            <!-- % Proyección -->
+            <td class="col-percent">
+              <span class="efectividad-badge" [style.background-color]="getEfectividadColor(agente.efectividadProyeccion) + '20'"
+                    [style.color]="getEfectividadColor(agente.efectividadProyeccion)">
+                {{ agente.efectividadProyeccion | number:'1.0-0' }}%
+              </span>
+            </td>
+            <!-- Efectividad general -->
+            <td class="col-percent">
+              <span class="efectividad-badge" [style.background-color]="getEfectividadColor(agente.efectividadGeneral) + '20'"
+                    [style.color]="getEfectividadColor(agente.efectividadGeneral)">
+                {{ agente.efectividadGeneral | number:'1.0-0' }}%
+              </span>
+            </td>
+            <!-- Tendencia -->
+            <td class="col-trend">
+              <lucide-angular
+                [name]="getTrendIcon(agente.trend)"
+                [size]="18"
+                [color]="getTrendColor(agente.trend)">
+              </lucide-angular>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sin datos -->
+    <div *ngIf="ranking.ranking.length === 0" class="no-data">
+      <lucide-angular name="inbox" [size]="48" color="#64748b"></lucide-angular>
+      <p>No hay datos de ranking disponibles</p>
+      <span>Comienza a gestionar para aparecer en el ranking</span>
+    </div>
+  </div>
+</div>

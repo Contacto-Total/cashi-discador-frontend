@@ -27,6 +27,11 @@
         <span class="item-text" *ngIf="!isSidebarCollapsed">Gestión Manual</span>
       </a>
 
+      <a routerLink="/team-ranking" routerLinkActive="active" class="sidebar-item" *ngIf="isAgent()" [title]="isSidebarCollapsed ? 'Ranking Equipo' : ''">
+        <lucide-angular name="trophy" [size]="20"></lucide-angular>
+        <span class="item-text" *ngIf="!isSidebarCollapsed">Ranking Equipo</span>
+      </a>
+
       <!-- Items para ADMIN -->
       <!-- Monitoreo Dropdown -->
       <div class="sidebar-group" *ngIf="(authService.currentUser$ | async)?.role === 'ADMIN'">
