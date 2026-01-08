@@ -44,41 +44,75 @@
               <span class="text-xs text-gray-400">({{ visibleItems().length }})</span>
             </div>
 
-            <div
-              cdkDropList
-              #visibleList="cdkDropList"
-              [cdkDropListData]="visibleItems()"
-              [cdkDropListConnectedTo]="[hiddenList]"
-              (cdkDropListDropped)="dropVisible($event)"
-              class="min-h-[400px] space-y-1 p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
-
-              @for (item of visibleItems(); track item.codigo) {
-                <div
-                  cdkDrag
-                  class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700 cursor-move hover:border-indigo-500/50 group">
-                  <div class="flex items-center gap-2">
-                    <lucide-angular name="grip-vertical" [size]="14" class="text-gray-500"></lucide-angular>
-                    <lucide-angular [name]="item.icono" [size]="16" class="text-indigo-400"></lucide-angular>
-                    <span class="text-sm text-white">{{ item.etiqueta }}</span>
-                    @if (item.tipo === 'DROPDOWN') {
-                      <span class="text-xs text-gray-500">(dropdown)</span>
-                    }
-                    @if (item.codigoPadre) {
-                      <span class="text-xs text-indigo-400/60">&#8627; hijo</span>
-                    }
+            <div class="min-h-[400px] space-y-2 p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
+              @for (group of visibleHierarchy(); track group.item.codigo) {
+                <!-- Parent/Root Item -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group">
+                    <div class="flex items-center gap-2">
+                      <lucide-angular [name]="group.item.icono" [size]="16" class="text-indigo-400"></lucide-angular>
+                      <span class="text-sm text-white font-medium">{{ group.item.etiqueta }}</span>
+                      @if (group.item.tipo === 'DROPDOWN') {
+                        <span class="text-xs bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">dropdown</span>
+                      }
+                      <span class="text-xs text-gray-500">#{{ group.item.orden }}</span>
+                    </div>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      @if (group.item.tipo !== 'DROPDOWN') {
+                        <button
+                          (click)="openParentModal(group.item)"
+                          class="p-1 text-gray-400 hover:text-indigo-400"
+                          title="Asignar padre">
+                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
+                        </button>
+                      }
+                      <button
+                        (click)="moveToHidden(group.item)"
+                        class="p-1 text-gray-400 hover:text-red-400"
+                        title="Ocultar">
+                        <lucide-angular name="eye-off" [size]="14"></lucide-angular>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    (click)="moveToHidden(item)"
-                    class="p-1 text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <lucide-angular name="eye-off" [size]="14"></lucide-angular>
-                  </button>
+
+                  <!-- Children -->
+                  @for (child of group.children; track child.codigo) {
+                    <div class="flex items-center justify-between p-2 ml-6 bg-slate-800/70 rounded border border-slate-700/50 hover:border-indigo-500/50 group">
+                      <div class="flex items-center gap-2">
+                        <lucide-angular name="corner-down-right" [size]="12" class="text-gray-500"></lucide-angular>
+                        <lucide-angular [name]="child.icono" [size]="14" class="text-indigo-300"></lucide-angular>
+                        <span class="text-sm text-gray-200">{{ child.etiqueta }}</span>
+                        <span class="text-xs text-gray-500">#{{ child.orden }}</span>
+                      </div>
+                      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          (click)="removeParent(child)"
+                          class="p-1 text-gray-400 hover:text-yellow-400"
+                          title="Quitar de {{ group.item.etiqueta }}">
+                          <lucide-angular name="unlink" [size]="14"></lucide-angular>
+                        </button>
+                        <button
+                          (click)="openParentModal(child)"
+                          class="p-1 text-gray-400 hover:text-indigo-400"
+                          title="Cambiar padre">
+                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
+                        </button>
+                        <button
+                          (click)="moveToHidden(child)"
+                          class="p-1 text-gray-400 hover:text-red-400"
+                          title="Ocultar">
+                          <lucide-angular name="eye-off" [size]="14"></lucide-angular>
+                        </button>
+                      </div>
+                    </div>
+                  }
                 </div>
               }
 
               @if (visibleItems().length === 0) {
                 <div class="flex flex-col items-center justify-center py-8 text-gray-500">
                   <lucide-angular name="eye-off" [size]="32"></lucide-angular>
-                  <p class="text-sm mt-2">Arrastra elementos aqui</p>
+                  <p class="text-sm mt-2">No hay elementos visibles</p>
                 </div>
               }
             </div>
@@ -92,34 +126,68 @@
               <span class="text-xs text-gray-400">({{ hiddenItems().length }})</span>
             </div>
 
-            <div
-              cdkDropList
-              #hiddenList="cdkDropList"
-              [cdkDropListData]="hiddenItems()"
-              [cdkDropListConnectedTo]="[visibleList]"
-              (cdkDropListDropped)="dropHidden($event)"
-              class="min-h-[400px] space-y-1 p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
-
-              @for (item of hiddenItems(); track item.codigo) {
-                <div
-                  cdkDrag
-                  class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700 cursor-move hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
-                  <div class="flex items-center gap-2">
-                    <lucide-angular name="grip-vertical" [size]="14" class="text-gray-500"></lucide-angular>
-                    <lucide-angular [name]="item.icono" [size]="16" class="text-gray-400"></lucide-angular>
-                    <span class="text-sm text-gray-300">{{ item.etiqueta }}</span>
-                    @if (item.tipo === 'DROPDOWN') {
-                      <span class="text-xs text-gray-500">(dropdown)</span>
-                    }
-                    @if (item.codigoPadre) {
-                      <span class="text-xs text-gray-500">&#8627; hijo</span>
-                    }
+            <div class="min-h-[400px] space-y-2 p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
+              @for (group of hiddenHierarchy(); track group.item.codigo) {
+                <!-- Parent/Root Item -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
+                    <div class="flex items-center gap-2">
+                      <lucide-angular [name]="group.item.icono" [size]="16" class="text-gray-400"></lucide-angular>
+                      <span class="text-sm text-gray-300">{{ group.item.etiqueta }}</span>
+                      @if (group.item.tipo === 'DROPDOWN') {
+                        <span class="text-xs bg-gray-500/20 text-gray-400 px-1.5 py-0.5 rounded">dropdown</span>
+                      }
+                      <span class="text-xs text-gray-600">#{{ group.item.orden }}</span>
+                    </div>
+                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      @if (group.item.tipo !== 'DROPDOWN') {
+                        <button
+                          (click)="openParentModal(group.item)"
+                          class="p-1 text-gray-400 hover:text-indigo-400"
+                          title="Asignar padre">
+                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
+                        </button>
+                      }
+                      <button
+                        (click)="moveToVisible(group.item)"
+                        class="p-1 text-gray-400 hover:text-green-400"
+                        title="Mostrar">
+                        <lucide-angular name="eye" [size]="14"></lucide-angular>
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    (click)="moveToVisible(item)"
-                    class="p-1 text-gray-400 hover:text-green-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <lucide-angular name="eye" [size]="14"></lucide-angular>
-                  </button>
+
+                  <!-- Children -->
+                  @for (child of group.children; track child.codigo) {
+                    <div class="flex items-center justify-between p-2 ml-6 bg-slate-800/50 rounded border border-slate-700/30 hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
+                      <div class="flex items-center gap-2">
+                        <lucide-angular name="corner-down-right" [size]="12" class="text-gray-600"></lucide-angular>
+                        <lucide-angular [name]="child.icono" [size]="14" class="text-gray-500"></lucide-angular>
+                        <span class="text-sm text-gray-400">{{ child.etiqueta }}</span>
+                        <span class="text-xs text-gray-600">#{{ child.orden }}</span>
+                      </div>
+                      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          (click)="removeParent(child)"
+                          class="p-1 text-gray-400 hover:text-yellow-400"
+                          title="Quitar de {{ group.item.etiqueta }}">
+                          <lucide-angular name="unlink" [size]="14"></lucide-angular>
+                        </button>
+                        <button
+                          (click)="openParentModal(child)"
+                          class="p-1 text-gray-400 hover:text-indigo-400"
+                          title="Cambiar padre">
+                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
+                        </button>
+                        <button
+                          (click)="moveToVisible(child)"
+                          class="p-1 text-gray-400 hover:text-green-400"
+                          title="Mostrar">
+                          <lucide-angular name="eye" [size]="14"></lucide-angular>
+                        </button>
+                      </div>
+                    </div>
+                  }
                 </div>
               }
 
@@ -157,3 +225,56 @@
     </div>
   </div>
 </div>
+
+<!-- Modal para asignar padre -->
+@if (showParentModal()) {
+  <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" (click)="closeParentModal()">
+    <div class="bg-slate-900 rounded-lg border border-slate-700 p-4 w-96 max-w-[90vw]" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-white">Asignar Padre</h3>
+        <button (click)="closeParentModal()" class="text-gray-400 hover:text-white">
+          <lucide-angular name="x" [size]="20"></lucide-angular>
+        </button>
+      </div>
+
+      @if (itemToAssignParent(); as item) {
+        <p class="text-sm text-gray-400 mb-4">
+          Selecciona el dropdown padre para: <span class="text-white font-medium">{{ item.etiqueta }}</span>
+        </p>
+
+        @if (item.codigoPadre) {
+          <div class="mb-3 p-2 bg-slate-800 rounded border border-slate-700">
+            <span class="text-xs text-gray-400">Padre actual:</span>
+            <span class="text-sm text-indigo-400 ml-2">{{ getParentLabel(item.codigoPadre) }}</span>
+          </div>
+        }
+
+        <div class="space-y-2 max-h-60 overflow-y-auto">
+          <!-- Opcion: Sin padre -->
+          <button
+            (click)="assignParent(null)"
+            class="w-full flex items-center gap-2 p-2 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 text-left transition-colors">
+            <lucide-angular name="minus-circle" [size]="16" class="text-gray-400"></lucide-angular>
+            <span class="text-sm text-gray-300">Sin padre (elemento raiz)</span>
+          </button>
+
+          <!-- Dropdowns disponibles -->
+          @for (parent of availableParents(); track parent.codigo) {
+            @if (parent.codigo !== item.codigo) {
+              <button
+                (click)="assignParent(parent.codigo)"
+                [class]="item.codigoPadre === parent.codigo ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700'"
+                class="w-full flex items-center gap-2 p-2 bg-slate-800 hover:bg-slate-700 rounded border text-left transition-colors">
+                <lucide-angular [name]="parent.icono" [size]="16" class="text-indigo-400"></lucide-angular>
+                <span class="text-sm text-white">{{ parent.etiqueta }}</span>
+                @if (item.codigoPadre === parent.codigo) {
+                  <lucide-angular name="check" [size]="14" class="text-indigo-400 ml-auto"></lucide-angular>
+                }
+              </button>
+            }
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

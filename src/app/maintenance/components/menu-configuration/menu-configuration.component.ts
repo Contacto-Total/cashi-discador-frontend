@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -9,6 +9,11 @@ type RoleType = 'ADMIN' | 'SUPERVISOR' | 'AGENT' | 'COORDINADOR';
 
 interface MenuItemWithVisibility extends MenuItem {
   visible: boolean;
+}
+
+interface HierarchicalItem {
+  item: MenuItemWithVisibility;
+  children: MenuItemWithVisibility[];
 }
 
 @Component({
@@ -22,8 +27,13 @@ export class MenuConfigurationComponent implements OnInit {
   roles: RoleType[] = ['ADMIN', 'SUPERVISOR', 'AGENT', 'COORDINADOR'];
   selectedRole = signal<RoleType>('SUPERVISOR');
 
+  allItems = signal<MenuItemWithVisibility[]>([]);
   visibleItems = signal<MenuItemWithVisibility[]>([]);
   hiddenItems = signal<MenuItemWithVisibility[]>([]);
+
+  // Modal para asignar padre
+  showParentModal = signal(false);
+  itemToAssignParent = signal<MenuItemWithVisibility | null>(null);
 
   loading = signal(false);
   saving = signal(false);
@@ -35,6 +45,15 @@ export class MenuConfigurationComponent implements OnInit {
     'AGENT': 'Agente',
     'COORDINADOR': 'Coordinador'
   };
+
+  // Computed: items agrupados jerárquicamente para visible
+  visibleHierarchy = computed(() => this.buildHierarchy(this.visibleItems()));
+  hiddenHierarchy = computed(() => this.buildHierarchy(this.hiddenItems()));
+
+  // Computed: lista de dropdowns disponibles para asignar como padre
+  availableParents = computed(() => {
+    return this.allItems().filter(item => item.tipo === 'DROPDOWN');
+  });
 
   constructor(private menuService: MenuPermissionService) {}
 
@@ -56,11 +75,13 @@ export class MenuConfigurationComponent implements OnInit {
     this.loading.set(true);
     this.menuService.getMenuConfigForRole(role).subscribe({
       next: (items) => {
+        const all: MenuItemWithVisibility[] = [];
         const visible: MenuItemWithVisibility[] = [];
         const hidden: MenuItemWithVisibility[] = [];
 
         items.forEach(item => {
           const itemWithVisibility = { ...item, visible: item.visible ?? false } as MenuItemWithVisibility;
+          all.push(itemWithVisibility);
           if (item.visible) {
             visible.push(itemWithVisibility);
           } else {
@@ -68,11 +89,24 @@ export class MenuConfigurationComponent implements OnInit {
           }
         });
 
-        visible.sort((a, b) => a.orden - b.orden);
-        hidden.sort((a, b) => a.orden - b.orden);
+        // Ordenar jerárquicamente: padres primero, luego hijos
+        const sortHierarchically = (arr: MenuItemWithVisibility[]) => {
+          return arr.sort((a, b) => {
+            // Si tienen el mismo padre, ordenar por orden
+            if (a.codigoPadre === b.codigoPadre) {
+              return a.orden - b.orden;
+            }
+            // Padres (sin codigoPadre) van primero
+            if (!a.codigoPadre && b.codigoPadre) return -1;
+            if (a.codigoPadre && !b.codigoPadre) return 1;
+            // Si son de diferentes padres, ordenar por el orden del padre
+            return a.orden - b.orden;
+          });
+        };
 
-        this.visibleItems.set(visible);
-        this.hiddenItems.set(hidden);
+        this.allItems.set(all);
+        this.visibleItems.set(sortHierarchically(visible));
+        this.hiddenItems.set(sortHierarchically(hidden));
         this.hasChanges.set(false);
         this.loading.set(false);
       },
@@ -82,6 +116,39 @@ export class MenuConfigurationComponent implements OnInit {
         alert('Error al cargar la configuracion del menu');
       }
     });
+  }
+
+  /**
+   * Construye la jerarquía agrupando padres con sus hijos
+   */
+  buildHierarchy(items: MenuItemWithVisibility[]): HierarchicalItem[] {
+    const result: HierarchicalItem[] = [];
+    const childrenMap = new Map<string, MenuItemWithVisibility[]>();
+
+    // Primero, agrupar hijos por padre
+    items.forEach(item => {
+      if (item.codigoPadre) {
+        if (!childrenMap.has(item.codigoPadre)) {
+          childrenMap.set(item.codigoPadre, []);
+        }
+        childrenMap.get(item.codigoPadre)!.push(item);
+      }
+    });
+
+    // Luego, construir la jerarquía con padres y sus hijos
+    items.forEach(item => {
+      if (!item.codigoPadre) {
+        // Es un item de nivel superior (padre o item suelto)
+        const children = childrenMap.get(item.codigo) || [];
+        children.sort((a, b) => a.orden - b.orden);
+        result.push({ item, children });
+      }
+    });
+
+    // Ordenar por orden del padre
+    result.sort((a, b) => a.item.orden - b.item.orden);
+
+    return result;
   }
 
   dropVisible(event: CdkDragDrop<MenuItemWithVisibility[]>): void {
@@ -201,5 +268,88 @@ export class MenuConfigurationComponent implements OnInit {
 
   getItemTypeLabel(tipo: string): string {
     return tipo === 'DROPDOWN' ? '(dropdown)' : '';
+  }
+
+  // ========================================
+  // Funciones para asignar/quitar padre
+  // ========================================
+
+  openParentModal(item: MenuItemWithVisibility): void {
+    this.itemToAssignParent.set(item);
+    this.showParentModal.set(true);
+  }
+
+  closeParentModal(): void {
+    this.showParentModal.set(false);
+    this.itemToAssignParent.set(null);
+  }
+
+  assignParent(parentCodigo: string | null): void {
+    const item = this.itemToAssignParent();
+    if (!item) return;
+
+    // Llamar a la API para guardar el cambio de padre
+    this.menuService.updateMenuItemParent(item.codigo, parentCodigo).subscribe({
+      next: () => {
+        // Actualizar en visibleItems o hiddenItems
+        const updateInList = (list: MenuItemWithVisibility[]) => {
+          return list.map(i => {
+            if (i.codigo === item.codigo) {
+              return { ...i, codigoPadre: parentCodigo };
+            }
+            return i;
+          });
+        };
+
+        if (item.visible) {
+          this.visibleItems.set(updateInList(this.visibleItems()));
+        } else {
+          this.hiddenItems.set(updateInList(this.hiddenItems()));
+        }
+
+        // Actualizar en allItems
+        this.allItems.set(updateInList(this.allItems()));
+
+        this.closeParentModal();
+      },
+      error: (err) => {
+        console.error('Error updating parent:', err);
+        alert('Error al actualizar el padre');
+      }
+    });
+  }
+
+  removeParent(item: MenuItemWithVisibility): void {
+    // Llamar a la API para quitar el padre
+    this.menuService.updateMenuItemParent(item.codigo, null).subscribe({
+      next: () => {
+        const updateInList = (list: MenuItemWithVisibility[]) => {
+          return list.map(i => {
+            if (i.codigo === item.codigo) {
+              return { ...i, codigoPadre: null };
+            }
+            return i;
+          });
+        };
+
+        if (item.visible) {
+          this.visibleItems.set(updateInList(this.visibleItems()));
+        } else {
+          this.hiddenItems.set(updateInList(this.hiddenItems()));
+        }
+
+        this.allItems.set(updateInList(this.allItems()));
+      },
+      error: (err) => {
+        console.error('Error removing parent:', err);
+        alert('Error al quitar el padre');
+      }
+    });
+  }
+
+  getParentLabel(codigoPadre: string | null): string {
+    if (!codigoPadre) return '';
+    const parent = this.allItems().find(i => i.codigo === codigoPadre);
+    return parent ? parent.etiqueta : codigoPadre;
   }
 }

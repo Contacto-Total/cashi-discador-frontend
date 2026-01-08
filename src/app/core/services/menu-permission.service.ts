@@ -74,6 +74,13 @@ export class MenuPermissionService {
   }
 
   /**
+   * Update parent of a menu item (admin) - affects all roles
+   */
+  updateMenuItemParent(codigo: string, codigoPadre: string | null): Observable<any> {
+    return this.http.put(`${this.apiUrl}/item/${codigo}/parent`, { codigoPadre });
+  }
+
+  /**
    * Clear cached menu (on logout)
    */
   clearMenu(): void {
