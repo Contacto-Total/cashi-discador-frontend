@@ -34,7 +34,7 @@
           <lucide-angular name="loader-2" [size]="32" class="text-indigo-400 animate-spin"></lucide-angular>
         </div>
       } @else {
-        <!-- Drag Drop Columns -->
+        <!-- Two Columns -->
         <div class="grid grid-cols-2 gap-4">
           <!-- Visible Items -->
           <div class="bg-slate-900 rounded-lg border border-slate-800 p-4">
@@ -44,68 +44,46 @@
               <span class="text-xs text-gray-400">({{ visibleItems().length }})</span>
             </div>
 
-            <div class="min-h-[400px] space-y-2 p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
-              @for (group of visibleHierarchy(); track group.item.codigo) {
-                <!-- Parent/Root Item -->
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group">
-                    <div class="flex items-center gap-2">
-                      <lucide-angular [name]="group.item.icono" [size]="16" class="text-indigo-400"></lucide-angular>
-                      <span class="text-sm text-white font-medium">{{ group.item.etiqueta }}</span>
-                      @if (group.item.tipo === 'DROPDOWN') {
-                        <span class="text-xs bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">dropdown</span>
-                      }
-                      <span class="text-xs text-gray-500">#{{ group.item.orden }}</span>
-                    </div>
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      @if (group.item.tipo !== 'DROPDOWN') {
-                        <button
-                          (click)="openParentModal(group.item)"
-                          class="p-1 text-gray-400 hover:text-indigo-400"
-                          title="Asignar padre">
-                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
-                        </button>
-                      }
-                      <button
-                        (click)="moveToHidden(group.item)"
-                        class="p-1 text-gray-400 hover:text-red-400"
-                        title="Ocultar">
-                        <lucide-angular name="eye-off" [size]="14"></lucide-angular>
-                      </button>
-                    </div>
+            <div class="min-h-[400px] p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
+              @for (item of visibleFlat(); track item.codigo) {
+                <div
+                  [class.ml-6]="isChild(item)"
+                  class="flex items-center justify-between p-2 mb-1 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group">
+                  <div class="flex items-center gap-2">
+                    @if (isChild(item)) {
+                      <lucide-angular name="corner-down-right" [size]="12" class="text-gray-500"></lucide-angular>
+                    }
+                    <lucide-angular [name]="item.icono" [size]="16" [class]="isChild(item) ? 'text-indigo-300' : 'text-indigo-400'"></lucide-angular>
+                    <span class="text-sm" [class]="isChild(item) ? 'text-gray-200' : 'text-white font-medium'">{{ item.etiqueta }}</span>
+                    @if (item.tipo === 'DROPDOWN') {
+                      <span class="text-xs bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded">dropdown</span>
+                    }
+                    <span class="text-xs text-gray-500">#{{ item.orden }}</span>
                   </div>
-
-                  <!-- Children -->
-                  @for (child of group.children; track child.codigo) {
-                    <div class="flex items-center justify-between p-2 ml-6 bg-slate-800/70 rounded border border-slate-700/50 hover:border-indigo-500/50 group">
-                      <div class="flex items-center gap-2">
-                        <lucide-angular name="corner-down-right" [size]="12" class="text-gray-500"></lucide-angular>
-                        <lucide-angular [name]="child.icono" [size]="14" class="text-indigo-300"></lucide-angular>
-                        <span class="text-sm text-gray-200">{{ child.etiqueta }}</span>
-                        <span class="text-xs text-gray-500">#{{ child.orden }}</span>
-                      </div>
-                      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          (click)="removeParent(child)"
-                          class="p-1 text-gray-400 hover:text-yellow-400"
-                          title="Quitar de {{ group.item.etiqueta }}">
-                          <lucide-angular name="unlink" [size]="14"></lucide-angular>
-                        </button>
-                        <button
-                          (click)="openParentModal(child)"
-                          class="p-1 text-gray-400 hover:text-indigo-400"
-                          title="Cambiar padre">
-                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
-                        </button>
-                        <button
-                          (click)="moveToHidden(child)"
-                          class="p-1 text-gray-400 hover:text-red-400"
-                          title="Ocultar">
-                          <lucide-angular name="eye-off" [size]="14"></lucide-angular>
-                        </button>
-                      </div>
-                    </div>
-                  }
+                  <div class="flex items-center gap-1">
+                    @if (item.tipo !== 'DROPDOWN') {
+                      <button
+                        (click)="openParentModal(item)"
+                        class="p-1 text-gray-400 hover:text-indigo-400"
+                        title="Asignar padre">
+                        <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
+                      </button>
+                    }
+                    @if (isChild(item)) {
+                      <button
+                        (click)="removeParent(item)"
+                        class="p-1 text-gray-400 hover:text-yellow-400"
+                        title="Quitar padre">
+                        <lucide-angular name="unlink" [size]="14"></lucide-angular>
+                      </button>
+                    }
+                    <button
+                      (click)="moveToHidden(item)"
+                      class="p-1 text-gray-400 hover:text-red-400"
+                      title="Ocultar">
+                      <lucide-angular name="eye-off" [size]="14"></lucide-angular>
+                    </button>
+                  </div>
                 </div>
               }
 
@@ -126,68 +104,46 @@
               <span class="text-xs text-gray-400">({{ hiddenItems().length }})</span>
             </div>
 
-            <div class="min-h-[400px] space-y-2 p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
-              @for (group of hiddenHierarchy(); track group.item.codigo) {
-                <!-- Parent/Root Item -->
-                <div class="space-y-1">
-                  <div class="flex items-center justify-between p-2 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
-                    <div class="flex items-center gap-2">
-                      <lucide-angular [name]="group.item.icono" [size]="16" class="text-gray-400"></lucide-angular>
-                      <span class="text-sm text-gray-300">{{ group.item.etiqueta }}</span>
-                      @if (group.item.tipo === 'DROPDOWN') {
-                        <span class="text-xs bg-gray-500/20 text-gray-400 px-1.5 py-0.5 rounded">dropdown</span>
-                      }
-                      <span class="text-xs text-gray-600">#{{ group.item.orden }}</span>
-                    </div>
-                    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      @if (group.item.tipo !== 'DROPDOWN') {
-                        <button
-                          (click)="openParentModal(group.item)"
-                          class="p-1 text-gray-400 hover:text-indigo-400"
-                          title="Asignar padre">
-                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
-                        </button>
-                      }
-                      <button
-                        (click)="moveToVisible(group.item)"
-                        class="p-1 text-gray-400 hover:text-green-400"
-                        title="Mostrar">
-                        <lucide-angular name="eye" [size]="14"></lucide-angular>
-                      </button>
-                    </div>
+            <div class="min-h-[400px] p-2 bg-slate-800/50 rounded-lg border-2 border-dashed border-slate-700">
+              @for (item of hiddenFlat(); track item.codigo) {
+                <div
+                  [class.ml-6]="isChild(item)"
+                  class="flex items-center justify-between p-2 mb-1 bg-slate-800 rounded border border-slate-700 hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
+                  <div class="flex items-center gap-2">
+                    @if (isChild(item)) {
+                      <lucide-angular name="corner-down-right" [size]="12" class="text-gray-600"></lucide-angular>
+                    }
+                    <lucide-angular [name]="item.icono" [size]="16" class="text-gray-400"></lucide-angular>
+                    <span class="text-sm text-gray-300">{{ item.etiqueta }}</span>
+                    @if (item.tipo === 'DROPDOWN') {
+                      <span class="text-xs bg-gray-500/20 text-gray-400 px-1.5 py-0.5 rounded">dropdown</span>
+                    }
+                    <span class="text-xs text-gray-600">#{{ item.orden }}</span>
                   </div>
-
-                  <!-- Children -->
-                  @for (child of group.children; track child.codigo) {
-                    <div class="flex items-center justify-between p-2 ml-6 bg-slate-800/50 rounded border border-slate-700/30 hover:border-indigo-500/50 group opacity-60 hover:opacity-100">
-                      <div class="flex items-center gap-2">
-                        <lucide-angular name="corner-down-right" [size]="12" class="text-gray-600"></lucide-angular>
-                        <lucide-angular [name]="child.icono" [size]="14" class="text-gray-500"></lucide-angular>
-                        <span class="text-sm text-gray-400">{{ child.etiqueta }}</span>
-                        <span class="text-xs text-gray-600">#{{ child.orden }}</span>
-                      </div>
-                      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          (click)="removeParent(child)"
-                          class="p-1 text-gray-400 hover:text-yellow-400"
-                          title="Quitar de {{ group.item.etiqueta }}">
-                          <lucide-angular name="unlink" [size]="14"></lucide-angular>
-                        </button>
-                        <button
-                          (click)="openParentModal(child)"
-                          class="p-1 text-gray-400 hover:text-indigo-400"
-                          title="Cambiar padre">
-                          <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
-                        </button>
-                        <button
-                          (click)="moveToVisible(child)"
-                          class="p-1 text-gray-400 hover:text-green-400"
-                          title="Mostrar">
-                          <lucide-angular name="eye" [size]="14"></lucide-angular>
-                        </button>
-                      </div>
-                    </div>
-                  }
+                  <div class="flex items-center gap-1">
+                    @if (item.tipo !== 'DROPDOWN') {
+                      <button
+                        (click)="openParentModal(item)"
+                        class="p-1 text-gray-400 hover:text-indigo-400"
+                        title="Asignar padre">
+                        <lucide-angular name="folder-tree" [size]="14"></lucide-angular>
+                      </button>
+                    }
+                    @if (isChild(item)) {
+                      <button
+                        (click)="removeParent(item)"
+                        class="p-1 text-gray-400 hover:text-yellow-400"
+                        title="Quitar padre">
+                        <lucide-angular name="unlink" [size]="14"></lucide-angular>
+                      </button>
+                    }
+                    <button
+                      (click)="moveToVisible(item)"
+                      class="p-1 text-gray-400 hover:text-green-400"
+                      title="Mostrar">
+                      <lucide-angular name="eye" [size]="14"></lucide-angular>
+                    </button>
+                  </div>
                 </div>
               }
 

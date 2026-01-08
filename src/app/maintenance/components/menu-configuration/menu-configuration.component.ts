@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -9,11 +9,6 @@ type RoleType = 'ADMIN' | 'SUPERVISOR' | 'AGENT' | 'COORDINADOR';
 
 interface MenuItemWithVisibility extends MenuItem {
   visible: boolean;
-}
-
-interface HierarchicalItem {
-  item: MenuItemWithVisibility;
-  children: MenuItemWithVisibility[];
 }
 
 @Component({
@@ -46,14 +41,15 @@ export class MenuConfigurationComponent implements OnInit {
     'COORDINADOR': 'Coordinador'
   };
 
-  // Jerarquías pre-calculadas (no computed)
-  visibleHierarchy = signal<HierarchicalItem[]>([]);
-  hiddenHierarchy = signal<HierarchicalItem[]>([]);
+  // Listas planas ordenadas (padres seguidos de sus hijos)
+  visibleFlat = signal<MenuItemWithVisibility[]>([]);
+  hiddenFlat = signal<MenuItemWithVisibility[]>([]);
   availableParents = signal<MenuItemWithVisibility[]>([]);
 
   constructor(
     private menuService: MenuPermissionService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -93,17 +89,13 @@ export class MenuConfigurationComponent implements OnInit {
         this.visibleItems.set(visible);
         this.hiddenItems.set(hidden);
 
-        // Calcular jerarquías y padres disponibles de una sola vez
-        this.availableParents.set(all.filter(item => item.tipo === 'DROPDOWN'));
-        this.recalculateHierarchies();
-
-        this.hasChanges.set(false);
-
-        // Usar setTimeout para asegurar que Angular procese todo antes de quitar el loading
-        setTimeout(() => {
+        // Usar NgZone para asegurar que Angular detecte todos los cambios
+        this.ngZone.run(() => {
+          this.availableParents.set(all.filter(item => item.tipo === 'DROPDOWN'));
+          this.recalculateHierarchies();
+          this.hasChanges.set(false);
           this.loading.set(false);
-          this.cdr.detectChanges();
-        }, 0);
+        });
       },
       error: (err) => {
         console.error('Error loading menu config:', err);
@@ -114,21 +106,21 @@ export class MenuConfigurationComponent implements OnInit {
   }
 
   /**
-   * Recalcula las jerarquías de visible y hidden
+   * Recalcula las listas planas ordenadas
    */
   private recalculateHierarchies(): void {
-    this.visibleHierarchy.set(this.buildHierarchy(this.visibleItems()));
-    this.hiddenHierarchy.set(this.buildHierarchy(this.hiddenItems()));
+    this.visibleFlat.set(this.buildFlatList(this.visibleItems()));
+    this.hiddenFlat.set(this.buildFlatList(this.hiddenItems()));
   }
 
   /**
-   * Construye la jerarquía agrupando padres con sus hijos
+   * Construye una lista plana con padres seguidos de sus hijos
    */
-  buildHierarchy(items: MenuItemWithVisibility[]): HierarchicalItem[] {
-    const result: HierarchicalItem[] = [];
+  buildFlatList(items: MenuItemWithVisibility[]): MenuItemWithVisibility[] {
+    const result: MenuItemWithVisibility[] = [];
     const childrenMap = new Map<string, MenuItemWithVisibility[]>();
 
-    // Primero, agrupar hijos por padre
+    // Agrupar hijos por padre
     items.forEach(item => {
       if (item.codigoPadre) {
         if (!childrenMap.has(item.codigoPadre)) {
@@ -138,20 +130,23 @@ export class MenuConfigurationComponent implements OnInit {
       }
     });
 
-    // Luego, construir la jerarquía con padres y sus hijos
-    items.forEach(item => {
-      if (!item.codigoPadre) {
-        // Es un item de nivel superior (padre o item suelto)
-        const children = childrenMap.get(item.codigo) || [];
-        children.sort((a, b) => a.orden - b.orden);
-        result.push({ item, children });
-      }
+    // Obtener items de nivel superior (sin padre)
+    const topLevel = items.filter(item => !item.codigoPadre);
+    topLevel.sort((a, b) => a.orden - b.orden);
+
+    // Construir lista plana: padre, luego sus hijos
+    topLevel.forEach(parent => {
+      result.push(parent);
+      const children = childrenMap.get(parent.codigo) || [];
+      children.sort((a, b) => a.orden - b.orden);
+      children.forEach(child => result.push(child));
     });
 
-    // Ordenar por orden del padre
-    result.sort((a, b) => a.item.orden - b.item.orden);
-
     return result;
+  }
+
+  isChild(item: MenuItemWithVisibility): boolean {
+    return !!item.codigoPadre;
   }
 
   dropVisible(event: CdkDragDrop<MenuItemWithVisibility[]>): void {
