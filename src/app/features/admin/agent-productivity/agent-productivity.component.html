@@ -211,7 +211,6 @@
               <th class="col-agent">Agente</th>
               <th class="col-num">Gestiones</th>
               <th class="col-num">Promesas</th>
-              <th class="col-money">Monto Promesas</th>
               <th class="col-money">Proyección</th>
               <th class="col-money">Recaudo</th>
               <th class="col-pct" title="(Recaudo / Proyección) × 100">% Efectividad Proyección</th>
@@ -237,7 +236,6 @@
               <td class="col-num">
                 <span class="promesas-badge">{{ agent.totalPromesas | number }}</span>
               </td>
-              <td class="col-money">S/ {{ formatMoney(agent.montoPromesas) }}</td>
               <td class="col-money">S/ {{ formatMoney(agent.proyeccion) }}</td>
               <td class="col-money">S/ {{ formatMoney(agent.recaudo) }}</td>
               <td class="col-pct">
