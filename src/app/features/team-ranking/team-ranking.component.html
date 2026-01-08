@@ -125,59 +125,59 @@
       </div>
       <div class="metas-content">
         <!-- Meta Gestiones -->
-        <div class="meta-item" *ngIf="ranking.metasProgreso.metaGestionesDiarias">
+        <div class="meta-item" *ngIf="ranking.metasProgreso!.metaGestionesDiarias">
           <div class="meta-info">
             <span class="meta-label">Gestiones</span>
             <span class="meta-values">
-              {{ ranking.metasProgreso.gestionesActuales || 0 }} / {{ ranking.metasProgreso.metaGestionesDiarias }}
+              {{ ranking.metasProgreso!.gestionesActuales || 0 }} / {{ ranking.metasProgreso!.metaGestionesDiarias }}
             </span>
           </div>
           <div class="progress-bar-container">
             <div class="progress-bar"
-                 [style.width.%]="ranking.metasProgreso.porcentajeGestiones || 0"
-                 [style.background-color]="getMetaColor(ranking.metasProgreso.porcentajeGestiones)">
+                 [style.width.%]="ranking.metasProgreso!.porcentajeGestiones || 0"
+                 [style.background-color]="getMetaColor(ranking.metasProgreso!.porcentajeGestiones)">
             </div>
           </div>
-          <span class="meta-percent" [style.color]="getMetaColor(ranking.metasProgreso.porcentajeGestiones)">
-            {{ ranking.metasProgreso.porcentajeGestiones || 0 }}%
+          <span class="meta-percent" [style.color]="getMetaColor(ranking.metasProgreso!.porcentajeGestiones)">
+            {{ ranking.metasProgreso!.porcentajeGestiones || 0 }}%
           </span>
         </div>
 
         <!-- Meta Promesas -->
-        <div class="meta-item" *ngIf="ranking.metasProgreso.metaPromesasDiarias">
+        <div class="meta-item" *ngIf="ranking.metasProgreso!.metaPromesasDiarias">
           <div class="meta-info">
             <span class="meta-label">Promesas</span>
             <span class="meta-values">
-              {{ ranking.metasProgreso.promesasActuales || 0 }} / {{ ranking.metasProgreso.metaPromesasDiarias }}
+              {{ ranking.metasProgreso!.promesasActuales || 0 }} / {{ ranking.metasProgreso!.metaPromesasDiarias }}
             </span>
           </div>
           <div class="progress-bar-container">
             <div class="progress-bar"
-                 [style.width.%]="ranking.metasProgreso.porcentajePromesas || 0"
-                 [style.background-color]="getMetaColor(ranking.metasProgreso.porcentajePromesas)">
+                 [style.width.%]="ranking.metasProgreso!.porcentajePromesas || 0"
+                 [style.background-color]="getMetaColor(ranking.metasProgreso!.porcentajePromesas)">
             </div>
           </div>
-          <span class="meta-percent" [style.color]="getMetaColor(ranking.metasProgreso.porcentajePromesas)">
-            {{ ranking.metasProgreso.porcentajePromesas || 0 }}%
+          <span class="meta-percent" [style.color]="getMetaColor(ranking.metasProgreso!.porcentajePromesas)">
+            {{ ranking.metasProgreso!.porcentajePromesas || 0 }}%
           </span>
         </div>
 
         <!-- Meta Monto -->
-        <div class="meta-item" *ngIf="ranking.metasProgreso.metaMontoDiario">
+        <div class="meta-item" *ngIf="ranking.metasProgreso!.metaMontoDiario">
           <div class="meta-info">
             <span class="meta-label">Monto Promesas</span>
             <span class="meta-values">
-              S/. {{ formatMonto(ranking.metasProgreso.montoActual || 0) }} / S/. {{ formatMonto(ranking.metasProgreso.metaMontoDiario) }}
+              S/. {{ formatMonto(ranking.metasProgreso!.montoActual || 0) }} / S/. {{ formatMonto(ranking.metasProgreso!.metaMontoDiario) }}
             </span>
           </div>
           <div class="progress-bar-container">
             <div class="progress-bar"
-                 [style.width.%]="ranking.metasProgreso.porcentajeMonto || 0"
-                 [style.background-color]="getMetaColor(ranking.metasProgreso.porcentajeMonto)">
+                 [style.width.%]="ranking.metasProgreso!.porcentajeMonto || 0"
+                 [style.background-color]="getMetaColor(ranking.metasProgreso!.porcentajeMonto)">
             </div>
           </div>
-          <span class="meta-percent" [style.color]="getMetaColor(ranking.metasProgreso.porcentajeMonto)">
-            {{ ranking.metasProgreso.porcentajeMonto || 0 }}%
+          <span class="meta-percent" [style.color]="getMetaColor(ranking.metasProgreso!.porcentajeMonto)">
+            {{ ranking.metasProgreso!.porcentajeMonto || 0 }}%
           </span>
         </div>
       </div>
