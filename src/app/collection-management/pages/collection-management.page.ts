@@ -205,13 +205,39 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
               @if (activeTab() === 'historial') {
                 <div class="space-y-1">
+                  <!-- Filtros compactos para vista de tabs -->
+                  <div class="flex items-center gap-1 pb-1 border-b border-gray-200 dark:border-gray-700">
+                    <button
+                      (click)="historialFilter.set('TODOS')"
+                      [class]="'px-1.5 py-0.5 text-[10px] rounded ' +
+                        (historialFilter() === 'TODOS' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
+                      Todos
+                    </button>
+                    <button
+                      (click)="historialFilter.set('CD')"
+                      [class]="'px-1.5 py-0.5 text-[10px] rounded ' +
+                        (historialFilter() === 'CD' ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
+                      [CD]
+                    </button>
+                    <button
+                      (click)="historialFilter.set('CI')"
+                      [class]="'px-1.5 py-0.5 text-[10px] rounded ' +
+                        (historialFilter() === 'CI' ? 'bg-amber-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
+                      [CI]
+                    </button>
+                    <span class="text-[10px] text-gray-400 ml-auto">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
+                  </div>
                   @if (historialGestiones().length === 0) {
                     <div class="text-center py-4">
                       <p class="text-xs text-gray-400">Sin gestiones previas</p>
                       <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-700 text-white dark:bg-blue-500 text-xs rounded">Recargar</button>
                     </div>
+                  } @else if (historialGestionesFiltrado().length === 0) {
+                    <div class="text-center py-4">
+                      <p class="text-xs text-gray-400">No hay gestiones con el filtro seleccionado</p>
+                    </div>
                   } @else {
-                    @for (gestion of historialGestiones(); track $index) {
+                    @for (gestion of historialGestionesFiltrado(); track $index) {
                       <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5">
                         <div class="flex justify-between items-center text-xs">
                           <span class="font-bold text-gray-600 dark:text-gray-300">{{ gestion.fecha }}</span>
@@ -806,18 +832,48 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
         <div class="h-44 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-colors duration-300">
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-sm">📋</span>
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
-              <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestiones().length }} registros)</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
             </div>
-            <button (click)="loadManagementHistory()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-              <span>↻</span> Actualizar
-            </button>
+            <!-- Filtros de tipificación -->
+            <div class="flex items-center gap-1">
+              <button
+                (click)="historialFilter.set('TODOS')"
+                [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                  (historialFilter() === 'TODOS'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                Todos
+              </button>
+              <button
+                (click)="historialFilter.set('CD')"
+                [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                  (historialFilter() === 'CD'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                [CD]
+              </button>
+              <button
+                (click)="historialFilter.set('CI')"
+                [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                  (historialFilter() === 'CI'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                [CI]
+              </button>
+              <button (click)="loadManagementHistory()" class="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                <span>↻</span>
+              </button>
+            </div>
           </div>
           <div class="flex-1 overflow-auto">
             @if (historialGestiones().length === 0) {
               <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
                 Sin gestiones registradas para este cliente
+              </div>
+            } @else if (historialGestionesFiltrado().length === 0) {
+              <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
+                No hay gestiones con el filtro seleccionado
               </div>
             } @else {
               <table class="w-full text-xs">
@@ -835,7 +891,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   </tr>
                 </thead>
                 <tbody>
-                  @for (gestion of historialGestiones(); track gestion.id) {
+                  @for (gestion of historialGestionesFiltrado(); track gestion.id) {
                     <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
                       <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
                       <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
@@ -1019,6 +1075,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     hasSchedule: boolean;
     schedule: any;
   }>>([]);
+
+  // Filtro de historial de gestiones por tipo de contacto
+  protected historialFilter = signal<'TODOS' | 'CI' | 'CD'>('TODOS');
+
+  // Computed signal para filtrar el historial según el filtro seleccionado
+  protected historialGestionesFiltrado = computed(() => {
+    const filter = this.historialFilter();
+    const gestiones = this.historialGestiones();
+
+    if (filter === 'TODOS') {
+      return gestiones;
+    }
+
+    return gestiones.filter(g => {
+      const tipif = g.tipificacionCompleta?.toUpperCase() || '';
+      if (filter === 'CI') {
+        return tipif.includes('[CI]') || tipif.includes('CONTACTO INDIRECTO');
+      }
+      if (filter === 'CD') {
+        return tipif.includes('[CD]') || tipif.includes('CONTACTO DIRECTO');
+      }
+      return true;
+    });
+  });
 
   selectedTenantId?: number;
   selectedPortfolioId?: number;
