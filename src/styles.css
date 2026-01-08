@@ -5387,3 +5387,68 @@ body.light-theme .typification-header-subtitle {
   color: #64748b;
 }
 
+/* ============================================
+   Campaign Monitoring - Alert Modal LIGHT MODE
+   ============================================ */
+
+html:not(.dark) .alert-modal,
+body.light-theme .alert-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid #EF4444 !important;
+  box-shadow: 0 20px 60px rgba(239, 68, 68, 0.2), 0 0 40px rgba(239, 68, 68, 0.08) !important;
+}
+
+html:not(.dark) .alert-close,
+body.light-theme .alert-close {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #64748b !important;
+}
+
+html:not(.dark) .alert-close:hover,
+body.light-theme .alert-close:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #EF4444 !important;
+}
+
+html:not(.dark) .alert-agent-info,
+body.light-theme .alert-agent-info {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) .agent-name,
+body.light-theme .agent-name {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .agent-extension,
+body.light-theme .agent-extension {
+  color: #64748b !important;
+}
+
+html:not(.dark) .status-label,
+body.light-theme .status-label {
+  color: #64748b !important;
+}
+
+html:not(.dark) .alert-time,
+body.light-theme .alert-time {
+  color: #475569 !important;
+}
+
+html:not(.dark) .alert-time lucide-angular,
+body.light-theme .alert-time lucide-angular {
+  color: #64748b !important;
+}
+
+html:not(.dark) .alert-message,
+body.light-theme .alert-message {
+  color: #475569 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+
+html:not(.dark) .alert-message lucide-angular,
+body.light-theme .alert-message lucide-angular {
+  color: #EF4444 !important;
+}
+
