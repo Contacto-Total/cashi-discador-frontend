@@ -98,10 +98,12 @@ export class MenuConfigurationComponent implements OnInit {
         this.recalculateHierarchies();
 
         this.hasChanges.set(false);
-        this.loading.set(false);
 
-        // Forzar detección de cambios
-        this.cdr.detectChanges();
+        // Usar setTimeout para asegurar que Angular procese todo antes de quitar el loading
+        setTimeout(() => {
+          this.loading.set(false);
+          this.cdr.detectChanges();
+        }, 0);
       },
       error: (err) => {
         console.error('Error loading menu config:', err);
