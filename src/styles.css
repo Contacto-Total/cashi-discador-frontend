@@ -5571,3 +5571,24 @@ body.ligth-theme .monitoring-container > .header  {
   background: none !important;
 }
 
+/* ===== Agent Time Alert Overlay - Sound Button Light Mode ===== */
+html:not(.dark) app-agent-time-alert-overlay .option-icon.active,
+body.light-theme app-agent-time-alert-overlay .option-icon.active {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #16a34a !important;
+}
+
+html:not(.dark) app-agent-time-alert-overlay .option-icon.active lucide-angular,
+body.light-theme app-agent-time-alert-overlay .option-icon.active lucide-angular,
+html:not(.dark) app-agent-time-alert-overlay .option-icon.active lucide-angular svg,
+body.light-theme app-agent-time-alert-overlay .option-icon.active lucide-angular svg {
+  color: #16a34a !important;
+  stroke: #16a34a !important;
+}
+
+/* Toggle switch activo en light mode */
+html:not(.dark) app-agent-time-alert-overlay .toggle-switch.active,
+body.light-theme app-agent-time-alert-overlay .toggle-switch.active {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
+}
+
