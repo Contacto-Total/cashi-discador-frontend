@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -46,14 +46,10 @@ export class MenuConfigurationComponent implements OnInit {
     'COORDINADOR': 'Coordinador'
   };
 
-  // Computed: items agrupados jerárquicamente para visible
-  visibleHierarchy = computed(() => this.buildHierarchy(this.visibleItems()));
-  hiddenHierarchy = computed(() => this.buildHierarchy(this.hiddenItems()));
-
-  // Computed: lista de dropdowns disponibles para asignar como padre
-  availableParents = computed(() => {
-    return this.allItems().filter(item => item.tipo === 'DROPDOWN');
-  });
+  // Jerarquías pre-calculadas (no computed)
+  visibleHierarchy = signal<HierarchicalItem[]>([]);
+  hiddenHierarchy = signal<HierarchicalItem[]>([]);
+  availableParents = signal<MenuItemWithVisibility[]>([]);
 
   constructor(private menuService: MenuPermissionService) {}
 
@@ -89,24 +85,15 @@ export class MenuConfigurationComponent implements OnInit {
           }
         });
 
-        // Ordenar jerárquicamente: padres primero, luego hijos
-        const sortHierarchically = (arr: MenuItemWithVisibility[]) => {
-          return arr.sort((a, b) => {
-            // Si tienen el mismo padre, ordenar por orden
-            if (a.codigoPadre === b.codigoPadre) {
-              return a.orden - b.orden;
-            }
-            // Padres (sin codigoPadre) van primero
-            if (!a.codigoPadre && b.codigoPadre) return -1;
-            if (a.codigoPadre && !b.codigoPadre) return 1;
-            // Si son de diferentes padres, ordenar por el orden del padre
-            return a.orden - b.orden;
-          });
-        };
-
+        // Guardar datos
         this.allItems.set(all);
-        this.visibleItems.set(sortHierarchically(visible));
-        this.hiddenItems.set(sortHierarchically(hidden));
+        this.visibleItems.set(visible);
+        this.hiddenItems.set(hidden);
+
+        // Calcular jerarquías y padres disponibles de una sola vez
+        this.availableParents.set(all.filter(item => item.tipo === 'DROPDOWN'));
+        this.recalculateHierarchies();
+
         this.hasChanges.set(false);
         this.loading.set(false);
       },
@@ -116,6 +103,14 @@ export class MenuConfigurationComponent implements OnInit {
         alert('Error al cargar la configuracion del menu');
       }
     });
+  }
+
+  /**
+   * Recalcula las jerarquías de visible y hidden
+   */
+  private recalculateHierarchies(): void {
+    this.visibleHierarchy.set(this.buildHierarchy(this.visibleItems()));
+    this.hiddenHierarchy.set(this.buildHierarchy(this.hiddenItems()));
   }
 
   /**
@@ -164,6 +159,7 @@ export class MenuConfigurationComponent implements OnInit {
       this.visibleItems.set(currItems);
     }
     this.updateOrders();
+    this.recalculateHierarchies();
     this.hasChanges.set(true);
   }
 
@@ -180,6 +176,7 @@ export class MenuConfigurationComponent implements OnInit {
       this.hiddenItems.set(currItems);
     }
     this.updateOrders();
+    this.recalculateHierarchies();
     this.hasChanges.set(true);
   }
 
@@ -190,12 +187,14 @@ export class MenuConfigurationComponent implements OnInit {
     const index = hidden.findIndex(i => i.codigo === item.codigo);
     if (index > -1) {
       hidden.splice(index, 1);
+      item.visible = true;
       visible.push(item);
     }
 
     this.hiddenItems.set(hidden);
     this.visibleItems.set(visible);
     this.updateOrders();
+    this.recalculateHierarchies();
     this.hasChanges.set(true);
   }
 
@@ -206,12 +205,14 @@ export class MenuConfigurationComponent implements OnInit {
     const index = visible.findIndex(i => i.codigo === item.codigo);
     if (index > -1) {
       visible.splice(index, 1);
+      item.visible = false;
       hidden.push(item);
     }
 
     this.visibleItems.set(visible);
     this.hiddenItems.set(hidden);
     this.updateOrders();
+    this.recalculateHierarchies();
     this.hasChanges.set(true);
   }
 
@@ -310,6 +311,9 @@ export class MenuConfigurationComponent implements OnInit {
         // Actualizar en allItems
         this.allItems.set(updateInList(this.allItems()));
 
+        // Recalcular jerarquías
+        this.recalculateHierarchies();
+
         this.closeParentModal();
       },
       error: (err) => {
@@ -339,6 +343,9 @@ export class MenuConfigurationComponent implements OnInit {
         }
 
         this.allItems.set(updateInList(this.allItems()));
+
+        // Recalcular jerarquías
+        this.recalculateHierarchies();
       },
       error: (err) => {
         console.error('Error removing parent:', err);
