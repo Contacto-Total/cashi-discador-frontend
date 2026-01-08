@@ -215,7 +215,6 @@
               <th class="col-money">Recaudo</th>
               <th class="col-pct" title="(Recaudo / Proyección) × 100">% Efectividad Proyección</th>
               <th class="col-pct" title="(Promesas / Gestiones) × 100">% Efectividad General</th>
-              <th class="col-status">Estado Promesas</th>
               <th class="col-trend">Tendencia</th>
             </tr>
           </thead>
@@ -248,19 +247,6 @@
                 <div class="efectividad-bar efectividad-general">
                   <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadGeneral, 100)"></div>
                   <span class="bar-label">{{ agent.efectividadGeneral | number:'1.0-0' }}%</span>
-                </div>
-              </td>
-              <td class="col-status">
-                <div class="status-pills">
-                  <span class="pill pending" *ngIf="agent.promesasPendientes > 0">
-                    {{ agent.promesasPendientes }} Pend.
-                  </span>
-                  <span class="pill paid" *ngIf="agent.promesasPagadas > 0">
-                    {{ agent.promesasPagadas }} Pag.
-                  </span>
-                  <span class="pill overdue" *ngIf="agent.promesasVencidas > 0">
-                    {{ agent.promesasVencidas }} Venc.
-                  </span>
                 </div>
               </td>
               <td class="col-trend">
