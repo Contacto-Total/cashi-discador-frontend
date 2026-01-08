@@ -224,6 +224,11 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/meta-productividad/meta-productividad.component').then(m => m.MetaProductividadComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/maintenance/menu-config',
+    loadComponent: () => import('./maintenance/components/menu-configuration/menu-configuration.component').then(m => m.MenuConfigurationComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   // ========================================
   // PAGOS BANCARIOS
