@@ -5246,6 +5246,11 @@ body.light-theme .status-modal {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
 }
 
+html:not(.dark) .status-modal h3,
+body.light-theme .status-modal h3 {
+  color: #fff !important;
+}
+
 html:not(.dark) .status-modal-close,
 body.light-theme .status-modal-close {
   background: rgba(0, 0, 0, 0.05) !important;
