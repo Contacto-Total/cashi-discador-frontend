@@ -136,13 +136,25 @@
 
       <div class="kpi-card">
         <div class="kpi-icon orange">
+          <lucide-angular name="percent" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">{{ summary?.efectividadProyeccion | number:'1.1-1' }}%</span>
+          <span class="kpi-label">% Efectividad Proyección</span>
+          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividadProyeccion)">
+            {{ formatPercent(summary?.cambioEfectividadProyeccion) }}
+          </span>
+        </div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon teal">
           <lucide-angular name="target" [size]="24"></lucide-angular>
         </div>
         <div class="kpi-content">
-          <span class="kpi-value">{{ summary?.efectividadPromedio | number:'1.1-1' }}%</span>
-          <span class="kpi-label">Efectividad Promedio</span>
-          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividad)">
-            {{ formatPercent(summary?.cambioEfectividad) }}
+          <span class="kpi-value">{{ summary?.efectividadGeneral | number:'1.1-1' }}%</span>
+          <span class="kpi-label">% Efectividad General</span>
+          <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividadGeneral)">
+            {{ formatPercent(summary?.cambioEfectividadGeneral) }}
           </span>
         </div>
       </div>
@@ -199,8 +211,11 @@
               <th class="col-agent">Agente</th>
               <th class="col-num">Gestiones</th>
               <th class="col-num">Promesas</th>
-              <th class="col-money">Monto</th>
-              <th class="col-pct">Efectividad</th>
+              <th class="col-money">Monto Promesas</th>
+              <th class="col-money">Proyección</th>
+              <th class="col-money">Recaudo</th>
+              <th class="col-pct" title="(Recaudo / Proyección) × 100">% Efectividad Proyección</th>
+              <th class="col-pct" title="(Promesas / Gestiones) × 100">% Efectividad General</th>
               <th class="col-status">Estado Promesas</th>
               <th class="col-trend">Tendencia</th>
             </tr>
@@ -223,10 +238,18 @@
                 <span class="promesas-badge">{{ agent.totalPromesas | number }}</span>
               </td>
               <td class="col-money">S/ {{ formatMoney(agent.montoPromesas) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agent.proyeccion) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agent.recaudo) }}</td>
               <td class="col-pct">
                 <div class="efectividad-bar">
-                  <div class="bar-fill" [style.width.%]="agent.efectividad"></div>
-                  <span class="bar-label">{{ agent.efectividad | number:'1.1-1' }}%</span>
+                  <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadProyeccion, 100)"></div>
+                  <span class="bar-label">{{ agent.efectividadProyeccion | number:'1.0-0' }}%</span>
+                </div>
+              </td>
+              <td class="col-pct">
+                <div class="efectividad-bar efectividad-general">
+                  <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadGeneral, 100)"></div>
+                  <span class="bar-label">{{ agent.efectividadGeneral | number:'1.0-0' }}%</span>
                 </div>
               </td>
               <td class="col-status">

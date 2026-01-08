@@ -28,6 +28,9 @@ type PeriodType = 'today' | 'week' | 'month' | 'lastMonth' | 'year' | 'custom';
   styleUrls: ['./agent-productivity.component.css']
 })
 export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewInit {
+  // Exponer Math para el template
+  Math = Math;
+
   // Filtros
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];

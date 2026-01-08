@@ -53,12 +53,16 @@ export interface ProductivitySummary {
   totalGestiones: number;
   totalPromesas: number;
   montoTotalPromesas: number;
-  efectividadPromedio: number;
+  proyeccionTotal: number;
+  recaudoTotal: number;
+  efectividadProyeccion: number;
+  efectividadGeneral: number;
   totalAgentes: number;
   cambioGestiones?: number;
   cambioPromesas?: number;
   cambioMonto?: number;
-  cambioEfectividad?: number;
+  cambioEfectividadProyeccion?: number;
+  cambioEfectividadGeneral?: number;
 }
 
 export interface AgentMetrics {
@@ -67,7 +71,10 @@ export interface AgentMetrics {
   totalGestiones: number;
   totalPromesas: number;
   montoPromesas: number;
-  efectividad: number;
+  proyeccion: number;
+  recaudo: number;
+  efectividadProyeccion: number;
+  efectividadGeneral: number;
   trend: 'up' | 'down' | 'stable';
   ranking: number;
   tipificaciones?: { [key: string]: number };
