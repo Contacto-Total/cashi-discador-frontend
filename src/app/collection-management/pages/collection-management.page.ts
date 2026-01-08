@@ -203,56 +203,15 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 </div>
               }
 
-              @if (activeTab() === 'historial') {
-                <div class="space-y-1">
-                  <!-- Filtros compactos para vista de tabs -->
-                  <div class="flex items-center gap-1 pb-1 border-b border-gray-200 dark:border-gray-700">
-                    <button
-                      (click)="historialFilter.set('TODOS')"
-                      [class]="'px-1.5 py-0.5 text-[10px] rounded ' +
-                        (historialFilter() === 'TODOS' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
-                      Todos
-                    </button>
-                    <button
-                      (click)="historialFilter.set('CD')"
-                      [class]="'px-1.5 py-0.5 text-[10px] rounded ' +
-                        (historialFilter() === 'CD' ? 'bg-green-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
-                      [CD]
-                    </button>
-                    <button
-                      (click)="historialFilter.set('CI')"
-                      [class]="'px-1.5 py-0.5 text-[10px] rounded ' +
-                        (historialFilter() === 'CI' ? 'bg-amber-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
-                      [CI]
-                    </button>
-                    <span class="text-[10px] text-gray-400 ml-auto">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
+              @if (activeTab() === 'pautas') {
+                <div class="flex flex-col items-center justify-center h-full py-8">
+                  <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
+                    <lucide-angular name="construction" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
                   </div>
-                  @if (historialGestiones().length === 0) {
-                    <div class="text-center py-4">
-                      <p class="text-xs text-gray-400">Sin gestiones previas</p>
-                      <button (click)="loadManagementHistory()" class="mt-2 px-2 py-1 bg-blue-700 text-white dark:bg-blue-500 text-xs rounded">Recargar</button>
-                    </div>
-                  } @else if (historialGestionesFiltrado().length === 0) {
-                    <div class="text-center py-4">
-                      <p class="text-xs text-gray-400">No hay gestiones con el filtro seleccionado</p>
-                    </div>
-                  } @else {
-                    @for (gestion of historialGestionesFiltrado(); track $index) {
-                      <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5">
-                        <div class="flex justify-between items-center text-xs">
-                          <span class="font-bold text-gray-600 dark:text-gray-300">{{ gestion.fecha }}</span>
-                          <span class="text-gray-400">{{ gestion.nombreAgente }}</span>
-                        </div>
-                        <div class="text-xs font-semibold text-blue-600 dark:text-blue-300 mt-0.5">{{ gestion.tipificacionCompleta }}</div>
-                        <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ gestion.observacion }}</div>
-                        @if (gestion.schedule) {
-                          <button (click)="openScheduleDetail(gestion.id)" class="text-xs text-purple-600 dark:text-purple-400 mt-0.5 hover:underline">
-                            Ver cronograma →
-                          </button>
-                        }
-                      </div>
-                    }
-                  }
+                  <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Funcionalidad en Desarrollo</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center px-4">
+                    Las pautas de gestión estarán disponibles próximamente
+                  </p>
                 </div>
               }
             </div>
@@ -829,12 +788,19 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
         </div>
 
         <!-- SECCION DE HISTORIAL DE GESTIONES - Compacto -->
-        <div class="h-44 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-colors duration-300">
+        <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-44') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
               <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
             </div>
+            <!-- Botón de expandir/contraer - Centro -->
+            <button
+              (click)="historialExpanded.set(!historialExpanded())"
+              class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              [title]="historialExpanded() ? 'Contraer historial' : 'Expandir historial'">
+              <lucide-angular [name]="historialExpanded() ? 'chevron-down' : 'chevron-up'" [size]="16"></lucide-angular>
+            </button>
             <!-- Filtros de tipificación -->
             <div class="flex items-center gap-1">
               <button
@@ -1079,6 +1045,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Filtro de historial de gestiones por tipo de contacto
   protected historialFilter = signal<'TODOS' | 'CI' | 'CD'>('TODOS');
 
+  // Signal para expandir/contraer el historial de gestiones
+  protected historialExpanded = signal<boolean>(false);
+
   // Computed signal para filtrar el historial según el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
     const filter = this.historialFilter();
@@ -1266,7 +1235,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   tabs = [
     { id: 'cliente', label: 'Cliente', icon: 'user' },
-    { id: 'historial', label: 'Historial', icon: 'history' }
+    { id: 'pautas', label: 'Pautas', icon: 'book-open' }
   ];
 
   managementForm: ManagementForm = {
@@ -3920,7 +3889,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.callDuration.set(0);
     this.callStartTime = undefined;
 
-    this.activeTab.set('historial');
+    this.activeTab.set('cliente');
 
     // Desbloquear llamadas entrantes - tipificación completada
     this.isTipifying.set(false);
