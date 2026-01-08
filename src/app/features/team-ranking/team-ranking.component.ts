@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, HostBinding, Inject, PLATFORM_ID } from '@angular/core';
-import { CommonModule, DecimalPipe, isPlatformBrowser } from '@angular/common';
+import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { TeamRankingService, TeamRankingDTO, AgentRankingInfo } from './team-ranking.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -10,32 +10,24 @@ import { interval, Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, LucideAngularModule, DecimalPipe],
   templateUrl: './team-ranking.component.html',
-  styleUrls: ['./team-ranking.component.css']
+  styleUrls: ['./team-ranking.component.css'],
+  encapsulation: ViewEncapsulation.None
 })
 export class TeamRankingComponent implements OnInit, OnDestroy {
-  @HostBinding('class.light-mode') isLightMode = false;
   ranking: TeamRankingDTO | null = null;
   loading = true;
   error: string | null = null;
   agenteId: number | null = null;
 
   private refreshSubscription?: Subscription;
-  private themeObserver?: MutationObserver;
   private readonly REFRESH_INTERVAL = 60000; // 1 minuto
 
   constructor(
     private teamRankingService: TeamRankingService,
-    private authService: AuthService,
-    @Inject(PLATFORM_ID) private platformId: Object
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
-    // Detectar tema light/dark
-    if (isPlatformBrowser(this.platformId)) {
-      this.checkLightMode();
-      this.observeThemeChanges();
-    }
-
     this.agenteId = this.authService.getCurrentUserId();
     if (this.agenteId) {
       this.loadRanking();
@@ -46,25 +38,8 @@ export class TeamRankingComponent implements OnInit, OnDestroy {
     }
   }
 
-  private checkLightMode(): void {
-    this.isLightMode = document.body.classList.contains('light-mode');
-  }
-
-  private observeThemeChanges(): void {
-    this.themeObserver = new MutationObserver(() => {
-      this.checkLightMode();
-    });
-    this.themeObserver.observe(document.body, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-  }
-
   ngOnDestroy(): void {
     this.stopAutoRefresh();
-    if (this.themeObserver) {
-      this.themeObserver.disconnect();
-    }
   }
 
   loadRanking(): void {

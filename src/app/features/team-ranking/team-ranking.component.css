@@ -456,159 +456,159 @@
 /* ========================================
    LIGHT MODE
    ======================================== */
-.team-ranking-container.light-mode {
+body.light-mode .team-ranking-container {
   background: #f8fafc;
 }
 
-.team-ranking-container.light-mode .ranking-header {
+body.light-mode .ranking-header {
   border-bottom-color: rgba(0, 0, 0, 0.1);
 }
 
-.team-ranking-container.light-mode .header-title h1 {
+body.light-mode .header-title h1 {
   color: #1e293b;
 }
 
-.team-ranking-container.light-mode .last-update {
+body.light-mode .last-update {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .btn-refresh {
+body.light-mode .btn-refresh {
   background: rgba(59, 130, 246, 0.1);
   border-color: rgba(59, 130, 246, 0.2);
 }
 
-.team-ranking-container.light-mode .btn-refresh:hover {
+body.light-mode .btn-refresh:hover {
   background: rgba(59, 130, 246, 0.2);
 }
 
-.team-ranking-container.light-mode .loading-container,
-.team-ranking-container.light-mode .error-container {
+body.light-mode .loading-container,
+body.light-mode .error-container {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .summary-card {
+body.light-mode .summary-card {
   background: #ffffff;
   border-color: #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.team-ranking-container.light-mode .summary-card.highlight {
+body.light-mode .summary-card.highlight {
   background: rgba(16, 185, 129, 0.05);
   border-color: rgba(16, 185, 129, 0.2);
 }
 
-.team-ranking-container.light-mode .summary-icon {
+body.light-mode .summary-icon {
   background: #f1f5f9;
 }
 
-.team-ranking-container.light-mode .summary-value {
+body.light-mode .summary-value {
   color: #1e293b;
 }
 
-.team-ranking-container.light-mode .summary-label {
+body.light-mode .summary-label {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .my-position-card {
+body.light-mode .my-position-card {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
   border-color: rgba(59, 130, 246, 0.2);
 }
 
-.team-ranking-container.light-mode .my-position-header {
+body.light-mode .my-position-header {
   color: #3b82f6;
 }
 
-.team-ranking-container.light-mode .position-number {
+body.light-mode .position-number {
   border-right-color: rgba(0, 0, 0, 0.1);
 }
 
-.team-ranking-container.light-mode .position-number .position {
+body.light-mode .position-number .position {
   color: #1e293b;
 }
 
-.team-ranking-container.light-mode .position-number .total {
+body.light-mode .position-number .total {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .metric-value {
+body.light-mode .metric-value {
   color: #1e293b;
 }
 
-.team-ranking-container.light-mode .metric-label {
+body.light-mode .metric-label {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .metric.highlight {
+body.light-mode .metric.highlight {
   background: rgba(16, 185, 129, 0.08);
 }
 
-.team-ranking-container.light-mode .ranking-table-container {
+body.light-mode .ranking-table-container {
   background: #ffffff;
   border-color: #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.team-ranking-container.light-mode .ranking-table thead {
+body.light-mode .ranking-table thead {
   background: #f8fafc;
 }
 
-.team-ranking-container.light-mode .ranking-table th {
+body.light-mode .ranking-table th {
   color: #475569;
   border-bottom-color: #e2e8f0;
 }
 
-.team-ranking-container.light-mode .ranking-table td {
+body.light-mode .ranking-table td {
   color: #334155;
   border-bottom-color: #f1f5f9;
 }
 
-.team-ranking-container.light-mode .ranking-table tbody tr:hover {
+body.light-mode .ranking-table tbody tr:hover {
   background: rgba(59, 130, 246, 0.04);
 }
 
-.team-ranking-container.light-mode .ranking-table tbody tr.es-yo {
+body.light-mode .ranking-table tbody tr.es-yo {
   background: rgba(59, 130, 246, 0.08);
 }
 
-.team-ranking-container.light-mode .ranking-table tbody tr.top-3 {
+body.light-mode .ranking-table tbody tr.top-3 {
   background: rgba(255, 215, 0, 0.08);
 }
 
-.team-ranking-container.light-mode .ranking-table tbody tr.es-yo.top-3 {
+body.light-mode .ranking-table tbody tr.es-yo.top-3 {
   background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(59, 130, 246, 0.08) 100%);
 }
 
-.team-ranking-container.light-mode .badge-yo {
+body.light-mode .badge-yo {
   background: rgba(59, 130, 246, 0.15);
   color: #2563eb;
 }
 
-.team-ranking-container.light-mode .no-data {
+body.light-mode .no-data {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .no-data p {
+body.light-mode .no-data p {
   color: #475569;
 }
 
-.team-ranking-container.light-mode .metas-card {
+body.light-mode .metas-card {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
   border-color: rgba(139, 92, 246, 0.2);
 }
 
-.team-ranking-container.light-mode .metas-header {
+body.light-mode .metas-header {
   color: #7c3aed;
 }
 
-.team-ranking-container.light-mode .meta-label {
+body.light-mode .meta-label {
   color: #64748b;
 }
 
-.team-ranking-container.light-mode .meta-values {
+body.light-mode .meta-values {
   color: #1e293b;
 }
 
-.team-ranking-container.light-mode .progress-bar-container {
+body.light-mode .progress-bar-container {
   background: rgba(0, 0, 0, 0.08);
 }
 
