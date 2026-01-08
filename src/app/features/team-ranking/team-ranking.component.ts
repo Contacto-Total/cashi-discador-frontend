@@ -27,7 +27,7 @@ export class TeamRankingComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    this.agenteId = this.authService.getUserId();
+    this.agenteId = this.authService.getCurrentUserId();
     if (this.agenteId) {
       this.loadRanking();
       this.startAutoRefresh();
