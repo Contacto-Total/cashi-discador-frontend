@@ -30,12 +30,26 @@ export interface TeamTotals {
   totalAgentes: number;
 }
 
+export interface MetasProgreso {
+  tieneMeta: boolean;
+  metaGestionesDiarias: number | null;
+  metaPromesasDiarias: number | null;
+  metaMontoDiario: number | null;
+  gestionesActuales: number | null;
+  promesasActuales: number | null;
+  montoActual: number | null;
+  porcentajeGestiones: number | null;
+  porcentajePromesas: number | null;
+  porcentajeMonto: number | null;
+}
+
 export interface TeamRankingDTO {
   miRanking: AgentRankingInfo | null;
   ranking: AgentRankingInfo[];
   nombreSubcartera: string;
   nombreCartera: string;
   totalesEquipo: TeamTotals;
+  metasProgreso: MetasProgreso | null;
 }
 
 @Injectable({

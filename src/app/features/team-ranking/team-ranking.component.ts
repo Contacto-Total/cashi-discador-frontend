@@ -112,6 +112,14 @@ export class TeamRankingComponent implements OnInit, OnDestroy {
     return '#EF4444';
   }
 
+  getMetaColor(porcentaje: number | null): string {
+    if (!porcentaje) return '#EF4444';
+    if (porcentaje >= 100) return '#10B981'; // Verde - Meta cumplida
+    if (porcentaje >= 70) return '#3B82F6';  // Azul - Buen progreso
+    if (porcentaje >= 40) return '#F59E0B';  // Amarillo - Progreso medio
+    return '#EF4444';                         // Rojo - Bajo progreso
+  }
+
   formatMonto(monto: number): string {
     if (monto >= 1000000) {
       return (monto / 1000000).toFixed(1) + 'M';
