@@ -382,6 +382,144 @@
   font-size: 0.85rem;
 }
 
+/* ========================================
+   LIGHT MODE
+   ======================================== */
+:host-context(body.light-mode) .team-ranking-container {
+  background: #f8fafc;
+}
+
+:host-context(body.light-mode) .ranking-header {
+  border-bottom-color: rgba(0, 0, 0, 0.1);
+}
+
+:host-context(body.light-mode) .header-title h1 {
+  color: #1e293b;
+}
+
+:host-context(body.light-mode) .last-update {
+  color: #64748b;
+}
+
+:host-context(body.light-mode) .btn-refresh {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+:host-context(body.light-mode) .btn-refresh:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+:host-context(body.light-mode) .loading-container,
+:host-context(body.light-mode) .error-container {
+  color: #64748b;
+}
+
+:host-context(body.light-mode) .summary-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+:host-context(body.light-mode) .summary-card.highlight {
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+:host-context(body.light-mode) .summary-icon {
+  background: #f1f5f9;
+}
+
+:host-context(body.light-mode) .summary-value {
+  color: #1e293b;
+}
+
+:host-context(body.light-mode) .summary-label {
+  color: #64748b;
+}
+
+:host-context(body.light-mode) .my-position-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+:host-context(body.light-mode) .my-position-header {
+  color: #3b82f6;
+}
+
+:host-context(body.light-mode) .position-number {
+  border-right-color: rgba(0, 0, 0, 0.1);
+}
+
+:host-context(body.light-mode) .position-number .position {
+  color: #1e293b;
+}
+
+:host-context(body.light-mode) .position-number .total {
+  color: #64748b;
+}
+
+:host-context(body.light-mode) .metric-value {
+  color: #1e293b;
+}
+
+:host-context(body.light-mode) .metric-label {
+  color: #64748b;
+}
+
+:host-context(body.light-mode) .metric.highlight {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+:host-context(body.light-mode) .ranking-table-container {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+:host-context(body.light-mode) .ranking-table thead {
+  background: #f8fafc;
+}
+
+:host-context(body.light-mode) .ranking-table th {
+  color: #475569;
+  border-bottom-color: #e2e8f0;
+}
+
+:host-context(body.light-mode) .ranking-table td {
+  color: #334155;
+  border-bottom-color: #f1f5f9;
+}
+
+:host-context(body.light-mode) .ranking-table tbody tr:hover {
+  background: rgba(59, 130, 246, 0.04);
+}
+
+:host-context(body.light-mode) .ranking-table tbody tr.es-yo {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+:host-context(body.light-mode) .ranking-table tbody tr.top-3 {
+  background: rgba(255, 215, 0, 0.08);
+}
+
+:host-context(body.light-mode) .ranking-table tbody tr.es-yo.top-3 {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(59, 130, 246, 0.08) 100%);
+}
+
+:host-context(body.light-mode) .badge-yo {
+  background: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}
+
+:host-context(body.light-mode) .no-data {
+  color: #64748b;
+}
+
+:host-context(body.light-mode) .no-data p {
+  color: #475569;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .team-ranking-container {
