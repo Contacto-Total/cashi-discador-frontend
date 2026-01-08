@@ -294,7 +294,12 @@
 
     <div class="alert-footer">
       <button class="btn-dismiss" (click)="dismissAlert()">
-        Entendido
+        <span class="btn-dismiss-progress" [style.width.%]="alertProgress"></span>
+        <span class="btn-dismiss-content">
+          <lucide-angular name="check" [size]="18" class="btn-dismiss-icon"></lucide-angular>
+          <span class="btn-dismiss-label">Entendido</span>
+          <span class="btn-dismiss-timer">{{ alertRemainingTime | number:'1.0-0' }}s</span>
+        </span>
       </button>
     </div>
   </div>

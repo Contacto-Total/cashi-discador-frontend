@@ -48,6 +48,25 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   alertasDismissed: Set<string> = new Set(); // IDs de alertas ya cerradas (agente-estado)
   soundEnabled = false; // El usuario debe activar el sonido manualmente (política de navegadores)
 
+  // Timer de alerta con progreso visual
+  alertDuration = 0; // Duración total en segundos
+  alertRemainingTime = 0; // Tiempo restante en segundos
+  alertProgress = 100; // Porcentaje de progreso (100 -> 0)
+  private alertTimerSubscription?: Subscription;
+
+  // Duraciones por tipo de estado (en segundos)
+  private readonly ALERT_DURATIONS: Record<string, number> = {
+    'DISPONIBLE': 8,
+    'EN_LLAMADA': 10,
+    'TIPIFICANDO': 10,
+    'EN_REUNION': 12,
+    'REFRIGERIO': 12,
+    'SSHH': 10,
+    'EN_MANUAL': 8,
+    'PAUSADO': 8
+  };
+  private readonly DEFAULT_ALERT_DURATION = 10;
+
   private readonly SOUND_STORAGE_KEY = 'supervisor_sound_enabled';
 
   // Modal de cambio de estado de agente
@@ -71,11 +90,34 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadSoundPreference(); // Cargar preferencia guardada
     this.initAlarmAudio();
+    this.initSpeechVoices(); // Pre-cargar voces de texto a voz
     this.loadCampaigns();
     this.startAutoDialerPolling();
     this.startAgentesPolling();
     this.startLlamadasPolling();
     this.startLocalTimer(); // Timer local para conteo fluido
+  }
+
+  /**
+   * Pre-carga las voces de speechSynthesis para evitar delays
+   */
+  private initSpeechVoices(): void {
+    if (!('speechSynthesis' in window)) return;
+
+    // Función para cargar voces
+    const loadVoices = () => {
+      this.speechVoices = speechSynthesis.getVoices();
+      this.spanishVoice = this.speechVoices.find(v => v.lang.startsWith('es')) || null;
+      console.log(`[Monitor] Voces cargadas: ${this.speechVoices.length}, voz española: ${this.spanishVoice?.name || 'ninguna'}`);
+    };
+
+    // Cargar voces inmediatamente si están disponibles
+    loadVoices();
+
+    // También escuchar el evento voiceschanged (necesario en algunos navegadores)
+    speechSynthesis.onvoiceschanged = () => {
+      loadVoices();
+    };
   }
 
   /**
@@ -121,6 +163,9 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     if (this.llamadasSubscription) {
       this.llamadasSubscription.unsubscribe();
     }
+    if (this.alertTimerSubscription) {
+      this.alertTimerSubscription.unsubscribe();
+    }
     this.stopAlarm();
     // Cerrar el AudioContext
     if (this.audioContext) {
@@ -140,6 +185,10 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   private oscillator: OscillatorNode | null = null;
   private gainNode: GainNode | null = null;
   private isAlarmPlaying = false;
+
+  // Voces de speechSynthesis pre-cargadas
+  private speechVoices: SpeechSynthesisVoice[] = [];
+  private spanishVoice: SpeechSynthesisVoice | null = null;
 
   /**
    * Carga todas las campañas para el selector
@@ -279,11 +328,53 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       timestamp: new Date()
     };
 
-    // Reproducir alerta con voz si está habilitado
-    if (agente.sonidoAlerta && this.soundEnabled) {
+    // Iniciar timer de alerta con duración según el tipo de estado
+    this.startAlertTimer(agente.estadoActual);
+
+    // Reproducir alerta con voz si el sonido está habilitado
+    // Siempre reproducir para todas las alertas (no depende de sonidoAlerta del backend)
+    if (this.soundEnabled) {
       this.speakAlert(agente);
       this.playAlarm();
     }
+  }
+
+  /**
+   * Inicia el timer de la alerta con progreso visual
+   */
+  private startAlertTimer(estado: string): void {
+    // Limpiar timer anterior si existe
+    if (this.alertTimerSubscription) {
+      this.alertTimerSubscription.unsubscribe();
+    }
+
+    // Obtener duración según el estado
+    this.alertDuration = this.ALERT_DURATIONS[estado] || this.DEFAULT_ALERT_DURATION;
+    this.alertRemainingTime = this.alertDuration;
+    this.alertProgress = 100;
+
+    // Iniciar countdown cada 100ms para animación fluida
+    this.alertTimerSubscription = interval(100).subscribe(() => {
+      this.alertRemainingTime -= 0.1;
+      this.alertProgress = (this.alertRemainingTime / this.alertDuration) * 100;
+
+      if (this.alertRemainingTime <= 0) {
+        this.dismissAlert();
+      }
+    });
+  }
+
+  /**
+   * Detiene el timer de la alerta
+   */
+  private stopAlertTimer(): void {
+    if (this.alertTimerSubscription) {
+      this.alertTimerSubscription.unsubscribe();
+      this.alertTimerSubscription = undefined;
+    }
+    this.alertDuration = 0;
+    this.alertRemainingTime = 0;
+    this.alertProgress = 100;
   }
 
   /**
@@ -301,20 +392,22 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     // Cancelar habla anterior
     speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(mensaje);
-    utterance.lang = 'es-ES';
-    utterance.rate = 0.9;  // Velocidad
-    utterance.pitch = 0.8; // Tono bajo = más serio
-    utterance.volume = 1.0;
+    // Delay necesario después de cancel() para evitar bug de Chrome
+    // donde speak() es ignorado si se llama inmediatamente después de cancel()
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(mensaje);
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.9;  // Velocidad
+      utterance.pitch = 0.8; // Tono bajo = más serio
+      utterance.volume = 1.0;
 
-    // Buscar voz en español
-    const voices = speechSynthesis.getVoices();
-    const spanishVoice = voices.find(v => v.lang.startsWith('es'));
-    if (spanishVoice) {
-      utterance.voice = spanishVoice;
-    }
+      // Usar voz pre-cargada si está disponible
+      if (this.spanishVoice) {
+        utterance.voice = this.spanishVoice;
+      }
 
-    speechSynthesis.speak(utterance);
+      speechSynthesis.speak(utterance);
+    }, 100); // 100ms de delay para asegurar que cancel() termine
   }
 
   /**
@@ -342,11 +435,20 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       const alertKey = `${this.alertaActiva.agente.idUsuario}-${this.alertaActiva.agente.estadoActual}`;
       this.alertasDismissed.add(alertKey);
       this.alertaActiva = null;
+      this.stopAlertTimer();
       this.stopAlarm();
       // Detener voz también
       if ('speechSynthesis' in window) {
         speechSynthesis.cancel();
       }
+
+      // Verificar si hay más alertas pendientes después de un pequeño delay
+      // para permitir que el estado se actualice correctamente
+      setTimeout(() => {
+        if (this.agentesMonitoreo.length > 0) {
+          this.checkAgentAlerts(this.agentesMonitoreo);
+        }
+      }, 500); // 500ms de delay para evitar conflictos con speechSynthesis
     }
   }
 
@@ -401,14 +503,21 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    * Reproduce el sonido de alarma usando Web Audio API
    * Genera un beep intermitente tipo alarma
    */
-  private playAlarm(): void {
+  private async playAlarm(): Promise<void> {
     // Solo reproducir si el sonido está habilitado
     if (!this.audioContext || this.isAlarmPlaying || !this.soundEnabled) return;
 
     try {
       // Reanudar el AudioContext si está suspendido (política de autoplay)
+      // Esperar a que se complete antes de reproducir
       if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume();
+        await this.audioContext.resume();
+      }
+
+      // Verificar que el contexto esté activo
+      if (this.audioContext.state !== 'running') {
+        console.warn('[Monitor] AudioContext no está en estado running:', this.audioContext.state);
+        return;
       }
 
       this.isAlarmPlaying = true;

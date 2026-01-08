@@ -5398,6 +5398,22 @@ body.light-theme .alert-modal {
   box-shadow: 0 20px 60px rgba(239, 68, 68, 0.2), 0 0 40px rgba(239, 68, 68, 0.08) !important;
 }
 
+html:not(.dark) .alert-modal .alert-header,
+body.light-theme .alert-modal .alert-header {
+  color: #fff !important;
+}
+
+html:not(.dark) .alert-modal .alert-header h3,
+body.light-theme .alert-modal .alert-header h3 {
+  color: #fff !important;
+}
+
+html:not(.dark) .alert-modal .alert-header .alert-icon,
+body.light-theme .alert-modal .alert-header .alert-icon {
+  color: #fff !important;
+}
+
+
 html:not(.dark) .alert-close,
 body.light-theme .alert-close {
   background: rgba(0, 0, 0, 0.05) !important;
@@ -5450,5 +5466,35 @@ body.light-theme .alert-message {
 html:not(.dark) .alert-message lucide-angular,
 body.light-theme .alert-message lucide-angular {
   color: #EF4444 !important;
+}
+
+/* Botón Entendido - LIGHT MODE */
+html:not(.dark) .btn-dismiss,
+body.light-theme .btn-dismiss {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+html:not(.dark) .btn-dismiss:hover,
+body.light-theme .btn-dismiss:hover {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2) !important;
+}
+
+html:not(.dark) .btn-dismiss-progress,
+body.light-theme .btn-dismiss-progress {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
+}
+
+html:not(.dark) .btn-dismiss-content,
+body.light-theme .btn-dismiss-content {
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+html:not(.dark) .btn-dismiss-timer,
+body.light-theme .btn-dismiss-timer {
+  background: rgba(255, 255, 255, 0.2) !important;
 }
 
