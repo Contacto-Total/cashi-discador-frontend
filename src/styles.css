@@ -5498,3 +5498,71 @@ body.light-theme .btn-dismiss-timer {
   background: rgba(255, 255, 255, 0.2) !important;
 }
 
+/* ============================================
+   Campaign Monitoring - Header Buttons LIGHT MODE
+   ============================================ */
+
+/* Header container */
+html:not(.dark) .monitoring-container .header,
+body.light-theme .monitoring-container .header {
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+/* Botón Volver a Campañas */
+html:not(.dark) .btn-back,
+body.light-theme .btn-back {
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html:not(.dark) .btn-back:hover,
+body.light-theme .btn-back:hover {
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%) !important;
+  border-color: #94a3b8 !important;
+}
+
+/* Botón Sonido OFF (inactivo) */
+html:not(.dark) .btn-sound,
+body.light-theme .btn-sound {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+  border: 1px solid #f87171 !important;
+  color: #b91c1c !important;
+}
+
+html:not(.dark) .btn-sound:hover,
+body.light-theme .btn-sound:hover {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+  border-color: #ef4444 !important;
+}
+
+/* Botón Sonido ON (activo) */
+html:not(.dark) .btn-sound.active,
+body.light-theme .btn-sound.active {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+  border: 1px solid #4ade80 !important;
+  color: #15803d !important;
+}
+
+html:not(.dark) .btn-sound.active:hover,
+body.light-theme .btn-sound.active:hover {
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%) !important;
+  border-color: #22c55e !important;
+}
+
+/* Header title en monitoring */
+html:not(.dark) .monitoring-container > .flex.items-center h1,
+body.light-theme .monitoring-container > .flex.items-center h1 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .monitoring-container > .flex.items-center p,
+body.light-theme .monitoring-container > .flex.items-center p {
+  color: #64748b !important;
+}
+
+html:not(.dark) .monitoring-container > .header ,
+body.ligth-theme .monitoring-container > .header  {
+  background: none !important;
+}
+
