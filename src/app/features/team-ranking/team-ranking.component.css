@@ -456,159 +456,159 @@
 /* ========================================
    LIGHT MODE
    ======================================== */
-body.light-mode .team-ranking-container {
+body.light-theme .team-ranking-container {
   background: #f8fafc;
 }
 
-body.light-mode .ranking-header {
+body.light-theme .ranking-header {
   border-bottom-color: rgba(0, 0, 0, 0.1);
 }
 
-body.light-mode .header-title h1 {
+body.light-theme .header-title h1 {
   color: #1e293b;
 }
 
-body.light-mode .last-update {
+body.light-theme .last-update {
   color: #64748b;
 }
 
-body.light-mode .btn-refresh {
+body.light-theme .btn-refresh {
   background: rgba(59, 130, 246, 0.1);
   border-color: rgba(59, 130, 246, 0.2);
 }
 
-body.light-mode .btn-refresh:hover {
+body.light-theme .btn-refresh:hover {
   background: rgba(59, 130, 246, 0.2);
 }
 
-body.light-mode .loading-container,
-body.light-mode .error-container {
+body.light-theme .loading-container,
+body.light-theme .error-container {
   color: #64748b;
 }
 
-body.light-mode .summary-card {
+body.light-theme .summary-card {
   background: #ffffff;
   border-color: #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-body.light-mode .summary-card.highlight {
+body.light-theme .summary-card.highlight {
   background: rgba(16, 185, 129, 0.05);
   border-color: rgba(16, 185, 129, 0.2);
 }
 
-body.light-mode .summary-icon {
+body.light-theme .summary-icon {
   background: #f1f5f9;
 }
 
-body.light-mode .summary-value {
+body.light-theme .summary-value {
   color: #1e293b;
 }
 
-body.light-mode .summary-label {
+body.light-theme .summary-label {
   color: #64748b;
 }
 
-body.light-mode .my-position-card {
+body.light-theme .my-position-card {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
   border-color: rgba(59, 130, 246, 0.2);
 }
 
-body.light-mode .my-position-header {
+body.light-theme .my-position-header {
   color: #3b82f6;
 }
 
-body.light-mode .position-number {
+body.light-theme .position-number {
   border-right-color: rgba(0, 0, 0, 0.1);
 }
 
-body.light-mode .position-number .position {
+body.light-theme .position-number .position {
   color: #1e293b;
 }
 
-body.light-mode .position-number .total {
+body.light-theme .position-number .total {
   color: #64748b;
 }
 
-body.light-mode .metric-value {
+body.light-theme .metric-value {
   color: #1e293b;
 }
 
-body.light-mode .metric-label {
+body.light-theme .metric-label {
   color: #64748b;
 }
 
-body.light-mode .metric.highlight {
+body.light-theme .metric.highlight {
   background: rgba(16, 185, 129, 0.08);
 }
 
-body.light-mode .ranking-table-container {
+body.light-theme .ranking-table-container {
   background: #ffffff;
   border-color: #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-body.light-mode .ranking-table thead {
+body.light-theme .ranking-table thead {
   background: #f8fafc;
 }
 
-body.light-mode .ranking-table th {
+body.light-theme .ranking-table th {
   color: #475569;
   border-bottom-color: #e2e8f0;
 }
 
-body.light-mode .ranking-table td {
+body.light-theme .ranking-table td {
   color: #334155;
   border-bottom-color: #f1f5f9;
 }
 
-body.light-mode .ranking-table tbody tr:hover {
+body.light-theme .ranking-table tbody tr:hover {
   background: rgba(59, 130, 246, 0.04);
 }
 
-body.light-mode .ranking-table tbody tr.es-yo {
+body.light-theme .ranking-table tbody tr.es-yo {
   background: rgba(59, 130, 246, 0.08);
 }
 
-body.light-mode .ranking-table tbody tr.top-3 {
+body.light-theme .ranking-table tbody tr.top-3 {
   background: rgba(255, 215, 0, 0.08);
 }
 
-body.light-mode .ranking-table tbody tr.es-yo.top-3 {
+body.light-theme .ranking-table tbody tr.es-yo.top-3 {
   background: linear-gradient(90deg, rgba(255, 215, 0, 0.1) 0%, rgba(59, 130, 246, 0.08) 100%);
 }
 
-body.light-mode .badge-yo {
+body.light-theme .badge-yo {
   background: rgba(59, 130, 246, 0.15);
   color: #2563eb;
 }
 
-body.light-mode .no-data {
+body.light-theme .no-data {
   color: #64748b;
 }
 
-body.light-mode .no-data p {
+body.light-theme .no-data p {
   color: #475569;
 }
 
-body.light-mode .metas-card {
+body.light-theme .metas-card {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
   border-color: rgba(139, 92, 246, 0.2);
 }
 
-body.light-mode .metas-header {
+body.light-theme .metas-header {
   color: #7c3aed;
 }
 
-body.light-mode .meta-label {
+body.light-theme .meta-label {
   color: #64748b;
 }
 
-body.light-mode .meta-values {
+body.light-theme .meta-values {
   color: #1e293b;
 }
 
-body.light-mode .progress-bar-container {
+body.light-theme .progress-bar-container {
   background: rgba(0, 0, 0, 0.08);
 }
 
