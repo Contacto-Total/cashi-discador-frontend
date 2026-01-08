@@ -285,15 +285,75 @@ import {
       <!-- ==================== TAB: BONOS ==================== -->
       @if (activeTab() === 'bonos') {
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
-          <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Configuración de Bonos</h2>
+          <!-- Selector de período y acciones -->
+          <div class="flex flex-wrap gap-4 items-end mb-6">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año</label>
+              <select [(ngModel)]="bonoFiltroAnio" (change)="cargarBonos()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                @for (a of aniosDisponibles; track a) {
+                  <option [value]="a">{{ a }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes</label>
+              <select [(ngModel)]="bonoFiltroMes" (change)="cargarBonos()" class="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                @for (m of mesesDisponibles; track m.value) {
+                  <option [value]="m.value">{{ m.label }}</option>
+                }
+              </select>
+            </div>
             <button (click)="nuevoBono()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
               </svg>
               Nuevo Bono
             </button>
+            <button (click)="abrirModalCopiarBonos()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Copiar de Otro Mes
+            </button>
           </div>
+
+          <!-- Modal copiar bonos -->
+          @if (mostrarModalCopiarBonos()) {
+            <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+                <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">Copiar Bonos de Otro Período</h3>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  Se copiarán todos los bonos del período origen al período actual ({{ comisionesService.getNombreMes(bonoFiltroMes) }} {{ bonoFiltroAnio }}).
+                </p>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Año Origen</label>
+                    <select [(ngModel)]="copiarBonosAnioOrigen" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                      @for (a of aniosDisponibles; track a) {
+                        <option [value]="a">{{ a }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mes Origen</label>
+                    <select [(ngModel)]="copiarBonosMesOrigen" class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white">
+                      @for (m of mesesDisponibles; track m.value) {
+                        <option [value]="m.value">{{ m.label }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                  <button (click)="cerrarModalCopiarBonos()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+                    Cancelar
+                  </button>
+                  <button (click)="copiarBonos()" [disabled]="isLoading()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-slate-400 transition-colors">
+                    {{ isLoading() ? 'Copiando...' : 'Copiar Bonos' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
 
           <!-- Formulario de bono -->
           @if (mostrarFormBono()) {
@@ -862,6 +922,11 @@ export class ComisionesPage implements OnInit {
   bonoSelectedCartera = 0;
   bonoCarteras = signal<Cartera[]>([]);
   bonoSubcarteras = signal<Subcartera[]>([]);
+  bonoFiltroAnio = new Date().getFullYear();
+  bonoFiltroMes = new Date().getMonth() + 1;
+  mostrarModalCopiarBonos = signal(false);
+  copiarBonosAnioOrigen = new Date().getFullYear();
+  copiarBonosMesOrigen = new Date().getMonth();
 
   // Reporte
   reporte = signal<ComisionReporte | null>(null);
@@ -1103,9 +1168,43 @@ export class ComisionesPage implements OnInit {
   // ==================== BONOS ====================
 
   cargarBonos() {
-    this.comisionesService.obtenerBonos().subscribe({
+    this.comisionesService.obtenerBonos(this.bonoFiltroAnio, this.bonoFiltroMes).subscribe({
       next: (data) => this.bonos.set(data),
       error: (err) => this.mostrarMensaje('Error al cargar bonos: ' + err.message, true)
+    });
+  }
+
+  abrirModalCopiarBonos() {
+    // Por defecto, mes anterior al actual
+    const mesAnterior = this.bonoFiltroMes === 1 ? 12 : this.bonoFiltroMes - 1;
+    const anioAnterior = this.bonoFiltroMes === 1 ? this.bonoFiltroAnio - 1 : this.bonoFiltroAnio;
+    this.copiarBonosMesOrigen = mesAnterior;
+    this.copiarBonosAnioOrigen = anioAnterior;
+    this.mostrarModalCopiarBonos.set(true);
+  }
+
+  cerrarModalCopiarBonos() {
+    this.mostrarModalCopiarBonos.set(false);
+  }
+
+  copiarBonos() {
+    this.isLoading.set(true);
+    this.comisionesService.copiarBonos(
+      this.copiarBonosAnioOrigen,
+      this.copiarBonosMesOrigen,
+      this.bonoFiltroAnio,
+      this.bonoFiltroMes
+    ).subscribe({
+      next: (result) => {
+        this.mostrarMensaje(`Se copiaron ${result.cantidadCopiada} bonos correctamente`, false);
+        this.cerrarModalCopiarBonos();
+        this.cargarBonos();
+      },
+      error: (err) => {
+        const errorMsg = err.error?.error || err.message || 'Error desconocido';
+        this.mostrarMensaje('Error: ' + errorMsg, true);
+      },
+      complete: () => this.isLoading.set(false)
     });
   }
 
@@ -1129,6 +1228,8 @@ export class ComisionesPage implements OnInit {
       valorBuscar: '',
       idSubcartera: undefined,
       nombreSubcartera: undefined,
+      anio: this.bonoFiltroAnio,
+      mes: this.bonoFiltroMes,
       activo: true,
       escalas: []
     });

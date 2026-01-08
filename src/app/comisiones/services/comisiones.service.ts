@@ -91,17 +91,37 @@ export class ComisionesService {
   // ==================== BONOS ====================
 
   /**
-   * Obtener todos los bonos
+   * Obtener bonos por período
    */
-  obtenerBonos(): Observable<ComisionBono[]> {
-    return this.http.get<ComisionBono[]>(`${this.baseUrl}/bonos`);
+  obtenerBonos(anio: number, mes: number): Observable<ComisionBono[]> {
+    const params = new HttpParams()
+      .set('anio', anio.toString())
+      .set('mes', mes.toString());
+    return this.http.get<ComisionBono[]>(`${this.baseUrl}/bonos`, { params });
   }
 
   /**
-   * Obtener bonos activos
+   * Obtener bonos activos por período
    */
-  obtenerBonosActivos(): Observable<ComisionBono[]> {
-    return this.http.get<ComisionBono[]>(`${this.baseUrl}/bonos/activos`);
+  obtenerBonosActivos(anio: number, mes: number): Observable<ComisionBono[]> {
+    const params = new HttpParams()
+      .set('anio', anio.toString())
+      .set('mes', mes.toString());
+    return this.http.get<ComisionBono[]>(`${this.baseUrl}/bonos/activos`, { params });
+  }
+
+  /**
+   * Copiar bonos de un período a otro
+   */
+  copiarBonos(anioOrigen: number, mesOrigen: number, anioDestino: number, mesDestino: number): Observable<{ mensaje: string; cantidadCopiada: number; bonos: ComisionBono[] }> {
+    const params = new HttpParams()
+      .set('anioOrigen', anioOrigen.toString())
+      .set('mesOrigen', mesOrigen.toString())
+      .set('anioDestino', anioDestino.toString())
+      .set('mesDestino', mesDestino.toString());
+    return this.http.post<{ mensaje: string; cantidadCopiada: number; bonos: ComisionBono[] }>(
+      `${this.baseUrl}/bonos/copiar`, null, { params }
+    );
   }
 
   /**

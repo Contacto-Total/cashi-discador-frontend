@@ -80,6 +80,8 @@ export interface ComisionBono {
   valorBuscar: string;
   idSubcartera?: number;
   nombreSubcartera?: string;
+  anio: number;
+  mes: number;
   activo?: boolean;
   escalas: ComisionBonoEscala[];
   fechaCreacion?: string;
