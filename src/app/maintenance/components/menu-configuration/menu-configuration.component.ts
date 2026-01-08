@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -51,7 +51,10 @@ export class MenuConfigurationComponent implements OnInit {
   hiddenHierarchy = signal<HierarchicalItem[]>([]);
   availableParents = signal<MenuItemWithVisibility[]>([]);
 
-  constructor(private menuService: MenuPermissionService) {}
+  constructor(
+    private menuService: MenuPermissionService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.loadRoleConfig(this.selectedRole());
@@ -96,6 +99,9 @@ export class MenuConfigurationComponent implements OnInit {
 
         this.hasChanges.set(false);
         this.loading.set(false);
+
+        // Forzar detección de cambios
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error loading menu config:', err);
