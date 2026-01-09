@@ -99,4 +99,66 @@ export class BcpPagosService {
     console.log('[BCP] Eliminando pago manual ID:', id);
     return this.http.delete<BcpPagoManualResponse>(`${this.baseUrl}/manuales/${id}`);
   }
+
+  // ============== REPORTES DE CONCILIACIÓN ==============
+
+  /**
+   * Descarga el reporte de conciliación en formato Excel por fecha o rango de fechas
+   * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
+   * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
+   */
+  descargarReporteConciliacionPorFecha(fechaInicio: string, fechaFin?: string): void {
+    let params = new HttpParams().set('fechaInicio', fechaInicio);
+    if (fechaFin) {
+      params = params.set('fechaFin', fechaFin);
+    }
+
+    console.log('[BCP] Descargando reporte de conciliación por fecha:', { fechaInicio, fechaFin });
+
+    this.http.get(`${this.baseUrl}/reporte-conciliacion/excel`, {
+      params,
+      responseType: 'blob',
+      observe: 'response'
+    }).subscribe({
+      next: (response) => {
+        const nombreArchivo = fechaFin
+          ? `reporte-conciliacion-${fechaInicio}-a-${fechaFin}.xlsx`
+          : `reporte-conciliacion-${fechaInicio}.xlsx`;
+        this.procesarDescargaBlob(response, nombreArchivo);
+      },
+      error: (error) => console.error('[BCP] Error descargando reporte:', error)
+    });
+  }
+
+  /**
+   * Procesa la descarga de un archivo blob
+   */
+  private procesarDescargaBlob(response: any, nombrePorDefecto: string): void {
+    const blob = response.body;
+    if (!blob) {
+      console.error('[BCP] No se recibió el archivo');
+      return;
+    }
+
+    // Extraer nombre del archivo del header Content-Disposition o usar uno por defecto
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let fileName = nombrePorDefecto;
+
+    if (contentDisposition) {
+      const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+      if (matches && matches[1]) {
+        fileName = matches[1].replace(/['"]/g, '');
+      }
+    }
+
+    // Crear enlace de descarga
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+
+    // Limpiar
+    window.URL.revokeObjectURL(url);
+  }
 }
