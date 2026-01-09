@@ -792,7 +792,30 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
-              <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
+              <!-- Tabs Actual / Histórico -->
+              <div class="flex items-center border border-slate-300 dark:border-slate-600 rounded overflow-hidden">
+                <button
+                  (click)="cambiarTabHistorial('actual')"
+                  [class]="'px-2 py-0.5 text-xs font-medium transition-colors ' +
+                    (historialTabActivo() === 'actual'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')">
+                  Actual
+                </button>
+                <button
+                  (click)="cambiarTabHistorial('historico')"
+                  [class]="'px-2 py-0.5 text-xs font-medium transition-colors border-l border-slate-300 dark:border-slate-600 ' +
+                    (historialTabActivo() === 'historico'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')">
+                  Histórico
+                </button>
+              </div>
+              @if (historialTabActivo() === 'actual') {
+                <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
+              } @else {
+                <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialHistorico().length }}/{{ historialHistoricoTotalElements() }})</span>
+              }
             </div>
             <!-- Botón de expandir/contraer - Centro -->
             <button
@@ -801,119 +824,236 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
               [title]="historialExpanded() ? 'Contraer historial' : 'Expandir historial'">
               <lucide-angular [name]="historialExpanded() ? 'chevron-down' : 'chevron-up'" [size]="16"></lucide-angular>
             </button>
-            <!-- Filtros de tipificación -->
-            <div class="flex items-center gap-1">
-              <button
-                (click)="historialFilter.set('TODOS')"
-                [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
-                  (historialFilter() === 'TODOS'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
-                Todos
-              </button>
-              <button
-                (click)="historialFilter.set('CD')"
-                [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
-                  (historialFilter() === 'CD'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
-                [CD]
-              </button>
-              <button
-                (click)="historialFilter.set('CI')"
-                [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
-                  (historialFilter() === 'CI'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
-                [CI]
-              </button>
-              <button (click)="loadManagementHistory()" class="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                <span>↻</span>
-              </button>
-            </div>
-          </div>
-          <div class="flex-1 overflow-auto">
-            @if (historialGestiones().length === 0) {
-              <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
-                Sin gestiones registradas para este cliente
-              </div>
-            } @else if (historialGestionesFiltrado().length === 0) {
-              <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
-                No hay gestiones con el filtro seleccionado
+            <!-- Filtros de tipificación (solo para tab Actual) -->
+            @if (historialTabActivo() === 'actual') {
+              <div class="flex items-center gap-1">
+                <button
+                  (click)="historialFilter.set('TODOS')"
+                  [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                    (historialFilter() === 'TODOS'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                  Todos
+                </button>
+                <button
+                  (click)="historialFilter.set('CD')"
+                  [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                    (historialFilter() === 'CD'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                  [CD]
+                </button>
+                <button
+                  (click)="historialFilter.set('CI')"
+                  [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                    (historialFilter() === 'CI'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                  [CI]
+                </button>
+                <button (click)="loadManagementHistory()" class="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                  <span>↻</span>
+                </button>
               </div>
             } @else {
-              <table class="w-full text-xs">
-                <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
-                  <tr class="text-left text-slate-600 dark:text-slate-300">
-                    <th class="px-2 py-1 font-semibold">Fecha</th>
-                    <th class="px-2 py-1 font-semibold">Agente</th>
-                    <th class="px-2 py-1 font-semibold">Tipificación</th>
-                    <th class="px-2 py-1 font-semibold">Teléfono</th>
-                    <th class="px-2 py-1 font-semibold">Observación</th>
-                    <th class="px-2 py-1 font-semibold">Canal</th>
-                    <th class="px-2 py-1 font-semibold">Método</th>
-                    <th class="px-2 py-1 font-semibold text-right">Monto Promesa</th>
-                    <th class="px-2 py-1 font-semibold text-center">Estado Pago</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (gestion of historialGestionesFiltrado(); track gestion.id) {
-                    <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                      <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
-                      <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
-                      <td class="px-2 py-1.5 max-w-[180px]">
-                        <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
-                          {{ gestion.tipificacionCompleta }}
-                        </span>
-                      </td>
-                      <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">{{ gestion.telefono || '-' }}</td>
-                      <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[120px] truncate" [title]="gestion.observacion">
-                        {{ gestion.observacion || '-' }}
-                      </td>
-                      <td class="px-2 py-1.5">
-                        <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                          (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                           gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                           gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
-                           gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                           'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                          {{ gestion.canalDisplay }}
-                        </span>
-                      </td>
-                      <td class="px-2 py-1.5">
-                        <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                          (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
-                           gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                           gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                           'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                          {{ gestion.metodoDisplay }}
-                        </span>
-                      </td>
-                      <td class="px-2 py-1.5 text-right font-mono whitespace-nowrap">
-                        @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
-                          <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
-                        } @else {
-                          <span class="text-slate-400 dark:text-slate-600">-</span>
-                        }
-                      </td>
-                      <td class="px-2 py-1.5 text-center">
-                        @if (gestion.estadoPago) {
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                            (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                             gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                             gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                             gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                            {{ gestion.estadoPagoDisplay }}
-                          </span>
-                        } @else {
-                          <span class="text-slate-400 dark:text-slate-600">-</span>
-                        }
-                      </td>
+              <!-- Paginación para tab Histórico -->
+              <div class="flex items-center gap-2">
+                <button
+                  (click)="cambiarPaginaHistorico('anterior')"
+                  [disabled]="historialHistoricoPage() === 0 || historialHistoricoLoading()"
+                  [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                    (historialHistoricoPage() === 0 || historialHistoricoLoading()
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                  ← Ant
+                </button>
+                <span class="text-xs text-slate-500 dark:text-slate-400">
+                  Pág {{ historialHistoricoPage() + 1 }} de {{ historialHistoricoTotalPages() }}
+                </span>
+                <button
+                  (click)="cambiarPaginaHistorico('siguiente')"
+                  [disabled]="historialHistoricoPage() >= historialHistoricoTotalPages() - 1 || historialHistoricoLoading()"
+                  [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
+                    (historialHistoricoPage() >= historialHistoricoTotalPages() - 1 || historialHistoricoLoading()
+                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                  Sig →
+                </button>
+                <button (click)="loadHistorialHistorico(historialHistoricoPage())" class="ml-1 text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
+                  <span>↻</span>
+                </button>
+              </div>
+            }
+          </div>
+          <div class="flex-1 overflow-auto">
+            <!-- TAB ACTUAL -->
+            @if (historialTabActivo() === 'actual') {
+              @if (historialGestiones().length === 0) {
+                <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
+                  Sin gestiones registradas para este cliente
+                </div>
+              } @else if (historialGestionesFiltrado().length === 0) {
+                <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
+                  No hay gestiones con el filtro seleccionado
+                </div>
+              } @else {
+                <table class="w-full text-xs">
+                  <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                    <tr class="text-left text-slate-600 dark:text-slate-300">
+                      <th class="px-2 py-1 font-semibold">Fecha</th>
+                      <th class="px-2 py-1 font-semibold">Agente</th>
+                      <th class="px-2 py-1 font-semibold">Tipificación</th>
+                      <th class="px-2 py-1 font-semibold">Teléfono</th>
+                      <th class="px-2 py-1 font-semibold">Observación</th>
+                      <th class="px-2 py-1 font-semibold">Canal</th>
+                      <th class="px-2 py-1 font-semibold">Método</th>
+                      <th class="px-2 py-1 font-semibold text-right">Monto Promesa</th>
+                      <th class="px-2 py-1 font-semibold text-center">Estado Pago</th>
                     </tr>
-                  }
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    @for (gestion of historialGestionesFiltrado(); track gestion.id) {
+                      <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
+                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                        <td class="px-2 py-1.5 max-w-[180px]">
+                          <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                            {{ gestion.tipificacionCompleta }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">{{ gestion.telefono || '-' }}</td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[120px] truncate" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
+                        </td>
+                        <td class="px-2 py-1.5">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                            (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                             gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                             gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                             gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                            {{ gestion.canalDisplay }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                            (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                             gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                             gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                            {{ gestion.metodoDisplay }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5 text-right font-mono whitespace-nowrap">
+                          @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
+                            <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
+                          } @else {
+                            <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+                        </td>
+                        <td class="px-2 py-1.5 text-center">
+                          @if (gestion.estadoPago) {
+                            <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                              (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                               gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                               gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                               gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                               'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                              {{ gestion.estadoPagoDisplay }}
+                            </span>
+                          } @else {
+                            <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
+            } @else {
+              <!-- TAB HISTÓRICO -->
+              @if (historialHistoricoLoading()) {
+                <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
+                  <span class="animate-pulse">Cargando historial histórico...</span>
+                </div>
+              } @else if (historialHistorico().length === 0) {
+                <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
+                  Sin gestiones históricas para este cliente
+                </div>
+              } @else {
+                <table class="w-full text-xs">
+                  <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
+                    <tr class="text-left text-slate-600 dark:text-slate-300">
+                      <th class="px-2 py-1 font-semibold">Fecha</th>
+                      <th class="px-2 py-1 font-semibold">Agente</th>
+                      <th class="px-2 py-1 font-semibold">Tipificación</th>
+                      <th class="px-2 py-1 font-semibold">Teléfono</th>
+                      <th class="px-2 py-1 font-semibold">Observación</th>
+                      <th class="px-2 py-1 font-semibold">Canal</th>
+                      <th class="px-2 py-1 font-semibold">Método</th>
+                      <th class="px-2 py-1 font-semibold text-right">Monto Promesa</th>
+                      <th class="px-2 py-1 font-semibold text-center">Estado Pago</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (gestion of historialHistorico(); track gestion.id) {
+                      <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
+                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                        <td class="px-2 py-1.5 max-w-[180px]">
+                          <span class="text-purple-600 dark:text-purple-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                            {{ gestion.tipificacionCompleta }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">{{ gestion.telefono || '-' }}</td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[120px] truncate" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
+                        </td>
+                        <td class="px-2 py-1.5">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                            (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                             gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                             gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                             gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                            {{ gestion.canalDisplay }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                            (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                             gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                             gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                            {{ gestion.metodoDisplay }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5 text-right font-mono whitespace-nowrap">
+                          @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
+                            <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
+                          } @else {
+                            <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+                        </td>
+                        <td class="px-2 py-1.5 text-center">
+                          @if (gestion.estadoPago) {
+                            <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                              (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                               gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                               gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                               gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                               'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                              {{ gestion.estadoPagoDisplay }}
+                            </span>
+                          } @else {
+                            <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              }
             }
           </div>
         </div>
@@ -1047,6 +1187,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Signal para expandir/contraer el historial de gestiones
   protected historialExpanded = signal<boolean>(false);
+
+  // Tab activo del historial: 'actual' | 'historico'
+  protected historialTabActivo = signal<'actual' | 'historico'>('actual');
+
+  // Signals para historial histórico (base de datos antigua)
+  protected historialHistorico = signal<Array<{
+    id: number;
+    fecha: string;
+    nombreAgente: string;
+    tipificacionCompleta: string;
+    telefono: string;
+    observacion: string;
+    canal: string;
+    canalDisplay: string;
+    metodo: string;
+    metodoDisplay: string;
+    montoPromesa?: number;
+    estadoPago?: string;
+    estadoPagoDisplay: string;
+  }>>([]);
+  protected historialHistoricoPage = signal<number>(0);
+  protected historialHistoricoTotalPages = signal<number>(0);
+  protected historialHistoricoTotalElements = signal<number>(0);
+  protected historialHistoricoLoading = signal<boolean>(false);
 
   // Computed signal para filtrar el historial según el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
@@ -2414,6 +2578,101 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         });
       }
     });
+  }
+
+  /**
+   * Carga el historial histórico desde la base de datos antigua (Web-Service)
+   */
+  loadHistorialHistorico(page: number = 0) {
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) {
+      console.log('[HISTORICO] No hay documento del cliente, omitiendo carga de historial histórico');
+      return;
+    }
+
+    console.log('[HISTORICO] Cargando historial histórico para documento:', documento, 'página:', page);
+    this.historialHistoricoLoading.set(true);
+
+    this.managementService.getGestionesHistoricas(documento, page, 10).subscribe({
+      next: (response) => {
+        console.log('[HISTORICO] Respuesta del backend:', response);
+
+        // Mapear al formato del frontend
+        const historial = response.content.map((g, index) => {
+          // Formatear fecha
+          const fecha = g.fechaGestion
+            ? this.formatDateOnly(g.fechaGestion)
+            : '-';
+
+          // Construir tipificación: buscar en catálogo por nombre de resultado
+          const tipificacionCompleta = [g.resultado, g.solucion].filter(Boolean).join(' > ') || '-';
+
+          // Formatear canal
+          const canalDisplay = this.formatCanalDisplay(g.canal);
+
+          // Formatear método
+          const metodoDisplay = this.formatMetodoDisplay(g.metodo);
+
+          // Formatear estado de pago
+          const estadoPagoDisplay = this.formatEstadoPagoDisplay(g.estadoPromesa);
+
+          return {
+            id: index + (page * 10),
+            fecha: fecha,
+            nombreAgente: g.agente || '-',
+            tipificacionCompleta: tipificacionCompleta,
+            telefono: g.telefono || '',
+            observacion: g.observacion || '',
+            canal: g.canal || '',
+            canalDisplay: canalDisplay,
+            metodo: g.metodo || '',
+            metodoDisplay: metodoDisplay,
+            montoPromesa: g.montoPromesa || undefined,
+            estadoPago: g.estadoPromesa || undefined,
+            estadoPagoDisplay: estadoPagoDisplay
+          };
+        });
+
+        this.historialHistorico.set(historial);
+        this.historialHistoricoPage.set(response.page);
+        this.historialHistoricoTotalPages.set(response.totalPages);
+        this.historialHistoricoTotalElements.set(response.totalElements);
+        this.historialHistoricoLoading.set(false);
+
+        console.log('[HISTORICO] Historial histórico cargado:', historial.length, 'registros');
+      },
+      error: (error) => {
+        console.error('[HISTORICO] Error al cargar historial histórico:', error);
+        this.historialHistoricoLoading.set(false);
+        this.historialHistorico.set([]);
+      }
+    });
+  }
+
+  /**
+   * Cambia de página en el historial histórico
+   */
+  cambiarPaginaHistorico(direccion: 'anterior' | 'siguiente') {
+    const currentPage = this.historialHistoricoPage();
+    const totalPages = this.historialHistoricoTotalPages();
+
+    if (direccion === 'anterior' && currentPage > 0) {
+      this.loadHistorialHistorico(currentPage - 1);
+    } else if (direccion === 'siguiente' && currentPage < totalPages - 1) {
+      this.loadHistorialHistorico(currentPage + 1);
+    }
+  }
+
+  /**
+   * Cambia el tab del historial y carga los datos si es necesario
+   */
+  cambiarTabHistorial(tab: 'actual' | 'historico') {
+    this.historialTabActivo.set(tab);
+
+    // Si cambia a histórico y no hay datos cargados, cargarlos
+    if (tab === 'historico' && this.historialHistorico().length === 0) {
+      this.loadHistorialHistorico();
+    }
   }
 
   private formatDateTime(dateTimeString: string): string {

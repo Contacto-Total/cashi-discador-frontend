@@ -90,6 +90,36 @@ export interface CallDetailResource {
   durationSeconds?: number;
 }
 
+/**
+ * Interface para gestiones históricas (base de datos antigua)
+ */
+export interface GestionHistoricaResponse {
+  fechaGestion: string;
+  horaGestion: string;
+  agente: string;
+  resultado: string;      // ruta_nivel_2
+  solucion: string;       // ruta_nivel_3
+  telefono: string;
+  observacion: string;
+  canal: string;          // LLAMADA_SALIENTE, LLAMADA_ENTRANTE, WHATSAPP
+  metodo: string;         // GESTION_MANUAL, GESTION_PROGRESIVO
+  montoPromesa: number | null;
+  estadoPromesa: string | null;  // PAGADA, VENCIDA, PENDIENTE
+}
+
+/**
+ * Interface para respuesta paginada
+ */
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
 export interface PaymentDetailResource {
   amount: number;
   scheduledDate: string;
@@ -561,5 +591,21 @@ export class ManagementService {
       return 1; // ID temporal
     }
     return Number(advisorId) || 1;
+  }
+
+  // ==================== HISTORIAL HISTÓRICO (Base de datos antigua) ====================
+
+  /**
+   * Obtiene gestiones históricas de un cliente desde la base de datos antigua (Web-Service)
+   * @param documento Documento del cliente
+   * @param page Número de página (0-indexed)
+   * @param size Tamaño de página
+   */
+  getGestionesHistoricas(documento: string, page: number = 0, size: number = 10): Observable<PageResponse<GestionHistoricaResponse>> {
+    console.log('[HISTORICO] Fetching historical managements for documento:', documento, { page, size });
+    return this.http.get<PageResponse<GestionHistoricaResponse>>(
+      `${environment.gatewayUrl.replace('/api', '')}/web-service/gestion/historica/cliente/${documento}`,
+      { params: { page: page.toString(), size: size.toString() } }
+    );
   }
 }
