@@ -129,6 +129,21 @@ export interface PaymentDetailResource {
   bankName?: string;
 }
 
+/**
+ * Interface para respuesta de verificación de continuidad de promesa
+ */
+export interface ContinuidadPromesaResponse {
+  aplica: boolean;
+  mensaje: string;
+  promesaOrigenUuid?: string;
+  montoOriginal?: number;
+  montoPagado?: number;
+  saldoRestante?: number;
+  fechaVencimiento?: string;
+  nombreCliente?: string;
+  documentoCliente?: string;
+}
+
 
 export interface CreateManagementRequest {
   customerId: string;
@@ -606,6 +621,20 @@ export class ManagementService {
     return this.http.get<PageResponse<GestionHistoricaResponse>>(
       `${environment.gatewayUrl.replace('/api', '')}/web-service/gestion/historica/cliente/${documento}`,
       { params: { page: page.toString(), size: size.toString() } }
+    );
+  }
+
+  // ==================== CONTINUIDAD DE PROMESAS ====================
+
+  /**
+   * Verifica si un cliente puede crear una promesa de continuidad.
+   * Aplica si tiene promesa VENCIDA con pagos parciales.
+   * @param documento Documento del cliente
+   */
+  verificarContinuidad(documento: string): Observable<ContinuidadPromesaResponse> {
+    console.log('[CONTINUIDAD] Verificando continuidad para documento:', documento);
+    return this.http.get<ContinuidadPromesaResponse>(
+      `${environment.gatewayUrl}/promesas/continuidad/verificar/${documento}`
     );
   }
 }

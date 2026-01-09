@@ -8,7 +8,7 @@ import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
-import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera } from '../services/management.service';
+import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse } from '../services/management.service';
 import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
@@ -417,6 +417,90 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
+            }
+
+            <!-- CONTINUIDAD DE PROMESA - Información cuando se selecciona CONTINUIDAD -->
+            @if (esContinuidad()) {
+              <!-- Cargando verificación -->
+              @if (isLoadingContinuidad()) {
+                <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-md p-3 animate-pulse">
+                  <div class="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
+                    <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                    <span class="text-xs font-semibold">Verificando continuidad de promesa...</span>
+                  </div>
+                </div>
+              }
+
+              <!-- Error: No aplica continuidad -->
+              @if (!isLoadingContinuidad() && continuidadError()) {
+                <div class="bg-red-50 dark:bg-red-950/20 border-2 border-red-300 dark:border-red-700 rounded-lg shadow-lg p-4">
+                  <div class="flex items-center gap-3">
+                    <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                      <lucide-angular name="alert-circle" [size]="20" class="text-red-600 dark:text-red-400"></lucide-angular>
+                    </div>
+                    <div>
+                      <h4 class="text-sm font-bold text-red-900 dark:text-red-100">No Aplica Continuidad</h4>
+                      <p class="text-xs text-red-600 dark:text-red-300">{{ continuidadError() }}</p>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- Éxito: Aplica continuidad -->
+              @if (!isLoadingContinuidad() && continuidadData()) {
+                <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-2 border-amber-400 dark:border-amber-600 rounded-lg shadow-lg p-4 space-y-3">
+                  <!-- Header -->
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                      <div class="p-2 bg-amber-500 dark:bg-amber-600 rounded-lg">
+                        <lucide-angular name="refresh-cw" [size]="20" class="text-white"></lucide-angular>
+                      </div>
+                      <div>
+                        <h4 class="text-sm font-bold text-amber-900 dark:text-amber-100">Continuidad de Promesa</h4>
+                        <p class="text-xs text-amber-600 dark:text-amber-300">El cliente tiene una promesa caída con pagos parciales</p>
+                      </div>
+                    </div>
+                    <div class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
+                      APLICA
+                    </div>
+                  </div>
+
+                  <!-- Detalle de la promesa original -->
+                  <div class="bg-white dark:bg-gray-800 rounded-lg border border-amber-200 dark:border-amber-700 p-3 space-y-2">
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                      <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">Monto Original</div>
+                        <div class="text-sm font-bold text-gray-800 dark:text-gray-100">
+                          S/ {{ continuidadData()!.montoOriginal | number:'1.2-2' }}
+                        </div>
+                      </div>
+                      <div class="bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
+                        <div class="text-xs text-green-600 dark:text-green-400 uppercase font-medium">Ya Pagado</div>
+                        <div class="text-sm font-bold text-green-700 dark:text-green-300">
+                          S/ {{ continuidadData()!.montoPagado | number:'1.2-2' }}
+                        </div>
+                      </div>
+                      <div class="bg-amber-100 dark:bg-amber-900/50 rounded-lg p-2 ring-2 ring-amber-400 dark:ring-amber-500">
+                        <div class="text-xs text-amber-700 dark:text-amber-300 uppercase font-medium">Saldo Restante</div>
+                        <div class="text-lg font-bold text-amber-800 dark:text-amber-200">
+                          S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}
+                        </div>
+                      </div>
+                    </div>
+                    @if (continuidadData()!.fechaVencimiento) {
+                      <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
+                        Promesa venció el: <span class="font-semibold">{{ continuidadData()!.fechaVencimiento }}</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Instrucción -->
+                  <div class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg p-2">
+                    <lucide-angular name="info" [size]="14"></lucide-angular>
+                    <span>La nueva promesa debe ser por el saldo restante de <strong>S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}</strong></span>
+                  </div>
+                </div>
+              }
             }
 
             <!-- Schedule Helper - Payment Schedule Information -->
@@ -1782,6 +1866,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Flag to indicate if payment options have been configured (even if all are disabled)
   hasPaymentOptionsConfig = signal<boolean>(false);
 
+  // ==================== CONTINUIDAD DE PROMESAS ====================
+  // Flag para indicar si se seleccionó tipificación CONTINUIDAD
+  esContinuidad = signal<boolean>(false);
+  // Datos de continuidad obtenidos del backend
+  continuidadData = signal<ContinuidadPromesaResponse | null>(null);
+  // Flag de carga mientras se verifica continuidad
+  isLoadingContinuidad = signal<boolean>(false);
+  // Error de continuidad (cuando no aplica)
+  continuidadError = signal<string | null>(null);
+
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
@@ -3045,6 +3139,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
 
+    // Resetear señales de continuidad al cambiar tipificación
+    this.resetContinuidadState();
+
     if (levelIndex === 0) {
       this.managementForm.clasificacionNivel1 = value;
       this.managementForm.clasificacionNivel2 = '';
@@ -3061,6 +3158,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       const numValue = Number(value);
       if (!isNaN(numValue) && numValue > 0) {
         this.loadDynamicFields(numValue);
+
+        // Detectar si es tipificación CONTINUIDAD (nivel 2)
+        this.checkIfContinuidad(numValue);
       } else {
         this.dynamicFields.set([]);
         this.dynamicFieldValues.set({});
@@ -3073,6 +3173,75 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.dynamicFieldValues.set({});
       this.isLeafClassification.set(false);
     }
+  }
+
+  /**
+   * Resetea el estado de continuidad
+   */
+  private resetContinuidadState() {
+    this.esContinuidad.set(false);
+    this.continuidadData.set(null);
+    this.continuidadError.set(null);
+    this.isLoadingContinuidad.set(false);
+  }
+
+  /**
+   * Verifica si la tipificación seleccionada es CONTINUIDAD y valida si aplica
+   */
+  private checkIfContinuidad(typificationId: number) {
+    const allTypifications = this.managementClassifications();
+    const selected = allTypifications.find((c: any) => c.id === typificationId);
+
+    if (!selected) return;
+
+    // Verificar si el código es CONTINUIDAD (case insensitive)
+    const isContinuidad = selected.codigo?.toUpperCase() === 'CONTINUIDAD';
+
+    if (isContinuidad) {
+      console.log('[CONTINUIDAD] Tipificación CONTINUIDAD detectada');
+      this.esContinuidad.set(true);
+      this.verificarContinuidadCliente();
+    }
+  }
+
+  /**
+   * Llama al backend para verificar si el cliente puede crear promesa de continuidad
+   */
+  private verificarContinuidadCliente() {
+    const documento = this.customerData()?.numero_documento;
+
+    if (!documento) {
+      console.warn('[CONTINUIDAD] No hay documento del cliente');
+      this.continuidadError.set('No se encontró el documento del cliente');
+      return;
+    }
+
+    console.log('[CONTINUIDAD] Verificando continuidad para documento:', documento);
+    this.isLoadingContinuidad.set(true);
+    this.continuidadError.set(null);
+
+    this.managementService.verificarContinuidad(documento).subscribe({
+      next: (response) => {
+        console.log('[CONTINUIDAD] Respuesta:', response);
+        this.isLoadingContinuidad.set(false);
+
+        if (response.aplica) {
+          this.continuidadData.set(response);
+          this.continuidadError.set(null);
+          console.log('[CONTINUIDAD] Aplica! Saldo restante:', response.saldoRestante);
+        } else {
+          this.continuidadData.set(null);
+          this.continuidadError.set(response.mensaje || 'No aplica continuidad para este cliente');
+          console.log('[CONTINUIDAD] No aplica:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('[CONTINUIDAD] Error al verificar:', error);
+        this.isLoadingContinuidad.set(false);
+        this.continuidadData.set(null);
+        this.continuidadError.set('Error al verificar continuidad');
+      }
+    });
   }
 
   private loadDynamicFields(typificationId: number) {
