@@ -3217,10 +3217,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (!selected) return;
 
-    // Verificar si el código es CON o el nombre contiene CONTINUIDAD (case insensitive)
+    // Verificar si el código es CON o el label contiene CONTINUIDAD (case insensitive)
     const isContinuidad = selected.codigo?.toUpperCase() === 'CON' ||
-                          selected.label?.toUpperCase()?.includes('CONTINUIDAD') ||
-                          selected.nombre?.toUpperCase()?.includes('CONTINUIDAD');
+                          selected.label?.toUpperCase()?.includes('CONTINUIDAD');
 
     if (isContinuidad) {
       console.log('[CONTINUIDAD] Tipificación CONTINUIDAD detectada:', selected.codigo, selected.label);
