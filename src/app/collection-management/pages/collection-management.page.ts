@@ -413,7 +413,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                 [schema]="dynamicFieldsSchema()"
                 [externalUpdates]="externalFieldUpdates()"
                 [selectedClassification]="selectedClassification()"
-                [customerAmounts]="customerPaymentAmounts()"
+                [customerAmounts]="finalPaymentAmounts()"
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
@@ -1876,6 +1876,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Error de continuidad (cuando no aplica)
   continuidadError = signal<string | null>(null);
 
+  // Computed: Opciones de monto para continuidad (solo saldo restante)
+  continuityPaymentAmounts = computed<AmountOption[]>(() => {
+    const data = this.continuidadData();
+    if (!data || !data.aplica || !data.saldoRestante) {
+      return [];
+    }
+    return [{
+      label: 'Saldo Restante (Continuidad)',
+      value: data.saldoRestante,
+      field: 'saldo_continuidad',
+      restriccionFecha: 'SIN_RESTRICCION',
+      generaCartaAcuerdo: false
+    }];
+  });
+
+  // Computed: Opciones de monto finales (usa continuidad si aplica, sino las normales)
+  finalPaymentAmounts = computed<AmountOption[]>(() => {
+    if (this.esContinuidad() && this.continuidadData()?.aplica) {
+      return this.continuityPaymentAmounts();
+    }
+    return this.customerPaymentAmounts();
+  });
+
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
@@ -3194,11 +3217,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (!selected) return;
 
-    // Verificar si el código es CONTINUIDAD (case insensitive)
-    const isContinuidad = selected.codigo?.toUpperCase() === 'CONTINUIDAD';
+    // Verificar si el código es CON o el nombre contiene CONTINUIDAD (case insensitive)
+    const isContinuidad = selected.codigo?.toUpperCase() === 'CON' ||
+                          selected.label?.toUpperCase()?.includes('CONTINUIDAD') ||
+                          selected.nombre?.toUpperCase()?.includes('CONTINUIDAD');
 
     if (isContinuidad) {
-      console.log('[CONTINUIDAD] Tipificación CONTINUIDAD detectada');
+      console.log('[CONTINUIDAD] Tipificación CONTINUIDAD detectada:', selected.codigo, selected.label);
       this.esContinuidad.set(true);
       this.verificarContinuidadCliente();
     }
