@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router, ActivatedRoute } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
+import { MenuPermissionService } from '../../../core/services/menu-permission.service';
 import * as THREE from 'three';
 
 @Component({
@@ -86,6 +87,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
+    private menuPermissionService: MenuPermissionService,
     private router: Router,
     private route: ActivatedRoute,
     private elementRef: ElementRef,
@@ -208,7 +210,26 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Redirect if already logged in
     if (this.authService.isAuthenticated()) {
-      this.router.navigate(['/dashboard']);
+      // Load dynamic menu and navigate to first item
+      this.menuPermissionService.loadVisibleMenu().subscribe({
+        next: (menuItems) => {
+          let firstRoute: string | null = null;
+          for (const item of menuItems) {
+            if (item.tipo === 'LINK' && item.ruta) {
+              firstRoute = item.ruta;
+              break;
+            } else if (item.tipo === 'DROPDOWN' && item.children?.length > 0) {
+              const firstChild = item.children.find(child => child.ruta);
+              if (firstChild?.ruta) {
+                firstRoute = firstChild.ruta;
+                break;
+              }
+            }
+          }
+          this.router.navigate([firstRoute || '/dashboard']);
+        },
+        error: () => this.router.navigate(['/dashboard'])
+      });
       return;
     }
 
@@ -803,20 +824,45 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.authService.login(username, password).subscribe({
       next: (response) => {
-        this.loading = false;
-        // Redirect based on user role
-        const user = this.authService.getCurrentUser();
+        // After successful login, load the dynamic menu and navigate to first item
+        this.menuPermissionService.loadVisibleMenu().subscribe({
+          next: (menuItems) => {
+            this.loading = false;
 
-        if (user?.role === 'ADMIN') {
-          this.router.navigate(['/admin/monitoring']);
-        } else if (user?.role === 'SUPERVISOR') {
-          this.router.navigate(['/reports/contact']);
-        } else if (user?.role === 'AGENT') {
-          // Primero ir al dashboard de estados, desde ahí puede acceder a WhatsApp o Softphone
-          this.router.navigate(['/agent-dashboard']);
-        } else {
-          this.router.navigate(['/dialer']);
-        }
+            // Find the first navigable route
+            let firstRoute: string | null = null;
+
+            for (const item of menuItems) {
+              if (item.tipo === 'LINK' && item.ruta) {
+                firstRoute = item.ruta;
+                break;
+              } else if (item.tipo === 'DROPDOWN' && item.children?.length > 0) {
+                // Get first child with a route
+                const firstChild = item.children.find(child => child.ruta);
+                if (firstChild?.ruta) {
+                  firstRoute = firstChild.ruta;
+                  break;
+                }
+              }
+            }
+
+            // Navigate to first route or fallback
+            if (firstRoute) {
+              console.log('📍 Navegando a primera opción del menú:', firstRoute);
+              this.router.navigate([firstRoute]);
+            } else {
+              // Fallback if no menu items found
+              console.warn('⚠️ No se encontraron items de menú, usando fallback');
+              this.router.navigate(['/dashboard']);
+            }
+          },
+          error: (menuError) => {
+            this.loading = false;
+            console.error('Error loading menu:', menuError);
+            // Fallback navigation
+            this.router.navigate(['/dashboard']);
+          }
+        });
       },
       error: (error) => {
         this.loading = false;
