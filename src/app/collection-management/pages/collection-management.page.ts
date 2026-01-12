@@ -390,7 +390,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             }
 
             <!-- Sección de Campos Dinámicos - NUEVA -->
-            @if (isLoadingDynamicFields()) {
+            <!-- No mostrar loading si es CONTINUIDAD (se muestra el loading de continuidad) -->
+            @if (isLoadingDynamicFields() && shouldShowDynamicForm()) {
               <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
                   <span class="text-xs">Cargando campos adicionales...</span>
@@ -398,7 +399,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
               </div>
             }
             
-            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0) {
+            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0 && shouldShowDynamicForm()) {
               <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
                   <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
@@ -407,7 +408,8 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
             }
 
             <!-- Componente de Campos Dinámicos -->
-            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFieldsSchema()) {
+            <!-- No mostrar si es CONTINUIDAD y no aplica (solo mostrar la alerta de error) -->
+            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFieldsSchema() && shouldShowDynamicForm()) {
               <app-dynamic-field-renderer
                 #dynamicFieldRendererComponent
                 [schema]="dynamicFieldsSchema()"
@@ -1889,6 +1891,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       restriccionFecha: 'SIN_RESTRICCION',
       generaCartaAcuerdo: false
     }];
+  });
+
+  // Computed: Determina si se debe mostrar el formulario de campos dinámicos
+  // No mostrar si es CONTINUIDAD pero no aplica (tiene error o no hay datos)
+  shouldShowDynamicForm = computed<boolean>(() => {
+    const esCont = this.esContinuidad();
+    const isLoadingCont = this.isLoadingContinuidad();
+    const contData = this.continuidadData();
+
+    // Si no es continuidad, mostrar normalmente
+    if (!esCont) {
+      return true;
+    }
+
+    // Si es continuidad y está cargando, no mostrar aún
+    if (isLoadingCont) {
+      return false;
+    }
+
+    // Si es continuidad, solo mostrar si aplica
+    return contData?.aplica === true;
   });
 
   // Computed: Opciones de monto finales (usa continuidad si aplica, sino las normales)
