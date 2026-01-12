@@ -1,4 +1,4 @@
-import { Component, effect, input, output, signal, untracked } from '@angular/core';
+import { Component, computed, effect, input, output, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -192,7 +192,7 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               <!-- Payment Schedule Input -->
               @if (field.type === 'payment_schedule') {
                 <app-payment-schedule
-                  [availableAmounts]="getPaymentAmountOptions(field)"
+                  [availableAmounts]="paymentAmountOptions()"
                   [maxInstallments]="6"
                   (scheduleChange)="onPaymentScheduleChange(field.id, $event)"
                   (customAmountSelected)="onCustomAmountSelected($event)"
@@ -384,6 +384,19 @@ export class DynamicFieldRendererComponent {
   dataChange = output<DynamicFieldData>();
   // Output when custom amount is selected (requires authorization)
   customAmountDetected = output<boolean>();
+
+  // Computed reactivo para las opciones de monto del payment schedule
+  // Esto asegura que cuando customerAmounts cambie (ej: después de verificar continuidad),
+  // el componente app-payment-schedule se actualice automáticamente
+  paymentAmountOptions = computed<AmountOption[]>(() => {
+    const amounts = this.customerAmounts();
+    if (amounts && amounts.length > 0) {
+      console.log('[DynamicFieldRenderer] Payment amounts updated (reactive):', amounts);
+      return amounts;
+    }
+    // Fallback cuando no hay montos configurados
+    return [{ label: 'Sin datos de deuda', value: 0, field: 'default' }];
+  });
 
   constructor() {
     // Initialize field data when schema changes

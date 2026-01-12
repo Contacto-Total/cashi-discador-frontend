@@ -1,4 +1,4 @@
-import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed } from '@angular/core';
+import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -381,6 +381,42 @@ export class PaymentScheduleComponent implements OnInit {
 
   installmentOptions: number[] = [];
   minDate: string = '';
+
+  // Track previous amounts to detect significant changes
+  private previousAmountsKey = '';
+
+  constructor() {
+    // Effect que resetea la selección cuando los montos disponibles cambian significativamente
+    // Esto es importante para CONTINUIDAD donde los montos cambian de [varios] a [Saldo Restante]
+    effect(() => {
+      const amounts = this.availableAmounts();
+      // Crear una key basada en los fields disponibles para detectar cambios
+      const currentKey = amounts.map(a => a.field).sort().join(',');
+
+      if (this.previousAmountsKey && this.previousAmountsKey !== currentKey) {
+        console.log('[PaymentSchedule] Amounts changed, resetting selection. Old:', this.previousAmountsKey, 'New:', currentKey);
+        // Resetear estado de selección
+        this.selectedAmount.set(0);
+        this.selectedField.set(undefined);
+        this.selectedRestriccion.set('SIN_RESTRICCION');
+        this.selectedGeneraCartaAcuerdo.set(false);
+        this.numberOfInstallments.set(1);
+        this.installments.set([]);
+        this._isCustomAmount.set(false);
+        this.customAmountValue = 0;
+        this.montoBase.set(undefined);
+        this.selectedBaseField.set('');
+
+        // Si solo hay una opción (como en CONTINUIDAD), auto-seleccionarla
+        if (amounts.length === 1 && amounts[0].value > 0) {
+          console.log('[PaymentSchedule] Auto-selecting single amount option:', amounts[0]);
+          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo);
+        }
+      }
+
+      this.previousAmountsKey = currentKey;
+    });
+  }
 
   ngOnInit(): void {
     this.installmentOptions = Array.from({ length: this.maxInstallments }, (_, i) => i + 1);
