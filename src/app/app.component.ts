@@ -11,6 +11,7 @@ import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
 import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
+import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
 import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
@@ -63,6 +64,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   notificaciones: NotificacionSistema[] = [];
   notificacionesCount = 0;
 
+  // Dynamic menu from backend
+  menuItems: MenuItem[] = [];
+  // Track which dropdowns are open by their codigo
+  openDropdowns: Set<string> = new Set();
+
   constructor(
     public authService: AuthService,
     public themeService: ThemeService,
@@ -73,6 +79,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private agentStatusService: AgentStatusService,
     private recordatoriosService: RecordatoriosService,
     private notificacionesService: NotificacionesSistemaService,
+    private menuPermissionService: MenuPermissionService,
     private dialog: MatDialog,
     private router: Router
   ) {}
@@ -140,12 +147,23 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     // Cargar configuraciones de sesión
     this.sessionConfig.cargarConfiguracion().subscribe();
 
+    // Suscribirse a cambios en el menú dinámico
+    this.menuPermissionService.menuItems$.subscribe(items => {
+      this.menuItems = items;
+    });
+
     // Suscribirse a cambios en el usuario autenticado
     this.authService.currentUser$.subscribe(user => {
       if (user && this.authService.isAuthenticated()) {
         // Usuario autenticado - iniciar servicios
         this.websocketService.connect();
         this.iniciarMonitoreoInactividad();
+
+        // Cargar menú dinámico según el rol del usuario
+        this.menuPermissionService.loadVisibleMenu().subscribe({
+          next: (items) => console.log('📋 Menú dinámico cargado:', items.length, 'items'),
+          error: (err) => console.error('❌ Error cargando menú:', err)
+        });
 
         // Conectar a FreeSWITCH automáticamente
         this.conectarFreeSWITCH(user);
@@ -159,6 +177,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         this.inactivityService.detener();
         this.websocketService.disconnect();
         this.sipService.unregister();
+        // Limpiar menú al cerrar sesión
+        this.menuPermissionService.clearMenu();
       }
     });
   }
@@ -716,5 +736,56 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   isAgent(): boolean {
     const currentUser = this.authService.getCurrentUser();
     return currentUser?.role === 'AGENT';
+  }
+
+  // ============== Dynamic Menu Methods ==============
+
+  /**
+   * Toggle a specific dropdown menu by its codigo
+   */
+  toggleDynamicDropdown(codigo: string): void {
+    // Auto-expand sidebar if collapsed
+    if (this.isSidebarCollapsed) {
+      this.isSidebarCollapsed = false;
+    }
+
+    if (this.openDropdowns.has(codigo)) {
+      this.openDropdowns.delete(codigo);
+    } else {
+      // Close all other dropdowns first (optional: remove this to allow multiple open)
+      this.openDropdowns.clear();
+      this.openDropdowns.add(codigo);
+    }
+
+    // Re-detectar overflow después de abrir dropdown
+    setTimeout(() => this.checkTextOverflow(), 50);
+  }
+
+  /**
+   * Check if a dropdown is open
+   */
+  isDropdownOpen(codigo: string): boolean {
+    return this.openDropdowns.has(codigo);
+  }
+
+  /**
+   * Check if a menu item's route is currently active
+   */
+  isMenuItemActive(item: MenuItem): boolean {
+    if (item.ruta) {
+      return this.router.url.startsWith(item.ruta);
+    }
+    // For dropdown, check if any child is active
+    if (item.children && item.children.length > 0) {
+      return item.children.some(child => child.ruta && this.router.url.startsWith(child.ruta));
+    }
+    return false;
+  }
+
+  /**
+   * Close all dynamic dropdowns
+   */
+  closeAllDynamicDropdowns(): void {
+    this.openDropdowns.clear();
   }
 }
