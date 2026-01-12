@@ -634,7 +634,7 @@ export class ManagementService {
   verificarContinuidad(documento: string): Observable<ContinuidadPromesaResponse> {
     console.log('[CONTINUIDAD] Verificando continuidad para documento:', documento);
     return this.http.get<ContinuidadPromesaResponse>(
-      `${environment.gatewayUrl}/promesas/continuidad/verificar/${documento}`
+      `${environment.gatewayUrl}/v2/management-records/promesas/continuidad/verificar/${documento}`
     );
   }
 }
