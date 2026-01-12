@@ -190,8 +190,7 @@ export const appConfig: ApplicationConfig = {
         Wallet,
         X,
         XCircle,
-        Zap,
-        FileSpreadsheet
+        Zap
       })
     )
   ]
