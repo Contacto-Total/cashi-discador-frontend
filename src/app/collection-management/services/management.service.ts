@@ -220,6 +220,11 @@ export interface PaymentScheduleRequest {
   canalContacto?: string;   // LLAMADA_SALIENTE, LLAMADA_ENTRANTE, SMS, etc.
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora, sld_total)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
+  // Campos de continuidad
+  esContinuidad?: boolean;           // true si es promesa de continuidad
+  promesaOrigenUuid?: string;        // UUID de la promesa original (caída)
+  montoOriginalPromesa?: number;     // Monto de la promesa original
+  montoPagadoPrevio?: number;        // Lo que ya había pagado de la promesa original
   schedule: {
     montoTotal: number;
     numeroCuotas: number;

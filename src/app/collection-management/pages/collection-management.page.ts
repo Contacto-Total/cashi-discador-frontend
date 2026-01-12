@@ -4090,6 +4090,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         canalContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
+        // Datos de continuidad (si aplica)
+        esContinuidad: this.esContinuidad() && this.continuidadData()?.aplica,
+        promesaOrigenUuid: this.continuidadData()?.promesaOrigenUuid,
+        montoOriginalPromesa: this.continuidadData()?.montoOriginal,
+        montoPagadoPrevio: this.continuidadData()?.montoPagado,
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
           numeroCuotas: paymentScheduleData.numeroCuotas,
