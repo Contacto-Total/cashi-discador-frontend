@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { MenuPermissionService, MenuItem, MenuConfigUpdate } from '../../../core/services/menu-permission.service';
-
-type RoleType = 'ADMIN' | 'SUPERVISOR' | 'AGENT' | 'COORDINADOR';
+import { AuthService, RolResponse } from '../../../core/services/auth.service';
 
 interface MenuItemWithVisibility extends MenuItem {
   visible: boolean;
@@ -19,8 +18,10 @@ interface MenuItemWithVisibility extends MenuItem {
   styleUrls: ['./menu-configuration.component.css']
 })
 export class MenuConfigurationComponent implements OnInit {
-  roles: RoleType[] = ['ADMIN', 'SUPERVISOR', 'AGENT', 'COORDINADOR'];
-  selectedRole = signal<RoleType>('SUPERVISOR');
+  // Roles dinámicos desde el backend
+  roles = signal<RolResponse[]>([]);
+  loadingRoles = signal(false);
+  selectedRole = signal<string>('');
 
   allItems = signal<MenuItemWithVisibility[]>([]);
   visibleItems = signal<MenuItemWithVisibility[]>([]);
@@ -34,13 +35,6 @@ export class MenuConfigurationComponent implements OnInit {
   saving = signal(false);
   hasChanges = signal(false);
 
-  roleLabels: Record<RoleType, string> = {
-    'ADMIN': 'Administrador',
-    'SUPERVISOR': 'Supervisor',
-    'AGENT': 'Agente',
-    'COORDINADOR': 'Coordinador'
-  };
-
   // Listas planas ordenadas (padres seguidos de sus hijos)
   visibleFlat = signal<MenuItemWithVisibility[]>([]);
   hiddenFlat = signal<MenuItemWithVisibility[]>([]);
@@ -48,15 +42,50 @@ export class MenuConfigurationComponent implements OnInit {
 
   constructor(
     private menuService: MenuPermissionService,
+    private authService: AuthService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
-    this.loadRoleConfig(this.selectedRole());
+    this.loadRoles();
   }
 
-  selectRole(role: RoleType): void {
+  /**
+   * Carga los roles disponibles desde el backend
+   */
+  loadRoles(): void {
+    this.loadingRoles.set(true);
+    this.authService.getRoles().subscribe({
+      next: (roles) => {
+        // Filtrar solo roles activos
+        const activeRoles = roles.filter(r => r.activo);
+        this.roles.set(activeRoles);
+        this.loadingRoles.set(false);
+
+        // Seleccionar el primer rol por defecto
+        if (activeRoles.length > 0) {
+          this.selectedRole.set(activeRoles[0].nombreRol);
+          this.loadRoleConfig(activeRoles[0].nombreRol);
+        }
+      },
+      error: (err) => {
+        console.error('Error loading roles:', err);
+        this.loadingRoles.set(false);
+        alert('Error al cargar los roles');
+      }
+    });
+  }
+
+  /**
+   * Obtiene la etiqueta de un rol (para mostrar en la UI)
+   */
+  getRoleLabel(nombreRol: string): string {
+    const rol = this.roles().find(r => r.nombreRol === nombreRol);
+    return rol?.descripcion || nombreRol;
+  }
+
+  selectRole(role: string): void {
     if (this.hasChanges()) {
       if (!confirm('Hay cambios sin guardar. ¿Desea continuar?')) {
         return;
@@ -66,7 +95,7 @@ export class MenuConfigurationComponent implements OnInit {
     this.loadRoleConfig(role);
   }
 
-  loadRoleConfig(role: RoleType): void {
+  loadRoleConfig(role: string): void {
     this.loading.set(true);
     this.menuService.getMenuConfigForRole(role).subscribe({
       next: (items) => {

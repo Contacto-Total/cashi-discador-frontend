@@ -5,6 +5,13 @@ import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import {User, LoginRequest, LoginResponse, UserRole} from '../models/user.model';
 
+export interface RolResponse {
+  idRol: number;
+  nombreRol: string;
+  descripcion: string;
+  activo: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -223,5 +230,12 @@ export class AuthService {
     } catch (e) {
       return false;
     }
+  }
+
+  /**
+   * Obtiene todos los roles disponibles desde el auth backend
+   */
+  getRoles(): Observable<RolResponse[]> {
+    return this.http.get<RolResponse[]>(`${environment.apiUrl}/roles`);
   }
 }

@@ -16,15 +16,25 @@
 
       <!-- Role Tabs -->
       <div class="flex gap-2 mb-4">
-        @for (role of roles; track role) {
-          <button
-            (click)="selectRole(role)"
-            [class]="selectedRole() === role
-              ? 'bg-indigo-600 text-white'
-              : 'bg-slate-800 text-gray-300 hover:bg-slate-700'"
-            class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-            {{ roleLabels[role] }}
-          </button>
+        @if (loadingRoles()) {
+          <div class="flex items-center gap-2 text-gray-400">
+            <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+            <span class="text-sm">Cargando roles...</span>
+          </div>
+        } @else {
+          @for (role of roles(); track role.idRol) {
+            <button
+              (click)="selectRole(role.nombreRol)"
+              [class]="selectedRole() === role.nombreRol
+                ? 'bg-indigo-600 text-white'
+                : 'bg-slate-800 text-gray-300 hover:bg-slate-700'"
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+              {{ role.descripcion || role.nombreRol }}
+            </button>
+          }
+          @if (roles().length === 0) {
+            <span class="text-gray-500 text-sm">No hay roles disponibles</span>
+          }
         }
       </div>
 
