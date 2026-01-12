@@ -288,6 +288,35 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
                   </div>
                 }
 
+                <!-- Advertencia de registros sin DOCUMENTO -->
+                @if (recordsWithNullDocumento().length > 0) {
+                  <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                      <lucide-angular name="alert-triangle" [size]="20" class="text-amber-600 dark:text-amber-400 mt-0.5"></lucide-angular>
+                      <div class="flex-1">
+                        <h3 class="text-amber-700 dark:text-amber-400 font-semibold mb-2">
+                          Registros sin DOCUMENTO ({{ recordsWithNullDocumento().length }})
+                        </h3>
+                        <p class="text-amber-600 dark:text-gray-400 text-sm mb-1">
+                          Los siguientes registros tienen el campo DOCUMENTO vacío o nulo:
+                        </p>
+                        <p class="text-amber-700 dark:text-amber-300 text-sm font-medium mb-2">
+                          Estos registros no serán sincronizados a la tabla de clientes.
+                        </p>
+                        <div class="bg-amber-100 dark:bg-amber-950/30 rounded-lg p-3 max-h-40 overflow-y-auto">
+                          <div class="flex flex-wrap gap-2">
+                            @for (record of recordsWithNullDocumento(); track record.rowIndex) {
+                              <span class="inline-flex items-center px-2 py-1 bg-amber-200 dark:bg-amber-800/40 text-amber-800 dark:text-amber-300 rounded text-xs font-mono">
+                                Fila {{ record.rowIndex }}
+                              </span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+
                 @if (invalidData().length > 0) {
                   <div class="bg-red-900/20 border border-red-700/50 rounded-lg p-4">
                     <div class="flex items-start gap-3">
@@ -375,6 +404,9 @@ export class DailyLoadComponent implements OnInit {
   invalidData = signal<{error: string, data: any}[]>([]);
   backendErrors = signal<string[]>([]);
   isLoading = signal(false);
+
+  // Registros con DOCUMENTO null
+  recordsWithNullDocumento = signal<{rowIndex: number, data: any}[]>([]);
 
   constructor(
     private tenantService: TenantService,
@@ -648,15 +680,26 @@ export class DailyLoadComponent implements OnInit {
           }
         });
 
+        // Detectar registros con DOCUMENTO null
+        const nullDocumentoRecords: {rowIndex: number, data: any}[] = [];
+        valid.forEach((row, index) => {
+          const documento = row['DOCUMENTO'] || row['documento'] || row['Documento'];
+          if (documento === null || documento === undefined || String(documento).trim() === '') {
+            nullDocumentoRecords.push({ rowIndex: index + 1, data: row });
+          }
+        });
+
         // Actualizar los signals para mostrar la previsualización
         this.importedData.set([...valid, ...invalid.map(i => i.data)]);
         this.validData.set(valid);
         this.invalidData.set(invalid);
+        this.recordsWithNullDocumento.set(nullDocumentoRecords);
 
         console.log('Previsualización de datos:', {
           total: dataRows.length,
           válidos: valid.length,
-          inválidos: invalid.length
+          inválidos: invalid.length,
+          sinDocumento: nullDocumentoRecords.length
         });
 
       } catch (error) {
@@ -826,15 +869,26 @@ export class DailyLoadComponent implements OnInit {
           }
         });
 
+        // Detectar registros con DOCUMENTO null
+        const nullDocumentoRecords: {rowIndex: number, data: any}[] = [];
+        valid.forEach((row, index) => {
+          const documento = row['DOCUMENTO'] || row['documento'] || row['Documento'];
+          if (documento === null || documento === undefined || String(documento).trim() === '') {
+            nullDocumentoRecords.push({ rowIndex: index + 1, data: row });
+          }
+        });
+
         // Actualizar los signals para mostrar la previsualización
         this.importedData.set([...valid, ...invalid.map(i => i.data)]);
         this.validData.set(valid);
         this.invalidData.set(invalid);
+        this.recordsWithNullDocumento.set(nullDocumentoRecords);
 
         console.log('Previsualización de datos CSV:', {
           total: dataLines.length,
           válidos: valid.length,
-          inválidos: invalid.length
+          inválidos: invalid.length,
+          sinDocumento: nullDocumentoRecords.length
         });
 
       } catch (error) {
@@ -1013,6 +1067,7 @@ export class DailyLoadComponent implements OnInit {
     this.validData.set([]);
     this.invalidData.set([]);
     this.backendErrors.set([]);
+    this.recordsWithNullDocumento.set([]);
   }
 
   confirmImport() {
