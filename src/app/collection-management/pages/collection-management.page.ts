@@ -3213,13 +3213,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private checkIfContinuidad(typificationId: number) {
     const allTypifications = this.managementClassifications();
-    const selected = allTypifications.find((c: any) => c.id === typificationId);
+    // Comparar con == para manejar string vs number (ej: '70' == 70)
+    const selected = allTypifications.find((c: any) => String(c.id) === String(typificationId));
 
-    if (!selected) return;
+    if (!selected) {
+      console.log('[CONTINUIDAD] No se encontró tipificación con ID:', typificationId);
+      return;
+    }
 
     // Verificar si el código es CON o el label contiene CONTINUIDAD (case insensitive)
     const isContinuidad = selected.codigo?.toUpperCase() === 'CON' ||
                           selected.label?.toUpperCase()?.includes('CONTINUIDAD');
+
+    console.log('[CONTINUIDAD] Verificando tipificación:', selected.codigo, selected.label, '- Es continuidad:', isContinuidad);
 
     if (isContinuidad) {
       console.log('[CONTINUIDAD] Tipificación CONTINUIDAD detectada:', selected.codigo, selected.label);
