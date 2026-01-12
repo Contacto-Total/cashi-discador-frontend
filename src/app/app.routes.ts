@@ -261,7 +261,7 @@ export const routes: Routes = [
   {
     path: 'admin/cartas-cesion',
     loadComponent: () => import('./features/admin/carta-cesion-viewer/carta-cesion-viewer.component').then(m => m.CartaCesionViewerComponent),
-    canActivate: [authGuard, adminOrSupervisorGuard]
+    canActivate: [authGuard] // Acceso controlado por configuración de menú dinámico
   },
   {
     path: 'admin/promesas',
