@@ -87,6 +87,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/legacy/reports/pages/cartera-propia-report/cartera-propia-report.component').then(m => m.CarteraPropiaReportComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'reports/conciliacion-pagos',
+    loadComponent: () => import('./pagos-bancarios/pages/conciliacion-report/conciliacion-report.component').then(m => m.ConciliacionReportComponent),
+    canActivate: [authGuard]
+  },
 
   // ========================================
   // SMS
