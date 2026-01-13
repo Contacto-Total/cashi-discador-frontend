@@ -97,6 +97,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/reports/continuidad-report/continuidad-report.component').then(m => m.ContinuidadReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'excepciones',
+    loadComponent: () => import('./features/excepciones/excepciones.component').then(m => m.ExcepcionesComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // SMS
