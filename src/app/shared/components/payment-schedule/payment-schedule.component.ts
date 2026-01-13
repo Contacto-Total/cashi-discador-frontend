@@ -450,6 +450,11 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedField.set(undefined);
     this.montoBase.set(undefined);  // Monto libre no tiene base
     this.selectedBaseField.set('');  // Resetear campo base
+
+    // Buscar la opción "personalizado" para obtener su generaCartaAcuerdo
+    const customOption = this.availableAmounts().find(o => o.field === 'personalizado');
+    this.selectedGeneraCartaAcuerdo.set(customOption?.generaCartaAcuerdo || false);
+
     this.customAmountSelected.emit(true);
     if (this.customAmountValue > 0) {
       this.selectedAmount.set(this.customAmountValue);
