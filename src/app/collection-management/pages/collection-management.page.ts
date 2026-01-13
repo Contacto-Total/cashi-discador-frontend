@@ -32,8 +32,7 @@ import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import { StatusAlarmClockComponent } from '../../shared/components/status-alarm-clock/status-alarm-clock.component';
-import { AutorizacionService, SupervisorEnLinea, CrearSolicitudRequest, SolicitudAutorizacion } from '../../core/services/autorizacion.service';
-import { SelectSupervisorModalComponent } from '../../shared/components/select-supervisor-modal/select-supervisor-modal.component';
+import { AutorizacionService } from '../../core/services/autorizacion.service';
 import { RecordatoriosService } from '../../core/services/recordatorios.service';
 import { MatDialog } from '@angular/material/dialog';
 import { RecordatoriosModalComponent } from '../../shared/components/recordatorios-modal/recordatorios-modal.component';
@@ -53,7 +52,6 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
     LucideAngularModule,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
-    SelectSupervisorModalComponent,
     StatusAlarmClockComponent
   ],
   template: `
@@ -1167,13 +1165,6 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
           </div>
         </div>
       }
-
-      <!-- Modal de Selección de Supervisor para Autorización -->
-      <app-select-supervisor-modal
-        [(visible)]="showSupervisorModal"
-        (supervisorSelected)="onSupervisorSelected($event)"
-        (cancelled)="onSupervisorSelectionCancelled()">
-      </app-select-supervisor-modal>
     </div>
   `,
   styles: [`
