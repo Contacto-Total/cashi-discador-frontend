@@ -805,34 +805,19 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
 
             <!-- Botones de Acción - COMPACTOS -->
             <div class="flex gap-2 pt-2">
-              @if (requiresAuthorization()) {
-                <!-- Botón de Solicitar Autorización (cuando es monto personalizado) -->
-                <button
-                  (click)="openSupervisorSelectionModal()"
-                  [disabled]="saving() || !isFormValid() || waitingForAuthorization()"
-                  class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
-                >
-                  @if (waitingForAuthorization()) {
-                    <span class="animate-pulse">⏳ Esperando Autorización...</span>
-                  } @else {
-                    🔐 Solicitar Autorización
-                  }
-                </button>
-              } @else {
-                <!-- Botón Normal de Guardar -->
-                <button
-                  (click)="saveManagement()"
-                  [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation()) || (isCancellationTypification() && pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0)"
-                  [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
-                  class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
-                >
-                  @if (saving()) {
-                    Guardando...
-                  } @else {
-                    Guardar Gestión
-                  }
-                </button>
-              }
+              <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
+              <button
+                (click)="saveManagement()"
+                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation()) || (isCancellationTypification() && pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0)"
+                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
+                class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+              >
+                @if (saving()) {
+                  Guardando...
+                } @else {
+                  Guardar Gestión
+                }
+              </button>
               <button
                 (click)="cancelarTipificacion()"
                 class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
@@ -1244,11 +1229,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected excedeTiempoMaximo = signal(false);
   private agentStatusSubscription?: Subscription;
 
-  // Signals para autorización de montos personalizados
-  protected requiresAuthorization = signal(false);
-  protected waitingForAuthorization = signal(false);
-  showSupervisorModal = false;
-  private currentAuthorizationData: CrearSolicitudRequest | null = null;
+  // [DESACTIVADO] Signals para autorización de montos personalizados en tiempo real
+  // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después
+  // protected requiresAuthorization = signal(false);
+  // protected waitingForAuthorization = signal(false);
+  // showSupervisorModal = false;
+  // private currentAuthorizationData: CrearSolicitudRequest | null = null;
 
   protected historialGestiones = signal<Array<{
     id: number;
@@ -2072,12 +2058,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     });
 
-    // Suscribirse a respuestas de autorización
-    this.autorizacionService.respuesta$.subscribe(solicitud => {
-      if (solicitud && this.waitingForAuthorization()) {
-        this.handleAuthorizationResponse(solicitud);
-      }
-    });
+    // [DESACTIVADO] Suscribirse a respuestas de autorización en tiempo real
+    // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después
+    // this.autorizacionService.respuesta$.subscribe(solicitud => {
+    //   if (solicitud && this.waitingForAuthorization()) {
+    //     this.handleAuthorizationResponse(solicitud);
+    //   }
+    // });
 
     // Iniciar polling del estado del agente para el indicador de umbral de tiempo
     const currentUser = this.authService.getCurrentUser();
@@ -2905,143 +2892,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.scheduleManagementId.set(null);
   }
 
-  // ===== MÉTODOS DE AUTORIZACIÓN PARA MONTOS PERSONALIZADOS =====
+  // ===== [DESACTIVADO] MÉTODOS DE AUTORIZACIÓN PARA MONTOS PERSONALIZADOS =====
+  // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después desde un módulo aparte
+  // Se mantienen los métodos comentados por si se necesitan reactivar en el futuro
 
   /**
-   * Detecta cuando el usuario selecciona un monto personalizado en el cronograma de pagos
+   * [DESACTIVADO] Detecta cuando el usuario selecciona un monto personalizado
+   * Ya no se usa - las excepciones se guardan directamente con estado EN_EVALUACION
    */
   onCustomAmountDetected(isCustom: boolean): void {
-    console.log('🔐 [Authorization] Custom amount detected:', isCustom);
-    this.requiresAuthorization.set(isCustom);
-    if (!isCustom) {
-      this.waitingForAuthorization.set(false);
-      this.currentAuthorizationData = null;
-    }
+    // Método desactivado - ya no se bloquea el guardado
+    console.log('ℹ️ [Exception] Custom amount detected (no blocking):', isCustom);
   }
 
-  /**
-   * Abre el modal de selección de supervisor para solicitar autorización
-   */
-  openSupervisorSelectionModal(): void {
-    console.log('📋 [Authorization] Opening supervisor selection modal');
-
-    // Preparar los datos de la solicitud antes de abrir el modal
-    const dynamicValues = this.dynamicFieldValues();
-    const schema = this.dynamicFieldsSchema();
-    let paymentScheduleData = null;
-
-    if (schema && schema.fields) {
-      const paymentScheduleField = schema.fields.find(f => f.type === 'payment_schedule');
-      if (paymentScheduleField && dynamicValues[paymentScheduleField.id]) {
-        paymentScheduleData = dynamicValues[paymentScheduleField.id];
-      }
-    }
-
-    if (!paymentScheduleData) {
-      alert('⚠️ No hay datos de cronograma de pago para autorizar');
-      return;
-    }
-
-    const currentUser = this.authService.getCurrentUser();
-
-    // Obtener tipificación seleccionada
-    const selectedClassifs = this.selectedClassifications();
-    const allTypifications = this.managementClassifications();
-    const lastSelectedId = selectedClassifs[selectedClassifs.length - 1];
-    const selectedTypification = allTypifications.find((c: any) => c.id.toString() === lastSelectedId);
-
-    const nombreAgente = currentUser
-      ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username
-      : 'Agente';
-
-    this.currentAuthorizationData = {
-      idTenant: this.selectedTenantId!,
-      idCartera: this.selectedPortfolioId,
-      idSubcartera: this.selectedSubPortfolioId,
-      idAgenteSolicitante: currentUser?.id || 0,
-      nombreAgente: nombreAgente,
-      idSupervisor: 0, // Se completará cuando seleccione supervisor
-      idCliente: this.customerData().id || 0,
-      nombreCliente: this.customerData().nombre_completo || '',
-      documentoCliente: this.customerData().numero_documento || '',
-      idTipificacion: selectedTypification?.id ? Number(selectedTypification.id) : 0,
-      nombreTipificacion: selectedTypification?.label || '',
-      montoTotal: paymentScheduleData.montoTotal,
-      numeroCuotas: paymentScheduleData.numeroCuotas,
-      campoMontoOrigen: paymentScheduleData.campoMontoOrigen,
-      montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción)
-      cuotas: paymentScheduleData.cuotas.map((c: any) => ({
-        numeroCuota: c.numeroCuota,
-        monto: c.monto,
-        fechaPago: c.fechaPago
-      })),
-      observacionesAgente: this.managementForm.observaciones || 'Solicitud de monto personalizado'
-    };
-
-    this.showSupervisorModal = true;
-  }
-
-  /**
-   * Callback cuando el agente selecciona un supervisor
-   */
-  onSupervisorSelected(supervisor: SupervisorEnLinea): void {
-    console.log('👤 [Authorization] Supervisor selected:', supervisor);
-    this.showSupervisorModal = false;
-
-    if (!this.currentAuthorizationData) {
-      console.error('❌ No authorization data prepared');
-      return;
-    }
-
-    // Agregar el ID del supervisor a la solicitud
-    const solicitudCompleta: CrearSolicitudRequest = {
-      ...this.currentAuthorizationData,
-      idSupervisor: supervisor.idUsuario
-    };
-
-    // Enviar la solicitud
-    this.autorizacionService.crearSolicitud(solicitudCompleta).subscribe({
-      next: (solicitud) => {
-        console.log('✅ [Authorization] Request created:', solicitud);
-        this.waitingForAuthorization.set(true);
-        // Mostrar mensaje de espera
-        alert(`📤 Solicitud enviada a ${supervisor.nombreCompleto}\n\nEsperando autorización...`);
-      },
-      error: (error) => {
-        console.error('❌ [Authorization] Error creating request:', error);
-        alert('❌ Error al enviar la solicitud de autorización');
-      }
-    });
-  }
-
-  /**
-   * Callback cuando el agente cancela la selección de supervisor
-   */
-  onSupervisorSelectionCancelled(): void {
-    console.log('❌ [Authorization] Supervisor selection cancelled');
-    this.showSupervisorModal = false;
-  }
-
-  /**
-   * Maneja la respuesta de autorización (aprobada o rechazada)
-   */
-  private handleAuthorizationResponse(solicitud: SolicitudAutorizacion): void {
-    console.log('📬 [Authorization] Response received:', solicitud);
-    this.waitingForAuthorization.set(false);
-
-    if (solicitud.estado === 'APROBADA') {
-      // Autorización aprobada - guardar automáticamente
-      alert('✅ ¡Autorización APROBADA!\n\nGuardando gestión automáticamente...');
-      this.requiresAuthorization.set(false); // Desactivar para que el guardado sea normal
-      this.saveManagement(); // Guardar la gestión
-    } else if (solicitud.estado === 'RECHAZADA') {
-      // Autorización rechazada - mostrar mensaje
-      const motivo = solicitud.comentariosSupervisor || 'Sin motivo especificado';
-      alert(`❌ Autorización RECHAZADA\n\nMotivo: ${motivo}\n\nPuede modificar los datos y volver a solicitar autorización.`);
-    } else if (solicitud.estado === 'EXPIRADA') {
-      alert('⏰ La solicitud de autorización ha expirado.\n\nPuede volver a solicitarla seleccionando otro supervisor.');
-    }
-  }
+  /*
+  // Los siguientes métodos están desactivados:
+  // - openSupervisorSelectionModal
+  // - onSupervisorSelected
+  // - onSupervisorSelectionCancelled
+  // - handleAuthorizationResponse
+  */
 
   toggleCall() {
     if (this.callActive()) {
