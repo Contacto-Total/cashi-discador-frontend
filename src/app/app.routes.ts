@@ -92,16 +92,6 @@ export const routes: Routes = [
     loadComponent: () => import('./pagos-bancarios/pages/conciliacion-report/conciliacion-report.component').then(m => m.ConciliacionReportComponent),
     canActivate: [authGuard]
   },
-  {
-    path: 'reports/continuidad',
-    loadComponent: () => import('./features/reports/continuidad-report/continuidad-report.component').then(m => m.ContinuidadReportComponent),
-    canActivate: [authGuard, adminOrSupervisorGuard]
-  },
-  {
-    path: 'excepciones',
-    loadComponent: () => import('./features/excepciones/excepciones.component').then(m => m.ExcepcionesComponent),
-    canActivate: [authGuard, adminOrSupervisorGuard]
-  },
 
   // ========================================
   // SMS
@@ -175,6 +165,11 @@ export const routes: Routes = [
   // ========================================
   // CARGA DE DATOS (Solo Admin)
   // ========================================
+  {
+    path: 'admin/data-load/consolidated',
+    loadComponent: () => import('./data-load/components/consolidated-load/consolidated-load.component').then(m => m.ConsolidatedLoadComponent),
+    canActivate: [authGuard, adminGuard]
+  },
   {
     path: 'admin/data-load/initial',
     loadComponent: () => import('./data-load/components/initial-load/initial-load.component').then(m => m.InitialLoadComponent),

@@ -1,16 +1,22 @@
-import { Component, OnInit, signal, computed, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, signal, computed, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { firstValueFrom } from 'rxjs';
 import { HeaderConfigurationService } from '../../services/header-configuration.service';
 import { FieldDefinitionService } from '../../services/field-definition.service';
 import { TypificationService } from '../../services/typification.service';
 import { PortfolioService } from '../../services/portfolio.service';
+import { NotificationService } from '../../../shared/services/notification.service';
+import { NotificationsComponent } from '../../../shared/components/notifications/notifications.component';
 import {
   HeaderConfiguration,
   HeaderConfigurationItem,
+  CreateHeaderConfigurationRequest,
   DataType,
-  LoadType
+  LoadType,
+  HeaderAlias,
+  HeaderResolutionResult
 } from '../../models/header-configuration.model';
 import { FieldDefinition } from '../../models/field-definition.model';
 import { Tenant } from '../../models/tenant.model';
@@ -20,8 +26,11 @@ import { SubPortfolio } from '../../models/portfolio.model';
 @Component({
   selector: 'app-header-configuration',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, NotificationsComponent],
   template: `
+    <!-- Notifications Toast -->
+    <app-notifications></app-notifications>
+
     <div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
       <div class="flex-1 overflow-y-auto">
         <div class="p-3 max-w-7xl mx-auto">
@@ -150,6 +159,14 @@ import { SubPortfolio } from '../../models/portfolio.model';
                          class="hidden">
                 </label>
 
+                <!-- Botón Agregar Cabecera Manual -->
+                <button (click)="openManualDialog()"
+                        class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-all cursor-pointer">
+                  <lucide-angular name="plus" [size]="16"></lucide-angular>
+                  <span class="hidden sm:inline">Agregar Cabecera</span>
+                  <span class="sm:hidden">Agregar</span>
+                </button>
+
                 <!-- Contador de cabeceras -->
                 @if (previewHeaders().length > 0) {
                   <div class="ml-auto flex items-center gap-2 px-3 py-1.5">
@@ -189,9 +206,15 @@ import { SubPortfolio } from '../../models/portfolio.model';
                   </button>
 
                   <button (click)="confirmConfiguration()"
-                          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all cursor-pointer">
-                    <lucide-angular name="save" [size]="16"></lucide-angular>
-                    <span>Guardar</span>
+                          [disabled]="isSaving()"
+                          class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    @if (isSaving()) {
+                      <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                      <span>Guardando...</span>
+                    } @else {
+                      <lucide-angular name="save" [size]="16"></lucide-angular>
+                      <span>Guardar</span>
+                    }
                   </button>
                 </div>
               }
@@ -228,6 +251,16 @@ import { SubPortfolio } from '../../models/portfolio.model';
                       <tr class="hover:bg-slate-800 transition-colors">
                         <td class="px-2 py-1.5">
                           <div class="flex items-center gap-1">
+                            @if (header.id) {
+                              <lucide-angular
+                                name="database"
+                                [size]="12"
+                                class="text-green-400 flex-shrink-0"
+                                title="Cabecera guardada en BD">
+                              </lucide-angular>
+                            } @else {
+                              <span class="px-1 py-0.5 bg-blue-900/50 text-blue-300 text-[9px] rounded font-medium">NUEVO</span>
+                            }
                             <span class="font-mono text-xs font-semibold text-indigo-400">{{ header.headerName }}</span>
                             @if (header.sourceField && header.regexPattern) {
                               <lucide-angular
@@ -272,6 +305,18 @@ import { SubPortfolio } from '../../models/portfolio.model';
                                     title="Editar">
                               <lucide-angular name="edit" [size]="14"></lucide-angular>
                             </button>
+                            @if (canManageAlias($index)) {
+                              <button (click)="openAliasDialog($index)"
+                                      class="p-1 text-amber-400 hover:bg-slate-800 rounded transition-colors relative"
+                                      title="Gestionar alias">
+                                <lucide-angular name="tags" [size]="14"></lucide-angular>
+                                @if (getAliasCount($index) > 0) {
+                                  <span class="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                                    {{ getAliasCount($index) }}
+                                  </span>
+                                }
+                              </button>
+                            }
                             <button (click)="removePreviewHeader($index)"
                                     class="p-1 text-red-400 hover:bg-slate-800 rounded transition-colors"
                                     title="Eliminar">
@@ -319,10 +364,14 @@ import { SubPortfolio } from '../../models/portfolio.model';
                   <label class="block text-sm font-semibold text-gray-300 mb-2">
                     <lucide-angular name="book-open" [size]="16" class="inline mr-1"></lucide-angular>
                     Campo Base de Datos (Opcional)
+                    @if (formData.id) {
+                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-400" title="No editable"></lucide-angular>
+                    }
                   </label>
                   <select [(ngModel)]="formData.fieldDefinitionId"
                           (ngModelChange)="onFieldDefinitionSelect()"
-                          class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                          [disabled]="!!formData.id"
+                          class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                     <option [value]="0">Sin asociar - Campo personalizado</option>
                     @for (field of availableFieldDefinitions(); track field.id) {
                       <option [value]="field.id">
@@ -331,7 +380,11 @@ import { SubPortfolio } from '../../models/portfolio.model';
                     }
                   </select>
                   <p class="text-xs text-gray-400 mt-1">
-                    Seleccione un campo del catálogo o deje "Sin asociar" para crear un campo personalizado.
+                    @if (formData.id) {
+                      La asociación al catálogo no puede cambiarse en cabeceras existentes.
+                    } @else {
+                      Seleccione un campo del catálogo o deje "Sin asociar" para crear un campo personalizado.
+                    }
                   </p>
                 </div>
 
@@ -363,21 +416,45 @@ import { SubPortfolio } from '../../models/portfolio.model';
                   </div>
                 }
 
+                <!-- Advertencia para cabeceras existentes -->
+                @if (formData.id) {
+                  <div class="bg-amber-900/30 border border-amber-700/50 rounded-lg p-3 mb-2">
+                    <div class="flex items-start gap-2">
+                      <lucide-angular name="alert-triangle" [size]="16" class="text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                      <div>
+                        <p class="text-sm text-amber-300 font-medium">Cabecera existente en base de datos</p>
+                        <p class="text-xs text-amber-400/80 mt-1">
+                          El nombre del campo y tipo de dato no pueden modificarse porque la columna ya existe en la tabla.
+                          Solo puede editar: etiqueta visual, formato y obligatoriedad.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                }
+
                 <!-- Selector de Tipo de Dato (para campos personalizados) -->
                 @if (formData.fieldDefinitionId === 0) {
                   <div>
                     <label class="block text-sm font-semibold text-gray-300 mb-2">
                       <lucide-angular name="type" [size]="16" class="inline mr-1"></lucide-angular>
                       Tipo de Dato *
+                      @if (formData.id) {
+                        <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-400" title="No editable"></lucide-angular>
+                      }
                     </label>
                     <select [(ngModel)]="formData.dataType"
-                            class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            [disabled]="!!formData.id"
+                            class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                       <option value="TEXTO">TEXTO</option>
                       <option value="NUMERICO">NUMERICO</option>
                       <option value="FECHA">FECHA</option>
                     </select>
                     <p class="text-xs text-gray-400 mt-1">
-                      Seleccione el tipo de dato para este campo personalizado.
+                      @if (formData.id) {
+                        El tipo de dato no puede cambiarse en cabeceras existentes.
+                      } @else {
+                        Seleccione el tipo de dato para este campo personalizado.
+                      }
                     </p>
                   </div>
                 }
@@ -387,13 +464,21 @@ import { SubPortfolio } from '../../models/portfolio.model';
                   <label class="block text-sm font-semibold text-gray-300 mb-2">
                     <lucide-angular name="settings" [size]="16" class="inline mr-1"></lucide-angular>
                     Campo Sistema *
+                    @if (formData.id) {
+                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-400" title="No editable"></lucide-angular>
+                    }
                   </label>
                   <input type="text"
                          [(ngModel)]="formData.headerName"
+                         [disabled]="!!formData.id"
                          placeholder="Ej: DNI, Saldo Vencido, Teléfono Principal"
-                         class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                         class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                   <p class="text-xs text-gray-400 mt-1">
-                    Nombre de la cabecera tal como viene del proveedor.
+                    @if (formData.id) {
+                      El nombre del campo no puede cambiarse en cabeceras existentes.
+                    } @else {
+                      Nombre de la cabecera tal como viene del proveedor.
+                    }
                   </p>
                 </div>
 
@@ -519,6 +604,111 @@ import { SubPortfolio } from '../../models/portfolio.model';
           </div>
         </div>
       }
+
+      <!-- Dialog Gestión de Alias -->
+      @if (showAliasDialog()) {
+        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div class="bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-slate-800">
+            <!-- Dialog Header -->
+            <div class="bg-gradient-to-r from-amber-600 to-amber-700 p-5 text-white">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <lucide-angular name="tags" [size]="20"></lucide-angular>
+                  </div>
+                  <div>
+                    <h2 class="text-xl font-bold">Gestionar Alias</h2>
+                    <p class="text-amber-100 text-sm">{{ selectedHeaderForAlias()?.headerName }}</p>
+                  </div>
+                </div>
+                <button (click)="closeAliasDialog()" class="text-white/80 hover:text-white">
+                  <lucide-angular name="x" [size]="20"></lucide-angular>
+                </button>
+              </div>
+            </div>
+
+            <!-- Dialog Body -->
+            <div class="p-6">
+              <!-- Info del campo -->
+              <div class="bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-700/50">
+                <p class="text-xs text-gray-400 mb-1">Nombre principal de la cabecera</p>
+                <p class="text-white font-mono font-semibold">{{ selectedHeaderForAlias()?.headerName }}</p>
+                <p class="text-xs text-gray-400 mt-2">Los alias permiten que el sistema reconozca columnas del Excel aunque tengan nombres diferentes.</p>
+              </div>
+
+              <!-- Agregar nuevo alias -->
+              <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  <lucide-angular name="plus" [size]="14" class="inline mr-1"></lucide-angular>
+                  Agregar nuevo alias
+                </label>
+                <div class="flex gap-2">
+                  <input type="text"
+                         [ngModel]="newAliasName()"
+                         (ngModelChange)="newAliasName.set($event)"
+                         (keyup.enter)="addAlias()"
+                         placeholder="Nombre alternativo de la columna"
+                         class="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+                  <button (click)="addAlias()"
+                          [disabled]="!newAliasName().trim()"
+                          class="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lista de alias -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  <lucide-angular name="list" [size]="14" class="inline mr-1"></lucide-angular>
+                  Alias configurados
+                </label>
+
+                @if (loadingAliases()) {
+                  <div class="text-center py-4">
+                    <lucide-angular name="loader-2" [size]="24" class="text-amber-400 animate-spin mx-auto"></lucide-angular>
+                    <p class="text-xs text-gray-400 mt-2">Cargando alias...</p>
+                  </div>
+                } @else if (aliases().length === 0) {
+                  <div class="text-center py-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                    <lucide-angular name="tags" [size]="24" class="text-gray-600 mx-auto"></lucide-angular>
+                    <p class="text-xs text-gray-400 mt-2">No hay alias configurados</p>
+                  </div>
+                } @else {
+                  <div class="space-y-2 max-h-48 overflow-y-auto">
+                    @for (alias of aliases(); track alias.id) {
+                      <div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/50">
+                        <div class="flex items-center gap-2">
+                          <lucide-angular name="tag" [size]="14" class="text-amber-400"></lucide-angular>
+                          <span class="text-white font-mono text-sm">{{ alias.alias }}</span>
+                          @if (alias.isPrincipal) {
+                            <span class="px-1.5 py-0.5 bg-green-900/50 text-green-400 rounded text-[10px] font-medium">Principal</span>
+                          }
+                        </div>
+                        @if (!alias.isPrincipal) {
+                          <button (click)="removeAlias(alias)"
+                                  class="p-1 text-red-400 hover:bg-slate-700 rounded transition-colors"
+                                  title="Eliminar alias">
+                            <lucide-angular name="trash-2" [size]="14"></lucide-angular>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Dialog Footer -->
+            <div class="border-t border-slate-800 p-4 flex justify-end bg-slate-950">
+              <button (click)="closeAliasDialog()"
+                      class="px-5 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
         </div>
       </div>
     </div>
@@ -532,6 +722,9 @@ import { SubPortfolio } from '../../models/portfolio.model';
 export class HeaderConfigurationComponent implements OnInit {
   @ViewChild('downloadButton', { read: ElementRef }) downloadButton?: ElementRef;
 
+  // Inyección del servicio de notificaciones
+  private notificationService = inject(NotificationService);
+
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
@@ -543,6 +736,16 @@ export class HeaderConfigurationComponent implements OnInit {
   showTransformSection = signal(false);
   dropdownPosition = signal<{ top: number; left: number }>({ top: 120, left: 100 });
   headersAreSaved = signal(false); // Indica si hay cabeceras guardadas en BD
+  isLoading = signal(false); // Estado de carga global
+  isSaving = signal(false); // Estado de guardado
+
+  // Signals para gestión de alias
+  showAliasDialog = signal(false);
+  selectedHeaderForAlias = signal<HeaderConfiguration | null>(null);
+  aliases = signal<HeaderAlias[]>([]);
+  newAliasName = signal('');
+  loadingAliases = signal(false);
+  savedHeaders = signal<HeaderConfiguration[]>([]); // Cabeceras guardadas en BD con sus IDs
 
   // Computed signal para mostrar solo campos disponibles (no usados)
   availableFieldDefinitions = computed(() => {
@@ -584,6 +787,7 @@ export class HeaderConfigurationComponent implements OnInit {
   csvSeparator = ';';
 
   formData = {
+    id: undefined as number | undefined,      // ID si es existente
     fieldDefinitionId: 0,
     headerName: '',
     dataType: 'TEXTO' as DataType,
@@ -591,7 +795,8 @@ export class HeaderConfigurationComponent implements OnInit {
     format: '',
     required: false,
     sourceField: '',
-    regexPattern: ''
+    regexPattern: '',
+    hasData: false                            // Si tiene datos en la tabla
   };
 
   constructor(
@@ -691,7 +896,12 @@ export class HeaderConfigurationComponent implements OnInit {
   loadExistingHeaders() {
     this.headerConfigService.getBySubPortfolioAndLoadType(this.selectedSubPortfolioId, this.selectedLoadType).subscribe({
       next: (headers) => {
+        // Guardar cabeceras completas con IDs para gestión de alias
+        this.savedHeaders.set(headers);
+
+        // Preservar el ID para saber cuáles ya existen en BD
         const items: HeaderConfigurationItem[] = headers.map(h => ({
+          id: h.id,                    // Preservar ID
           fieldDefinitionId: h.fieldDefinitionId,
           headerName: h.headerName,
           dataType: h.dataType,
@@ -699,7 +909,8 @@ export class HeaderConfigurationComponent implements OnInit {
           format: h.format,
           required: h.required,
           sourceField: h.sourceField,
-          regexPattern: h.regexPattern
+          regexPattern: h.regexPattern,
+          hasData: true               // Asumimos que tienen datos si ya existen
         }));
         this.previewHeaders.set(items);
         this.headersAreSaved.set(headers.length > 0);
@@ -707,6 +918,7 @@ export class HeaderConfigurationComponent implements OnInit {
       error: (error) => {
         console.error('Error loading headers:', error);
         this.headersAreSaved.set(false);
+        this.savedHeaders.set([]);
       }
     });
   }
@@ -714,6 +926,7 @@ export class HeaderConfigurationComponent implements OnInit {
   openManualDialog() {
     this.editingIndex.set(null);
     this.formData = {
+      id: undefined,
       fieldDefinitionId: 0,
       headerName: '',
       dataType: 'TEXTO',
@@ -721,7 +934,8 @@ export class HeaderConfigurationComponent implements OnInit {
       format: '',
       required: false,
       sourceField: '',
-      regexPattern: ''
+      regexPattern: '',
+      hasData: false
     };
     this.showTransformSection.set(false);
     this.showManualDialog.set(true);
@@ -778,7 +992,11 @@ export class HeaderConfigurationComponent implements OnInit {
   saveManualHeader() {
     if (!this.canSaveManualHeader()) return;
 
+    const editIdx = this.editingIndex();
+
+    // Crear el objeto de cabecera preservando id y hasData si existen
     const newHeader: HeaderConfigurationItem = {
+      id: this.formData.id,                   // Preservar ID si es cabecera existente
       fieldDefinitionId: this.formData.fieldDefinitionId,
       headerName: this.formData.headerName.trim(),
       dataType: this.formData.dataType,
@@ -786,21 +1004,23 @@ export class HeaderConfigurationComponent implements OnInit {
       format: this.formData.format?.trim() || undefined,
       required: this.formData.required,
       sourceField: this.formData.sourceField?.trim() || undefined,
-      regexPattern: this.formData.regexPattern?.trim() || undefined
+      regexPattern: this.formData.regexPattern?.trim() || undefined,
+      hasData: this.formData.hasData          // Preservar indicador de datos
     };
 
-    const currentHeaders = [...this.previewHeaders()];
-    const editIdx = this.editingIndex();
-
     if (editIdx !== null) {
-      // Editando
+      // Editando - actualizar en memoria
+      const currentHeaders = [...this.previewHeaders()];
       currentHeaders[editIdx] = newHeader;
+      this.previewHeaders.set(currentHeaders);
     } else {
-      // Agregando nuevo
+      // Agregando nuevo - solo agregar a memoria local (NO enviar al backend)
+      // El envío al backend se hace cuando el usuario presiona "Guardar"
+      const currentHeaders = [...this.previewHeaders()];
       currentHeaders.push(newHeader);
+      this.previewHeaders.set(currentHeaders);
     }
 
-    this.previewHeaders.set(currentHeaders);
     this.closeManualDialog();
   }
 
@@ -808,6 +1028,7 @@ export class HeaderConfigurationComponent implements OnInit {
     const header = this.previewHeaders()[index];
     this.editingIndex.set(index);
     this.formData = {
+      id: header.id,                          // Preservar ID si existe
       fieldDefinitionId: header.fieldDefinitionId,
       headerName: header.headerName,
       dataType: header.dataType,
@@ -815,61 +1036,203 @@ export class HeaderConfigurationComponent implements OnInit {
       format: header.format || '',
       required: header.required || false,
       sourceField: header.sourceField || '',
-      regexPattern: header.regexPattern || ''
+      regexPattern: header.regexPattern || '',
+      hasData: header.hasData || false        // Preservar indicador de datos
     };
     // Expandir sección de transformación si tiene datos
     this.showTransformSection.set(!!(header.sourceField || header.regexPattern));
     this.showManualDialog.set(true);
   }
 
-  removePreviewHeader(index: number) {
+  async removePreviewHeader(index: number) {
+    const header = this.previewHeaders()[index];
+
+    // Si la cabecera existe en BD, advertir
+    if (header.id) {
+      const confirmed = await this.notificationService.confirm({
+        title: 'Eliminar cabecera',
+        message: `La cabecera "${header.headerName}" ya existe en la base de datos.\n\nSi la tabla tiene datos, la eliminación será rechazada por el servidor.`,
+        confirmText: 'Eliminar',
+        cancelText: 'Cancelar',
+        type: 'warning'
+      });
+      if (!confirmed) return;
+    }
+
     const currentHeaders = [...this.previewHeaders()];
     currentHeaders.splice(index, 1);
     this.previewHeaders.set(currentHeaders);
+    this.notificationService.info('Cabecera removida', 'Recuerde guardar los cambios');
   }
 
-  clearAll() {
-    if (confirm('¿Está seguro de limpiar todas las cabeceras? Esta acción no se puede deshacer.')) {
-      this.previewHeaders.set([]);
-    }
-  }
+  async clearAll() {
+    const hasSavedHeaders = this.headersAreSaved();
 
-  confirmConfiguration() {
-    if (this.previewHeaders().length === 0) {
-      alert('No hay cabeceras para confirmar');
-      return;
-    }
-
-    if (!confirm(`¿Confirmar la configuración de ${this.previewHeaders().length} cabeceras?`)) {
-      return;
-    }
-
-    const request = {
-      subPortfolioId: this.selectedSubPortfolioId,
-      loadType: this.selectedLoadType,
-      headers: this.previewHeaders()
-    };
-
-    // Primero eliminamos las configuraciones existentes
-    this.headerConfigService.deleteAllBySubPortfolioAndLoadType(this.selectedSubPortfolioId, this.selectedLoadType).subscribe({
-      next: () => {
-        // Luego creamos las nuevas
-        this.headerConfigService.createBulk(request).subscribe({
-          next: () => {
-            alert('Configuración guardada exitosamente');
-            this.loadExistingHeaders();
-          },
-          error: (error) => {
-            console.error('Error saving configuration:', error);
-            alert('Error al guardar la configuración: ' + (error.error?.message || error.message));
-          }
-        });
-      },
-      error: (error) => {
-        console.error('Error deleting old configuration:', error);
-        alert('Error al eliminar configuración anterior');
-      }
+    const confirmed = await this.notificationService.confirm({
+      title: hasSavedHeaders ? 'Eliminar todas las cabeceras' : 'Limpiar vista',
+      message: hasSavedHeaders
+        ? 'Esto eliminará las cabeceras guardadas en la base de datos. Esta acción no se puede deshacer.'
+        : '¿Está seguro de limpiar todas las cabeceras de la vista?',
+      confirmText: hasSavedHeaders ? 'Eliminar todo' : 'Limpiar',
+      cancelText: 'Cancelar',
+      type: hasSavedHeaders ? 'danger' : 'warning'
     });
+
+    if (!confirmed) return;
+
+    // Si hay cabeceras guardadas en BD, eliminarlas
+    if (hasSavedHeaders) {
+      this.isLoading.set(true);
+      this.headerConfigService.deleteAllBySubPortfolioAndLoadType(
+        this.selectedSubPortfolioId,
+        this.selectedLoadType
+      ).subscribe({
+        next: () => {
+          this.previewHeaders.set([]);
+          this.savedHeaders.set([]);
+          this.headersAreSaved.set(false);
+          this.isLoading.set(false);
+          this.notificationService.success('Cabeceras eliminadas', 'Todas las cabeceras han sido eliminadas exitosamente');
+        },
+        error: (error) => {
+          console.error('Error al eliminar cabeceras:', error);
+          this.isLoading.set(false);
+          this.notificationService.error('Error al eliminar', error.error?.message || error.message);
+        }
+      });
+    } else {
+      // Solo limpiar la vista local
+      this.previewHeaders.set([]);
+      this.notificationService.info('Vista limpiada', 'Se han removido todas las cabeceras de la vista');
+    }
+  }
+
+  async confirmConfiguration() {
+    if (this.previewHeaders().length === 0) {
+      this.notificationService.warning('Sin cabeceras', 'No hay cabeceras para guardar');
+      return;
+    }
+
+    const currentHeaders = this.previewHeaders();
+
+    // Clasificar cabeceras
+    const newHeaders = currentHeaders.filter(h => !h.id);
+    const existingHeaders = currentHeaders.filter(h => h.id);
+    const currentIds = new Set(currentHeaders.filter(h => h.id).map(h => h.id));
+    const headersToDelete = this.savedHeaders().filter(h => !currentIds.has(h.id));
+
+    // Si no hay cambios
+    if (newHeaders.length === 0 && existingHeaders.length === 0 && headersToDelete.length === 0) {
+      this.notificationService.info('Sin cambios', 'No hay cambios pendientes para guardar');
+      return;
+    }
+
+    // Preparar detalles para el diálogo
+    const details: string[] = [];
+    if (newHeaders.length > 0) details.push(`${newHeaders.length} cabecera(s) nueva(s)`);
+    if (existingHeaders.length > 0) details.push(`${existingHeaders.length} cabecera(s) actualizada(s)`);
+    if (headersToDelete.length > 0) {
+      details.push(`${headersToDelete.length} cabecera(s) a eliminar:`);
+      headersToDelete.forEach(h => details.push(`  • ${h.headerName}`));
+    }
+
+    const confirmed = await this.notificationService.confirm({
+      title: 'Guardar configuración',
+      message: headersToDelete.length > 0
+        ? 'Se guardarán los cambios en la configuración de cabeceras.\n\nSi alguna cabecera a eliminar tiene datos, la eliminación fallará.'
+        : 'Se guardarán los cambios en la configuración de cabeceras.',
+      confirmText: 'Guardar',
+      cancelText: 'Cancelar',
+      type: headersToDelete.length > 0 ? 'warning' : 'info',
+      details
+    });
+
+    if (!confirmed) return;
+
+    this.saveConfigurationWithSmartLogic(newHeaders, existingHeaders, headersToDelete);
+  }
+
+  private async saveConfigurationWithSmartLogic(
+    newHeaders: HeaderConfigurationItem[],
+    existingHeaders: HeaderConfigurationItem[],
+    headersToDelete: HeaderConfiguration[]
+  ) {
+    this.isSaving.set(true);
+    const errors: string[] = [];
+    const deletionErrors: string[] = [];
+
+    try {
+      // 1. Intentar eliminar cabeceras removidas (una por una para capturar errores individuales)
+      for (const header of headersToDelete) {
+        try {
+          await firstValueFrom(this.headerConfigService.delete(header.id));
+        } catch (error: any) {
+          const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+          deletionErrors.push(`${header.headerName}: ${errorMsg}`);
+        }
+      }
+
+      // 2. Actualizar cabeceras existentes
+      for (const header of existingHeaders) {
+        if (!header.id) continue;
+        try {
+          await firstValueFrom(this.headerConfigService.update(header.id, {
+            displayLabel: header.displayLabel,
+            format: header.format,
+            required: header.required
+          }));
+        } catch (error: any) {
+          errors.push(`${header.headerName}: ${error?.error?.message || error?.message}`);
+        }
+      }
+
+      // 3. Crear nuevas cabeceras
+      if (newHeaders.length > 0) {
+        try {
+          const request = {
+            subPortfolioId: this.selectedSubPortfolioId,
+            loadType: this.selectedLoadType,
+            headers: newHeaders.map(h => ({
+              fieldDefinitionId: h.fieldDefinitionId,
+              headerName: h.headerName,
+              dataType: h.dataType,
+              displayLabel: h.displayLabel,
+              format: h.format,
+              required: h.required,
+              sourceField: h.sourceField,
+              regexPattern: h.regexPattern
+            }))
+          };
+          await firstValueFrom(this.headerConfigService.createBulk(request));
+        } catch (error: any) {
+          errors.push(`Creación en lote: ${error?.error?.message || error?.message}`);
+        }
+      }
+
+      // Mostrar resultados
+      if (deletionErrors.length > 0) {
+        const errorDetails = deletionErrors.join('\n• ');
+        this.notificationService.warning(
+          'Algunas cabeceras no se eliminaron',
+          `Las siguientes cabeceras no pudieron eliminarse (probablemente tienen datos):\n• ${errorDetails}`
+        );
+      }
+
+      if (errors.length > 0) {
+        const errorDetails = errors.join('\n• ');
+        this.notificationService.error('Errores durante el guardado', `• ${errorDetails}`);
+      }
+
+      if (deletionErrors.length === 0 && errors.length === 0) {
+        this.notificationService.success('Configuración guardada', 'Todos los cambios se aplicaron exitosamente');
+      } else if (errors.length === 0 && deletionErrors.length > 0) {
+        this.notificationService.info('Guardado parcial', 'El resto de la configuración se guardó correctamente');
+      }
+
+    } finally {
+      this.isSaving.set(false);
+      this.loadExistingHeaders();
+    }
   }
 
   onFileSelected(event: any) {
@@ -899,15 +1262,12 @@ export class HeaderConfigurationComponent implements OnInit {
    */
   parseExcel(file: File) {
     const reader = new FileReader();
-    reader.onload = (e: any) => {
+    reader.onload = async (e: any) => {
       try {
         // Cargar librería XLSX de forma dinámica desde CDN
         if (!(window as any).XLSX) {
-          alert('Cargando soporte para Excel... intente nuevamente en unos segundos.');
-          this.loadXLSXLibrary().then(() => {
-            this.parseExcel(file); // Reintentar después de cargar la librería
-          });
-          return;
+          this.notificationService.info('Cargando soporte Excel', 'Por favor espere...');
+          await this.loadXLSXLibrary();
         }
 
         const XLSX = (window as any).XLSX;
@@ -926,7 +1286,7 @@ export class HeaderConfigurationComponent implements OnInit {
         this.parseCSV(csvData);
       } catch (error) {
         console.error('Error al procesar Excel:', error);
-        alert('Error al procesar el archivo Excel. Verifique que el formato sea correcto.');
+        this.notificationService.error('Error al procesar Excel', 'Verifique que el formato del archivo sea correcto');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -988,84 +1348,138 @@ export class HeaderConfigurationComponent implements OnInit {
     });
   }
 
+  /**
+   * Detecta el tipo de dato basándose en los valores de muestra
+   * Analiza los primeros N registros para inferir el tipo
+   */
+  private detectDataType(sampleValues: string[]): { dataType: DataType; format?: string } {
+    // Filtrar valores vacíos para el análisis
+    const nonEmptyValues = sampleValues.filter(v => v && v.trim() !== '');
+
+    if (nonEmptyValues.length === 0) {
+      return { dataType: 'TEXTO' };
+    }
+
+    // Patrones para detección de fechas
+    const datePatterns = [
+      { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, format: 'yyyy-MM-dd HH:mm:ss' },
+      { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, format: 'yyyy-MM-ddTHH:mm:ss' },
+      { regex: /^\d{4}-\d{2}-\d{2}$/, format: 'yyyy-MM-dd' },
+      { regex: /^\d{2}\/\d{2}\/\d{4}$/, format: 'dd/MM/yyyy' },
+      { regex: /^\d{2}-\d{2}-\d{4}$/, format: 'dd-MM-yyyy' },
+      { regex: /^\d{4}\/\d{2}\/\d{2}$/, format: 'yyyy/MM/dd' }
+    ];
+
+    // Verificar si es fecha
+    for (const pattern of datePatterns) {
+      const matchCount = nonEmptyValues.filter(v => pattern.regex.test(v.trim())).length;
+      // Si al menos 80% de los valores no vacíos coinciden con el patrón de fecha
+      if (matchCount >= nonEmptyValues.length * 0.8) {
+        return { dataType: 'FECHA', format: pattern.format };
+      }
+    }
+
+    // Verificar si es numérico
+    const numericRegex = /^-?\d+([.,]\d+)?$/;
+    const numericCount = nonEmptyValues.filter(v => {
+      const cleaned = v.trim().replace(/,/g, '.');
+      return numericRegex.test(cleaned);
+    }).length;
+
+    // Si al menos 80% de los valores son numéricos
+    if (numericCount >= nonEmptyValues.length * 0.8) {
+      // Detectar si tiene decimales
+      const hasDecimals = nonEmptyValues.some(v => v.includes('.') || v.includes(','));
+      return {
+        dataType: 'NUMERICO',
+        format: hasDecimals ? 'decimal(18,2)' : undefined
+      };
+    }
+
+    // Por defecto es texto
+    return { dataType: 'TEXTO' };
+  }
+
+  /**
+   * Genera una etiqueta visual legible a partir del nombre de columna
+   * Ejemplo: "FECHA_PROCESO" -> "Fecha Proceso"
+   */
+  private generateDisplayLabel(headerName: string): string {
+    return headerName
+      .toLowerCase()
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
   parseCSV(csv: string) {
     const lines = csv.split('\n').filter(line => line.trim());
     if (lines.length < 2) {
-      alert('El archivo CSV está vacío o no tiene datos');
+      this.notificationService.error('Archivo vacío', 'El archivo CSV está vacío o no tiene datos');
       return;
     }
 
+    // Primera línea contiene los nombres de las columnas
+    const columnNames = this.parseCsvLine(lines[0], this.csvSeparator);
+
+    if (columnNames.length === 0) {
+      this.notificationService.error('Sin columnas', 'No se encontraron columnas en el archivo');
+      return;
+    }
+
+    // Recopilar hasta 5 registros de muestra para cada columna
+    const sampleSize = Math.min(5, lines.length - 1);
+    const columnSamples: string[][] = columnNames.map(() => []);
+
+    for (let i = 1; i <= sampleSize; i++) {
+      const rowValues = this.parseCsvLine(lines[i], this.csvSeparator);
+      rowValues.forEach((value, colIndex) => {
+        if (colIndex < columnNames.length) {
+          columnSamples[colIndex].push(value);
+        }
+      });
+    }
+
+    // Crear cabeceras basándose en el análisis
     const headers: HeaderConfigurationItem[] = [];
 
-    // Saltar la primera línea (cabecera del CSV)
-    for (let i = 1; i < lines.length; i++) {
-      const columns = this.parseCsvLine(lines[i], this.csvSeparator);
+    for (let colIndex = 0; colIndex < columnNames.length; colIndex++) {
+      const headerName = columnNames[colIndex].trim();
 
-      if (columns.length < 3) continue;
+      if (!headerName) continue;
 
-      // Formato CSV: codigoCampo, nombreCabecera, etiquetaVisual, formato, tipoDato, obligatorio, campoAsociado, regEx
-      const [fieldCode, headerName, displayLabel, format, tipoDato, obligatorio, campoAsociado, regEx] = columns;
+      // Detectar tipo de dato analizando los valores de muestra
+      const { dataType, format } = this.detectDataType(columnSamples[colIndex]);
 
-      if (!headerName || !displayLabel) continue;
+      // Generar etiqueta visual legible
+      const displayLabel = this.generateDisplayLabel(headerName);
 
-      // Parsear el campo obligatorio (puede ser "1", "true", "TRUE", etc.)
-      const isRequired = obligatorio ? (obligatorio === '1' || obligatorio.toLowerCase() === 'true') : undefined;
-
-      // Limpiar el regex si viene entre comillas
-      let cleanRegex = regEx?.trim();
-      if (cleanRegex) {
-        // Remover comillas al inicio y final si existen
-        if (cleanRegex.startsWith('"') && cleanRegex.endsWith('"')) {
-          cleanRegex = cleanRegex.slice(1, -1);
-        }
-      }
-
-      // Si fieldCode está vacío, es un campo personalizado (no mapeado a BD)
-      if (!fieldCode || fieldCode.trim() === '') {
-        // Campo personalizado - requiere tipoDato
-        if (!tipoDato || !['TEXTO', 'NUMERICO', 'FECHA'].includes(tipoDato.toUpperCase())) {
-          alert(`Campo personalizado en línea ${i + 1} requiere un tipo de dato válido (TEXTO, NUMERICO, FECHA)`);
-          return;
-        }
-
-        headers.push({
-          fieldDefinitionId: 0, // Sin asociar a BD
-          headerName: headerName.trim(),
-          dataType: tipoDato.toUpperCase() as DataType,
-          displayLabel: displayLabel.trim(),
-          format: format?.trim() || undefined,
-          required: isRequired,
-          sourceField: campoAsociado?.trim() || undefined,
-          regexPattern: cleanRegex || undefined
-        });
-      } else {
-        // Campo asociado a BD - buscar en catálogo
-        const fieldDef = this.fieldDefinitions().find(f => f.fieldCode === fieldCode.trim());
-        if (!fieldDef) {
-          alert(`Código de campo no encontrado en línea ${i + 1}: ${fieldCode}. Revise el catálogo de campos.`);
-          return;
-        }
-
-        headers.push({
-          fieldDefinitionId: fieldDef.id,
-          headerName: headerName.trim(),
-          dataType: fieldDef.dataType,
-          displayLabel: displayLabel.trim(),
-          format: format?.trim() || undefined,
-          required: isRequired !== undefined ? isRequired : true, // Usar el valor del CSV o true por defecto
-          sourceField: campoAsociado?.trim() || undefined,
-          regexPattern: cleanRegex || undefined
-        });
-      }
+      headers.push({
+        fieldDefinitionId: 0, // Sin asociar a BD (el usuario puede asociar después)
+        headerName: headerName,
+        dataType: dataType,
+        displayLabel: displayLabel,
+        format: format,
+        required: false // Por defecto no obligatorio, el usuario puede cambiar
+      });
     }
 
     if (headers.length === 0) {
-      alert('No se encontraron cabeceras válidas en el archivo CSV');
+      this.notificationService.error('Sin cabeceras válidas', 'No se encontraron cabeceras válidas en el archivo');
       return;
     }
 
     this.previewHeaders.set(headers);
-    alert(`Se importaron ${headers.length} cabeceras exitosamente`);
+
+    // Contar tipos detectados
+    const fechaCount = headers.filter(h => h.dataType === 'FECHA').length;
+    const numericoCount = headers.filter(h => h.dataType === 'NUMERICO').length;
+    const textoCount = headers.filter(h => h.dataType === 'TEXTO').length;
+
+    this.notificationService.success(
+      `${headers.length} columnas detectadas`,
+      `Tipos: ${fechaCount} fecha, ${numericoCount} numérico, ${textoCount} texto\nRevise y ajuste antes de guardar`
+    );
   }
 
   toggleDownloadMenu() {
@@ -1198,11 +1612,10 @@ export class HeaderConfigurationComponent implements OnInit {
     link.click();
     document.body.removeChild(link);
 
-    const message = this.previewHeaders().length > 0
-      ? 'Configuración actual descargada exitosamente'
-      : 'Plantilla CSV descargada exitosamente';
-
-    alert(message);
+    this.notificationService.success(
+      'Archivo descargado',
+      this.previewHeaders().length > 0 ? 'Configuración actual exportada' : 'Plantilla CSV descargada'
+    );
   }
 
   async downloadExcelTemplate() {
@@ -1211,9 +1624,10 @@ export class HeaderConfigurationComponent implements OnInit {
     // Cargar librería XLSX si no está disponible
     if (!(window as any).XLSX) {
       try {
+        this.notificationService.info('Cargando', 'Preparando soporte para Excel...');
         await this.loadXLSXLibrary();
       } catch (error) {
-        alert('No se pudo cargar el soporte para Excel. Intente de nuevo.');
+        this.notificationService.error('Error', 'No se pudo cargar el soporte para Excel');
         return;
       }
     }
@@ -1264,7 +1678,7 @@ export class HeaderConfigurationComponent implements OnInit {
     // Descargar el archivo
     XLSX.writeFile(wb, 'header-configuration-template.xlsx');
 
-    alert('Modelo Excel descargado exitosamente');
+    this.notificationService.success('Archivo descargado', 'Plantilla Excel descargada exitosamente');
   }
 
   getDataTypeBadgeClass(dataType: DataType): string {
@@ -1283,5 +1697,131 @@ export class HeaderConfigurationComponent implements OnInit {
   getFieldCodeById(fieldDefinitionId: number): string {
     const field = this.fieldDefinitions().find(f => f.id === fieldDefinitionId);
     return field ? field.fieldCode : '-';
+  }
+
+  // ==================== Gestión de Alias ====================
+
+  /**
+   * Abre el diálogo de gestión de alias para una cabecera
+   */
+  openAliasDialog(index: number) {
+    // Buscar la cabecera guardada por su ID, no por índice
+    const previewHeader = this.previewHeaders()[index];
+    if (!previewHeader || !previewHeader.id) {
+      this.notificationService.warning('Cabecera no guardada', 'Debe guardar las cabeceras primero para poder gestionar alias');
+      return;
+    }
+
+    // Buscar en savedHeaders por el ID
+    const savedHeader = this.savedHeaders().find(h => h.id === previewHeader.id);
+    if (!savedHeader) {
+      this.notificationService.warning('Cabecera no encontrada', 'No se encontró la cabecera en la base de datos');
+      return;
+    }
+
+    this.selectedHeaderForAlias.set(savedHeader);
+    this.newAliasName.set('');
+    this.showAliasDialog.set(true);
+    this.loadAliases(savedHeader.id);
+  }
+
+  /**
+   * Cierra el diálogo de alias
+   */
+  closeAliasDialog() {
+    this.showAliasDialog.set(false);
+    this.selectedHeaderForAlias.set(null);
+    this.aliases.set([]);
+    this.newAliasName.set('');
+  }
+
+  /**
+   * Carga los alias de una cabecera
+   */
+  loadAliases(headerConfigId: number) {
+    this.loadingAliases.set(true);
+    this.headerConfigService.getAliases(headerConfigId).subscribe({
+      next: (aliases) => {
+        this.aliases.set(aliases);
+        this.loadingAliases.set(false);
+      },
+      error: (error) => {
+        console.error('Error al cargar alias:', error);
+        this.loadingAliases.set(false);
+        this.aliases.set([]);
+      }
+    });
+  }
+
+  /**
+   * Agrega un nuevo alias
+   */
+  addAlias() {
+    const header = this.selectedHeaderForAlias();
+    const aliasName = this.newAliasName().trim();
+
+    if (!header || !header.id || !aliasName) {
+      return;
+    }
+
+    this.headerConfigService.addAlias(header.id, {
+      alias: aliasName,
+      username: 'admin' // TODO: obtener del usuario autenticado
+    }).subscribe({
+      next: (newAlias) => {
+        this.aliases.update(current => [...current, newAlias]);
+        this.newAliasName.set('');
+        this.notificationService.success('Alias agregado', `Se agregó "${aliasName}" como alias`);
+      },
+      error: (error) => {
+        console.error('Error al agregar alias:', error);
+        this.notificationService.error('Error al agregar alias', error.error?.message || error.message);
+      }
+    });
+  }
+
+  /**
+   * Elimina un alias
+   */
+  async removeAlias(alias: HeaderAlias) {
+    const confirmed = await this.notificationService.confirm({
+      title: 'Eliminar alias',
+      message: `¿Está seguro de eliminar el alias "${alias.alias}"?`,
+      confirmText: 'Eliminar',
+      cancelText: 'Cancelar',
+      type: 'warning'
+    });
+
+    if (!confirmed) return;
+
+    this.headerConfigService.removeAlias(alias.id, 'admin').subscribe({
+      next: () => {
+        this.aliases.update(current => current.filter(a => a.id !== alias.id));
+        this.notificationService.success('Alias eliminado', `Se eliminó el alias "${alias.alias}"`);
+      },
+      error: (error) => {
+        console.error('Error al eliminar alias:', error);
+        this.notificationService.error('Error al eliminar alias', error.error?.message || error.message);
+      }
+    });
+  }
+
+  /**
+   * Verifica si una cabecera tiene ID guardado (puede gestionar alias)
+   */
+  canManageAlias(index: number): boolean {
+    const previewHeader = this.previewHeaders()[index];
+    return !!previewHeader && !!previewHeader.id;
+  }
+
+  /**
+   * Obtiene la cantidad de alias de una cabecera
+   */
+  getAliasCount(index: number): number {
+    const previewHeader = this.previewHeaders()[index];
+    if (!previewHeader || !previewHeader.id) return 0;
+
+    const savedHeader = this.savedHeaders().find(h => h.id === previewHeader.id);
+    return savedHeader?.aliases?.length || 0;
   }
 }

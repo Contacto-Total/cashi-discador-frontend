@@ -7,7 +7,14 @@ import {
   CreateHeaderConfigurationRequest,
   UpdateHeaderConfigurationRequest,
   BulkCreateHeaderConfigurationRequest,
-  LoadType
+  LoadType,
+  HeaderAlias,
+  AddAliasRequest,
+  ResolveHeadersRequest,
+  HeaderResolutionResult,
+  CreateNewHeaderFromColumnRequest,
+  IgnoreColumnRequest,
+  HeaderChangeHistory
 } from '../models/header-configuration.model';
 
 @Injectable({
@@ -90,5 +97,83 @@ export class HeaderConfigurationService {
       loadType,
       data
     });
+  }
+
+  // ==================== Resolución de cabeceras ====================
+
+  /**
+   * Resuelve las cabeceras del Excel contra las configuradas
+   * Identifica cabeceras coincidentes, no reconocidas e ignoradas
+   */
+  resolveHeaders(request: ResolveHeadersRequest): Observable<HeaderResolutionResult> {
+    return this.http.post<HeaderResolutionResult>(`${this.baseUrl}/resolve-headers`, request);
+  }
+
+  // ==================== Gestión de Alias ====================
+
+  /**
+   * Obtiene todos los alias de una cabecera específica
+   */
+  getAliases(headerConfigId: number): Observable<HeaderAlias[]> {
+    return this.http.get<HeaderAlias[]>(`${this.baseUrl}/${headerConfigId}/aliases`);
+  }
+
+  /**
+   * Agrega un nuevo alias a una cabecera
+   */
+  addAlias(headerConfigId: number, request: AddAliasRequest): Observable<HeaderAlias> {
+    return this.http.post<HeaderAlias>(`${this.baseUrl}/${headerConfigId}/aliases`, request);
+  }
+
+  /**
+   * Elimina un alias
+   */
+  removeAlias(aliasId: number, username: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/aliases/${aliasId}`, {
+      params: { username }
+    });
+  }
+
+  // ==================== Crear cabecera desde columna ====================
+
+  /**
+   * Crea una nueva cabecera desde una columna no reconocida del Excel
+   */
+  createFromColumn(request: CreateNewHeaderFromColumnRequest): Observable<HeaderConfiguration> {
+    return this.http.post<HeaderConfiguration>(`${this.baseUrl}/create-from-column`, request);
+  }
+
+  // ==================== Columnas ignoradas ====================
+
+  /**
+   * Marca una columna como ignorada
+   */
+  ignoreColumn(request: IgnoreColumnRequest): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/ignore-column`, request);
+  }
+
+  /**
+   * Obtiene la lista de columnas ignoradas para una subcartera y tipo de carga
+   */
+  getIgnoredColumns(subPortfolioId: number, loadType: LoadType): Observable<string[]> {
+    return this.http.get<string[]>(`${this.baseUrl}/subportfolio/${subPortfolioId}/load-type/${loadType}/ignored-columns`);
+  }
+
+  /**
+   * Reactiva una columna previamente ignorada
+   */
+  reactivateColumn(subPortfolioId: number, loadType: LoadType, columnName: string, username: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/subportfolio/${subPortfolioId}/load-type/${loadType}/ignored-columns/${encodeURIComponent(columnName)}`, {
+      params: { username }
+    });
+  }
+
+  // ==================== Historial de cambios ====================
+
+  /**
+   * Obtiene el historial de cambios de cabeceras de una subcartera
+   */
+  getChangeHistory(subPortfolioId: number): Observable<HeaderChangeHistory[]> {
+    return this.http.get<HeaderChangeHistory[]>(`${this.baseUrl}/subportfolio/${subPortfolioId}/change-history`);
   }
 }
