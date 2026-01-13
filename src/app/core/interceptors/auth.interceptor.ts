@@ -22,6 +22,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error) => {
       // Handle 401 Unauthorized errors
       if (error.status === 401) {
+        console.error('[INTERCEPTOR] Error 401 en:', req.url);
+        console.error('[INTERCEPTOR] Haciendo logout automático');
         authService.logout();
         router.navigate(['/login']);
       }
