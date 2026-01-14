@@ -329,6 +329,9 @@ export class ExcepcionesComponent implements OnInit {
   procesando = signal(false);
 
   ngOnInit(): void {
+    console.log('[EXCEPCIONES] ========================================');
+    console.log('[EXCEPCIONES] Componente inicializado');
+    console.log('[EXCEPCIONES] Cargando excepciones...');
     this.cargarExcepciones();
   }
 
