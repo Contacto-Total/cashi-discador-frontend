@@ -274,6 +274,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    path: 'excepciones',
+    loadComponent: () => import('./features/excepciones/excepciones.component').then(m => m.ExcepcionesComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
     path: 'admin/agent-productivity',
     loadComponent: () => import('./features/admin/agent-productivity/agent-productivity.component').then(m => m.AgentProductivityComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
