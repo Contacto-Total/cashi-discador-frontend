@@ -496,16 +496,106 @@ interface NewHeaderForm {
                   <h3 class="text-lg font-bold text-red-400">Carga completada con errores</h3>
                 }
               </div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+
+              <!-- Estadísticas principales -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                 <div class="bg-slate-800 rounded-lg p-3">
-                  <p class="text-gray-400">Procesados</p>
-                  <p class="text-2xl font-bold text-white">{{ lastResult()?.totalProcessed }}</p>
+                  <p class="text-gray-400">Total filas</p>
+                  <p class="text-2xl font-bold text-white">{{ lastResult()?.mainFileResult?.totalRows || lastResult()?.totalProcessed || 0 }}</p>
                 </div>
                 <div class="bg-slate-800 rounded-lg p-3">
-                  <p class="text-gray-400">Errores</p>
-                  <p class="text-2xl font-bold" [class.text-red-400]="lastResult()?.totalErrors" [class.text-gray-400]="!lastResult()?.totalErrors">{{ lastResult()?.totalErrors }}</p>
+                  <p class="text-gray-400">Insertados</p>
+                  <p class="text-2xl font-bold text-emerald-400">{{ lastResult()?.mainFileResult?.insertedRows || 0 }}</p>
+                </div>
+                <div class="bg-slate-800 rounded-lg p-3">
+                  <p class="text-gray-400">Actualizados</p>
+                  <p class="text-2xl font-bold text-blue-400">{{ lastResult()?.mainFileResult?.updatedRows || 0 }}</p>
+                </div>
+                <div class="bg-slate-800 rounded-lg p-3">
+                  <p class="text-gray-400">Fallidos</p>
+                  <p class="text-2xl font-bold" [class.text-red-400]="lastResult()?.totalErrors" [class.text-gray-400]="!lastResult()?.totalErrors">{{ lastResult()?.totalErrors || 0 }}</p>
                 </div>
               </div>
+
+              <!-- Detalle de errores -->
+              @if (lastResult()?.mainFileResult?.errors?.length > 0) {
+                <div class="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                  <div class="flex items-center gap-2 mb-3">
+                    <lucide-angular name="alert-circle" [size]="18" class="text-red-400"></lucide-angular>
+                    <h4 class="font-semibold text-red-400">
+                      Detalle de errores ({{ lastResult()?.mainFileResult?.errors?.length }}
+                      @if (lastResult()?.mainFileResult?.totalErrors > lastResult()?.mainFileResult?.errors?.length) {
+                        de {{ lastResult()?.mainFileResult?.totalErrors }}
+                      })
+                    </h4>
+                  </div>
+                  <div class="max-h-48 overflow-y-auto space-y-1 text-sm">
+                    @for (error of lastResult()?.mainFileResult?.errors; track $index) {
+                      <div class="bg-slate-800/50 rounded px-3 py-2 text-gray-300 font-mono text-xs">
+                        <span class="text-red-400 mr-2">●</span>{{ error }}
+                      </div>
+                    }
+                  </div>
+                  @if (lastResult()?.mainFileResult?.totalErrors > lastResult()?.mainFileResult?.errors?.length) {
+                    <p class="text-gray-500 text-xs mt-2 italic">
+                      * Se muestran solo los primeros {{ lastResult()?.mainFileResult?.errors?.length }} errores de {{ lastResult()?.mainFileResult?.totalErrors }} totales
+                    </p>
+                  }
+                </div>
+              }
+
+              <!-- Errores de sincronización de clientes -->
+              @if (lastResult()?.mainFileResult?.syncError) {
+                <div class="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4 mt-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <lucide-angular name="users" [size]="18" class="text-amber-400"></lucide-angular>
+                    <h4 class="font-semibold text-amber-400">Error en sincronización de clientes</h4>
+                  </div>
+                  <p class="text-gray-300 text-sm">{{ lastResult()?.mainFileResult?.syncError }}</p>
+                </div>
+              }
+
+              <!-- Resultados de sincronización exitosa -->
+              @if (lastResult()?.mainFileResult?.syncCustomersCreated !== undefined || lastResult()?.mainFileResult?.syncCustomersUpdated !== undefined) {
+                <div class="bg-slate-800/50 rounded-lg p-3 mt-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <lucide-angular name="users" [size]="16" class="text-cyan-400"></lucide-angular>
+                    <span class="text-sm text-gray-400">Sincronización de clientes:</span>
+                  </div>
+                  <div class="flex gap-4 text-sm">
+                    <span class="text-emerald-400">{{ lastResult()?.mainFileResult?.syncCustomersCreated || 0 }} creados</span>
+                    <span class="text-blue-400">{{ lastResult()?.mainFileResult?.syncCustomersUpdated || 0 }} actualizados</span>
+                  </div>
+                </div>
+              }
+
+              <!-- Resultados de archivos complementarios -->
+              @if (lastResult()?.complementaryResults?.length > 0) {
+                <div class="bg-slate-800/50 rounded-lg p-3 mt-3">
+                  <div class="flex items-center gap-2 mb-2">
+                    <lucide-angular name="file-plus" [size]="16" class="text-purple-400"></lucide-angular>
+                    <span class="text-sm text-gray-400">Archivos complementarios:</span>
+                  </div>
+                  @for (comp of lastResult()?.complementaryResults; track $index) {
+                    <div class="flex items-center gap-2 text-sm mt-1">
+                      @if (comp?.failedRows > 0 || comp?.errors?.length > 0) {
+                        <lucide-angular name="alert-circle" [size]="14" class="text-amber-400"></lucide-angular>
+                      } @else {
+                        <lucide-angular name="check" [size]="14" class="text-emerald-400"></lucide-angular>
+                      }
+                      <span class="text-gray-300">
+                        {{ comp?.updatedRows || 0 }} actualizados
+                        @if (comp?.notFoundRows > 0) {
+                          <span class="text-amber-400 ml-2">{{ comp?.notFoundRows }} no encontrados</span>
+                        }
+                        @if (comp?.failedRows > 0) {
+                          <span class="text-red-400 ml-2">{{ comp?.failedRows }} fallidos</span>
+                        }
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
             </div>
           }
         }
@@ -655,10 +745,12 @@ export class ConsolidatedLoadComponent implements OnInit {
 
   // ==================== Manejo de archivos ====================
 
-  onFileSelected(event: any) {
+  async onFileSelected(event: any) {
     const files: FileList = event.target.files;
     if (!files || files.length === 0) return;
 
+    // Procesar archivos secuencialmente para evitar condiciones de carrera
+    // especialmente con el diálogo de columnas no registradas
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileType = detectFileTypeByName(file.name);
@@ -688,10 +780,32 @@ export class ConsolidatedLoadComponent implements OnInit {
       };
 
       this.filesToProcess.update(files => [...files, fileToProcess]);
-      this.parseAndValidateFile(fileToProcess);
+
+      // Esperar a que se procese completamente antes de continuar con el siguiente
+      await this.parseAndValidateFile(fileToProcess);
+
+      // Si hay un diálogo de columnas no registradas abierto, esperar a que se cierre
+      // antes de procesar el siguiente archivo
+      if (this.showUnregisteredColumnsDialog()) {
+        await this.waitForDialogClose();
+      }
     }
 
     event.target.value = '';
+  }
+
+  /**
+   * Espera a que el diálogo de columnas no registradas se cierre
+   */
+  private waitForDialogClose(): Promise<void> {
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (!this.showUnregisteredColumnsDialog()) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
   }
 
   isFileTypeValidForMode(fileType: FileType): boolean {
@@ -721,7 +835,7 @@ export class ConsolidatedLoadComponent implements OnInit {
     this.lastResult.set(null);
   }
 
-  async parseAndValidateFile(fileToProcess: FileToProcess) {
+  async parseAndValidateFile(fileToProcess: FileToProcess): Promise<void> {
     try {
       const data = await this.readExcelFile(fileToProcess.file);
       if (data.length === 0) {
@@ -734,20 +848,19 @@ export class ConsolidatedLoadComponent implements OnInit {
       fileToProcess.headers = headers;
       fileToProcess.rowCount = data.length;
 
-      // Detectar columnas no registradas (solo para archivos principales, no complementarios)
-      if (fileToProcess.type === 'DAILY' || fileToProcess.type === 'INITIAL_MAIN') {
-        const unregistered = this.detectUnregisteredColumns(fileToProcess);
+      // Detectar columnas no registradas (para todos los archivos: DAILY, INITIAL_MAIN, PKM y Facilidades)
+      // PKM y Facilidades usan las cabeceras de INICIAL ya que sus columnas se agregan a esa tabla
+      const unregistered = this.detectUnregisteredColumns(fileToProcess);
 
-        if (unregistered.length > 0) {
-          // Mostrar diálogo de advertencia
-          this.unregisteredColumns.set(unregistered);
-          this.pendingFileForValidation.set(fileToProcess);
-          this.showUnregisteredColumnsDialog.set(true);
-          return; // Esperar decisión del usuario
-        }
+      if (unregistered.length > 0) {
+        // Mostrar diálogo de advertencia
+        this.unregisteredColumns.set(unregistered);
+        this.pendingFileForValidation.set(fileToProcess);
+        this.showUnregisteredColumnsDialog.set(true);
+        return; // Esperar decisión del usuario
       }
 
-      // Si no hay columnas no registradas o es archivo complementario, validar directamente
+      // Si no hay columnas no registradas, validar directamente
       this.completeFileValidation(fileToProcess);
 
     } catch (error: any) {
@@ -757,14 +870,17 @@ export class ConsolidatedLoadComponent implements OnInit {
 
   /**
    * Detecta las columnas del archivo que no están registradas como cabeceras
+   * NOTA: PKM y Facilidades usan las cabeceras de INICIAL porque sus columnas
+   * se agregan a la misma tabla de carga inicial de mes
    */
   private detectUnregisteredColumns(fileToProcess: FileToProcess): UnregisteredColumn[] {
     if (!fileToProcess.headers || !fileToProcess.data) return [];
 
     // Obtener cabeceras configuradas según el tipo de archivo
+    // DAILY usa cabeceras de ACTUALIZACION, todos los demás usan INICIAL
     const configuredHeaders = fileToProcess.type === 'DAILY'
       ? this.headersActualizacion()
-      : this.headersInicial();
+      : this.headersInicial(); // INITIAL_MAIN, COMPLEMENTARY_PKM, COMPLEMENTARY_FACILITIES usan INICIAL
 
     // Crear set de nombres de cabeceras registradas (incluyendo aliases)
     const registeredHeadersLower = new Set<string>();
@@ -850,10 +966,36 @@ export class ConsolidatedLoadComponent implements OnInit {
       reader.onload = (e: any) => {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
+          // cellDates: true convierte números de fecha Excel a objetos Date de JavaScript
+          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
           const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
           const jsonData = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
-          resolve(jsonData as Record<string, any>[]);
+
+          // Convertir objetos Date a strings en formato d/M/yyyy
+          const processedData = (jsonData as Record<string, any>[]).map(row => {
+            const processedRow: Record<string, any> = {};
+            for (const [key, value] of Object.entries(row)) {
+              if (value instanceof Date) {
+                // Convertir Date a string en formato d/M/yyyy
+                const day = value.getDate();
+                const month = value.getMonth() + 1; // getMonth() es 0-indexed
+                const year = value.getFullYear();
+                processedRow[key] = `${day}/${month}/${year}`;
+              } else if (typeof value === 'number' && this.looksLikeExcelDate(value, key)) {
+                // Fallback: convertir números de fecha Excel que no se convirtieron
+                const date = this.excelDateToJSDate(value);
+                const day = date.getDate();
+                const month = date.getMonth() + 1;
+                const year = date.getFullYear();
+                processedRow[key] = `${day}/${month}/${year}`;
+              } else {
+                processedRow[key] = value;
+              }
+            }
+            return processedRow;
+          });
+
+          resolve(processedData);
         } catch (error) {
           reject(error);
         }
@@ -861,6 +1003,35 @@ export class ConsolidatedLoadComponent implements OnInit {
       reader.onerror = () => reject(new Error('Error al leer el archivo'));
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  /**
+   * Detecta si un número podría ser una fecha de Excel basándose en el nombre de la columna
+   */
+  private looksLikeExcelDate(value: number, columnName: string): boolean {
+    // Verificar si el nombre de columna sugiere una fecha
+    const dateKeywords = ['fecha', 'date', 'fec_', 'vencimiento', 'nacimiento', 'registro', 'creacion'];
+    const lowerKey = columnName.toLowerCase();
+    const isDateColumn = dateKeywords.some(keyword => lowerKey.includes(keyword));
+
+    // Rango típico de fechas Excel (1900-2100 aproximadamente)
+    // Excel: 1 = 1/1/1900, 44197 = 1/1/2021, 73050 = 31/12/2099
+    const isInDateRange = value > 1 && value < 73050;
+
+    return isDateColumn && isInDateRange;
+  }
+
+  /**
+   * Convierte un número de fecha de Excel a Date de JavaScript
+   * Excel cuenta días desde el 1 de enero de 1900 (con un bug del año bisiesto 1900)
+   */
+  private excelDateToJSDate(excelDate: number): Date {
+    // Excel tiene un bug: considera 1900 como año bisiesto, así que restamos 1 para fechas > 60
+    const adjustedDate = excelDate > 60 ? excelDate - 1 : excelDate;
+    // Fecha base de Excel: 1 de enero de 1900
+    const baseDate = new Date(1900, 0, 1);
+    // Sumar los días (restando 1 porque Excel cuenta desde 1, no desde 0)
+    return new Date(baseDate.getTime() + (adjustedDate - 1) * 24 * 60 * 60 * 1000);
   }
 
   // ==================== Procesamiento ====================
@@ -961,22 +1132,33 @@ export class ConsolidatedLoadComponent implements OnInit {
     totalProcessed += mainResult.insertedRows || 0;
     totalErrors += mainResult.failedRows || 0;
 
-    // 2. Procesar archivos complementarios
+    // 2. Procesar archivos complementarios (actualizan columnas en la tabla INICIAL existente)
+    // Estos archivos usan updateComplementaryData con un campo de enlace para hacer UPDATE
     const facilitiesFile = files.find(f => f.type === 'COMPLEMENTARY_FACILITIES');
     if (facilitiesFile && facilitiesFile.data) {
       this.loadingMessage.set('Procesando facilidades de pago...');
       try {
-        const facilitiesResult = await firstValueFrom(this.complementaryFileService.importComplementaryData({
-          subPortfolioId: this.selectedSubPortfolioId,
-          typeName: 'FACILIDADES',
-          data: facilitiesFile.data
-        }));
+        // Detectar automáticamente el campo de enlace del archivo
+        const linkField = this.detectLinkField(facilitiesFile.data);
+
+        const facilitiesResult = await firstValueFrom(this.headerConfigService.updateComplementaryData(
+          this.selectedSubPortfolioId,
+          'INICIAL',
+          facilitiesFile.data,
+          linkField
+        ));
 
         complementaryResults.push(facilitiesResult);
         totalProcessed += facilitiesResult?.updatedRows || 0;
-        totalErrors += facilitiesResult?.errorRows || 0;
+        totalErrors += facilitiesResult?.failedRows || 0;
+
+        this.notificationService.success(
+          'Facilidades procesadas',
+          `${facilitiesResult?.updatedRows || 0} registros actualizados`
+        );
       } catch (error: any) {
         console.error('Error processing facilities:', error);
+        this.notificationService.error('Error en Facilidades', error.message || 'Error al procesar facilidades de pago');
         totalErrors++;
       }
     }
@@ -985,17 +1167,27 @@ export class ConsolidatedLoadComponent implements OnInit {
     if (pkmFile && pkmFile.data) {
       this.loadingMessage.set('Procesando PKM...');
       try {
-        const pkmResult = await firstValueFrom(this.complementaryFileService.importComplementaryData({
-          subPortfolioId: this.selectedSubPortfolioId,
-          typeName: 'PKM',
-          data: pkmFile.data
-        }));
+        // Detectar automáticamente el campo de enlace del archivo
+        const linkField = this.detectLinkField(pkmFile.data);
+
+        const pkmResult = await firstValueFrom(this.headerConfigService.updateComplementaryData(
+          this.selectedSubPortfolioId,
+          'INICIAL',
+          pkmFile.data,
+          linkField
+        ));
 
         complementaryResults.push(pkmResult);
         totalProcessed += pkmResult?.updatedRows || 0;
-        totalErrors += pkmResult?.errorRows || 0;
+        totalErrors += pkmResult?.failedRows || 0;
+
+        this.notificationService.success(
+          'PKM procesado',
+          `${pkmResult?.updatedRows || 0} registros actualizados`
+        );
       } catch (error: any) {
         console.error('Error processing PKM:', error);
+        this.notificationService.error('Error en PKM', error.message || 'Error al procesar archivo PKM');
         totalErrors++;
       }
     }
@@ -1017,19 +1209,29 @@ export class ConsolidatedLoadComponent implements OnInit {
     const file = this.filesToProcess().find(f => f.type === 'COMPLEMENTARY_PKM');
     if (!file || !file.data) throw new Error('No hay archivo PKM');
 
-    const result = await firstValueFrom(this.complementaryFileService.importComplementaryData({
-      subPortfolioId: this.selectedSubPortfolioId,
-      typeName: 'PKM',
-      data: file.data
-    }));
+    // Detectar automáticamente el campo de enlace del archivo
+    const linkField = this.detectLinkField(file.data);
+
+    // Usar updateComplementaryData para actualizar columnas específicas en la tabla INICIAL
+    const result = await firstValueFrom(this.headerConfigService.updateComplementaryData(
+      this.selectedSubPortfolioId,
+      'INICIAL',
+      file.data,
+      linkField
+    ));
 
     this.lastResult.set({
-      success: (result?.errorRows ?? 0) === 0,
+      success: (result?.failedRows ?? 0) === 0,
       totalProcessed: result?.updatedRows || 0,
-      totalErrors: result?.errorRows || 0,
+      totalErrors: result?.failedRows || 0,
       mode: 'PKM',
       mainFileResult: result
     });
+
+    this.notificationService.success(
+      'PKM procesado',
+      `${result?.updatedRows || 0} registros actualizados`
+    );
 
     this.filesToProcess.set([]);
   }
@@ -1054,7 +1256,7 @@ export class ConsolidatedLoadComponent implements OnInit {
       case 'DAILY':
         return 'Suba el archivo de actualización diaria (Cartera_CONTACTO_TOTAL_YYYY-MM-DD.xlsx)';
       case 'INITIAL_MONTH':
-        return 'Suba el archivo de asignación (obligatorio) y opcionalmente los archivos de facilidades y PKM';
+        return 'Suba el archivo de asignación (obligatorio) y opcionalmente el archivo de facilidades';
       case 'PKM':
         return 'Suba el archivo PKM para actualizar la columna PKM de los registros existentes';
       default:
@@ -1155,6 +1357,68 @@ export class ConsolidatedLoadComponent implements OnInit {
    */
   getSelectedColumnsCount(): number {
     return this.unregisteredColumns().filter(c => c.selected).length;
+  }
+
+  /**
+   * Detecta automáticamente el campo de enlace (linkField) de los datos
+   * Busca campos comunes de identificación en orden de prioridad
+   */
+  private detectLinkField(data: Record<string, any>[]): string {
+    if (!data || data.length === 0) {
+      return 'IDENTITY_CODE'; // Fallback por defecto
+    }
+
+    // Lista de nombres de campo comunes para identificación (en orden de prioridad)
+    const identityFieldNames = [
+      'IDENTITY_CODE',
+      'identity_code',
+      'COD_CLI',
+      'cod_cli',
+      'CODIGO_IDENTIFICACION',
+      'codigo_identificacion',
+      'CUSTOMER_ID',
+      'customer_id',
+      'ID_CLIENTE',
+      'id_cliente',
+      'DOCUMENTO',
+      'documento',
+      'DNI',
+      'dni',
+      'RUC',
+      'ruc',
+      'NUM_DOCUMENTO',
+      'num_documento'
+    ];
+
+    // Obtener las keys del primer registro
+    const availableKeys = Object.keys(data[0]);
+
+    // Buscar el primer campo de identificación disponible
+    for (const fieldName of identityFieldNames) {
+      // Búsqueda exacta
+      if (availableKeys.includes(fieldName)) {
+        return fieldName;
+      }
+
+      // Búsqueda case-insensitive
+      const found = availableKeys.find(key =>
+        key.toLowerCase() === fieldName.toLowerCase()
+      );
+      if (found) {
+        return found;
+      }
+
+      // Búsqueda parcial (el campo contiene el nombre)
+      const partial = availableKeys.find(key =>
+        key.toLowerCase().includes(fieldName.toLowerCase().replace(/_/g, ''))
+      );
+      if (partial) {
+        return partial;
+      }
+    }
+
+    // Si no se encuentra ninguno, usar la primera columna como fallback
+    return availableKeys[0];
   }
 
   /**

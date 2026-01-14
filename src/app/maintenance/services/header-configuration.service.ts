@@ -99,6 +99,20 @@ export class HeaderConfigurationService {
     });
   }
 
+  /**
+   * Actualiza datos complementarios en la tabla dinámica existente
+   * Usado para archivos como PKM y Facilidades que actualizan columnas específicas
+   * de registros existentes basándose en un campo de enlace (linkField)
+   */
+  updateComplementaryData(subPortfolioId: number, loadType: LoadType, data: any[], linkField: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/subportfolio/${subPortfolioId}/update-complementary`, {
+      subPortfolioId,
+      loadType,
+      data,
+      linkField
+    });
+  }
+
   // ==================== Resolución de cabeceras ====================
 
   /**

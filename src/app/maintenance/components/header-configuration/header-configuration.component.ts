@@ -22,6 +22,17 @@ import { FieldDefinition } from '../../models/field-definition.model';
 import { Tenant } from '../../models/tenant.model';
 import { Portfolio } from '../../models/portfolio.model';
 import { SubPortfolio } from '../../models/portfolio.model';
+import { DATE_DETECTION_PATTERNS, detectDateFormat } from '../../../shared/constants/date-formats';
+
+// Interface para columnas detectadas en el archivo
+interface DetectedColumn {
+  name: string;
+  dataType: DataType;
+  format?: string;
+  displayLabel: string;
+  sampleValues: string[];
+  selected: boolean;
+}
 
 @Component({
   selector: 'app-header-configuration',
@@ -30,6 +41,123 @@ import { SubPortfolio } from '../../models/portfolio.model';
   template: `
     <!-- Notifications Toast -->
     <app-notifications></app-notifications>
+
+    <!-- Dialog de Selección de Columnas -->
+    @if (showColumnSelectionDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="columns" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-white">Seleccionar columnas a importar</h2>
+                <p class="text-emerald-100 text-sm">
+                  {{ detectedColumns().length }} columna(s) detectada(s) en
+                  <span class="font-semibold">{{ importFileName() }}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-5 overflow-y-auto max-h-[55vh]">
+            <p class="text-gray-300 text-sm mb-4">
+              Seleccione las columnas que desea agregar como cabeceras. Las columnas no seleccionadas serán ignoradas.
+            </p>
+
+            <!-- Lista de columnas con checkboxes -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              @for (col of detectedColumns(); track col.name; let i = $index) {
+                <div class="bg-slate-700/50 rounded-lg border transition-all cursor-pointer"
+                     [class.border-emerald-500]="col.selected"
+                     [class.border-slate-600]="!col.selected"
+                     [class.bg-emerald-900/20]="col.selected"
+                     (click)="toggleColumnDetected(i)">
+                  <div class="p-3">
+                    <div class="flex items-start gap-3">
+                      <!-- Checkbox -->
+                      <div class="mt-0.5">
+                        <input type="checkbox"
+                               [checked]="col.selected"
+                               (click)="$event.stopPropagation()"
+                               (change)="toggleColumnDetected(i)"
+                               class="w-4 h-4 rounded border-slate-500 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer">
+                      </div>
+
+                      <!-- Info de la columna -->
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <span class="font-mono text-sm font-semibold truncate"
+                                [class.text-emerald-400]="col.selected"
+                                [class.text-gray-300]="!col.selected">
+                            {{ col.name }}
+                          </span>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                                [class.bg-purple-900/50]="col.dataType === 'FECHA'"
+                                [class.text-purple-400]="col.dataType === 'FECHA'"
+                                [class.bg-blue-900/50]="col.dataType === 'NUMERICO'"
+                                [class.text-blue-400]="col.dataType === 'NUMERICO'"
+                                [class.bg-slate-600]="col.dataType === 'TEXTO'"
+                                [class.text-gray-300]="col.dataType === 'TEXTO'">
+                            {{ col.dataType }}
+                          </span>
+                        </div>
+                        @if (col.sampleValues.length > 0) {
+                          <div class="text-[11px] text-gray-500 truncate">
+                            Ej: {{ col.sampleValues.slice(0, 2).join(' | ') }}
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="border-t border-slate-700 p-4 bg-slate-900">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-400">
+                  <span class="text-emerald-400 font-semibold">{{ getSelectedColumnsCount() }}</span>
+                  de {{ detectedColumns().length }} columna(s) seleccionada(s)
+                </span>
+              </div>
+              <div class="flex gap-2">
+                <button (click)="selectAllDetectedColumns()"
+                        class="text-xs px-3 py-1.5 bg-slate-700 text-gray-300 rounded-lg hover:bg-slate-600 cursor-pointer">
+                  Seleccionar todas
+                </button>
+                <button (click)="deselectAllDetectedColumns()"
+                        class="text-xs px-3 py-1.5 bg-slate-700 text-gray-300 rounded-lg hover:bg-slate-600 cursor-pointer">
+                  Deseleccionar todas
+                </button>
+              </div>
+            </div>
+
+            <div class="flex gap-3 justify-end">
+              <button
+                (click)="cancelColumnSelection()"
+                class="px-4 py-2.5 bg-slate-700 text-gray-300 rounded-lg hover:bg-slate-600 transition-colors font-medium cursor-pointer">
+                Cancelar
+              </button>
+              <button
+                (click)="confirmColumnSelection()"
+                [disabled]="getSelectedColumnsCount() === 0"
+                class="px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                <lucide-angular name="check" [size]="16"></lucide-angular>
+                Agregar {{ getSelectedColumnsCount() }} cabecera(s)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
 
     <div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
       <div class="flex-1 overflow-y-auto">
@@ -747,6 +875,11 @@ export class HeaderConfigurationComponent implements OnInit {
   loadingAliases = signal(false);
   savedHeaders = signal<HeaderConfiguration[]>([]); // Cabeceras guardadas en BD con sus IDs
 
+  // Signals para selección de columnas al importar archivo
+  showColumnSelectionDialog = signal(false);
+  detectedColumns = signal<DetectedColumn[]>([]);
+  importFileName = signal('');
+
   // Computed signal para mostrar solo campos disponibles (no usados)
   availableFieldDefinitions = computed(() => {
     const usedIds = this.previewHeaders().map(h => h.fieldDefinitionId);
@@ -1239,6 +1372,7 @@ export class HeaderConfigurationComponent implements OnInit {
     const file = event.target.files[0];
     if (!file) return;
 
+    this.importFileName.set(file.name);
     const fileName = file.name.toLowerCase();
     const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
 
@@ -1360,18 +1494,9 @@ export class HeaderConfigurationComponent implements OnInit {
       return { dataType: 'TEXTO' };
     }
 
-    // Patrones para detección de fechas
-    const datePatterns = [
-      { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, format: 'yyyy-MM-dd HH:mm:ss' },
-      { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, format: 'yyyy-MM-ddTHH:mm:ss' },
-      { regex: /^\d{4}-\d{2}-\d{2}$/, format: 'yyyy-MM-dd' },
-      { regex: /^\d{2}\/\d{2}\/\d{4}$/, format: 'dd/MM/yyyy' },
-      { regex: /^\d{2}-\d{2}-\d{4}$/, format: 'dd-MM-yyyy' },
-      { regex: /^\d{4}\/\d{2}\/\d{2}$/, format: 'yyyy/MM/dd' }
-    ];
-
-    // Verificar si es fecha
-    for (const pattern of datePatterns) {
+    // Usar patrones centralizados de shared/constants/date-formats.ts
+    // IMPORTANTE: Estos patrones están sincronizados con el backend (DateParserUtil.java)
+    for (const pattern of DATE_DETECTION_PATTERNS) {
       const matchCount = nonEmptyValues.filter(v => pattern.regex.test(v.trim())).length;
       // Si al menos 80% de los valores no vacíos coinciden con el patrón de fecha
       if (matchCount >= nonEmptyValues.length * 0.8) {
@@ -1440,8 +1565,8 @@ export class HeaderConfigurationComponent implements OnInit {
       });
     }
 
-    // Crear cabeceras basándose en el análisis
-    const headers: HeaderConfigurationItem[] = [];
+    // Crear lista de columnas detectadas para mostrar en el diálogo de selección
+    const detectedCols: DetectedColumn[] = [];
 
     for (let colIndex = 0; colIndex < columnNames.length; colIndex++) {
       const headerName = columnNames[colIndex].trim();
@@ -1454,32 +1579,129 @@ export class HeaderConfigurationComponent implements OnInit {
       // Generar etiqueta visual legible
       const displayLabel = this.generateDisplayLabel(headerName);
 
-      headers.push({
-        fieldDefinitionId: 0, // Sin asociar a BD (el usuario puede asociar después)
-        headerName: headerName,
+      detectedCols.push({
+        name: headerName,
         dataType: dataType,
-        displayLabel: displayLabel,
         format: format,
-        required: false // Por defecto no obligatorio, el usuario puede cambiar
+        displayLabel: displayLabel,
+        sampleValues: columnSamples[colIndex].filter(v => v.trim() !== ''),
+        selected: true // Por defecto todas seleccionadas
       });
     }
 
-    if (headers.length === 0) {
+    if (detectedCols.length === 0) {
       this.notificationService.error('Sin cabeceras válidas', 'No se encontraron cabeceras válidas en el archivo');
       return;
     }
 
-    this.previewHeaders.set(headers);
+    // Mostrar diálogo de selección de columnas
+    this.detectedColumns.set(detectedCols);
+    this.showColumnSelectionDialog.set(true);
+  }
 
-    // Contar tipos detectados
-    const fechaCount = headers.filter(h => h.dataType === 'FECHA').length;
-    const numericoCount = headers.filter(h => h.dataType === 'NUMERICO').length;
-    const textoCount = headers.filter(h => h.dataType === 'TEXTO').length;
+  // ==================== Métodos para selección de columnas ====================
 
-    this.notificationService.success(
-      `${headers.length} columnas detectadas`,
-      `Tipos: ${fechaCount} fecha, ${numericoCount} numérico, ${textoCount} texto\nRevise y ajuste antes de guardar`
+  /**
+   * Alterna la selección de una columna detectada
+   */
+  toggleColumnDetected(index: number) {
+    this.detectedColumns.update(cols => {
+      const updated = [...cols];
+      updated[index] = { ...updated[index], selected: !updated[index].selected };
+      return updated;
+    });
+  }
+
+  /**
+   * Obtiene el conteo de columnas seleccionadas
+   */
+  getSelectedColumnsCount(): number {
+    return this.detectedColumns().filter(c => c.selected).length;
+  }
+
+  /**
+   * Selecciona todas las columnas detectadas
+   */
+  selectAllDetectedColumns() {
+    this.detectedColumns.update(cols =>
+      cols.map(col => ({ ...col, selected: true }))
     );
+  }
+
+  /**
+   * Deselecciona todas las columnas detectadas
+   */
+  deselectAllDetectedColumns() {
+    this.detectedColumns.update(cols =>
+      cols.map(col => ({ ...col, selected: false }))
+    );
+  }
+
+  /**
+   * Cancela la selección de columnas
+   */
+  cancelColumnSelection() {
+    this.showColumnSelectionDialog.set(false);
+    this.detectedColumns.set([]);
+    this.importFileName.set('');
+    this.notificationService.info('Importación cancelada', 'No se agregaron cabeceras');
+  }
+
+  /**
+   * Confirma la selección de columnas y las agrega como cabeceras
+   */
+  confirmColumnSelection() {
+    const selectedColumns = this.detectedColumns().filter(c => c.selected);
+
+    if (selectedColumns.length === 0) {
+      this.notificationService.warning('Sin selección', 'Debe seleccionar al menos una columna');
+      return;
+    }
+
+    // Crear cabeceras a partir de las columnas seleccionadas
+    const newHeaders: HeaderConfigurationItem[] = selectedColumns.map(col => ({
+      fieldDefinitionId: 0,
+      headerName: col.name,
+      dataType: col.dataType,
+      displayLabel: col.displayLabel,
+      format: col.format,
+      required: false
+    }));
+
+    // Agregar a las cabeceras existentes (no reemplazar)
+    const currentHeaders = this.previewHeaders();
+    const existingNames = new Set(currentHeaders.map(h => h.headerName.toLowerCase()));
+
+    // Filtrar cabeceras que ya existen
+    const uniqueNewHeaders = newHeaders.filter(h => !existingNames.has(h.headerName.toLowerCase()));
+    const duplicateCount = newHeaders.length - uniqueNewHeaders.length;
+
+    if (uniqueNewHeaders.length > 0) {
+      this.previewHeaders.set([...currentHeaders, ...uniqueNewHeaders]);
+    }
+
+    // Cerrar diálogo
+    this.showColumnSelectionDialog.set(false);
+    this.detectedColumns.set([]);
+    this.importFileName.set('');
+
+    // Mostrar mensaje
+    if (duplicateCount > 0) {
+      this.notificationService.success(
+        `${uniqueNewHeaders.length} cabecera(s) agregada(s)`,
+        `${duplicateCount} columna(s) ignorada(s) por duplicado`
+      );
+    } else {
+      // Contar tipos detectados
+      const fechaCount = uniqueNewHeaders.filter(h => h.dataType === 'FECHA').length;
+      const numericoCount = uniqueNewHeaders.filter(h => h.dataType === 'NUMERICO').length;
+      const textoCount = uniqueNewHeaders.filter(h => h.dataType === 'TEXTO').length;
+
+      this.notificationService.success(
+        `${uniqueNewHeaders.length} cabecera(s) agregada(s)`,
+        `Tipos: ${fechaCount} fecha, ${numericoCount} numérico, ${textoCount} texto`
+      );
+    }
   }
 
   toggleDownloadMenu() {
