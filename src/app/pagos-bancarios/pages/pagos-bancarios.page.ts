@@ -720,37 +720,42 @@ import {
             </div>
           }
 
-          <!-- Tabla de detalles OH -->
+          <!-- Tabla de detalles OH (Preview) -->
           @if (resultadoOh()?.detalles && resultadoOh()!.detalles.length > 0) {
             <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos OH</h2>
-                <span class="text-sm text-slate-600 dark:text-slate-400">{{ resultadoOh()?.detalles?.length }} registros</span>
+                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Preview de Pagos OH</h2>
+                <span class="text-sm text-slate-600 dark:text-slate-400">
+                  {{ resultadoOh()?.detalles?.length }} registros cargados
+                </span>
               </div>
               <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                   <thead class="bg-purple-100 dark:bg-purple-900/20">
                     <tr>
+                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">#</th>
                       <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">DNI</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Cuenta</th>
                       <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Fecha</th>
                       <th class="px-3 py-3 text-right text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Monto</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Canal</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (d of resultadoOh()?.detalles; track d.numeroFila) {
+                    @for (d of resultadoOh()?.detalles?.slice(0, 10); track d.numeroFila) {
                       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                        <td class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{{ d.numeroFila }}</td>
                         <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.codigoDepositante }}</td>
                         <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
                         <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.medioAtencion }}</td>
                       </tr>
                     }
                   </tbody>
                 </table>
               </div>
+              @if (resultadoOh()!.detalles.length > 10) {
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 text-center text-sm text-slate-600 dark:text-slate-400">
+                  ... y {{ resultadoOh()!.detalles.length - 10 }} registros más
+                </div>
+              }
             </div>
           }
         }
