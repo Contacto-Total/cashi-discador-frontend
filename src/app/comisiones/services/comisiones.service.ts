@@ -260,6 +260,25 @@ export class ComisionesService {
     });
   }
 
+  /**
+   * Exportar reporte DETALLADO de comisiones en Excel
+   * Incluye: Resumen, Detalle Pagos, Escalas, Detalle Bonos
+   */
+  exportarExcelDetallado(anio: number, mes: number, idSubcartera?: number): Observable<Blob> {
+    let params = new HttpParams()
+      .set('anio', anio.toString())
+      .set('mes', mes.toString());
+
+    if (idSubcartera) {
+      params = params.set('idSubcartera', idSubcartera.toString());
+    }
+
+    return this.http.get(`${this.baseUrl}/exportar-excel-detallado`, {
+      params,
+      responseType: 'blob'
+    });
+  }
+
   // ==================== BASE DE AJUSTE ====================
 
   /**
