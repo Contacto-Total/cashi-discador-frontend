@@ -45,8 +45,8 @@ interface DetectedColumn {
     <!-- Dialog de Selección de Columnas -->
     @if (showColumnSelectionDialog()) {
       <div class="fixed inset-0 z-[60] flex items-center justify-center">
-        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
-        <div class="relative bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
           <!-- Header -->
           <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-5">
             <div class="flex items-center gap-3">
@@ -54,7 +54,7 @@ interface DetectedColumn {
                 <lucide-angular name="columns" [size]="24" class="text-white"></lucide-angular>
               </div>
               <div>
-                <h2 class="text-xl font-bold text-white">Seleccionar columnas a importar</h2>
+                <h2 class="text-xl font-bold !text-white">Seleccionar columnas a importar</h2>
                 <p class="text-emerald-100 text-sm">
                   {{ detectedColumns().length }} columna(s) detectada(s) en
                   <span class="font-semibold">{{ importFileName() }}</span>
@@ -65,17 +65,19 @@ interface DetectedColumn {
 
           <!-- Body -->
           <div class="p-5 overflow-y-auto max-h-[55vh]">
-            <p class="text-gray-300 text-sm mb-4">
+            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">
               Seleccione las columnas que desea agregar como cabeceras. Las columnas no seleccionadas serán ignoradas.
             </p>
 
             <!-- Lista de columnas con checkboxes -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
               @for (col of detectedColumns(); track col.name; let i = $index) {
-                <div class="bg-slate-700/50 rounded-lg border transition-all cursor-pointer"
+                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-lg border transition-all cursor-pointer"
                      [class.border-emerald-500]="col.selected"
-                     [class.border-slate-600]="!col.selected"
-                     [class.bg-emerald-900/20]="col.selected"
+                     [class.border-gray-200]="!col.selected"
+                     [class.dark:border-slate-600]="!col.selected"
+                     [class.bg-emerald-50]="col.selected"
+                     [class.dark:bg-emerald-900/20]="col.selected"
                      (click)="toggleColumnDetected(i)">
                   <div class="p-3">
                     <div class="flex items-start gap-3">
@@ -85,24 +87,32 @@ interface DetectedColumn {
                                [checked]="col.selected"
                                (click)="$event.stopPropagation()"
                                (change)="toggleColumnDetected(i)"
-                               class="w-4 h-4 rounded border-slate-500 bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer">
+                               class="w-4 h-4 rounded border-gray-300 dark:border-slate-500 bg-white dark:bg-slate-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer">
                       </div>
 
                       <!-- Info de la columna -->
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
                           <span class="font-mono text-sm font-semibold truncate"
-                                [class.text-emerald-400]="col.selected"
-                                [class.text-gray-300]="!col.selected">
+                                [class.text-emerald-600]="col.selected"
+                                [class.dark:text-emerald-400]="col.selected"
+                                [class.text-gray-700]="!col.selected"
+                                [class.dark:text-gray-300]="!col.selected">
                             {{ col.name }}
                           </span>
                           <span class="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                                [class.bg-purple-900/50]="col.dataType === 'FECHA'"
-                                [class.text-purple-400]="col.dataType === 'FECHA'"
-                                [class.bg-blue-900/50]="col.dataType === 'NUMERICO'"
-                                [class.text-blue-400]="col.dataType === 'NUMERICO'"
-                                [class.bg-slate-600]="col.dataType === 'TEXTO'"
-                                [class.text-gray-300]="col.dataType === 'TEXTO'">
+                                [class.bg-purple-100]="col.dataType === 'FECHA'"
+                                [class.dark:bg-purple-900/50]="col.dataType === 'FECHA'"
+                                [class.text-purple-600]="col.dataType === 'FECHA'"
+                                [class.dark:text-purple-400]="col.dataType === 'FECHA'"
+                                [class.bg-blue-100]="col.dataType === 'NUMERICO'"
+                                [class.dark:bg-blue-900/50]="col.dataType === 'NUMERICO'"
+                                [class.text-blue-600]="col.dataType === 'NUMERICO'"
+                                [class.dark:text-blue-400]="col.dataType === 'NUMERICO'"
+                                [class.bg-gray-200]="col.dataType === 'TEXTO'"
+                                [class.dark:bg-slate-600]="col.dataType === 'TEXTO'"
+                                [class.text-gray-600]="col.dataType === 'TEXTO'"
+                                [class.dark:text-gray-300]="col.dataType === 'TEXTO'">
                             {{ col.dataType }}
                           </span>
                         </div>
@@ -120,21 +130,21 @@ interface DetectedColumn {
           </div>
 
           <!-- Footer -->
-          <div class="border-t border-slate-700 p-4 bg-slate-900">
+          <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center gap-4">
-                <span class="text-sm text-gray-400">
-                  <span class="text-emerald-400 font-semibold">{{ getSelectedColumnsCount() }}</span>
+                <span class="text-sm text-gray-600 dark:text-gray-400">
+                  <span class="text-emerald-600 dark:text-emerald-400 font-semibold">{{ getSelectedColumnsCount() }}</span>
                   de {{ detectedColumns().length }} columna(s) seleccionada(s)
                 </span>
               </div>
               <div class="flex gap-2">
                 <button (click)="selectAllDetectedColumns()"
-                        class="text-xs px-3 py-1.5 bg-slate-700 text-gray-300 rounded-lg hover:bg-slate-600 cursor-pointer">
+                        class="text-xs px-3 py-1.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 cursor-pointer">
                   Seleccionar todas
                 </button>
                 <button (click)="deselectAllDetectedColumns()"
-                        class="text-xs px-3 py-1.5 bg-slate-700 text-gray-300 rounded-lg hover:bg-slate-600 cursor-pointer">
+                        class="text-xs px-3 py-1.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 cursor-pointer">
                   Deseleccionar todas
                 </button>
               </div>
@@ -143,7 +153,7 @@ interface DetectedColumn {
             <div class="flex gap-3 justify-end">
               <button
                 (click)="cancelColumnSelection()"
-                class="px-4 py-2.5 bg-slate-700 text-gray-300 rounded-lg hover:bg-slate-600 transition-colors font-medium cursor-pointer">
+                class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium cursor-pointer">
                 Cancelar
               </button>
               <button
@@ -159,7 +169,7 @@ interface DetectedColumn {
       </div>
     }
 
-    <div class="h-[calc(100dvh-56px)] bg-slate-950 overflow-hidden flex flex-col">
+    <div class="h-[calc(100dvh-56px)] bg-gray-100 dark:bg-slate-950 overflow-hidden flex flex-col">
       <div class="flex-1 overflow-y-auto">
         <div class="p-3 max-w-7xl mx-auto">
       <!-- Header -->
@@ -169,25 +179,25 @@ interface DetectedColumn {
             <lucide-angular name="table-2" [size]="16" class="text-white"></lucide-angular>
           </div>
           <div>
-            <h1 class="text-lg font-bold text-white">Configuración de Cabeceras</h1>
-            <p class="text-xs text-gray-400">Define las cabeceras personalizadas por subcartera</p>
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white">Configuración de Cabeceras</h1>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Define las cabeceras personalizadas por subcartera</p>
           </div>
         </div>
       </div>
 
       <!-- Filtros en Cascada -->
       <div class="mb-2">
-        <div class="bg-slate-900 rounded-lg p-2 shadow-sm border border-slate-800">
+        <div class="bg-white dark:bg-slate-900 rounded-lg p-2 shadow-sm border border-gray-200 dark:border-slate-800">
           <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
             <!-- Proveedor -->
             <div>
-              <label class="block text-xs font-semibold text-gray-300 mb-1">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
                 <lucide-angular name="building-2" [size]="16" class="inline mr-1"></lucide-angular>
                 Proveedor
               </label>
               <select [(ngModel)]="selectedTenantId"
                       (ngModelChange)="onTenantChange()"
-                      class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 <option [value]="0">Seleccione un proveedor...</option>
                 @for (tenant of tenants(); track tenant.id) {
                   <option [value]="tenant.id">{{ tenant.tenantName }}</option>
@@ -197,14 +207,14 @@ interface DetectedColumn {
 
             <!-- Cartera -->
             <div>
-              <label class="block text-xs font-semibold text-gray-300 mb-1">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
                 <lucide-angular name="folder" [size]="16" class="inline mr-1"></lucide-angular>
                 Cartera
               </label>
               <select [(ngModel)]="selectedPortfolioId"
                       (ngModelChange)="onPortfolioChange()"
                       [disabled]="selectedTenantId === 0"
-                      class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                 <option [value]="0">Seleccione una cartera...</option>
                 @for (portfolio of portfolios(); track portfolio.id) {
                   <option [value]="portfolio.id">{{ portfolio.portfolioName }}</option>
@@ -214,14 +224,14 @@ interface DetectedColumn {
 
             <!-- Subcartera -->
             <div>
-              <label class="block text-xs font-semibold text-gray-300 mb-1">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
                 <lucide-angular name="folder-tree" [size]="16" class="inline mr-1"></lucide-angular>
                 Subcartera
               </label>
               <select [(ngModel)]="selectedSubPortfolioId"
                       (ngModelChange)="onSubPortfolioChange()"
                       [disabled]="selectedPortfolioId === 0"
-                      class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                 <option [value]="0">Seleccione una subcartera...</option>
                 @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
                   <option [value]="subPortfolio.id">{{ subPortfolio.subPortfolioName }}</option>
@@ -231,14 +241,14 @@ interface DetectedColumn {
 
             <!-- Tipo de Carga -->
             <div>
-              <label class="block text-xs font-semibold text-gray-300 mb-1">
+              <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
                 <lucide-angular name="database" [size]="16" class="inline mr-1"></lucide-angular>
                 Tipo de Carga
               </label>
               <select [(ngModel)]="selectedLoadType"
                       (ngModelChange)="onLoadTypeChange()"
                       [disabled]="selectedSubPortfolioId === 0"
-                      class="w-full px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                      class="w-full px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                 <option value="ACTUALIZACION">Carga Diaria</option>
                 <option value="INICIAL">Carga Inicial del Mes</option>
               </select>
@@ -250,7 +260,7 @@ interface DetectedColumn {
       @if (selectedSubPortfolioId > 0) {
         <!-- Panel de Acciones -->
         <div class="mb-2">
-          <div class="bg-slate-900 rounded-lg shadow-sm border border-slate-800 overflow-hidden">
+          <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
             <!-- Contenido del Panel -->
             <div class="p-3">
               <!-- Primera fila: Botones principales y contador -->
@@ -269,7 +279,7 @@ interface DetectedColumn {
 
                 <!-- Selector de Separador -->
                 <select [(ngModel)]="csvSeparator"
-                        class="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
+                        class="px-3 py-1.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer">
                   <option value=";">Separador: Punto y coma (;)</option>
                   <option value=",">Separador: Coma (,)</option>
                   <option value="|">Separador: Pipe (|)</option>
@@ -298,9 +308,9 @@ interface DetectedColumn {
                 <!-- Contador de cabeceras -->
                 @if (previewHeaders().length > 0) {
                   <div class="ml-auto flex items-center gap-2 px-3 py-1.5">
-                    <lucide-angular name="table-2" [size]="14" class="text-indigo-400"></lucide-angular>
-                    <span class="text-sm font-semibold text-indigo-400">{{ previewHeaders().length }}</span>
-                    <span class="text-xs text-indigo-400">cabecera(s)</span>
+                    <lucide-angular name="table-2" [size]="14" class="text-indigo-500 dark:text-indigo-400"></lucide-angular>
+                    <span class="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{{ previewHeaders().length }}</span>
+                    <span class="text-xs text-indigo-600 dark:text-indigo-400">cabecera(s)</span>
                   </div>
                 }
               </div>
@@ -308,17 +318,17 @@ interface DetectedColumn {
               <!-- Menú dropdown con posición fixed para evitar overflow hidden del contenedor -->
               @if (downloadMenuOpen()) {
                 <div class="fixed inset-0 z-[9998]" (click)="downloadMenuOpen.set(false)"></div>
-                <div class="fixed w-56 bg-slate-800 rounded-lg shadow-xl border border-slate-700 py-1 z-[9999]"
+                <div class="fixed w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 py-1 z-[9999]"
                      [style.top.px]="dropdownPosition().top"
                      [style.left.px]="dropdownPosition().left">
                   <button (click)="downloadCSVTemplate()"
-                          class="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors text-left text-gray-300 cursor-pointer">
-                    <lucide-angular name="file-text" [size]="16" class="text-gray-400"></lucide-angular>
+                          class="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-left text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <lucide-angular name="file-text" [size]="16" class="text-gray-500 dark:text-gray-400"></lucide-angular>
                     <span class="text-sm font-medium">Descargar CSV</span>
                   </button>
                   <button (click)="downloadExcelTemplate()"
-                          class="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-700 transition-colors text-left text-gray-300 cursor-pointer">
-                    <lucide-angular name="table-2" [size]="16" class="text-green-400"></lucide-angular>
+                          class="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors text-left text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <lucide-angular name="table-2" [size]="16" class="text-green-500 dark:text-green-400"></lucide-angular>
                     <span class="text-sm font-medium">Descargar Excel (.xlsx)</span>
                   </button>
                 </div>
@@ -326,9 +336,9 @@ interface DetectedColumn {
 
               <!-- Segunda fila: Botones de acción cuando hay cabeceras -->
               @if (previewHeaders().length > 0) {
-                <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-700">
+                <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-slate-700">
                   <button (click)="clearAll()"
-                          class="flex items-center gap-1 px-3 py-1.5 bg-slate-800 text-gray-300 rounded-lg text-sm hover:bg-slate-700 hover:text-white transition-all cursor-pointer">
+                          class="flex items-center gap-1 px-3 py-1.5 bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-all cursor-pointer">
                     <lucide-angular name="trash-2" [size]="14"></lucide-angular>
                     <span>Limpiar</span>
                   </button>
@@ -352,49 +362,49 @@ interface DetectedColumn {
 
         <!-- Tabla de Previsualización -->
         <div>
-          <div class="bg-slate-900 rounded-lg shadow-sm border border-slate-800 overflow-hidden">
+          <div class="bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
             @if (previewHeaders().length === 0) {
               <div class="p-6 text-center">
-                <div class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <lucide-angular name="table-2" [size]="24" class="text-gray-600"></lucide-angular>
+                <div class="w-12 h-12 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <lucide-angular name="table-2" [size]="24" class="text-gray-400 dark:text-gray-600"></lucide-angular>
                 </div>
-                <p class="text-sm text-gray-400">No hay cabeceras configuradas</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">No hay cabeceras configuradas</p>
               </div>
             } @else {
               <div class="overflow-x-auto max-h-[calc(100dvh-340px)] overflow-y-auto">
                 <table class="w-full">
-                  <thead class="bg-slate-800 border-b border-slate-700 sticky top-0">
+                  <thead class="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0">
                     <tr>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-400">Nombre</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-400">Tipo</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-400">Etiqueta</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-400">Campo Catálogo</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-400">Formato</th>
-                      <th class="px-2 py-1.5 text-center text-xs font-semibold text-gray-400">Req.</th>
-                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-400">Acciones</th>
+                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Nombre</th>
+                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Tipo</th>
+                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Etiqueta</th>
+                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Campo Catálogo</th>
+                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Formato</th>
+                      <th class="px-2 py-1.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">Req.</th>
+                      <th class="px-2 py-1.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400">Acciones</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-slate-800">
+                  <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
                     @for (header of previewHeaders(); track $index) {
-                      <tr class="hover:bg-slate-800 transition-colors">
+                      <tr class="hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                         <td class="px-2 py-1.5">
                           <div class="flex items-center gap-1">
                             @if (header.id) {
                               <lucide-angular
                                 name="database"
                                 [size]="12"
-                                class="text-green-400 flex-shrink-0"
+                                class="text-green-500 dark:text-green-400 flex-shrink-0"
                                 title="Cabecera guardada en BD">
                               </lucide-angular>
                             } @else {
-                              <span class="px-1 py-0.5 bg-blue-900/50 text-blue-300 text-[9px] rounded font-medium">NUEVO</span>
+                              <span class="px-1 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300 text-[9px] rounded font-medium">NUEVO</span>
                             }
-                            <span class="font-mono text-xs font-semibold text-indigo-400">{{ header.headerName }}</span>
+                            <span class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">{{ header.headerName }}</span>
                             @if (header.sourceField && header.regexPattern) {
                               <lucide-angular
                                 name="sparkles"
                                 [size]="12"
-                                class="text-amber-400 flex-shrink-0"
+                                class="text-amber-500 dark:text-amber-400 flex-shrink-0"
                                 title="Campo transformado mediante expresión regular desde: {{ header.sourceField }}">
                               </lucide-angular>
                             }
@@ -407,35 +417,35 @@ interface DetectedColumn {
                           </span>
                         </td>
                         <td class="px-2 py-1.5">
-                          <span class="text-xs text-white">{{ header.displayLabel }}</span>
+                          <span class="text-xs text-gray-900 dark:text-white">{{ header.displayLabel }}</span>
                         </td>
                         <td class="px-2 py-1.5">
                           @if (header.fieldDefinitionId === 0) {
-                            <span class="text-xs text-amber-400 italic">Sin asociar</span>
+                            <span class="text-xs text-amber-600 dark:text-amber-400 italic">Sin asociar</span>
                           } @else {
-                            <span class="font-mono text-xs text-gray-400">{{ getFieldCodeById(header.fieldDefinitionId) }}</span>
+                            <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ getFieldCodeById(header.fieldDefinitionId) }}</span>
                           }
                         </td>
                         <td class="px-2 py-1.5">
-                          <span class="text-xs text-gray-400">{{ header.format || '-' }}</span>
+                          <span class="text-xs text-gray-500 dark:text-gray-400">{{ header.format || '-' }}</span>
                         </td>
                         <td class="px-2 py-1.5 text-center">
                           @if (header.required) {
-                            <lucide-angular name="check-circle" [size]="14" class="text-green-400 inline"></lucide-angular>
+                            <lucide-angular name="check-circle" [size]="14" class="text-green-500 dark:text-green-400 inline"></lucide-angular>
                           } @else {
-                            <lucide-angular name="circle" [size]="14" class="text-gray-600 inline"></lucide-angular>
+                            <lucide-angular name="circle" [size]="14" class="text-gray-400 dark:text-gray-600 inline"></lucide-angular>
                           }
                         </td>
                         <td class="px-2 py-1.5">
                           <div class="flex items-center gap-1">
                             <button (click)="editPreviewHeader($index)"
-                                    class="p-1 text-blue-400 hover:bg-slate-800 rounded transition-colors"
+                                    class="p-1 text-blue-500 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded transition-colors"
                                     title="Editar">
                               <lucide-angular name="edit" [size]="14"></lucide-angular>
                             </button>
                             @if (canManageAlias($index)) {
                               <button (click)="openAliasDialog($index)"
-                                      class="p-1 text-amber-400 hover:bg-slate-800 rounded transition-colors relative"
+                                      class="p-1 text-amber-500 dark:text-amber-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded transition-colors relative"
                                       title="Gestionar alias">
                                 <lucide-angular name="tags" [size]="14"></lucide-angular>
                                 @if (getAliasCount($index) > 0) {
@@ -446,7 +456,7 @@ interface DetectedColumn {
                               </button>
                             }
                             <button (click)="removePreviewHeader($index)"
-                                    class="p-1 text-red-400 hover:bg-slate-800 rounded transition-colors"
+                                    class="p-1 text-red-500 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-slate-800 rounded transition-colors"
                                     title="Eliminar">
                               <lucide-angular name="trash-2" [size]="14"></lucide-angular>
                             </button>
@@ -464,8 +474,8 @@ interface DetectedColumn {
 
       <!-- Dialog Agregar/Editar Manual -->
       @if (showManualDialog()) {
-        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-slate-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-slate-800">
+        <div class="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
             <!-- Dialog Header -->
             <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 p-5 text-white">
               <div class="flex items-center justify-between">
@@ -474,7 +484,7 @@ interface DetectedColumn {
                     <lucide-angular name="plus-circle" [size]="20"></lucide-angular>
                   </div>
                   <div>
-                    <h2 class="text-xl font-bold">{{ editingIndex() !== null ? 'Editar' : 'Agregar' }} Cabecera</h2>
+                    <h2 class="text-xl font-bold !text-white">{{ editingIndex() !== null ? 'Editar' : 'Agregar' }} Cabecera</h2>
                     <p class="text-indigo-100 text-sm">Complete la información de la cabecera</p>
                   </div>
                 </div>
@@ -489,17 +499,17 @@ interface DetectedColumn {
               <div class="space-y-4">
                 <!-- Campo Base de Datos (Dropdown del Catálogo) -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     <lucide-angular name="book-open" [size]="16" class="inline mr-1"></lucide-angular>
                     Campo Base de Datos (Opcional)
                     @if (formData.id) {
-                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-400" title="No editable"></lucide-angular>
+                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-500 dark:text-amber-400" title="No editable"></lucide-angular>
                     }
                   </label>
                   <select [(ngModel)]="formData.fieldDefinitionId"
                           (ngModelChange)="onFieldDefinitionSelect()"
                           [disabled]="!!formData.id"
-                          class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                          class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                     <option [value]="0">Sin asociar - Campo personalizado</option>
                     @for (field of availableFieldDefinitions(); track field.id) {
                       <option [value]="field.id">
@@ -507,7 +517,7 @@ interface DetectedColumn {
                       </option>
                     }
                   </select>
-                  <p class="text-xs text-gray-400 mt-1">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     @if (formData.id) {
                       La asociación al catálogo no puede cambiarse en cabeceras existentes.
                     } @else {
@@ -518,11 +528,11 @@ interface DetectedColumn {
 
                 <!-- Información del Catálogo (Solo Lectura) -->
                 @if (getSelectedFieldDefinition(); as selectedField) {
-                  <div class="bg-slate-800/50 rounded-lg p-4 space-y-2 border border-slate-700/50">
-                    <p class="text-xs font-semibold text-gray-400 mb-2">📋 Información del Catálogo</p>
+                  <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-2 border border-gray-200 dark:border-slate-700/50">
+                    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📋 Información del Catálogo</p>
 
                     <div class="flex items-center gap-2">
-                      <span class="text-xs text-gray-400">Tipo de Dato:</span>
+                      <span class="text-xs text-gray-500 dark:text-gray-400">Tipo de Dato:</span>
                       <span [class]="getDataTypeBadgeClass(selectedField.dataType)"
                             class="inline-flex px-2 py-0.5 rounded text-xs font-medium">
                         {{ selectedField.dataType }}
@@ -530,15 +540,15 @@ interface DetectedColumn {
                     </div>
 
                     @if (selectedField.description) {
-                      <div class="text-xs text-gray-400">
+                      <div class="text-xs text-gray-500 dark:text-gray-400">
                         <span class="font-semibold">Descripción:</span> {{ selectedField.description }}
                       </div>
                     }
 
                     @if (selectedField.format) {
-                      <div class="text-xs text-gray-400">
+                      <div class="text-xs text-gray-500 dark:text-gray-400">
                         <span class="font-semibold">Formato del Sistema:</span>
-                        <code class="text-cyan-400">{{ selectedField.format }}</code>
+                        <code class="text-cyan-600 dark:text-cyan-400">{{ selectedField.format }}</code>
                       </div>
                     }
                   </div>
@@ -546,12 +556,12 @@ interface DetectedColumn {
 
                 <!-- Advertencia para cabeceras existentes -->
                 @if (formData.id) {
-                  <div class="bg-amber-900/30 border border-amber-700/50 rounded-lg p-3 mb-2">
+                  <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 rounded-lg p-3 mb-2">
                     <div class="flex items-start gap-2">
-                      <lucide-angular name="alert-triangle" [size]="16" class="text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                      <lucide-angular name="alert-triangle" [size]="16" class="text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
                       <div>
-                        <p class="text-sm text-amber-300 font-medium">Cabecera existente en base de datos</p>
-                        <p class="text-xs text-amber-400/80 mt-1">
+                        <p class="text-sm text-amber-700 dark:text-amber-300 font-medium">Cabecera existente en base de datos</p>
+                        <p class="text-xs text-amber-600 dark:text-amber-400/80 mt-1">
                           El nombre del campo y tipo de dato no pueden modificarse porque la columna ya existe en la tabla.
                           Solo puede editar: etiqueta visual, formato y obligatoriedad.
                         </p>
@@ -563,21 +573,21 @@ interface DetectedColumn {
                 <!-- Selector de Tipo de Dato (para campos personalizados) -->
                 @if (formData.fieldDefinitionId === 0) {
                   <div>
-                    <label class="block text-sm font-semibold text-gray-300 mb-2">
+                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                       <lucide-angular name="type" [size]="16" class="inline mr-1"></lucide-angular>
                       Tipo de Dato *
                       @if (formData.id) {
-                        <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-400" title="No editable"></lucide-angular>
+                        <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-500 dark:text-amber-400" title="No editable"></lucide-angular>
                       }
                     </label>
                     <select [(ngModel)]="formData.dataType"
                             [disabled]="!!formData.id"
-                            class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                       <option value="TEXTO">TEXTO</option>
                       <option value="NUMERICO">NUMERICO</option>
                       <option value="FECHA">FECHA</option>
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       @if (formData.id) {
                         El tipo de dato no puede cambiarse en cabeceras existentes.
                       } @else {
@@ -589,19 +599,19 @@ interface DetectedColumn {
 
                 <!-- Campo Sistema (Input Texto Libre) -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     <lucide-angular name="settings" [size]="16" class="inline mr-1"></lucide-angular>
                     Campo Sistema *
                     @if (formData.id) {
-                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-400" title="No editable"></lucide-angular>
+                      <lucide-angular name="lock" [size]="12" class="inline ml-1 text-amber-500 dark:text-amber-400" title="No editable"></lucide-angular>
                     }
                   </label>
                   <input type="text"
                          [(ngModel)]="formData.headerName"
                          [disabled]="!!formData.id"
                          placeholder="Ej: DNI, Saldo Vencido, Teléfono Principal"
-                         class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <p class="text-xs text-gray-400 mt-1">
+                         class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     @if (formData.id) {
                       El nombre del campo no puede cambiarse en cabeceras existentes.
                     } @else {
@@ -612,30 +622,30 @@ interface DetectedColumn {
 
                 <!-- Etiqueta Visual (Input Texto) -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     <lucide-angular name="eye" [size]="16" class="inline mr-1"></lucide-angular>
                     Etiqueta Visual *
                   </label>
                   <input type="text"
                          [(ngModel)]="formData.displayLabel"
                          placeholder="Ej: Número de Documento, Saldo Pendiente"
-                         class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <p class="text-xs text-gray-400 mt-1">
+                         class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Texto que se mostrará en la interfaz de usuario.
                   </p>
                 </div>
 
                 <!-- Formato (Input Texto Opcional) -->
                 <div>
-                  <label class="block text-sm font-semibold text-gray-300 mb-2">
+                  <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                     <lucide-angular name="file-text" [size]="16" class="inline mr-1"></lucide-angular>
                     Formato
                   </label>
                   <input type="text"
                          [(ngModel)]="formData.format"
                          placeholder="Ej: dd/MM/yyyy, decimal(18,2)"
-                         class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                  <p class="text-xs text-gray-400 mt-1">
+                         class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Formato específico para esta subcartera (opcional, puede diferir del formato del sistema).
                   </p>
                 </div>
@@ -645,18 +655,18 @@ interface DetectedColumn {
                   <input type="checkbox"
                          [(ngModel)]="formData.required"
                          id="required"
-                         class="w-4 h-4 text-indigo-600 bg-slate-800 border-slate-700 rounded focus:ring-indigo-500">
-                  <label for="required" class="text-sm text-gray-300">
+                         class="w-4 h-4 text-indigo-600 bg-gray-100 dark:bg-slate-800 border-gray-300 dark:border-slate-700 rounded focus:ring-indigo-500">
+                  <label for="required" class="text-sm text-gray-700 dark:text-gray-300">
                     Campo obligatorio
                   </label>
                 </div>
 
                 <!-- Sección de Transformación -->
-                <div class="col-span-2 border-t border-slate-700 pt-4 mt-2">
+                <div class="col-span-2 border-t border-gray-200 dark:border-slate-700 pt-4 mt-2">
                   <!-- Toggle Header -->
                   <button type="button"
                           (click)="showTransformSection.set(!showTransformSection())"
-                          class="w-full flex items-center justify-between text-sm font-bold text-emerald-400 mb-3 hover:text-emerald-300 transition-colors">
+                          class="w-full flex items-center justify-between text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-3 hover:text-emerald-500 dark:hover:text-emerald-300 transition-colors">
                     <div class="flex items-center gap-2">
                       <lucide-angular name="git-branch" [size]="16"></lucide-angular>
                       Transformación de Campo (Opcional)
@@ -668,7 +678,7 @@ interface DetectedColumn {
                   </button>
 
                   @if (showTransformSection()) {
-                    <p class="text-xs text-gray-400 mb-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">
                       Si este campo se deriva de otro campo mediante regex, configúralo aquí.<br>
                       Ejemplo: extraer documento desde IDENTITY_CODE.
                     </p>
@@ -676,12 +686,12 @@ interface DetectedColumn {
                     <div class="grid grid-cols-1 gap-4">
                       <!-- Campo Origen -->
                       <div>
-                        <label class="block text-sm font-semibold text-gray-300 mb-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                           <lucide-angular name="arrow-right" [size]="16" class="inline mr-1"></lucide-angular>
                           Campo Origen
                         </label>
                         <select [(ngModel)]="formData.sourceField"
-                                class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                                class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                           <option value="">Seleccione un campo origen...</option>
                           @for (header of availableSourceHeaders(); track header.headerName) {
                             <option [value]="header.headerName">
@@ -689,26 +699,26 @@ interface DetectedColumn {
                             </option>
                           }
                         </select>
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           Campo desde donde se extraerá el valor mediante regex.
                         </p>
                       </div>
 
                       <!-- Patrón Regex -->
                       <div>
-                        <label class="block text-sm font-semibold text-gray-300 mb-2">
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                           <lucide-angular name="code" [size]="16" class="inline mr-1"></lucide-angular>
                           Patrón Regex
                           @if (formData.sourceField && formData.sourceField.trim() !== '') {
-                            <span class="text-red-400 ml-1">*</span>
+                            <span class="text-red-500 dark:text-red-400 ml-1">*</span>
                           }
                         </label>
                         <input type="text"
                                [(ngModel)]="formData.regexPattern"
                                placeholder="Ej: .{{8}}$ (últimos 8 caracteres)"
-                               class="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm">
-                        <p class="text-xs text-gray-400 mt-1">
-                          Ejemplos: <code class="text-emerald-400">.{{8}}$</code> últimos 8 • <code class="text-emerald-400">\\d{{8}}</code> 8 dígitos
+                               class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono text-sm">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Ejemplos: <code class="text-emerald-600 dark:text-emerald-400">.{{8}}$</code> últimos 8 • <code class="text-emerald-600 dark:text-emerald-400">\\d{{8}}</code> 8 dígitos
                         </p>
                       </div>
                     </div>
@@ -718,9 +728,9 @@ interface DetectedColumn {
             </div>
 
             <!-- Dialog Footer -->
-            <div class="border-t border-slate-800 p-4 flex justify-end gap-3 bg-slate-950">
+            <div class="border-t border-gray-200 dark:border-slate-800 p-4 flex justify-end gap-3 bg-gray-50 dark:bg-slate-950">
               <button (click)="closeManualDialog()"
-                      class="px-5 py-2 text-gray-400 hover:bg-slate-800 hover:text-white rounded-lg font-medium transition-colors">
+                      class="px-5 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium transition-colors">
                 Cancelar
               </button>
               <button (click)="saveManualHeader()"
@@ -735,8 +745,8 @@ interface DetectedColumn {
 
       <!-- Dialog Gestión de Alias -->
       @if (showAliasDialog()) {
-        <div class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div class="bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-slate-800">
+        <div class="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-800">
             <!-- Dialog Header -->
             <div class="bg-gradient-to-r from-amber-600 to-amber-700 p-5 text-white">
               <div class="flex items-center justify-between">
@@ -745,7 +755,7 @@ interface DetectedColumn {
                     <lucide-angular name="tags" [size]="20"></lucide-angular>
                   </div>
                   <div>
-                    <h2 class="text-xl font-bold">Gestionar Alias</h2>
+                    <h2 class="text-xl font-bold !text-white">Gestionar Alias</h2>
                     <p class="text-amber-100 text-sm">{{ selectedHeaderForAlias()?.headerName }}</p>
                   </div>
                 </div>
@@ -758,15 +768,15 @@ interface DetectedColumn {
             <!-- Dialog Body -->
             <div class="p-6">
               <!-- Info del campo -->
-              <div class="bg-slate-800/50 rounded-lg p-3 mb-4 border border-slate-700/50">
-                <p class="text-xs text-gray-400 mb-1">Nombre principal de la cabecera</p>
-                <p class="text-white font-mono font-semibold">{{ selectedHeaderForAlias()?.headerName }}</p>
-                <p class="text-xs text-gray-400 mt-2">Los alias permiten que el sistema reconozca columnas del Excel aunque tengan nombres diferentes.</p>
+              <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-3 mb-4 border border-gray-200 dark:border-slate-700/50">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Nombre principal de la cabecera</p>
+                <p class="text-gray-900 dark:text-white font-mono font-semibold">{{ selectedHeaderForAlias()?.headerName }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Los alias permiten que el sistema reconozca columnas del Excel aunque tengan nombres diferentes.</p>
               </div>
 
               <!-- Agregar nuevo alias -->
               <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-300 mb-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   <lucide-angular name="plus" [size]="14" class="inline mr-1"></lucide-angular>
                   Agregar nuevo alias
                 </label>
@@ -776,7 +786,7 @@ interface DetectedColumn {
                          (ngModelChange)="newAliasName.set($event)"
                          (keyup.enter)="addAlias()"
                          placeholder="Nombre alternativo de la columna"
-                         class="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
+                         class="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm">
                   <button (click)="addAlias()"
                           [disabled]="!newAliasName().trim()"
                           class="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
@@ -787,35 +797,35 @@ interface DetectedColumn {
 
               <!-- Lista de alias -->
               <div>
-                <label class="block text-sm font-semibold text-gray-300 mb-2">
+                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                   <lucide-angular name="list" [size]="14" class="inline mr-1"></lucide-angular>
                   Alias configurados
                 </label>
 
                 @if (loadingAliases()) {
                   <div class="text-center py-4">
-                    <lucide-angular name="loader-2" [size]="24" class="text-amber-400 animate-spin mx-auto"></lucide-angular>
-                    <p class="text-xs text-gray-400 mt-2">Cargando alias...</p>
+                    <lucide-angular name="loader-2" [size]="24" class="text-amber-500 dark:text-amber-400 animate-spin mx-auto"></lucide-angular>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Cargando alias...</p>
                   </div>
                 } @else if (aliases().length === 0) {
-                  <div class="text-center py-4 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                    <lucide-angular name="tags" [size]="24" class="text-gray-600 mx-auto"></lucide-angular>
-                    <p class="text-xs text-gray-400 mt-2">No hay alias configurados</p>
+                  <div class="text-center py-4 bg-gray-50 dark:bg-slate-800/30 rounded-lg border border-gray-200 dark:border-slate-700/50">
+                    <lucide-angular name="tags" [size]="24" class="text-gray-400 dark:text-gray-600 mx-auto"></lucide-angular>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">No hay alias configurados</p>
                   </div>
                 } @else {
                   <div class="space-y-2 max-h-48 overflow-y-auto">
                     @for (alias of aliases(); track alias.id) {
-                      <div class="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 border border-slate-700/50">
+                      <div class="flex items-center justify-between bg-gray-50 dark:bg-slate-800/50 rounded-lg px-3 py-2 border border-gray-200 dark:border-slate-700/50">
                         <div class="flex items-center gap-2">
-                          <lucide-angular name="tag" [size]="14" class="text-amber-400"></lucide-angular>
-                          <span class="text-white font-mono text-sm">{{ alias.alias }}</span>
+                          <lucide-angular name="tag" [size]="14" class="text-amber-500 dark:text-amber-400"></lucide-angular>
+                          <span class="text-gray-900 dark:text-white font-mono text-sm">{{ alias.alias }}</span>
                           @if (alias.isPrincipal) {
-                            <span class="px-1.5 py-0.5 bg-green-900/50 text-green-400 rounded text-[10px] font-medium">Principal</span>
+                            <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400 rounded text-[10px] font-medium">Principal</span>
                           }
                         </div>
                         @if (!alias.isPrincipal) {
                           <button (click)="removeAlias(alias)"
-                                  class="p-1 text-red-400 hover:bg-slate-700 rounded transition-colors"
+                                  class="p-1 text-red-500 dark:text-red-400 hover:bg-gray-200 dark:hover:bg-slate-700 rounded transition-colors"
                                   title="Eliminar alias">
                             <lucide-angular name="trash-2" [size]="14"></lucide-angular>
                           </button>
@@ -828,9 +838,9 @@ interface DetectedColumn {
             </div>
 
             <!-- Dialog Footer -->
-            <div class="border-t border-slate-800 p-4 flex justify-end bg-slate-950">
+            <div class="border-t border-gray-200 dark:border-slate-800 p-4 flex justify-end bg-gray-50 dark:bg-slate-950">
               <button (click)="closeAliasDialog()"
-                      class="px-5 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors">
+                      class="px-5 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-white rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors">
                 Cerrar
               </button>
             </div>
@@ -951,6 +961,13 @@ export class HeaderConfigurationComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al cargar definiciones de campos:', error);
+        // Solo notificar si es un error de conexión, no 404
+        if (error?.status === 0 || error?.status >= 500) {
+          this.notificationService.warning(
+            'Definiciones no disponibles',
+            'No se pudieron cargar las definiciones de campos predefinidos'
+          );
+        }
       }
     });
   }
@@ -962,6 +979,8 @@ export class HeaderConfigurationComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading tenants:', error);
+        const friendlyMsg = this.getFriendlyErrorMessage(error);
+        this.notificationService.error('Error al cargar proveedores', friendlyMsg);
       }
     });
   }
@@ -1011,6 +1030,8 @@ export class HeaderConfigurationComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading portfolios:', error);
+        const friendlyMsg = this.getFriendlyErrorMessage(error);
+        this.notificationService.error('Error al cargar carteras', friendlyMsg);
       }
     });
   }
@@ -1022,6 +1043,8 @@ export class HeaderConfigurationComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading subportfolios:', error);
+        const friendlyMsg = this.getFriendlyErrorMessage(error);
+        this.notificationService.error('Error al cargar subcarteras', friendlyMsg);
       }
     });
   }
@@ -1052,6 +1075,11 @@ export class HeaderConfigurationComponent implements OnInit {
         console.error('Error loading headers:', error);
         this.headersAreSaved.set(false);
         this.savedHeaders.set([]);
+        // 404 significa que no hay cabeceras configuradas - no es un error
+        if (error?.status !== 404) {
+          const friendlyMsg = this.getFriendlyErrorMessage(error);
+          this.notificationService.error('Error al cargar cabeceras', friendlyMsg);
+        }
       }
     });
   }
@@ -1228,9 +1256,29 @@ export class HeaderConfigurationComponent implements OnInit {
           this.notificationService.success('Cabeceras eliminadas', 'Todas las cabeceras han sido eliminadas exitosamente');
         },
         error: (error) => {
-          console.error('Error al eliminar cabeceras:', error);
           this.isLoading.set(false);
-          this.notificationService.error('Error al eliminar', error.error?.message || error.message);
+          // Manejar errores de forma más amigable
+          if (error?.status === 404) {
+            // Las cabeceras ya no existen en el servidor - limpiar la vista local
+            this.previewHeaders.set([]);
+            this.savedHeaders.set([]);
+            this.headersAreSaved.set(false);
+            this.notificationService.info(
+              'Cabeceras no encontradas',
+              'Las cabeceras ya no existen en el sistema. La vista ha sido actualizada.'
+            );
+            return;
+          }
+          // Para 409 (Conflict), mostrar el mensaje del backend
+          if (error?.status === 409) {
+            const backendMessage = error?.error?.message || 'Las cabeceras tienen datos asociados y no pueden eliminarse.';
+            this.notificationService.warning('No se pueden eliminar', backendMessage);
+            return;
+          }
+          console.error('Error al eliminar cabeceras:', error);
+          // Mostrar mensaje de error más amigable
+          const friendlyMessage = this.getFriendlyErrorMessage(error);
+          this.notificationService.error('Error al eliminar', friendlyMessage);
         }
       });
     } else {
@@ -1300,7 +1348,12 @@ export class HeaderConfigurationComponent implements OnInit {
         try {
           await firstValueFrom(this.headerConfigService.delete(header.id));
         } catch (error: any) {
-          const errorMsg = error?.error?.message || error?.message || 'Error desconocido';
+          // Si es 404, la cabecera ya no existe - no es un error real
+          if (error?.status === 404) {
+            continue; // La cabecera ya fue eliminada, continuar con las demás
+          }
+          // Para 409 (Conflict), usar el mensaje del backend que indica que tiene datos
+          const errorMsg = error?.error?.message || this.getFriendlyErrorMessage(error);
           deletionErrors.push(`${header.headerName}: ${errorMsg}`);
         }
       }
@@ -1315,7 +1368,8 @@ export class HeaderConfigurationComponent implements OnInit {
             required: header.required
           }));
         } catch (error: any) {
-          errors.push(`${header.headerName}: ${error?.error?.message || error?.message}`);
+          const friendlyMsg = this.getFriendlyErrorMessage(error);
+          errors.push(`${header.headerName}: ${friendlyMsg}`);
         }
       }
 
@@ -1338,7 +1392,8 @@ export class HeaderConfigurationComponent implements OnInit {
           };
           await firstValueFrom(this.headerConfigService.createBulk(request));
         } catch (error: any) {
-          errors.push(`Creación en lote: ${error?.error?.message || error?.message}`);
+          const friendlyMsg = this.getFriendlyErrorMessage(error);
+          errors.push(`Creación de cabeceras: ${friendlyMsg}`);
         }
       }
 
@@ -1906,13 +1961,13 @@ export class HeaderConfigurationComponent implements OnInit {
   getDataTypeBadgeClass(dataType: DataType): string {
     switch (dataType) {
       case 'TEXTO':
-        return 'bg-blue-900/30 text-blue-400';
+        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
       case 'NUMERICO':
-        return 'bg-emerald-900/30 text-emerald-400';
+        return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400';
       case 'FECHA':
-        return 'bg-amber-900/30 text-amber-400';
+        return 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400';
       default:
-        return 'bg-gray-900/30 text-gray-400';
+        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-400';
     }
   }
 
@@ -1971,6 +2026,11 @@ export class HeaderConfigurationComponent implements OnInit {
         console.error('Error al cargar alias:', error);
         this.loadingAliases.set(false);
         this.aliases.set([]);
+        // 404 significa que no hay alias - no es un error
+        if (error?.status !== 404) {
+          const friendlyMsg = this.getFriendlyErrorMessage(error);
+          this.notificationService.error('Error al cargar alias', friendlyMsg);
+        }
       }
     });
   }
@@ -1997,7 +2057,8 @@ export class HeaderConfigurationComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error al agregar alias:', error);
-        this.notificationService.error('Error al agregar alias', error.error?.message || error.message);
+        const friendlyMsg = this.getFriendlyErrorMessage(error);
+        this.notificationService.error('Error al agregar alias', friendlyMsg);
       }
     });
   }
@@ -2022,8 +2083,15 @@ export class HeaderConfigurationComponent implements OnInit {
         this.notificationService.success('Alias eliminado', `Se eliminó el alias "${alias.alias}"`);
       },
       error: (error) => {
+        // Si es 404, el alias ya no existe - eliminarlo de la lista local
+        if (error?.status === 404) {
+          this.aliases.update(current => current.filter(a => a.id !== alias.id));
+          this.notificationService.info('Alias no encontrado', 'El alias ya no existe en el sistema');
+          return;
+        }
         console.error('Error al eliminar alias:', error);
-        this.notificationService.error('Error al eliminar alias', error.error?.message || error.message);
+        const friendlyMsg = this.getFriendlyErrorMessage(error);
+        this.notificationService.error('Error al eliminar alias', friendlyMsg);
       }
     });
   }
@@ -2045,5 +2113,47 @@ export class HeaderConfigurationComponent implements OnInit {
 
     const savedHeader = this.savedHeaders().find(h => h.id === previewHeader.id);
     return savedHeader?.aliases?.length || 0;
+  }
+
+  /**
+   * Convierte errores HTTP técnicos a mensajes amigables para el usuario
+   */
+  private getFriendlyErrorMessage(error: any): string {
+    // Si el error tiene un mensaje personalizado del backend, usarlo (prioridad alta)
+    if (error?.error?.message && !error.error.message.includes('Http failure')) {
+      return error.error.message;
+    }
+
+    // Mapear códigos de estado HTTP a mensajes amigables
+    const status = error?.status;
+    switch (status) {
+      case 400:
+        return 'Datos inválidos. Por favor verifique la información ingresada.';
+      case 401:
+        return 'Sesión expirada. Por favor inicie sesión nuevamente.';
+      case 403:
+        return 'No tiene permisos para realizar esta acción.';
+      case 404:
+        return 'El recurso ya no existe en el sistema.';
+      case 409:
+        // Para conflictos, el backend debería enviar un mensaje específico
+        return error?.error?.message || 'No se puede completar la operación porque hay datos asociados.';
+      case 422:
+        return 'No se puede procesar: la cabecera tiene datos asociados.';
+      case 500:
+        return 'Error interno del servidor. Por favor intente más tarde.';
+      case 502:
+      case 503:
+      case 504:
+        return 'El servidor no está disponible. Por favor intente más tarde.';
+      case 0:
+        return 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
+      default:
+        // Para errores desconocidos, dar un mensaje genérico
+        if (error?.message && !error.message.includes('Http failure')) {
+          return error.message;
+        }
+        return 'Ocurrió un error inesperado. Por favor intente nuevamente.';
+    }
   }
 }

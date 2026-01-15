@@ -20,25 +20,25 @@ import { NotificationService, Notification } from '../../services/notification.s
           <div class="flex-shrink-0 mt-0.5">
             @switch (notification.type) {
               @case ('success') {
-                <lucide-angular name="check-circle" [size]="20" class="text-green-400"></lucide-angular>
+                <lucide-angular name="check-circle" [size]="20" class="text-green-600 dark:text-green-400"></lucide-angular>
               }
               @case ('error') {
-                <lucide-angular name="x-circle" [size]="20" class="text-red-400"></lucide-angular>
+                <lucide-angular name="x-circle" [size]="20" class="text-red-600 dark:text-red-400"></lucide-angular>
               }
               @case ('warning') {
-                <lucide-angular name="alert-triangle" [size]="20" class="text-amber-400"></lucide-angular>
+                <lucide-angular name="alert-triangle" [size]="20" class="text-amber-600 dark:text-amber-400"></lucide-angular>
               }
               @case ('info') {
-                <lucide-angular name="info" [size]="20" class="text-blue-400"></lucide-angular>
+                <lucide-angular name="info" [size]="20" class="text-blue-600 dark:text-blue-400"></lucide-angular>
               }
             }
           </div>
 
           <!-- Content -->
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-white">{{ notification.title }}</p>
+            <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ notification.title }}</p>
             @if (notification.message) {
-              <p class="text-xs text-gray-300 mt-1 whitespace-pre-line">{{ notification.message }}</p>
+              <p class="text-xs text-gray-600 dark:text-gray-300 mt-1 whitespace-pre-line">{{ notification.message }}</p>
             }
 
             <!-- Actions -->
@@ -48,8 +48,8 @@ import { NotificationService, Notification } from '../../services/notification.s
                   <button
                     (click)="action.callback(); notificationService.dismiss(notification.id)"
                     [class]="action.primary
-                      ? 'px-2 py-1 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded'
-                      : 'px-2 py-1 text-gray-300 hover:text-white text-xs'">
+                      ? 'px-2 py-1 bg-gray-900/10 dark:bg-white/20 hover:bg-gray-900/20 dark:hover:bg-white/30 text-gray-900 dark:text-white text-xs font-medium rounded'
+                      : 'px-2 py-1 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white text-xs'">
                     {{ action.label }}
                   </button>
                 }
@@ -60,7 +60,7 @@ import { NotificationService, Notification } from '../../services/notification.s
           <!-- Close button -->
           <button
             (click)="notificationService.dismiss(notification.id)"
-            class="flex-shrink-0 text-gray-400 hover:text-white transition-colors">
+            class="flex-shrink-0 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <lucide-angular name="x" [size]="16"></lucide-angular>
           </button>
         </div>
@@ -69,25 +69,25 @@ import { NotificationService, Notification } from '../../services/notification.s
 
     <!-- Confirmation Dialog -->
     @if (notificationService.confirmDialog().visible) {
-      <div class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-        <div class="bg-slate-900 rounded-xl shadow-2xl max-w-md w-full border border-slate-700 animate-scale-in">
+      <div class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-md w-full border border-gray-200 dark:border-slate-700 animate-scale-in">
           <!-- Header -->
-          <div class="p-5 border-b border-slate-700">
+          <div class="p-5 border-b border-gray-200 dark:border-slate-700">
             <div class="flex items-center gap-3">
               <div [class]="getConfirmIconBgClass()">
                 @switch (notificationService.confirmDialog().options.type) {
                   @case ('danger') {
-                    <lucide-angular name="alert-triangle" [size]="20" class="text-red-400"></lucide-angular>
+                    <lucide-angular name="alert-triangle" [size]="20" class="text-red-600 dark:text-red-400"></lucide-angular>
                   }
                   @case ('warning') {
-                    <lucide-angular name="alert-circle" [size]="20" class="text-amber-400"></lucide-angular>
+                    <lucide-angular name="alert-circle" [size]="20" class="text-amber-600 dark:text-amber-400"></lucide-angular>
                   }
                   @default {
-                    <lucide-angular name="help-circle" [size]="20" class="text-blue-400"></lucide-angular>
+                    <lucide-angular name="help-circle" [size]="20" class="text-blue-600 dark:text-blue-400"></lucide-angular>
                   }
                 }
               </div>
-              <h3 class="text-lg font-bold text-white">
+              <h3 class="text-lg font-bold text-gray-900 dark:text-white">
                 {{ notificationService.confirmDialog().options.title }}
               </h3>
             </div>
@@ -95,15 +95,15 @@ import { NotificationService, Notification } from '../../services/notification.s
 
           <!-- Body -->
           <div class="p-5">
-            <p class="text-gray-300 text-sm whitespace-pre-line">
+            <p class="text-gray-600 dark:text-gray-300 text-sm whitespace-pre-line">
               {{ notificationService.confirmDialog().options.message }}
             </p>
 
             @if (notificationService.confirmDialog().options.details?.length) {
               <ul class="mt-3 space-y-1 max-h-32 overflow-y-auto">
                 @for (detail of notificationService.confirmDialog().options.details; track detail) {
-                  <li class="text-xs text-gray-400 flex items-center gap-2">
-                    <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+                  <li class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                    <span class="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
                     {{ detail }}
                   </li>
                 }
@@ -112,10 +112,10 @@ import { NotificationService, Notification } from '../../services/notification.s
           </div>
 
           <!-- Footer -->
-          <div class="p-4 border-t border-slate-700 flex justify-end gap-3">
+          <div class="p-4 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
             <button
               (click)="notificationService.resolveConfirm(false)"
-              class="px-4 py-2 text-gray-400 hover:bg-slate-800 hover:text-white rounded-lg font-medium transition-colors">
+              class="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium transition-colors">
               {{ notificationService.confirmDialog().options.cancelText }}
             </button>
             <button
@@ -164,18 +164,18 @@ export class NotificationsComponent {
   notificationService = inject(NotificationService);
 
   getNotificationClasses(type: string): string {
-    const base = 'bg-slate-800/95';
+    const base = 'bg-white dark:bg-slate-800/95';
     switch (type) {
       case 'success':
-        return `${base} border-green-500/30`;
+        return `${base} border-green-500/50 dark:border-green-500/30`;
       case 'error':
-        return `${base} border-red-500/30`;
+        return `${base} border-red-500/50 dark:border-red-500/30`;
       case 'warning':
-        return `${base} border-amber-500/30`;
+        return `${base} border-amber-500/50 dark:border-amber-500/30`;
       case 'info':
-        return `${base} border-blue-500/30`;
+        return `${base} border-blue-500/50 dark:border-blue-500/30`;
       default:
-        return `${base} border-slate-700`;
+        return `${base} border-gray-200 dark:border-slate-700`;
     }
   }
 
@@ -183,11 +183,11 @@ export class NotificationsComponent {
     const type = this.notificationService.confirmDialog().options.type;
     switch (type) {
       case 'danger':
-        return 'w-10 h-10 bg-red-900/50 rounded-lg flex items-center justify-center';
+        return 'w-10 h-10 bg-red-100 dark:bg-red-900/50 rounded-lg flex items-center justify-center';
       case 'warning':
-        return 'w-10 h-10 bg-amber-900/50 rounded-lg flex items-center justify-center';
+        return 'w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center';
       default:
-        return 'w-10 h-10 bg-blue-900/50 rounded-lg flex items-center justify-center';
+        return 'w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center';
     }
   }
 

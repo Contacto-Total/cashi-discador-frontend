@@ -72,11 +72,55 @@ export interface DetectFileTypeResult {
 
 // ==================== Tipos de Carga Consolidada ====================
 
-export type LoadMode = 'DAILY' | 'INITIAL_MONTH' | 'PKM';
+export type LoadMode = 'DAILY' | 'INITIAL_MONTH' | 'COMPLEMENTARY';
+
+/**
+ * Tipo de archivo simplificado:
+ * - MAIN: Archivo principal (inserción de nuevos registros)
+ * - COMPLEMENTARY: Archivo complementario (actualización de columnas existentes)
+ */
+export type FileType = 'MAIN' | 'COMPLEMENTARY';
+
+/**
+ * Estado de configuración del archivo
+ */
+export type FileConfigState = 'loading' | 'configuring' | 'ready' | 'error';
+
+/**
+ * Información de una columna no registrada
+ */
+export interface UnregisteredColumn {
+  name: string;
+  sampleValues: string[];
+  detectedType: string;
+  selected: boolean;
+  displayLabel?: string;
+  format?: string;
+}
+
+/**
+ * Información de una hoja de Excel
+ */
+export interface SheetInfo {
+  name: string;
+  headers: string[];
+  rowCount: number;
+}
 
 export interface FileToProcess {
   file: File;
   type: FileType;
+  // Estado de configuración
+  configState: FileConfigState;
+  isExpanded: boolean;
+  // Información de hojas de Excel
+  sheetsInfo?: SheetInfo[];        // Info de todas las hojas disponibles
+  selectedSheet?: string;          // Hoja seleccionada por el usuario
+  // Campo de enlace para archivos complementarios
+  linkField?: string;              // Columna usada para vincular con registros existentes
+  // Columnas no registradas detectadas
+  unregisteredColumns?: UnregisteredColumn[];
+  // Datos procesados
   data?: Record<string, any>[];
   headers?: string[];
   validated: boolean;
@@ -84,12 +128,24 @@ export interface FileToProcess {
   rowCount?: number;
 }
 
-export type FileType =
-  | 'DAILY'                    // Cartera_CONTACTO_TOTAL_YYYY-MM-DD.xlsx
-  | 'INITIAL_MAIN'             // CONTACTO_TOTAL_ASIGNACION_YYYYMM.xlsx
-  | 'COMPLEMENTARY_FACILITIES' // Facilidades_Pago_CONTACTO_TOTAL_YYYYMM.xlsx
-  | 'COMPLEMENTARY_PKM'        // CONTACTO_TOTAL_PKM_MESYY.xlsx
-  | 'UNKNOWN';
+/**
+ * Columnas comunes que suelen usarse como campo de enlace
+ * Se usan para sugerir automáticamente al usuario
+ */
+export const COMMON_LINK_FIELDS = [
+  'IDENTITY_CODE',
+  'NRO_DOCUMENTO',
+  'NUMERO_DOCUMENTO',
+  'DNI',
+  'RUC',
+  'NUMERO_CUENTA',
+  'NRO_CUENTA',
+  'CUENTA',
+  'CODIGO_CLIENTE',
+  'ID_CLIENTE',
+  'CONTRATO',
+  'NUMERO_CONTRATO'
+];
 
 export interface ConsolidatedLoadResult {
   mode: LoadMode;
@@ -100,24 +156,23 @@ export interface ConsolidatedLoadResult {
   success: boolean;
 }
 
-// ==================== Patrones de Detección de Archivos ====================
-
-export const FILE_PATTERNS = {
-  DAILY: /Cartera_CONTACTO_TOTAL_\d{4}-\d{2}-\d{2}/i,
-  INITIAL_MAIN: /CONTACTO_TOTAL_ASIGNACION_\d{6}/i,
-  COMPLEMENTARY_FACILITIES: /Facilidades_Pago_CONTACTO_TOTAL_\d{6}/i,
-  COMPLEMENTARY_PKM: /CONTACTO_TOTAL_PKM_/i
-};
-
 /**
- * Detecta el tipo de archivo basándose en su nombre
+ * Determina el tipo de archivo basándose en el modo de carga y si ya existe un archivo principal
+ * @param mode Modo de carga seleccionado
+ * @param hasMainFile Si ya existe un archivo principal en la lista
  */
-export function detectFileTypeByName(fileName: string): FileType {
-  if (FILE_PATTERNS.DAILY.test(fileName)) return 'DAILY';
-  if (FILE_PATTERNS.INITIAL_MAIN.test(fileName)) return 'INITIAL_MAIN';
-  if (FILE_PATTERNS.COMPLEMENTARY_FACILITIES.test(fileName)) return 'COMPLEMENTARY_FACILITIES';
-  if (FILE_PATTERNS.COMPLEMENTARY_PKM.test(fileName)) return 'COMPLEMENTARY_PKM';
-  return 'UNKNOWN';
+export function determineFileType(mode: LoadMode, hasMainFile: boolean): FileType {
+  switch (mode) {
+    case 'DAILY':
+      // En carga diaria, el archivo siempre es principal (actualización)
+      return 'MAIN';
+    case 'INITIAL_MONTH':
+      // En carga inicial: el primer archivo es principal, los demás son complementarios
+      return hasMainFile ? 'COMPLEMENTARY' : 'MAIN';
+    case 'COMPLEMENTARY':
+      // En subida complementaria, todos los archivos son complementarios
+      return 'COMPLEMENTARY';
+  }
 }
 
 /**
@@ -125,10 +180,14 @@ export function detectFileTypeByName(fileName: string): FileType {
  */
 export function getFileTypeLabel(type: FileType): string {
   switch (type) {
-    case 'DAILY': return 'Carga Diaria';
-    case 'INITIAL_MAIN': return 'Asignación Inicial';
-    case 'COMPLEMENTARY_FACILITIES': return 'Facilidades de Pago';
-    case 'COMPLEMENTARY_PKM': return 'PKM';
-    case 'UNKNOWN': return 'Desconocido';
+    case 'MAIN': return 'Principal';
+    case 'COMPLEMENTARY': return 'Complementario';
   }
+}
+
+/**
+ * Valida si la extensión del archivo es válida (Excel)
+ */
+export function isValidExcelFile(fileName: string): boolean {
+  return /\.(xlsx|xls)$/i.test(fileName);
 }
