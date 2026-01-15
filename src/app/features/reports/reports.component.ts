@@ -66,7 +66,7 @@ import { ReportService, DashboardStats, AgentPerformanceReport } from '../../cor
       </mat-tab-group>
     </div>
   `,
-  styles: [`.container { padding: 24px; } .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; } .stat-item { text-align: center; padding: 20px; background: #f5f5f5; border-radius: 8px; } .stat-item h3 { margin: 0; font-size: 32px; color: #333; } .stat-item p { margin: 8px 0 0; color: #666; }`]
+  styles: [`.container { padding: 24px; } .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; } .stat-item { text-align: center; padding: 20px; background: #f5f5f5; border-radius: 8px; } .stat-item h3 { margin: 0; font-size: 2rem; color: #333; } .stat-item p { margin: 8px 0 0; color: #666; }`]
 })
 export class ReportsComponent implements OnInit {
   stats: DashboardStats | null = null;

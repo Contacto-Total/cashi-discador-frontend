@@ -101,7 +101,7 @@ import { LucideAngularModule } from 'lucide-angular';
       right: -4px;
       background: #fff;
       color: #EF4444;
-      font-size: 10px;
+      font-size: 0.625rem;
       font-weight: bold;
       width: 14px;
       height: 14px;

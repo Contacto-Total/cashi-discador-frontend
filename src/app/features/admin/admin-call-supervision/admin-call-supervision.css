@@ -13,7 +13,7 @@
 
 .supervision-header h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 500;
 }
 
@@ -27,7 +27,7 @@
 }
 
 .loading-container p {
-  font-size: 16px;
+  font-size: 1rem;
   color: #666;
 }
 
@@ -51,7 +51,7 @@
 }
 
 .status-info mat-chip {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .status-info mat-chip mat-icon {
@@ -62,7 +62,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 500;
 }
 
@@ -90,20 +90,20 @@
 }
 
 .info-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #666;
   text-transform: uppercase;
   margin-bottom: 4px;
 }
 
 .info-value {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 500;
   margin-bottom: 2px;
 }
 
 .info-sublabel {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #888;
 }
 
@@ -126,7 +126,7 @@
 }
 
 .mode-button mat-icon {
-  font-size: 32px;
+  font-size: 2rem;
   width: 32px;
   height: 32px;
 }
@@ -139,12 +139,12 @@
 }
 
 .mode-name {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 500;
 }
 
 .mode-description {
-  font-size: 12px;
+  font-size: 0.75rem;
   opacity: 0.8;
 }
 

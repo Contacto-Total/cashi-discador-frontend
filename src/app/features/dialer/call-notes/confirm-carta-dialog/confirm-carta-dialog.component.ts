@@ -101,7 +101,7 @@ export interface ConfirmCartaDialogData {
     }
     .carta-success-badge mat-icon {
       color: white !important;
-      font-size: 36px;
+      font-size: 2.25rem;
       width: 36px;
       height: 36px;
     }
@@ -159,7 +159,7 @@ export interface ConfirmCartaDialogData {
     }
 
     .carta-icon {
-      font-size: 26px;
+      font-size: 1.625rem;
       width: 26px;
       height: 26px;
       color: #2563eb !important;
@@ -213,7 +213,7 @@ export interface ConfirmCartaDialogData {
       flex: 1;
       padding: 14px 24px !important;
       border-radius: 10px !important;
-      font-size: 14px !important;
+      font-size: 0.875rem !important;
       font-weight: 500 !important;
       color: #64748b !important;
       background: #f1f5f9 !important;
@@ -244,7 +244,7 @@ export interface ConfirmCartaDialogData {
       gap: 10px;
       padding: 14px 28px !important;
       border-radius: 10px !important;
-      font-size: 14px !important;
+      font-size: 0.875rem !important;
       font-weight: 600 !important;
       background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
       color: white !important;
@@ -260,7 +260,7 @@ export interface ConfirmCartaDialogData {
     }
 
     .carta-btn-primary mat-icon {
-      font-size: 20px;
+      font-size: 1.25rem;
       width: 20px;
       height: 20px;
       flex-shrink: 0;

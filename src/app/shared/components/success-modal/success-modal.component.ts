@@ -93,7 +93,7 @@ export interface SuccessModalData {
     h2 {
       margin: 0;
       color: #1f2937;
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 600;
     }
 
@@ -103,7 +103,7 @@ export interface SuccessModalData {
     }
 
     .success-message {
-      font-size: 16px;
+      font-size: 1rem;
       color: #4b5563;
       line-height: 1.6;
       margin: 0 0 12px 0;
@@ -111,7 +111,7 @@ export interface SuccessModalData {
     }
 
     .success-details {
-      font-size: 14px;
+      font-size: 0.875rem;
       color: #6b7280;
       background: #f0fdf4;
       padding: 12px;
@@ -133,7 +133,7 @@ export interface SuccessModalData {
       align-items: center;
       gap: 8px;
       padding: 10px 24px;
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 500;
       border-radius: 8px;
       transition: all 0.3s ease;

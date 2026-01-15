@@ -23,7 +23,7 @@
 
     .multiselect-value {
       color: #ffffff;
-      font-size: 12px;
+      font-size: 0.75rem;
       flex: 1;
 
       &.placeholder {
@@ -68,7 +68,7 @@
         border: 1px solid #334155;
         border-radius: 6px;
         color: #10B981;
-        font-size: 13px;
+        font-size: 0.8125rem;
         cursor: pointer;
         transition: all 0.2s ease;
 
@@ -136,7 +136,7 @@
 
         .option-label {
           color: #ffffff;
-          font-size: 14px;
+          font-size: 0.875rem;
           flex: 1;
         }
       }

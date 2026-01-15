@@ -13,7 +13,7 @@
 }
 
 .dashboard-title {
-  font-size: 32px;
+  font-size: 2rem;
   font-weight: 600;
   margin-bottom: 24px;
   color: #0f172a;
@@ -31,7 +31,7 @@
 
 .loading-container p {
   color: #64748b;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .dashboard-content {
@@ -79,7 +79,7 @@
 }
 
 .stat-icon mat-icon {
-  font-size: 32px;
+  font-size: 2rem;
   width: 32px;
   height: 32px;
   color: #64748b;
@@ -123,7 +123,7 @@
 
 /* Stat Info */
 .stat-info h3 {
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 700;
   margin: 0 0 4px 0;
   color: #0f172a;
@@ -131,7 +131,7 @@
 }
 
 .stat-info p {
-  font-size: 14px;
+  font-size: 0.875rem;
   margin: 0;
   color: #64748b;
   font-weight: 500;
@@ -150,7 +150,7 @@
 }
 
 .chart-card mat-card-title {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #0f172a;
 }
@@ -177,7 +177,7 @@
 }
 
 .campaigns-card mat-card-title {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #0f172a;
 }
@@ -191,7 +191,7 @@
   background-color: #f8fafc;
   color: #0f172a;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 2px solid #e2e8f0;
@@ -211,7 +211,7 @@
   padding: 4px 12px;
   border-radius: 12px;
   color: white;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -231,7 +231,7 @@
 }
 
 .no-data mat-icon {
-  font-size: 48px;
+  font-size: 3rem;
   width: 48px;
   height: 48px;
   color: #94a3b8;
@@ -239,7 +239,7 @@
 
 .no-data p {
   color: #64748b;
-  font-size: 16px;
+  font-size: 1rem;
   margin: 0;
 }
 
@@ -254,7 +254,7 @@
   flex: 1;
   min-width: 200px;
   height: 48px;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 500;
 }
 
@@ -413,7 +413,7 @@ body.dark-theme .no-data p {
   }
 
   .dashboard-title {
-    font-size: 28px;
+    font-size: 1.75rem;
   }
 
   .stats-grid {
@@ -441,7 +441,7 @@ body.dark-theme .no-data p {
   }
 
   .dashboard-title {
-    font-size: 24px;
+    font-size: 1.5rem;
   }
 
   .stat-card mat-card-content {
@@ -454,17 +454,17 @@ body.dark-theme .no-data p {
   }
 
   .stat-icon mat-icon {
-    font-size: 28px;
+    font-size: 1.75rem;
     width: 28px;
     height: 28px;
   }
 
   .stat-info h3 {
-    font-size: 24px;
+    font-size: 1.5rem;
   }
 
   .stat-info p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .chart-container {

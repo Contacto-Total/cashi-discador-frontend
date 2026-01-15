@@ -35,7 +35,7 @@ app-admin-monitoring mat-card-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 24px !important;
+  font-size: 1.5rem !important;
   font-weight: 600 !important;
   color: #0f172a !important;
   margin: 0 !important;
@@ -66,7 +66,7 @@ app-admin-monitoring mat-card-content {
 .loading-container p {
   margin-top: 20px;
   color: #64748b !important;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .no-calls {
@@ -82,7 +82,7 @@ app-admin-monitoring mat-card-content {
 }
 
 .no-calls mat-icon {
-  font-size: 64px !important;
+  font-size: 4rem !important;
   width: 64px !important;
   height: 64px !important;
   margin-bottom: 20px;
@@ -90,7 +90,7 @@ app-admin-monitoring mat-card-content {
 }
 
 .no-calls p {
-  font-size: 16px;
+  font-size: 1rem;
   color: #64748b !important;
   margin: 0;
 }
@@ -110,7 +110,7 @@ app-admin-monitoring mat-card-content {
   background-color: #f8fafc !important;
   font-weight: 600 !important;
   color: #0f172a !important;
-  font-size: 13px !important;
+  font-size: 0.8125rem !important;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: 12px 16px !important;
@@ -145,7 +145,7 @@ app-admin-monitoring mat-card-content {
 .client-info mat-icon,
 .duration mat-icon {
   color: #64748b !important;
-  font-size: 20px !important;
+  font-size: 1.25rem !important;
   width: 20px !important;
   height: 20px !important;
 }
@@ -156,7 +156,7 @@ app-admin-monitoring mat-card-content {
 }
 
 .agent-ext {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #64748b !important;
 }
 
@@ -169,14 +169,14 @@ app-admin-monitoring mat-card-content {
 .call-state {
   padding: 6px 12px;
   border-radius: 16px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .call-state mat-icon {
-  font-size: 18px !important;
+  font-size: 1.125rem !important;
   width: 18px !important;
   height: 18px !important;
 }
@@ -202,7 +202,7 @@ app-admin-monitoring mat-card-content {
 }
 
 .campaign-name {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #334155 !important;
   font-weight: 500 !important;
 }
@@ -219,7 +219,7 @@ app-admin-monitoring mat-card-content {
   margin: 0 0 16px 0;
   color: #0f172a !important;
   font-weight: 600 !important;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 .legend-items {
@@ -239,7 +239,7 @@ app-admin-monitoring mat-card-content {
 }
 
 .legend-item span {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #334155 !important;
 }
 
@@ -434,7 +434,7 @@ body.dark-theme app-admin-monitoring button[mat-raised-button]:hover {
   }
 
   app-admin-monitoring mat-card-title {
-    font-size: 18px !important;
+    font-size: 1.125rem !important;
   }
 
   app-admin-monitoring mat-card-header {
@@ -446,7 +446,7 @@ body.dark-theme app-admin-monitoring button[mat-raised-button]:hover {
   .calls-table td,
   .calls-table th {
     padding: 8px 12px !important;
-    font-size: 13px !important;
+    font-size: 0.8125rem !important;
   }
 }
 
@@ -456,17 +456,17 @@ body.dark-theme app-admin-monitoring button[mat-raised-button]:hover {
   }
 
   app-admin-monitoring mat-card-title {
-    font-size: 16px !important;
+    font-size: 1rem !important;
   }
 
   .calls-table td,
   .calls-table th {
     padding: 6px 8px !important;
-    font-size: 12px !important;
+    font-size: 0.75rem !important;
   }
 
   .call-state {
-    font-size: 11px;
+    font-size: 0.6875rem;
     padding: 4px 8px;
   }
 }

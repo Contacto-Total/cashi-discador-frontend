@@ -7,7 +7,7 @@
 
 /* Variable para tamaño de fuente configurable */
 :root {
-  --app-font-size: 16px;
+  --app-font-size: 1rem;
 }
 
 /* Variables de tema claro (por defecto) */
@@ -674,7 +674,7 @@ body.light-theme .mat-mdc-input-element:-ms-input-placeholder,
   padding: 10px 16px;
   color: #ffffff;
   width: 100%;
-  font-size: 14px;
+  font-size: 0.875rem;
   transition: all 0.2s ease;
 }
 
@@ -696,7 +696,7 @@ body.light-theme .mat-mdc-input-element:-ms-input-placeholder,
   padding: 10px 16px;
   color: #ffffff;
   width: 100%;
-  font-size: 14px;
+  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -759,7 +759,7 @@ body.light-theme .mat-mdc-input-element:-ms-input-placeholder,
   color: #ffffff;
   padding: 4px 12px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   display: inline-block;
 }
@@ -1118,7 +1118,7 @@ body.dark-theme .message-info {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   background-color: #10B981;
   color: #ffffff;

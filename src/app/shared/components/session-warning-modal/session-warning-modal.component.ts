@@ -113,7 +113,7 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
     }
     .session-warning-badge mat-icon {
       color: white !important;
-      font-size: 36px;
+      font-size: 2.25rem;
       width: 36px;
       height: 36px;
     }
@@ -242,7 +242,7 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
       gap: 8px;
       padding: 14px 20px !important;
       border-radius: 10px !important;
-      font-size: 14px !important;
+      font-size: 0.875rem !important;
       font-weight: 500 !important;
       color: #64748b !important;
       background: #f1f5f9 !important;
@@ -265,7 +265,7 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
       border-color: #475569 !important;
     }
     .session-btn-secondary mat-icon {
-      font-size: 18px;
+      font-size: 1.125rem;
       width: 18px;
       height: 18px;
     }
@@ -278,7 +278,7 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
       gap: 10px;
       padding: 14px 24px !important;
       border-radius: 10px !important;
-      font-size: 14px !important;
+      font-size: 0.875rem !important;
       font-weight: 600 !important;
       background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
       color: white !important;
@@ -293,7 +293,7 @@ import { SessionConfigService } from '../../../core/services/session-config.serv
       transform: translateY(-1px);
     }
     .session-btn-primary mat-icon {
-      font-size: 20px;
+      font-size: 1.25rem;
       width: 20px;
       height: 20px;
     }

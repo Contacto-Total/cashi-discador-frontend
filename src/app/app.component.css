@@ -70,7 +70,7 @@
 
 .sidebar-toggle lucide-angular,
 .sidebar-toggle .icon {
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   color: white !important;
   line-height: 1 !important;
   width: 16px !important;
@@ -109,13 +109,13 @@
 
 .logo-icon .icon {
   color: #ffffff;
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: bold;
   line-height: 1;
 }
 
 .logo-text {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
@@ -164,7 +164,7 @@
   text-decoration: none !important;
   border-radius: 6px !important;
   transition: all 0.15s !important;
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   font-weight: 500 !important;
   cursor: pointer !important;
   background-color: transparent !important;
@@ -294,7 +294,7 @@
 .dropdown-arrow {
   margin-left: auto;
   transition: transform 0.2s;
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -333,7 +333,7 @@
   text-decoration: none !important;
   border-radius: 6px !important;
   transition: all 0.15s !important;
-  font-size: 13px !important;
+  font-size: 0.8125rem !important;
   font-weight: 500 !important;
   cursor: pointer !important;
   background-color: transparent !important;
@@ -443,7 +443,7 @@
   margin-bottom: 4px;
   border-radius: 6px !important;
   transition: all 0.15s !important;
-  font-size: 14px !important;
+  font-size: 0.875rem !important;
   font-weight: 500 !important;
   cursor: pointer !important;
   background-color: transparent !important;

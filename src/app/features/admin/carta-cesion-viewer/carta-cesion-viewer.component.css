@@ -57,7 +57,7 @@ body.dark-theme .carta-cesion-container {
 }
 
 .header-text h1 {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
@@ -71,7 +71,7 @@ body.dark-theme .header-text h1 {
 }
 
 .header-text p {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #64748b;
   margin: 0;
   line-height: 1.2;
@@ -174,7 +174,7 @@ body.dark-theme .pdf-placeholder-card {
 }
 
 .input-label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: #475569;
   text-transform: uppercase;
@@ -252,7 +252,7 @@ body.dark-theme .input-icon {
   border: none;
   outline: none;
   color: #0f172a;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 500;
   padding: 0;
   transition: color 0.3s ease;
@@ -291,7 +291,7 @@ body.dark-theme .dni-input::placeholder {
   justify-content: center;
   gap: 10px;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 0.9375rem;
   border-radius: 12px;
   border: none;
   cursor: pointer;
@@ -400,7 +400,7 @@ body.dark-theme .clear-button:hover {
   gap: 12px;
   padding: 14px 16px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   animation: slideIn 0.3s ease;
   transition: all 0.3s ease;
@@ -507,7 +507,7 @@ body.dark-theme .pdf-info-header {
 }
 
 .pdf-info-text h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0 0 4px 0;
@@ -521,7 +521,7 @@ body.dark-theme .pdf-info-text h3 {
 }
 
 .pdf-info-text p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: #64748b;
   margin: 0;
   line-height: 1.2;
@@ -566,7 +566,7 @@ body.dark-theme .spinner {
 
 .loading-container p {
   color: #64748b;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 500;
   transition: color 0.3s ease;
 }
@@ -644,7 +644,7 @@ body.dark-theme .placeholder-content lucide-angular {
 }
 
 .placeholder-content h3 {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
   color: #64748b;
   margin: 0 0 8px 0;
@@ -657,7 +657,7 @@ body.dark-theme .placeholder-content h3 {
 }
 
 .placeholder-content p {
-  font-size: 15px;
+  font-size: 0.9375rem;
   color: #94a3b8;
   margin: 0;
   transition: color 0.3s ease;
@@ -688,11 +688,11 @@ body.dark-theme .placeholder-content p {
   }
 
   .header-text h1 {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
 
   .header-text p {
-    font-size: 13px;
+    font-size: 0.8125rem;
   }
 
   .card-content {

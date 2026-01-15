@@ -287,7 +287,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       right: -10px;
       padding: 3px 8px;
       border-radius: 8px;
-      font-size: 12px;
+      font-size: 0.75rem;
       font-weight: 700;
       font-family: 'SF Mono', 'Consolas', monospace;
       background: #1e293b;
@@ -454,7 +454,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     }
 
     .header-title {
-      font-size: 10px;
+      font-size: 0.625rem;
       font-weight: 600;
       color: #64748b;
       text-transform: uppercase;
@@ -462,7 +462,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     }
 
     .header-status {
-      font-size: 15px;
+      font-size: 0.9375rem;
       font-weight: 600;
       color: #f1f5f9;
     }
@@ -552,7 +552,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     }
 
     .time-label {
-      font-size: 10px;
+      font-size: 0.625rem;
       font-weight: 600;
       color: #64748b;
       text-transform: uppercase;
@@ -560,7 +560,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     }
 
     .time-value {
-      font-size: 22px;
+      font-size: 1.375rem;
       font-weight: 700;
       font-family: 'SF Mono', 'Consolas', monospace;
       color: #22c55e;
@@ -609,7 +609,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       background: rgba(239, 68, 68, 0.08);
       border: 1px solid rgba(239, 68, 68, 0.15);
       color: #fca5a5;
-      font-size: 12px;
+      font-size: 0.75rem;
       font-weight: 500;
     }
 
@@ -669,13 +669,13 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     }
 
     .option-label {
-      font-size: 13px;
+      font-size: 0.8125rem;
       font-weight: 500;
       color: #e2e8f0;
     }
 
     .option-hint {
-      font-size: 11px;
+      font-size: 0.6875rem;
       color: #64748b;
     }
 

@@ -178,7 +178,7 @@ body.light-theme .login-card > *,
 
 .speech-bubble > div {
   color: #ffffff !important;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-align: center;
   line-height: 1.4;
@@ -188,7 +188,7 @@ body.light-theme .login-card > *,
 /* Animación de tipeo letra por letra */
 .typing-text {
   text-align: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   line-height: 1.3;
 }
@@ -668,7 +668,7 @@ body.light-theme .mascot-headset::before,
 }
 
 .login-header h1 {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.5px;
@@ -690,7 +690,7 @@ body.light-theme .login-header h1,
 }
 
 .login-header p {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #94a3b8;
   margin: 0;
   font-weight: 500;
@@ -737,7 +737,7 @@ body.light-theme .login-header p,
 }
 
 .form-group label {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   color: #e2e8f0;
   text-transform: uppercase;
@@ -854,7 +854,7 @@ body.light-theme .login-card .input-wrapper:focus-within,
 
 /* Input Icon Styling */
 .input-icon {
-  font-size: 18px;
+  font-size: 1.125rem;
   width: 18px;
   height: 18px;
   color: #e2e8f0;
@@ -887,7 +887,7 @@ body.light-theme .login-card .input-icon,
   outline: none !important;
   box-shadow: none !important;
   color: #f8fafc !important;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
   padding: 0 !important;
   margin: 0 !important;
@@ -1019,7 +1019,7 @@ body.light-theme .login-card .input-wrapper input:-webkit-autofill,
 }
 
 .toggle-password mat-icon {
-  font-size: 18px;
+  font-size: 1.125rem;
   width: 18px;
   height: 18px;
   color: #e2e8f0;
@@ -1083,7 +1083,7 @@ body.light-theme .login-card .toggle-password mat-icon,
    ======================================== */
 
 .error-text {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: #fca5a5;
   margin-top: -2px;
   margin-left: 2px;
@@ -1096,7 +1096,7 @@ body.light-theme .login-card .toggle-password mat-icon,
 
 .error-text::before {
   content: '⚠';
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 @keyframes fadeIn {
@@ -1113,7 +1113,7 @@ body.light-theme .login-card .toggle-password mat-icon,
   border: 1.5px solid rgba(239, 68, 68, 0.4);
   border-radius: 10px;
   color: #fca5a5;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
   backdrop-filter: blur(10px);
   animation: errorSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -1132,7 +1132,7 @@ body.light-theme .login-card .toggle-password mat-icon,
 }
 
 .error-message mat-icon {
-  font-size: 18px;
+  font-size: 1.125rem;
   width: 18px;
   height: 18px;
   color: #fca5a5;
@@ -1156,7 +1156,7 @@ body.light-theme .login-card .toggle-password mat-icon,
   border: none;
   border-radius: 10px;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1247,7 +1247,7 @@ body.light-theme .login-card .toggle-password mat-icon,
   }
 
   .login-header h1 {
-    font-size: 20px;
+    font-size: 1.25rem;
   }
 
   .login-icon {
@@ -1257,7 +1257,7 @@ body.light-theme .login-card .toggle-password mat-icon,
   }
 
   .login-icon mat-icon {
-    font-size: 22px;
+    font-size: 1.375rem;
     width: 22px;
     height: 22px;
   }
@@ -1272,7 +1272,7 @@ body.light-theme .login-card .toggle-password mat-icon,
 
   .login-button {
     height: 42px;
-    font-size: 12px;
+    font-size: 0.75rem;
   }
 }
 
@@ -1831,7 +1831,7 @@ body.light-theme .snowflake,
 }
 
 .countdown-title {
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 800;
   letter-spacing: 4px;
   margin-bottom: 16px;
@@ -1897,7 +1897,7 @@ body.light-theme .snowflake,
 }
 
 .countdown-value {
-  font-size: 36px;
+  font-size: 2.25rem;
   font-weight: 900;
   font-family: 'Arial Black', sans-serif;
   background: linear-gradient(180deg, #FFD700 0%, #FFA500 40%, #FF8C00 100%);
@@ -1915,7 +1915,7 @@ body.light-theme .snowflake,
 }
 
 .countdown-label {
-  font-size: 8px;
+  font-size: 0.5rem;
   font-weight: 700;
   letter-spacing: 2px;
   color: rgba(255, 215, 0, 0.7);
@@ -1956,7 +1956,7 @@ body.light-theme .snowflake,
 }
 
 .celebration-text {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 900;
   letter-spacing: 2px;
   background: linear-gradient(135deg, #FFD700 0%, #FFA500 30%, #FFD700 60%, #FFA500 100%);
@@ -2458,7 +2458,7 @@ body.light-theme .snowflake,
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 900;
   color: #1a1a2e;
   font-family: 'Arial Black', sans-serif;
@@ -2540,11 +2540,11 @@ body.light-theme .snowflake,
   }
 
   .countdown-value {
-    font-size: 24px;
+    font-size: 1.5rem;
   }
 
   .countdown-title {
-    font-size: 9px;
+    font-size: 0.5625rem;
     letter-spacing: 2px;
   }
 
@@ -2553,7 +2553,7 @@ body.light-theme .snowflake,
   }
 
   .celebration-text {
-    font-size: 16px;
+    font-size: 1rem;
   }
 
   .newyear-glasses {
@@ -2571,7 +2571,7 @@ body.light-theme .snowflake,
 
 /* Hint para click */
 .countdown-hint {
-  font-size: 8px;
+  font-size: 0.5rem;
   color: rgba(255, 215, 0, 0.5);
   letter-spacing: 1px;
   margin-bottom: 8px;
@@ -2764,7 +2764,7 @@ body.light-theme .snowflake,
 
 .fs-title-text {
   display: block;
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 300;
   letter-spacing: 15px;
   color: rgba(255, 255, 255, 0.7);
@@ -2774,7 +2774,7 @@ body.light-theme .snowflake,
 
 .fs-year {
   display: block;
-  font-size: 120px;
+  font-size: 7.5rem;
   font-weight: 900;
   font-family: 'Arial Black', sans-serif;
   background: linear-gradient(180deg, #FFD700 0%, #FFA500 40%, #FF8C00 80%, #FFD700 100%);
@@ -2834,7 +2834,7 @@ body.light-theme .snowflake,
 }
 
 .fs-countdown-value {
-  font-size: 64px;
+  font-size: 4rem;
   font-weight: 900;
   font-family: 'Arial Black', sans-serif;
   background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%);
@@ -2847,7 +2847,7 @@ body.light-theme .snowflake,
 }
 
 .fs-countdown-label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 3px;
   color: rgba(255, 215, 0, 0.7);
@@ -2857,7 +2857,7 @@ body.light-theme .snowflake,
 }
 
 .fs-countdown-separator {
-  font-size: 60px;
+  font-size: 3.75rem;
   font-weight: 900;
   color: #FFD700;
   animation: fs-separator-pulse 1s ease-in-out infinite;
@@ -2870,7 +2870,7 @@ body.light-theme .snowflake,
 }
 
 .fs-message {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
   letter-spacing: 2px;
@@ -2893,7 +2893,7 @@ body.light-theme .snowflake,
   background: rgba(0, 0, 0, 0.3);
   border-radius: 50%;
   color: white;
-  font-size: 24px;
+  font-size: 1.5rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2915,7 +2915,7 @@ body.light-theme .snowflake,
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 12px;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.4);
   letter-spacing: 2px;
 }
@@ -2923,7 +2923,7 @@ body.light-theme .snowflake,
 /* Responsive fullscreen */
 @media (max-width: 768px) {
   .fs-year {
-    font-size: 80px;
+    font-size: 5rem;
   }
 
   .fs-countdown {
@@ -2937,16 +2937,16 @@ body.light-theme .snowflake,
   }
 
   .fs-countdown-value {
-    font-size: 40px;
+    font-size: 2.5rem;
   }
 
   .fs-countdown-separator {
-    font-size: 40px;
+    font-size: 2.5rem;
     margin-bottom: 20px;
   }
 
   .fs-title-text {
-    font-size: 16px;
+    font-size: 1rem;
     letter-spacing: 8px;
   }
 
@@ -2955,7 +2955,7 @@ body.light-theme .snowflake,
     right: 15px;
     width: 40px;
     height: 40px;
-    font-size: 20px;
+    font-size: 1.25rem;
   }
 }
 
@@ -3131,7 +3131,7 @@ body.light-theme .snowflake,
   top: -5px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 65px;
+  font-size: 4.0625rem;
   color: transparent;
   background: linear-gradient(135deg, #fff7cc 0%, #fbbf24 25%, #f59e0b 50%, #d97706 75%, #fbbf24 100%);
   -webkit-background-clip: text;
@@ -3147,7 +3147,7 @@ body.light-theme .snowflake,
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.4);
-  font-size: 65px;
+  font-size: 4.0625rem;
   color: #fff;
   opacity: 0.9;
   animation: starInnerPulse 2s ease-in-out infinite alternate;
@@ -3969,7 +3969,7 @@ body.light-theme .snowflake,
 
 .cloud {
   position: absolute;
-  font-size: 50px;
+  font-size: 3.125rem;
   color: rgba(255, 255, 255, 0.5);
   animation: cloudFloat 50s linear infinite;
 }
@@ -3985,7 +3985,7 @@ body.light-theme .snowflake,
   left: -150px;
   animation-duration: 75s;
   animation-delay: -20s;
-  font-size: 40px;
+  font-size: 2.5rem;
 }
 
 .cloud-3 {
@@ -3993,7 +3993,7 @@ body.light-theme .snowflake,
   left: -120px;
   animation-duration: 65s;
   animation-delay: -35s;
-  font-size: 45px;
+  font-size: 2.8125rem;
 }
 
 @keyframes cloudFloat {
@@ -4078,7 +4078,7 @@ body.light-theme .snowflake,
 }
 
 .summer-icon {
-  font-size: 48px;
+  font-size: 3rem;
   margin-bottom: 16px;
   animation: sunIconPulse 3s ease-in-out infinite;
   filter: drop-shadow(0 0 20px rgba(255, 193, 7, 0.4));

@@ -245,7 +245,7 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .app-icon mat-icon {
-      font-size: 28px;
+      font-size: 1.75rem;
       width: 28px;
       height: 28px;
       color: white;
@@ -253,13 +253,13 @@ import { Subscription, interval } from 'rxjs';
 
     .header-info h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 1.25rem;
       font-weight: 600;
     }
 
     .header-info .subtitle {
       margin: 0;
-      font-size: 12px;
+      font-size: 0.75rem;
       opacity: 0.9;
     }
 
@@ -271,12 +271,12 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .advisor-info .label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       opacity: 0.8;
     }
 
     .advisor-info .name {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 500;
     }
 
@@ -305,12 +305,12 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .status-label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       opacity: 0.8;
     }
 
     .status-value {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
     }
 
@@ -320,7 +320,7 @@ import { Subscription, interval } from 'rxjs';
 
     .timer {
       font-family: 'Courier New', monospace;
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 600;
       padding: 8px 16px;
       background-color: rgba(0,0,0,0.2);
@@ -345,13 +345,13 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .info-data .label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       color: var(--text-secondary);
       text-transform: uppercase;
     }
 
     .info-data .value {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -403,7 +403,7 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .section-title {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
       color: var(--panel-text);
       margin-bottom: 12px;
@@ -416,7 +416,7 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .filter-option label {
-      font-size: 13px;
+      font-size: 0.8125rem;
       color: var(--text-primary);
       cursor: pointer;
     }
@@ -429,12 +429,12 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .stat-label {
-      font-size: 12px;
+      font-size: 0.75rem;
       color: var(--text-secondary);
     }
 
     .stat-value {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
       color: var(--panel-text);
     }
@@ -462,7 +462,7 @@ import { Subscription, interval } from 'rxjs';
 
     .section-header h3 {
       margin: 0;
-      font-size: 18px;
+      font-size: 1.125rem;
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -485,14 +485,14 @@ import { Subscription, interval } from 'rxjs';
       background-color: var(--secondary-bg);
       color: var(--text-primary);
       font-weight: 600;
-      font-size: 13px;
+      font-size: 0.8125rem;
       padding: 12px 16px;
       border-bottom: 2px solid var(--border-color);
     }
 
     .contacts-table td {
       color: var(--text-primary);
-      font-size: 14px;
+      font-size: 0.875rem;
       padding: 12px 16px;
       border-bottom: 1px solid var(--border-color);
     }
@@ -506,7 +506,7 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .status-chip {
-      font-size: 11px;
+      font-size: 0.6875rem;
       font-weight: 600;
       padding: 4px 12px;
       border-radius: 12px;
@@ -553,7 +553,7 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .no-data mat-icon {
-      font-size: 64px;
+      font-size: 4rem;
       width: 64px;
       height: 64px;
       opacity: 0.3;
@@ -561,7 +561,7 @@ import { Subscription, interval } from 'rxjs';
     }
 
     .no-data p {
-      font-size: 16px;
+      font-size: 1rem;
       margin-bottom: 20px;
     }
 

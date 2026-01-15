@@ -58,19 +58,19 @@ import { interval, Subscription } from 'rxjs';
     }
 
     .caller-info {
-      font-size: 18px;
+      font-size: 1.125rem;
       margin: 15px 0;
     }
 
     .duration {
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: bold;
       color: #4CAF50;
       margin: 10px 0;
     }
 
     .status {
-      font-size: 14px;
+      font-size: 0.875rem;
       color: #666;
       font-style: italic;
     }

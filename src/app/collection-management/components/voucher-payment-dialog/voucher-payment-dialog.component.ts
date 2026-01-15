@@ -344,11 +344,11 @@ export interface VoucherPaymentDialogResult {
       border-radius: 12px;
       display: flex; align-items: center; justify-content: center;
     }
-    .header-icon mat-icon { font-size: 26px; width: 26px; height: 26px; }
+    .header-icon mat-icon { font-size: 1.625rem; width: 26px; height: 26px; }
 
-    .header-text h2 { margin: 0; font-size: 20px; font-weight: 600; }
-    .header-subtitle { font-size: 13px; opacity: 0.9; display: flex; align-items: center; gap: 6px; }
-    .inline-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; }
+    .header-text h2 { margin: 0; font-size: 1.25rem; font-weight: 600; }
+    .header-subtitle { font-size: 0.8125rem; opacity: 0.9; display: flex; align-items: center; gap: 6px; }
+    .inline-icon { font-size: 0.875rem !important; width: 14px !important; height: 14px !important; }
 
     .close-btn { color: white !important; opacity: 0.8; transition: opacity 0.2s; }
     .close-btn:hover { opacity: 1; }
@@ -384,21 +384,21 @@ export interface VoucherPaymentDialogResult {
       padding: 12px 16px;
       background: #f1f5f9;
       border-bottom: 1px solid #e2e8f0;
-      font-size: 13px; font-weight: 600; color: #475569;
+      font-size: 0.8125rem; font-weight: 600; color: #475569;
     }
     .dark-mode .card-header { background: #334155; border-color: #475569; color: #cbd5e1; }
-    .card-header mat-icon { font-size: 18px; width: 18px; height: 18px; color: #64748b; }
+    .card-header mat-icon { font-size: 1.125rem; width: 18px; height: 18px; color: #64748b; }
     .dark-mode .card-header mat-icon { color: #94a3b8; }
 
     .card-body { padding: 16px; }
 
     .info-row { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
     .info-item { display: flex; flex-direction: column; gap: 6px; }
-    .info-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+    .info-label { font-size: 0.6875rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
     .dark-mode .info-label { color: #94a3b8; }
-    .info-value { font-size: 14px; font-weight: 600; color: #1e293b; word-break: break-word; }
+    .info-value { font-size: 0.875rem; font-weight: 600; color: #1e293b; word-break: break-word; }
     .dark-mode .info-value { color: #f1f5f9; }
-    .info-value.highlight { color: #059669; font-family: 'SF Mono', Monaco, monospace; font-size: 15px; }
+    .info-value.highlight { color: #059669; font-family: 'SF Mono', Monaco, monospace; font-size: 0.9375rem; }
 
     /* Installments */
     .installments-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
@@ -415,21 +415,21 @@ export interface VoucherPaymentDialogResult {
     .installment-chip.active { background: #dcfce7; border-color: #22c55e; }
     .dark-mode .installment-chip.active { background: rgba(34, 197, 94, 0.2); border-color: #22c55e; }
 
-    .chip-number { font-size: 12px; font-weight: 700; color: #64748b; }
+    .chip-number { font-size: 0.75rem; font-weight: 700; color: #64748b; }
     .installment-chip.active .chip-number { color: #16a34a; }
     .dark-mode .installment-chip.active .chip-number { color: #4ade80; }
 
-    .chip-amount { font-size: 13px; font-weight: 600; color: #1e293b; }
+    .chip-amount { font-size: 0.8125rem; font-weight: 600; color: #1e293b; }
     .dark-mode .chip-amount { color: #e2e8f0; }
     .installment-chip.active .chip-amount { color: #15803d; }
     .dark-mode .installment-chip.active .chip-amount { color: #86efac; }
 
-    .chip-amount-original { font-size: 12px; color: #64748b; margin-right: 4px; opacity: 0.8; }
+    .chip-amount-original { font-size: 0.75rem; color: #64748b; margin-right: 4px; opacity: 0.8; }
     .dark-mode .chip-amount-original { color: #94a3b8; }
     .installment-chip.active .chip-amount-original { color: #22c55e; opacity: 0.7; }
 
     .partial-badge {
-      font-size: 10px; font-weight: 600;
+      font-size: 0.625rem; font-weight: 600;
       padding: 2px 6px;
       background: #f59e0b;
       color: white;
@@ -442,10 +442,10 @@ export interface VoucherPaymentDialogResult {
       padding: 12px 14px;
       background: #f0fdf4;
       border-radius: 10px;
-      font-size: 13px; color: #166534;
+      font-size: 0.8125rem; color: #166534;
     }
     .dark-mode .next-installment { background: rgba(34, 197, 94, 0.15); color: #86efac; }
-    .next-installment mat-icon { font-size: 18px; width: 18px; height: 18px; color: #22c55e; }
+    .next-installment mat-icon { font-size: 1.125rem; width: 18px; height: 18px; color: #22c55e; }
     .next-installment strong { font-weight: 700; }
 
     .date-badge {
@@ -453,7 +453,7 @@ export interface VoucherPaymentDialogResult {
       padding: 5px 10px;
       background: white;
       border-radius: 8px;
-      font-size: 12px; font-weight: 600;
+      font-size: 0.75rem; font-weight: 600;
       color: #059669;
       border: 1px solid #bbf7d0;
     }
@@ -484,9 +484,9 @@ export interface VoucherPaymentDialogResult {
     .result-banner.error .result-icon { background: #ef4444; color: white; }
 
     .result-text { display: flex; flex-direction: column; gap: 3px; }
-    .result-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .result-title { font-size: 0.875rem; font-weight: 700; color: #1e293b; }
     .dark-mode .result-title { color: #f1f5f9; }
-    .result-subtitle { font-size: 12px; color: #64748b; }
+    .result-subtitle { font-size: 0.75rem; color: #64748b; }
     .dark-mode .result-subtitle { color: #94a3b8; }
 
     /* Validations grid */
@@ -507,13 +507,13 @@ export interface VoucherPaymentDialogResult {
     .validation-card.neutral { border-color: #e2e8f0; }
     .dark-mode .validation-card.neutral { border-color: #475569; }
 
-    .validation-icon mat-icon { font-size: 22px; width: 22px; height: 22px; }
+    .validation-icon mat-icon { font-size: 1.375rem; width: 22px; height: 22px; }
     .validation-card.success .validation-icon mat-icon { color: #22c55e; }
     .validation-card.warning .validation-icon mat-icon { color: #f59e0b; }
 
     .validation-content { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
-    .validation-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 500; }
-    .validation-value { font-size: 13px; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; }
+    .validation-label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 500; }
+    .validation-value { font-size: 0.8125rem; font-weight: 600; color: #1e293b; overflow: hidden; text-overflow: ellipsis; }
     .dark-mode .validation-value { color: #f1f5f9; }
     .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -526,23 +526,23 @@ export interface VoucherPaymentDialogResult {
       border: 1px solid #e2e8f0;
     }
     .dark-mode .bank-details { background: #1e293b; border-color: #334155; }
-    .detail-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; }
+    .detail-item { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; color: #475569; }
     .dark-mode .detail-item { color: #94a3b8; }
-    .detail-item mat-icon { font-size: 16px; width: 16px; height: 16px; color: #94a3b8; }
+    .detail-item mat-icon { font-size: 1rem; width: 16px; height: 16px; color: #94a3b8; }
 
     /* Selected installment */
     .selected-installment {
       display: flex; align-items: center; gap: 10px;
       padding: 14px 16px;
       border-radius: 12px;
-      font-size: 14px;
+      font-size: 0.875rem;
       border: 2px solid;
     }
     .selected-installment.success { background: #dcfce7; border-color: #22c55e; color: #166534; }
     .dark-mode .selected-installment.success { background: rgba(34, 197, 94, 0.15); color: #86efac; }
     .selected-installment.warning { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
     .dark-mode .selected-installment.warning { background: rgba(245, 158, 11, 0.15); color: #fcd34d; }
-    .selected-installment mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .selected-installment mat-icon { font-size: 1.25rem; width: 20px; height: 20px; }
     .selected-installment .amount { opacity: 0.8; }
 
     /* Auto select info */
@@ -552,10 +552,10 @@ export interface VoucherPaymentDialogResult {
       background: #eff6ff;
       border-radius: 10px;
       border: 1px solid #bfdbfe;
-      font-size: 12px; color: #1d4ed8;
+      font-size: 0.75rem; color: #1d4ed8;
     }
     .dark-mode .auto-select-info { background: rgba(59, 130, 246, 0.1); border-color: #3b82f6; color: #93c5fd; }
-    .auto-select-info mat-icon { font-size: 18px; width: 18px; height: 18px; color: #3b82f6; }
+    .auto-select-info mat-icon { font-size: 1.125rem; width: 18px; height: 18px; color: #3b82f6; }
 
     /* Error message */
     .error-message {
@@ -564,7 +564,7 @@ export interface VoucherPaymentDialogResult {
       background: #fef2f2;
       border-radius: 10px;
       border: 1px solid #fecaca;
-      font-size: 13px; color: #dc2626;
+      font-size: 0.8125rem; color: #dc2626;
     }
     .dark-mode .error-message { background: rgba(239, 68, 68, 0.1); border-color: #ef4444; color: #fca5a5; }
 
@@ -590,9 +590,9 @@ export interface VoucherPaymentDialogResult {
     }
     .dark-mode .viewer-header { background: #0f172a; border-color: #334155; }
 
-    .viewer-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #475569; }
+    .viewer-title { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; color: #475569; }
     .dark-mode .viewer-title { color: #94a3b8; }
-    .viewer-title mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .viewer-title mat-icon { font-size: 1.125rem; width: 18px; height: 18px; }
 
     .zoom-controls { display: flex; align-items: center; gap: 6px; }
     .zoom-btn {
@@ -606,10 +606,10 @@ export interface VoucherPaymentDialogResult {
       padding: 0 !important;
     }
     .dark-mode .zoom-btn { background: #334155 !important; border-color: #475569 !important; }
-    .zoom-btn mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #64748b; }
+    .zoom-btn mat-icon { font-size: 1.125rem !important; width: 18px !important; height: 18px !important; color: #64748b; }
     .dark-mode .zoom-btn mat-icon { color: #94a3b8; }
 
-    .zoom-level { font-size: 12px; font-weight: 600; color: #64748b; min-width: 40px; text-align: center; }
+    .zoom-level { font-size: 0.75rem; font-weight: 600; color: #64748b; min-width: 40px; text-align: center; }
     .dark-mode .zoom-level { color: #94a3b8; }
 
     .zoom-divider { width: 1px; height: 24px; background: #e2e8f0; margin: 0 6px; }
@@ -626,7 +626,7 @@ export interface VoucherPaymentDialogResult {
       padding: 0 !important;
     }
     .dark-mode .delete-btn { background: rgba(239, 68, 68, 0.15) !important; border-color: #ef4444 !important; }
-    .delete-btn mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #ef4444; line-height: 1 !important; display: block !important; }
+    .delete-btn mat-icon { font-size: 1.125rem !important; width: 18px !important; height: 18px !important; color: #ef4444; line-height: 1 !important; display: block !important; }
 
     .viewer-body { flex: 1; min-height: 380px; position: relative; background: #f1f5f9; }
     .dark-mode .viewer-body { background: #0f172a; }
@@ -655,17 +655,17 @@ export interface VoucherPaymentDialogResult {
       display: flex; align-items: center; justify-content: center;
     }
     .dark-mode .upload-icon { background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.3) 100%); }
-    .upload-icon mat-icon { font-size: 36px; width: 36px; height: 36px; color: #22c55e; }
+    .upload-icon mat-icon { font-size: 2.25rem; width: 36px; height: 36px; color: #22c55e; }
 
-    .upload-title { font-size: 16px; font-weight: 600; color: #1e293b; margin: 0 0 6px; }
+    .upload-title { font-size: 1rem; font-weight: 600; color: #1e293b; margin: 0 0 6px; }
     .dark-mode .upload-title { color: #f1f5f9; }
-    .upload-subtitle { font-size: 13px; color: #64748b; margin: 0 0 20px; }
+    .upload-subtitle { font-size: 0.8125rem; color: #64748b; margin: 0 0 20px; }
     .dark-mode .upload-subtitle { color: #94a3b8; }
 
     .upload-formats { display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .format-badge { padding: 5px 10px; background: #f1f5f9; border-radius: 6px; font-size: 11px; font-weight: 600; color: #64748b; }
+    .format-badge { padding: 5px 10px; background: #f1f5f9; border-radius: 6px; font-size: 0.6875rem; font-weight: 600; color: #64748b; }
     .dark-mode .format-badge { background: #334155; color: #94a3b8; }
-    .size-info { font-size: 11px; color: #94a3b8; }
+    .size-info { font-size: 0.6875rem; color: #94a3b8; }
 
     /* Image container */
     .image-container { position: absolute; inset: 0; overflow: auto; cursor: grab; display: flex; }
@@ -681,8 +681,8 @@ export interface VoucherPaymentDialogResult {
     }
     .loading-content { text-align: center; color: white; }
     .loading-content mat-spinner { margin: 0 auto 16px; }
-    .loading-content p { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
-    .loading-content span { font-size: 13px; opacity: 0.8; }
+    .loading-content p { font-size: 1rem; font-weight: 600; margin: 0 0 6px; }
+    .loading-content span { font-size: 0.8125rem; opacity: 0.8; }
 
     /* Dialog actions */
     .dialog-actions {
@@ -699,7 +699,7 @@ export interface VoucherPaymentDialogResult {
       display: flex; align-items: center; gap: 8px;
       padding: 10px 20px !important;
       border-radius: 10px !important;
-      font-size: 14px !important; font-weight: 500 !important;
+      font-size: 0.875rem !important; font-weight: 500 !important;
       color: #64748b !important;
       border: 1px solid #e2e8f0 !important;
       background: white !important;
@@ -708,7 +708,7 @@ export interface VoucherPaymentDialogResult {
     .dark-mode .btn-cancel { color: #94a3b8 !important; border-color: #475569 !important; background: #0f172a !important; }
     .btn-cancel:hover { background: #f1f5f9 !important; border-color: #cbd5e1 !important; }
     .dark-mode .btn-cancel:hover { background: #334155 !important; }
-    .btn-cancel mat-icon { font-size: 18px; width: 18px; height: 18px; }
+    .btn-cancel mat-icon { font-size: 1.125rem; width: 18px; height: 18px; }
 
     .action-buttons { display: flex; gap: 12px; }
 
@@ -716,7 +716,7 @@ export interface VoucherPaymentDialogResult {
       display: flex !important; align-items: center; gap: 10px;
       padding: 12px 24px !important;
       border-radius: 12px !important;
-      font-size: 14px !important; font-weight: 600 !important;
+      font-size: 0.875rem !important; font-weight: 600 !important;
       transition: all 0.2s;
     }
 
@@ -741,7 +741,7 @@ export interface VoucherPaymentDialogResult {
     }
     .btn-confirm:hover { transform: translateY(-2px); }
 
-    .btn-analyze mat-icon, .btn-confirm mat-icon { font-size: 20px; width: 20px; height: 20px; }
+    .btn-analyze mat-icon, .btn-confirm mat-icon { font-size: 1.25rem; width: 20px; height: 20px; }
 
     .hidden { display: none; }
   `]

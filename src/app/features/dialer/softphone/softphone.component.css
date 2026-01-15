@@ -85,7 +85,7 @@
 
 /* Screen Text Styles - Retro LCD */
 .screen-status {
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 700;
   color: #1f3d2c;
   text-transform: uppercase;
@@ -104,7 +104,7 @@
 }
 
 .screen-number {
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 900;
   color: #0d1f17;
   font-family: 'Courier New', 'Consolas', 'Lucida Console', monospace;
@@ -163,7 +163,7 @@
 }
 
 .screen-placeholder {
-  font-size: 10px;
+  font-size: 0.625rem;
   color: #4a6b52;
   font-style: normal;
   font-family: 'Courier New', monospace;
@@ -182,7 +182,7 @@
 }
 
 .screen-number-small {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 800;
   color: #0d1f17;
   font-family: 'Courier New', 'Consolas', monospace;
@@ -201,7 +201,7 @@
 }
 
 .screen-duration {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 900;
   color: #0a3a1f;
   font-family: 'Courier New', 'Consolas', monospace;
@@ -365,7 +365,7 @@
 
 /* Key Content */
 .key-digit {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1e293b;
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
@@ -378,7 +378,7 @@
 }
 
 .key-letters {
-  font-size: 8px;
+  font-size: 0.5rem;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -456,7 +456,7 @@
 }
 
 .action-label {
-  font-size: 9px;
+  font-size: 0.5625rem;
   font-weight: 600;
   color: #475569;
   text-transform: uppercase;
@@ -468,7 +468,7 @@
 }
 
 .action-label-white {
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   color: white;
   text-transform: uppercase;
@@ -488,7 +488,7 @@
   }
 
   .key-digit {
-    font-size: 18px;
+    font-size: 1.125rem;
   }
 
   .action-btn {

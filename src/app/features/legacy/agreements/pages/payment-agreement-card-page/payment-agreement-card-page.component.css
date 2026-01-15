@@ -176,7 +176,7 @@ body {
   border: 2px solid black;
   background: var(--bg-primary);
   font-family: Arial, sans-serif;
-  font-size: 12px;
+  font-size: 0.75rem;
   position: relative;
   color: var(--text-primary);
 }
@@ -272,7 +272,7 @@ body {
   border-radius: 50%;
   width: 22px;
   height: 22px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: bold;
   cursor: pointer;
   display: flex;
@@ -355,24 +355,24 @@ body {
   border: 2px dashed #bdc3c7;
   color: #7f8c8d;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .logo-placeholder.small {
   padding: 5px 10px;
-  font-size: 10px;
+  font-size: 0.625rem;
 }
 
 .date-location {
   text-align: right;
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin: 10px 0;
   color: var(--text-secondary);
 }
 
 .formatted-date {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -388,7 +388,7 @@ body {
   text-align: center;
   padding: 10px;
   font-weight: bold;
-  font-size: 13px;
+  font-size: 0.8125rem;
   margin: 10px 0;
 }
 
@@ -401,7 +401,7 @@ body {
 .client-table td {
   padding: 10px 12px;
   border: 1px solid #ccc;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
@@ -423,7 +423,7 @@ body {
 .congratulations {
   padding: 15px;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.5;
   margin: 15px 0;
   color: var(--text-secondary);
@@ -432,7 +432,7 @@ body {
 .date-highlight {
   text-align: center;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 0.875rem;
   padding: 15px 0;
 }
 
@@ -442,7 +442,7 @@ body {
   text-align: center;
   padding: 10px;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 0.75rem;
   margin: 15px 0 0 0;
 }
 
@@ -457,7 +457,7 @@ body {
   border: 1px solid #ccc;
   padding: 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   vertical-align: middle;
   color: var(--text-secondary);
 }
@@ -465,7 +465,7 @@ body {
 .highlight-amount {
   background: yellow;
   font-weight: bold !important;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .amount {
@@ -475,7 +475,7 @@ body {
 .payment-header-clean {
   background: none;
   padding: 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: bold;
   border: none;
 }
@@ -488,13 +488,13 @@ body {
 
 .payment-title {
   font-weight: bold;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .payment-row {
   padding: 12px;
   border: 1px solid #ccc;
-  font-size: 13px;
+  font-size: 0.8125rem;
   background: var(--bg-secondary);
 }
 
@@ -524,14 +524,14 @@ body {
   border: 1px solid #ccc;
   padding: 15px;
   background: #fff9e6;
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 .observation-header {
   font-weight: bold;
   color: #d32f2f;
   margin-bottom: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .observation-content {
@@ -541,7 +541,7 @@ body {
 }
 
 .btn-sm {
-  font-size: 12px;
+  font-size: 0.75rem;
   padding: 6px 12px;
   border-radius: 4px;
 }
@@ -586,7 +586,7 @@ body {
 .instructions {
   padding: 15px;
   text-align: justify;
-  font-size: 12px;
+  font-size: 0.75rem;
   line-height: 1.4;
   margin: 15px 0;
   color: var(--text-secondary);
@@ -596,14 +596,14 @@ body {
   background: #e0e0e0;
   padding: 8px 12px;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 0.6875rem;
   margin: 10px 0 0 0;
   color: var(--text-primary);
 }
 
 .section-content {
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
   border: 1px solid #e0e0e0;
   border-top: none;
   color: var(--text-secondary);
@@ -617,7 +617,7 @@ body {
 .bcp-logo {
   color: #203764;
   font-weight: bold;
-  font-size: 14px;
+  font-size: 0.875rem;
   display: table-cell;
   width: 80px;
   text-align: center;
@@ -643,7 +643,7 @@ body {
 
 .contact-info {
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: 0.75rem;
   text-align: justify;
   margin: 10px 0;
   color: var(--text-secondary);
@@ -680,7 +680,7 @@ body {
 
 .footer-notes {
   padding: 10px 12px;
-  font-size: 9px;
+  font-size: 0.5625rem;
   border-top: 1px solid #ccc;
   margin-top: 20px;
   color: var(--text-secondary);
@@ -693,7 +693,7 @@ body {
 
 .error-message {
   color: #e74c3c;
-  font-size: 10px;
+  font-size: 0.625rem;
   font-style: italic;
   margin-top: 4px;
   display: block;
@@ -734,7 +734,7 @@ body {
 .close-btn {
   border: none;
   background: transparent;
-  font-size: 20px;
+  font-size: 1.25rem;
   cursor: pointer;
   color: var(--text-primary);
 }
@@ -760,7 +760,7 @@ body {
 }
 
 .modal-field label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   margin-bottom: 6px;
   color: var(--text-primary);
@@ -822,12 +822,12 @@ body {
 }
 
 .toast-icon {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 .toast-content {
   flex: 1;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #374151;
   line-height: 1.4;
 }
@@ -835,7 +835,7 @@ body {
 .toast-close {
   background: transparent;
   border: 0;
-  font-size: 18px;
+  font-size: 1.125rem;
   cursor: pointer;
   color: #9ca3af;
   padding: 0;
@@ -892,12 +892,12 @@ body {
 
   .document {
     padding: 15px;
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
 
   .editable-input {
     min-width: 100px;
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
 
   .editable-input.large-input {
@@ -908,13 +908,13 @@ body {
 
 @media (max-width: 480px) {
   .document {
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 10px;
   }
 
   .editable-input {
     min-width: 80px;
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 4px 6px;
   }
 
@@ -929,7 +929,7 @@ body {
   }
 
   .client-table {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
 
   .client-table td {

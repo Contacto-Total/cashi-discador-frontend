@@ -44,7 +44,7 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .caller-info {
-      font-size: 18px;
+      font-size: 1.125rem;
       margin: 20px 0;
     }
 

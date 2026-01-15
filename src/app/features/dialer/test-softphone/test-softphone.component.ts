@@ -331,13 +331,13 @@ import { LucideAngularModule } from 'lucide-angular';
 
     .header-info h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 1.25rem;
       font-weight: 600;
     }
 
     .header-info .subtitle {
       margin: 0;
-      font-size: 12px;
+      font-size: 0.75rem;
       opacity: 0.9;
     }
 
@@ -349,12 +349,12 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .advisor-info .label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       opacity: 0.8;
     }
 
     .advisor-info .name {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 500;
     }
 
@@ -383,12 +383,12 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .status-label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       opacity: 0.8;
     }
 
     .status-value {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
     }
 
@@ -398,7 +398,7 @@ import { LucideAngularModule } from 'lucide-angular';
 
     .timer {
       font-family: 'Courier New', monospace;
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 600;
       padding: 8px 16px;
       background-color: rgba(0,0,0,0.2);
@@ -423,13 +423,13 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .client-data .label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       color: var(--text-secondary);
       text-transform: uppercase;
     }
 
     .client-data .value {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -447,18 +447,18 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .debt .label, .mora .label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       color: var(--text-secondary);
     }
 
     .debt .amount {
-      font-size: 20px;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--accent-danger);
     }
 
     .mora .days {
-      font-size: 20px;
+      font-size: 1.25rem;
       font-weight: 700;
       color: var(--accent-warning);
     }
@@ -492,7 +492,7 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .section-title {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
       color: var(--panel-text);
       margin-bottom: 12px;
@@ -507,13 +507,13 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .field label {
-      font-size: 11px;
+      font-size: 0.6875rem;
       color: var(--text-secondary);
       margin-bottom: 4px;
     }
 
     .field span {
-      font-size: 13px;
+      font-size: 0.8125rem;
       color: var(--text-primary);
     }
 
@@ -524,7 +524,7 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .info-text {
-      font-size: 13px;
+      font-size: 0.8125rem;
       color: var(--text-secondary);
       font-style: italic;
     }
@@ -560,19 +560,19 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .phone-icon {
-      font-size: 48px;
+      font-size: 3rem;
       width: 48px;
       height: 48px;
     }
 
     .alert-text h3 {
       margin: 0 0 8px 0;
-      font-size: 18px;
+      font-size: 1.125rem;
     }
 
     .incoming-number {
       margin: 0;
-      font-size: 16px;
+      font-size: 1rem;
       font-weight: 600;
     }
 
@@ -613,7 +613,7 @@ import { LucideAngularModule } from 'lucide-angular';
 
     .section-header h3 {
       margin: 0;
-      font-size: 16px;
+      font-size: 1rem;
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -647,7 +647,7 @@ import { LucideAngularModule } from 'lucide-angular';
       background: transparent;
       border: none;
       outline: none;
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 600;
       color: var(--text-primary);
       text-align: center;
@@ -677,7 +677,7 @@ import { LucideAngularModule } from 'lucide-angular';
       color: var(--text-primary) !important;
       border: 2px solid var(--border-color) !important;
       border-radius: 50% !important;
-      font-size: 24px;
+      font-size: 1.5rem;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
@@ -697,13 +697,13 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .dialpad-btn .digit {
-      font-size: 28px;
+      font-size: 1.75rem;
       font-weight: 700;
       line-height: 1;
     }
 
     .dialpad-btn .letters {
-      font-size: 10px;
+      font-size: 0.625rem;
       font-weight: 500;
       opacity: 0.6;
       margin-top: 2px;
@@ -717,7 +717,7 @@ import { LucideAngularModule } from 'lucide-angular';
       gap: 8px;
       color: var(--accent-info);
       font-family: 'Courier New', monospace;
-      font-size: 20px;
+      font-size: 1.25rem;
       font-weight: 700;
       margin-bottom: 16px;
       padding: 8px 16px;
@@ -749,7 +749,7 @@ import { LucideAngularModule } from 'lucide-angular';
     }
 
     .status-text {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
       color: var(--text-primary);
     }
