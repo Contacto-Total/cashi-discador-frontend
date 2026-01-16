@@ -32,6 +32,10 @@ interface DetectedColumn {
   displayLabel: string;
   sampleValues: string[];
   selected: boolean;
+  // Auto-matching properties
+  matchedFieldDefinition?: FieldDefinition;
+  matchStatus: 'matched' | 'review' | 'no-match';
+  matchScore?: number; // Similarity score (0-100)
 }
 
 @Component({
@@ -121,6 +125,28 @@ interface DetectedColumn {
                             Ej: {{ col.sampleValues.slice(0, 2).join(' | ') }}
                           </div>
                         }
+                        <!-- Match Status Indicator -->
+                        <div class="mt-1.5 flex items-center gap-1.5">
+                          @if (col.matchStatus === 'matched') {
+                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-full">
+                              <lucide-angular name="check-circle" [size]="10"></lucide-angular>
+                              {{ col.matchedFieldDefinition?.fieldName }}
+                            </span>
+                          } @else if (col.matchStatus === 'review') {
+                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 rounded-full">
+                              <lucide-angular name="alert-circle" [size]="10"></lucide-angular>
+                              Revisar: {{ col.matchedFieldDefinition?.fieldName }}
+                            </span>
+                          } @else {
+                            <span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 rounded-full">
+                              <lucide-angular name="x-circle" [size]="10"></lucide-angular>
+                              Sin coincidencia
+                            </span>
+                          }
+                          @if (col.matchScore) {
+                            <span class="text-[9px] text-gray-400">({{ col.matchScore }}%)</span>
+                          }
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -511,10 +537,14 @@ interface DetectedColumn {
                           [disabled]="!!formData.id"
                           class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
                     <option [value]="0">Sin asociar - Campo personalizado</option>
-                    @for (field of availableFieldDefinitions(); track field.id) {
-                      <option [value]="field.id">
-                        {{ field.fieldName }} ({{ field.fieldCode }})
-                      </option>
+                    @for (group of groupedFieldDefinitions(); track group.table) {
+                      <optgroup [label]="group.label">
+                        @for (field of group.fields; track field.id) {
+                          <option [value]="field.id">
+                            {{ field.fieldName }} ({{ field.fieldCode }})
+                          </option>
+                        }
+                      </optgroup>
                     }
                   </select>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -531,12 +561,19 @@ interface DetectedColumn {
                   <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-4 space-y-2 border border-gray-200 dark:border-slate-700/50">
                     <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">📋 Información del Catálogo</p>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                       <span class="text-xs text-gray-500 dark:text-gray-400">Tipo de Dato:</span>
                       <span [class]="getDataTypeBadgeClass(selectedField.dataType)"
                             class="inline-flex px-2 py-0.5 rounded text-xs font-medium">
                         {{ selectedField.dataType }}
                       </span>
+                      @if (selectedField.associatedTable) {
+                        <span class="text-xs text-gray-400 dark:text-gray-500">|</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400">Tabla:</span>
+                        <span class="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
+                          {{ selectedField.associatedTable === 'clientes' ? '👤 Clientes' : selectedField.associatedTable === 'metodos_contacto' ? '📞 Contactos' : selectedField.associatedTable }}
+                        </span>
+                      }
                     </div>
 
                     @if (selectedField.description) {
@@ -906,6 +943,29 @@ export class HeaderConfigurationComponent implements OnInit {
     });
   });
 
+  // Computed signal para campos agrupados por tabla asociada
+  groupedFieldDefinitions = computed(() => {
+    const fields = this.availableFieldDefinitions();
+    const groups: { table: string; label: string; fields: typeof fields }[] = [];
+
+    // Agrupar por tabla asociada
+    const clientesFields = fields.filter(f => f.associatedTable === 'clientes');
+    const contactosFields = fields.filter(f => f.associatedTable === 'metodos_contacto');
+    const otrosFields = fields.filter(f => !f.associatedTable || f.associatedTable === 'otros');
+
+    if (clientesFields.length > 0) {
+      groups.push({ table: 'clientes', label: '👤 Datos del Cliente', fields: clientesFields });
+    }
+    if (contactosFields.length > 0) {
+      groups.push({ table: 'metodos_contacto', label: '📞 Métodos de Contacto', fields: contactosFields });
+    }
+    if (otrosFields.length > 0) {
+      groups.push({ table: 'otros', label: '📋 Otros Campos', fields: otrosFields });
+    }
+
+    return groups;
+  });
+
   // Computed signal para cabeceras disponibles como campo origen (no transformadas)
   availableSourceHeaders = computed(() => {
     const currentHeaderName = this.formData.headerName;
@@ -955,19 +1015,27 @@ export class HeaderConfigurationComponent implements OnInit {
   }
 
   loadFieldDefinitions() {
-    this.fieldDefinitionService.getAllActive().subscribe({
+    // Cargar solo campos asociados a clientes y métodos de contacto
+    this.fieldDefinitionService.getFieldsForCustomerSync().subscribe({
       next: (definitions) => {
         this.fieldDefinitions.set(definitions);
       },
       error: (error) => {
         console.error('Error al cargar definiciones de campos:', error);
-        // Solo notificar si es un error de conexión, no 404
-        if (error?.status === 0 || error?.status >= 500) {
-          this.notificationService.warning(
-            'Definiciones no disponibles',
-            'No se pudieron cargar las definiciones de campos predefinidos'
-          );
-        }
+        // Fallback: si el endpoint nuevo falla, intentar con el antiguo
+        this.fieldDefinitionService.getAllActive().subscribe({
+          next: (definitions) => {
+            this.fieldDefinitions.set(definitions);
+          },
+          error: (fallbackError) => {
+            if (fallbackError?.status === 0 || fallbackError?.status >= 500) {
+              this.notificationService.warning(
+                'Definiciones no disponibles',
+                'No se pudieron cargar las definiciones de campos predefinidos'
+              );
+            }
+          }
+        });
       }
     });
   }
@@ -1542,19 +1610,25 @@ export class HeaderConfigurationComponent implements OnInit {
    * Analiza los primeros N registros para inferir el tipo
    */
   private detectDataType(sampleValues: string[]): { dataType: DataType; format?: string } {
-    // Filtrar valores vacíos para el análisis
-    const nonEmptyValues = sampleValues.filter(v => v && v.trim() !== '');
+    // Filtrar valores vacíos y NULL para el análisis
+    const nonEmptyValues = sampleValues.filter(v =>
+      v && v.trim() !== '' && v.trim().toUpperCase() !== 'NULL'
+    );
 
     if (nonEmptyValues.length === 0) {
       return { dataType: 'TEXTO' };
     }
 
+    // Umbral dinámico: si hay pocos valores, ser más permisivo
+    const threshold = nonEmptyValues.length <= 2 ? 0.5 : 0.8;
+
     // Usar patrones centralizados de shared/constants/date-formats.ts
     // IMPORTANTE: Estos patrones están sincronizados con el backend (DateParserUtil.java)
     for (const pattern of DATE_DETECTION_PATTERNS) {
       const matchCount = nonEmptyValues.filter(v => pattern.regex.test(v.trim())).length;
-      // Si al menos 80% de los valores no vacíos coinciden con el patrón de fecha
-      if (matchCount >= nonEmptyValues.length * 0.8) {
+      // Si al menos threshold% de los valores no vacíos coinciden con el patrón de fecha
+      if (matchCount >= nonEmptyValues.length * threshold) {
+        console.log(`Fecha detectada: ${nonEmptyValues[0]} -> formato: ${pattern.format}`);
         return { dataType: 'FECHA', format: pattern.format };
       }
     }
@@ -1566,8 +1640,8 @@ export class HeaderConfigurationComponent implements OnInit {
       return numericRegex.test(cleaned);
     }).length;
 
-    // Si al menos 80% de los valores son numéricos
-    if (numericCount >= nonEmptyValues.length * 0.8) {
+    // Si al menos threshold% de los valores son numéricos
+    if (numericCount >= nonEmptyValues.length * threshold) {
       // Detectar si tiene decimales
       const hasDecimals = nonEmptyValues.some(v => v.includes('.') || v.includes(','));
       return {
@@ -1590,6 +1664,99 @@ export class HeaderConfigurationComponent implements OnInit {
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  }
+
+  /**
+   * Normaliza un string para comparación de similitud
+   * Elimina acentos, convierte a minúsculas, elimina caracteres especiales
+   */
+  private normalizeForMatching(str: string): string {
+    return str
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Elimina acentos
+      .replace(/[^a-z0-9]/g, ''); // Solo letras y números
+  }
+
+  /**
+   * Calcula la distancia de Levenshtein entre dos strings
+   */
+  private levenshteinDistance(s1: string, s2: string): number {
+    const len1 = s1.length;
+    const len2 = s2.length;
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= len1; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= len2; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= len1; i++) {
+      for (let j = 1; j <= len2; j++) {
+        const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,      // deletion
+          matrix[i][j - 1] + 1,      // insertion
+          matrix[i - 1][j - 1] + cost // substitution
+        );
+      }
+    }
+
+    return matrix[len1][len2];
+  }
+
+  /**
+   * Calcula el score de similitud entre dos strings (0-100)
+   */
+  private calculateSimilarityScore(str1: string, str2: string): number {
+    const norm1 = this.normalizeForMatching(str1);
+    const norm2 = this.normalizeForMatching(str2);
+
+    if (norm1 === norm2) return 100;
+    if (norm1.length === 0 || norm2.length === 0) return 0;
+
+    // Check if one contains the other
+    if (norm1.includes(norm2) || norm2.includes(norm1)) {
+      const containScore = Math.min(norm1.length, norm2.length) / Math.max(norm1.length, norm2.length) * 80;
+      return Math.round(containScore + 20); // Bonus for containing
+    }
+
+    const distance = this.levenshteinDistance(norm1, norm2);
+    const maxLen = Math.max(norm1.length, norm2.length);
+    const similarity = (1 - distance / maxLen) * 100;
+
+    return Math.round(Math.max(0, similarity));
+  }
+
+  /**
+   * Busca el FieldDefinition que mejor coincide con el nombre de columna
+   * Retorna el match con score >= 60, o undefined si no hay match suficiente
+   * Usa fieldDefinitions() para buscar en TODOS los campos, no solo los disponibles
+   */
+  private findMatchingFieldDefinition(columnName: string): { field: FieldDefinition; score: number } | undefined {
+    // Usar fieldDefinitions() en lugar de availableFieldDefinitions() para buscar en todos
+    const availableFields = this.fieldDefinitions();
+    if (availableFields.length === 0) {
+      console.warn('Auto-matching: No hay campos cargados en fieldDefinitions');
+      return undefined;
+    }
+
+    let bestMatch: { field: FieldDefinition; score: number } | undefined;
+
+    for (const field of availableFields) {
+      // Comparar contra fieldCode y fieldName
+      const scoreCode = this.calculateSimilarityScore(columnName, field.fieldCode);
+      const scoreName = this.calculateSimilarityScore(columnName, field.fieldName);
+      const maxScore = Math.max(scoreCode, scoreName);
+
+      if (maxScore >= 60 && (!bestMatch || maxScore > bestMatch.score)) {
+        bestMatch = { field, score: maxScore };
+      }
+    }
+
+    return bestMatch;
   }
 
   parseCSV(csv: string) {
@@ -1623,6 +1790,9 @@ export class HeaderConfigurationComponent implements OnInit {
     // Crear lista de columnas detectadas para mostrar en el diálogo de selección
     const detectedCols: DetectedColumn[] = [];
 
+    // Log para debug: verificar cuántos campos hay disponibles para matching
+    console.log(`Auto-matching: ${this.fieldDefinitions().length} campos cargados para matching`);
+
     for (let colIndex = 0; colIndex < columnNames.length; colIndex++) {
       const headerName = columnNames[colIndex].trim();
 
@@ -1634,13 +1804,28 @@ export class HeaderConfigurationComponent implements OnInit {
       // Generar etiqueta visual legible
       const displayLabel = this.generateDisplayLabel(headerName);
 
+      // Auto-matching: buscar el FieldDefinition que mejor coincide
+      const matchResult = this.findMatchingFieldDefinition(headerName);
+
+      let matchStatus: 'matched' | 'review' | 'no-match';
+      if (matchResult && matchResult.score >= 80) {
+        matchStatus = 'matched';
+      } else if (matchResult && matchResult.score >= 60) {
+        matchStatus = 'review';
+      } else {
+        matchStatus = 'no-match';
+      }
+
       detectedCols.push({
         name: headerName,
         dataType: dataType,
         format: format,
         displayLabel: displayLabel,
         sampleValues: columnSamples[colIndex].filter(v => v.trim() !== ''),
-        selected: true // Por defecto todas seleccionadas
+        selected: true, // Por defecto todas seleccionadas
+        matchedFieldDefinition: matchResult?.field,
+        matchStatus: matchStatus,
+        matchScore: matchResult?.score
       });
     }
 
@@ -1649,9 +1834,22 @@ export class HeaderConfigurationComponent implements OnInit {
       return;
     }
 
+    // Calcular estadísticas de matching
+    const matchedCount = detectedCols.filter(c => c.matchStatus === 'matched').length;
+    const reviewCount = detectedCols.filter(c => c.matchStatus === 'review').length;
+    const noMatchCount = detectedCols.filter(c => c.matchStatus === 'no-match').length;
+
     // Mostrar diálogo de selección de columnas
     this.detectedColumns.set(detectedCols);
     this.showColumnSelectionDialog.set(true);
+
+    // Notificar sobre el resultado del auto-matching
+    if (reviewCount > 0 || noMatchCount > 0) {
+      this.notificationService.info(
+        'Auto-matching completado',
+        `${matchedCount} coincidencias exactas, ${reviewCount} para revisar, ${noMatchCount} sin coincidencia`
+      );
+    }
   }
 
   // ==================== Métodos para selección de columnas ====================
@@ -1714,8 +1912,9 @@ export class HeaderConfigurationComponent implements OnInit {
     }
 
     // Crear cabeceras a partir de las columnas seleccionadas
+    // Usar el FieldDefinition matched si existe, sino fieldDefinitionId = 0
     const newHeaders: HeaderConfigurationItem[] = selectedColumns.map(col => ({
-      fieldDefinitionId: 0,
+      fieldDefinitionId: col.matchedFieldDefinition?.id ?? 0,
       headerName: col.name,
       dataType: col.dataType,
       displayLabel: col.displayLabel,
@@ -1740,21 +1939,20 @@ export class HeaderConfigurationComponent implements OnInit {
     this.detectedColumns.set([]);
     this.importFileName.set('');
 
+    // Contar columnas con match de campo BD
+    const matchedWithField = selectedColumns.filter(c => c.matchedFieldDefinition).length;
+    const unmatchedCount = selectedColumns.length - matchedWithField;
+
     // Mostrar mensaje
     if (duplicateCount > 0) {
       this.notificationService.success(
         `${uniqueNewHeaders.length} cabecera(s) agregada(s)`,
-        `${duplicateCount} columna(s) ignorada(s) por duplicado`
+        `${duplicateCount} columna(s) ignorada(s) por duplicado. ${matchedWithField} con campo BD asignado.`
       );
     } else {
-      // Contar tipos detectados
-      const fechaCount = uniqueNewHeaders.filter(h => h.dataType === 'FECHA').length;
-      const numericoCount = uniqueNewHeaders.filter(h => h.dataType === 'NUMERICO').length;
-      const textoCount = uniqueNewHeaders.filter(h => h.dataType === 'TEXTO').length;
-
       this.notificationService.success(
         `${uniqueNewHeaders.length} cabecera(s) agregada(s)`,
-        `Tipos: ${fechaCount} fecha, ${numericoCount} numérico, ${textoCount} texto`
+        `${matchedWithField} con campo BD asignado, ${unmatchedCount} sin asignar`
       );
     }
   }

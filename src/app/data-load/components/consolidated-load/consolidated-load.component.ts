@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,6 +9,7 @@ import { HeaderConfigurationService } from '../../../maintenance/services/header
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { ComplementaryFileService } from '../../services/complementary-file.service';
+import { PeriodSnapshotService, PeriodStatusResponse } from '../../services/period-snapshot.service';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { NotificationsComponent } from '../../../shared/components/notifications/notifications.component';
 import { HeaderConfiguration, LoadType, BulkCreateHeaderConfigurationRequest, HeaderConfigurationItem, DataType } from '../../../maintenance/models/header-configuration.model';
@@ -22,11 +23,19 @@ import {
   ComplementaryFileType,
   UnregisteredColumn,
   SheetInfo,
+  LinkFieldValidation,
   determineFileType,
   getFileTypeLabel,
   isValidExcelFile,
   COMMON_LINK_FIELDS
 } from '../../models/complementary-file.model';
+import {
+  FILE_LIMITS,
+  FILE_CONFIG_STATES,
+  LOAD_TYPES,
+  DATA_TYPES,
+  formatFileSize
+} from '../../constants/data-load.constants';
 
 @Component({
   selector: 'app-consolidated-load',
@@ -54,6 +63,107 @@ import {
               <div class="bg-gradient-to-r from-blue-500 to-cyan-400 h-full rounded-full animate-pulse" style="width: 100%"></div>
             </div>
           </div>
+        </div>
+      </div>
+    }
+
+    <!-- Period Change Confirmation Dialog -->
+    @if (showPeriodChangeDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-lg w-full mx-4 overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-amber-500 to-orange-500 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="calendar-clock" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold !text-white">Cambio de Periodo Detectado</h2>
+                <p class="text-amber-100 text-sm">Se archivará el periodo anterior</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6">
+            @if (isExecutingSnapshot()) {
+              <!-- Snapshot in progress -->
+              <div class="text-center py-6">
+                <div class="relative mx-auto w-16 h-16 mb-4">
+                  <div class="w-16 h-16 border-4 border-gray-200 dark:border-slate-600 rounded-full"></div>
+                  <div class="absolute top-0 left-0 w-16 h-16 border-4 border-amber-500 rounded-full border-t-transparent animate-spin"></div>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ snapshotProgress() }}</h3>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Por favor espere mientras se archiva el periodo anterior...</p>
+              </div>
+            } @else {
+              <!-- Confirmation content -->
+              <div class="space-y-4">
+                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="alert-triangle" [size]="20" class="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div>
+                      <p class="text-amber-800 dark:text-amber-200 text-sm font-medium">
+                        Ya existen <span class="font-bold">{{ periodStatus()?.recordCount | number }}</span> registros cargados en esta subcartera.
+                      </p>
+                      <p class="text-amber-700 dark:text-amber-300 text-sm mt-1">
+                        Al continuar, se archivará la información actual antes de cargar los nuevos datos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">Tabla actual:</span>
+                    <span class="font-mono text-gray-900 dark:text-white">{{ periodStatus()?.tableName }}</span>
+                  </div>
+                  @if (periodStatus()?.currentPeriod) {
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-400">Periodo actual:</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ periodStatus()?.currentPeriod }}</span>
+                    </div>
+                  }
+                  @if (periodStatus()?.lastArchivedPeriod) {
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-400">Último archivo:</span>
+                      <span class="text-gray-900 dark:text-white">{{ periodStatus()?.lastArchivedPeriod }}</span>
+                    </div>
+                  }
+                </div>
+
+                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="archive" [size]="20" class="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div>
+                      <p class="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
+                        Los datos actuales se guardarán en el histórico
+                      </p>
+                      <p class="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                        Podrá consultar los datos archivados posteriormente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Footer -->
+          @if (!isExecutingSnapshot()) {
+            <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900 flex justify-end gap-3">
+              <button (click)="cancelPeriodChange()"
+                      class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium cursor-pointer">
+                Cancelar
+              </button>
+              <button (click)="confirmPeriodChange()"
+                      class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+                <lucide-angular name="archive" [size]="16"></lucide-angular>
+                Archivar y Continuar
+              </button>
+            </div>
+          }
         </div>
       </div>
     }
@@ -227,46 +337,78 @@ import {
               </div>
 
               <!-- Lista de archivos -->
-              <div class="p-4">
+              <div class="p-4"
+                   (dragover)="onDragOver($event)"
+                   (dragenter)="onDragEnter($event)"
+                   (dragleave)="onDragLeave($event)"
+                   (drop)="onDrop($event)">
                 @if (filesToProcess().length === 0) {
-                  <div class="border-2 border-dashed border-gray-300 dark:border-slate-700 rounded-xl p-8 text-center">
-                    <div class="w-16 h-16 bg-gray-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <lucide-angular name="file-spreadsheet" [size]="32" class="text-gray-400 dark:text-gray-600"></lucide-angular>
+                  <div class="border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200"
+                       [class.border-gray-300]="!isDragging()"
+                       [class.dark:border-slate-700]="!isDragging()"
+                       [class.border-emerald-500]="isDragging()"
+                       [class.bg-emerald-50]="isDragging()"
+                       [class.dark:bg-emerald-900/20]="isDragging()">
+                    <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 transition-all"
+                         [class.bg-gray-100]="!isDragging()"
+                         [class.dark:bg-slate-800]="!isDragging()"
+                         [class.bg-emerald-100]="isDragging()"
+                         [class.dark:bg-emerald-800]="isDragging()">
+                      <lucide-angular [name]="isDragging() ? 'download' : 'file-spreadsheet'" [size]="32"
+                                      [class.text-gray-400]="!isDragging()"
+                                      [class.dark:text-gray-600]="!isDragging()"
+                                      [class.text-emerald-600]="isDragging()"
+                                      [class.dark:text-emerald-400]="isDragging()"></lucide-angular>
                     </div>
-                    <h3 class="text-gray-900 dark:text-white font-semibold mb-2">Arrastra archivos aquí o haz clic en "Agregar Archivo"</h3>
+                    <h3 class="font-semibold mb-2 transition-colors"
+                        [class.text-gray-900]="!isDragging()"
+                        [class.dark:text-white]="!isDragging()"
+                        [class.text-emerald-700]="isDragging()"
+                        [class.dark:text-emerald-300]="isDragging()">
+                      {{ isDragging() ? '¡Suelta los archivos aquí!' : 'Arrastra archivos aquí o haz clic en "Agregar Archivo"' }}
+                    </h3>
                     <p class="text-gray-500 dark:text-gray-400 text-sm">{{ getExpectedFilesDescription() }}</p>
                   </div>
                 } @else {
+                  <!-- Indicador de drop cuando ya hay archivos -->
+                  @if (isDragging()) {
+                    <div class="mb-3 border-2 border-dashed border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 text-center transition-all">
+                      <div class="flex items-center justify-center gap-2 text-emerald-600 dark:text-emerald-400">
+                        <lucide-angular name="download" [size]="20"></lucide-angular>
+                        <span class="font-semibold">¡Suelta para agregar más archivos!</span>
+                      </div>
+                    </div>
+                  }
                   <div class="space-y-3">
                     @for (file of filesToProcess(); track file.file.name; let fileIndex = $index) {
                       <div class="bg-gray-50 dark:bg-slate-800 rounded-xl border overflow-hidden transition-all"
-                           [class.border-emerald-500]="file.configState === 'ready'"
-                           [class.border-amber-500]="file.configState === 'configuring'"
-                           [class.border-red-500]="file.configState === 'error'"
-                           [class.border-gray-200]="file.configState === 'loading'"
-                           [class.dark:border-emerald-500]="file.configState === 'ready'"
-                           [class.dark:border-amber-500]="file.configState === 'configuring'"
-                           [class.dark:border-red-500]="file.configState === 'error'"
-                           [class.dark:border-slate-700]="file.configState === 'loading'">
+                           [class.border-emerald-500]="file.configState === FILE_CONFIG_STATES.READY"
+                           [class.border-amber-500]="file.configState === FILE_CONFIG_STATES.CONFIGURING"
+                           [class.border-red-500]="file.configState === FILE_CONFIG_STATES.ERROR"
+                           [class.border-gray-200]="file.configState === FILE_CONFIG_STATES.LOADING"
+                           [class.dark:border-emerald-500]="file.configState === FILE_CONFIG_STATES.READY"
+                           [class.dark:border-amber-500]="file.configState === FILE_CONFIG_STATES.CONFIGURING"
+                           [class.dark:border-red-500]="file.configState === FILE_CONFIG_STATES.ERROR"
+                           [class.dark:border-slate-700]="file.configState === FILE_CONFIG_STATES.LOADING">
 
                         <!-- Cabecera del archivo (siempre visible) -->
                         <div class="p-4 flex items-center justify-between">
                           <div class="flex items-center gap-3">
                             <!-- Icono de estado -->
                             <div class="w-10 h-10 rounded-lg flex items-center justify-center"
-                                 [class.bg-emerald-100]="file.configState === 'ready'"
-                                 [class.dark:bg-emerald-600/20]="file.configState === 'ready'"
-                                 [class.bg-amber-100]="file.configState === 'configuring'"
-                                 [class.dark:bg-amber-600/20]="file.configState === 'configuring'"
-                                 [class.bg-red-100]="file.configState === 'error'"
-                                 [class.dark:bg-red-600/20]="file.configState === 'error'"
-                                 [class.bg-gray-200]="file.configState === 'loading'"
-                                 [class.dark:bg-slate-700]="file.configState === 'loading'">
-                              @if (file.configState === 'ready') {
+                                 [class.bg-emerald-100]="file.configState === FILE_CONFIG_STATES.READY"
+                                 [class.dark:bg-emerald-600/20]="file.configState === FILE_CONFIG_STATES.READY"
+                                 [class.bg-amber-100]="file.configState === FILE_CONFIG_STATES.CONFIGURING"
+                                 [class.dark:bg-amber-600/20]="file.configState === FILE_CONFIG_STATES.CONFIGURING"
+                                 [class.bg-red-100]="file.configState === FILE_CONFIG_STATES.ERROR"
+                                 [class.dark:bg-red-600/20]="file.configState === FILE_CONFIG_STATES.ERROR"
+                                 [class.bg-gray-200]="file.configState === FILE_CONFIG_STATES.LOADING"
+                                 [class.dark:bg-slate-700]="file.configState === FILE_CONFIG_STATES.LOADING">
+                              @if (file.configState === FILE_CONFIG_STATES.READY) {
                                 <lucide-angular name="check-circle" [size]="20" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
-                              } @else if (file.configState === 'configuring') {
+                              } @else if (file.configState === FILE_CONFIG_STATES.CONFIGURING) {
                                 <lucide-angular name="settings" [size]="20" class="text-amber-600 dark:text-amber-400"></lucide-angular>
-                              } @else if (file.configState === 'error') {
+                              } @else if (file.configState === FILE_CONFIG_STATES.ERROR) {
                                 <lucide-angular name="alert-circle" [size]="20" class="text-red-600 dark:text-red-400"></lucide-angular>
                               } @else {
                                 <div class="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -308,13 +450,13 @@ import {
                                     {{ getFileTypeLabel(file.type) }}
                                   </span>
                                 }
-                                @if (file.configState === 'ready' && file.selectedSheet) {
+                                @if (file.configState === FILE_CONFIG_STATES.READY && file.selectedSheet) {
                                   <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-400 rounded text-xs">
                                     <lucide-angular name="sheet" [size]="10" class="inline mr-0.5"></lucide-angular>
                                     {{ file.selectedSheet }}
                                   </span>
                                 }
-                                @if (file.configState === 'ready' && file.linkField) {
+                                @if (file.configState === FILE_CONFIG_STATES.READY && file.linkField) {
                                   <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-400 rounded text-xs">
                                     <lucide-angular name="link" [size]="10" class="inline mr-0.5"></lucide-angular>
                                     {{ file.linkField }}
@@ -329,10 +471,10 @@ import {
 
                           <!-- Acciones -->
                           <div class="flex items-center gap-2">
-                            @if (file.configState === 'error') {
+                            @if (file.configState === FILE_CONFIG_STATES.ERROR) {
                               <span class="text-xs text-red-600 dark:text-red-400 max-w-xs truncate">{{ file.error }}</span>
                             }
-                            @if (file.configState === 'configuring') {
+                            @if (file.configState === FILE_CONFIG_STATES.CONFIGURING) {
                               <button (click)="toggleFileExpanded(file)"
                                       class="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-all cursor-pointer">
                                 <lucide-angular [name]="file.isExpanded ? 'chevron-up' : 'chevron-down'" [size]="18"></lucide-angular>
@@ -346,7 +488,7 @@ import {
                         </div>
 
                         <!-- Panel de Configuración Expandible -->
-                        @if (file.configState === 'configuring' && file.isExpanded) {
+                        @if (file.configState === FILE_CONFIG_STATES.CONFIGURING && file.isExpanded) {
                           <div class="border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-4">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                               <!-- Selector de Hoja -->
@@ -367,12 +509,15 @@ import {
                                 </div>
                               }
 
-                              <!-- Selector de Campo de Enlace (solo para COMPLEMENTARY) -->
-                              @if (file.type === 'COMPLEMENTARY' && file.headers && file.headers.length > 0) {
+                              <!-- Selector de Campo de Enlace (para COMPLEMENTARY y DAILY) -->
+                              @if ((file.type === 'COMPLEMENTARY' || (file.type === 'MAIN' && selectedLoadMode() === 'DAILY')) && file.headers && file.headers.length > 0) {
                                 <div>
                                   <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1.5">
                                     <lucide-angular name="link" [size]="12" class="inline mr-1"></lucide-angular>
                                     Campo de enlace
+                                    @if (selectedLoadMode() === 'DAILY') {
+                                      <span class="text-xs font-normal text-gray-400 ml-1">(para vincular con tabla inicial)</span>
+                                    }
                                   </label>
                                   <select [(ngModel)]="file.linkField"
                                           class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
@@ -385,7 +530,11 @@ import {
                                     }
                                   </select>
                                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                    Columna que identifica los registros a actualizar
+                                    @if (selectedLoadMode() === 'DAILY') {
+                                      Columna para identificar registros en la tabla inicial y actualizarlos
+                                    } @else {
+                                      Columna que identifica los registros a actualizar
+                                    }
                                   </p>
                                 </div>
                               }
@@ -412,7 +561,7 @@ import {
                                     <div class="p-3 !bg-gray-100 dark:!bg-slate-800 rounded-lg border !border-gray-200 dark:!border-slate-700"
                                          [class.!border-emerald-400]="col.selected"
                                          [class.dark:!border-emerald-600]="col.selected">
-                                      <!-- Fila principal: checkbox + nombre + ejemplos -->
+                                      <!-- Fila principal: checkbox + nombre + badges de tablas + ejemplos -->
                                       <div class="flex items-center gap-3">
                                         <input type="checkbox"
                                                [(ngModel)]="col.selected"
@@ -420,6 +569,22 @@ import {
                                         <div class="flex-1 min-w-0">
                                           <div class="flex items-center gap-2 flex-wrap">
                                             <code class="font-mono text-sm !text-amber-700 dark:!text-amber-400 !bg-amber-100 dark:!bg-amber-900/30 px-1.5 py-0.5 rounded">{{ col.name }}</code>
+                                            <!-- Badges indicando en qué tablas falta (solo para DAILY mode) -->
+                                            @if (selectedLoadMode() === 'DAILY') {
+                                              @if (col.missingInActualizacion && col.missingInInicial) {
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium !bg-red-100 dark:!bg-red-900/30 !text-red-700 dark:!text-red-400">
+                                                  Falta en ambas
+                                                </span>
+                                              } @else if (col.missingInActualizacion) {
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium !bg-orange-100 dark:!bg-orange-900/30 !text-orange-700 dark:!text-orange-400">
+                                                  Falta en Diaria
+                                                </span>
+                                              } @else if (col.missingInInicial) {
+                                                <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium !bg-purple-100 dark:!bg-purple-900/30 !text-purple-700 dark:!text-purple-400">
+                                                  Falta en Inicial
+                                                </span>
+                                              }
+                                            }
                                             @if (col.sampleValues.length > 0) {
                                               <span class="text-xs !text-gray-500 dark:!text-gray-400">
                                                 Ej: <span class="!bg-gray-200 dark:!bg-slate-700 !text-gray-700 dark:!text-gray-300 px-1 py-0.5 rounded font-mono">{{ col.sampleValues.slice(0, 2).join(', ') }}</span>
@@ -446,7 +611,7 @@ import {
                                           </div>
 
                                           <!-- Formato (solo para FECHA) -->
-                                          @if (col.detectedType === 'FECHA') {
+                                          @if (col.detectedType === DATA_TYPES.DATE) {
                                             <div>
                                               <label class="block text-xs font-medium !text-gray-600 dark:!text-gray-400 mb-1">
                                                 Formato
@@ -463,7 +628,7 @@ import {
                                           }
 
                                           <!-- Etiqueta de visualización -->
-                                          <div [class.sm:col-span-2]="col.detectedType !== 'FECHA'">
+                                          <div [class.sm:col-span-2]="col.detectedType !== DATA_TYPES.DATE">
                                             <label class="block text-xs font-medium !text-gray-600 dark:!text-gray-400 mb-1">
                                               Etiqueta de visualización
                                             </label>
@@ -480,9 +645,100 @@ import {
 
                                 <p class="text-xs !text-gray-600 dark:!text-gray-400 mt-3 p-2 !bg-blue-50 dark:!bg-blue-900/20 rounded-lg border !border-blue-200 dark:!border-blue-800/50">
                                   <lucide-angular name="info" [size]="12" class="inline mr-1 !text-blue-600 dark:!text-blue-400"></lucide-angular>
-                                  Las columnas seleccionadas se crearán como nuevas cabeceras. Las no seleccionadas serán ignoradas.
+                                  @if (selectedLoadMode() === 'DAILY') {
+                                    Las columnas seleccionadas se crearán en las tablas donde falten (Diaria y/o Inicial). Las no seleccionadas serán ignoradas.
+                                  } @else {
+                                    Las columnas seleccionadas se crearán como nuevas cabeceras. Las no seleccionadas serán ignoradas.
+                                  }
                                 </p>
                               </div>
+                            }
+
+                            <!-- Vista Previa de Datos -->
+                            @if (file.data && file.data.length > 0 && file.headers) {
+                              <div class="border-t !border-gray-200 dark:!border-slate-700 pt-4 mt-4">
+                                <button (click)="toggleDataPreview(file)"
+                                        class="flex items-center gap-2 text-sm font-semibold !text-gray-700 dark:!text-gray-300 hover:!text-blue-600 dark:hover:!text-blue-400 cursor-pointer mb-3">
+                                  <lucide-angular [name]="file.showPreview ? 'chevron-down' : 'chevron-right'" [size]="16"></lucide-angular>
+                                  <lucide-angular name="eye" [size]="16" class="!text-blue-600 dark:!text-blue-400"></lucide-angular>
+                                  Vista previa ({{ file.data.length > 5 ? '5 de ' + file.data.length : file.data.length }} registros)
+                                </button>
+
+                                @if (file.showPreview) {
+                                  <div class="overflow-x-auto rounded-lg border !border-gray-200 dark:!border-slate-700 max-h-48">
+                                    <table class="min-w-full text-xs">
+                                      <thead class="!bg-gray-100 dark:!bg-slate-800 sticky top-0">
+                                        <tr>
+                                          @for (header of file.headers.slice(0, 8); track header) {
+                                            <th class="px-2 py-1.5 text-left font-semibold !text-gray-700 dark:!text-gray-300 whitespace-nowrap border-r !border-gray-200 dark:!border-slate-700 last:border-r-0"
+                                                [class.!bg-purple-100]="header === file.linkField"
+                                                [class.dark:!bg-purple-900/30]="header === file.linkField">
+                                              {{ header }}
+                                              @if (header === file.linkField) {
+                                                <lucide-angular name="link" [size]="10" class="inline ml-1 !text-purple-600 dark:!text-purple-400"></lucide-angular>
+                                              }
+                                            </th>
+                                          }
+                                          @if (file.headers.length > 8) {
+                                            <th class="px-2 py-1.5 text-center !text-gray-500 dark:!text-gray-400">
+                                              +{{ file.headers.length - 8 }} cols
+                                            </th>
+                                          }
+                                        </tr>
+                                      </thead>
+                                      <tbody class="!bg-white dark:!bg-slate-900">
+                                        @for (row of file.data.slice(0, 5); track $index; let rowIdx = $index) {
+                                          <tr class="border-t !border-gray-100 dark:!border-slate-800">
+                                            @for (header of file.headers.slice(0, 8); track header) {
+                                              <td class="px-2 py-1 !text-gray-600 dark:!text-gray-400 whitespace-nowrap max-w-32 truncate border-r !border-gray-100 dark:!border-slate-800 last:border-r-0"
+                                                  [class.!bg-purple-50]="header === file.linkField"
+                                                  [class.dark:!bg-purple-900/10]="header === file.linkField"
+                                                  [title]="row[header]">
+                                                {{ row[header] ?? '-' }}
+                                              </td>
+                                            }
+                                            @if (file.headers.length > 8) {
+                                              <td class="px-2 py-1 text-center !text-gray-400">...</td>
+                                            }
+                                          </tr>
+                                        }
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                }
+                              </div>
+                            }
+
+                            <!-- Validaciones del Campo de Enlace -->
+                            @if (file.linkField && file.data && file.data.length > 0) {
+                              @let validation = validateLinkFieldData(file);
+                              @if (validation.hasWarnings) {
+                                <div class="border-t !border-gray-200 dark:!border-slate-700 pt-4 mt-4">
+                                  <div class="p-3 rounded-lg !bg-amber-50 dark:!bg-amber-900/20 border !border-amber-200 dark:!border-amber-700/50">
+                                    <div class="flex items-center gap-2 mb-2">
+                                      <lucide-angular name="alert-triangle" [size]="16" class="!text-amber-600 dark:!text-amber-400"></lucide-angular>
+                                      <span class="text-sm font-semibold !text-amber-800 dark:!text-amber-300">Advertencias de validación</span>
+                                    </div>
+                                    <ul class="text-xs space-y-1 !text-amber-700 dark:!text-amber-400">
+                                      @if (validation.emptyCount > 0) {
+                                        <li class="flex items-center gap-1">
+                                          <lucide-angular name="circle-x" [size]="12"></lucide-angular>
+                                          {{ validation.emptyCount }} registro(s) con campo de enlace vacío
+                                        </li>
+                                      }
+                                      @if (validation.duplicateCount > 0) {
+                                        <li class="flex items-center gap-1">
+                                          <lucide-angular name="copy" [size]="12"></lucide-angular>
+                                          {{ validation.duplicateCount }} valor(es) duplicado(s) en campo de enlace
+                                        </li>
+                                      }
+                                    </ul>
+                                    <p class="text-xs !text-amber-600 dark:!text-amber-500 mt-2 italic">
+                                      Estos registros podrían no vincularse correctamente con la tabla inicial.
+                                    </p>
+                                  </div>
+                                </div>
+                              }
                             }
 
                             <!-- Botón de Validar -->
@@ -517,7 +773,7 @@ import {
                           <span class="text-gray-900 dark:text-white font-semibold">{{ getTotalRows() }}</span> registros en
                           <span class="text-gray-900 dark:text-white font-semibold">{{ filesToProcess().length }}</span> archivo(s)
                         </div>
-                        <button (click)="processFiles()"
+                        <button (click)="showConfirmation.set(true)"
                                 class="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all font-semibold cursor-pointer flex items-center gap-2 shadow-lg shadow-emerald-500/20">
                           <lucide-angular name="play" [size]="18"></lucide-angular>
                           Procesar Carga
@@ -526,6 +782,129 @@ import {
                     </div>
                   }
                 }
+              </div>
+            </div>
+          }
+
+          <!-- Modal de Confirmación -->
+          @if (showConfirmation()) {
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+              <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="p-5 border-b border-gray-200 dark:border-slate-700">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                      <lucide-angular name="clipboard-check" [size]="20" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-bold text-gray-900 dark:text-white">Confirmar procesamiento</h3>
+                      <p class="text-sm text-gray-500 dark:text-gray-400">Revise el resumen antes de continuar</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Body -->
+                <div class="p-5 space-y-4">
+                  <!-- Modo de carga -->
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
+                    <lucide-angular name="folder" [size]="18" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+                    <div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">Modo de carga</div>
+                      <div class="font-semibold text-gray-900 dark:text-white">
+                        @switch (selectedLoadMode()) {
+                          @case ('DAILY') { Carga Diaria }
+                          @case ('INITIAL_MONTH') { Carga Inicial de Mes }
+                          @case ('COMPLEMENTARY') { Carga Complementaria }
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Registros totales -->
+                  <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-800 rounded-lg">
+                    <lucide-angular name="database" [size]="18" class="text-purple-600 dark:text-purple-400"></lucide-angular>
+                    <div>
+                      <div class="text-xs text-gray-500 dark:text-gray-400">Total de registros</div>
+                      <div class="font-semibold text-gray-900 dark:text-white">{{ getTotalRows() }} en {{ filesToProcess().length }} archivo(s)</div>
+                    </div>
+                  </div>
+
+                  <!-- Campo de enlace (para DAILY y COMPLEMENTARY) -->
+                  @if (selectedLoadMode() === 'DAILY' || selectedLoadMode() === 'COMPLEMENTARY') {
+                    @for (file of filesToProcess(); track file.file.name) {
+                      @if (file.linkField) {
+                        <div class="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700/50">
+                          <lucide-angular name="link" [size]="18" class="text-purple-600 dark:text-purple-400"></lucide-angular>
+                          <div class="flex-1">
+                            <div class="text-xs text-purple-600 dark:text-purple-400">Campo de enlace</div>
+                            <div class="font-semibold text-purple-800 dark:text-purple-300">{{ file.linkField }}</div>
+                          </div>
+                          @let validation = validateLinkFieldData(file);
+                          @if (validation.hasWarnings) {
+                            <div class="text-xs text-amber-600 dark:text-amber-400">
+                              @if (validation.emptyCount > 0) {
+                                <div>{{ validation.emptyCount }} vacíos</div>
+                              }
+                              @if (validation.duplicateCount > 0) {
+                                <div>{{ validation.duplicateCount }} duplicados</div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    }
+                  }
+
+                  <!-- Nuevas columnas a crear -->
+                  @let newColumns = getNewColumnsToCreate();
+                  @if (newColumns.total > 0) {
+                    <div class="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700/50">
+                      <div class="flex items-center gap-2 mb-2">
+                        <lucide-angular name="plus-circle" [size]="18" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+                        <span class="font-semibold text-amber-800 dark:text-amber-300">{{ newColumns.total }} columna(s) nueva(s)</span>
+                      </div>
+                      @if (selectedLoadMode() === 'DAILY' && (newColumns.actualizacion > 0 || newColumns.inicial > 0)) {
+                        <div class="text-xs text-amber-700 dark:text-amber-400 space-y-1">
+                          @if (newColumns.actualizacion > 0) {
+                            <div>• {{ newColumns.actualizacion }} en tabla Diaria</div>
+                          }
+                          @if (newColumns.inicial > 0) {
+                            <div>• {{ newColumns.inicial }} en tabla Inicial</div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  <!-- Advertencia general -->
+                  <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700/50">
+                    <div class="flex items-start gap-2">
+                      <lucide-angular name="info" [size]="16" class="text-blue-600 dark:text-blue-400 mt-0.5"></lucide-angular>
+                      <p class="text-xs text-blue-700 dark:text-blue-300">
+                        @if (selectedLoadMode() === 'DAILY') {
+                          Los datos se importarán a la tabla de carga diaria y actualizarán los registros correspondientes en la tabla inicial usando el campo de enlace.
+                        } @else if (selectedLoadMode() === 'INITIAL_MONTH') {
+                          Los datos se importarán a la tabla de carga inicial. Esta operación puede crear nuevos registros.
+                        } @else {
+                          Los datos complementarios actualizarán los registros existentes usando el campo de enlace.
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="p-5 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+                  <button (click)="showConfirmation.set(false)"
+                          class="px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors cursor-pointer">
+                    Cancelar
+                  </button>
+                  <button (click)="confirmAndProcess()"
+                          class="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all font-semibold cursor-pointer flex items-center gap-2">
+                    <lucide-angular name="check" [size]="18"></lucide-angular>
+                    Confirmar y Procesar
+                  </button>
+                </div>
               </div>
             </div>
           }
@@ -549,32 +928,112 @@ import {
                 }
               </div>
 
-              <!-- Estadísticas principales -->
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
-                <div class="bg-gray-100 dark:bg-slate-800 rounded-lg p-3">
-                  <p class="text-gray-500 dark:text-gray-400">Total filas</p>
-                  <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ lastResult()?.mainFileResult?.totalRows || lastResult()?.totalProcessed || 0 }}</p>
+              <!-- ========== ESTADÍSTICAS PARA CARGA DIARIA ========== -->
+              @if (lastResult()?.mode === 'DAILY' && lastResult()?.mainFileResult?.actualizacion) {
+                <!-- Resumen general -->
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-4">
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Total filas procesadas</p>
+                    <p class="text-2xl font-bold !text-gray-900 dark:!text-white">{{ lastResult()?.mainFileResult?.totalRows || 0 }}</p>
+                  </div>
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Actualizados en Inicial</p>
+                    <p class="text-2xl font-bold !text-blue-600 dark:!text-blue-400">{{ lastResult()?.totalUpdatedInicial || 0 }}</p>
+                  </div>
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Errores totales</p>
+                    <p class="text-2xl font-bold" [class.!text-red-600]="lastResult()?.totalErrors" [class.dark:!text-red-400]="lastResult()?.totalErrors" [class.!text-gray-400]="!lastResult()?.totalErrors">{{ lastResult()?.totalErrors || 0 }}</p>
+                  </div>
                 </div>
-                <div class="bg-gray-100 dark:bg-slate-800 rounded-lg p-3">
-                  <p class="text-gray-500 dark:text-gray-400">Insertados</p>
-                  <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ lastResult()?.mainFileResult?.insertedRows || 0 }}</p>
+
+                <!-- Detalles por tabla -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <!-- Tabla Actualización (Histórico) -->
+                  <div class="!bg-amber-50 dark:!bg-amber-900/20 rounded-lg p-3 border !border-amber-200 dark:!border-amber-700/50">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <div class="flex items-center gap-2">
+                        <lucide-angular name="clock" [size]="16" class="!text-amber-600 dark:!text-amber-400"></lucide-angular>
+                        <span class="text-sm font-semibold !text-amber-700 dark:!text-amber-400">Tabla Diaria</span>
+                      </div>
+                      @if (lastResult()?.mainFileResult?.tableActualizacion) {
+                        <code class="text-xs !bg-amber-200 dark:!bg-amber-800/50 !text-amber-800 dark:!text-amber-300 px-2 py-0.5 rounded font-mono">
+                          {{ lastResult()?.mainFileResult?.tableActualizacion }}
+                        </code>
+                      }
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                      <div class="text-center">
+                        <p class="!text-gray-500 dark:!text-gray-400">Insertados</p>
+                        <p class="font-bold !text-emerald-600 dark:!text-emerald-400">{{ lastResult()?.mainFileResult?.actualizacion?.insertedRows || 0 }}</p>
+                      </div>
+                      <div class="text-center">
+                        <p class="!text-gray-500 dark:!text-gray-400">Actualizados</p>
+                        <p class="font-bold !text-blue-600 dark:!text-blue-400">{{ lastResult()?.mainFileResult?.actualizacion?.updatedRows || 0 }}</p>
+                      </div>
+                      <div class="text-center">
+                        <p class="!text-gray-500 dark:!text-gray-400">Fallidos</p>
+                        <p class="font-bold !text-red-600 dark:!text-red-400">{{ lastResult()?.mainFileResult?.actualizacion?.failedRows || 0 }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tabla Inicial (Maestra) -->
+                  <div class="!bg-emerald-50 dark:!bg-emerald-900/20 rounded-lg p-3 border !border-emerald-200 dark:!border-emerald-700/50">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <div class="flex items-center gap-2">
+                        <lucide-angular name="database" [size]="16" class="!text-emerald-600 dark:!text-emerald-400"></lucide-angular>
+                        <span class="text-sm font-semibold !text-emerald-700 dark:!text-emerald-400">Tabla Inicial</span>
+                      </div>
+                      @if (lastResult()?.mainFileResult?.tableInicial) {
+                        <code class="text-xs !bg-emerald-200 dark:!bg-emerald-800/50 !text-emerald-800 dark:!text-emerald-300 px-2 py-0.5 rounded font-mono">
+                          {{ lastResult()?.mainFileResult?.tableInicial }}
+                        </code>
+                      }
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-xs">
+                      <div class="text-center">
+                        <p class="!text-gray-500 dark:!text-gray-400">Actualizados</p>
+                        <p class="font-bold !text-blue-600 dark:!text-blue-400">{{ lastResult()?.mainFileResult?.inicial?.updatedRows || 0 }}</p>
+                      </div>
+                      <div class="text-center">
+                        <p class="!text-gray-500 dark:!text-gray-400">No encontrados</p>
+                        <p class="font-bold !text-amber-600 dark:!text-amber-400">{{ lastResult()?.mainFileResult?.inicial?.notFoundRows || 0 }}</p>
+                      </div>
+                      <div class="text-center">
+                        <p class="!text-gray-500 dark:!text-gray-400">Fallidos</p>
+                        <p class="font-bold !text-red-600 dark:!text-red-400">{{ lastResult()?.mainFileResult?.inicial?.failedRows || 0 }}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="bg-gray-100 dark:bg-slate-800 rounded-lg p-3">
-                  <p class="text-gray-500 dark:text-gray-400">Actualizados</p>
-                  <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ lastResult()?.mainFileResult?.updatedRows || 0 }}</p>
+              } @else {
+                <!-- ========== ESTADÍSTICAS PARA OTROS MODOS (INICIAL/COMPLEMENTARIO) ========== -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Total filas</p>
+                    <p class="text-2xl font-bold !text-gray-900 dark:!text-white">{{ lastResult()?.mainFileResult?.totalRows || lastResult()?.totalProcessed || 0 }}</p>
+                  </div>
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Insertados</p>
+                    <p class="text-2xl font-bold !text-emerald-600 dark:!text-emerald-400">{{ lastResult()?.mainFileResult?.insertedRows || 0 }}</p>
+                  </div>
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Actualizados</p>
+                    <p class="text-2xl font-bold !text-blue-600 dark:!text-blue-400">{{ lastResult()?.mainFileResult?.updatedRows || 0 }}</p>
+                  </div>
+                  <div class="!bg-gray-100 dark:!bg-slate-800 rounded-lg p-3">
+                    <p class="!text-gray-500 dark:!text-gray-400">Fallidos</p>
+                    <p class="text-2xl font-bold" [class.!text-red-600]="lastResult()?.totalErrors" [class.dark:!text-red-400]="lastResult()?.totalErrors" [class.!text-gray-400]="!lastResult()?.totalErrors">{{ lastResult()?.totalErrors || 0 }}</p>
+                  </div>
                 </div>
-                <div class="bg-gray-100 dark:bg-slate-800 rounded-lg p-3">
-                  <p class="text-gray-500 dark:text-gray-400">Fallidos</p>
-                  <p class="text-2xl font-bold" [class.text-red-600]="lastResult()?.totalErrors" [class.dark:text-red-400]="lastResult()?.totalErrors" [class.text-gray-400]="!lastResult()?.totalErrors">{{ lastResult()?.totalErrors || 0 }}</p>
-                </div>
-              </div>
+              }
 
               <!-- Detalle de errores -->
               @if (lastResult()?.mainFileResult?.errors?.length > 0) {
-                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg p-4">
+                <div class="!bg-red-50 dark:!bg-red-900/20 border !border-red-200 dark:!border-red-500/30 rounded-lg p-4">
                   <div class="flex items-center gap-2 mb-3">
-                    <lucide-angular name="alert-circle" [size]="18" class="text-red-600 dark:text-red-400"></lucide-angular>
-                    <h4 class="font-semibold text-red-600 dark:text-red-400">
+                    <lucide-angular name="alert-circle" [size]="18" class="!text-red-600 dark:!text-red-400"></lucide-angular>
+                    <h4 class="font-semibold !text-red-600 dark:!text-red-400">
                       Detalle de errores ({{ lastResult()?.mainFileResult?.errors?.length }}
                       @if (lastResult()?.mainFileResult?.totalErrors > lastResult()?.mainFileResult?.errors?.length) {
                         de {{ lastResult()?.mainFileResult?.totalErrors }}
@@ -583,13 +1042,13 @@ import {
                   </div>
                   <div class="max-h-48 overflow-y-auto space-y-1 text-sm">
                     @for (error of lastResult()?.mainFileResult?.errors; track $index) {
-                      <div class="bg-white dark:bg-slate-800/50 rounded px-3 py-2 text-gray-700 dark:text-gray-300 font-mono text-xs">
-                        <span class="text-red-600 dark:text-red-400 mr-2">●</span>{{ error }}
+                      <div class="!bg-white dark:!bg-slate-800/50 rounded px-3 py-2 !text-gray-700 dark:!text-gray-300 font-mono text-xs">
+                        <span class="!text-red-600 dark:!text-red-400 mr-2">●</span>{{ error }}
                       </div>
                     }
                   </div>
                   @if (lastResult()?.mainFileResult?.totalErrors > lastResult()?.mainFileResult?.errors?.length) {
-                    <p class="text-gray-400 dark:text-gray-500 text-xs mt-2 italic">
+                    <p class="!text-gray-400 dark:!text-gray-500 text-xs mt-2 italic">
                       * Se muestran solo los primeros {{ lastResult()?.mainFileResult?.errors?.length }} errores de {{ lastResult()?.mainFileResult?.totalErrors }} totales
                     </p>
                   }
@@ -598,25 +1057,31 @@ import {
 
               <!-- Errores de sincronización de clientes -->
               @if (lastResult()?.mainFileResult?.syncError) {
-                <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-500/30 rounded-lg p-4 mt-3">
+                <div class="!bg-amber-50 dark:!bg-amber-900/20 border !border-amber-200 dark:!border-amber-500/30 rounded-lg p-4 mt-3">
                   <div class="flex items-center gap-2 mb-2">
-                    <lucide-angular name="users" [size]="18" class="text-amber-600 dark:text-amber-400"></lucide-angular>
-                    <h4 class="font-semibold text-amber-600 dark:text-amber-400">Error en sincronización de clientes</h4>
+                    <lucide-angular name="users" [size]="18" class="!text-amber-600 dark:!text-amber-400"></lucide-angular>
+                    <h4 class="font-semibold !text-amber-600 dark:!text-amber-400">Error en sincronización de clientes</h4>
                   </div>
-                  <p class="text-gray-700 dark:text-gray-300 text-sm">{{ lastResult()?.mainFileResult?.syncError }}</p>
+                  <p class="!text-gray-700 dark:!text-gray-300 text-sm">{{ lastResult()?.mainFileResult?.syncError }}</p>
                 </div>
               }
 
               <!-- Resultados de sincronización exitosa -->
-              @if (lastResult()?.mainFileResult?.syncCustomersCreated !== undefined || lastResult()?.mainFileResult?.syncCustomersUpdated !== undefined) {
-                <div class="bg-gray-100 dark:bg-slate-800/50 rounded-lg p-3 mt-3">
+              @if (lastResult()?.mainFileResult?.syncCustomersCreated !== undefined || lastResult()?.mainFileResult?.syncCustomersUpdated !== undefined || lastResult()?.syncCustomersCreated !== undefined) {
+                <div class="!bg-cyan-50 dark:!bg-cyan-900/20 rounded-lg p-3 mt-3 border !border-cyan-200 dark:!border-cyan-700/50">
                   <div class="flex items-center gap-2 mb-2">
-                    <lucide-angular name="users" [size]="16" class="text-cyan-600 dark:text-cyan-400"></lucide-angular>
-                    <span class="text-sm text-gray-500 dark:text-gray-400">Sincronización de clientes:</span>
+                    <lucide-angular name="users" [size]="16" class="!text-cyan-600 dark:!text-cyan-400"></lucide-angular>
+                    <span class="text-sm font-semibold !text-cyan-700 dark:!text-cyan-400">Sincronización de clientes (desde tabla Inicial):</span>
                   </div>
                   <div class="flex gap-4 text-sm">
-                    <span class="text-emerald-600 dark:text-emerald-400">{{ lastResult()?.mainFileResult?.syncCustomersCreated || 0 }} creados</span>
-                    <span class="text-blue-600 dark:text-blue-400">{{ lastResult()?.mainFileResult?.syncCustomersUpdated || 0 }} actualizados</span>
+                    <span class="!text-emerald-600 dark:!text-emerald-400">
+                      <lucide-angular name="user-plus" [size]="14" class="inline mr-1"></lucide-angular>
+                      {{ lastResult()?.syncCustomersCreated || lastResult()?.mainFileResult?.syncCustomersCreated || 0 }} creados
+                    </span>
+                    <span class="!text-blue-600 dark:!text-blue-400">
+                      <lucide-angular name="user-check" [size]="14" class="inline mr-1"></lucide-angular>
+                      {{ lastResult()?.syncCustomersUpdated || lastResult()?.mainFileResult?.syncCustomersUpdated || 0 }} actualizados
+                    </span>
                   </div>
                 </div>
               }
@@ -672,8 +1137,12 @@ import {
     }
   `]
 })
-export class ConsolidatedLoadComponent implements OnInit {
+export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   private notificationService = inject(NotificationService);
+
+  // Constantes expuestas para uso en template
+  readonly DATA_TYPES = DATA_TYPES;
+  readonly FILE_CONFIG_STATES = FILE_CONFIG_STATES;
 
   // Signals para estado
   tenants = signal<Tenant[]>([]);
@@ -696,15 +1165,33 @@ export class ConsolidatedLoadComponent implements OnInit {
   // Signal para estado de creación de headers
   isCreatingHeaders = signal(false);
 
+  // Signal para estado de drag & drop
+  isDragging = signal(false);
+
+  // Signal para mostrar resumen de confirmación antes de procesar
+  showConfirmation = signal(false);
+
+  // Signals para cambio de periodo
+  showPeriodChangeDialog = signal(false);
+  periodStatus = signal<PeriodStatusResponse | null>(null);
+  isExecutingSnapshot = signal(false);
+  snapshotProgress = signal('');
+
   constructor(
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
     private headerConfigService: HeaderConfigurationService,
-    private complementaryFileService: ComplementaryFileService
+    private complementaryFileService: ComplementaryFileService,
+    private periodSnapshotService: PeriodSnapshotService
   ) {}
 
   ngOnInit() {
     this.loadTenants();
+  }
+
+  ngOnDestroy() {
+    // Limpiar caché de validación para liberar memoria
+    this.validationCache.clear();
   }
 
   // ==================== Carga de datos iniciales ====================
@@ -770,7 +1257,7 @@ export class ConsolidatedLoadComponent implements OnInit {
 
   loadHeaderConfigurations() {
     // Cargar cabeceras para INICIAL
-    this.headerConfigService.getBySubPortfolioAndLoadType(this.selectedSubPortfolioId, 'INICIAL').subscribe({
+    this.headerConfigService.getBySubPortfolioAndLoadType(this.selectedSubPortfolioId, LOAD_TYPES.INICIAL).subscribe({
       next: (headers) => this.headersInicial.set(headers),
       error: (error) => {
         console.error('Error loading INICIAL headers:', error);
@@ -785,7 +1272,7 @@ export class ConsolidatedLoadComponent implements OnInit {
     });
 
     // Cargar cabeceras para ACTUALIZACION
-    this.headerConfigService.getBySubPortfolioAndLoadType(this.selectedSubPortfolioId, 'ACTUALIZACION').subscribe({
+    this.headerConfigService.getBySubPortfolioAndLoadType(this.selectedSubPortfolioId, LOAD_TYPES.ACTUALIZACION).subscribe({
       next: (headers) => this.headersActualizacion.set(headers),
       error: (error) => {
         console.error('Error loading ACTUALIZACION headers:', error);
@@ -839,23 +1326,80 @@ export class ConsolidatedLoadComponent implements OnInit {
     const mode = this.selectedLoadMode();
     if (!mode) return;
 
-    // Procesar archivos en paralelo (cada uno manejará su propio estado inline)
+    await this.addFilesToProcess(files, mode);
+    event.target.value = '';
+  }
+
+  // ==================== Drag & Drop ====================
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(true);
+  }
+
+  onDragEnter(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(true);
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragging.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const mode = this.selectedLoadMode();
+    if (!mode) {
+      this.notificationService.warning(
+        'Seleccione tipo de carga',
+        'Debe seleccionar un tipo de carga antes de arrastrar archivos.'
+      );
+      return;
+    }
+
+    this.addFilesToProcess(files, mode);
+  }
+
+  // ==================== Procesamiento común de archivos ====================
+
+  /**
+   * Método común para agregar archivos (usado por onFileSelected y onDrop)
+   * Incluye validaciones de formato y tamaño
+   */
+  private async addFilesToProcess(files: FileList, mode: LoadMode): Promise<void> {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Validar que es un archivo Excel válido
+      // Validar formato Excel
       if (!isValidExcelFile(file.name)) {
         this.notificationService.error(
           'Archivo no válido',
-          `El archivo "${file.name}" no es un archivo Excel válido (.xlsx o .xls).`
+          `"${file.name}" no es un archivo Excel válido (.xlsx o .xls).`
         );
         continue;
       }
 
-      // Verificar si ya existe un archivo principal
-      const hasMainFile = this.filesToProcess().some(f => f.type === 'MAIN');
+      // Validar tamaño de archivo
+      if (file.size > FILE_LIMITS.MAX_SIZE_BYTES) {
+        this.notificationService.error(
+          'Archivo muy grande',
+          `"${file.name}" (${formatFileSize(file.size)}) excede el límite de ${FILE_LIMITS.MAX_SIZE_DISPLAY}.`
+        );
+        continue;
+      }
 
-      // Determinar el tipo de archivo basándose en el modo y si ya hay archivo principal
+      // Determinar tipo de archivo
+      const hasMainFile = this.filesToProcess().some(f => f.type === 'MAIN');
       const fileType = determineFileType(mode, hasMainFile);
 
       // Validar restricciones según el modo
@@ -863,22 +1407,20 @@ export class ConsolidatedLoadComponent implements OnInit {
         continue;
       }
 
-      // Crear archivo con estado inicial 'loading'
+      // Crear objeto FileToProcess
       const fileToProcess: FileToProcess = {
         file,
         type: fileType,
-        configState: 'loading',
+        configState: FILE_CONFIG_STATES.LOADING,
         isExpanded: true,
         validated: false
       };
 
-      this.filesToProcess.update(files => [...files, fileToProcess]);
+      this.filesToProcess.update(currentFiles => [...currentFiles, fileToProcess]);
 
-      // Procesar el archivo (no bloqueante - usa configuración inline)
+      // Procesar archivo de forma asíncrona
       this.parseAndValidateFile(fileToProcess);
     }
-
-    event.target.value = '';
   }
 
   /**
@@ -944,8 +1486,8 @@ export class ConsolidatedLoadComponent implements OnInit {
       }
 
       // Si estaba listo, volver a configuración para seleccionar linkField
-      if (file.configState === 'ready') {
-        file.configState = 'configuring';
+      if (file.configState === FILE_CONFIG_STATES.READY) {
+        file.configState = FILE_CONFIG_STATES.CONFIGURING;
         file.isExpanded = true;
         file.validated = false;
       }
@@ -967,8 +1509,8 @@ export class ConsolidatedLoadComponent implements OnInit {
         }
 
         // Si estaba listo, volver a configuración
-        if (currentMain.configState === 'ready') {
-          currentMain.configState = 'configuring';
+        if (currentMain.configState === FILE_CONFIG_STATES.READY) {
+          currentMain.configState = FILE_CONFIG_STATES.CONFIGURING;
           currentMain.isExpanded = true;
           currentMain.validated = false;
         }
@@ -982,7 +1524,7 @@ export class ConsolidatedLoadComponent implements OnInit {
       if (file.data && file.headers) {
         const hasUnregisteredSelected = file.unregisteredColumns?.some(c => c.selected);
         if (!hasUnregisteredSelected && file.selectedSheet) {
-          file.configState = 'ready';
+          file.configState = FILE_CONFIG_STATES.READY;
           file.isExpanded = false;
           file.validated = true;
         }
@@ -1047,8 +1589,8 @@ export class ConsolidatedLoadComponent implements OnInit {
         fileToProcess.headers = headers;
         fileToProcess.rowCount = data.length;
 
-        // Pre-seleccionar campo de enlace sugerido para archivos complementarios
-        if (fileToProcess.type === 'COMPLEMENTARY') {
+        // Pre-seleccionar campo de enlace sugerido para archivos complementarios o carga diaria
+        if (fileToProcess.type === 'COMPLEMENTARY' || this.selectedLoadMode() === 'DAILY') {
           fileToProcess.linkField = this.suggestLinkField(headers) || undefined;
         }
 
@@ -1057,12 +1599,14 @@ export class ConsolidatedLoadComponent implements OnInit {
       }
 
       // Determinar si necesita configuración
+      const isDaily = this.selectedLoadMode() === 'DAILY';
       const needsConfig = needsSheetSelection ||
                           (fileToProcess.type === 'COMPLEMENTARY') ||
+                          isDaily ||  // Carga diaria siempre requiere configuración (link field)
                           (fileToProcess.unregisteredColumns && fileToProcess.unregisteredColumns.length > 0);
 
       if (needsConfig) {
-        fileToProcess.configState = 'configuring';
+        fileToProcess.configState = FILE_CONFIG_STATES.CONFIGURING;
         fileToProcess.isExpanded = true;
         this.updateFilesSignal();
       } else {
@@ -1086,23 +1630,36 @@ export class ConsolidatedLoadComponent implements OnInit {
    * Detecta las columnas del archivo que no están registradas como cabeceras
    * NOTA: Archivos complementarios y Facilidades usan las cabeceras de INICIAL porque sus columnas
    * se agregan a la misma tabla de carga inicial de mes
+   * Para DAILY: compara contra AMBAS tablas (ACTUALIZACION e INICIAL)
    */
   private detectUnregisteredColumns(fileToProcess: FileToProcess): UnregisteredColumn[] {
     if (!fileToProcess.headers || !fileToProcess.data) return [];
 
-    // Obtener cabeceras configuradas según el modo de carga
-    // DAILY usa cabeceras de ACTUALIZACION, los demás modos usan INICIAL
-    const configuredHeaders = this.selectedLoadMode() === 'DAILY'
-      ? this.headersActualizacion()
-      : this.headersInicial();
+    const isDaily = this.selectedLoadMode() === 'DAILY';
 
-    // Crear set de nombres de cabeceras registradas (incluyendo aliases)
-    const registeredHeadersLower = new Set<string>();
-    configuredHeaders.forEach(header => {
-      registeredHeadersLower.add(header.headerName.toLowerCase());
+    // Para DAILY: crear sets de ambas tablas
+    // Para otros modos: solo usar INICIAL
+    const headersActualizacionSet = new Set<string>();
+    const headersInicialSet = new Set<string>();
+
+    if (isDaily) {
+      // Crear set de cabeceras de ACTUALIZACION
+      this.headersActualizacion().forEach(header => {
+        headersActualizacionSet.add(header.headerName.toLowerCase());
+        if (header.aliases) {
+          header.aliases.forEach(alias => {
+            headersActualizacionSet.add(alias.alias.toLowerCase());
+          });
+        }
+      });
+    }
+
+    // Crear set de cabeceras de INICIAL (usado por todos los modos)
+    this.headersInicial().forEach(header => {
+      headersInicialSet.add(header.headerName.toLowerCase());
       if (header.aliases) {
         header.aliases.forEach(alias => {
-          registeredHeadersLower.add(alias.alias.toLowerCase());
+          headersInicialSet.add(alias.alias.toLowerCase());
         });
       }
     });
@@ -1111,25 +1668,44 @@ export class ConsolidatedLoadComponent implements OnInit {
     const unregistered: UnregisteredColumn[] = [];
 
     fileToProcess.headers.forEach(headerName => {
-      if (!registeredHeadersLower.has(headerName.toLowerCase())) {
-        // Recopilar valores de muestra (primeras 5 filas)
-        const sampleValues: string[] = [];
-        for (let i = 0; i < Math.min(5, fileToProcess.data!.length); i++) {
-          const value = fileToProcess.data![i][headerName];
-          if (value !== undefined && value !== null && String(value).trim() !== '') {
-            sampleValues.push(String(value).trim());
-          }
-        }
+      const headerLower = headerName.toLowerCase();
 
-        const detectedType = this.detectColumnType(sampleValues);
-        unregistered.push({
-          name: headerName,
-          sampleValues,
-          detectedType,
-          selected: true,  // Por defecto, seleccionada para crear
-          displayLabel: this.generateDisplayLabel(headerName),
-          format: detectedType === 'FECHA' ? 'dd/MM/yyyy' : undefined
-        });
+      if (isDaily) {
+        // Para DAILY: verificar si falta en alguna de las dos tablas
+        const missingInActualizacion = !headersActualizacionSet.has(headerLower);
+        const missingInInicial = !headersInicialSet.has(headerLower);
+
+        // Solo agregar si falta en al menos una tabla
+        if (missingInActualizacion || missingInInicial) {
+          const sampleValues = this.collectSampleValues(fileToProcess, headerName);
+          const detectedType = this.detectColumnType(sampleValues);
+
+          unregistered.push({
+            name: headerName,
+            sampleValues,
+            detectedType,
+            selected: true,  // Por defecto, seleccionada para crear
+            displayLabel: this.generateDisplayLabel(headerName),
+            format: detectedType === DATA_TYPES.DATE ? 'dd/MM/yyyy' : undefined,
+            missingInActualizacion,
+            missingInInicial
+          });
+        }
+      } else {
+        // Para otros modos: solo verificar contra INICIAL
+        if (!headersInicialSet.has(headerLower)) {
+          const sampleValues = this.collectSampleValues(fileToProcess, headerName);
+          const detectedType = this.detectColumnType(sampleValues);
+
+          unregistered.push({
+            name: headerName,
+            sampleValues,
+            detectedType,
+            selected: true,
+            displayLabel: this.generateDisplayLabel(headerName),
+            format: detectedType === DATA_TYPES.DATE ? 'dd/MM/yyyy' : undefined
+          });
+        }
       }
     });
 
@@ -1137,10 +1713,24 @@ export class ConsolidatedLoadComponent implements OnInit {
   }
 
   /**
+   * Recopila valores de muestra de las primeras 5 filas
+   */
+  private collectSampleValues(fileToProcess: FileToProcess, headerName: string): string[] {
+    const sampleValues: string[] = [];
+    for (let i = 0; i < Math.min(5, fileToProcess.data!.length); i++) {
+      const value = fileToProcess.data![i][headerName];
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        sampleValues.push(String(value).trim());
+      }
+    }
+    return sampleValues;
+  }
+
+  /**
    * Detecta el tipo de dato de una columna basándose en valores de muestra
    */
   private detectColumnType(sampleValues: string[]): string {
-    if (sampleValues.length === 0) return 'TEXTO';
+    if (sampleValues.length === 0) return DATA_TYPES.TEXT;
 
     const datePatterns = [
       /^\d{4}-\d{2}-\d{2}$/,
@@ -1152,15 +1742,15 @@ export class ConsolidatedLoadComponent implements OnInit {
     const isDate = sampleValues.every(v =>
       datePatterns.some(pattern => pattern.test(v))
     );
-    if (isDate) return 'FECHA';
+    if (isDate) return DATA_TYPES.DATE;
 
     const numericRegex = /^-?\d+([.,]\d+)?$/;
     const isNumeric = sampleValues.every(v =>
       numericRegex.test(v.replace(/,/g, '.'))
     );
-    if (isNumeric) return 'NUMERICO';
+    if (isNumeric) return DATA_TYPES.NUMERIC;
 
-    return 'TEXTO';
+    return DATA_TYPES.TEXT;
   }
 
   /**
@@ -1169,7 +1759,7 @@ export class ConsolidatedLoadComponent implements OnInit {
   private completeFileValidation(fileToProcess: FileToProcess) {
     fileToProcess.validated = true;
     fileToProcess.error = undefined;
-    fileToProcess.configState = 'ready';
+    fileToProcess.configState = FILE_CONFIG_STATES.READY;
     fileToProcess.isExpanded = false;
     this.filesToProcess.update(files => [...files]);
   }
@@ -1177,7 +1767,7 @@ export class ConsolidatedLoadComponent implements OnInit {
   updateFileError(fileToProcess: FileToProcess, error: string) {
     fileToProcess.error = error;
     fileToProcess.validated = false;
-    fileToProcess.configState = 'error';
+    fileToProcess.configState = FILE_CONFIG_STATES.ERROR;
     this.filesToProcess.update(files => [...files]);
   }
 
@@ -1255,6 +1845,65 @@ export class ConsolidatedLoadComponent implements OnInit {
   }
 
   /**
+   * Alterna la vista previa de datos de un archivo
+   */
+  toggleDataPreview(file: FileToProcess) {
+    file.showPreview = !file.showPreview;
+    this.updateFilesSignal();
+  }
+
+  /**
+   * Valida los datos del campo de enlace en busca de valores vacíos y duplicados
+   * Cachea el resultado para evitar recálculos en cada ciclo de detección de cambios
+   */
+  private validationCache = new Map<string, LinkFieldValidation>();
+
+  validateLinkFieldData(file: FileToProcess): LinkFieldValidation {
+    if (!file.linkField || !file.data || file.data.length === 0) {
+      return { hasWarnings: false, emptyCount: 0, duplicateCount: 0 };
+    }
+
+    // Crear clave de cache basada en archivo y campo de enlace
+    const cacheKey = `${file.file.name}_${file.linkField}_${file.data.length}`;
+    if (this.validationCache.has(cacheKey)) {
+      return this.validationCache.get(cacheKey)!;
+    }
+
+    const linkField = file.linkField;
+    const values: string[] = [];
+    let emptyCount = 0;
+
+    // Contar vacíos y recopilar valores no vacíos
+    file.data.forEach(row => {
+      const value = row[linkField];
+      if (value === undefined || value === null || String(value).trim() === '') {
+        emptyCount++;
+      } else {
+        values.push(String(value).trim());
+      }
+    });
+
+    // Contar duplicados
+    const valueCounts = new Map<string, number>();
+    values.forEach(v => {
+      valueCounts.set(v, (valueCounts.get(v) || 0) + 1);
+    });
+    let duplicateCount = 0;
+    valueCounts.forEach((count, value) => {
+      if (count > 1) duplicateCount++;
+    });
+
+    const result: LinkFieldValidation = {
+      hasWarnings: emptyCount > 0 || duplicateCount > 0,
+      emptyCount,
+      duplicateCount
+    };
+
+    this.validationCache.set(cacheKey, result);
+    return result;
+  }
+
+  /**
    * Alterna la selección de todas las columnas no registradas de un archivo
    */
   toggleAllColumnsForFile(file: FileToProcess) {
@@ -1295,6 +1944,11 @@ export class ConsolidatedLoadComponent implements OnInit {
       return false;
     }
 
+    // Para DAILY (archivo MAIN), debe tener campo de enlace para vincular con tabla inicial
+    if (file.type === 'MAIN' && this.selectedLoadMode() === 'DAILY' && !file.linkField) {
+      return false;
+    }
+
     // Debe tener datos cargados
     if (!file.headers || !file.data) {
       return false;
@@ -1315,32 +1969,83 @@ export class ConsolidatedLoadComponent implements OnInit {
     if (selectedColumns.length > 0) {
       this.isCreatingHeaders.set(true);
       try {
-        const loadType: LoadType = this.selectedLoadMode() === 'DAILY' ? 'ACTUALIZACION' : 'INICIAL';
+        const isDaily = this.selectedLoadMode() === 'DAILY';
 
-        const headersToCreate: HeaderConfigurationItem[] = selectedColumns.map(col => ({
-          fieldDefinitionId: 0,  // Campo personalizado sin definición de campo
-          headerName: col.name,
-          displayLabel: col.displayLabel || col.name,
-          dataType: col.detectedType as DataType,
-          format: col.format,
-          required: false
-        }));
+        if (isDaily) {
+          // Para DAILY: crear columnas en las tablas donde falten
+          const colsForActualizacion = selectedColumns.filter(c => c.missingInActualizacion);
+          const colsForInicial = selectedColumns.filter(c => c.missingInInicial);
 
-        const request: BulkCreateHeaderConfigurationRequest = {
-          subPortfolioId: this.selectedSubPortfolioId,
-          loadType: loadType,
-          headers: headersToCreate
-        };
+          // Crear en tabla ACTUALIZACION
+          if (colsForActualizacion.length > 0) {
+            const headersActualizacion: HeaderConfigurationItem[] = colsForActualizacion.map(col => ({
+              fieldDefinitionId: 0,
+              headerName: col.name,
+              displayLabel: col.displayLabel || col.name,
+              dataType: col.detectedType as DataType,
+              format: col.format,
+              required: false
+            }));
 
-        await firstValueFrom(this.headerConfigService.createBulk(request));
+            await firstValueFrom(this.headerConfigService.createBulk({
+              subPortfolioId: this.selectedSubPortfolioId,
+              loadType: LOAD_TYPES.ACTUALIZACION,
+              headers: headersActualizacion
+            }));
+          }
 
-        // Recargar cabeceras
-        await this.loadHeaders(this.selectedSubPortfolioId);
+          // Crear en tabla INICIAL
+          if (colsForInicial.length > 0) {
+            const headersInicial: HeaderConfigurationItem[] = colsForInicial.map(col => ({
+              fieldDefinitionId: 0,
+              headerName: col.name,
+              displayLabel: col.displayLabel || col.name,
+              dataType: col.detectedType as DataType,
+              format: col.format,
+              required: false
+            }));
 
-        this.notificationService.success(
-          'Cabeceras creadas',
-          `Se crearon ${selectedColumns.length} cabecera(s) exitosamente`
-        );
+            await firstValueFrom(this.headerConfigService.createBulk({
+              subPortfolioId: this.selectedSubPortfolioId,
+              loadType: LOAD_TYPES.INICIAL,
+              headers: headersInicial
+            }));
+          }
+
+          // Recargar cabeceras
+          await this.loadHeaders(this.selectedSubPortfolioId);
+
+          // Mensaje de resumen
+          const parts: string[] = [];
+          if (colsForActualizacion.length > 0) parts.push(`${colsForActualizacion.length} en Diaria`);
+          if (colsForInicial.length > 0) parts.push(`${colsForInicial.length} en Inicial`);
+          this.notificationService.success('Cabeceras creadas', `Se crearon: ${parts.join(', ')}`);
+
+        } else {
+          // Para otros modos: comportamiento original
+          const headersToCreate: HeaderConfigurationItem[] = selectedColumns.map(col => ({
+            fieldDefinitionId: 0,
+            headerName: col.name,
+            displayLabel: col.displayLabel || col.name,
+            dataType: col.detectedType as DataType,
+            format: col.format,
+            required: false
+          }));
+
+          const request: BulkCreateHeaderConfigurationRequest = {
+            subPortfolioId: this.selectedSubPortfolioId,
+            loadType: LOAD_TYPES.INICIAL,
+            headers: headersToCreate
+          };
+
+          await firstValueFrom(this.headerConfigService.createBulk(request));
+          await this.loadHeaders(this.selectedSubPortfolioId);
+
+          this.notificationService.success(
+            'Cabeceras creadas',
+            `Se crearon ${selectedColumns.length} cabecera(s) exitosamente`
+          );
+        }
       } catch (error: any) {
         console.error('Error creating headers:', error);
         const friendlyMsg = this.getFriendlyErrorMessage(error);
@@ -1493,8 +2198,8 @@ export class ConsolidatedLoadComponent implements OnInit {
   private async loadHeaders(subPortfolioId: number): Promise<void> {
     try {
       const [inicial, actualizacion] = await Promise.all([
-        firstValueFrom(this.headerConfigService.getBySubPortfolioAndLoadType(subPortfolioId, 'INICIAL')),
-        firstValueFrom(this.headerConfigService.getBySubPortfolioAndLoadType(subPortfolioId, 'ACTUALIZACION'))
+        firstValueFrom(this.headerConfigService.getBySubPortfolioAndLoadType(subPortfolioId, LOAD_TYPES.INICIAL)),
+        firstValueFrom(this.headerConfigService.getBySubPortfolioAndLoadType(subPortfolioId, LOAD_TYPES.ACTUALIZACION))
       ]);
       this.headersInicial.set(inicial || []);
       this.headersActualizacion.set(actualizacion || []);
@@ -1525,6 +2230,39 @@ export class ConsolidatedLoadComponent implements OnInit {
 
   getTotalRows(): number {
     return this.filesToProcess().reduce((sum, f) => sum + (f.rowCount || 0), 0);
+  }
+
+  /**
+   * Calcula el número de columnas nuevas a crear
+   */
+  getNewColumnsToCreate(): { total: number; actualizacion: number; inicial: number } {
+    let total = 0;
+    let actualizacion = 0;
+    let inicial = 0;
+
+    this.filesToProcess().forEach(file => {
+      if (file.unregisteredColumns) {
+        const selected = file.unregisteredColumns.filter(c => c.selected);
+        total += selected.length;
+
+        if (this.selectedLoadMode() === 'DAILY') {
+          selected.forEach(col => {
+            if (col.missingInActualizacion) actualizacion++;
+            if (col.missingInInicial) inicial++;
+          });
+        }
+      }
+    });
+
+    return { total, actualizacion, inicial };
+  }
+
+  /**
+   * Confirma y procesa los archivos
+   */
+  confirmAndProcess() {
+    this.showConfirmation.set(false);
+    this.processFiles();
   }
 
   async processFiles() {
@@ -1565,20 +2303,45 @@ export class ConsolidatedLoadComponent implements OnInit {
     this.loadingMessage.set('Procesando carga diaria...');
     const file = this.filesToProcess().find(f => f.type === 'MAIN');
     if (!file || !file.data) throw new Error('No hay archivo de carga diaria');
+    if (!file.linkField) throw new Error('No se ha seleccionado un campo de enlace');
 
-    const result = await firstValueFrom(this.headerConfigService.importData(
+    // Usar el nuevo endpoint que:
+    // 1. Inserta/Actualiza en tabla ACTUALIZACION (histórico)
+    // 2. Actualiza la tabla INICIAL (maestra) usando el campo de enlace seleccionado
+    // 3. Sincroniza clientes desde INICIAL
+    const result = await firstValueFrom(this.headerConfigService.importDailyData(
       this.selectedSubPortfolioId,
-      'ACTUALIZACION',
-      file.data
+      file.data,
+      file.linkField
     ));
+
+    // Calcular totales de ambas tablas
+    const actualizacionResult = result.actualizacion || {};
+    const inicialResult = result.inicial || {};
+
+    const totalInserted = actualizacionResult.insertedRows || 0;
+    const totalUpdatedActualizacion = actualizacionResult.updatedRows || 0;
+    const totalUpdatedInicial = inicialResult.updatedRows || 0;
+    const totalErrors = (actualizacionResult.failedRows || 0) + (inicialResult.failedRows || 0);
 
     this.lastResult.set({
       success: !result.errors || result.errors.length === 0,
-      totalProcessed: result.insertedRows || 0,
-      totalErrors: result.failedRows || 0,
+      totalProcessed: totalInserted + totalUpdatedActualizacion,
+      totalUpdatedInicial: totalUpdatedInicial,
+      totalErrors: totalErrors,
       mode: 'DAILY',
-      mainFileResult: result
+      mainFileResult: result,
+      syncCustomersCreated: result.syncCustomersCreated,
+      syncCustomersUpdated: result.syncCustomersUpdated
     });
+
+    // Mostrar notificación con detalles
+    if (totalUpdatedInicial > 0) {
+      this.notificationService.success(
+        'Carga diaria completada',
+        `${totalInserted} insertados, ${totalUpdatedInicial} actualizados en tabla inicial`
+      );
+    }
 
     this.filesToProcess.set([]);
   }
@@ -1588,56 +2351,58 @@ export class ConsolidatedLoadComponent implements OnInit {
     const mainFile = files.find(f => f.type === 'MAIN');
     if (!mainFile || !mainFile.data) throw new Error('No hay archivo de asignación inicial');
 
-    let totalProcessed = 0;
-    let totalErrors = 0;
-    const complementaryResults: any[] = [];
+    // Verificar si se requiere confirmación de cambio de periodo
+    try {
+      console.log('[PeriodSnapshot] Verificando estado del periodo para subPortfolioId:', this.selectedSubPortfolioId);
+      const periodStatus = await firstValueFrom(
+        this.periodSnapshotService.checkPeriodStatus(this.selectedSubPortfolioId)
+      );
+      console.log('[PeriodSnapshot] Estado del periodo:', periodStatus);
+
+      if (periodStatus.requiresConfirmation) {
+        console.log('[PeriodSnapshot] Se requiere confirmación - mostrando diálogo');
+        // Mostrar diálogo de confirmación de cambio de periodo
+        this.periodStatus.set(periodStatus);
+        this.showPeriodChangeDialog.set(true);
+        this.isLoading.set(false);
+        return; // Esperar confirmación del usuario
+      } else {
+        console.log('[PeriodSnapshot] No se requiere confirmación - continuando con carga');
+      }
+    } catch (error) {
+      console.error('[PeriodSnapshot] Error al verificar estado del periodo:', error);
+      // Continuar sin verificación si falla el endpoint
+    }
+
+    // Si no se requiere confirmación, procesar directamente
+    await this.executeInitialMonthLoad();
+  }
+
+  /**
+   * Ejecuta la carga inicial de mes después de verificar/confirmar el cambio de periodo
+   */
+  private async executeInitialMonthLoad() {
+    const files = this.filesToProcess();
+    const mainFile = files.find(f => f.type === 'MAIN');
+    if (!mainFile || !mainFile.data) throw new Error('No hay archivo de asignación inicial');
 
     // 1. Procesar archivo principal (INICIAL)
     this.loadingMessage.set('Procesando asignación inicial...');
     const mainResult = await firstValueFrom(this.headerConfigService.importData(
       this.selectedSubPortfolioId,
-      'INICIAL',
+      LOAD_TYPES.INICIAL,
       mainFile.data
     ));
 
-    totalProcessed += mainResult.insertedRows || 0;
-    totalErrors += mainResult.failedRows || 0;
+    let totalProcessed = mainResult.insertedRows || 0;
+    let totalErrors = mainResult.failedRows || 0;
 
-    // 2. Procesar archivos complementarios (actualizan columnas en la tabla INICIAL existente)
-    // Estos archivos usan updateComplementaryData con un campo de enlace para hacer UPDATE
+    // 2. Procesar archivos complementarios usando método común
     const complementaryFiles = files.filter(f => f.type === 'COMPLEMENTARY');
+    const compResults = await this.processComplementaryFiles(complementaryFiles);
 
-    for (let i = 0; i < complementaryFiles.length; i++) {
-      const compFile = complementaryFiles[i];
-      if (!compFile.data) continue;
-
-      this.loadingMessage.set(`Procesando archivo complementario ${i + 1} de ${complementaryFiles.length}...`);
-      try {
-        // Usar el campo de enlace seleccionado por el usuario, o detectar si no se seleccionó
-        const linkField = compFile.linkField || this.detectLinkField(compFile.data);
-
-        const compResult = await firstValueFrom(this.headerConfigService.updateComplementaryData(
-          this.selectedSubPortfolioId,
-          'INICIAL',
-          compFile.data,
-          linkField
-        ));
-
-        complementaryResults.push(compResult);
-        totalProcessed += compResult?.updatedRows || 0;
-        totalErrors += compResult?.failedRows || 0;
-
-        this.notificationService.success(
-          `Archivo complementario ${i + 1} procesado`,
-          `${compResult?.updatedRows || 0} registros actualizados`
-        );
-      } catch (error: any) {
-        console.error('Error processing complementary file:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error(`Error en archivo complementario ${i + 1}`, friendlyMsg);
-        totalErrors++;
-      }
-    }
+    totalProcessed += compResults.totalUpdated;
+    totalErrors += compResults.totalErrors;
 
     this.lastResult.set({
       success: totalErrors === 0,
@@ -1645,60 +2410,90 @@ export class ConsolidatedLoadComponent implements OnInit {
       totalErrors,
       mode: 'INITIAL_MONTH',
       mainFileResult: mainResult,
-      complementaryResults
+      complementaryResults: compResults.results
     });
 
     this.filesToProcess.set([]);
+  }
+
+  // ==================== Period Change Management ====================
+
+  /**
+   * Cancela el cambio de periodo y cierra el diálogo
+   */
+  cancelPeriodChange() {
+    this.showPeriodChangeDialog.set(false);
+    this.periodStatus.set(null);
+    this.notificationService.info('Carga cancelada', 'La carga inicial de mes fue cancelada');
+  }
+
+  /**
+   * Confirma el cambio de periodo, ejecuta el snapshot y continúa con la carga
+   */
+  async confirmPeriodChange() {
+    this.isExecutingSnapshot.set(true);
+    this.snapshotProgress.set('Archivando periodo anterior...');
+
+    try {
+      // Ejecutar snapshot
+      const snapshotResult = await firstValueFrom(
+        this.periodSnapshotService.executeSnapshotForSubPortfolio(this.selectedSubPortfolioId)
+      );
+
+      if (!snapshotResult.success) {
+        throw new Error(snapshotResult.message || 'Error al ejecutar snapshot');
+      }
+
+      this.snapshotProgress.set('Archivo completado. Iniciando carga...');
+
+      // Notificar éxito del snapshot
+      this.notificationService.success(
+        'Periodo archivado',
+        `${snapshotResult.tablesArchived} tabla(s) archivada(s) para periodo ${snapshotResult.archivePeriod}`
+      );
+
+      // Cerrar diálogo y continuar con la carga
+      this.showPeriodChangeDialog.set(false);
+      this.isExecutingSnapshot.set(false);
+      this.periodStatus.set(null);
+
+      // Iniciar la carga
+      this.isLoading.set(true);
+      this.loadingMessage.set('Procesando asignación inicial...');
+
+      await this.executeInitialMonthLoad();
+
+      this.isLoading.set(false);
+      this.notificationService.success(
+        'Carga completada',
+        `${this.lastResult()?.totalProcessed || 0} registros procesados`
+      );
+
+    } catch (error: any) {
+      this.isExecutingSnapshot.set(false);
+      this.showPeriodChangeDialog.set(false);
+      this.isLoading.set(false);
+
+      this.notificationService.error(
+        'Error en cambio de periodo',
+        error.message || 'No se pudo completar el archivado del periodo'
+      );
+    }
   }
 
   async processComplementaryLoad() {
     const files = this.filesToProcess().filter(f => f.type === 'COMPLEMENTARY');
     if (files.length === 0) throw new Error('No hay archivos complementarios');
 
-    let totalProcessed = 0;
-    let totalErrors = 0;
-    const complementaryResults: any[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (!file.data) continue;
-
-      this.loadingMessage.set(`Procesando archivo complementario ${i + 1} de ${files.length}...`);
-
-      try {
-        // Usar el campo de enlace seleccionado por el usuario, o detectar si no se seleccionó
-        const linkField = file.linkField || this.detectLinkField(file.data);
-
-        // Usar updateComplementaryData para actualizar columnas específicas en la tabla INICIAL
-        const result = await firstValueFrom(this.headerConfigService.updateComplementaryData(
-          this.selectedSubPortfolioId,
-          'INICIAL',
-          file.data,
-          linkField
-        ));
-
-        complementaryResults.push(result);
-        totalProcessed += result?.updatedRows || 0;
-        totalErrors += result?.failedRows || 0;
-
-        this.notificationService.success(
-          `Archivo complementario ${i + 1} procesado`,
-          `${result?.updatedRows || 0} registros actualizados`
-        );
-      } catch (error: any) {
-        console.error('Error processing complementary file:', error);
-        const friendlyMsg = this.getFriendlyErrorMessage(error);
-        this.notificationService.error(`Error en archivo complementario ${i + 1}`, friendlyMsg);
-        totalErrors++;
-      }
-    }
+    // Usar método común para procesar archivos complementarios
+    const compResults = await this.processComplementaryFiles(files);
 
     this.lastResult.set({
-      success: totalErrors === 0,
-      totalProcessed,
-      totalErrors,
+      success: compResults.totalErrors === 0,
+      totalProcessed: compResults.totalUpdated,
+      totalErrors: compResults.totalErrors,
       mode: 'COMPLEMENTARY',
-      complementaryResults
+      complementaryResults: compResults.results
     });
 
     this.filesToProcess.set([]);
@@ -1750,6 +2545,55 @@ export class ConsolidatedLoadComponent implements OnInit {
   }
 
   // ==================== Helpers privados ====================
+
+  /**
+   * Procesa archivos complementarios de forma común.
+   * Usado tanto en processInitialMonthLoad como en processComplementaryLoad.
+   * @param files Lista de archivos complementarios a procesar
+   * @returns Objeto con totales y resultados
+   */
+  private async processComplementaryFiles(
+    files: FileToProcess[]
+  ): Promise<{ totalUpdated: number; totalErrors: number; results: any[] }> {
+    let totalUpdated = 0;
+    let totalErrors = 0;
+    const results: any[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (!file.data) continue;
+
+      const displayIndex = i + 1;
+      this.loadingMessage.set(`Procesando archivo complementario ${displayIndex} de ${files.length}...`);
+
+      try {
+        const linkField = file.linkField || this.detectLinkField(file.data);
+
+        const result = await firstValueFrom(this.headerConfigService.updateComplementaryData(
+          this.selectedSubPortfolioId,
+          LOAD_TYPES.INICIAL,
+          file.data,
+          linkField
+        ));
+
+        results.push(result);
+        totalUpdated += result?.updatedRows || 0;
+        totalErrors += result?.failedRows || 0;
+
+        this.notificationService.success(
+          `Archivo complementario ${displayIndex} procesado`,
+          `${result?.updatedRows || 0} registros actualizados`
+        );
+      } catch (error: any) {
+        console.error('Error processing complementary file:', error);
+        const friendlyMsg = this.getFriendlyErrorMessage(error);
+        this.notificationService.error(`Error en archivo complementario ${displayIndex}`, friendlyMsg);
+        totalErrors++;
+      }
+    }
+
+    return { totalUpdated, totalErrors, results };
+  }
 
   /**
    * Genera una etiqueta visual a partir del nombre de la columna

@@ -113,6 +113,25 @@ export class HeaderConfigurationService {
     });
   }
 
+  /**
+   * Importa datos de carga diaria
+   * Esta operación:
+   * 1. Inserta/Actualiza datos en la tabla ACTUALIZACION (histórico diario)
+   * 2. Actualiza los registros correspondientes en la tabla INICIAL (tabla maestra)
+   * 3. Sincroniza los clientes SOLO desde la tabla INICIAL
+   *
+   * @param subPortfolioId ID de la subcartera
+   * @param data Datos a importar
+   * @param linkField Campo de enlace para vincular con tabla inicial
+   */
+  importDailyData(subPortfolioId: number, data: any[], linkField: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/subportfolio/${subPortfolioId}/import-daily`, {
+      subPortfolioId,
+      data,
+      linkField
+    });
+  }
+
   // ==================== Resolución de cabeceras ====================
 
   /**

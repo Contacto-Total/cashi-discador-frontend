@@ -14,6 +14,9 @@ export const environment = {
   // Web Service Backend (catch-all route)
   webServiceUrl: 'https://cobranza.contactototal.com.pe/web-service',
 
+  // Tipificación Backend
+  tipificacionUrl: 'https://cobranza.contactototal.com.pe/api/tipificacion/v1',
+
   // FreeSWITCH on AWS - WebSocket SIP (puerto 5066 para WS no seguro)
   freeswitchWsUrl: 'cobranza.contactototal.com.pe:7443',
   freeswitchDomain: 'cobranza.contactototal.com.pe'

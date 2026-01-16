@@ -96,6 +96,9 @@ export interface UnregisteredColumn {
   selected: boolean;
   displayLabel?: string;
   format?: string;
+  // Para carga diaria: indica en qué tabla(s) falta la columna
+  missingInActualizacion?: boolean;  // Falta en tabla de actualización diaria
+  missingInInicial?: boolean;        // Falta en tabla inicial (maestra)
 }
 
 /**
@@ -126,6 +129,17 @@ export interface FileToProcess {
   validated: boolean;
   error?: string;
   rowCount?: number;
+  // Vista previa
+  showPreview?: boolean;           // Controla si se muestra la vista previa de datos
+}
+
+/**
+ * Resultado de validación del campo de enlace
+ */
+export interface LinkFieldValidation {
+  hasWarnings: boolean;
+  emptyCount: number;
+  duplicateCount: number;
 }
 
 /**

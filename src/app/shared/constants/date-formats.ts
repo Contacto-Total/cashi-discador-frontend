@@ -39,23 +39,42 @@ export const DEFAULT_DATE_FORMAT = DATE_FORMATS.DMY_SLASH;
 /**
  * Patrones regex para detección automática de fechas
  * Mapea el patrón regex al formato correspondiente
+ * IMPORTANTE: El orden importa - patrones más específicos primero
  */
 export const DATE_DETECTION_PATTERNS = [
-  // ISO con hora
-  { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, format: 'yyyy-MM-dd HH:mm:ss' },
-  { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, format: "yyyy-MM-dd'T'HH:mm:ss" },
+  // ISO con hora y milisegundos (desde BD)
+  { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+$/, format: 'yyyy-MM-dd HH:mm:ss' },
+  { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+/, format: "yyyy-MM-dd'T'HH:mm:ss" },
 
-  // ISO sin hora
+  // ISO con hora (sin milisegundos)
+  { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/, format: 'yyyy-MM-dd HH:mm:ss' },
+  { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/, format: "yyyy-MM-dd'T'HH:mm:ss" },
+  { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/, format: "yyyy-MM-dd'T'HH:mm:ss" },
+
+  // ISO con hora sin segundos
+  { regex: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/, format: 'yyyy-MM-dd HH:mm' },
+  { regex: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, format: "yyyy-MM-dd'T'HH:mm" },
+
+  // ISO sin hora (estricto)
   { regex: /^\d{4}-\d{2}-\d{2}$/, format: 'yyyy-MM-dd' },
 
   // Formatos flexibles año/mes/día
   { regex: /^\d{4}\/\d{1,2}\/\d{1,2}$/, format: 'yyyy/M/d' },
   { regex: /^\d{4}-\d{1,2}-\d{1,2}$/, format: 'yyyy-M-d' },
 
-  // Formatos flexibles día/mes/año (más comunes en LATAM)
+  // Formatos día/mes/año CON HORA (comunes en exports de BD)
+  { regex: /^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}:\d{2}$/, format: 'd/M/yyyy H:mm:ss' },
+  { regex: /^\d{1,2}-\d{1,2}-\d{4} \d{1,2}:\d{2}:\d{2}$/, format: 'd-M-yyyy H:mm:ss' },
+  { regex: /^\d{1,2}\/\d{1,2}\/\d{4} \d{1,2}:\d{2}$/, format: 'd/M/yyyy H:mm' },
+  { regex: /^\d{1,2}-\d{1,2}-\d{4} \d{1,2}:\d{2}$/, format: 'd-M-yyyy H:mm' },
+
+  // Formatos flexibles día/mes/año SIN HORA (más comunes en LATAM)
   { regex: /^\d{1,2}\/\d{1,2}\/\d{4}$/, format: 'd/M/yyyy' },
   { regex: /^\d{1,2}-\d{1,2}-\d{4}$/, format: 'd-M-yyyy' },
-  { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, format: 'd.M.yyyy' }
+  { regex: /^\d{1,2}\.\d{1,2}\.\d{4}$/, format: 'd.M.yyyy' },
+
+  // Formato yyyyMMdd (sin separadores - común en sistemas legacy)
+  { regex: /^\d{8}$/, format: 'yyyyMMdd' }
 ];
 
 /**

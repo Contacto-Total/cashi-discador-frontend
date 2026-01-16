@@ -53,4 +53,19 @@ export class FieldDefinitionService {
   countActiveFields(): Observable<number> {
     return this.http.get<number>(`${this.baseUrl}/count`);
   }
+
+  /**
+   * Obtiene campos filtrados por tabla asociada
+   */
+  getByAssociatedTable(tableName: string): Observable<FieldDefinition[]> {
+    return this.http.get<FieldDefinition[]>(`${this.baseUrl}/table/${tableName}`);
+  }
+
+  /**
+   * Obtiene campos para sincronización de clientes (clientes + metodos_contacto)
+   * Útil para configuración de cabeceras
+   */
+  getFieldsForCustomerSync(): Observable<FieldDefinition[]> {
+    return this.http.get<FieldDefinition[]>(`${this.baseUrl}/customer-sync`);
+  }
 }
