@@ -607,9 +607,8 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                             <div class="flex items-center gap-2">
                               <span class="text-lg transform transition-transform" [class.rotate-90]="isGrupoExpanded(grupo.grupoPromesaUuid)">▶</span>
                               <div class="text-left">
-                                <p class="text-xs font-semibold text-gray-800 dark:text-white">Promesa: {{ grupo.grupoPromesaUuid.substring(0, 8) }}...</p>
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400">
-                                  {{ grupo.fechaPrimerPago }} - {{ grupo.fechaUltimoPago }}
+                                <p class="text-sm font-semibold text-gray-800 dark:text-white">
+                                  Promesa: {{ grupo.fechaPrimerPago }} - {{ grupo.fechaUltimoPago }}
                                 </p>
                               </div>
                             </div>
@@ -634,7 +633,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                     <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Fecha</th>
                                     <th class="px-2 py-1.5 text-right text-gray-600 dark:text-gray-300 font-semibold">Monto</th>
                                     <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Banco</th>
-                                    <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Nº Operación</th>
                                     <th class="px-2 py-1.5 text-center text-gray-600 dark:text-gray-300 font-semibold">Cuota</th>
                                     <th class="px-2 py-1.5 text-center text-gray-600 dark:text-gray-300 font-semibold">Estado</th>
                                   </tr>
@@ -645,7 +643,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       <td class="px-2 py-1.5 text-gray-800 dark:text-white">{{ pago.fechaPago }}</td>
                                       <td class="px-2 py-1.5 text-right font-mono font-semibold text-gray-800 dark:text-white">S/ {{ pago.monto | number:'1.2-2' }}</td>
                                       <td class="px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ pago.banco || '-' }}</td>
-                                      <td class="px-2 py-1.5 text-gray-600 dark:text-gray-300 font-mono">{{ pago.numeroOperacion || '-' }}</td>
                                       <td class="px-2 py-1.5 text-center">
                                         @if (pago.numeroCuota) {
                                           <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[10px] font-semibold">
