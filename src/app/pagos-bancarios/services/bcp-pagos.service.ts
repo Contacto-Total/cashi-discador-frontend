@@ -7,7 +7,8 @@ import {
   BcpPagoManualRequest,
   BcpPagoManualResponse,
   BcpPagoManualFiltros,
-  BcpPagoManualListResponse
+  BcpPagoManualListResponse,
+  ResultadoConciliacion
 } from '../models/bcp-archivo.model';
 
 @Injectable({
@@ -122,6 +123,16 @@ export class BcpPagosService {
       null,
       { params }
     );
+  }
+
+  // ============== CONCILIACIÓN MANUAL ==============
+
+  /**
+   * Ejecuta la conciliación completa: pagos pendientes + re-intento de pagos "por fuera"
+   */
+  ejecutarConciliacionCompleta(): Observable<ResultadoConciliacion> {
+    console.log('[BCP] Ejecutando conciliación completa...');
+    return this.http.post<ResultadoConciliacion>(`${this.baseUrl}/conciliar-completo`, null);
   }
 
   // ============== REPORTES DE CONCILIACIÓN ==============

@@ -7,7 +7,8 @@ import {
   BcpPagoManualRequest,
   BcpPagoManualResponse,
   BcpPagoManual,
-  BcpPagoManualFiltros
+  BcpPagoManualFiltros,
+  ResultadoConciliacion
 } from '../models/bcp-archivo.model';
 
 @Component({
@@ -26,17 +27,40 @@ import {
             Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
           </p>
         </div>
-        <!-- Botón de configuración -->
-        <button
-          (click)="toggleConfigPanel()"
-          class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-          title="Configuración de conciliación"
-        >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-          </svg>
-        </button>
+        <div class="flex items-center gap-2">
+          <!-- Botón de conciliación manual -->
+          <button
+            (click)="ejecutarConciliacion()"
+            [disabled]="isLoadingConciliacion()"
+            class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            title="Ejecutar conciliación de pagos"
+          >
+            @if (isLoadingConciliacion()) {
+              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Conciliando...
+            } @else {
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Ejecutar Conciliación
+            }
+          </button>
+
+          <!-- Botón de configuración -->
+          <button
+            (click)="toggleConfigPanel()"
+            class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            title="Configuración de conciliación"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Panel de configuración de conciliación -->
@@ -907,6 +931,116 @@ import {
           </div>
         </div>
       }
+
+      <!-- Modal de resultado de conciliación -->
+      @if (showConciliacionModal()) {
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full mx-4 overflow-hidden">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between"
+                 [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
+                   ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                   : 'bg-slate-50 dark:bg-slate-700/50'">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-full"
+                     [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
+                       ? 'bg-emerald-100 dark:bg-emerald-800/50'
+                       : 'bg-slate-200 dark:bg-slate-600'">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                       [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
+                         ? 'text-emerald-600 dark:text-emerald-400'
+                         : 'text-slate-500 dark:text-slate-400'">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Resultado de Conciliación</h3>
+              </div>
+              <button
+                (click)="cerrarModalConciliacion()"
+                class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="p-6">
+              <!-- Estadísticas -->
+              <div class="grid grid-cols-3 gap-4 mb-6">
+                <div class="text-center p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
+                  <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ resultadoConciliacion()?.totalProcesados || 0 }}</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Total Procesados</p>
+                </div>
+                <div class="text-center p-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+                  <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ resultadoConciliacion()?.matchesEncontrados || 0 }}</p>
+                  <p class="text-xs text-emerald-600 dark:text-emerald-400">Matches</p>
+                </div>
+                <div class="text-center p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ resultadoConciliacion()?.sinMatch || 0 }}</p>
+                  <p class="text-xs text-amber-600 dark:text-amber-400">Sin Match</p>
+                </div>
+              </div>
+
+              <!-- Mensaje explicativo -->
+              <div class="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                @if (resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0) {
+                  <p class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Se encontraron {{ resultadoConciliacion()?.matchesEncontrados }} coincidencias entre pagos del banco y pagos registrados.
+                  </p>
+                } @else {
+                  <p class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    No se encontraron nuevas coincidencias. Los pagos pendientes siguen como "pagos por fuera".
+                  </p>
+                }
+              </div>
+
+              <!-- Detalle de matches (si hay) -->
+              @if (resultadoConciliacion()?.detallesMatch && resultadoConciliacion()!.detallesMatch.length > 0) {
+                <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                  <div class="bg-slate-50 dark:bg-slate-700/50 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400">
+                    Detalle de Matches
+                  </div>
+                  <div class="max-h-48 overflow-y-auto">
+                    @for (match of resultadoConciliacion()?.detallesMatch?.slice(0, 10); track match.bcpPagoDetalleId) {
+                      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-sm flex justify-between items-center">
+                        <span class="text-slate-700 dark:text-slate-300">
+                          DNI: <span class="font-medium">{{ match.documento }}</span>
+                        </span>
+                        <span class="text-emerald-600 dark:text-emerald-400 font-medium">
+                          S/ {{ formatMonto(match.monto) }}
+                        </span>
+                      </div>
+                    }
+                    @if (resultadoConciliacion()!.detallesMatch.length > 10) {
+                      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-sm text-center text-slate-500 dark:text-slate-400">
+                        ... y {{ resultadoConciliacion()!.detallesMatch.length - 10 }} más
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 flex justify-end">
+              <button
+                (click)="cerrarModalConciliacion()"
+                class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -969,6 +1103,11 @@ export class PagosBancariosPage implements OnInit {
   isLoadingConfig = signal(false);
   configMessage = signal<{ success: boolean; text: string } | null>(null);
 
+  // Conciliación manual
+  isLoadingConciliacion = signal(false);
+  showConciliacionModal = signal(false);
+  resultadoConciliacion = signal<ResultadoConciliacion | null>(null);
+
   constructor(private bcpService: BcpPagosService) {}
 
   ngOnInit(): void {
@@ -1020,6 +1159,36 @@ export class PagosBancariosPage implements OnInit {
         this.isLoadingConfig.set(false);
       }
     });
+  }
+
+  // === Conciliación Manual ===
+  ejecutarConciliacion(): void {
+    this.isLoadingConciliacion.set(true);
+    this.resultadoConciliacion.set(null);
+
+    this.bcpService.ejecutarConciliacionCompleta().subscribe({
+      next: (resultado) => {
+        this.resultadoConciliacion.set(resultado);
+        this.showConciliacionModal.set(true);
+        this.isLoadingConciliacion.set(false);
+      },
+      error: (error) => {
+        console.error('Error en conciliación:', error);
+        this.resultadoConciliacion.set({
+          totalProcesados: 0,
+          matchesEncontrados: 0,
+          sinMatch: 0,
+          detallesMatch: [],
+          pagosSinMatch: []
+        });
+        this.showConciliacionModal.set(true);
+        this.isLoadingConciliacion.set(false);
+      }
+    });
+  }
+
+  cerrarModalConciliacion(): void {
+    this.showConciliacionModal.set(false);
   }
 
   // === Carga Masiva ===

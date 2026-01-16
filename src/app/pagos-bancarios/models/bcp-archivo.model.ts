@@ -126,3 +126,25 @@ export interface BcpPagoManualListResponse {
   size: number;
   totalPages: number;
 }
+
+/**
+ * Detalle de un match de conciliación
+ */
+export interface MatchDetalle {
+  bcpPagoDetalleId: number;
+  transaccionId: number;
+  documento: string;
+  monto: number;
+  resultado: string;
+}
+
+/**
+ * Resultado de la conciliación bancaria
+ */
+export interface ResultadoConciliacion {
+  totalProcesados: number;
+  matchesEncontrados: number;
+  sinMatch: number;
+  detallesMatch: MatchDetalle[];
+  pagosSinMatch: BcpPagoManual[];
+}
