@@ -157,10 +157,10 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                           <div class="flex items-start justify-between gap-2">
                             <div class="flex-1">
                               <div class="font-bold text-sm">{{ customer.document }}</div>
-                              <div class="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">{{ customer.fullName }}</div>
+                              <div class="text-[0.6875rem] text-gray-600 dark:text-gray-400 mt-0.5">{{ customer.fullName }}</div>
                             </div>
                           </div>
-                          <div class="flex items-center gap-1.5 mt-2 text-[10px] text-gray-500 dark:text-gray-400">
+                          <div class="flex items-center gap-1.5 mt-2 text-[0.625rem] text-gray-500 dark:text-gray-400">
                             <span class="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded font-medium">{{ customer.tenantName }}</span>
                             <span class="text-gray-400 dark:text-gray-500">›</span>
                             <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded font-medium">{{ customer.portfolioName }}</span>
@@ -202,10 +202,10 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 <div class="p-1.5 bg-blue-200 dark:bg-blue-600/30 rounded">
                 </div>
                 <div class="flex-1">
-                  <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-none">Edad</p>
+                  <p class="text-[0.625rem] text-gray-600 dark:text-gray-400 leading-none">Edad</p>
                   <p class="text-sm text-gray-900 dark:text-white font-bold">{{ getFieldValue('edad') || 'N/A' }} años</p>
                 </div>
-                <span [class]="getAgeBadgeClass()" class="text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                <span [class]="getAgeBadgeClass()" class="text-[0.625rem] px-2 py-0.5 rounded-full font-semibold">
                   {{ getAgeCategory() }}
                 </span>
               </div>
@@ -214,7 +214,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 <div class="p-1.5 bg-purple-200 dark:bg-purple-600/30 rounded">
                 </div>
                 <div class="flex-1">
-                  <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-none">Estado Civil</p>
+                  <p class="text-[0.625rem] text-gray-600 dark:text-gray-400 leading-none">Estado Civil</p>
                   <p class="text-sm text-gray-900 dark:text-white font-semibold">{{ getFieldValue('estado_civil') || 'N/A' }}</p>
                 </div>
               </div>
@@ -223,7 +223,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 <div class="p-1.5 bg-orange-200 dark:bg-orange-600/30 rounded">
                 </div>
                 <div class="flex-1">
-                  <p class="text-[10px] text-gray-600 dark:text-gray-400 leading-none">Ocupación</p>
+                  <p class="text-[0.625rem] text-gray-600 dark:text-gray-400 leading-none">Ocupación</p>
                   <p class="text-xs text-gray-900 dark:text-white font-semibold leading-tight">{{ getFieldValue('ocupacion') || 'N/A' }}</p>
                 </div>
               </div>
@@ -291,7 +291,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                 <div class="flex items-center gap-1.5">
                   <span>Pagos</span>
                   @if (pagosCliente()?.cantidadPagos) {
-                    <span class="px-1.5 py-0.5 bg-amber-600 text-white text-[10px] rounded-full">{{ pagosCliente()?.cantidadPagos }}</span>
+                    <span class="px-1.5 py-0.5 bg-amber-600 text-white text-[0.625rem] rounded-full">{{ pagosCliente()?.cantidadPagos }}</span>
                   }
                 </div>
               </button>
@@ -310,12 +310,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-indigo-100 dark:bg-indigo-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Identificación</h3>
+                        <h3 class="text-[0.625rem] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Identificación</h3>
                       </div>
                       <div class="grid grid-cols-2 gap-1.5">
                         @for (field of getFieldsBySection('personal', ['codigo_identificacion', 'documento']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -327,12 +327,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-cyan-100 dark:bg-cyan-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wide">Información Personal</h3>
+                        <h3 class="text-[0.625rem] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wide">Información Personal</h3>
                       </div>
                       <div class="grid grid-cols-3 gap-1.5">
                         @for (field of getFieldsBySection('personal', ['primer_nombre', 'segundo_nombre', 'primer_apellido', 'segundo_apellido', 'nombre_completo']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -344,12 +344,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Datos Demográficos</h3>
+                        <h3 class="text-[0.625rem] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Datos Demográficos</h3>
                       </div>
                       <div class="grid grid-cols-3 gap-1.5">
                         @for (field of getFieldsBySection('personal', ['fecha_nacimiento', 'edad', 'estado_civil']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -361,12 +361,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-orange-100 dark:bg-orange-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wide">Información Laboral</h3>
+                        <h3 class="text-[0.625rem] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wide">Información Laboral</h3>
                       </div>
                       <div class="grid grid-cols-2 gap-1.5">
                         @for (field of getFieldsBySection('personal', ['ocupacion', 'tipo_cliente']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -385,13 +385,13 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Teléfonos</h3>
+                        <h3 class="text-[0.625rem] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Teléfonos</h3>
                       </div>
                       @if (getPhoneContactMethods().length > 0) {
                         <div class="grid grid-cols-3 gap-1.5">
                           @for (contact of getPhoneContactMethods(); track contact.id) {
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                              <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
+                              <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
                             </div>
                           }
@@ -406,13 +406,13 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-purple-100 dark:bg-purple-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Correo Electrónico</h3>
+                        <h3 class="text-[0.625rem] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Correo Electrónico</h3>
                       </div>
                       @if (getEmailContactMethods().length > 0) {
                         <div class="grid grid-cols-1 gap-1.5">
                           @for (contact of getEmailContactMethods(); track contact.id) {
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                              <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ contact.label || 'Email' }}</p>
+                              <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ contact.label || 'Email' }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
                             </div>
                           }
@@ -434,12 +434,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-purple-100 dark:bg-purple-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Dirección</h3>
+                        <h3 class="text-[0.625rem] font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wide">Dirección</h3>
                       </div>
                       <div class="grid grid-cols-1 gap-1.5">
                         @for (field of getFieldsBySection('ubicacion', ['direccion']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -451,12 +451,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Ubicación Geográfica</h3>
+                        <h3 class="text-[0.625rem] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Ubicación Geográfica</h3>
                       </div>
                       <div class="grid grid-cols-3 gap-1.5">
                         @for (field of getFieldsBySection('ubicacion', ['distrito', 'provincia', 'departamento']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -475,12 +475,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-indigo-100 dark:bg-indigo-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Referencia Personal</h3>
+                        <h3 class="text-[0.625rem] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">Referencia Personal</h3>
                       </div>
                       <div class="grid grid-cols-1 gap-1.5">
                         @for (field of getFieldsBySection('referencias', ['referencia_personal']); track field.fieldCode) {
                           <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                            <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
+                            <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ field.fieldName }}</p>
                             <p class="text-xs text-gray-900 dark:text-white font-medium">{{ field.value || 'N/A' }}</p>
                           </div>
                         }
@@ -492,13 +492,13 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Teléfonos de Referencia</h3>
+                        <h3 class="text-[0.625rem] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Teléfonos de Referencia</h3>
                       </div>
                       @if (getReferenceContactMethods().length > 0) {
                         <div class="grid grid-cols-2 gap-1.5">
                           @for (contact of getReferenceContactMethods(); track contact.id) {
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                              <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
+                              <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
                             </div>
                           }
@@ -520,11 +520,11 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-green-100 dark:bg-green-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Número de Cuenta</h3>
+                        <h3 class="text-[0.625rem] font-bold text-green-700 dark:text-green-300 uppercase tracking-wide">Número de Cuenta</h3>
                       </div>
                       <div class="grid grid-cols-1 gap-1.5">
                         <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Número de Cuenta</p>
+                          <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Número de Cuenta</p>
                           <p class="text-xs text-gray-900 dark:text-white font-medium font-mono">{{ customer()?.accountNumber || 'N/A' }}</p>
                         </div>
                       </div>
@@ -535,15 +535,15 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-red-100 dark:bg-red-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-red-700 dark:text-red-300 uppercase tracking-wide">Información de Mora</h3>
+                        <h3 class="text-[0.625rem] font-bold text-red-700 dark:text-red-300 uppercase tracking-wide">Información de Mora</h3>
                       </div>
                       <div class="grid grid-cols-2 gap-1.5">
                         <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Días de Mora</p>
+                          <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Días de Mora</p>
                           <p class="text-xs text-gray-900 dark:text-white font-bold">{{ customer()?.overdueDays ?? 0 }} días</p>
                         </div>
                         <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Monto de Mora</p>
+                          <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Monto de Mora</p>
                           <p class="text-xs text-gray-900 dark:text-white font-bold">S/ {{ customer()?.overdueAmount ? (customer()!.overdueAmount | number:'1.2-2') : '0.00' }}</p>
                         </div>
                       </div>
@@ -554,11 +554,11 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="flex items-center gap-1 mb-1.5">
                         <div class="p-0.5 bg-blue-100 dark:bg-blue-600/20 rounded">
                         </div>
-                        <h3 class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Monto Capital</h3>
+                        <h3 class="text-[0.625rem] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Monto Capital</h3>
                       </div>
                       <div class="grid grid-cols-1 gap-1.5">
                         <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
-                          <p class="text-[9px] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Monto Capital</p>
+                          <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">Monto Capital</p>
                           <p class="text-xs text-gray-900 dark:text-white font-bold">S/ {{ customer()?.principalAmount ? (customer()!.principalAmount | number:'1.2-2') : '0.00' }}</p>
                         </div>
                       </div>
@@ -584,15 +584,15 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/20 rounded-lg p-3 border border-amber-200 dark:border-amber-600/30">
                         <div class="flex items-center justify-between">
                           <div>
-                            <p class="text-[10px] text-amber-700 dark:text-amber-300 font-semibold uppercase">Total Pagado</p>
+                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">Total Pagado</p>
                             <p class="text-xl font-bold text-amber-800 dark:text-amber-200">S/ {{ pagosCliente()!.totalPagado | number:'1.2-2' }}</p>
                           </div>
                           <div class="text-right">
-                            <p class="text-[10px] text-amber-700 dark:text-amber-300 font-semibold uppercase">Pagos Registrados</p>
+                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">Pagos Registrados</p>
                             <p class="text-xl font-bold text-amber-800 dark:text-amber-200">{{ pagosCliente()!.cantidadPagos }}</p>
                           </div>
                           <div class="text-right">
-                            <p class="text-[10px] text-amber-700 dark:text-amber-300 font-semibold uppercase">Promesas</p>
+                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">Promesas</p>
                             <p class="text-xl font-bold text-amber-800 dark:text-amber-200">{{ pagosCliente()!.grupos.length }}</p>
                           </div>
                         </div>
@@ -619,11 +619,11 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                             </div>
                             <div class="flex items-center gap-4">
                               <div class="text-right">
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400">Pagos</p>
+                                <p class="text-[0.625rem] text-gray-500 dark:text-gray-400">Pagos</p>
                                 <p class="text-sm font-bold text-gray-800 dark:text-white">{{ grupo.cantidadPagos }}</p>
                               </div>
                               <div class="text-right">
-                                <p class="text-[10px] text-gray-500 dark:text-gray-400">Total</p>
+                                <p class="text-[0.625rem] text-gray-500 dark:text-gray-400">Total</p>
                                 <p class="text-sm font-bold text-green-600 dark:text-green-400">S/ {{ grupo.totalPagado | number:'1.2-2' }}</p>
                               </div>
                             </div>
@@ -650,7 +650,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       <td class="px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ pago.banco || '-' }}</td>
                                       <td class="px-2 py-1.5 text-center">
                                         @if (pago.numeroCuota) {
-                                          <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[10px] font-semibold">
+                                          <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[0.625rem] font-semibold">
                                             #{{ pago.numeroCuota }}
                                           </span>
                                         } @else {
@@ -659,11 +659,11 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       </td>
                                       <td class="px-2 py-1.5 text-center">
                                         @if (pago.verificado) {
-                                          <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-[10px] font-semibold">
+                                          <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-[0.625rem] font-semibold">
                                             Verificado
                                           </span>
                                         } @else {
-                                          <span class="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-[10px] font-semibold">
+                                          <span class="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-[0.625rem] font-semibold">
                                             Pendiente
                                           </span>
                                         }
