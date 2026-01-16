@@ -16,7 +16,7 @@ import { ThemeService } from '../../core/services/theme.service';
       <div class="mb-6">
         <h1 class="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
           <div class="w-10 h-10 bg-amber-100 dark:bg-amber-900/50 rounded-xl flex items-center justify-center">
-            <lucide-angular name="file-warning" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+            <lucide-angular name="file-clock" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
           </div>
           Cartas de Acuerdo Pendientes
         </h1>
