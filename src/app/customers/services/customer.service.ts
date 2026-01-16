@@ -111,7 +111,7 @@ export interface CustomerResource {
   providedIn: 'root'
 })
 export class CustomerService {
-  private apiUrl = `${environment.apiUrl}/customers`;
+  private apiUrl = `${environment.webServiceUrl}/api/v1/customers`;
 
   constructor(private http: HttpClient) {}
 

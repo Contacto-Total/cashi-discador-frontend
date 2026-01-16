@@ -313,6 +313,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // CONSULTA DE CLIENTE
+  // ========================================
+  {
+    path: 'customer-search',
+    loadComponent: () => import('./customers/components/customer-view/customer-view.component').then(m => m.CustomerViewComponent),
+    canActivate: [authGuard]
+  },
+
+  // ========================================
   // CONFIGURACIÓN DE USUARIO
   // ========================================
   {
