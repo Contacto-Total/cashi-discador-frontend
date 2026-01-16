@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CartaAcuerdoService, CartaPendiente } from '../../core/services/carta-acuerdo.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { UserRole } from '../../core/models/user.model';
 
 @Component({
   selector: 'app-cartas-pendientes',
@@ -191,9 +192,15 @@ export class CartasPendientesComponent implements OnInit {
 
   buscar(): void {
     this.loading.set(true);
+    const currentUser = this.authService.getCurrentUser();
+
+    // Si es AGENT, solo ver sus propias cartas pendientes
+    const agenteId = currentUser?.role === UserRole.AGENT ? currentUser.id : undefined;
+
     this.cartaAcuerdoService.obtenerCartasPendientes({
       fechaInicio: this.filtroFechaInicio || undefined,
-      fechaFin: this.filtroFechaFin || undefined
+      fechaFin: this.filtroFechaFin || undefined,
+      agenteId: agenteId
     }).subscribe({
       next: (response) => {
         this.cartasPendientes.set(response.data || []);
