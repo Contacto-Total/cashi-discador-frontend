@@ -68,6 +68,16 @@ export interface ImportStats {
   subcartera?: number;
 }
 
+export interface ImportPreview {
+  totalClientesSubcartera: number;
+  totalDespuesBlacklist: number;
+  excluidosPorBlacklist: number;
+  totalConFiltros: number;
+  totalConEstadoCalculado: number;
+  porTipoContacto: { [key: string]: number };
+  porTipoContactoFiltrado: { [key: string]: number };
+}
+
 export interface CampaignStatistics {
   idCampana: number;
   nombre: string;
@@ -335,5 +345,33 @@ export class CampaignAdminService {
    */
   deleteAllFilters(campaignId: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${campaignId}/filters`, { headers: this.getHeaders() });
+  }
+
+  /**
+   * Preview de importación: obtiene conteos por tipo de contacto SIN crear la campaña
+   */
+  previewImportacion(
+    tenantId: number,
+    portfolioId: number,
+    subPortfolioId: number,
+    tipoFiltroEstado: string,
+    filtros: CampaignFilterRange[]
+  ): Observable<ImportPreview> {
+    return this.http.post<ImportPreview>(
+      `${environment.gatewayUrl}/admin/campaigns/preview-import`,
+      {
+        tenantId,
+        portfolioId,
+        subPortfolioId,
+        tipoFiltroEstado,
+        filtros: filtros.map(f => ({
+          fieldCode: f.fieldCode,
+          minValue: f.minValue,
+          maxValue: f.maxValue,
+          tipoContacto: f.tipoContacto
+        }))
+      },
+      { headers: this.getHeaders() }
+    );
   }
 }

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -60,6 +60,12 @@ export class CampaignFormComponent implements OnInit {
   tiposContacto = TIPOS_CONTACTO;
   tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
   selectedTipoContacto: TipoContacto | null = null;
+
+  // Modal de preview/confirmación
+  showPreviewModal: boolean = false;
+  previewLoading: boolean = false;
+  previewData: ImportPreview | null = null;
+  previewError: string | null = null;
 
   constructor(
     private campaignService: CampaignAdminService,
@@ -343,14 +349,13 @@ export class CampaignFormComponent implements OnInit {
       this.campaign.endDate = this.endDateString;
     }
 
-    this.loading = true;
     this.error = null;
 
     if (this.isEditMode && this.campaignId) {
-      // Actualizar campaña existente
+      // En modo edición, actualizar directamente
+      this.loading = true;
       this.campaignService.updateCampaign(this.campaignId, this.campaign).subscribe({
         next: () => {
-          // Guardar filtros después de actualizar la campaña
           this.saveFiltersAndNavigate(this.campaignId!);
         },
         error: (err) => {
@@ -360,25 +365,87 @@ export class CampaignFormComponent implements OnInit {
         }
       });
     } else {
-      // Crear nueva campaña
-      this.campaignService.createCampaign(this.campaign).subscribe({
-        next: (response: any) => {
-          // Guardar filtros después de crear la campaña (SIEMPRE, para disparar auto-import)
-          const newCampaignId = response.id || response;
-          if (newCampaignId) {
-            this.saveFiltersAndNavigate(newCampaignId);
-          } else {
-            console.error('No se pudo obtener el ID de la campaña creada');
-            this.router.navigate(['/admin/campaigns']);
-          }
-        },
-        error: (err) => {
-          console.error('Error creating campaign:', err);
-          this.error = 'Error al crear la campaña';
-          this.loading = false;
-        }
-      });
+      // Para nueva campaña, mostrar preview primero
+      this.showPreview();
     }
+  }
+
+  /**
+   * Muestra el modal de preview con el resumen de la campaña
+   */
+  showPreview(): void {
+    this.previewLoading = true;
+    this.previewError = null;
+    this.showPreviewModal = true;
+
+    this.campaignService.previewImportacion(
+      this.selectedTenantId,
+      this.selectedPortfolioId,
+      this.selectedSubPortfolioId,
+      this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+      this.campaignFilters
+    ).subscribe({
+      next: (preview) => {
+        this.previewData = preview;
+        this.previewLoading = false;
+      },
+      error: (err) => {
+        console.error('Error en preview:', err);
+        this.previewError = 'Error al obtener el preview de la campaña';
+        this.previewLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Cierra el modal de preview
+   */
+  closePreviewModal(): void {
+    this.showPreviewModal = false;
+    this.previewData = null;
+    this.previewError = null;
+  }
+
+  /**
+   * Confirma la creación de la campaña desde el modal de preview
+   */
+  confirmCreateCampaign(): void {
+    this.showPreviewModal = false;
+    this.loading = true;
+
+    this.campaignService.createCampaign(this.campaign).subscribe({
+      next: (response: any) => {
+        const newCampaignId = response.id || response;
+        if (newCampaignId) {
+          this.saveFiltersAndNavigate(newCampaignId);
+        } else {
+          console.error('No se pudo obtener el ID de la campaña creada');
+          this.router.navigate(['/admin/campaigns']);
+        }
+      },
+      error: (err) => {
+        console.error('Error creating campaign:', err);
+        this.error = 'Error al crear la campaña';
+        this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Calcula el total de contactos del preview
+   */
+  getPreviewTotal(): number {
+    if (!this.previewData?.porTipoContactoFiltrado) return 0;
+    return Object.values(this.previewData.porTipoContactoFiltrado).reduce((sum, val) => sum + val, 0);
+  }
+
+  /**
+   * Calcula el porcentaje de un tipo de contacto
+   */
+  getPreviewPercentage(count: number): string {
+    const total = this.getPreviewTotal();
+    if (total === 0) return '0.0';
+    return ((count / total) * 100).toFixed(1);
   }
 
   private saveFiltersAndNavigate(campaignId: number): void {

@@ -374,9 +374,107 @@
         Cancelar
       </button>
       <button type="submit" class="btn-submit" [disabled]="loading">
-        <lucide-angular [name]="isEditMode ? 'save' : 'plus-circle'" [size]="16"></lucide-angular>
-        {{ isEditMode ? 'Actualizar Campaña' : 'Crear Campaña' }}
+        <lucide-angular [name]="isEditMode ? 'save' : 'eye'" [size]="16"></lucide-angular>
+        {{ isEditMode ? 'Actualizar Campaña' : 'Ver Resumen y Crear' }}
       </button>
     </div>
   </form>
+</div>
+
+<!-- Modal de Preview/Confirmación -->
+<div class="preview-modal-overlay" *ngIf="showPreviewModal" (click)="closePreviewModal()">
+  <div class="preview-modal" (click)="$event.stopPropagation()">
+    <div class="preview-modal-header">
+      <h2>
+        <lucide-angular name="file-bar-chart" [size]="24"></lucide-angular>
+        Reporte de Campaña
+      </h2>
+      <button class="btn-close-modal" (click)="closePreviewModal()">
+        <lucide-angular name="x" [size]="20"></lucide-angular>
+      </button>
+    </div>
+
+    <div class="preview-modal-body">
+      <!-- Loading -->
+      <div *ngIf="previewLoading" class="preview-loading">
+        <div class="spinner"></div>
+        <p>Calculando resumen...</p>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="previewError" class="preview-error">
+        <lucide-angular name="alert-circle" [size]="24"></lucide-angular>
+        <p>{{ previewError }}</p>
+      </div>
+
+      <!-- Preview Data -->
+      <div *ngIf="!previewLoading && !previewError && previewData" class="preview-content">
+        <!-- Info de la subcartera -->
+        <div class="preview-info">
+          <div class="info-item">
+            <span class="info-label">Total en Subcartera:</span>
+            <span class="info-value">{{ previewData.totalClientesSubcartera | number }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Excluidos por Blacklist:</span>
+            <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | number }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Disponibles:</span>
+            <span class="info-value text-green">{{ previewData.totalDespuesBlacklist | number }}</span>
+          </div>
+        </div>
+
+        <!-- Tabla de resumen por tipo de contacto -->
+        <div class="preview-table-container">
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th>TIPO</th>
+                <th></th>
+                <th class="text-right">CANTIDAD</th>
+                <th class="text-right">PORCENTAJE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tipo of tiposContacto">
+                <td>
+                  <span class="tipo-code" [style.background-color]="tipo.color">{{ tipo.codigo }}</span>
+                </td>
+                <td>{{ tipo.nombre }}</td>
+                <td class="text-right">{{ (previewData.porTipoContactoFiltrado[tipo.codigo] || 0) | number }}</td>
+                <td class="text-right">{{ getPreviewPercentage(previewData.porTipoContactoFiltrado[tipo.codigo] || 0) }}%</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="2"><strong>TOTAL</strong></td>
+                <td class="text-right"><strong>{{ getPreviewTotal() | number }}</strong></td>
+                <td class="text-right"><strong>100.0%</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- Filtros aplicados -->
+        <div class="preview-filters" *ngIf="campaignFilters.length > 0">
+          <p class="filters-note">
+            <lucide-angular name="filter" [size]="14"></lucide-angular>
+            {{ campaignFilters.length }} filtro(s) aplicado(s)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-modal-footer">
+      <button class="btn-cancel" (click)="closePreviewModal()">
+        <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
+        Volver a Editar
+      </button>
+      <button class="btn-confirm" (click)="confirmCreateCampaign()" [disabled]="previewLoading || previewError">
+        <lucide-angular name="check-circle" [size]="16"></lucide-angular>
+        Confirmar y Crear Campaña
+      </button>
+    </div>
+  </div>
 </div>
