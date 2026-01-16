@@ -17,6 +17,26 @@ export interface CartaGeneradaHistorial {
   fechaGeneracion: string;
 }
 
+export interface CartaPendiente {
+  idGestion: number;
+  documentoCliente: string;
+  nombreCliente: string;
+  montoPromesa: number;
+  totalCuotas: number;
+  fechaGestion: string;
+  idAgente: number;
+  nombreAgente: string;
+  nombreTenant: string;
+  nombreCartera: string;
+  nombreSubcartera: string;
+}
+
+export interface CartasPendientesResponse {
+  success: boolean;
+  total: number;
+  data: CartaPendiente[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -62,5 +82,34 @@ export class CartaAcuerdoService {
     link.download = nombreArchivo;
     link.click();
     window.URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Obtiene la lista de cartas de acuerdo pendientes por generar
+   */
+  obtenerCartasPendientes(filtros?: {
+    tenantId?: number;
+    agenteId?: number;
+    fechaInicio?: string;
+    fechaFin?: string;
+  }): Observable<CartasPendientesResponse> {
+    let params: any = {};
+    if (filtros?.tenantId) params.tenantId = filtros.tenantId;
+    if (filtros?.agenteId) params.agenteId = filtros.agenteId;
+    if (filtros?.fechaInicio) params.fechaInicio = filtros.fechaInicio;
+    if (filtros?.fechaFin) params.fechaFin = filtros.fechaFin;
+
+    return this.http.get<CartasPendientesResponse>(`${this.apiUrl}/pendientes`, { params });
+  }
+
+  /**
+   * Cuenta el total de cartas de acuerdo pendientes
+   */
+  contarCartasPendientes(tenantId?: number, agenteId?: number): Observable<{success: boolean, total: number}> {
+    let params: any = {};
+    if (tenantId) params.tenantId = tenantId;
+    if (agenteId) params.agenteId = agenteId;
+
+    return this.http.get<{success: boolean, total: number}>(`${this.apiUrl}/pendientes/count`, { params });
   }
 }

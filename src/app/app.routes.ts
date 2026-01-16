@@ -322,6 +322,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // CARTAS DE ACUERDO PENDIENTES
+  // ========================================
+  {
+    path: 'cartas-pendientes',
+    loadComponent: () => import('./features/cartas-pendientes/cartas-pendientes.component').then(m => m.CartasPendientesComponent),
+    canActivate: [authGuard]
+  },
+
+  // ========================================
   // CONFIGURACIÓN DE USUARIO
   // ========================================
   {
