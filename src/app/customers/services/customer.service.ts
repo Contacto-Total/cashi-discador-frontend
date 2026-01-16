@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface CustomerStaticData {
@@ -218,4 +219,43 @@ export class CustomerService {
       }
     });
   }
+
+  /**
+   * Obtiene los pagos de un cliente agrupados por promesa
+   */
+  getPagosCliente(documento: string): Observable<PagosClienteResponse> {
+    return this.http.get<{success: boolean, data: PagosClienteResponse}>(`${environment.apiUrl}/pagos/cliente/${documento}`)
+      .pipe(
+        map(response => response.data)
+      );
+  }
+}
+
+// Interfaces para pagos
+export interface PagoDetalle {
+  id: number;
+  monto: number;
+  fechaPago: string;
+  banco: string | null;
+  numeroOperacion: string | null;
+  verificado: boolean;
+  comprobanteUrl: string | null;
+  numeroCuota: number | null;
+  metodoRegistro: string;
+}
+
+export interface GrupoPagos {
+  grupoPromesaUuid: string;
+  totalPagado: number;
+  cantidadPagos: number;
+  fechaPrimerPago: string | null;
+  fechaUltimoPago: string | null;
+  pagos: PagoDetalle[];
+}
+
+export interface PagosClienteResponse {
+  documento: string;
+  grupos: GrupoPagos[];
+  totalPagado: number;
+  cantidadPagos: number;
 }
