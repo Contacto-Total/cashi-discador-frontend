@@ -17,14 +17,120 @@ import {
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl font-bold text-slate-800 dark:text-white">
-          Pagos Bancarios
-        </h1>
-        <p class="text-slate-600 dark:text-slate-400">
-          Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
-        </p>
+      <div class="mb-6 flex items-start justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800 dark:text-white">
+            Pagos Bancarios
+          </h1>
+          <p class="text-slate-600 dark:text-slate-400">
+            Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
+          </p>
+        </div>
+        <!-- Botón de configuración -->
+        <button
+          (click)="toggleConfigPanel()"
+          class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          title="Configuración de conciliación"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </button>
       </div>
+
+      <!-- Panel de configuración de conciliación -->
+      @if (showConfigPanel()) {
+        <div class="mb-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+              Configuración de Conciliación
+            </h2>
+            <button
+              (click)="showConfigPanel.set(false)"
+              class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Tolerancia de monto -->
+            <div class="space-y-3">
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Tolerancia de Monto (en soles)
+              </label>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Diferencia máxima permitida entre el monto del banco y el monto registrado por la asesora para hacer match.
+                <br>Ejemplo: Si es 1.00, un pago de S/150.50 hará match con S/150.00 o S/151.00
+              </p>
+              <div class="flex items-center gap-3">
+                <div class="relative flex-1 max-w-xs">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">S/</span>
+                  <input
+                    type="number"
+                    [(ngModel)]="configTolerancia"
+                    min="0"
+                    max="10"
+                    step="0.10"
+                    class="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                </div>
+                <button
+                  (click)="guardarConfiguracion()"
+                  [disabled]="isLoadingConfig()"
+                  class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  @if (isLoadingConfig()) {
+                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  } @else {
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  }
+                  Guardar
+                </button>
+              </div>
+              @if (configMessage()) {
+                <p class="text-sm" [class]="configMessage()!.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+                  {{ configMessage()!.text }}
+                </p>
+              }
+            </div>
+
+            <!-- Info de configuración actual -->
+            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+              <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Configuración Actual</h3>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Tolerancia de monto:</span>
+                  <span class="font-medium text-slate-800 dark:text-white">
+                    @if (configTolerancia === 0) {
+                      Match exacto
+                    } @else {
+                      ± S/ {{ configTolerancia.toFixed(2) }}
+                    }
+                  </span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Tolerancia de fecha:</span>
+                  <span class="font-medium text-slate-800 dark:text-white">Match exacto</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
 
       <!-- Tabs -->
       <div class="mb-6">
@@ -857,6 +963,12 @@ export class PagosBancariosPage implements OnInit {
   pagoAEliminar = signal<BcpPagoManual | null>(null);
   isDeleting = signal(false);
 
+  // Configuración de conciliación
+  showConfigPanel = signal(false);
+  configTolerancia = 0;
+  isLoadingConfig = signal(false);
+  configMessage = signal<{ success: boolean; text: string } | null>(null);
+
   constructor(private bcpService: BcpPagosService) {}
 
   ngOnInit(): void {
@@ -864,6 +976,50 @@ export class PagosBancariosPage implements OnInit {
     if (this.activeTab() === 'manual') {
       this.cargarPagosManuales();
     }
+    // Cargar configuración de conciliación
+    this.cargarConfiguracion();
+  }
+
+  // === Configuración de Conciliación ===
+  toggleConfigPanel(): void {
+    this.showConfigPanel.set(!this.showConfigPanel());
+    if (this.showConfigPanel()) {
+      this.cargarConfiguracion();
+    }
+  }
+
+  cargarConfiguracion(): void {
+    this.bcpService.obtenerConfiguracionConciliacion().subscribe({
+      next: (config) => {
+        this.configTolerancia = config.toleranciaMonto;
+      },
+      error: (error) => {
+        console.error('Error cargando configuración:', error);
+        this.configTolerancia = 0;
+      }
+    });
+  }
+
+  guardarConfiguracion(): void {
+    this.isLoadingConfig.set(true);
+    this.configMessage.set(null);
+
+    this.bcpService.actualizarToleranciaMonto(this.configTolerancia).subscribe({
+      next: (result) => {
+        if (result.exitoso) {
+          this.configMessage.set({ success: true, text: 'Configuración guardada correctamente' });
+        } else {
+          this.configMessage.set({ success: false, text: result.mensaje });
+        }
+        this.isLoadingConfig.set(false);
+        // Limpiar mensaje después de 3 segundos
+        setTimeout(() => this.configMessage.set(null), 3000);
+      },
+      error: (error) => {
+        this.configMessage.set({ success: false, text: error.error?.mensaje || 'Error al guardar configuración' });
+        this.isLoadingConfig.set(false);
+      }
+    });
   }
 
   // === Carga Masiva ===

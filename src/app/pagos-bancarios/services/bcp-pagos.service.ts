@@ -100,6 +100,30 @@ export class BcpPagosService {
     return this.http.delete<BcpPagoManualResponse>(`${this.baseUrl}/manuales/${id}`);
   }
 
+  // ============== CONFIGURACIÓN DE CONCILIACIÓN ==============
+
+  /**
+   * Obtiene la configuración actual de conciliación
+   */
+  obtenerConfiguracionConciliacion(): Observable<{ toleranciaMonto: number }> {
+    console.log('[BCP] Obteniendo configuración de conciliación');
+    return this.http.get<{ toleranciaMonto: number }>(`${this.baseUrl}/conciliacion/config`);
+  }
+
+  /**
+   * Actualiza la tolerancia de monto para conciliación
+   * @param tolerancia Valor en soles (ej: 1.00 = ±1 sol de tolerancia)
+   */
+  actualizarToleranciaMonto(tolerancia: number): Observable<{ exitoso: boolean; mensaje: string; toleranciaMonto?: number }> {
+    console.log('[BCP] Actualizando tolerancia de monto a:', tolerancia);
+    const params = new HttpParams().set('tolerancia', tolerancia.toString());
+    return this.http.put<{ exitoso: boolean; mensaje: string; toleranciaMonto?: number }>(
+      `${this.baseUrl}/conciliacion/config/tolerancia-monto`,
+      null,
+      { params }
+    );
+  }
+
   // ============== REPORTES DE CONCILIACIÓN ==============
 
   /**
