@@ -608,7 +608,12 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                               <span class="text-lg transform transition-transform" [class.rotate-90]="isGrupoExpanded(grupo.grupoPromesaUuid)">▶</span>
                               <div class="text-left">
                                 <p class="text-sm font-semibold text-gray-800 dark:text-white">
-                                  Promesa: {{ grupo.fechaPrimerPago }} - {{ grupo.fechaUltimoPago }}
+                                  @if (grupo.esContinuidad) {
+                                    <span class="text-blue-600 dark:text-blue-400">Continuidad:</span>
+                                  } @else {
+                                    <span class="text-amber-600 dark:text-amber-400">Promesa:</span>
+                                  }
+                                  {{ grupo.fechaPrimerPago }} - {{ grupo.fechaUltimoPago }}
                                 </p>
                               </div>
                             </div>

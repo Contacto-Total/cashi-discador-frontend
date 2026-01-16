@@ -250,6 +250,7 @@ export interface GrupoPagos {
   cantidadPagos: number;
   fechaPrimerPago: string | null;
   fechaUltimoPago: string | null;
+  esContinuidad: boolean;
   pagos: PagoDetalle[];
 }
 
