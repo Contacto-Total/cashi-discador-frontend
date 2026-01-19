@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview } from '../../../core/services/campaign-admin.service';
@@ -9,6 +10,8 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
+import { environment } from '../../../../environments/environment';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-campaign-form',
@@ -72,7 +75,8 @@ export class CampaignFormComponent implements OnInit {
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
@@ -460,11 +464,95 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        this.router.navigate(['/admin/campaigns']);
+        // Exportar Excel con resumen y lista de clientes
+        this.exportCampaignToExcel(campaignId);
       },
       error: (err) => {
         console.error('Error guardando filtros:', err);
         // Navegar de todos modos aunque fallen los filtros
+        this.router.navigate(['/admin/campaigns']);
+      }
+    });
+  }
+
+  /**
+   * Exporta la campaña a Excel con dos hojas:
+   * 1. Resumen: datos del preview
+   * 2. Clientes: documento y celular
+   */
+  private exportCampaignToExcel(campaignId: number): void {
+    // Obtener los contactos de la campaña
+    this.http.get<Array<{documento: string, celular: string}>>(
+      `${environment.apiUrl}/contacts/campaign/${campaignId}/export`
+    ).subscribe({
+      next: (contacts) => {
+        console.log('📊 Exportando', contacts.length, 'contactos a Excel');
+
+        // Crear workbook
+        const wb = XLSX.utils.book_new();
+
+        // === HOJA 1: RESUMEN ===
+        const resumenData: any[][] = [
+          ['RESUMEN DE CAMPAÑA'],
+          [],
+          ['Campaña', this.campaign.name],
+          ['Descripción', this.campaign.description || ''],
+          [],
+          ['DATOS DE SUBCARTERA'],
+          ['Total en Subcartera', this.previewData?.totalClientesSubcartera || 0],
+          ['Excluidos por Blacklist', this.previewData?.excluidosPorBlacklist || 0],
+          ['Disponibles', this.previewData?.totalDespuesBlacklist || 0],
+          [],
+          ['DISTRIBUCIÓN POR TIPO DE CONTACTO'],
+          ['Tipo', 'Nombre', 'Cantidad', 'Porcentaje']
+        ];
+
+        // Agregar filas por tipo de contacto
+        const total = this.getPreviewTotal();
+        this.tiposContacto.forEach(tipo => {
+          const cantidad = this.previewData?.porTipoContactoFiltrado[tipo.codigo] || 0;
+          const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) + '%' : '0%';
+          resumenData.push([tipo.codigo, tipo.nombre, cantidad, porcentaje]);
+        });
+        resumenData.push(['TOTAL', '', total, '100%']);
+
+        // Agregar filtros aplicados
+        if (this.campaignFilters.length > 0) {
+          resumenData.push([]);
+          resumenData.push(['FILTROS APLICADOS']);
+          this.campaignFilters.forEach(f => {
+            const filtroDesc = f.fieldCode
+              ? `${f.fieldName}: ${f.minValue || 'N/A'} - ${f.maxValue || 'N/A'}`
+              : 'Solo por Estado';
+            resumenData.push([this.getTipoContactoNombre(f.tipoContacto), filtroDesc]);
+          });
+        }
+
+        const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+        XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+        // === HOJA 2: CLIENTES ===
+        const clientesData: any[][] = [
+          ['DOCUMENTO', 'CELULAR']
+        ];
+        contacts.forEach(c => {
+          clientesData.push([c.documento, c.celular]);
+        });
+
+        const wsClientes = XLSX.utils.aoa_to_sheet(clientesData);
+        XLSX.utils.book_append_sheet(wb, wsClientes, 'Clientes');
+
+        // Generar archivo y descargar
+        const fechaHoy = new Date().toISOString().split('T')[0];
+        const fileName = `Campaña_${this.campaign.name.replace(/[^a-zA-Z0-9]/g, '_')}_${fechaHoy}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+
+        console.log('✅ Excel exportado:', fileName);
+        this.router.navigate(['/admin/campaigns']);
+      },
+      error: (err) => {
+        console.error('Error obteniendo contactos para exportar:', err);
+        // Navegar de todos modos aunque falle la exportación
         this.router.navigate(['/admin/campaigns']);
       }
     });
