@@ -331,6 +331,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // CONVENIOS
+  // ========================================
+  {
+    path: 'admin/convenios/import',
+    loadComponent: () => import('./features/convenios/convenio-import.component').then(m => m.ConvenioImportComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
+  // ========================================
   // CONFIGURACIÓN DE USUARIO
   // ========================================
   {
