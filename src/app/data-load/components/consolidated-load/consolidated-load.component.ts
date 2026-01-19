@@ -9,7 +9,7 @@ import { HeaderConfigurationService } from '../../../maintenance/services/header
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { ComplementaryFileService } from '../../services/complementary-file.service';
-import { PeriodSnapshotService, PeriodStatusResponse } from '../../services/period-snapshot.service';
+import { PeriodSnapshotService, PeriodStatusResponse, DailyStatusResponse } from '../../services/period-snapshot.service';
 import { NotificationService } from '../../../shared/services/notification.service';
 import { NotificationsComponent } from '../../../shared/components/notifications/notifications.component';
 import { HeaderConfiguration, LoadType, BulkCreateHeaderConfigurationRequest, HeaderConfigurationItem, DataType } from '../../../maintenance/models/header-configuration.model';
@@ -164,6 +164,408 @@ import {
               </button>
             </div>
           }
+        </div>
+      </div>
+    }
+
+    <!-- Verification Warning Dialog (cuando falla la verificación del periodo) -->
+    @if (showVerificationWarningDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-lg w-full mx-4 overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-amber-500 to-yellow-500 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="wifi-off" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold !text-white">No se pudo verificar el periodo</h2>
+                <p class="text-amber-100 text-sm">La verificación del estado actual falló</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-4">
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="alert-triangle" [size]="20" class="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-amber-800 dark:text-amber-200 text-sm font-medium">
+                    No se pudo verificar si existen datos previos en esta subcartera.
+                  </p>
+                  <p class="text-amber-700 dark:text-amber-300 text-sm mt-1">
+                    Si continúa, los datos existentes podrían ser sobrescritos sin ser archivados.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            @if (verificationError()) {
+              <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Detalle del error:</p>
+                <p class="text-sm text-gray-700 dark:text-gray-300 font-mono">{{ verificationError() }}</p>
+              </div>
+            }
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="info" [size]="20" class="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                    Recomendación
+                  </p>
+                  <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                    Si es la primera vez que carga datos en esta subcartera, puede continuar sin problemas.
+                    Si ya existen datos, cancele y reintente más tarde.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900 flex justify-end gap-3">
+            <button (click)="cancelVerificationWarning()"
+                    class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium cursor-pointer">
+              Cancelar
+            </button>
+            <button (click)="proceedWithoutVerification()"
+                    class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg hover:from-amber-600 hover:to-yellow-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+              <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+              Continuar de todos modos
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Post-Snapshot Error Dialog (cuando la carga falla después de archivar) -->
+    @if (showPostSnapshotErrorDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-lg w-full mx-4 overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-red-500 to-rose-500 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="database" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold !text-white">Error en la carga</h2>
+                <p class="text-red-100 text-sm">Los datos fueron archivados pero la carga falló</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-4">
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="x-circle" [size]="20" class="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-red-800 dark:text-red-200 text-sm font-medium">
+                    La carga de datos falló después de archivar el periodo anterior.
+                  </p>
+                  <p class="text-red-700 dark:text-red-300 text-sm mt-1">
+                    {{ postSnapshotErrorMessage() }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="archive" [size]="20" class="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
+                    Sus datos están seguros
+                  </p>
+                  <p class="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                    Los datos del periodo anterior fueron archivados exitosamente en:
+                    <span class="font-mono font-semibold">{{ archivedPeriodInfo() }}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="info" [size]="20" class="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                    ¿Qué hacer ahora?
+                  </p>
+                  <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                    Puede reintentar la carga. La tabla inicial está vacía y lista para recibir los nuevos datos.
+                    Si el problema persiste, contacte al administrador.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900 flex justify-end gap-3">
+            <button (click)="closePostSnapshotErrorDialog()"
+                    class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+              <lucide-angular name="check" [size]="16"></lucide-angular>
+              Entendido
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ==================== DIÁLOGOS PARA SNAPSHOT DIARIO ==================== -->
+
+    <!-- Daily Snapshot Confirmation Dialog -->
+    @if (showDailySnapshotDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-lg w-full mx-4 overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-blue-500 to-cyan-500 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="calendar-days" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold !text-white">Datos Diarios Existentes</h2>
+                <p class="text-blue-100 text-sm">Se archivará la carga anterior</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6">
+            @if (isExecutingDailySnapshot()) {
+              <!-- Snapshot in progress -->
+              <div class="text-center py-6">
+                <div class="relative mx-auto w-16 h-16 mb-4">
+                  <div class="w-16 h-16 border-4 border-gray-200 dark:border-slate-600 rounded-full"></div>
+                  <div class="absolute top-0 left-0 w-16 h-16 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">{{ dailySnapshotProgress() }}</h3>
+                <p class="text-gray-500 dark:text-gray-400 text-sm">Por favor espere mientras se archivan los datos del día anterior...</p>
+              </div>
+            } @else {
+              <!-- Confirmation content -->
+              <div class="space-y-4">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="info" [size]="20" class="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div>
+                      <p class="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                        Ya existen <span class="font-bold">{{ dailyStatus()?.recordCount | number }}</span> registros de carga diaria.
+                      </p>
+                      <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                        Al continuar, se archivará la información actual antes de cargar los nuevos datos.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4 space-y-3">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-gray-600 dark:text-gray-400">Tabla:</span>
+                    <span class="font-mono text-gray-900 dark:text-white">{{ dailyStatus()?.tableName }}</span>
+                  </div>
+                  @if (dailyStatus()?.lastLoadDate) {
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-400">Última carga:</span>
+                      <span class="font-semibold text-gray-900 dark:text-white">{{ dailyStatus()?.lastLoadDate }}</span>
+                    </div>
+                  }
+                  @if (dailyStatus()?.lastArchivedDate) {
+                    <div class="flex items-center justify-between text-sm">
+                      <span class="text-gray-600 dark:text-gray-400">Último archivo:</span>
+                      <span class="text-gray-900 dark:text-white">{{ dailyStatus()?.lastArchivedDate }}</span>
+                    </div>
+                  }
+                </div>
+
+                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="archive" [size]="20" class="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div>
+                      <p class="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
+                        Los datos actuales se guardarán en el histórico
+                      </p>
+                      <p class="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                        Podrá consultar los datos archivados posteriormente.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Footer -->
+          @if (!isExecutingDailySnapshot()) {
+            <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900 flex justify-end gap-3">
+              <button (click)="cancelDailySnapshot()"
+                      class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium cursor-pointer">
+                Cancelar
+              </button>
+              <button (click)="confirmDailySnapshot()"
+                      class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+                <lucide-angular name="archive" [size]="16"></lucide-angular>
+                Archivar y Continuar
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Daily Verification Warning Dialog -->
+    @if (showDailyVerificationWarningDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-lg w-full mx-4 overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-amber-500 to-yellow-500 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="wifi-off" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold !text-white">No se pudo verificar estado diario</h2>
+                <p class="text-amber-100 text-sm">La verificación de datos existentes falló</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-4">
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="alert-triangle" [size]="20" class="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-amber-800 dark:text-amber-200 text-sm font-medium">
+                    No se pudo verificar si existen datos de carga diaria previos.
+                  </p>
+                  <p class="text-amber-700 dark:text-amber-300 text-sm mt-1">
+                    Si continúa, los datos existentes podrían ser sobrescritos sin ser archivados.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            @if (dailyVerificationError()) {
+              <div class="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-4">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Detalle del error:</p>
+                <p class="text-sm text-gray-700 dark:text-gray-300 font-mono">{{ dailyVerificationError() }}</p>
+              </div>
+            }
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="info" [size]="20" class="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                    Recomendación
+                  </p>
+                  <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                    Si es la primera carga diaria del día, puede continuar sin problemas.
+                    Si ya realizó cargas hoy, cancele y reintente más tarde.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900 flex justify-end gap-3">
+            <button (click)="cancelDailyVerificationWarning()"
+                    class="px-4 py-2.5 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-600 transition-colors font-medium cursor-pointer">
+              Cancelar
+            </button>
+            <button (click)="proceedDailyWithoutVerification()"
+                    class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg hover:from-amber-600 hover:to-yellow-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+              <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+              Continuar de todos modos
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Post-Daily-Snapshot Error Dialog -->
+    @if (showPostDailySnapshotErrorDialog()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center">
+        <div class="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm"></div>
+        <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-slate-700 max-w-lg w-full mx-4 overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-red-500 to-rose-500 p-5">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <lucide-angular name="database" [size]="24" class="text-white"></lucide-angular>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold !text-white">Error en carga diaria</h2>
+                <p class="text-red-100 text-sm">Los datos fueron archivados pero la carga falló</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-4">
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="x-circle" [size]="20" class="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-red-800 dark:text-red-200 text-sm font-medium">
+                    La carga diaria falló después de archivar los datos anteriores.
+                  </p>
+                  <p class="text-red-700 dark:text-red-300 text-sm mt-1">
+                    {{ postDailySnapshotErrorMessage() }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="archive" [size]="20" class="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-emerald-800 dark:text-emerald-200 text-sm font-medium">
+                    Sus datos están seguros
+                  </p>
+                  <p class="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                    Los datos diarios anteriores fueron archivados en:
+                    <span class="font-mono font-semibold">{{ archivedDailyInfo() }}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-xl p-4">
+              <div class="flex items-start gap-3">
+                <lucide-angular name="info" [size]="20" class="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                <div>
+                  <p class="text-blue-800 dark:text-blue-200 text-sm font-medium">
+                    ¿Qué hacer ahora?
+                  </p>
+                  <p class="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                    Puede reintentar la carga. La tabla de actualización está vacía y lista para recibir los nuevos datos.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="border-t border-gray-200 dark:border-slate-700 p-4 bg-gray-50 dark:bg-slate-900 flex justify-end gap-3">
+            <button (click)="closePostDailySnapshotErrorDialog()"
+                    class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+              <lucide-angular name="check" [size]="16"></lucide-angular>
+              Entendido
+            </button>
+          </div>
         </div>
       </div>
     }
@@ -1176,6 +1578,30 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   periodStatus = signal<PeriodStatusResponse | null>(null);
   isExecutingSnapshot = signal(false);
   snapshotProgress = signal('');
+
+  // Signals para advertencias de verificación fallida
+  showVerificationWarningDialog = signal(false);
+  verificationError = signal<string | null>(null);
+
+  // Signal para error post-snapshot (carga falló después de archivar)
+  showPostSnapshotErrorDialog = signal(false);
+  postSnapshotErrorMessage = signal<string | null>(null);
+  archivedPeriodInfo = signal<string | null>(null);
+
+  // Signals para snapshot diario (carga diaria)
+  showDailySnapshotDialog = signal(false);
+  dailyStatus = signal<DailyStatusResponse | null>(null);
+  isExecutingDailySnapshot = signal(false);
+  dailySnapshotProgress = signal('');
+
+  // Signals para advertencias de verificación diaria fallida
+  showDailyVerificationWarningDialog = signal(false);
+  dailyVerificationError = signal<string | null>(null);
+
+  // Signal para error post-snapshot diario
+  showPostDailySnapshotErrorDialog = signal(false);
+  postDailySnapshotErrorMessage = signal<string | null>(null);
+  archivedDailyInfo = signal<string | null>(null);
 
   constructor(
     private tenantService: TenantService,
@@ -2300,6 +2726,46 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   }
 
   async processDailyLoad() {
+    const file = this.filesToProcess().find(f => f.type === 'MAIN');
+    if (!file || !file.data) throw new Error('No hay archivo de carga diaria');
+    if (!file.linkField) throw new Error('No se ha seleccionado un campo de enlace');
+
+    // Verificar si se requiere confirmación de snapshot diario
+    try {
+      console.log('[DailySnapshot] Verificando estado diario para subPortfolioId:', this.selectedSubPortfolioId);
+      const dailyStatus = await firstValueFrom(
+        this.periodSnapshotService.checkDailyStatus(this.selectedSubPortfolioId)
+      );
+      console.log('[DailySnapshot] Estado diario:', dailyStatus);
+
+      if (dailyStatus.requiresConfirmation) {
+        console.log('[DailySnapshot] Se requiere confirmación - mostrando diálogo');
+        // Mostrar diálogo de confirmación de snapshot diario
+        this.dailyStatus.set(dailyStatus);
+        this.showDailySnapshotDialog.set(true);
+        this.isLoading.set(false);
+        return; // Esperar confirmación del usuario
+      } else {
+        console.log('[DailySnapshot] No se requiere confirmación - continuando con carga');
+      }
+    } catch (error: any) {
+      console.error('[DailySnapshot] Error al verificar estado diario:', error);
+      // Mostrar diálogo de advertencia para que el usuario decida
+      const errorMessage = error?.message || error?.error?.message || 'Error de conexión con el servidor';
+      this.dailyVerificationError.set(errorMessage);
+      this.showDailyVerificationWarningDialog.set(true);
+      this.isLoading.set(false);
+      return; // Esperar decisión del usuario
+    }
+
+    // Si no se requiere confirmación, procesar directamente
+    await this.executeDailyLoad();
+  }
+
+  /**
+   * Ejecuta la carga diaria después de verificar/confirmar el snapshot
+   */
+  private async executeDailyLoad() {
     this.loadingMessage.set('Procesando carga diaria...');
     const file = this.filesToProcess().find(f => f.type === 'MAIN');
     if (!file || !file.data) throw new Error('No hay archivo de carga diaria');
@@ -2369,9 +2835,14 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       } else {
         console.log('[PeriodSnapshot] No se requiere confirmación - continuando con carga');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[PeriodSnapshot] Error al verificar estado del periodo:', error);
-      // Continuar sin verificación si falla el endpoint
+      // Mostrar diálogo de advertencia para que el usuario decida
+      const errorMessage = error?.message || error?.error?.message || 'Error de conexión con el servidor';
+      this.verificationError.set(errorMessage);
+      this.showVerificationWarningDialog.set(true);
+      this.isLoading.set(false);
+      return; // Esperar decisión del usuario
     }
 
     // Si no se requiere confirmación, procesar directamente
@@ -2428,11 +2899,55 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Cancela cuando la verificación del periodo falló y el usuario no quiere continuar
+   */
+  cancelVerificationWarning() {
+    this.showVerificationWarningDialog.set(false);
+    this.verificationError.set(null);
+    this.notificationService.info('Carga cancelada', 'La carga fue cancelada por precaución');
+  }
+
+  /**
+   * El usuario decide continuar con la carga a pesar de que la verificación falló
+   */
+  async proceedWithoutVerification() {
+    this.showVerificationWarningDialog.set(false);
+    this.verificationError.set(null);
+    this.isLoading.set(true);
+    this.loadingMessage.set('Procesando asignación inicial...');
+
+    try {
+      await this.executeInitialMonthLoad();
+      this.isLoading.set(false);
+      this.notificationService.success(
+        'Carga completada',
+        `${this.lastResult()?.totalProcessed || 0} registros procesados`
+      );
+    } catch (error: any) {
+      this.isLoading.set(false);
+      const friendlyMsg = this.getFriendlyErrorMessage(error);
+      this.notificationService.error('Error en la carga', friendlyMsg);
+    }
+  }
+
+  /**
+   * Cierra el diálogo de error post-snapshot
+   */
+  closePostSnapshotErrorDialog() {
+    this.showPostSnapshotErrorDialog.set(false);
+    this.postSnapshotErrorMessage.set(null);
+    this.archivedPeriodInfo.set(null);
+  }
+
+  /**
    * Confirma el cambio de periodo, ejecuta el snapshot y continúa con la carga
    */
   async confirmPeriodChange() {
     this.isExecutingSnapshot.set(true);
     this.snapshotProgress.set('Archivando periodo anterior...');
+
+    let snapshotCompleted = false;
+    let archivePeriod: string | null = null;
 
     try {
       // Ejecutar snapshot
@@ -2443,6 +2958,10 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       if (!snapshotResult.success) {
         throw new Error(snapshotResult.message || 'Error al ejecutar snapshot');
       }
+
+      // Marcar que el snapshot fue exitoso
+      snapshotCompleted = true;
+      archivePeriod = snapshotResult.archivePeriod;
 
       this.snapshotProgress.set('Archivo completado. Iniciando carga...');
 
@@ -2474,10 +2993,144 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       this.showPeriodChangeDialog.set(false);
       this.isLoading.set(false);
 
-      this.notificationService.error(
-        'Error en cambio de periodo',
-        error.message || 'No se pudo completar el archivado del periodo'
+      // Distinguir entre error de snapshot y error de carga post-snapshot
+      if (snapshotCompleted) {
+        // El snapshot fue exitoso pero la carga falló
+        // Mostrar diálogo especial informando que los datos están en histórico
+        const errorMessage = error?.message || error?.error?.message || 'Error desconocido en la carga';
+        this.postSnapshotErrorMessage.set(errorMessage);
+        this.archivedPeriodInfo.set(`cashi_historico_db (periodo ${archivePeriod})`);
+        this.showPostSnapshotErrorDialog.set(true);
+      } else {
+        // El snapshot falló
+        this.notificationService.error(
+          'Error en cambio de periodo',
+          error.message || 'No se pudo completar el archivado del periodo'
+        );
+      }
+    }
+  }
+
+  // ==================== Daily Snapshot Management ====================
+
+  /**
+   * Cancela el snapshot diario y cierra el diálogo
+   */
+  cancelDailySnapshot() {
+    this.showDailySnapshotDialog.set(false);
+    this.dailyStatus.set(null);
+    this.notificationService.info('Carga cancelada', 'La carga diaria fue cancelada');
+  }
+
+  /**
+   * Cancela cuando la verificación del estado diario falló
+   */
+  cancelDailyVerificationWarning() {
+    this.showDailyVerificationWarningDialog.set(false);
+    this.dailyVerificationError.set(null);
+    this.notificationService.info('Carga cancelada', 'La carga diaria fue cancelada por precaución');
+  }
+
+  /**
+   * El usuario decide continuar con la carga diaria a pesar de que la verificación falló
+   */
+  async proceedDailyWithoutVerification() {
+    this.showDailyVerificationWarningDialog.set(false);
+    this.dailyVerificationError.set(null);
+    this.isLoading.set(true);
+    this.loadingMessage.set('Procesando carga diaria...');
+
+    try {
+      await this.executeDailyLoad();
+      this.isLoading.set(false);
+      this.notificationService.success(
+        'Carga diaria completada',
+        `${this.lastResult()?.totalProcessed || 0} registros procesados`
       );
+    } catch (error: any) {
+      this.isLoading.set(false);
+      const friendlyMsg = this.getFriendlyErrorMessage(error);
+      this.notificationService.error('Error en la carga diaria', friendlyMsg);
+    }
+  }
+
+  /**
+   * Cierra el diálogo de error post-snapshot diario
+   */
+  closePostDailySnapshotErrorDialog() {
+    this.showPostDailySnapshotErrorDialog.set(false);
+    this.postDailySnapshotErrorMessage.set(null);
+    this.archivedDailyInfo.set(null);
+  }
+
+  /**
+   * Confirma el snapshot diario, ejecuta el archivado y continúa con la carga
+   */
+  async confirmDailySnapshot() {
+    this.isExecutingDailySnapshot.set(true);
+    this.dailySnapshotProgress.set('Archivando datos diarios anteriores...');
+
+    let snapshotCompleted = false;
+    let archiveDate: string | null = null;
+
+    try {
+      // Ejecutar snapshot diario
+      const snapshotResult = await firstValueFrom(
+        this.periodSnapshotService.executeDailySnapshotForSubPortfolio(this.selectedSubPortfolioId)
+      );
+
+      if (!snapshotResult.success) {
+        throw new Error(snapshotResult.message || 'Error al ejecutar snapshot diario');
+      }
+
+      // Marcar que el snapshot fue exitoso
+      snapshotCompleted = true;
+      archiveDate = snapshotResult.archivePeriod;
+
+      this.dailySnapshotProgress.set('Archivo completado. Iniciando carga...');
+
+      // Notificar éxito del snapshot
+      this.notificationService.success(
+        'Datos diarios archivados',
+        `${snapshotResult.tablesArchived} tabla(s) archivada(s) para fecha ${snapshotResult.archivePeriod}`
+      );
+
+      // Cerrar diálogo y continuar con la carga
+      this.showDailySnapshotDialog.set(false);
+      this.isExecutingDailySnapshot.set(false);
+      this.dailyStatus.set(null);
+
+      // Iniciar la carga
+      this.isLoading.set(true);
+      this.loadingMessage.set('Procesando carga diaria...');
+
+      await this.executeDailyLoad();
+
+      this.isLoading.set(false);
+      this.notificationService.success(
+        'Carga diaria completada',
+        `${this.lastResult()?.totalProcessed || 0} registros procesados`
+      );
+
+    } catch (error: any) {
+      this.isExecutingDailySnapshot.set(false);
+      this.showDailySnapshotDialog.set(false);
+      this.isLoading.set(false);
+
+      // Distinguir entre error de snapshot y error de carga post-snapshot
+      if (snapshotCompleted) {
+        // El snapshot fue exitoso pero la carga falló
+        const errorMessage = error?.message || error?.error?.message || 'Error desconocido en la carga';
+        this.postDailySnapshotErrorMessage.set(errorMessage);
+        this.archivedDailyInfo.set(`cashi_historico_db (fecha ${archiveDate})`);
+        this.showPostDailySnapshotErrorDialog.set(true);
+      } else {
+        // El snapshot falló
+        this.notificationService.error(
+          'Error en snapshot diario',
+          error.message || 'No se pudo completar el archivado diario'
+        );
+      }
     }
   }
 

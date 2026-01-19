@@ -29,6 +29,25 @@ export interface RequiresConfirmationResponse {
   tableName: string;
 }
 
+// ==================== Interfaces para Snapshot Diario ====================
+
+export interface DailyStatusResponse {
+  subPortfolioId: number;
+  tableName: string;
+  hasExistingData: boolean;
+  recordCount: number;
+  lastLoadDate: string | null;
+  lastArchivedDate: string | null;
+  requiresConfirmation: boolean;
+}
+
+export interface DailyRequiresConfirmationResponse {
+  requiresConfirmation: boolean;
+  recordCount: number;
+  lastLoadDate: string;
+  tableName: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -89,6 +108,53 @@ export class PeriodSnapshotService {
   }> {
     return this.http.get<any>(
       `${this.baseUrl}/subportfolio/${subPortfolioId}/last-archived`
+    );
+  }
+
+  // ==================== Métodos para Snapshot Diario ====================
+
+  /**
+   * Verifica el estado diario para una subcartera (tabla de actualización)
+   * @param subPortfolioId ID de la subcartera
+   */
+  checkDailyStatus(subPortfolioId: number): Observable<DailyStatusResponse> {
+    return this.http.get<DailyStatusResponse>(
+      `${this.baseUrl}/subportfolio/${subPortfolioId}/daily-status`
+    );
+  }
+
+  /**
+   * Verifica si se requiere confirmación para carga diaria
+   * @param subPortfolioId ID de la subcartera
+   */
+  requiresDailyConfirmation(subPortfolioId: number): Observable<DailyRequiresConfirmationResponse> {
+    return this.http.get<DailyRequiresConfirmationResponse>(
+      `${this.baseUrl}/subportfolio/${subPortfolioId}/daily-requires-confirmation`
+    );
+  }
+
+  /**
+   * Ejecuta snapshot diario para una subcartera específica
+   * @param subPortfolioId ID de la subcartera
+   */
+  executeDailySnapshotForSubPortfolio(subPortfolioId: number): Observable<SnapshotResultResponse> {
+    return this.http.post<SnapshotResultResponse>(
+      `${this.baseUrl}/subportfolio/${subPortfolioId}/daily-execute`,
+      {}
+    );
+  }
+
+  /**
+   * Obtiene la última fecha de archivo diario para una subcartera
+   * @param subPortfolioId ID de la subcartera
+   */
+  getLastArchivedDailyDate(subPortfolioId: number): Observable<{
+    subPortfolioId: number;
+    lastArchivedDate: string | null;
+    hasArchivedData: boolean;
+  }> {
+    return this.http.get<any>(
+      `${this.baseUrl}/subportfolio/${subPortfolioId}/last-daily-archived`
     );
   }
 }
