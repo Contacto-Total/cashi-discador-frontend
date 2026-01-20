@@ -60,7 +60,7 @@ export interface AmountOption {
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-600')"
               (click)="enableCustomAmount()"
             >
-              <span class="text-[10px] opacity-70">Otro monto</span>
+              <span class="text-[10px] opacity-70">Excepción</span>
               @if (isCustomAmount()) {
                 <input
                   type="number"
@@ -79,7 +79,7 @@ export interface AmountOption {
           }
         </div>
 
-        <!-- Selector de campo base para "Otro monto" -->
+        <!-- Selector de campo base para "Excepción" -->
         @if (isCustomAmount()) {
           <div class="mt-3 flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
             <lucide-angular name="link" [size]="16" class="text-purple-500 flex-shrink-0"></lucide-angular>
@@ -314,7 +314,7 @@ export class PaymentScheduleComponent implements OnInit {
   customAmountValue: number = 0;
   private _isCustomAmount = signal<boolean>(false);
   montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
-  selectedBaseField = signal<string>('');  // Campo base seleccionado para "Otro monto"
+  selectedBaseField = signal<string>('');  // Campo base seleccionado para "Excepción"
 
   // Signals para editor de porcentaje
   showPercentageEditor = signal<boolean>(false);
@@ -514,7 +514,7 @@ export class PaymentScheduleComponent implements OnInit {
   }
 
   /**
-   * Cuando el usuario selecciona un campo base para "Otro monto"
+   * Cuando el usuario selecciona un campo base para "Excepción"
    */
   onBaseFieldChange(fieldValue: string): void {
     this.selectedBaseField.set(fieldValue);

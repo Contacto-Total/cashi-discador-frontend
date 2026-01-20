@@ -61,7 +61,7 @@ export interface ChipOption {
             class="px-4 py-2 rounded-full border border-gray-300 dark:border-gray-600 transition-all duration-200 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
           >
             <lucide-angular name="edit-3" [size]="16" class="inline mr-1"></lucide-angular>
-            Otro monto
+            Excepción
           </button>
         }
       </div>

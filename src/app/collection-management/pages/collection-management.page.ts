@@ -1445,7 +1445,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Handle "personalizado" option specially - add as custom option marker
         if (option.codigoOpcion === 'personalizado') {
           amounts.push({
-            label: 'Otro monto',
+            label: 'Excepción',
             value: -1, // Special marker for custom amount
             field: 'personalizado',
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
