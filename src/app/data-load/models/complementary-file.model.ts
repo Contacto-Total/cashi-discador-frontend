@@ -200,8 +200,8 @@ export function getFileTypeLabel(type: FileType): string {
 }
 
 /**
- * Valida si la extensión del archivo es válida (Excel)
+ * Valida si la extensión del archivo es válida (Excel o CSV)
  */
 export function isValidExcelFile(fileName: string): boolean {
-  return /\.(xlsx|xls)$/i.test(fileName);
+  return /\.(xlsx|xls|csv)$/i.test(fileName);
 }

@@ -729,7 +729,7 @@ import {
                       <lucide-angular name="plus" [size]="16"></lucide-angular>
                       Agregar Archivo
                       <input type="file"
-                             accept=".xlsx,.xls"
+                             accept=".xlsx,.xls,.csv"
                              (change)="onFileSelected($event)"
                              [multiple]="selectedLoadMode() === 'INITIAL_MONTH'"
                              class="hidden">
@@ -1806,11 +1806,11 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // Validar formato Excel
+      // Validar formato Excel o CSV
       if (!isValidExcelFile(file.name)) {
         this.notificationService.error(
           'Archivo no válido',
-          `"${file.name}" no es un archivo Excel válido (.xlsx o .xls).`
+          `"${file.name}" no es un archivo válido (.xlsx, .xls o .csv).`
         );
         continue;
       }
@@ -2492,8 +2492,21 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       reader.onload = (e: any) => {
         try {
           const data = new Uint8Array(e.target.result);
-          // cellDates: true convierte números de fecha Excel a objetos Date de JavaScript
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+
+          // Detectar si es archivo CSV disfrazado de Excel (texto plano con extensión .xls)
+          const isCsvContent = this.detectCsvContent(data);
+
+          let workbook: XLSX.WorkBook;
+          if (isCsvContent) {
+            // Leer como CSV (texto separado por comas)
+            const textContent = new TextDecoder('utf-8').decode(data);
+            workbook = XLSX.read(textContent, { type: 'string', cellDates: true });
+            console.log('📄 Archivo detectado como CSV (contenido de texto)');
+          } else {
+            // Leer como Excel binario normal
+            workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          }
+
           // Usar la hoja especificada o la primera por defecto
           const targetSheetName = sheetName || workbook.SheetNames[0];
           const sheet = workbook.Sheets[targetSheetName];
@@ -2538,6 +2551,40 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Detecta si el contenido del archivo es CSV (texto plano) en lugar de Excel binario.
+   * Los archivos Excel binarios (.xls) comienzan con el encabezado OLE2: D0 CF 11 E0
+   * Los archivos XLSX comienzan con el encabezado ZIP: 50 4B 03 04
+   * Si no tiene ninguno de estos encabezados, es probablemente texto plano (CSV)
+   */
+  private detectCsvContent(data: Uint8Array): boolean {
+    if (data.length < 4) return false;
+
+    // Verificar encabezado OLE2 (archivos .xls binarios): D0 CF 11 E0
+    const isOle2 = data[0] === 0xD0 && data[1] === 0xCF && data[2] === 0x11 && data[3] === 0xE0;
+
+    // Verificar encabezado ZIP (archivos .xlsx): 50 4B 03 04
+    const isZip = data[0] === 0x50 && data[1] === 0x4B && data[2] === 0x03 && data[3] === 0x04;
+
+    // Si no es Excel binario ni XLSX, verificar si es texto ASCII/UTF-8
+    if (!isOle2 && !isZip) {
+      // Revisar los primeros 1000 bytes para ver si son caracteres de texto válidos
+      const sampleSize = Math.min(data.length, 1000);
+      let textCharCount = 0;
+      for (let i = 0; i < sampleSize; i++) {
+        const byte = data[i];
+        // Caracteres ASCII imprimibles, tabuladores, saltos de línea, o UTF-8 continuation bytes
+        if ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13 || byte >= 128) {
+          textCharCount++;
+        }
+      }
+      // Si más del 90% son caracteres de texto, considerarlo como CSV
+      return (textCharCount / sampleSize) > 0.9;
+    }
+
+    return false;
+  }
+
+  /**
    * Detecta si un número podría ser una fecha de Excel basándose en el nombre de la columna
    */
   private looksLikeExcelDate(value: number, columnName: string): boolean {
@@ -2575,7 +2622,20 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       reader.onload = (e: any) => {
         try {
           const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+
+          // Detectar si es archivo CSV disfrazado de Excel
+          const isCsvContent = this.detectCsvContent(data);
+
+          let workbook: XLSX.WorkBook;
+          if (isCsvContent) {
+            // Leer como CSV (texto separado por comas)
+            const textContent = new TextDecoder('utf-8').decode(data);
+            workbook = XLSX.read(textContent, { type: 'string', cellDates: true });
+            console.log('📄 Archivo detectado como CSV en preview (contenido de texto)');
+          } else {
+            // Leer como Excel binario normal
+            workbook = XLSX.read(data, { type: 'array', cellDates: true });
+          }
 
           const sheetsInfo = workbook.SheetNames.map(sheetName => {
             const sheet = workbook.Sheets[sheetName];
@@ -3179,11 +3239,11 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   getExpectedFilesDescription(): string {
     switch (this.selectedLoadMode()) {
       case 'DAILY':
-        return 'Archivo Excel (.xlsx, .xls) con los datos de actualización diaria';
+        return 'Archivo Excel (.xlsx, .xls) o CSV con los datos de actualización diaria';
       case 'INITIAL_MONTH':
         return 'El primer archivo será el principal. Los adicionales actualizarán columnas de los registros existentes';
       case 'COMPLEMENTARY':
-        return 'Archivos Excel (.xlsx, .xls) con una columna de identificación para vincular registros';
+        return 'Archivos Excel (.xlsx, .xls) o CSV con una columna de identificación para vincular registros';
       default:
         return '';
     }
