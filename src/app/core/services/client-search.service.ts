@@ -23,6 +23,19 @@ export interface DynamicClient {
   [key: string]: any; // Permitir campos dinámicos adicionales
 }
 
+/**
+ * Resultado de búsqueda global con contexto
+ */
+export interface GlobalSearchResult {
+  tenantId: number;
+  portfolioId: number;
+  subPortfolioId: number;
+  nombreInquilino: string;
+  nombreCartera: string;
+  nombreSubcartera: string;
+  clientData: DynamicClient;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -30,6 +43,15 @@ export class ClientSearchService {
   private apiUrl = `${environment.apiUrl}/client-search`;
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * Busca un cliente globalmente solo por documento.
+   * Encuentra automáticamente en qué inquilino/cartera/subcartera está.
+   */
+  findClientGlobal(documento: string): Observable<GlobalSearchResult> {
+    const params = new HttpParams().set('documento', documento);
+    return this.http.get<GlobalSearchResult>(`${this.apiUrl}/global`, { params });
+  }
 
   /**
    * Busca un cliente por documento exacto
