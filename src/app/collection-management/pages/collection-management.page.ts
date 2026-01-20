@@ -812,7 +812,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
               </div>
             }
 
-            <!-- Botón para subir comprobante (opcional) -->
+            <!-- Botón para subir comprobante (opcional) - Sin OCR -->
             @if (isCancellationTypification() && selectedInstallmentForCancellation()) {
               <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                 <div class="flex items-center justify-between">
@@ -820,39 +820,51 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                     <span class="text-lg">📎</span>
                     <div>
                       <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Comprobante de Pago</h4>
-                      <p class="text-xs text-purple-600 dark:text-purple-300">Opcional: Sube una imagen del voucher para validación OCR</p>
+                      <p class="text-xs text-purple-600 dark:text-purple-300">Opcional: Adjunta una imagen del voucher</p>
                     </div>
                   </div>
+                  <!-- Input file oculto -->
+                  <input
+                    #comprobanteFileInput
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    class="hidden"
+                    (change)="onComprobanteFileSelected($event)"
+                  />
                   <button
                     type="button"
-                    (click)="openComprobanteUploadDialog()"
-                    class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all"
+                    (click)="comprobanteFileInput.click()"
+                    [disabled]="isUploadingComprobante()"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center gap-1.5"
                     [class]="uploadedComprobante()
-                      ? 'bg-green-700 hover:bg-green-800 text-white dark:bg-green-500 dark:hover:bg-green-600'
-                      : 'bg-purple-700 hover:bg-purple-800 text-white dark:bg-purple-600 dark:hover:bg-purple-700'"
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-purple-600 hover:bg-purple-700 text-white'"
                   >
-                    @if (uploadedComprobante()) {
-                      Comprobante Subido
+                    @if (isUploadingComprobante()) {
+                      <lucide-angular name="loader-2" [size]="14" class="animate-spin"></lucide-angular>
+                      Subiendo...
+                    } @else if (uploadedComprobante()) {
+                      <lucide-angular name="check-circle" [size]="14"></lucide-angular>
+                      Comprobante Adjunto
                     } @else {
-                      📤 Subir Comprobante
+                      <lucide-angular name="upload" [size]="14"></lucide-angular>
+                      Subir Comprobante
                     }
                   </button>
                 </div>
                 @if (uploadedComprobante()) {
-                  <div class="mt-2 p-2 bg-white dark:bg-gray-800 rounded text-xs space-y-1">
-                    <p class="text-gray-600 dark:text-gray-400">{{ uploadedComprobante()?.mensaje }}</p>
-                    @if (uploadedComprobante()?.ocrResult?.monto) {
-                      <p><strong>Monto detectado:</strong> S/ {{ uploadedComprobante()?.ocrResult?.monto | number:'1.2-2' }}</p>
-                    }
-                    @if (uploadedComprobante()?.ocrResult?.banco) {
-                      <p><strong>Banco:</strong> {{ uploadedComprobante()?.ocrResult?.banco }}</p>
-                    }
+                  <div class="mt-2 p-2 bg-white dark:bg-gray-800 rounded-lg text-xs flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-green-700 dark:text-green-400">
+                      <lucide-angular name="image" [size]="16"></lucide-angular>
+                      <span>Comprobante guardado correctamente</span>
+                    </div>
                     <button
                       type="button"
                       (click)="uploadedComprobante.set(null)"
-                      class="text-red-500 hover:text-red-700 text-xs underline"
+                      class="text-red-500 hover:text-red-700 text-xs flex items-center gap-1"
                     >
-                      Quitar comprobante
+                      <lucide-angular name="x" [size]="12"></lucide-angular>
+                      Quitar
                     </button>
                   </div>
                 }
@@ -1747,6 +1759,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Comprobante subido para la cancelación (opcional)
   uploadedComprobante = signal<ComprobanteUploadResponse | null>(null);
+  // Flag para indicar que se está subiendo un comprobante
+  isUploadingComprobante = signal<boolean>(false);
 
   // Computed para detectar si la tipificación seleccionada es de tipo Cancelación (código CA)
   isCancellationTypification = computed(() => {
@@ -4980,7 +4994,66 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Abre el modal para subir comprobante de pago
+   * Maneja la selección de archivo de comprobante (subida simple sin OCR)
+   */
+  onComprobanteFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+
+    // Validar tipo de archivo
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Tipo de archivo no permitido. Solo JPG, PNG o WebP.');
+      input.value = '';
+      return;
+    }
+
+    // Validar tamaño (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('El archivo es muy grande. Máximo 5MB.');
+      input.value = '';
+      return;
+    }
+
+    const cuota = this.selectedInstallmentForCancellation();
+    const customer = this.customerData();
+    const currentUser = this.authService.getCurrentUser();
+
+    if (!cuota || !customer) {
+      console.warn('[COMPROBANTE-SIMPLE] No hay cuota o cliente seleccionado');
+      input.value = '';
+      return;
+    }
+
+    this.isUploadingComprobante.set(true);
+
+    // Subir sin validación OCR
+    this.comprobanteService.uploadComprobante(file, {
+      idCuota: cuota.id,
+      montoEsperado: cuota.monto || 0,
+      documentoEsperado: customer.numero_documento || '',
+      nombreEsperado: customer.nombre_completo || '',
+      idAgente: currentUser?.id || 1,
+      validarConOcr: false  // Sin OCR
+    }).subscribe({
+      next: (response) => {
+        console.log('[COMPROBANTE-SIMPLE] Comprobante subido:', response);
+        this.isUploadingComprobante.set(false);
+        this.uploadedComprobante.set(response);
+        input.value = '';  // Limpiar input
+      },
+      error: (err) => {
+        console.error('[COMPROBANTE-SIMPLE] Error al subir:', err);
+        this.isUploadingComprobante.set(false);
+        alert('Error al subir el comprobante: ' + (err.error?.error || 'Error de conexión'));
+        input.value = '';
+      }
+    });
+  }
+
+  /**
+   * Abre el modal para subir comprobante de pago (con OCR - legacy)
    */
   openComprobanteUploadDialog(): void {
     const cuota = this.selectedInstallmentForCancellation();
