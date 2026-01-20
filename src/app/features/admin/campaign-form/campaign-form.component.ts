@@ -95,7 +95,7 @@ export class CampaignFormComponent implements OnInit {
   loadTenants(): void {
     this.tenantService.getAllTenants().subscribe({
       next: (tenants) => {
-        this.tenants = tenants.filter(t => t.isActive);
+        this.tenants = tenants;
       },
       error: (err) => console.error('Error loading tenants:', err)
     });
@@ -110,7 +110,7 @@ export class CampaignFormComponent implements OnInit {
     if (this.selectedTenantId > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
         next: (portfolios) => {
-          this.portfolios = portfolios.filter(p => p.isActive);
+          this.portfolios = portfolios;
         },
         error: (err) => console.error('Error loading portfolios:', err)
       });
@@ -125,7 +125,7 @@ export class CampaignFormComponent implements OnInit {
     if (this.selectedPortfolioId > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
         next: (subPortfolios) => {
-          this.subPortfolios = subPortfolios.filter(sp => sp.isActive);
+          this.subPortfolios = subPortfolios;
         },
         error: (err) => console.error('Error loading sub-portfolios:', err)
       });
@@ -278,8 +278,8 @@ export class CampaignFormComponent implements OnInit {
             subPortfolios: this.portfolioService.getSubPortfoliosByPortfolio(campaign.portfolioId)
           }).subscribe({
             next: (result) => {
-              this.portfolios = result.portfolios.filter(p => p.isActive);
-              this.subPortfolios = result.subPortfolios.filter(sp => sp.isActive);
+              this.portfolios = result.portfolios;
+              this.subPortfolios = result.subPortfolios;
 
               console.log('✅ Data loaded, now setting selected values:', {
                 portfolios: this.portfolios.length,
