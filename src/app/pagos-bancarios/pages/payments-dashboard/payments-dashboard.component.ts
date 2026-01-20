@@ -547,7 +547,7 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
           tension: 0.4
         },
         {
-          label: 'Agente',
+          label: 'Asesor',
           data: tendencia.map(t => t.cantidadAgente),
           borderColor: '#22c55e',
           backgroundColor: 'rgba(34, 197, 94, 0.1)',

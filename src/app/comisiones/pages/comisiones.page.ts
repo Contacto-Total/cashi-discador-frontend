@@ -605,7 +605,7 @@ import {
                 <p class="text-2xl font-bold text-amber-800 dark:text-amber-300">S/ {{ formatMonto(reporte()!.totalBonos) }}</p>
               </div>
               <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
-                <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Agentes</p>
+                <p class="text-sm text-purple-600 dark:text-purple-400 font-medium">Asesores</p>
                 <p class="text-2xl font-bold text-purple-800 dark:text-purple-300">{{ reporte()!.totalAgentes }}</p>
               </div>
             </div>
@@ -632,7 +632,7 @@ import {
                 <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
                   <thead class="bg-slate-50 dark:bg-slate-700/50">
                     <tr>
-                      <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Agente</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Asesor</th>
                       <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Subcartera</th>
                       <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Recaudo</th>
                       <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Meta</th>
@@ -646,7 +646,7 @@ import {
                     @for (agente of reporte()!.agentes; track agente.idAgente) {
                       <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
                         <td class="px-4 py-3 text-sm font-medium text-slate-800 dark:text-white">
-                          {{ agente.nombreAgente || 'Agente ' + agente.idAgente }}
+                          {{ agente.nombreAgente || 'Asesor ' + agente.idAgente }}
                         </td>
                         <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
                           {{ agente.nombreSubcartera }}

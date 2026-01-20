@@ -856,7 +856,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
     if (user?.role === 'AGENT' && user.id) {
       this.isVisible = true;
       this.userId = user.id;
-      this.userName = user.firstName || user.username || 'Agente';
+      this.userName = user.firstName || user.username || 'Asesor';
       this.startStatusPolling();
     }
 
@@ -864,7 +864,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       if (user?.role === 'AGENT' && user.id) {
         this.isVisible = true;
         this.userId = user.id;
-        this.userName = user.firstName || user.username || 'Agente';
+        this.userName = user.firstName || user.username || 'Asesor';
         if (!this.statusSubscription) {
           this.startStatusPolling();
         }

@@ -1040,7 +1040,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
                       <th class="px-2 py-1 font-semibold">Fecha</th>
-                      <th class="px-2 py-1 font-semibold">Agente</th>
+                      <th class="px-2 py-1 font-semibold">Asesor</th>
                       <th class="px-2 py-1 font-semibold">Tipificación</th>
                       <th class="px-2 py-1 font-semibold">Teléfono</th>
                       <th class="px-2 py-1 font-semibold">Observación</th>
@@ -1124,7 +1124,7 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
                   <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
                       <th class="px-2 py-1 font-semibold">Fecha</th>
-                      <th class="px-2 py-1 font-semibold">Agente</th>
+                      <th class="px-2 py-1 font-semibold">Asesor</th>
                       <th class="px-2 py-1 font-semibold">Tipificación</th>
                       <th class="px-2 py-1 font-semibold">Teléfono</th>
                       <th class="px-2 py-1 font-semibold">Observación</th>

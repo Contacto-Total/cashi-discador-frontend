@@ -93,7 +93,7 @@ import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '
                 <thead class="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cliente</th>
-                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
+                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Asesor</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Monto</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cuotas</th>
                     <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fecha</th>
@@ -238,7 +238,7 @@ import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '
                 <thead class="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Cliente</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Agente</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Asesor</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Monto Base</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Solicitado</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Diferencia</th>
@@ -307,7 +307,7 @@ import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ excepcionSeleccionada()!.documentoCliente }}</p>
                   </div>
                   <div>
-                    <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Agente</label>
+                    <label class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Asesor</label>
                     <p class="text-gray-900 dark:text-white">{{ excepcionSeleccionada()!.nombreAgente }}</p>
                   </div>
                 </div>

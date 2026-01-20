@@ -134,7 +134,7 @@ import {
               <thead class="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Cliente</th>
-                  <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Agente</th>
+                  <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Asesor</th>
                   <th class="px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-300">Cartera</th>
                   <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Monto Base</th>
                   <th class="px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-300">Solicitado</th>
