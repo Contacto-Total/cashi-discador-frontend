@@ -2258,7 +2258,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.customerData.set({
       id: customerId,
       id_cliente: client.documento,
-      nombre_completo: client.nombre || client.nombres + ' ' + (client.apellidos || ''),
+      nombre_completo: client.nombre_completo || client.nombre || client.nombres + ' ' + (client.apellidos || ''),
       tipo_documento: 'DNI',
       numero_documento: client.documento,
       fecha_nacimiento: '',
