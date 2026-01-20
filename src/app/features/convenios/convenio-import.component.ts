@@ -54,7 +54,7 @@ import { NotificationsComponent } from '../../shared/components/notifications/no
         <!-- Selectores en Cascada -->
         <div class="bg-slate-900/80 backdrop-blur rounded-xl p-5 shadow-lg border border-slate-800 mb-6">
           <h3 class="text-sm font-semibold text-gray-300 mb-4 flex items-center gap-2">
-            <lucide-angular name="settings-2" [size]="16"></lucide-angular>
+            <lucide-angular name="sliders" [size]="16"></lucide-angular>
             Configuración de Importación
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -123,7 +123,7 @@ import { NotificationsComponent } from '../../shared/components/notifications/no
               @if (!selectedFile()) {
                 <label class="border-2 border-dashed border-slate-700 rounded-xl p-10 text-center cursor-pointer hover:border-violet-500 hover:bg-slate-800/50 transition-all block">
                   <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <lucide-angular name="file-up" [size]="32" class="text-violet-400"></lucide-angular>
+                    <lucide-angular name="upload-cloud" [size]="32" class="text-violet-400"></lucide-angular>
                   </div>
                   <h3 class="text-white font-semibold mb-2">Haz clic o arrastra el archivo Excel</h3>
                   <p class="text-gray-500 text-sm">Archivo .xlsx con hoja "CONVENIOS"</p>
