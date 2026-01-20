@@ -503,6 +503,64 @@ import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/co
               }
             }
 
+            <!-- BLOQUEO PROMESA DE PAGO ACTIVA - Mensaje cuando cliente tiene promesa activa -->
+            @if (showPromesaActivaBlocking()) {
+              <div class="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 dark:from-red-950/40 dark:via-orange-950/30 dark:to-red-950/40 border-2 border-red-400 dark:border-red-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
+                <!-- Header con icono animado -->
+                <div class="flex items-center gap-4">
+                  <div class="relative">
+                    <div class="p-3 bg-red-500 dark:bg-red-600 rounded-xl shadow-lg">
+                      <lucide-angular name="shield-alert" [size]="28" class="text-white animate-pulse"></lucide-angular>
+                    </div>
+                    <div class="absolute -top-1 -right-1 w-4 h-4 bg-orange-400 rounded-full animate-bounce"></div>
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="text-base font-bold text-red-800 dark:text-red-200">
+                      No puede registrar una nueva Promesa de Pago
+                    </h3>
+                    <p class="text-sm text-red-600 dark:text-red-300 mt-1">
+                      Este cliente ya tiene una promesa de pago activa con
+                      <span class="font-bold text-red-700 dark:text-red-200 bg-red-100 dark:bg-red-900/50 px-2 py-0.5 rounded-full">
+                        {{ promesaActivaPendingCount() }} cuota{{ promesaActivaPendingCount() > 1 ? 's' : '' }} pendiente{{ promesaActivaPendingCount() > 1 ? 's' : '' }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Mensaje de instrucción -->
+                <div class="mt-4 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-red-200 dark:border-red-700 p-3">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="info" [size]="18" class="text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div class="text-sm text-red-700 dark:text-red-300">
+                      <p class="font-medium mb-2">Para continuar, puede:</p>
+                      <ul class="space-y-1.5 text-xs">
+                        <li class="flex items-center gap-2">
+                          <lucide-angular name="check-circle" [size]="14" class="text-green-500"></lucide-angular>
+                          <span>Registrar el <strong>pago</strong> de las cuotas pendientes</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                          <lucide-angular name="x-circle" [size]="14" class="text-orange-500"></lucide-angular>
+                          <span>Cancelar la promesa activa si el cliente no cumplirá</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                          <lucide-angular name="arrow-right" [size]="14" class="text-blue-500"></lucide-angular>
+                          <span>Esperar a que venzan las cuotas actuales</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Badge de estado -->
+                <div class="mt-3 flex justify-center">
+                  <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-xs font-semibold border border-red-300 dark:border-red-600">
+                    <lucide-angular name="lock" [size]="14"></lucide-angular>
+                    Seleccione otra tipificación para continuar
+                  </span>
+                </div>
+              </div>
+            }
+
             <!-- Schedule Helper - Payment Schedule Information -->
             @if (isLoadingSchedules()) {
               <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3 animate-pulse">
@@ -1528,6 +1586,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Computed para determinar si el formulario es válido y completo para habilitar el botón guardar
   isFormValid = computed(() => {
+    // 0. Verificar bloqueo de promesa activa
+    if (this.showPromesaActivaBlocking()) {
+      console.log('[isFormValid] ❌ Bloqueado: cliente tiene promesa activa');
+      return false;
+    }
+
     // 1. Verificar clasificación seleccionada
     if (this.usesHierarchicalClassifications()) {
       // Sistema jerárquico: verificar que se haya seleccionado al menos una clasificación
@@ -1861,6 +1925,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Error de continuidad (cuando no aplica)
   continuidadError = signal<string | null>(null);
 
+  // ==================== BLOQUEO PROMESA DE PAGO ACTIVA ====================
+  // Flag para mostrar alerta de bloqueo cuando cliente tiene promesa activa
+  showPromesaActivaBlocking = signal<boolean>(false);
+  // Número de cuotas pendientes de la promesa activa
+  promesaActivaPendingCount = signal<number>(0);
+
   // Computed: Opciones de monto para continuidad (solo saldo restante)
   continuityPaymentAmounts = computed<AmountOption[]>(() => {
     const data = this.continuidadData();
@@ -1878,7 +1948,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Computed: Determina si se debe mostrar el formulario de campos dinámicos
   // No mostrar si es CONTINUIDAD pero no aplica (tiene error o no hay datos)
+  // No mostrar si hay bloqueo de promesa activa
   shouldShowDynamicForm = computed<boolean>(() => {
+    // Si hay bloqueo de promesa activa, NO mostrar formulario
+    if (this.showPromesaActivaBlocking()) {
+      return false;
+    }
+
     const esCont = this.esContinuidad();
     const isLoadingCont = this.isLoadingContinuidad();
     const contData = this.continuidadData();
@@ -3052,8 +3128,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
 
-    // Resetear señales de continuidad al cambiar tipificación
+    // Resetear señales de continuidad y bloqueo de promesa activa al cambiar tipificación
     this.resetContinuidadState();
+    this.resetPromesaActivaState();
 
     if (levelIndex === 0) {
       this.managementForm.clasificacionNivel1 = value;
@@ -3074,6 +3151,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Detectar si es tipificación CONTINUIDAD (nivel 2)
         this.checkIfContinuidad(numValue);
+
+        // Detectar si es tipificación PROMESA DE PAGO y validar promesas activas
+        this.checkIfPromesaPago(numValue);
       } else {
         this.dynamicFields.set([]);
         this.dynamicFieldValues.set({});
@@ -3122,6 +3202,59 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.esContinuidad.set(true);
       this.verificarContinuidadCliente();
     }
+  }
+
+  /**
+   * Verifica si la tipificación seleccionada es PROMESA DE PAGO y si el cliente
+   * ya tiene una promesa activa, mostrando un mensaje de bloqueo proactivo
+   */
+  private checkIfPromesaPago(typificationId: number) {
+    const allTypifications = this.managementClassifications();
+    const selected = allTypifications.find((c: any) => String(c.id) === String(typificationId));
+
+    if (!selected) {
+      console.log('[PROMESA-CHECK] No se encontró tipificación con ID:', typificationId);
+      return;
+    }
+
+    // Verificar si el código es PP (Promesa de Pago) o el label contiene "PROMESA DE PAGO"
+    // También verificar allowsInstallmentSelection que indica que genera cronograma
+    const isPromesaPago = selected.codigo?.toUpperCase() === 'PP' ||
+                          selected.label?.toUpperCase()?.includes('PROMESA DE PAGO') ||
+                          selected.allowsInstallmentSelection === true;
+
+    console.log('[PROMESA-CHECK] Verificando tipificación:', selected.codigo, selected.label,
+                '- Es promesa de pago:', isPromesaPago,
+                '- allowsInstallmentSelection:', selected.allowsInstallmentSelection);
+
+    if (isPromesaPago) {
+      // Verificar si el cliente tiene promesas activas
+      const activeSchedules = this.activePaymentSchedules();
+      const schedulesWithPending = activeSchedules.filter(schedule => schedule.cuotasPendientes > 0);
+
+      if (schedulesWithPending.length > 0) {
+        // Calcular total de cuotas pendientes
+        const totalPending = schedulesWithPending.reduce((sum, schedule) => sum + schedule.cuotasPendientes, 0);
+
+        console.log('[PROMESA-CHECK] ⚠️ Cliente tiene', totalPending, 'cuota(s) pendiente(s) en',
+                    schedulesWithPending.length, 'promesa(s) activa(s)');
+
+        this.showPromesaActivaBlocking.set(true);
+        this.promesaActivaPendingCount.set(totalPending);
+      } else {
+        this.resetPromesaActivaState();
+      }
+    } else {
+      this.resetPromesaActivaState();
+    }
+  }
+
+  /**
+   * Resetea el estado de bloqueo de promesa activa
+   */
+  private resetPromesaActivaState() {
+    this.showPromesaActivaBlocking.set(false);
+    this.promesaActivaPendingCount.set(0);
   }
 
   /**
