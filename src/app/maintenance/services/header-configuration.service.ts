@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   HeaderConfiguration,
@@ -90,19 +91,21 @@ export class HeaderConfigurationService {
 
   /**
    * Importa datos masivos a la tabla dinámica de una subcartera
+   * Timeout de 10 minutos para cargas grandes
    */
   importData(subPortfolioId: number, loadType: LoadType, data: any[]): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/subportfolio/${subPortfolioId}/import-data`, {
       subPortfolioId,
       loadType,
       data
-    });
+    }).pipe(timeout(600000));
   }
 
   /**
    * Actualiza datos complementarios en la tabla dinámica existente
    * Usado para archivos como PKM y Facilidades que actualizan columnas específicas
    * de registros existentes basándose en un campo de enlace (linkField)
+   * Timeout de 10 minutos para cargas grandes
    */
   updateComplementaryData(subPortfolioId: number, loadType: LoadType, data: any[], linkField: string): Observable<any> {
     return this.http.post<any>(`${this.baseUrl}/subportfolio/${subPortfolioId}/update-complementary`, {
@@ -110,7 +113,7 @@ export class HeaderConfigurationService {
       loadType,
       data,
       linkField
-    });
+    }).pipe(timeout(600000));
   }
 
   /**
@@ -125,11 +128,12 @@ export class HeaderConfigurationService {
    * @param linkField Campo de enlace para vincular con tabla inicial
    */
   importDailyData(subPortfolioId: number, data: any[], linkField: string): Observable<any> {
+    // Timeout de 10 minutos para cargas grandes (600000ms)
     return this.http.post<any>(`${this.baseUrl}/subportfolio/${subPortfolioId}/import-daily`, {
       subPortfolioId,
       data,
       linkField
-    });
+    }).pipe(timeout(600000));
   }
 
   // ==================== Resolución de cabeceras ====================

@@ -3003,10 +3003,8 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
         this.showPostSnapshotErrorDialog.set(true);
       } else {
         // El snapshot falló
-        this.notificationService.error(
-          'Error en cambio de periodo',
-          error.message || 'No se pudo completar el archivado del periodo'
-        );
+        const errorMsg = this.extractErrorMessage(error, 'No se pudo completar el archivado del periodo');
+        this.notificationService.error('Error en snapshot mensual', errorMsg);
       }
     }
   }
@@ -3126,10 +3124,8 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
         this.showPostDailySnapshotErrorDialog.set(true);
       } else {
         // El snapshot falló
-        this.notificationService.error(
-          'Error en snapshot diario',
-          error.message || 'No se pudo completar el archivado diario'
-        );
+        const errorMsg = this.extractErrorMessage(error, 'No se pudo completar el archivado diario');
+        this.notificationService.error('Error en snapshot diario', errorMsg);
       }
     }
   }
@@ -3198,6 +3194,33 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   }
 
   // ==================== Helpers privados ====================
+
+  /**
+   * Extrae y formatea el mensaje de error de una respuesta HTTP o excepción.
+   * Maneja errores de backend Spring Boot y errores de base de datos.
+   */
+  private extractErrorMessage(error: any, defaultMessage: string = 'Error desconocido'): string {
+    // Intentar extraer el mensaje de diferentes estructuras de error
+    let message = error?.error?.message
+                || error?.error?.error
+                || error?.message
+                || error?.statusText
+                || defaultMessage;
+
+    // Si el mensaje contiene información de error SQL, extraer la parte relevante
+    if (typeof message === 'string') {
+      // Detectar errores de clave duplicada de MySQL
+      const duplicateMatch = message.match(/Duplicate entry '([^']+)' for key '([^']+)'/);
+      if (duplicateMatch) {
+        const [, value, key] = duplicateMatch;
+        // Extraer nombre de tabla del key (formato: tabla.indice)
+        const tableName = key.split('.')[0];
+        message = `Registro duplicado: el valor '${value}' ya existe en la tabla '${tableName}'`;
+      }
+    }
+
+    return message;
+  }
 
   /**
    * Procesa archivos complementarios de forma común.
