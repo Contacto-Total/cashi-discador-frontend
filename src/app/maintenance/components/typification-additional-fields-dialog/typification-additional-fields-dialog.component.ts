@@ -183,6 +183,32 @@ interface ConfiguracionCabecera {
                                 {{ opcion.generaCartaAcuerdo ? 'Sí' : 'No' }}
                               </span>
                             </div>
+
+                            <!-- Rango de Cuotas -->
+                            <div class="flex items-center gap-2">
+                              <lucide-angular name="list-ordered" [size]="14" class="text-emerald-600"></lucide-angular>
+                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Cuotas permitidas:</span>
+                              <div class="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  [ngModel]="opcion.minCuotas || 1"
+                                  (ngModelChange)="onMinCuotasChange(opcion.codigoOpcion, $event)"
+                                  min="1"
+                                  max="12"
+                                  class="w-14 px-2 py-1 text-xs text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                >
+                                <span class="text-xs text-gray-500">a</span>
+                                <input
+                                  type="number"
+                                  [ngModel]="opcion.maxCuotas || 6"
+                                  (ngModelChange)="onMaxCuotasChange(opcion.codigoOpcion, $event)"
+                                  min="1"
+                                  max="12"
+                                  class="w-14 px-2 py-1 text-xs text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+                                >
+                                <span class="text-xs text-gray-500 dark:text-gray-400">cuotas</span>
+                              </div>
+                            </div>
                           </div>
                         }
                       </div>
@@ -484,6 +510,36 @@ export class TypificationAdditionalFieldsDialogComponent {
     }
   }
 
+  onMinCuotasChange(codigoOpcion: string, value: number) {
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (opcion) {
+      const minValue = Math.max(1, Math.min(12, value || 1));
+      opcion.minCuotas = minValue;
+      // Asegurar que max sea >= min
+      if (opcion.maxCuotas && opcion.maxCuotas < minValue) {
+        opcion.maxCuotas = minValue;
+      }
+      // Forzar actualización del signal
+      this.opciones.set([...opciones]);
+    }
+  }
+
+  onMaxCuotasChange(codigoOpcion: string, value: number) {
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (opcion) {
+      const maxValue = Math.max(1, Math.min(12, value || 6));
+      opcion.maxCuotas = maxValue;
+      // Asegurar que min sea <= max
+      if (opcion.minCuotas && opcion.minCuotas > maxValue) {
+        opcion.minCuotas = maxValue;
+      }
+      // Forzar actualización del signal
+      this.opciones.set([...opciones]);
+    }
+  }
+
   getOpcionesHabilitadasCount(): number {
     return this.opciones().filter(o => o.estaHabilitada).length;
   }
@@ -514,7 +570,9 @@ export class TypificationAdditionalFieldsDialogComponent {
         estaHabilitada: o.estaHabilitada,
         ordenVisualizacion: o.ordenVisualizacion,
         restriccionFecha: o.restriccionFecha || RestriccionFecha.SIN_RESTRICCION,
-        generaCartaAcuerdo: o.generaCartaAcuerdo || false
+        generaCartaAcuerdo: o.generaCartaAcuerdo || false,
+        minCuotas: o.minCuotas || 1,
+        maxCuotas: o.maxCuotas || 6
       }))
     };
 

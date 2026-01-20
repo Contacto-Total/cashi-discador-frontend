@@ -1390,7 +1390,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             label: 'Otro monto',
             value: -1, // Special marker for custom amount
             field: 'personalizado',
-            generaCartaAcuerdo: option.generaCartaAcuerdo || false
+            generaCartaAcuerdo: option.generaCartaAcuerdo || false,
+            minCuotas: option.minCuotas || 1,
+            maxCuotas: option.maxCuotas || 6
           });
           continue;
         }
@@ -1417,7 +1419,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             value: numValue,
             field: fieldName,
             restriccionFecha: option.restriccionFecha || 'SIN_RESTRICCION',
-            generaCartaAcuerdo: option.generaCartaAcuerdo || false
+            generaCartaAcuerdo: option.generaCartaAcuerdo || false,
+            minCuotas: option.minCuotas || 1,
+            maxCuotas: option.maxCuotas || 6
           });
         }
       }
@@ -1438,7 +1442,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                 label: cabecera.nombre,
                 value: numValue,
                 field: lowerCodigo,
-                generaCartaAcuerdo: false
+                generaCartaAcuerdo: false,
+                minCuotas: 1,  // Default: 1-6 cuotas
+                maxCuotas: 6
               });
             }
           }

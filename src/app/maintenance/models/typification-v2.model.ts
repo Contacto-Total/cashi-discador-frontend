@@ -152,6 +152,8 @@ export interface CampoOpcionDTO {
   ordenVisualizacion: number;
   restriccionFecha?: RestriccionFecha | string;  // Restricción de fecha para promesas de pago
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
+  minCuotas?: number;  // Número mínimo de cuotas permitidas (default 1)
+  maxCuotas?: number;  // Número máximo de cuotas permitidas (default 6)
 }
 
 export interface ConfigurarOpcionesCampoRequest {
@@ -165,6 +167,8 @@ export interface OpcionToggleDTO {
   ordenVisualizacion?: number;
   restriccionFecha?: RestriccionFecha | string;  // Restricción de fecha para promesas de pago
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
+  minCuotas?: number;  // Número mínimo de cuotas permitidas
+  maxCuotas?: number;  // Número máximo de cuotas permitidas
 }
 
 export interface CampoConOpcionesResponse {

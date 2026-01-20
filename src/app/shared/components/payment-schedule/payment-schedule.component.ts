@@ -10,6 +10,8 @@ export interface AmountOption {
   field?: string;
   restriccionFecha?: 'SIN_RESTRICCION' | 'DENTRO_MES' | 'FUERA_MES' | string;
   generaCartaAcuerdo?: boolean;  // Indica si al seleccionar este monto se genera carta de acuerdo
+  minCuotas?: number;  // Número mínimo de cuotas permitidas
+  maxCuotas?: number;  // Número máximo de cuotas permitidas
 }
 
 @Component({
@@ -34,7 +36,7 @@ export interface AmountOption {
                 (selectedField() === option.field && !isCustomAmount()
                   ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
-              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo)"
+              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo, option.minCuotas, option.maxCuotas)"
             >
               <span class="text-[10px] opacity-70 leading-tight text-center">{{ option.label }}</span>
               <span class="text-sm font-bold mt-1">{{ formatCurrency(option.value) }}</span>
@@ -172,7 +174,7 @@ export interface AmountOption {
             Número de Cuotas
           </label>
           <div class="flex flex-wrap gap-2">
-            @for (num of installmentOptions; track num) {
+            @for (num of installmentOptionsComputed(); track num) {
               <button
                 type="button"
                 [class]="'px-4 py-2 border-2 rounded-lg cursor-pointer transition-all duration-200 text-sm font-medium hover:shadow-md ' +
@@ -295,7 +297,8 @@ export interface AmountOption {
 export class PaymentScheduleComponent implements OnInit {
   // Signal inputs for reactivity
   availableAmounts = input<AmountOption[]>([]);
-  @Input() maxInstallments: number = 6;
+  @Input() maxInstallments: number = 6;  // Default, será sobrescrito por la opción seleccionada
+  @Input() minInstallments: number = 1;  // Default, será sobrescrito por la opción seleccionada
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
   @Output() customAmountSelected = new EventEmitter<boolean>();
 
@@ -304,6 +307,8 @@ export class PaymentScheduleComponent implements OnInit {
   selectedField = signal<string | undefined>(undefined);
   selectedRestriccion = signal<string>('SIN_RESTRICCION');
   selectedGeneraCartaAcuerdo = signal<boolean>(false);  // Si la opción seleccionada genera carta de acuerdo
+  selectedMinCuotas = signal<number>(1);   // Min cuotas de la opción seleccionada
+  selectedMaxCuotas = signal<number>(6);   // Max cuotas de la opción seleccionada
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
@@ -315,6 +320,13 @@ export class PaymentScheduleComponent implements OnInit {
   showPercentageEditor = signal<boolean>(false);
   editablePercentage = signal<number>(0);
   isDiscountMode = signal<boolean>(true);  // true = descuento (-), false = aumento (+)
+
+  // Computed: opciones de cuotas basadas en min/max de la opción seleccionada
+  installmentOptionsComputed = computed(() => {
+    const min = this.selectedMinCuotas();
+    const max = this.selectedMaxCuotas();
+    return Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  });
 
   // Computed
   amountOptions = computed(() => this.availableAmounts());
@@ -410,7 +422,7 @@ export class PaymentScheduleComponent implements OnInit {
         // Si solo hay una opción (como en CONTINUIDAD), auto-seleccionarla
         if (amounts.length === 1 && amounts[0].value > 0) {
           console.log('[PaymentSchedule] Auto-selecting single amount option:', amounts[0]);
-          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo);
+          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo, amounts[0].minCuotas, amounts[0].maxCuotas);
         }
       }
 
@@ -428,13 +440,26 @@ export class PaymentScheduleComponent implements OnInit {
     return this._isCustomAmount();
   }
 
-  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean): void {
+  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean, minCuotas?: number, maxCuotas?: number): void {
     this._isCustomAmount.set(false);
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
     this.selectedRestriccion.set(restriccion || 'SIN_RESTRICCION');
     this.selectedGeneraCartaAcuerdo.set(generaCartaAcuerdo || false);  // Guardar si genera carta
+    this.selectedMinCuotas.set(minCuotas ?? this.minInstallments);  // Min cuotas de la opción o default
+    this.selectedMaxCuotas.set(maxCuotas ?? this.maxInstallments);  // Max cuotas de la opción o default
     this.montoBase.set(amount);  // Guardar monto original del campo
+
+    // Ajustar número de cuotas si está fuera del nuevo rango
+    const currentNum = this.numberOfInstallments();
+    const newMin = this.selectedMinCuotas();
+    const newMax = this.selectedMaxCuotas();
+    if (currentNum < newMin) {
+      this.numberOfInstallments.set(newMin);
+    } else if (currentNum > newMax) {
+      this.numberOfInstallments.set(newMax);
+    }
+
     this.generateInstallments();
     this.customAmountSelected.emit(false);
   }
@@ -451,9 +476,21 @@ export class PaymentScheduleComponent implements OnInit {
     this.montoBase.set(undefined);  // Monto libre no tiene base
     this.selectedBaseField.set('');  // Resetear campo base
 
-    // Buscar la opción "personalizado" para obtener su generaCartaAcuerdo
+    // Buscar la opción "personalizado" para obtener sus configuraciones
     const customOption = this.availableAmounts().find(o => o.field === 'personalizado');
     this.selectedGeneraCartaAcuerdo.set(customOption?.generaCartaAcuerdo || false);
+    this.selectedMinCuotas.set(customOption?.minCuotas ?? this.minInstallments);
+    this.selectedMaxCuotas.set(customOption?.maxCuotas ?? this.maxInstallments);
+
+    // Ajustar número de cuotas si está fuera del nuevo rango
+    const currentNum = this.numberOfInstallments();
+    const newMin = this.selectedMinCuotas();
+    const newMax = this.selectedMaxCuotas();
+    if (currentNum < newMin) {
+      this.numberOfInstallments.set(newMin);
+    } else if (currentNum > newMax) {
+      this.numberOfInstallments.set(newMax);
+    }
 
     this.customAmountSelected.emit(true);
     if (this.customAmountValue > 0) {
