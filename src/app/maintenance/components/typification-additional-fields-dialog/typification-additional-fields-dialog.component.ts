@@ -19,259 +19,295 @@ interface ConfiguracionCabecera {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    @if (isOpen()) {
-      <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] flex flex-col">
-          <!-- Header -->
-          <div class="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-600 to-blue-600">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-              <lucide-angular name="sliders" [size]="22" class="text-white"></lucide-angular>
-              Configurar Montos - {{ typificationName() }}
-            </h2>
+    <!-- Backdrop con blur -->
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
+      [class.opacity-0]="!isVisible()"
+      [class.pointer-events-none]="!isVisible()"
+      [class.opacity-100]="isVisible()"
+    >
+      <!-- Overlay con blur -->
+      <div
+        class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+        (click)="handleCancel()"
+      ></div>
+
+      <!-- Modal -->
+      <div
+        class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col transform transition-all duration-300 border border-slate-200 dark:border-slate-700"
+        [class.scale-95]="!isVisible()"
+        [class.opacity-0]="!isVisible()"
+        [class.scale-100]="isVisible()"
+        [class.opacity-100]="isVisible()"
+      >
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <lucide-angular name="sliders" [size]="20" class="text-white"></lucide-angular>
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 dark:text-white">Configurar Montos</h2>
+              <p class="text-sm text-slate-500 dark:text-slate-400">{{ typificationName() }}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            (click)="handleCancel()"
+            class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+          >
+            <lucide-angular name="x" [size]="20"></lucide-angular>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-5">
+          <!-- Selector de Subcartera -->
+          @if (portfolioId()) {
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl">
+              <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2 flex items-center gap-2">
+                <lucide-angular name="database" [size]="16" class="text-violet-500"></lucide-angular>
+                Subcartera
+              </label>
+
+              @if (loadingSubPortfolios()) {
+                <div class="flex items-center gap-2 py-2 text-sm text-slate-500">
+                  <lucide-angular name="loader" [size]="16" class="animate-spin"></lucide-angular>
+                  Cargando subcarteras...
+                </div>
+              } @else if (subPortfolios().length > 0) {
+                <select
+                  [(ngModel)]="selectedSubPortfolioId"
+                  (ngModelChange)="onSubPortfolioChange($event)"
+                  class="w-full px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+                >
+                  <option [ngValue]="undefined">-- Seleccione una subcartera --</option>
+                  @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                    <option [ngValue]="subPortfolio.id">{{ subPortfolio.nombre || subPortfolio.nombreSubcartera }}</option>
+                  }
+                </select>
+              } @else {
+                <p class="text-sm text-slate-500">No hay subcarteras disponibles</p>
+              }
+            </div>
+          }
+
+          <!-- Lista de Opciones con Toggles -->
+          @if (selectedSubPortfolioId()) {
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <lucide-angular name="list-checks" [size]="18" class="text-emerald-500"></lucide-angular>
+                  Montos disponibles para el agente
+                </h3>
+                @if (opciones().length > 0) {
+                  <span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-semibold rounded-full">
+                    {{ getOpcionesHabilitadasCount() }}/{{ opciones().length }} habilitados
+                  </span>
+                }
+              </div>
+
+              @if (loadingOpciones()) {
+                <div class="flex flex-col items-center justify-center py-16 text-slate-500">
+                  <div class="w-12 h-12 border-4 border-slate-200 dark:border-slate-700 border-t-violet-500 rounded-full animate-spin mb-4"></div>
+                  <p class="text-sm">Cargando montos disponibles...</p>
+                </div>
+              } @else if (opcionesConNombres().length > 0) {
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 max-h-[450px] overflow-y-auto pr-1">
+                  @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
+                    <div
+                      class="p-4 rounded-xl border-2 transition-all duration-200"
+                      [class.bg-emerald-50]="opcion.estaHabilitada"
+                      [class.dark:bg-emerald-900/10]="opcion.estaHabilitada"
+                      [class.border-emerald-400]="opcion.estaHabilitada"
+                      [class.dark:border-emerald-600]="opcion.estaHabilitada"
+                      [class.shadow-lg]="opcion.estaHabilitada"
+                      [class.shadow-emerald-500/10]="opcion.estaHabilitada"
+                      [class.bg-slate-50]="!opcion.estaHabilitada"
+                      [class.dark:bg-slate-800/30]="!opcion.estaHabilitada"
+                      [class.border-slate-200]="!opcion.estaHabilitada"
+                      [class.dark:border-slate-700]="!opcion.estaHabilitada"
+                    >
+                      <!-- Row 1: Toggle + Label -->
+                      <div class="flex items-center justify-between cursor-pointer" (click)="toggleOpcionOriginal(opcion)">
+                        <div class="flex items-center gap-3 flex-1">
+                          <!-- Toggle Switch -->
+                          <label class="relative inline-flex items-center cursor-pointer" (click)="$event.stopPropagation()">
+                            <input
+                              type="checkbox"
+                              [checked]="opcion.estaHabilitada"
+                              (change)="toggleOpcionOriginal(opcion)"
+                              class="sr-only peer"
+                            >
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300/50 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:bg-emerald-500"></div>
+                          </label>
+
+                          <!-- Label -->
+                          <div class="flex-1 min-w-0">
+                            <span class="text-sm font-semibold text-slate-900 dark:text-white block truncate">
+                              {{ opcion.visualName }}
+                            </span>
+                            @if (opcion.codigoOpcion !== 'personalizado' && opcion.campoTablaDinamica) {
+                              <span class="text-xs text-slate-500 dark:text-slate-400">
+                                {{ opcion.campoTablaDinamica }}
+                              </span>
+                            }
+                          </div>
+
+                          <!-- Badge -->
+                          @if (opcion.codigoOpcion === 'personalizado') {
+                            <span class="px-2 py-1 bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 text-xs font-semibold rounded-lg">
+                              Manual
+                            </span>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Configuración expandida (solo si está habilitada) -->
+                      @if (opcion.estaHabilitada) {
+                        <div class="mt-4 pt-4 border-t border-emerald-200 dark:border-emerald-800/50 space-y-4" (click)="$event.stopPropagation()">
+                          <!-- Restricción de fecha -->
+                          <div>
+                            <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1.5 flex items-center gap-1.5">
+                              <lucide-angular name="calendar" [size]="12" class="text-blue-500"></lucide-angular>
+                              Restricción de fecha
+                            </label>
+                            <select
+                              [ngModel]="opcion.restriccionFecha || 'SIN_RESTRICCION'"
+                              (ngModelChange)="onRestriccionFechaChange(opcion.codigoOpcion, $event)"
+                              class="w-full px-3 py-2 text-xs border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="SIN_RESTRICCION">Sin restriccion</option>
+                              <option value="DENTRO_MES">Solo dentro del mes actual</option>
+                              <option value="FUERA_MES">Solo fuera del mes</option>
+                            </select>
+                          </div>
+
+                          <!-- Genera Carta de Acuerdo -->
+                          <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                              <lucide-angular name="file-text" [size]="12" class="text-purple-500"></lucide-angular>
+                              Genera Carta de Acuerdo
+                            </label>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                [checked]="opcion.generaCartaAcuerdo"
+                                (change)="onGeneraCartaChange(opcion.codigoOpcion, $event)"
+                                class="sr-only peer"
+                              >
+                              <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300/50 rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
+                            </label>
+                          </div>
+
+                          <!-- Rango de Cuotas - Selector visual -->
+                          <div>
+                            <label class="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2 flex items-center gap-1.5">
+                              <lucide-angular name="layers" [size]="12" class="text-emerald-500"></lucide-angular>
+                              Cuotas permitidas
+                            </label>
+                            <div class="flex flex-wrap gap-1.5">
+                              @for (num of cuotasDisponibles; track num) {
+                                <button
+                                  type="button"
+                                  (click)="toggleCuota(opcion.codigoOpcion, num)"
+                                  class="w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150"
+                                  [class.bg-emerald-500]="isCuotaInRange(opcion, num)"
+                                  [class.text-white]="isCuotaInRange(opcion, num)"
+                                  [class.shadow-md]="isCuotaInRange(opcion, num)"
+                                  [class.shadow-emerald-500/30]="isCuotaInRange(opcion, num)"
+                                  [class.bg-slate-100]="!isCuotaInRange(opcion, num)"
+                                  [class.dark:bg-slate-700]="!isCuotaInRange(opcion, num)"
+                                  [class.text-slate-600]="!isCuotaInRange(opcion, num)"
+                                  [class.dark:text-slate-300]="!isCuotaInRange(opcion, num)"
+                                  [class.hover:bg-slate-200]="!isCuotaInRange(opcion, num)"
+                                  [class.dark:hover:bg-slate-600]="!isCuotaInRange(opcion, num)"
+                                >
+                                  {{ num }}
+                                </button>
+                              }
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1.5">
+                              @if ((opcion.minCuotas || 1) === (opcion.maxCuotas || 6)) {
+                                Solo {{ opcion.minCuotas || 1 }} cuota{{ (opcion.minCuotas || 1) > 1 ? 's' : '' }}
+                              } @else {
+                                De {{ opcion.minCuotas || 1 }} a {{ opcion.maxCuotas || 6 }} cuotas
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else if (errorMessage()) {
+                <div class="text-center py-12 text-red-500 dark:text-red-400">
+                  <div class="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <lucide-angular name="alert-circle" [size]="32"></lucide-angular>
+                  </div>
+                  <p class="text-sm mb-4">{{ errorMessage() }}</p>
+                  <button
+                    (click)="retryLoadOpciones()"
+                    class="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-900/50 transition-all"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              } @else {
+                <div class="text-center py-12 text-slate-400">
+                  <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <lucide-angular name="inbox" [size]="32"></lucide-angular>
+                  </div>
+                  <p class="text-sm">No se encontraron campos numericos en esta subcartera</p>
+                </div>
+              }
+            </div>
+          } @else {
+            <!-- Estado inicial: seleccionar subcartera -->
+            <div class="text-center py-16 text-slate-400">
+              <div class="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <lucide-angular name="mouse-pointer-click" [size]="40" class="opacity-50"></lucide-angular>
+              </div>
+              <p class="text-sm">Seleccione una subcartera para ver los montos disponibles</p>
+            </div>
+          }
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-between items-center gap-4 p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+          <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+            @if (opciones().length > 0) {
+              <lucide-angular name="info" [size]="14"></lucide-angular>
+              Los montos habilitados apareceran como opciones para el agente
+            }
+          </div>
+          <div class="flex gap-3">
             <button
               type="button"
               (click)="handleCancel()"
-              class="text-white/80 hover:text-white"
+              class="px-5 py-2.5 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium transition-all"
             >
-              <lucide-angular name="x" [size]="24"></lucide-angular>
+              Cancelar
             </button>
-          </div>
-
-          <!-- Body -->
-          <div class="flex-1 overflow-y-auto p-5 space-y-4">
-            <!-- Selector de Subcartera -->
-            @if (portfolioId()) {
-              <div class="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-                  <lucide-angular name="database" [size]="16" class="text-blue-600"></lucide-angular>
-                  Subcartera
-                </label>
-
-                @if (loadingSubPortfolios()) {
-                  <div class="flex items-center gap-2 py-2 text-sm text-gray-600 dark:text-gray-400">
-                    <lucide-angular name="loader" [size]="16" class="animate-spin"></lucide-angular>
-                    Cargando subcarteras...
-                  </div>
-                } @else if (subPortfolios().length > 0) {
-                  <select
-                    [(ngModel)]="selectedSubPortfolioId"
-                    (ngModelChange)="onSubPortfolioChange($event)"
-                    class="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option [ngValue]="undefined">-- Seleccione una subcartera --</option>
-                    @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
-                      <option [ngValue]="subPortfolio.id">{{ subPortfolio.nombre || subPortfolio.nombreSubcartera }}</option>
-                    }
-                  </select>
-                } @else {
-                  <p class="text-sm text-gray-600 dark:text-gray-400">
-                    No hay subcarteras disponibles
-                  </p>
-                }
-              </div>
-            }
-
-            <!-- Lista de Opciones con Toggles -->
-            @if (selectedSubPortfolioId()) {
-              <div class="space-y-3">
-                <div class="flex items-center justify-between">
-                  <h3 class="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <lucide-angular name="list-checks" [size]="18" class="text-green-600"></lucide-angular>
-                    Montos disponibles para el agente
-                  </h3>
-                  @if (opciones().length > 0) {
-                    <span class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ getOpcionesHabilitadasCount() }}/{{ opciones().length }} habilitados
-                    </span>
-                  }
-                </div>
-
-                @if (loadingOpciones()) {
-                  <div class="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <lucide-angular name="loader" [size]="40" class="animate-spin text-blue-600 mb-3"></lucide-angular>
-                    <p class="text-sm">Cargando montos disponibles...</p>
-                  </div>
-                } @else if (opcionesConNombres().length > 0) {
-                  <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
-                    @for (opcion of opcionesConNombres(); track opcion.codigoOpcion) {
-                      <div
-                        class="p-3 rounded-lg border transition-all"
-                        [class.bg-green-50]="opcion.estaHabilitada"
-                        [class.dark:bg-green-900/20]="opcion.estaHabilitada"
-                        [class.border-green-300]="opcion.estaHabilitada"
-                        [class.dark:border-green-700]="opcion.estaHabilitada"
-                        [class.bg-gray-50]="!opcion.estaHabilitada"
-                        [class.dark:bg-gray-700/50]="!opcion.estaHabilitada"
-                        [class.border-gray-200]="!opcion.estaHabilitada"
-                        [class.dark:border-gray-600]="!opcion.estaHabilitada"
-                      >
-                        <!-- Row 1: Toggle + Label + Badge -->
-                        <div class="flex items-center justify-between cursor-pointer" (click)="toggleOpcionOriginal(opcion)">
-                          <div class="flex items-center gap-3 flex-1">
-                            <!-- Toggle Switch -->
-                            <label class="relative inline-flex items-center cursor-pointer" (click)="$event.stopPropagation()">
-                              <input
-                                type="checkbox"
-                                [checked]="opcion.estaHabilitada"
-                                (change)="toggleOpcionOriginal(opcion)"
-                                class="sr-only peer"
-                              >
-                              <div class="w-10 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-500"></div>
-                            </label>
-
-                            <!-- Label -->
-                            <div class="flex-1">
-                              <span class="text-sm font-medium text-gray-900 dark:text-white">
-                                {{ opcion.visualName }}
-                              </span>
-                              @if (opcion.codigoOpcion !== 'personalizado') {
-                                <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                                  ({{ opcion.campoTablaDinamica }})
-                                </span>
-                              }
-                            </div>
-
-                            <!-- Badge -->
-                            @if (opcion.codigoOpcion === 'personalizado') {
-                              <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-semibold rounded-full">
-                                Manual
-                              </span>
-                            }
-                          </div>
-
-                          <!-- Status Icon -->
-                          <div class="ml-2">
-                            @if (opcion.estaHabilitada) {
-                              <lucide-angular name="check-circle" [size]="20" class="text-green-600"></lucide-angular>
-                            } @else {
-                              <lucide-angular name="circle" [size]="20" class="text-gray-300 dark:text-gray-500"></lucide-angular>
-                            }
-                          </div>
-                        </div>
-
-                        <!-- Row 2: Restricción de Fecha y Genera Carta (solo si está habilitada) -->
-                        @if (opcion.estaHabilitada) {
-                          <div class="mt-2 pt-2 border-t border-green-200 dark:border-green-800 space-y-2" (click)="$event.stopPropagation()">
-                            <!-- Restricción de fecha -->
-                            <div class="flex items-center gap-2">
-                              <lucide-angular name="calendar" [size]="14" class="text-blue-600"></lucide-angular>
-                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Restricción de fecha:</span>
-                              <select
-                                [ngModel]="opcion.restriccionFecha || 'SIN_RESTRICCION'"
-                                (ngModelChange)="onRestriccionFechaChange(opcion.codigoOpcion, $event)"
-                                class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                              >
-                                <option value="SIN_RESTRICCION">Sin restricción (cualquier fecha)</option>
-                                <option value="DENTRO_MES">Solo dentro del mes actual</option>
-                                <option value="FUERA_MES">Solo fuera del mes (próximo mes+)</option>
-                              </select>
-                            </div>
-                            <!-- Genera Carta de Acuerdo -->
-                            <div class="flex items-center gap-2">
-                              <lucide-angular name="file-text" [size]="14" class="text-purple-600"></lucide-angular>
-                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Genera Carta de Acuerdo:</span>
-                              <label class="relative inline-flex items-center cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  [checked]="opcion.generaCartaAcuerdo"
-                                  (change)="onGeneraCartaChange(opcion.codigoOpcion, $event)"
-                                  class="sr-only peer"
-                                >
-                                <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-500"></div>
-                              </label>
-                              <span class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ opcion.generaCartaAcuerdo ? 'Sí' : 'No' }}
-                              </span>
-                            </div>
-
-                            <!-- Rango de Cuotas -->
-                            <div class="flex items-center gap-2">
-                              <lucide-angular name="list-ordered" [size]="14" class="text-emerald-600"></lucide-angular>
-                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">Cuotas permitidas:</span>
-                              <div class="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  [ngModel]="opcion.minCuotas || 1"
-                                  (ngModelChange)="onMinCuotasChange(opcion.codigoOpcion, $event)"
-                                  min="1"
-                                  max="12"
-                                  class="w-14 px-2 py-1 text-xs text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-                                >
-                                <span class="text-xs text-gray-500">a</span>
-                                <input
-                                  type="number"
-                                  [ngModel]="opcion.maxCuotas || 6"
-                                  (ngModelChange)="onMaxCuotasChange(opcion.codigoOpcion, $event)"
-                                  min="1"
-                                  max="12"
-                                  class="w-14 px-2 py-1 text-xs text-center border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-                                >
-                                <span class="text-xs text-gray-500 dark:text-gray-400">cuotas</span>
-                              </div>
-                            </div>
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                } @else if (errorMessage()) {
-                  <div class="text-center py-8 text-red-500 dark:text-red-400">
-                    <lucide-angular name="alert-circle" [size]="40" class="mx-auto mb-3"></lucide-angular>
-                    <p class="text-sm">{{ errorMessage() }}</p>
-                    <button
-                      (click)="retryLoadOpciones()"
-                      class="mt-3 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm hover:bg-red-200"
-                    >
-                      Reintentar
-                    </button>
-                  </div>
-                } @else {
-                  <div class="text-center py-8 text-yellow-600 dark:text-yellow-400">
-                    <lucide-angular name="inbox" [size]="40" class="mx-auto mb-3 opacity-60"></lucide-angular>
-                    <p class="text-sm">No se encontraron campos numéricos en esta subcartera</p>
-                  </div>
-                }
-              </div>
-            } @else {
-              <!-- Estado inicial: seleccionar subcartera -->
-              <div class="text-center py-12 text-gray-400 dark:text-gray-500">
-                <lucide-angular name="pointer" [size]="48" class="mx-auto mb-4 opacity-50"></lucide-angular>
-                <p class="text-sm">Seleccione una subcartera para ver los montos disponibles</p>
-              </div>
-            }
-          </div>
-
-          <!-- Footer -->
-          <div class="flex justify-between items-center gap-3 p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              @if (opciones().length > 0) {
-                <lucide-angular name="info" [size]="14" class="inline mr-1"></lucide-angular>
-                Los montos habilitados aparecerán como opciones para el agente
-              }
-            </div>
-            <div class="flex gap-3">
-              <button
-                type="button"
-                (click)="handleCancel()"
-                class="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-sm"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                (click)="handleSave()"
-                [disabled]="!canSave()"
-                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
-              >
-                <lucide-angular name="save" [size]="18"></lucide-angular>
-                Guardar
-              </button>
-            </div>
+            <button
+              type="button"
+              (click)="handleSave()"
+              [disabled]="!canSave()"
+              class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-semibold transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none"
+            >
+              <lucide-angular name="save" [size]="16"></lucide-angular>
+              Guardar
+            </button>
           </div>
         </div>
       </div>
+    </div>
+  `,
+  styles: [`
+    :host {
+      display: contents;
     }
-  `
+  `]
 })
 export class TypificationAdditionalFieldsDialogComponent {
   isOpen = input.required<boolean>();
@@ -291,6 +327,10 @@ export class TypificationAdditionalFieldsDialogComponent {
   loadingSubPortfolios = signal<boolean>(false);
   selectedSubPortfolioId = signal<number | undefined>(undefined);
   paymentScheduleFieldId = signal<number | null>(null);
+  isVisible = signal<boolean>(false);
+
+  // Cuotas disponibles (1-12)
+  cuotasDisponibles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
@@ -301,7 +341,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     const opciones = this.opciones();
     const cabeceras = this.cabeceras();
 
-    // Crear mapa de código -> nombre visual
+    // Crear mapa de codigo -> nombre visual
     const codigoToNombre = new Map<string, string>();
     for (const c of cabeceras) {
       codigoToNombre.set(c.codigo.toLowerCase(), c.nombre);
@@ -333,6 +373,10 @@ export class TypificationAdditionalFieldsDialogComponent {
         this.resetState();
         this.loadSubPortfolios();
         this.loadPaymentScheduleField();
+        // Animacion de entrada
+        setTimeout(() => this.isVisible.set(true), 10);
+      } else {
+        this.isVisible.set(false);
       }
     });
   }
@@ -464,7 +508,7 @@ export class TypificationAdditionalFieldsDialogComponent {
         },
         error: (error) => {
           console.error('Error initializing options:', error);
-          this.errorMessage.set('Error al cargar las opciones. Verifique la configuración de la subcartera.');
+          this.errorMessage.set('Error al cargar las opciones. Verifique la configuracion de la subcartera.');
           this.loadingOpciones.set(false);
         }
       });
@@ -475,16 +519,16 @@ export class TypificationAdditionalFieldsDialogComponent {
   }
 
   toggleOpcionOriginal(opcionConNombre: CampoOpcionDTO & { visualName: string }) {
-    // Buscar la opción original en el signal y modificarla
+    // Buscar la opcion original en el signal y modificarla
     const opciones = this.opciones();
     const opcionOriginal = opciones.find(o => o.codigoOpcion === opcionConNombre.codigoOpcion);
     if (opcionOriginal) {
       opcionOriginal.estaHabilitada = !opcionOriginal.estaHabilitada;
-      // Si se habilita y no tiene restricción, poner por defecto SIN_RESTRICCION
+      // Si se habilita y no tiene restriccion, poner por defecto SIN_RESTRICCION
       if (opcionOriginal.estaHabilitada && !opcionOriginal.restriccionFecha) {
         opcionOriginal.restriccionFecha = RestriccionFecha.SIN_RESTRICCION;
       }
-      // Forzar actualización del signal
+      // Forzar actualizacion del signal
       this.opciones.set([...opciones]);
     }
   }
@@ -494,7 +538,7 @@ export class TypificationAdditionalFieldsDialogComponent {
     const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
     if (opcion) {
       opcion.restriccionFecha = restriccion as RestriccionFecha;
-      // Forzar actualización del signal
+      // Forzar actualizacion del signal
       this.opciones.set([...opciones]);
     }
   }
@@ -505,39 +549,60 @@ export class TypificationAdditionalFieldsDialogComponent {
     const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
     if (opcion) {
       opcion.generaCartaAcuerdo = checkbox.checked;
-      // Forzar actualización del signal
+      // Forzar actualizacion del signal
       this.opciones.set([...opciones]);
     }
   }
 
-  onMinCuotasChange(codigoOpcion: string, value: number) {
-    const opciones = this.opciones();
-    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
-    if (opcion) {
-      const minValue = Math.max(1, Math.min(12, value || 1));
-      opcion.minCuotas = minValue;
-      // Asegurar que max sea >= min
-      if (opcion.maxCuotas && opcion.maxCuotas < minValue) {
-        opcion.maxCuotas = minValue;
-      }
-      // Forzar actualización del signal
-      this.opciones.set([...opciones]);
-    }
+  // Verificar si una cuota esta en el rango seleccionado
+  isCuotaInRange(opcion: CampoOpcionDTO, num: number): boolean {
+    const min = opcion.minCuotas || 1;
+    const max = opcion.maxCuotas || 6;
+    return num >= min && num <= max;
   }
 
-  onMaxCuotasChange(codigoOpcion: string, value: number) {
+  // Toggle de cuota: expande o contrae el rango
+  toggleCuota(codigoOpcion: string, num: number) {
     const opciones = this.opciones();
     const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
-    if (opcion) {
-      const maxValue = Math.max(1, Math.min(12, value || 6));
-      opcion.maxCuotas = maxValue;
-      // Asegurar que min sea <= max
-      if (opcion.minCuotas && opcion.minCuotas > maxValue) {
-        opcion.minCuotas = maxValue;
+    if (!opcion) return;
+
+    const currentMin = opcion.minCuotas || 1;
+    const currentMax = opcion.maxCuotas || 6;
+
+    // Si el numero esta en el rango
+    if (num >= currentMin && num <= currentMax) {
+      // Si es el unico, no hacer nada
+      if (currentMin === currentMax) return;
+
+      // Si es el minimo, aumentar el minimo
+      if (num === currentMin) {
+        opcion.minCuotas = num + 1;
       }
-      // Forzar actualización del signal
-      this.opciones.set([...opciones]);
+      // Si es el maximo, reducir el maximo
+      else if (num === currentMax) {
+        opcion.maxCuotas = num - 1;
+      }
+      // Si esta en medio, verificar cual extremo esta mas cerca
+      else {
+        const distToMin = num - currentMin;
+        const distToMax = currentMax - num;
+        if (distToMin <= distToMax) {
+          opcion.minCuotas = num + 1;
+        } else {
+          opcion.maxCuotas = num - 1;
+        }
+      }
+    } else {
+      // Fuera del rango: expandir para incluirlo
+      if (num < currentMin) {
+        opcion.minCuotas = num;
+      } else {
+        opcion.maxCuotas = num;
+      }
     }
+
+    this.opciones.set([...opciones]);
   }
 
   getOpcionesHabilitadasCount(): number {
@@ -552,7 +617,8 @@ export class TypificationAdditionalFieldsDialogComponent {
   }
 
   handleCancel() {
-    this.close.emit();
+    this.isVisible.set(false);
+    setTimeout(() => this.close.emit(), 200);
   }
 
   handleSave() {
@@ -580,11 +646,12 @@ export class TypificationAdditionalFieldsDialogComponent {
       next: (opcionesActualizadas) => {
         console.log('Options saved successfully:', opcionesActualizadas.length);
         this.opciones.set(opcionesActualizadas);
-        this.save.emit();
+        this.isVisible.set(false);
+        setTimeout(() => this.save.emit(), 200);
       },
       error: (error) => {
         console.error('Error saving options:', error);
-        this.errorMessage.set('Error al guardar la configuración');
+        this.errorMessage.set('Error al guardar la configuracion');
       }
     });
   }
