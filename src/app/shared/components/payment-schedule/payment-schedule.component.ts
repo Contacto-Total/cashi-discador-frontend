@@ -45,7 +45,7 @@ export interface AmountOption {
                   [class]="option.restriccionFecha === 'DENTRO_MES'
                     ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
                     : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
-                  {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Próx. mes+' }}
+                  {{ option.restriccionFecha === 'DENTRO_MES' ? 'Este mes' : 'Mensual' }}
                 </span>
               }
             </button>
@@ -359,10 +359,13 @@ export class PaymentScheduleComponent implements OnInit {
           message: `Solo fechas dentro del mes actual (hasta ${lastDayOfMonth.toLocaleDateString('es-PE')})`
         };
       case 'FUERA_MES':
+        // Permitir desde mañana, cuotas espaciadas cada 30 días
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
         return {
-          minDate: formatDate(firstDayNextMonth),
+          minDate: formatDate(tomorrow),
           maxDate: undefined,
-          message: `Solo fechas a partir del ${firstDayNextMonth.toLocaleDateString('es-PE')}`
+          message: 'Cuotas cada 30 días'
         };
       default:
         return {
@@ -637,14 +640,9 @@ export class PaymentScheduleComponent implements OnInit {
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
 
-    if (restriccion === 'FUERA_MES') {
-      // Empezar desde el primer día del próximo mes
-      startDate = new Date(currentYear, currentMonth + 1, 1);
-    } else {
-      // Para SIN_RESTRICCION o DENTRO_MES, empezar desde mañana
-      startDate = new Date(today);
-      startDate.setDate(startDate.getDate() + 1);
-    }
+    // Para todas las restricciones, empezar desde mañana
+    startDate = new Date(today);
+    startDate.setDate(startDate.getDate() + 1);
 
     // Para DENTRO_MES, calcular el último día permitido
     const lastDayOfMonth = restriccion === 'DENTRO_MES'
@@ -665,7 +663,7 @@ export class PaymentScheduleComponent implements OnInit {
           dueDate = new Date(lastDayOfMonth);
         }
       } else if (restriccion === 'FUERA_MES') {
-        // Cada cuota con 30 días de diferencia, empezando desde el próximo mes
+        // Cada cuota con 30 días de diferencia
         dueDate = new Date(startDate);
         dueDate.setDate(dueDate.getDate() + (30 * i));
       } else {
