@@ -19,7 +19,8 @@ export const LOAD_TYPES = {
 export const DATA_TYPES = {
   TEXT: 'TEXTO',
   NUMERIC: 'NUMERICO',
-  DATE: 'FECHA'
+  DATE: 'FECHA',
+  BOOLEAN: 'BOOLEANO'
 } as const;
 
 // Tipos de archivo

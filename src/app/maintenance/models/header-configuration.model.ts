@@ -18,7 +18,7 @@ export interface HeaderConfiguration {
 }
 
 // ==================== Tipos base ====================
-export type DataType = 'TEXTO' | 'NUMERICO' | 'FECHA';
+export type DataType = 'TEXTO' | 'NUMERICO' | 'FECHA' | 'BOOLEANO';
 export type LoadType = 'INICIAL' | 'ACTUALIZACION' | 'COMPLEMENTARIO';
 export type ChangeType = 'NUEVO' | 'MODIFICADO' | 'ALIAS_AGREGADO' | 'ALIAS_ELIMINADO' | 'IGNORADO' | 'REACTIVADO';
 
@@ -137,3 +137,49 @@ export interface HeaderConfigurationItem {
   regexPattern?: string;
   hasData?: boolean;          // Indica si la columna tiene datos en la tabla
 }
+
+// ==================== Importar desde otra subcartera ====================
+
+export interface ImportPreviewResult {
+  sourceSubPortfolioId: number;
+  sourceSubPortfolioName: string;
+  targetSubPortfolioId: number;
+  targetSubPortfolioName: string;
+  loadType: LoadType;
+  headersToImport: HeaderPreviewItem[];
+  conflicts: ConflictItem[];
+  totalNew: number;
+  totalConflicts: number;
+}
+
+export interface HeaderPreviewItem {
+  headerName: string;
+  dataType: DataType;
+  displayLabel: string;
+  hasAliases: boolean;
+  aliasCount: number;
+}
+
+export interface ConflictItem {
+  headerName: string;
+  sourceDisplayLabel: string;
+  targetDisplayLabel: string;
+}
+
+export interface ImportFromSubPortfolioRequest {
+  sourceSubPortfolioId: number;
+  loadType: LoadType;
+  conflictResolution: ConflictResolution;
+  headersToReplace?: string[];
+}
+
+export interface ImportResult {
+  success: boolean;
+  headersImported: number;
+  headersSkipped: number;
+  headersReplaced: number;
+  aliasesImported: number;
+  errors: string[];
+}
+
+export type ConflictResolution = 'SKIP' | 'REPLACE' | 'SELECTIVE';

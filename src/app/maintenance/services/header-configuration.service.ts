@@ -15,7 +15,10 @@ import {
   HeaderResolutionResult,
   CreateNewHeaderFromColumnRequest,
   IgnoreColumnRequest,
-  HeaderChangeHistory
+  HeaderChangeHistory,
+  ImportPreviewResult,
+  ImportFromSubPortfolioRequest,
+  ImportResult
 } from '../models/header-configuration.model';
 
 @Injectable({
@@ -212,5 +215,42 @@ export class HeaderConfigurationService {
    */
   getChangeHistory(subPortfolioId: number): Observable<HeaderChangeHistory[]> {
     return this.http.get<HeaderChangeHistory[]>(`${this.baseUrl}/subportfolio/${subPortfolioId}/change-history`);
+  }
+
+  // ==================== Importar desde otra subcartera ====================
+
+  /**
+   * Obtiene un preview de la importación de cabeceras desde otra subcartera
+   * Muestra qué cabeceras se importarían y cuáles tienen conflictos
+   */
+  previewImportFromSubPortfolio(
+    targetSubPortfolioId: number,
+    sourceSubPortfolioId: number,
+    loadType: LoadType
+  ): Observable<ImportPreviewResult> {
+    return this.http.get<ImportPreviewResult>(
+      `${this.baseUrl}/subportfolio/${targetSubPortfolioId}/import-preview`,
+      {
+        params: {
+          sourceSubPortfolioId: sourceSubPortfolioId.toString(),
+          loadType: loadType
+        }
+      }
+    );
+  }
+
+  /**
+   * Importa configuraciones de cabeceras desde otra subcartera
+   * @param targetSubPortfolioId ID de la subcartera destino
+   * @param request Datos de la importación incluyendo resolución de conflictos
+   */
+  importFromSubPortfolio(
+    targetSubPortfolioId: number,
+    request: ImportFromSubPortfolioRequest
+  ): Observable<ImportResult> {
+    return this.http.post<ImportResult>(
+      `${this.baseUrl}/subportfolio/${targetSubPortfolioId}/import-from-subportfolio`,
+      request
+    );
   }
 }

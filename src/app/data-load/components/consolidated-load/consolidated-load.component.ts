@@ -1009,6 +1009,7 @@ import {
                                               <option value="TEXTO">TEXTO</option>
                                               <option value="NUMERICO">NUMERICO</option>
                                               <option value="FECHA">FECHA</option>
+                                              <option value="BOOLEANO">BOOLEANO</option>
                                             </select>
                                           </div>
 
@@ -2169,6 +2170,13 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       datePatterns.some(pattern => pattern.test(v))
     );
     if (isDate) return DATA_TYPES.DATE;
+
+    // Detectar valores booleanos
+    const booleanValues = ['true', 'false', '1', '0', 'si', 'sí', 'no', 'yes', 'verdadero', 'falso', 'activo', 'inactivo', 'v', 'f', 'y', 'n'];
+    const isBoolean = sampleValues.every(v =>
+      booleanValues.includes(v.toLowerCase().trim())
+    );
+    if (isBoolean) return DATA_TYPES.BOOLEAN;
 
     const numericRegex = /^-?\d+([.,]\d+)?$/;
     const isNumeric = sampleValues.every(v =>
