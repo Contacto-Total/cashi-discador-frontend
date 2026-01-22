@@ -11,7 +11,8 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { environment } from '../../../../environments/environment';
-import * as XLSX from 'xlsx';
+import { Workbook, Worksheet } from 'exceljs';
+import { saveAs } from 'file-saver';
 
 @Component({
   selector: 'app-campaign-form',
@@ -419,12 +420,15 @@ export class CampaignFormComponent implements OnInit {
 
     this.campaignService.createCampaign(this.campaign).subscribe({
       next: (response: any) => {
-        const newCampaignId = response.id || response;
-        if (newCampaignId) {
+        // El backend devuelve {success, mensaje, campaignId, campaign}
+        const newCampaignId = response.campaignId || response.campaign?.id || response.id;
+        console.log('Campaña creada, respuesta:', response, 'ID extraído:', newCampaignId);
+        if (newCampaignId && typeof newCampaignId === 'number') {
           this.saveFiltersAndNavigate(newCampaignId);
         } else {
-          console.error('No se pudo obtener el ID de la campaña creada');
-          this.router.navigate(['/admin/campaigns']);
+          console.error('No se pudo obtener el ID de la campaña creada. Respuesta:', response);
+          this.error = 'Error: No se pudo obtener el ID de la campaña';
+          this.loading = false;
         }
       },
       error: (err) => {
@@ -476,86 +480,248 @@ export class CampaignFormComponent implements OnInit {
   }
 
   /**
-   * Exporta la campaña a Excel con dos hojas:
-   * 1. Resumen: datos del preview
-   * 2. Clientes: documento y celular
+   * Exporta la campaña a Excel con dos hojas y estilos profesionales:
+   * 1. Resumen: datos del preview con colores y formato
+   * 2. Clientes: documento y celular con tabla formateada
    */
   private exportCampaignToExcel(campaignId: number): void {
     // Obtener los contactos de la campaña
     this.http.get<Array<{documento: string, celular: string}>>(
       `${environment.apiUrl}/contacts/campaign/${campaignId}/export`
     ).subscribe({
-      next: (contacts) => {
-        console.log('📊 Exportando', contacts.length, 'contactos a Excel');
+      next: async (contacts) => {
+        console.log('Exportando', contacts.length, 'contactos a Excel');
 
-        // Crear workbook
-        const wb = XLSX.utils.book_new();
+        // Crear workbook con ExcelJS
+        const workbook = new Workbook();
+        workbook.creator = 'Sistema de Cobranza';
+        workbook.created = new Date();
 
         // === HOJA 1: RESUMEN ===
-        const resumenData: any[][] = [
-          ['RESUMEN DE CAMPAÑA'],
-          [],
-          ['Campaña', this.campaign.name],
-          ['Descripción', this.campaign.description || ''],
-          [],
-          ['DATOS DE SUBCARTERA'],
-          ['Total en Subcartera', this.previewData?.totalClientesSubcartera || 0],
-          ['Excluidos por Blacklist', this.previewData?.excluidosPorBlacklist || 0],
-          ['Disponibles', this.previewData?.totalDespuesBlacklist || 0],
-          [],
-          ['DISTRIBUCIÓN POR TIPO DE CONTACTO'],
-          ['Tipo', 'Nombre', 'Cantidad', 'Porcentaje']
+        const wsResumen = workbook.addWorksheet('Resumen', {
+          properties: { tabColor: { argb: '3B82F6' } }
+        });
+
+        // Configurar anchos de columna
+        wsResumen.columns = [
+          { width: 25 },
+          { width: 35 },
+          { width: 15 },
+          { width: 15 }
         ];
 
-        // Agregar filas por tipo de contacto
+        // Título principal
+        wsResumen.mergeCells('A1:D1');
+        const titleCell = wsResumen.getCell('A1');
+        titleCell.value = 'RESUMEN DE CAMPAÑA';
+        titleCell.font = { bold: true, size: 16, color: { argb: 'FFFFFF' } };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        wsResumen.getRow(1).height = 30;
+
+        // Datos de la campaña
+        let rowNum = 3;
+        this.addLabelValueRow(wsResumen, rowNum++, 'Campaña:', this.campaign.name, '10B981');
+        this.addLabelValueRow(wsResumen, rowNum++, 'Descripción:', this.campaign.description || '-', '10B981');
+        rowNum++;
+
+        // Sección: Datos de Subcartera
+        wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
+        const subcarteraTitle = wsResumen.getCell(`A${rowNum}`);
+        subcarteraTitle.value = 'DATOS DE SUBCARTERA';
+        subcarteraTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
+        subcarteraTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '6366F1' } };
+        subcarteraTitle.alignment = { horizontal: 'center' };
+        rowNum++;
+
+        this.addLabelValueRow(wsResumen, rowNum++, 'Total en Subcartera:', this.previewData?.totalClientesSubcartera || 0);
+        this.addLabelValueRow(wsResumen, rowNum++, 'Excluidos por Blacklist:', this.previewData?.excluidosPorBlacklist || 0, 'EF4444');
+        this.addLabelValueRow(wsResumen, rowNum++, 'Disponibles:', this.previewData?.totalDespuesBlacklist || 0, '10B981');
+        rowNum++;
+
+        // Sección: Distribución por tipo de contacto
+        wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
+        const distTitle = wsResumen.getCell(`A${rowNum}`);
+        distTitle.value = 'DISTRIBUCIÓN POR TIPO DE CONTACTO';
+        distTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
+        distTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '8B5CF6' } };
+        distTitle.alignment = { horizontal: 'center' };
+        rowNum++;
+
+        // Encabezados de tabla
+        const headerRow = wsResumen.getRow(rowNum);
+        ['Código', 'Nombre', 'Cantidad', 'Porcentaje'].forEach((header, idx) => {
+          const cell = headerRow.getCell(idx + 1);
+          cell.value = header;
+          cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '374151' } };
+          cell.alignment = { horizontal: 'center' };
+          cell.border = this.getTableBorder();
+        });
+        rowNum++;
+
+        // Datos por tipo de contacto
         const total = this.getPreviewTotal();
+        const tipoColors: { [key: string]: string } = {
+          'CD': '10B981', 'CI': '3B82F6', 'PR': 'EF4444', 'NC': '6B7280'
+        };
+
         this.tiposContacto.forEach(tipo => {
           const cantidad = this.previewData?.porTipoContactoFiltrado[tipo.codigo] || 0;
           const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) + '%' : '0%';
-          resumenData.push([tipo.codigo, tipo.nombre, cantidad, porcentaje]);
-        });
-        resumenData.push(['TOTAL', '', total, '100%']);
+          const row = wsResumen.getRow(rowNum);
 
-        // Agregar filtros aplicados
+          row.getCell(1).value = tipo.codigo;
+          row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: tipoColors[tipo.codigo] || '6B7280' } };
+          row.getCell(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+          row.getCell(1).alignment = { horizontal: 'center' };
+
+          row.getCell(2).value = tipo.nombre;
+          row.getCell(3).value = cantidad;
+          row.getCell(3).alignment = { horizontal: 'center' };
+          row.getCell(4).value = porcentaje;
+          row.getCell(4).alignment = { horizontal: 'center' };
+
+          [1, 2, 3, 4].forEach(col => {
+            row.getCell(col).border = this.getTableBorder();
+          });
+          rowNum++;
+        });
+
+        // Fila TOTAL
+        const totalRow = wsResumen.getRow(rowNum);
+        totalRow.getCell(1).value = 'TOTAL';
+        totalRow.getCell(1).font = { bold: true };
+        totalRow.getCell(2).value = '';
+        totalRow.getCell(3).value = total;
+        totalRow.getCell(3).font = { bold: true };
+        totalRow.getCell(3).alignment = { horizontal: 'center' };
+        totalRow.getCell(4).value = '100%';
+        totalRow.getCell(4).font = { bold: true };
+        totalRow.getCell(4).alignment = { horizontal: 'center' };
+        [1, 2, 3, 4].forEach(col => {
+          totalRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'E5E7EB' } };
+          totalRow.getCell(col).border = this.getTableBorder();
+        });
+        rowNum += 2;
+
+        // Sección: Filtros aplicados
         if (this.campaignFilters.length > 0) {
-          resumenData.push([]);
-          resumenData.push(['FILTROS APLICADOS']);
+          wsResumen.mergeCells(`A${rowNum}:D${rowNum}`);
+          const filtrosTitle = wsResumen.getCell(`A${rowNum}`);
+          filtrosTitle.value = 'FILTROS APLICADOS';
+          filtrosTitle.font = { bold: true, size: 12, color: { argb: 'FFFFFF' } };
+          filtrosTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'F59E0B' } };
+          filtrosTitle.alignment = { horizontal: 'center' };
+          rowNum++;
+
           this.campaignFilters.forEach(f => {
             const filtroDesc = f.fieldCode
-              ? `${f.fieldName}: ${f.minValue || 'N/A'} - ${f.maxValue || 'N/A'}`
+              ? `${f.fieldName}: ${f.minValue ?? 'N/A'} - ${f.maxValue ?? 'N/A'}`
               : 'Solo por Estado';
-            resumenData.push([this.getTipoContactoNombre(f.tipoContacto), filtroDesc]);
+            const row = wsResumen.getRow(rowNum);
+            row.getCell(1).value = this.getTipoContactoNombre(f.tipoContacto);
+            row.getCell(2).value = filtroDesc;
+            wsResumen.mergeCells(`B${rowNum}:D${rowNum}`);
+            rowNum++;
           });
         }
 
-        const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
-        XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
-
         // === HOJA 2: CLIENTES ===
-        const clientesData: any[][] = [
-          ['DOCUMENTO', 'CELULAR']
-        ];
-        contacts.forEach(c => {
-          clientesData.push([c.documento, c.celular]);
+        const wsClientes = workbook.addWorksheet('Clientes', {
+          properties: { tabColor: { argb: '10B981' } }
         });
 
-        const wsClientes = XLSX.utils.aoa_to_sheet(clientesData);
-        XLSX.utils.book_append_sheet(wb, wsClientes, 'Clientes');
+        // Configurar anchos
+        wsClientes.columns = [
+          { width: 5 },
+          { width: 20 },
+          { width: 20 }
+        ];
 
-        // Generar archivo y descargar
+        // Título
+        wsClientes.mergeCells('A1:C1');
+        const clientesTitle = wsClientes.getCell('A1');
+        clientesTitle.value = `LISTA DE CONTACTOS - ${this.campaign.name}`;
+        clientesTitle.font = { bold: true, size: 14, color: { argb: 'FFFFFF' } };
+        clientesTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '10B981' } };
+        clientesTitle.alignment = { horizontal: 'center', vertical: 'middle' };
+        wsClientes.getRow(1).height = 28;
+
+        // Info de cantidad
+        wsClientes.mergeCells('A2:C2');
+        const countCell = wsClientes.getCell('A2');
+        countCell.value = `Total: ${contacts.length} contactos`;
+        countCell.font = { italic: true, color: { argb: '6B7280' } };
+        countCell.alignment = { horizontal: 'center' };
+
+        // Encabezados
+        const clienteHeader = wsClientes.getRow(4);
+        ['#', 'DOCUMENTO', 'CELULAR'].forEach((h, idx) => {
+          const cell = clienteHeader.getCell(idx + 1);
+          cell.value = h;
+          cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '374151' } };
+          cell.alignment = { horizontal: 'center' };
+          cell.border = this.getTableBorder();
+        });
+
+        // Datos de clientes
+        contacts.forEach((c, idx) => {
+          const row = wsClientes.getRow(5 + idx);
+          row.getCell(1).value = idx + 1;
+          row.getCell(1).alignment = { horizontal: 'center' };
+          row.getCell(2).value = c.documento || '';
+          row.getCell(3).value = c.celular || '';
+
+          // Alternar colores de fila
+          const bgColor = idx % 2 === 0 ? 'FFFFFF' : 'F3F4F6';
+          [1, 2, 3].forEach(col => {
+            row.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+            row.getCell(col).border = this.getTableBorder();
+          });
+        });
+
+        // Generar y descargar
         const fechaHoy = new Date().toISOString().split('T')[0];
-        const fileName = `Campaña_${this.campaign.name.replace(/[^a-zA-Z0-9]/g, '_')}_${fechaHoy}.xlsx`;
-        XLSX.writeFile(wb, fileName);
+        const fileName = `Campana_${this.campaign.name.replace(/[^a-zA-Z0-9]/g, '_')}_${fechaHoy}.xlsx`;
 
-        console.log('✅ Excel exportado:', fileName);
+        const buffer = await workbook.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), fileName);
+
+        console.log('Excel exportado:', fileName);
         this.router.navigate(['/admin/campaigns']);
       },
       error: (err) => {
         console.error('Error obteniendo contactos para exportar:', err);
-        // Navegar de todos modos aunque falle la exportación
         this.router.navigate(['/admin/campaigns']);
       }
     });
+  }
+
+  /**
+   * Agrega una fila con etiqueta y valor
+   */
+  private addLabelValueRow(ws: Worksheet, rowNum: number, label: string, value: any, colorHex?: string): void {
+    const row = ws.getRow(rowNum);
+    row.getCell(1).value = label;
+    row.getCell(1).font = { bold: true };
+    row.getCell(2).value = value;
+    if (colorHex) {
+      row.getCell(2).font = { bold: true, color: { argb: colorHex } };
+    }
+  }
+
+  /**
+   * Retorna el estilo de borde para tablas
+   */
+  private getTableBorder(): any {
+    return {
+      top: { style: 'thin', color: { argb: 'D1D5DB' } },
+      left: { style: 'thin', color: { argb: 'D1D5DB' } },
+      bottom: { style: 'thin', color: { argb: 'D1D5DB' } },
+      right: { style: 'thin', color: { argb: 'D1D5DB' } }
+    };
   }
 
   onCancel(): void {
