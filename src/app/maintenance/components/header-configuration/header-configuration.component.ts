@@ -449,7 +449,7 @@ interface DetectedColumn {
                           <span class="text-xs text-gray-900 dark:text-white">{{ header.displayLabel }}</span>
                         </td>
                         <td class="px-2 py-1.5">
-                          @if (header.fieldDefinitionId === 0) {
+                          @if (!header.fieldDefinitionId) {
                             <span class="text-xs text-amber-600 dark:text-amber-400 italic">Sin asociar</span>
                           } @else {
                             <span class="font-mono text-xs text-gray-500 dark:text-gray-400">{{ getFieldCodeById(header.fieldDefinitionId) }}</span>
@@ -1553,7 +1553,7 @@ export class HeaderConfigurationComponent implements OnInit {
     this.editingIndex.set(index);
     this.formData = {
       id: header.id,                          // Preservar ID si existe
-      fieldDefinitionId: header.fieldDefinitionId,
+      fieldDefinitionId: header.fieldDefinitionId ?? 0,
       headerName: header.headerName,
       dataType: header.dataType,
       displayLabel: header.displayLabel,
@@ -2830,9 +2830,10 @@ export class HeaderConfigurationComponent implements OnInit {
   }
 
   /**
-   * Ejecuta la importación de cabeceras
+   * Agrega las cabeceras seleccionadas del preview a la memoria local (previewHeaders).
+   * NO guarda en base de datos - eso se hace al presionar "Guardar".
    */
-  async executeImportFromSubPortfolio(): Promise<void> {
+  executeImportFromSubPortfolio(): void {
     const preview = this.importPreviewResult();
     if (!preview) return;
 
@@ -2854,39 +2855,89 @@ export class HeaderConfigurationComponent implements OnInit {
     this.isExecutingImport.set(true);
 
     try {
-      const headersToReplace = this.importConflictResolution() === 'SELECTIVE'
-        ? Array.from(this.selectedConflictsToReplace())
-        : undefined;
+      const currentHeaders = [...this.previewHeaders()];
+      const currentHeaderNames = new Set(currentHeaders.map(h => h.headerName.toLowerCase().trim()));
+      let addedCount = 0;
+      let skippedCount = 0;
 
-      const result = await firstValueFrom(
-        this.headerConfigService.importFromSubPortfolio(
-          this.selectedSubPortfolioId,
-          {
-            sourceSubPortfolioId: this.importSourceSubPortfolioId(),
-            loadType: this.selectedLoadType,
-            conflictResolution: this.importConflictResolution(),
-            headersToReplace
-          }
-        )
-      );
-
-      if (result.success) {
-        const message = `Importación completada: ${result.headersImported} nuevas, ${result.headersReplaced} reemplazadas, ${result.headersSkipped} omitidas, ${result.aliasesImported} aliases`;
-        this.notificationService.success(message);
-
-        // Recargar las cabeceras
-        this.loadExistingHeaders();
-
-        this.closeImportFromSubPortfolioDialog();
-      } else {
-        const errorMsg = result.errors.length > 0
-          ? result.errors.join(', ')
-          : 'Error desconocido en la importación';
-        this.notificationService.error(errorMsg);
+      // Verificar si hay cabeceras para importar
+      if (!preview.headersToImport || preview.headersToImport.length === 0) {
+        if (preview.conflicts && preview.conflicts.length > 0) {
+          this.notificationService.warning(
+            `Todas las ${preview.conflicts.length} cabeceras ya existen en la configuración destino (conflictos).`
+          );
+        } else {
+          this.notificationService.warning('La subcartera origen no tiene cabeceras configuradas para este tipo de carga.');
+        }
+        this.isExecutingImport.set(false);
+        return;
       }
+
+      // 1. Agregar cabeceras nuevas (que no existen en destino)
+      for (const item of preview.headersToImport) {
+        // Verificar si ya existe en previewHeaders local
+        if (currentHeaderNames.has(item.headerName.toLowerCase().trim())) {
+          skippedCount++;
+          continue;
+        }
+
+        // Convertir HeaderPreviewItem a HeaderConfigurationItem
+        const newHeader: HeaderConfigurationItem = {
+          // Sin id = nuevo registro
+          fieldDefinitionId: item.fieldDefinitionId,
+          headerName: item.headerName,
+          dataType: item.dataType,
+          displayLabel: item.displayLabel,
+          format: item.format,
+          required: item.required,
+          sourceField: item.sourceField,
+          regexPattern: item.regexPattern
+        };
+
+        currentHeaders.push(newHeader);
+        currentHeaderNames.add(item.headerName.toLowerCase().trim());
+        addedCount++;
+      }
+
+      // 2. Manejar conflictos según la estrategia seleccionada
+      const conflictResolution = this.importConflictResolution();
+      if (preview.conflicts.length > 0 && conflictResolution !== 'SKIP') {
+        // Nota: Para reemplazar conflictos, necesitaríamos los datos completos del origen
+        // Por ahora solo agregamos las nuevas cabeceras
+        // Los conflictos se manejarán manualmente por el usuario editando las existentes
+        if (conflictResolution === 'REPLACE') {
+          this.notificationService.info(
+            `${preview.conflicts.length} cabeceras ya existen. Edítelas manualmente si desea cambiar sus valores.`
+          );
+        } else if (conflictResolution === 'SELECTIVE') {
+          const selectedCount = this.selectedConflictsToReplace().size;
+          if (selectedCount > 0) {
+            this.notificationService.info(
+              `${selectedCount} cabeceras seleccionadas ya existen. Edítelas manualmente si desea cambiar sus valores.`
+            );
+          }
+        }
+      }
+
+      // Actualizar el estado local
+      this.previewHeaders.set(currentHeaders);
+
+      // Mostrar mensaje de éxito
+      const message = addedCount > 0
+        ? `Se agregaron ${addedCount} cabeceras a la configuración. Presione "Guardar" para aplicar los cambios.`
+        : 'No se agregaron cabeceras nuevas (ya existían todas).';
+
+      if (addedCount > 0) {
+        this.notificationService.success(message);
+      } else {
+        this.notificationService.info(message);
+      }
+
+      this.closeImportFromSubPortfolioDialog();
+
     } catch (error) {
-      console.error('Error executing import:', error);
-      this.notificationService.error(this.getFriendlyErrorMessage(error));
+      console.error('Error agregando cabeceras importadas:', error);
+      this.notificationService.error('Error al procesar las cabeceras importadas');
     } finally {
       this.isExecutingImport.set(false);
     }

@@ -1,7 +1,7 @@
 export interface HeaderConfiguration {
   id: number;
   subPortfolioId: number;
-  fieldDefinitionId: number;
+  fieldDefinitionId?: number;  // null para campos personalizados no vinculados al catálogo
   headerName: string;
   dataType: DataType;
   displayLabel: string;
@@ -127,7 +127,7 @@ export interface BulkCreateHeaderConfigurationRequest {
 
 export interface HeaderConfigurationItem {
   id?: number;                // ID si ya existe en BD (undefined = nuevo)
-  fieldDefinitionId: number;
+  fieldDefinitionId?: number; // null para campos personalizados no vinculados al catálogo
   headerName: string;
   dataType: DataType;
   displayLabel: string;
@@ -158,6 +158,12 @@ export interface HeaderPreviewItem {
   displayLabel: string;
   hasAliases: boolean;
   aliasCount: number;
+  // Campos adicionales para agregar a memoria local
+  fieldDefinitionId?: number;
+  format?: string;
+  required?: boolean;
+  sourceField?: string;
+  regexPattern?: string;
 }
 
 export interface ConflictItem {
