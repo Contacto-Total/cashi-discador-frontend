@@ -62,8 +62,86 @@
   cursor: not-allowed;
 }
 
+.btn-export {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  color: #10B981;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-export:hover {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+.btn-export:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .spinning {
   animation: spin 1s linear infinite;
+}
+
+/* Tabs */
+.tabs-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover {
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+body.light-theme .tabs-container {
+  border-bottom-color: #e2e8f0;
+}
+
+body.light-theme .tab-btn {
+  color: #64748b;
+}
+
+body.light-theme .tab-btn:hover {
+  color: #475569;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme .tab-btn.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
 }
 
 @keyframes spin {
@@ -612,6 +690,67 @@ body.light-theme .progress-bar-container {
   background: rgba(0, 0, 0, 0.08);
 }
 
+body.light-theme .btn-export {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+body.light-theme .btn-export:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+/* ========================================
+   PROMESAS DEL MES TAB
+   ======================================== */
+.promesas-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.promesas-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+/* Promesas table columns */
+.promesas-table .col-date {
+  width: 100px;
+}
+
+.promesas-table .col-doc {
+  width: 110px;
+}
+
+.promesas-table .col-name {
+  min-width: 150px;
+}
+
+.promesas-table .col-phone {
+  width: 110px;
+}
+
+.promesas-table .col-agent {
+  min-width: 120px;
+}
+
+.promesas-table .col-status {
+  width: 100px;
+  text-align: center;
+}
+
+/* Status badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .team-ranking-container {
@@ -662,5 +801,13 @@ body.light-theme .progress-bar-container {
 
   .ranking-table {
     min-width: 700px;
+  }
+
+  .promesas-table {
+    min-width: 900px;
+  }
+
+  .tabs-container {
+    overflow-x: auto;
   }
 }

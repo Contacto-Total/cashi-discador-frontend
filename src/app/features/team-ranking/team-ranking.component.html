@@ -2,16 +2,36 @@
   <!-- Header -->
   <div class="ranking-header">
     <div class="header-title">
-      <lucide-angular name="trophy" [size]="28" color="#FFD700"></lucide-angular>
-      <h1>Ranking del Equipo</h1>
+      <lucide-angular [name]="activeTab === 'ranking' ? 'trophy' : 'file-text'" [size]="28" [color]="activeTab === 'ranking' ? '#FFD700' : '#10B981'"></lucide-angular>
+      <h1>{{ activeTab === 'ranking' ? 'Ranking del Equipo' : 'Promesas del Mes' }}</h1>
     </div>
     <div class="header-actions">
-      <span class="last-update">Actualiza cada 1 min</span>
-      <button class="btn-refresh" (click)="refresh()" [disabled]="loading">
-        <lucide-angular name="refresh-cw" [size]="18" [class.spinning]="loading"></lucide-angular>
+      <span class="last-update" *ngIf="activeTab === 'ranking'">Actualiza cada 1 min</span>
+      <button class="btn-export" *ngIf="activeTab === 'promesas' && promesasMes?.promesas?.length"
+              (click)="exportarExcel()" [disabled]="exportingExcel">
+        <lucide-angular name="download" [size]="18" [class.spinning]="exportingExcel"></lucide-angular>
+        <span>Exportar Excel</span>
+      </button>
+      <button class="btn-refresh" (click)="refresh()" [disabled]="loading || loadingPromesas">
+        <lucide-angular name="refresh-cw" [size]="18" [class.spinning]="loading || loadingPromesas"></lucide-angular>
       </button>
     </div>
   </div>
+
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <button class="tab-btn" [class.active]="activeTab === 'ranking'" (click)="setActiveTab('ranking')">
+      <lucide-angular name="trophy" [size]="16"></lucide-angular>
+      <span>Ranking</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'promesas'" (click)="setActiveTab('promesas')">
+      <lucide-angular name="file-text" [size]="16"></lucide-angular>
+      <span>Promesas del Mes</span>
+    </button>
+  </div>
+
+  <!-- ==================== TAB RANKING ==================== -->
+  <div *ngIf="activeTab === 'ranking'">
 
   <!-- Loading -->
   <div *ngIf="loading && !ranking" class="loading-container">
@@ -263,4 +283,122 @@
       <span>Comienza a gestionar para aparecer en el ranking</span>
     </div>
   </div>
+
+  </div><!-- Fin TAB RANKING -->
+
+  <!-- ==================== TAB PROMESAS ==================== -->
+  <div *ngIf="activeTab === 'promesas'">
+
+    <!-- Loading -->
+    <div *ngIf="loadingPromesas && !promesasMes" class="loading-container">
+      <div class="spinner"></div>
+      <p>Cargando promesas...</p>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="errorPromesas" class="error-container">
+      <lucide-angular name="alert-circle" [size]="48" color="#EF4444"></lucide-angular>
+      <p>{{ errorPromesas }}</p>
+      <button class="btn-retry" (click)="loadPromesas()">Reintentar</button>
+    </div>
+
+    <!-- Contenido Promesas -->
+    <div *ngIf="promesasMes && !loadingPromesas" class="promesas-content">
+
+      <!-- Resumen -->
+      <div class="promesas-summary">
+        <div class="summary-card">
+          <div class="summary-icon">
+            <lucide-angular name="file-text" [size]="24" color="#3B82F6"></lucide-angular>
+          </div>
+          <div class="summary-info">
+            <span class="summary-value">{{ promesasMes.resumen.totalPromesas }}</span>
+            <span class="summary-label">Total Promesas</span>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <lucide-angular name="wallet" [size]="24" color="#8B5CF6"></lucide-angular>
+          </div>
+          <div class="summary-info">
+            <span class="summary-value">S/. {{ formatMonto(promesasMes.resumen.montoTotal) }}</span>
+            <span class="summary-label">Monto Total</span>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <lucide-angular name="check-circle" [size]="24" color="#10B981"></lucide-angular>
+          </div>
+          <div class="summary-info">
+            <span class="summary-value" style="color: #10B981">{{ promesasMes.resumen.promesasPagadas }}</span>
+            <span class="summary-label">Pagadas</span>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <lucide-angular name="clock" [size]="24" color="#F59E0B"></lucide-angular>
+          </div>
+          <div class="summary-info">
+            <span class="summary-value" style="color: #F59E0B">{{ promesasMes.resumen.promesasPendientes }}</span>
+            <span class="summary-label">Pendientes</span>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <lucide-angular name="alert-triangle" [size]="24" color="#EF4444"></lucide-angular>
+          </div>
+          <div class="summary-info">
+            <span class="summary-value" style="color: #EF4444">{{ promesasMes.resumen.promesasVencidas }}</span>
+            <span class="summary-label">Vencidas</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de promesas -->
+      <div class="ranking-table-container">
+        <table class="ranking-table promesas-table">
+          <thead>
+            <tr>
+              <th class="col-date">Fecha</th>
+              <th class="col-doc">Documento</th>
+              <th class="col-name">Cliente</th>
+              <th class="col-phone">Teléfono</th>
+              <th class="col-agent">Agente</th>
+              <th class="col-money">Monto</th>
+              <th class="col-num">Cuotas</th>
+              <th class="col-status">Estado</th>
+              <th class="col-date">Fecha Pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let promesa of promesasMes.promesas">
+              <td class="col-date">{{ promesa.fechaGestion | date:'dd/MM/yyyy' }}</td>
+              <td class="col-doc">{{ promesa.documentoCliente }}</td>
+              <td class="col-name">{{ promesa.nombreCliente }}</td>
+              <td class="col-phone">{{ promesa.telefonoContacto }}</td>
+              <td class="col-agent">{{ promesa.nombreAgente }}</td>
+              <td class="col-money">S/. {{ formatMonto(promesa.montoPromesa) }}</td>
+              <td class="col-num">{{ promesa.totalCuotas || '-' }}</td>
+              <td class="col-status">
+                <span class="status-badge"
+                      [style.background-color]="getEstadoBgColor(promesa.estadoPago)"
+                      [style.color]="getEstadoColor(promesa.estadoPago)">
+                  {{ promesa.estadoPago }}
+                </span>
+              </td>
+              <td class="col-date">{{ promesa.fechaPagoCompromiso ? (promesa.fechaPagoCompromiso | date:'dd/MM/yyyy') : '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Sin datos -->
+      <div *ngIf="promesasMes.promesas.length === 0" class="no-data">
+        <lucide-angular name="inbox" [size]="48" color="#64748b"></lucide-angular>
+        <p>No hay promesas registradas este mes</p>
+      </div>
+    </div>
+
+  </div><!-- Fin TAB PROMESAS -->
+
 </div>

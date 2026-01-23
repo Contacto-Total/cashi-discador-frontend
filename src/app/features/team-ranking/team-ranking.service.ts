@@ -52,6 +52,39 @@ export interface TeamRankingDTO {
   metasProgreso: MetasProgreso | null;
 }
 
+export interface ResumenPromesas {
+  totalPromesas: number;
+  montoTotal: number;
+  promesasPagadas: number;
+  montoPagado: number;
+  promesasPendientes: number;
+  montoPendiente: number;
+  promesasVencidas: number;
+  montoVencido: number;
+}
+
+export interface PromesaDetalle {
+  fechaGestion: string;
+  documentoCliente: string;
+  nombreCliente: string;
+  telefonoContacto: string;
+  nombreAgente: string;
+  montoPromesa: number;
+  totalCuotas: number | null;
+  estadoPago: string;
+  fechaPagoCompromiso: string | null;
+  tipificacion: string;
+  observaciones: string;
+}
+
+export interface PromesasMesDTO {
+  resumen: ResumenPromesas;
+  promesas: PromesaDetalle[];
+  mesAnio: string;
+  fechaInicio: string;
+  fechaFin: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -76,5 +109,12 @@ export class TeamRankingService {
     totalesEquipo: TeamTotals;
   }> {
     return this.http.get<any>(`${this.apiUrl}/${agenteId}/mi-ranking`);
+  }
+
+  /**
+   * Obtiene las promesas del mes para el agente
+   */
+  getPromesasMes(agenteId: number): Observable<PromesasMesDTO> {
+    return this.http.get<PromesasMesDTO>(`${this.apiUrl}/${agenteId}/promesas-mes`);
   }
 }
