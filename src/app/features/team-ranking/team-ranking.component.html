@@ -7,8 +7,8 @@
     </div>
     <div class="header-actions">
       <span class="last-update" *ngIf="activeTab === 'ranking'">Actualiza cada 1 min</span>
-      <button class="btn-export" *ngIf="activeTab === 'promesas' && promesasMes?.promesas?.length"
-              (click)="exportarExcel()" [disabled]="exportingExcel">
+      <button class="btn-export" *ngIf="activeTab === 'promesas'"
+              (click)="exportarExcel()" [disabled]="exportingExcel || !promesasMes?.promesas?.length">
         <lucide-angular name="download" [size]="18" [class.spinning]="exportingExcel"></lucide-angular>
         <span>Exportar Excel</span>
       </button>
