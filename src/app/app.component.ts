@@ -18,6 +18,7 @@ import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-a
 import { SupervisionPanelComponent } from './shared/components/supervision-panel/supervision-panel.component';
 import { RecordatoriosModalComponent } from './shared/components/recordatorios-modal/recordatorios-modal.component';
 import { RecordatoriosService } from './core/services/recordatorios.service';
+import { SupervisionService } from './core/services/supervision.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -82,6 +83,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private recordatoriosService: RecordatoriosService,
     private notificacionesService: NotificacionesSistemaService,
     private menuPermissionService: MenuPermissionService,
+    private supervisionService: SupervisionService,
     private dialog: MatDialog,
     private router: Router
   ) {}
@@ -366,6 +368,21 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             const currentState = this.sipService.getCallState();
 
             if (callDuration >= 2000 && currentState === CallState.ACTIVE && !this.hasNavigatedToTypification) {
+              // ✅ CHECK 1: Si estamos en modo supervisión, NO navegar a collection-management
+              // La supervisión usa SIP calls pero no deben redirigir al supervisor
+              if (this.supervisionService.isSupervisionActive()) {
+                console.log('🔇 [App] Supervisión activa - NO navegando a tipificación');
+                return;
+              }
+
+              // ✅ CHECK 2: Solo agentes deben ser redirigidos a collection-management
+              // Admin y supervisores no deben ser redirigidos automáticamente
+              const currentUser = this.authService.getCurrentUser();
+              if (currentUser && currentUser.role !== 'AGENT') {
+                console.log(`🔇 [App] Usuario no es AGENT (${currentUser.role}) - NO navegando a tipificación`);
+                return;
+              }
+
               console.log(`📞 [App] Llamada estable (${callDuration}ms), navegando a tipificación...`);
               this.hasNavigatedToTypification = true;
               this.router.navigate(['/collection-management']);
