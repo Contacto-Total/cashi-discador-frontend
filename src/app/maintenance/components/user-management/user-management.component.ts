@@ -321,6 +321,7 @@ interface Role {
                         </label>
                         <input type="text"
                                [(ngModel)]="selectedUser()!.nombreUsuario"
+                               (ngModelChange)="notifyChange()"
                                placeholder="Ej: jgarcia"
                                class="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Usuario único para iniciar sesión</p>
@@ -332,6 +333,7 @@ interface Role {
                         </label>
                         <input type="text"
                                [(ngModel)]="selectedUser()!.extensionSip"
+                               (ngModelChange)="notifyChange()"
                                placeholder="Ej: 1001"
                                class="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <p class="mt-1 text-xs text-gray-500">Para llamadas VoIP (1000-1019)</p>
@@ -350,6 +352,7 @@ interface Role {
                     <div class="flex items-center gap-2">
                       <input type="checkbox"
                              [(ngModel)]="selectedUser()!.activo"
+                             (ngModelChange)="notifyChange()"
                              id="userActive"
                              class="w-3.5 h-3.5 text-blue-600 bg-slate-800 border-slate-700 rounded focus:ring-blue-500">
                       <label for="userActive" class="text-xs text-gray-300 cursor-pointer">Usuario activo</label>
@@ -708,6 +711,13 @@ export class UserManagementComponent implements OnInit {
 
     user.nombreCompleto = parts.join(' ');
     this.selectedUser.set({ ...user });
+  }
+
+  notifyChange() {
+    const user = this.selectedUser();
+    if (user) {
+      this.selectedUser.set({ ...user });
+    }
   }
 
   isRoleAssigned(roleId: number): boolean {
