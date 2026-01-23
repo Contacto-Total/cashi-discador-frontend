@@ -268,4 +268,27 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
   toggleLegend(): void {
     this.showLegend = !this.showLegend;
   }
+
+  /**
+   * Format phone number from FreeSWITCH format to readable format
+   * Input: 215251913254120 -> Output: +51 913 254 120
+   */
+  formatPhoneNumber(rawNumber: string): string {
+    if (!rawNumber) return '';
+
+    const digits = rawNumber.replace(/\D/g, '');
+
+    if (digits.length >= 11) {
+      const phoneNumber = digits.slice(-9);
+      const countryCode = digits.slice(-11, -9);
+      return `+${countryCode} ${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
+    }
+
+    if (digits.length >= 9) {
+      const phoneNumber = digits.slice(-9);
+      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
+    }
+
+    return rawNumber;
+  }
 }

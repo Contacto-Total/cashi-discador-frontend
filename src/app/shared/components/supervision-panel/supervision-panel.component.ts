@@ -43,7 +43,7 @@ import { interval, Subscription } from 'rxjs';
               </div>
               <div class="info-row">
                 <lucide-angular name="phone" [size]="14"></lucide-angular>
-                <span>{{ supervisionService.state().clientNumber }}</span>
+                <span>{{ formatPhoneNumber(supervisionService.state().clientNumber) }}</span>
               </div>
             </div>
 
@@ -333,5 +333,28 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Format phone number from FreeSWITCH format to readable format
+   * Input: 215251913254120 -> Output: +51 913 254 120
+   */
+  formatPhoneNumber(rawNumber: string | null): string {
+    if (!rawNumber) return '';
+
+    const digits = rawNumber.replace(/\D/g, '');
+
+    if (digits.length >= 11) {
+      const phoneNumber = digits.slice(-9);
+      const countryCode = digits.slice(-11, -9);
+      return `+${countryCode} ${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
+    }
+
+    if (digits.length >= 9) {
+      const phoneNumber = digits.slice(-9);
+      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
+    }
+
+    return rawNumber;
   }
 }

@@ -283,4 +283,34 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
       default: return '';
     }
   }
+
+  /**
+   * Format phone number from FreeSWITCH format to readable format
+   * Input: 215251913254120 -> Output: +51 913 254 120
+   */
+  formatPhoneNumber(rawNumber: string): string {
+    if (!rawNumber) return '';
+
+    // Remove any non-digit characters
+    const digits = rawNumber.replace(/\D/g, '');
+
+    // Get the last 9 digits (phone number)
+    if (digits.length >= 11) {
+      const phoneNumber = digits.slice(-9);
+      // Get country code (2 digits before the phone number)
+      const countryCode = digits.slice(-11, -9);
+
+      // Format: +51 913 254 120
+      return `+${countryCode} ${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
+    }
+
+    // If number is shorter, just return last 9 digits formatted
+    if (digits.length >= 9) {
+      const phoneNumber = digits.slice(-9);
+      return `${phoneNumber.slice(0, 3)} ${phoneNumber.slice(3, 6)} ${phoneNumber.slice(6)}`;
+    }
+
+    // Return as-is if too short
+    return rawNumber;
+  }
 }
