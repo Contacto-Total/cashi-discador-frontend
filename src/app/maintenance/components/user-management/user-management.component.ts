@@ -19,6 +19,7 @@ interface User {
   segundoApellido?: string;
   nombreCompleto: string;
   nombreUsuario: string;
+  extensionSip?: string;
   generatedPassword?: string;
   roleIds: number[];
   activo: boolean;
@@ -313,15 +314,28 @@ interface Role {
 
                   <!-- Credenciales -->
                   <div class="space-y-2 pt-2 border-t border-slate-800">
-                    <div>
-                      <label class="block text-xs font-semibold text-gray-300 mb-1">
-                        Nombre de Usuario <span class="text-red-400">*</span>
-                      </label>
-                      <input type="text"
-                             [(ngModel)]="selectedUser()!.nombreUsuario"
-                             placeholder="Ej: jgarcia"
-                             class="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                      <p class="mt-1 text-xs text-gray-500">Usuario único para iniciar sesión</p>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">
+                          Nombre de Usuario <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text"
+                               [(ngModel)]="selectedUser()!.nombreUsuario"
+                               placeholder="Ej: jgarcia"
+                               class="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">Usuario único para iniciar sesión</p>
+                      </div>
+
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">
+                          Extensión SIP
+                        </label>
+                        <input type="text"
+                               [(ngModel)]="selectedUser()!.extensionSip"
+                               placeholder="Ej: 1001"
+                               class="w-full px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">Para llamadas VoIP (1000-1019)</p>
+                      </div>
                     </div>
 
                     @if (!selectedUser()!.id) {
@@ -632,6 +646,7 @@ export class UserManagementComponent implements OnInit {
       segundoApellido: response.segundoApellido,
       nombreCompleto: response.nombreCompleto,
       nombreUsuario: response.nombreUsuario,
+      extensionSip: response.extensionSip,
       roleIds: response.roleIds,
       activo: response.activo
     };
@@ -645,6 +660,7 @@ export class UserManagementComponent implements OnInit {
       segundoApellido: '',
       nombreCompleto: '',
       nombreUsuario: '',
+      extensionSip: '',
       roleIds: [],
       activo: true
     };
@@ -746,6 +762,7 @@ export class UserManagementComponent implements OnInit {
       primerApellido: user.primerApellido,
       segundoApellido: user.segundoApellido,
       nombreUsuario: user.nombreUsuario,
+      extensionSip: user.extensionSip,
       activo: user.activo,
       roleIds: user.roleIds
     };
