@@ -83,14 +83,13 @@
 
         <!-- Botones de modo -->
         <div class="mode-selector">
-          <h3>Selecciona un modo de supervisión</h3>
+          <h3>{{ currentMode === 'none' ? 'Selecciona un modo de supervisión' : 'Cambiar modo de supervisión' }}</h3>
           <div class="mode-buttons">
             <button
               class="mode-btn spy"
               [class.active]="currentMode === 'spy'"
-              [class.disabled]="currentMode !== 'none' && currentMode !== 'spy'"
-              [disabled]="isConnecting || (currentMode !== 'none' && currentMode !== 'spy')"
-              (click)="startSpyMode()">
+              [disabled]="isConnecting || currentMode === 'spy'"
+              (click)="selectMode('spy')">
               <div class="mode-icon">
                 <lucide-angular name="eye" [size]="28"></lucide-angular>
               </div>
@@ -109,9 +108,8 @@
             <button
               class="mode-btn whisper"
               [class.active]="currentMode === 'whisper'"
-              [class.disabled]="currentMode !== 'none' && currentMode !== 'whisper'"
-              [disabled]="isConnecting || (currentMode !== 'none' && currentMode !== 'whisper')"
-              (click)="startWhisperMode()">
+              [disabled]="isConnecting || currentMode === 'whisper'"
+              (click)="selectMode('whisper')">
               <div class="mode-icon">
                 <lucide-angular name="ear" [size]="28"></lucide-angular>
               </div>
@@ -130,9 +128,8 @@
             <button
               class="mode-btn barge"
               [class.active]="currentMode === 'barge'"
-              [class.disabled]="currentMode !== 'none' && currentMode !== 'barge'"
-              [disabled]="isConnecting || (currentMode !== 'none' && currentMode !== 'barge')"
-              (click)="startBargeMode()">
+              [disabled]="isConnecting || currentMode === 'barge'"
+              (click)="selectMode('barge')">
               <div class="mode-icon">
                 <lucide-angular name="users" [size]="28"></lucide-angular>
               </div>

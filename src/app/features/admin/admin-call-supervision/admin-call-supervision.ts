@@ -37,7 +37,6 @@ interface ActiveCall {
 })
 export class AdminCallSupervision implements OnInit, OnDestroy {
   call: ActiveCall | null = null;
-  currentMode: SupervisionMode = 'none';
   isConnecting = false;
   isMuted = false;
   callDuration = 0;
@@ -51,8 +50,13 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     private router: Router,
     private adminService: AdminMonitoringService,
     private sipService: SipService,
-    private supervisionService: SupervisionService
+    public supervisionService: SupervisionService
   ) {}
+
+  // Use the service's mode so it stays in sync with the floating panel
+  get currentMode(): SupervisionMode {
+    return this.supervisionService.currentMode();
+  }
 
   ngOnInit(): void {
     // Get call UUID from route params
@@ -136,25 +140,38 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     });
   }
 
-  // Spy Mode (Vigía) - Admin listens only
-  startSpyMode(): void {
+  // Select or change to a supervision mode
+  selectMode(mode: SupervisionMode): void {
+    if (this.currentMode === mode) return; // Already in this mode
+    if (this.isConnecting) return;
+
+    // If already in a mode, change to the new mode
     if (this.currentMode !== 'none') {
-      alert('Ya estás en modo de supervisión. Desconecta primero.');
+      this.changeToMode(mode);
       return;
     }
 
-    this.isConnecting = true;
-    console.log('🕵️ Starting SPY mode for call:', this.callUuid);
+    // Start fresh supervision
+    this.startMode(mode);
+  }
 
-    this.adminService.spyCall(this.callUuid).subscribe({
+  // Start a new supervision session
+  private startMode(mode: SupervisionMode): void {
+    this.isConnecting = true;
+    console.log(`🎯 Starting ${mode.toUpperCase()} mode for call:`, this.callUuid);
+
+    const serviceCall = mode === 'spy' ? this.adminService.spyCall(this.callUuid)
+                      : mode === 'whisper' ? this.adminService.whisperCall(this.callUuid)
+                      : this.adminService.bargeCall(this.callUuid);
+
+    serviceCall.subscribe({
       next: () => {
-        console.log('✅ SPY mode activated');
-        this.currentMode = 'spy';
+        console.log(`✅ ${mode.toUpperCase()} mode activated`);
         this.isConnecting = false;
 
-        // Update SupervisionService state for global access
+        // Update SupervisionService state - this sets the mode globally
         if (this.call) {
-          this.supervisionService.startSupervision(this.callUuid, 'spy', {
+          this.supervisionService.startSupervision(this.callUuid, mode, {
             agentName: this.call.agentName,
             agentExtension: this.call.agentExtension,
             clientNumber: this.call.clientNumber
@@ -162,75 +179,29 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
         }
       },
       error: (error) => {
-        console.error('❌ Error starting spy mode:', error);
+        console.error(`❌ Error starting ${mode} mode:`, error);
         this.isConnecting = false;
-        alert('Error al iniciar modo Vigía');
+        const modeLabels: Record<string, string> = { spy: 'Vigía', whisper: 'Susurro', barge: 'Tripartita' };
+        alert(`Error al iniciar modo ${modeLabels[mode] || mode}`);
       }
     });
   }
 
-  // Whisper Mode (Susurro) - Admin speaks to agent only
-  startWhisperMode(): void {
-    if (this.currentMode !== 'none') {
-      alert('Ya estás en modo de supervisión. Desconecta primero.');
-      return;
-    }
-
+  // Change from one mode to another
+  private changeToMode(newMode: SupervisionMode): void {
     this.isConnecting = true;
-    console.log('🗣️ Starting WHISPER mode for call:', this.callUuid);
+    console.log(`🔄 Changing mode from ${this.currentMode} to ${newMode}`);
 
-    this.adminService.whisperCall(this.callUuid).subscribe({
+    this.supervisionService.changeMode(newMode).subscribe({
       next: () => {
-        console.log('✅ WHISPER mode activated');
-        this.currentMode = 'whisper';
+        console.log(`✅ Mode changed to ${newMode.toUpperCase()}`);
+        this.supervisionService.updateMode(newMode);
         this.isConnecting = false;
-
-        // Update SupervisionService state for global access
-        if (this.call) {
-          this.supervisionService.startSupervision(this.callUuid, 'whisper', {
-            agentName: this.call.agentName,
-            agentExtension: this.call.agentExtension,
-            clientNumber: this.call.clientNumber
-          });
-        }
       },
       error: (error) => {
-        console.error('❌ Error starting whisper mode:', error);
+        console.error('❌ Error changing mode:', error);
         this.isConnecting = false;
-        alert('Error al iniciar modo Susurro');
-      }
-    });
-  }
-
-  // Barge Mode (Tripartita) - Admin joins as full participant
-  startBargeMode(): void {
-    if (this.currentMode !== 'none') {
-      alert('Ya estás en modo de supervisión. Desconecta primero.');
-      return;
-    }
-
-    this.isConnecting = true;
-    console.log('📞 Starting BARGE mode for call:', this.callUuid);
-
-    this.adminService.bargeCall(this.callUuid).subscribe({
-      next: () => {
-        console.log('✅ BARGE mode activated');
-        this.currentMode = 'barge';
-        this.isConnecting = false;
-
-        // Update SupervisionService state for global access
-        if (this.call) {
-          this.supervisionService.startSupervision(this.callUuid, 'barge', {
-            agentName: this.call.agentName,
-            agentExtension: this.call.agentExtension,
-            clientNumber: this.call.clientNumber
-          });
-        }
-      },
-      error: (error) => {
-        console.error('❌ Error starting barge mode:', error);
-        this.isConnecting = false;
-        alert('Error al iniciar modo Tripartita');
+        alert('Error al cambiar modo de supervisión');
       }
     });
   }
@@ -242,10 +213,9 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     // Hangup admin's call
     this.sipService.hangup();
 
-    // Clear global supervision state
+    // Clear global supervision state (this resets the mode to 'none')
     this.supervisionService.stopSupervision();
 
-    this.currentMode = 'none';
     this.isMuted = false;
   }
 
