@@ -85,7 +85,7 @@
               <lucide-angular *ngIf="!campaign.estaDiscando" name="phone-call" [size]="16"></lucide-angular>
             </button>
             <button
-              *ngIf="campaign.status === 'DRAFT' || campaign.status === 'COMPLETED'"
+              *ngIf="campaign.status !== 'ACTIVE'"
               class="btn-action-small btn-delete"
               (click)="deleteCampaign(campaign)"
               title="Eliminar campaña">
