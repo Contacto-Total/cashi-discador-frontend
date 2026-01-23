@@ -6,6 +6,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
 import { TypificationService } from '../../services/typification.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { ManagementService, ConfiguracionCabecera } from '../../../collection-management/services/management.service';
+import { FirstInstallmentConfigService } from '../../services/first-installment-config.service';
 import { Tenant } from '../../models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../models/portfolio.model';
 
@@ -102,6 +103,86 @@ interface AmountFieldConfig extends ConfiguracionCabecera {
         </div>
       </div>
 
+      <!-- Expansion Panel: Primera Cuota Config -->
+      @if (selectedSubPortfolioId > 0) {
+        <div class="max-w-5xl mx-auto mb-6">
+          <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+            <!-- Header (clickeable) -->
+            <button (click)="toggleFirstInstallmentPanel()"
+                    class="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-800/50 transition-colors">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
+                  <lucide-angular name="calendar-days" [size]="16" class="text-white"></lucide-angular>
+                </div>
+                <div class="text-left">
+                  <h3 class="text-sm font-semibold text-white">Configuración Primera Cuota</h3>
+                  <p class="text-xs text-gray-400">
+                    @if (selectedMaxDays() !== null) {
+                      Máximo {{ selectedMaxDays() }} días configurado
+                    } @else {
+                      Sin restricción de días
+                    }
+                  </p>
+                </div>
+              </div>
+              <lucide-angular [name]="firstInstallmentPanelOpen() ? 'chevron-up' : 'chevron-down'"
+                              [size]="20"
+                              class="text-gray-400"></lucide-angular>
+            </button>
+
+            <!-- Content (colapsable) -->
+            @if (firstInstallmentPanelOpen()) {
+              <div class="px-4 pb-4 border-t border-slate-800">
+                <div class="mt-4">
+                  <p class="text-sm text-gray-300 mb-3">
+                    Selecciona el máximo de días permitidos para la fecha de la primera cuota.
+                    Si el agente selecciona una fecha fuera de este rango, la gestión se guardará como <span class="text-yellow-400 font-medium">excepción en evaluación</span>.
+                  </p>
+
+                  <!-- Chips de días -->
+                  <div class="flex flex-wrap gap-2">
+                    @for (day of availableDays; track day) {
+                      <button (click)="selectMaxDays(day)"
+                              [class]="selectedMaxDays() === day
+                                ? 'bg-purple-600 text-white border-purple-500'
+                                : 'bg-slate-800 text-gray-300 border-slate-700 hover:border-purple-500/50 hover:text-white'"
+                              class="px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                        {{ day }} {{ day === 1 ? 'día' : 'días' }}
+                      </button>
+                    }
+                    <!-- Opción sin restricción -->
+                    <button (click)="selectMaxDays(null)"
+                            [class]="selectedMaxDays() === null
+                              ? 'bg-gray-600 text-white border-gray-500'
+                              : 'bg-slate-800 text-gray-300 border-slate-700 hover:border-gray-500/50 hover:text-white'"
+                            class="px-4 py-2 rounded-lg border text-sm font-medium transition-all">
+                      Sin límite
+                    </button>
+                  </div>
+
+                  <!-- Botón guardar config primera cuota -->
+                  @if (hasFirstInstallmentChanges()) {
+                    <div class="mt-4 flex justify-end">
+                      <button (click)="saveFirstInstallmentConfig()"
+                              [disabled]="savingFirstInstallment()"
+                              class="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50">
+                        @if (savingFirstInstallment()) {
+                          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Guardando...</span>
+                        } @else {
+                          <lucide-angular name="save" [size]="16"></lucide-angular>
+                          <span>Guardar configuración</span>
+                        }
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Info Card -->
       @if (selectedSubPortfolioId > 0) {
         <div class="max-w-5xl mx-auto mb-6">
@@ -109,7 +190,7 @@ interface AmountFieldConfig extends ConfiguracionCabecera {
             <div class="flex items-start gap-3">
               <lucide-angular name="info" [size]="20" class="text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
               <div>
-                <p class="text-amber-200 text-sm font-medium">Instrucciones</p>
+                <p class="text-amber-200 text-sm font-medium">Instrucciones - Campos de Montos</p>
                 <ul class="text-amber-200/70 text-sm mt-1 space-y-1">
                   <li>Use los toggles para mostrar u ocultar cada campo de monto en el panel de deuda</li>
                   <li>Haga clic en el nombre para editarlo y personalizar cómo se muestra</li>
@@ -271,10 +352,18 @@ export class AmountDisplayConfigComponent implements OnInit {
   selectedPortfolioId = 0;
   selectedSubPortfolioId = 0;
 
+  // Primera cuota config
+  firstInstallmentPanelOpen = signal(false);
+  selectedMaxDays = signal<number | null>(null);
+  originalMaxDays = signal<number | null>(null);
+  savingFirstInstallment = signal(false);
+  availableDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
   constructor(
     private typificationService: TypificationService,
     private portfolioService: PortfolioService,
-    private managementService: ManagementService
+    private managementService: ManagementService,
+    private firstInstallmentService: FirstInstallmentConfigService
   ) {}
 
   ngOnInit() {
@@ -299,6 +388,10 @@ export class AmountDisplayConfigComponent implements OnInit {
     this.subPortfolios.set([]);
     this.amountFields.set([]);
     this.originalFields.set([]);
+    // Reset primera cuota config
+    this.selectedMaxDays.set(null);
+    this.originalMaxDays.set(null);
+    this.firstInstallmentPanelOpen.set(false);
 
     if (this.selectedTenantId > 0) {
       this.loadPortfolios();
@@ -321,6 +414,10 @@ export class AmountDisplayConfigComponent implements OnInit {
     this.subPortfolios.set([]);
     this.amountFields.set([]);
     this.originalFields.set([]);
+    // Reset primera cuota config
+    this.selectedMaxDays.set(null);
+    this.originalMaxDays.set(null);
+    this.firstInstallmentPanelOpen.set(false);
 
     if (this.selectedPortfolioId > 0) {
       this.loadSubPortfolios();
@@ -341,9 +438,14 @@ export class AmountDisplayConfigComponent implements OnInit {
   onSubPortfolioChange() {
     this.amountFields.set([]);
     this.originalFields.set([]);
+    // Reset primera cuota config
+    this.selectedMaxDays.set(null);
+    this.originalMaxDays.set(null);
+    this.firstInstallmentPanelOpen.set(false);
 
     if (this.selectedSubPortfolioId > 0) {
       this.loadAmountFields();
+      this.loadFirstInstallmentConfig();
     }
   }
 
@@ -443,5 +545,58 @@ export class AmountDisplayConfigComponent implements OnInit {
   showSuccessMessage() {
     this.showSuccess.set(true);
     setTimeout(() => this.showSuccess.set(false), 3000);
+  }
+
+  // ==================== Primera Cuota Config ====================
+
+  toggleFirstInstallmentPanel() {
+    this.firstInstallmentPanelOpen.update(v => !v);
+  }
+
+  loadFirstInstallmentConfig() {
+    this.firstInstallmentService.getConfig(this.selectedSubPortfolioId).subscribe({
+      next: (config) => {
+        const maxDays = config?.maxDays ?? null;
+        this.selectedMaxDays.set(maxDays);
+        this.originalMaxDays.set(maxDays);
+      },
+      error: (error) => {
+        console.error('Error loading first installment config:', error);
+        this.selectedMaxDays.set(null);
+        this.originalMaxDays.set(null);
+      }
+    });
+  }
+
+  selectMaxDays(days: number | null) {
+    this.selectedMaxDays.set(days);
+  }
+
+  hasFirstInstallmentChanges(): boolean {
+    return this.selectedMaxDays() !== this.originalMaxDays();
+  }
+
+  saveFirstInstallmentConfig() {
+    if (!this.hasFirstInstallmentChanges() || this.savingFirstInstallment()) return;
+
+    this.savingFirstInstallment.set(true);
+
+    const config = {
+      subPortfolioId: this.selectedSubPortfolioId,
+      maxDays: this.selectedMaxDays()!
+    };
+
+    this.firstInstallmentService.saveConfig(config).subscribe({
+      next: () => {
+        this.savingFirstInstallment.set(false);
+        this.originalMaxDays.set(this.selectedMaxDays());
+        this.showSuccessMessage();
+      },
+      error: (error) => {
+        console.error('Error saving first installment config:', error);
+        this.savingFirstInstallment.set(false);
+        alert('Error al guardar la configuración de primera cuota');
+      }
+    });
   }
 }

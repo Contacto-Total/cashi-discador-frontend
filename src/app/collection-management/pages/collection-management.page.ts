@@ -42,6 +42,7 @@ import { VoucherPaymentDialogComponent, VoucherPaymentDialogData, VoucherPayment
 import { ComprobanteUploadResponse } from '../models/comprobante.model';
 import { CartaAcuerdoService } from '../../core/services/carta-acuerdo.service';
 import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/confirm-carta-dialog/confirm-carta-dialog.component';
+import { FirstInstallmentConfigService } from '../../maintenance/services/first-installment-config.service';
 
 @Component({
   selector: 'app-collection-management',
@@ -2028,7 +2029,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private recordatoriosService: RecordatoriosService,
     private dialog: MatDialog,
     private comprobanteService: ComprobanteService,
-    private cartaAcuerdoService: CartaAcuerdoService
+    private cartaAcuerdoService: CartaAcuerdoService,
+    private firstInstallmentConfigService: FirstInstallmentConfigService
   ) {}
 
   ngOnInit() {
@@ -2333,6 +2335,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Variable para almacenar el subPortfolioId seleccionado
   selectedSubPortfolioId?: number;
 
+  // Configuración de días máximos para primera cuota (por subcartera)
+  firstInstallmentMaxDays = signal<number | null>(null);
+
   loadTenants() {
     const currentUser = this.authService.getCurrentUser();
     console.log('[V2] Usuario actual:', currentUser);
@@ -2346,6 +2351,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Cargar datos SIN llamar a onTenantChange (que resetea portfolioId)
       this.reloadTypifications();
       this.loadCustomerOutputConfig();
+      this.loadFirstInstallmentConfig(); // Cargar config de primera cuota
       this.loadFirstCustomer();
     } else {
       console.error('[V2] Usuario no tiene asignación completa de tenant/portfolio/subportfolio');
@@ -2455,6 +2461,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       });
     */
+  }
+
+  /**
+   * Carga la configuración de días máximos para la primera cuota de la subcartera actual
+   */
+  loadFirstInstallmentConfig() {
+    if (!this.selectedSubPortfolioId) {
+      this.firstInstallmentMaxDays.set(null);
+      return;
+    }
+
+    this.firstInstallmentConfigService.getConfig(this.selectedSubPortfolioId).subscribe({
+      next: (config) => {
+        const maxDays = config?.maxDays ?? null;
+        this.firstInstallmentMaxDays.set(maxDays);
+        console.log(`[PRIMERA-CUOTA] Config cargada para subcartera ${this.selectedSubPortfolioId}: maxDays=${maxDays}`);
+      },
+      error: (error) => {
+        console.error('[PRIMERA-CUOTA] Error cargando config:', error);
+        this.firstInstallmentMaxDays.set(null);
+      }
+    });
   }
 
   /**
@@ -4090,6 +4118,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Obtener el ID del agente actual
       const currentUserSchedule = this.authService.getCurrentUser();
 
+      // ========== VALIDACIÓN DE PRIMERA CUOTA ==========
+      // Calcular días desde hoy hasta la fecha de la primera cuota
+      let esExcepcionPrimeraCuota = false;
+      let diasPrimeraCuota = 0;
+      const maxDiasPermitidos = this.firstInstallmentMaxDays();
+
+      // Buscar la primera cuota (numeroCuota = 1)
+      const primeraCuota = paymentScheduleData.cuotas.find((c: any) => c.numeroCuota === 1);
+      if (primeraCuota && primeraCuota.fechaPago) {
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const fechaPrimeraCuota = new Date(primeraCuota.fechaPago + 'T00:00:00');
+        diasPrimeraCuota = Math.ceil((fechaPrimeraCuota.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Verificar si excede el límite configurado
+        if (maxDiasPermitidos !== null && diasPrimeraCuota > maxDiasPermitidos) {
+          esExcepcionPrimeraCuota = true;
+          console.log(`[PRIMERA-CUOTA] ⚠️ EXCEPCIÓN: ${diasPrimeraCuota} días > ${maxDiasPermitidos} días permitidos`);
+        } else {
+          console.log(`[PRIMERA-CUOTA] ✅ OK: ${diasPrimeraCuota} días <= ${maxDiasPermitidos ?? 'sin límite'} días permitidos`);
+        }
+      }
+      // ========== FIN VALIDACIÓN DE PRIMERA CUOTA ==========
+
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
         nombreCliente: this.customerData().nombre_completo,
@@ -4109,6 +4161,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         promesaOrigenUuid: this.continuidadData()?.promesaOrigenUuid,
         montoOriginalPromesa: this.continuidadData()?.montoOriginal,
         montoPagadoPrevio: this.continuidadData()?.montoPagado,
+        // Excepción de primera cuota
+        esExcepcionPrimeraCuota: esExcepcionPrimeraCuota,
+        diasPrimeraCuota: diasPrimeraCuota,
+        maxDiasPermitidos: maxDiasPermitidos ?? undefined,
         schedule: {
           montoTotal: paymentScheduleData.montoTotal,
           numeroCuotas: paymentScheduleData.numeroCuotas,

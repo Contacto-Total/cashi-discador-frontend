@@ -225,6 +225,10 @@ export interface PaymentScheduleRequest {
   promesaOrigenUuid?: string;        // UUID de la promesa original (caída)
   montoOriginalPromesa?: number;     // Monto de la promesa original
   montoPagadoPrevio?: number;        // Lo que ya había pagado de la promesa original
+  // Excepción de primera cuota
+  esExcepcionPrimeraCuota?: boolean; // true si la fecha de primera cuota excede el límite configurado
+  diasPrimeraCuota?: number;         // Días desde hoy hasta la fecha de la primera cuota
+  maxDiasPermitidos?: number;        // Máximo de días permitidos según configuración
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
