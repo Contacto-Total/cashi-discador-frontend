@@ -74,26 +74,17 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Stop timer
+    // Stop timer (panel flotante tiene su propio timer)
     if (this.timerSubscription) {
       this.timerSubscription.unsubscribe();
     }
 
-    // Disconnect from call if connected
-    if (this.currentMode !== 'none') {
-      this.disconnectSupervision();
-    }
+    // NO limpiar la supervisión aquí - el panel flotante sigue activo
+    // La supervisión solo se limpia cuando el usuario hace click en "Desconectar"
+    // en el panel flotante (SupervisionPanelComponent)
 
-    // Ensure global supervision state is cleared
-    this.supervisionService.stopSupervision();
-
-    // Disable auto-answer mode
-    this.sipService.disableAutoAnswer();
-
-    // Unregister SIP
-    if (this.sipRegistered) {
-      this.sipService.unregister();
-    }
+    // NO desregistrar SIP ni deshabilitar auto-answer
+    // El panel flotante sigue necesitando la conexión SIP activa
   }
 
   private loadCallDetails(): void {

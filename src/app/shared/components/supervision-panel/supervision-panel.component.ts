@@ -313,6 +313,12 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
     // Hangup SIP call
     this.sipService.hangup();
 
+    // Disable auto-answer mode
+    this.sipService.disableAutoAnswer();
+
+    // Unregister SIP
+    this.sipService.unregister();
+
     // Clear supervision state
     this.supervisionService.stopSupervision();
 
