@@ -16,7 +16,8 @@ interface ActiveCall {
   agentExtension: string;
   clientNumber: string;
   duration: number;
-  callState: string;  // Changed from 'state' to 'callState' to match service
+  callState: string;
+  campaignName?: string;
 }
 
 // SupervisionMode type is imported from supervision.service
@@ -276,10 +277,30 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
   // Get mode label in Spanish
   getModeLabel(): string {
     switch (this.currentMode) {
-      case 'spy': return 'Vigía';
-      case 'whisper': return 'Susurro';
-      case 'barge': return 'Tripartita';
+      case 'spy': return 'Modo Vigía';
+      case 'whisper': return 'Modo Susurro';
+      case 'barge': return 'Modo Tripartita';
       default: return 'Sin conexión';
+    }
+  }
+
+  // Get mode description
+  getModeDescription(): string {
+    switch (this.currentMode) {
+      case 'spy': return 'Escuchando la llamada en silencio';
+      case 'whisper': return 'Hablando solo con el agente';
+      case 'barge': return 'Conectado con todos los participantes';
+      default: return 'Selecciona un modo para comenzar';
+    }
+  }
+
+  // Get mode icon
+  getModeIcon(): string {
+    switch (this.currentMode) {
+      case 'spy': return 'eye';
+      case 'whisper': return 'ear';
+      case 'barge': return 'users';
+      default: return 'radio';
     }
   }
 

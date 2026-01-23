@@ -1,126 +1,124 @@
 <div class="monitoring-container">
-  <!-- Header -->
-  <div class="flex items-center gap-2 mb-2">
-    <div class="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="phone-call" [size]="16" class="text-white"></lucide-angular>
+  <!-- Header con estadísticas -->
+  <div class="monitoring-header">
+    <div class="header-left">
+      <div class="header-icon pulse-ring">
+        <lucide-angular name="radio" [size]="24"></lucide-angular>
+      </div>
+      <div class="header-text">
+        <h1>Centro de Monitoreo</h1>
+        <p>Supervisión en tiempo real</p>
+      </div>
     </div>
-    <div>
-      <h1 class="text-lg font-bold text-white">Llamadas Activas</h1>
-      <p class="text-xs text-gray-400">Monitoreo en tiempo real de llamadas en curso</p>
+    <div class="header-stats">
+      <div class="stat-badge" [class.active]="activeCalls.length > 0">
+        <span class="stat-number">{{ activeCalls.length }}</span>
+        <span class="stat-label">Llamadas Activas</span>
+      </div>
     </div>
   </div>
 
-  <mat-card>
-    <mat-card-content>
-      <!-- Loading spinner -->
-      <div *ngIf="loading" class="loading-container">
-        <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        <p>Cargando llamadas activas...</p>
+  <!-- Leyenda de modos (compacta) -->
+  <div class="modes-legend">
+    <div class="legend-title" (click)="toggleLegend()">
+      <lucide-angular name="info" [size]="16"></lucide-angular>
+      <span>Modos de Supervisión</span>
+      <lucide-angular [name]="showLegend ? 'chevron-up' : 'chevron-down'" [size]="16"></lucide-angular>
+    </div>
+    <div class="legend-content" [class.show]="showLegend">
+      <div class="mode-chip spy">
+        <lucide-angular name="eye" [size]="14"></lucide-angular>
+        <span>Vigía</span>
+        <small>Solo escuchar</small>
       </div>
+      <div class="mode-chip whisper">
+        <lucide-angular name="ear" [size]="14"></lucide-angular>
+        <span>Susurro</span>
+        <small>Hablar al agente</small>
+      </div>
+      <div class="mode-chip barge">
+        <lucide-angular name="users" [size]="14"></lucide-angular>
+        <span>Tripartita</span>
+        <small>Todos escuchan</small>
+      </div>
+    </div>
+  </div>
 
-      <!-- No active calls message -->
-      <div *ngIf="!loading && activeCalls.length === 0" class="no-calls">
+  <!-- Estado de carga -->
+  @if (loading) {
+    <div class="loading-state">
+      <div class="loader">
+        <div class="loader-ring"></div>
+        <lucide-angular name="phone-call" [size]="24"></lucide-angular>
+      </div>
+      <p>Buscando llamadas activas...</p>
+    </div>
+  }
+
+  <!-- Sin llamadas -->
+  @if (!loading && activeCalls.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon">
         <lucide-angular name="phone-off" [size]="48"></lucide-angular>
-        <p>No hay llamadas activas en este momento</p>
       </div>
-
-      <!-- Active calls table -->
-      <div *ngIf="!loading && activeCalls.length > 0" class="table-container">
-        <table mat-table [dataSource]="activeCalls" class="calls-table">
-
-          <!-- Agent Column -->
-          <ng-container matColumnDef="agent">
-            <th mat-header-cell *matHeaderCellDef>Asesor</th>
-            <td mat-cell *matCellDef="let call">
-              <div class="agent-info">
-                <lucide-angular name="user" [size]="20"></lucide-angular>
-                <div>
-                  <div class="agent-name">{{call.agentName}}</div>
-                  <div class="agent-ext">Ext: {{call.agentExtension}}</div>
-                </div>
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Client Column -->
-          <ng-container matColumnDef="client">
-            <th mat-header-cell *matHeaderCellDef>Cliente</th>
-            <td mat-cell *matCellDef="let call">
-              <div class="client-info">
-                <lucide-angular name="phone" [size]="20"></lucide-angular>
-                <span>{{call.clientNumber}}</span>
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Duration Column -->
-          <ng-container matColumnDef="duration">
-            <th mat-header-cell *matHeaderCellDef>Duración</th>
-            <td mat-cell *matCellDef="let call">
-              <div class="duration">
-                <lucide-angular name="clock" [size]="20"></lucide-angular>
-                <span>{{formatDuration(call.duration)}}</span>
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- State Column -->
-          <ng-container matColumnDef="state">
-            <th mat-header-cell *matHeaderCellDef>Estado</th>
-            <td mat-cell *matCellDef="let call">
-              <div class="call-state" [class]="'state-' + call.callState.toLowerCase()">
-                <lucide-angular name="phone-call" [size]="20"></lucide-angular>
-                <span>{{call.callState}}</span>
-              </div>
-            </td>
-          </ng-container>
-
-          <!-- Campaign Column -->
-          <ng-container matColumnDef="campaign">
-            <th mat-header-cell *matHeaderCellDef>Campaña</th>
-            <td mat-cell *matCellDef="let call">
-              <span class="campaign-name">{{call.campaignName || '-'}}</span>
-            </td>
-          </ng-container>
-
-          <!-- Actions Column -->
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Acciones</th>
-            <td mat-cell *matCellDef="let call">
-              <button
-                mat-raised-button
-                color="primary"
-                (click)="superviseCall(call)"
-                matTooltip="Abrir pantalla de supervisión">
-                <lucide-angular name="eye" [size]="20"></lucide-angular>
-                Supervisar
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+      <h3>No hay llamadas activas</h3>
+      <p>Las llamadas en curso aparecerán aquí automáticamente</p>
+      <div class="empty-animation">
+        <span></span><span></span><span></span>
       </div>
+    </div>
+  }
 
-      <!-- Legend -->
-      <div *ngIf="!loading && activeCalls.length > 0" class="legend">
-        <h4>Modos de Monitoreo:</h4>
-        <div class="legend-items">
-          <div class="legend-item">
-            <lucide-angular name="eye" [size]="20" class="text-blue-500"></lucide-angular>
-            <span><strong>VIGÍA:</strong> Escuchas la llamada, pero nadie te escucha</span>
+  <!-- Grid de llamadas -->
+  @if (!loading && activeCalls.length > 0) {
+    <div class="calls-grid">
+      @for (call of activeCalls; track call.callUuid; let i = $index) {
+        <div class="call-card" [style.animation-delay]="i * 0.1 + 's'">
+          <!-- Header de la card -->
+          <div class="call-card-header">
+            <div class="call-status" [class]="'status-' + call.callState.toLowerCase()">
+              <span class="status-dot"></span>
+              <span>{{ call.callState }}</span>
+            </div>
+            <div class="call-duration">
+              <lucide-angular name="timer" [size]="14"></lucide-angular>
+              <span>{{ formatDuration(call.duration) }}</span>
+            </div>
           </div>
-          <div class="legend-item">
-            <lucide-angular name="mic" [size]="20" class="text-green-500"></lucide-angular>
-            <span><strong>SUSURRO:</strong> Solo el agente puede escucharte, el cliente no</span>
+
+          <!-- Info del agente -->
+          <div class="call-agent">
+            <div class="agent-avatar">
+              <lucide-angular name="headphones" [size]="20"></lucide-angular>
+            </div>
+            <div class="agent-details">
+              <span class="agent-name">{{ call.agentName }}</span>
+              <span class="agent-ext">Ext. {{ call.agentExtension }}</span>
+            </div>
           </div>
-          <div class="legend-item">
-            <lucide-angular name="users" [size]="20" class="text-red-500"></lucide-angular>
-            <span><strong>TRIPARTITA:</strong> Todos te escuchan (agente y cliente)</span>
+
+          <!-- Info del cliente -->
+          <div class="call-client">
+            <lucide-angular name="phone-outgoing" [size]="16"></lucide-angular>
+            <span>{{ call.clientNumber }}</span>
           </div>
+
+          <!-- Campaña -->
+          @if (call.campaignName) {
+            <div class="call-campaign">
+              <lucide-angular name="folder" [size]="14"></lucide-angular>
+              <span>{{ call.campaignName }}</span>
+            </div>
+          }
+
+          <!-- Botón de acción -->
+          <button class="supervise-btn" (click)="superviseCall(call)">
+            <lucide-angular name="radio" [size]="18"></lucide-angular>
+            <span>Supervisar</span>
+            <lucide-angular name="arrow-right" [size]="16" class="arrow-icon"></lucide-angular>
+          </button>
         </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
+      }
+    </div>
+  }
 </div>

@@ -34,6 +34,7 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   currentMonitoringCall: string | null = null;
   currentAdminCallUuid: string | null = null;
+  showLegend = false;
 
   displayedColumns: string[] = ['agent', 'client', 'duration', 'state', 'campaign', 'actions'];
 
@@ -259,5 +260,12 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
    */
   superviseCall(call: ActiveCall): void {
     this.router.navigate(['/admin/supervision', call.callUuid]);
+  }
+
+  /**
+   * Toggle legend visibility
+   */
+  toggleLegend(): void {
+    this.showLegend = !this.showLegend;
   }
 }

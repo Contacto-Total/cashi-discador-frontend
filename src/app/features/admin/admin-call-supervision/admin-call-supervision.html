@@ -1,169 +1,234 @@
-<div class="supervision-container">
-  <!-- Header -->
-  <div class="supervision-header">
-    <button mat-icon-button (click)="goBack()">
+<div class="supervision-page">
+  <!-- Header con navegación -->
+  <div class="page-header">
+    <button class="back-btn" (click)="goBack()">
       <lucide-angular name="arrow-left" [size]="20"></lucide-angular>
+      <span>Volver</span>
     </button>
-    <h2>Supervisión de Llamada</h2>
+    <div class="header-title">
+      <lucide-angular name="radio" [size]="24"></lucide-angular>
+      <h1>Supervisión en Vivo</h1>
+    </div>
   </div>
 
-  <!-- Loading state -->
-  <div *ngIf="!call" class="loading-container">
-    <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    <p>Cargando detalles de la llamada...</p>
-  </div>
+  <!-- Loading -->
+  @if (!call) {
+    <div class="loading-state">
+      <div class="loader">
+        <div class="loader-ring"></div>
+        <lucide-angular name="phone-call" [size]="28"></lucide-angular>
+      </div>
+      <p>Conectando con la llamada...</p>
+    </div>
+  }
 
-  <!-- Call details -->
-  <div *ngIf="call" class="call-details-container">
-    <!-- Status card -->
-    <mat-card class="status-card">
-      <mat-card-header>
-        <mat-card-title>Estado de la Supervisión</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="status-info">
-          <mat-chip [color]="getModeColor()" [highlighted]="currentMode !== 'none'">
-            <lucide-angular [name]="currentMode !== 'none' ? 'eye' : 'eye-off'" [size]="16"></lucide-angular>
-            {{ getModeLabel() }}
-          </mat-chip>
-          <div class="duration">
-            <lucide-angular name="clock" [size]="20"></lucide-angular>
+  @if (call) {
+    <div class="supervision-content">
+      <!-- Panel principal de supervisión -->
+      <div class="main-panel">
+        <!-- Estado de conexión -->
+        <div class="connection-status" [class]="'mode-' + currentMode">
+          <div class="status-indicator">
+            <div class="status-ring"></div>
+            <lucide-angular [name]="getModeIcon()" [size]="32"></lucide-angular>
+          </div>
+          <div class="status-text">
+            <span class="status-label">{{ getModeLabel() }}</span>
+            <span class="status-description">{{ getModeDescription() }}</span>
+          </div>
+          <div class="call-timer">
+            <lucide-angular name="timer" [size]="18"></lucide-angular>
             <span>{{ formatDuration(callDuration) }}</span>
           </div>
         </div>
-      </mat-card-content>
-    </mat-card>
 
-    <!-- Call information card -->
-    <mat-card class="info-card">
-      <mat-card-header>
-        <mat-card-title>Información de la Llamada</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="info-grid">
-          <div class="info-item">
-            <lucide-angular name="user" [size]="24"></lucide-angular>
-            <div>
-              <div class="info-label">Asesor</div>
-              <div class="info-value">{{ call.agentName }}</div>
-              <div class="info-sublabel">Ext: {{ call.agentExtension }}</div>
+        <!-- Información de la llamada -->
+        <div class="call-participants">
+          <div class="participant agent">
+            <div class="participant-avatar">
+              <lucide-angular name="headphones" [size]="24"></lucide-angular>
+            </div>
+            <div class="participant-info">
+              <span class="participant-role">Agente</span>
+              <span class="participant-name">{{ call.agentName }}</span>
+              <span class="participant-detail">Ext. {{ call.agentExtension }}</span>
+            </div>
+            <div class="audio-indicator">
+              <span class="audio-bar"></span>
+              <span class="audio-bar"></span>
+              <span class="audio-bar"></span>
             </div>
           </div>
 
-          <div class="info-item">
-            <lucide-angular name="phone" [size]="24"></lucide-angular>
-            <div>
-              <div class="info-label">Cliente</div>
-              <div class="info-value">{{ call.clientNumber }}</div>
-              <div class="info-sublabel">{{ call.callState }}</div>
+          <div class="connection-line">
+            <lucide-angular name="arrow-left-right" [size]="20"></lucide-angular>
+          </div>
+
+          <div class="participant client">
+            <div class="participant-avatar">
+              <lucide-angular name="user" [size]="24"></lucide-angular>
+            </div>
+            <div class="participant-info">
+              <span class="participant-role">Cliente</span>
+              <span class="participant-name">{{ call.clientNumber }}</span>
+              <span class="participant-detail">{{ call.callState }}</span>
+            </div>
+            <div class="audio-indicator">
+              <span class="audio-bar"></span>
+              <span class="audio-bar"></span>
+              <span class="audio-bar"></span>
             </div>
           </div>
         </div>
-      </mat-card-content>
-    </mat-card>
 
-    <!-- Supervision controls -->
-    <mat-card class="controls-card">
-      <mat-card-header>
-        <mat-card-title>Modos de Supervisión</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="mode-buttons">
-          <!-- Spy Mode (Vigía) -->
-          <button
-            mat-raised-button
-            color="accent"
-            class="mode-button"
-            [disabled]="currentMode !== 'none' || isConnecting"
-            (click)="startSpyMode()">
-            <lucide-angular name="eye" [size]="20"></lucide-angular>
-            <div class="button-content">
-              <span class="mode-name">Vigía</span>
-              <span class="mode-description">Solo escuchar</span>
-            </div>
-          </button>
+        <!-- Botones de modo -->
+        <div class="mode-selector">
+          <h3>Selecciona un modo de supervisión</h3>
+          <div class="mode-buttons">
+            <button
+              class="mode-btn spy"
+              [class.active]="currentMode === 'spy'"
+              [class.disabled]="currentMode !== 'none' && currentMode !== 'spy'"
+              [disabled]="isConnecting || (currentMode !== 'none' && currentMode !== 'spy')"
+              (click)="startSpyMode()">
+              <div class="mode-icon">
+                <lucide-angular name="eye" [size]="28"></lucide-angular>
+              </div>
+              <div class="mode-info">
+                <span class="mode-name">Vigía</span>
+                <span class="mode-desc">Solo escuchar</span>
+              </div>
+              @if (currentMode === 'spy') {
+                <div class="active-badge">
+                  <lucide-angular name="check" [size]="14"></lucide-angular>
+                  Activo
+                </div>
+              }
+            </button>
 
-          <!-- Whisper Mode (Susurro) -->
-          <button
-            mat-raised-button
-            color="primary"
-            class="mode-button"
-            [disabled]="currentMode !== 'none' || isConnecting"
-            (click)="startWhisperMode()">
-            <lucide-angular name="mic" [size]="20"></lucide-angular>
-            <div class="button-content">
-              <span class="mode-name">Susurro</span>
-              <span class="mode-description">Hablar al agente</span>
-            </div>
-          </button>
+            <button
+              class="mode-btn whisper"
+              [class.active]="currentMode === 'whisper'"
+              [class.disabled]="currentMode !== 'none' && currentMode !== 'whisper'"
+              [disabled]="isConnecting || (currentMode !== 'none' && currentMode !== 'whisper')"
+              (click)="startWhisperMode()">
+              <div class="mode-icon">
+                <lucide-angular name="ear" [size]="28"></lucide-angular>
+              </div>
+              <div class="mode-info">
+                <span class="mode-name">Susurro</span>
+                <span class="mode-desc">Hablar al agente</span>
+              </div>
+              @if (currentMode === 'whisper') {
+                <div class="active-badge">
+                  <lucide-angular name="check" [size]="14"></lucide-angular>
+                  Activo
+                </div>
+              }
+            </button>
 
-          <!-- Barge Mode (Tripartita) -->
-          <button
-            mat-raised-button
-            color="warn"
-            class="mode-button"
-            [disabled]="currentMode !== 'none' || isConnecting"
-            (click)="startBargeMode()">
-            <lucide-angular name="users" [size]="20"></lucide-angular>
-            <div class="button-content">
-              <span class="mode-name">Tripartita</span>
-              <span class="mode-description">Unirse a la llamada</span>
-            </div>
-          </button>
-        </div>
-
-        <!-- Connection status -->
-        <div *ngIf="isConnecting" class="connecting-status">
-          <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span>Conectando...</span>
-        </div>
-
-        <!-- Active controls (when connected) -->
-        <div *ngIf="currentMode !== 'none'" class="active-controls">
-          <button
-            mat-raised-button
-            [color]="isMuted ? 'warn' : ''"
-            (click)="toggleMute()">
-            <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="20"></lucide-angular>
-            {{ isMuted ? 'Activar Micrófono' : 'Silenciar' }}
-          </button>
-
-          <button
-            mat-raised-button
-            color="warn"
-            (click)="disconnectSupervision()">
-            <lucide-angular name="phone-off" [size]="20"></lucide-angular>
-            Desconectar
-          </button>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <!-- Instructions card -->
-    <mat-card class="instructions-card">
-      <mat-card-header>
-        <mat-card-title>Instrucciones</mat-card-title>
-      </mat-card-header>
-      <mat-card-content>
-        <div class="instruction-item">
-          <lucide-angular name="eye" [size]="24" class="text-blue-500"></lucide-angular>
-          <div>
-            <strong>Vigía:</strong> Escuchas la conversación entre agente y cliente. Nadie puede escucharte.
+            <button
+              class="mode-btn barge"
+              [class.active]="currentMode === 'barge'"
+              [class.disabled]="currentMode !== 'none' && currentMode !== 'barge'"
+              [disabled]="isConnecting || (currentMode !== 'none' && currentMode !== 'barge')"
+              (click)="startBargeMode()">
+              <div class="mode-icon">
+                <lucide-angular name="users" [size]="28"></lucide-angular>
+              </div>
+              <div class="mode-info">
+                <span class="mode-name">Tripartita</span>
+                <span class="mode-desc">Todos escuchan</span>
+              </div>
+              @if (currentMode === 'barge') {
+                <div class="active-badge">
+                  <lucide-angular name="check" [size]="14"></lucide-angular>
+                  Activo
+                </div>
+              }
+            </button>
           </div>
         </div>
-        <div class="instruction-item">
-          <lucide-angular name="mic" [size]="24" class="text-green-500"></lucide-angular>
-          <div>
-            <strong>Susurro:</strong> Hablas solo con el agente. El cliente no puede escucharte.
+
+        <!-- Estado de conexión -->
+        @if (isConnecting) {
+          <div class="connecting-overlay">
+            <div class="connecting-content">
+              <div class="connecting-spinner"></div>
+              <span>Conectando al modo de supervisión...</span>
+            </div>
+          </div>
+        }
+
+        <!-- Controles activos -->
+        @if (currentMode !== 'none') {
+          <div class="active-controls">
+            <button
+              class="control-btn mute"
+              [class.muted]="isMuted"
+              (click)="toggleMute()">
+              <lucide-angular [name]="isMuted ? 'mic-off' : 'mic'" [size]="22"></lucide-angular>
+              <span>{{ isMuted ? 'Activar Mic' : 'Silenciar' }}</span>
+            </button>
+
+            <button
+              class="control-btn disconnect"
+              (click)="disconnectSupervision()">
+              <lucide-angular name="phone-off" [size]="22"></lucide-angular>
+              <span>Desconectar</span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- Panel lateral de información -->
+      <div class="info-panel">
+        <div class="info-card">
+          <h4>
+            <lucide-angular name="info" [size]="18"></lucide-angular>
+            Guía de Modos
+          </h4>
+          <div class="info-list">
+            <div class="info-item">
+              <div class="info-icon spy">
+                <lucide-angular name="eye" [size]="16"></lucide-angular>
+              </div>
+              <div class="info-text">
+                <strong>Vigía</strong>
+                <p>Escuchas la conversación completa. Ni el agente ni el cliente pueden oírte.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-icon whisper">
+                <lucide-angular name="ear" [size]="16"></lucide-angular>
+              </div>
+              <div class="info-text">
+                <strong>Susurro</strong>
+                <p>Puedes hablar con el agente. El cliente no te escucha.</p>
+              </div>
+            </div>
+            <div class="info-item">
+              <div class="info-icon barge">
+                <lucide-angular name="users" [size]="16"></lucide-angular>
+              </div>
+              <div class="info-text">
+                <strong>Tripartita</strong>
+                <p>Te unes a la llamada. Todos los participantes pueden escucharte.</p>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="instruction-item">
-          <lucide-angular name="users" [size]="24" class="text-red-500"></lucide-angular>
-          <div>
-            <strong>Tripartita:</strong> Te unes como participante completo. Todos se escuchan.
+
+        @if (call.campaignName) {
+          <div class="info-card campaign">
+            <h4>
+              <lucide-angular name="folder" [size]="18"></lucide-angular>
+              Campaña
+            </h4>
+            <span class="campaign-name">{{ call.campaignName }}</span>
           </div>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
+        }
+      </div>
+    </div>
+  }
 </div>
