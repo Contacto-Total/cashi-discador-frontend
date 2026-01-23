@@ -681,174 +681,174 @@
    LIGHT THEME
    ======================================== */
 
-html:not(.dark) .supervision-page {
+:host-context(html:not(.dark)) .supervision-page {
   background: #f1f5f9;
 }
 
-html:not(.dark) .back-btn {
+:host-context(html:not(.dark)) .back-btn {
   background: #fff;
   border-color: #e2e8f0;
   color: #64748b;
 }
 
-html:not(.dark) .back-btn:hover {
+:host-context(html:not(.dark)) .back-btn:hover {
   background: #f8fafc;
   color: #0f172a;
   border-color: #cbd5e1;
 }
 
-html:not(.dark) .header-title h1 {
+:host-context(html:not(.dark)) .header-title h1 {
   color: #0f172a;
 }
 
-html:not(.dark) .main-panel {
+:host-context(html:not(.dark)) .main-panel {
   background: linear-gradient(145deg, #fff 0%, #f8fafc 100%);
   border-color: #e2e8f0;
 }
 
-html:not(.dark) .connection-status {
+:host-context(html:not(.dark)) .connection-status {
   background: #f8fafc;
   border-color: #e2e8f0;
 }
 
-html:not(.dark) .connection-status.mode-spy {
+:host-context(html:not(.dark)) .connection-status.mode-spy {
   background: rgba(59, 130, 246, 0.08);
   border-color: rgba(59, 130, 246, 0.25);
 }
 
-html:not(.dark) .connection-status.mode-whisper {
+:host-context(html:not(.dark)) .connection-status.mode-whisper {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.25);
 }
 
-html:not(.dark) .connection-status.mode-barge {
+:host-context(html:not(.dark)) .connection-status.mode-barge {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.25);
 }
 
-html:not(.dark) .status-label {
+:host-context(html:not(.dark)) .status-label {
   color: #0f172a;
 }
 
-html:not(.dark) .status-description {
+:host-context(html:not(.dark)) .status-description {
   color: #64748b;
 }
 
-html:not(.dark) .call-timer {
+:host-context(html:not(.dark)) .call-timer {
   background: #e2e8f0;
   color: #0f172a;
 }
 
-html:not(.dark) .participant {
+:host-context(html:not(.dark)) .participant {
   background: #fff;
   border-color: #e2e8f0;
 }
 
-html:not(.dark) .participant:hover {
+:host-context(html:not(.dark)) .participant:hover {
   border-color: #cbd5e1;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-html:not(.dark) .participant-name {
+:host-context(html:not(.dark)) .participant-name {
   color: #0f172a;
 }
 
-html:not(.dark) .participant-role,
-html:not(.dark) .participant-detail {
+:host-context(html:not(.dark)) .participant-role,
+:host-context(html:not(.dark)) .participant-detail {
   color: #64748b;
 }
 
-html:not(.dark) .connection-line {
+:host-context(html:not(.dark)) .connection-line {
   color: #94a3b8;
 }
 
-html:not(.dark) .mode-selector h3 {
+:host-context(html:not(.dark)) .mode-selector h3 {
   color: #64748b;
 }
 
-html:not(.dark) .mode-btn {
+:host-context(html:not(.dark)) .mode-btn {
   background: #fff;
   border-color: #e2e8f0;
 }
 
-html:not(.dark) .mode-btn:hover {
+:host-context(html:not(.dark)) .mode-btn:hover {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
-html:not(.dark) .mode-btn:disabled {
+:host-context(html:not(.dark)) .mode-btn:disabled {
   background: #f8fafc;
   opacity: 0.6;
 }
 
-html:not(.dark) .mode-name {
+:host-context(html:not(.dark)) .mode-name {
   color: #0f172a;
 }
 
-html:not(.dark) .mode-desc {
+:host-context(html:not(.dark)) .mode-desc {
   color: #64748b;
 }
 
-html:not(.dark) .connecting-overlay {
+:host-context(html:not(.dark)) .connecting-overlay {
   background: rgba(255, 255, 255, 0.9);
 }
 
-html:not(.dark) .connecting-content {
+:host-context(html:not(.dark)) .connecting-content {
   color: #0f172a;
 }
 
-html:not(.dark) .connecting-spinner {
+:host-context(html:not(.dark)) .connecting-spinner {
   border-color: #e2e8f0;
   border-top-color: #10b981;
 }
 
-html:not(.dark) .active-controls {
+:host-context(html:not(.dark)) .active-controls {
   background: rgba(16, 185, 129, 0.08);
   border-color: rgba(16, 185, 129, 0.15);
 }
 
-html:not(.dark) .control-btn.mute {
+:host-context(html:not(.dark)) .control-btn.mute {
   background: #fff;
   color: #0f172a;
   border-color: #e2e8f0;
 }
 
-html:not(.dark) .control-btn.mute:hover {
+:host-context(html:not(.dark)) .control-btn.mute:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
 }
 
-html:not(.dark) .info-card {
+:host-context(html:not(.dark)) .info-card {
   background: #fff;
   border-color: #e2e8f0;
 }
 
-html:not(.dark) .info-card h4 {
+:host-context(html:not(.dark)) .info-card h4 {
   color: #0f172a;
 }
 
-html:not(.dark) .info-text strong {
+:host-context(html:not(.dark)) .info-text strong {
   color: #0f172a;
 }
 
-html:not(.dark) .info-text p {
+:host-context(html:not(.dark)) .info-text p {
   color: #64748b;
 }
 
-html:not(.dark) .info-card.campaign {
+:host-context(html:not(.dark)) .info-card.campaign {
   background: linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(109, 40, 217, 0.06) 100%);
   border-color: rgba(139, 92, 246, 0.2);
 }
 
-html:not(.dark) .campaign-name {
+:host-context(html:not(.dark)) .campaign-name {
   color: #0f172a;
 }
 
-html:not(.dark) .loader-ring {
+:host-context(html:not(.dark)) .loader-ring {
   border-color: #e2e8f0;
   border-top-color: #10b981;
 }
 
-html:not(.dark) .loading-state p {
+:host-context(html:not(.dark)) .loading-state p {
   color: #64748b;
 }
 
