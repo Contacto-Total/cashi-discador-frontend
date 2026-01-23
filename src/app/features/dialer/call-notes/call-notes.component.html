@@ -1,10 +1,24 @@
 <mat-card class="call-notes-card">
   <mat-card-header>
-    <mat-card-title>Call Notes & Disposition</mat-card-title>
+    <mat-card-title>
+      @if (isSupervisionMode) {
+        <span class="supervision-badge">👁️ MODO SUPERVISIÓN - Solo Lectura</span>
+      } @else {
+        Call Notes & Disposition
+      }
+    </mat-card-title>
   </mat-card-header>
 
-  <!-- Botón Generar Carta de Acuerdo - Solo visible si hay promesa pendiente -->
-  @if (tienePromesaPendiente && idGestionPendiente) {
+  <!-- Mensaje de modo supervisión -->
+  @if (isSupervisionMode) {
+    <div class="supervision-notice">
+      <p>Estás supervisando esta llamada. Los datos se muestran en modo solo lectura.</p>
+      <p>Usa el panel de supervisión para cambiar de modo o desconectarte.</p>
+    </div>
+  }
+
+  <!-- Botón Generar Carta de Acuerdo - Solo visible si hay promesa pendiente y NO en supervisión -->
+  @if (tienePromesaPendiente && idGestionPendiente && !isSupervisionMode) {
     <div class="carta-acuerdo-section">
       <button
         mat-raised-button
@@ -26,7 +40,8 @@
   <mat-card-content>
     <form [formGroup]="notesForm" (ngSubmit)="onSubmit()">
       <div class="form-section">
-        <!-- Tipificaciones V2 en cascada -->
+        <!-- Tipificaciones V2 en cascada - OCULTO EN MODO SUPERVISIÓN -->
+        @if (!isSupervisionMode) {
         <div class="typification-section">
           <h3 class="section-title">Tipificación (4 Niveles)</h3>
 
@@ -254,11 +269,12 @@
             </div>
           }
         </div>
+        } <!-- Fin del @if (!isSupervisionMode) para tipificación -->
 
-        <!-- Separador -->
+        <!-- Separador y Campos originales - También ocultos en supervisión -->
+        @if (!isSupervisionMode) {
         <hr class="section-divider">
 
-        <!-- Campos originales -->
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Disposition</mat-label>
           <mat-select formControlName="disposition">
@@ -293,14 +309,17 @@
           <mat-datepicker-toggle matSuffix [for]="callbackPicker"></mat-datepicker-toggle>
           <mat-datepicker #callbackPicker></mat-datepicker>
         </mat-form-field>
+        } <!-- Fin del @if (!isSupervisionMode) para campos del formulario -->
       </div>
 
+      @if (!isSupervisionMode) {
       <div class="form-actions">
         <button mat-button type="button" (click)="onSkip()">Skip</button>
         <button mat-raised-button color="primary" type="submit" [disabled]="loading || notesForm.invalid">
           Save Notes
         </button>
       </div>
+      }
     </form>
   </mat-card-content>
 </mat-card>

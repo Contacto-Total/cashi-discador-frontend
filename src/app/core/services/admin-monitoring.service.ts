@@ -147,6 +147,20 @@ export class AdminMonitoringService {
   }
 
   /**
+   * Change monitoring mode without full disconnect
+   * Switches between spy/whisper/barge seamlessly
+   */
+  changeMode(callUuid: string, adminCallUuid: string, newMode: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/change-mode`, {
+      callUuid,
+      adminCallUuid,
+      newMode,
+      adminExtension: '1000',
+      adminUsername: 'admin'
+    });
+  }
+
+  /**
    * Get SIP extension registrations
    */
   getExtensionRegistrations(): Observable<ExtensionRegistration[]> {

@@ -20,6 +20,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
 import { CartaAcuerdoService } from '../../../core/services/carta-acuerdo.service';
 import { TypificationService } from '../../../maintenance/services/typification.service';
 import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
+import { SupervisionService } from '../../../core/services/supervision.service';
 import { TypificationCatalog, AdditionalField, FieldType } from '../../../maintenance/models/typification.model';
 import { AdditionalFieldV2, FieldTypeV2, FieldDataSourceV2, PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 import { ChipSelectComponent, ChipOption } from '../../../shared/components/chip-select/chip-select.component';
@@ -93,8 +94,16 @@ export class CallNotesComponent implements OnInit {
     private typificationV2Service: TypificationV2Service,
     private cartaAcuerdoService: CartaAcuerdoService,
     private dialog: MatDialog,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    public supervisionService: SupervisionService
   ) {}
+
+  /**
+   * Indica si estamos en modo supervisión (solo lectura)
+   */
+  get isSupervisionMode(): boolean {
+    return this.supervisionService.isSupervisionActive();
+  }
 
   ngOnInit(): void {
     this.initForm();

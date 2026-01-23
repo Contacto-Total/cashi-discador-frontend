@@ -83,3 +83,34 @@
 .btn-generar-carta mat-spinner {
   margin-right: 8px;
 }
+
+/* Estilos para modo supervisión */
+.supervision-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.supervision-notice {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 16px;
+}
+
+.supervision-notice p {
+  margin: 4px 0;
+  color: #3b82f6;
+  font-size: 0.875rem;
+}
+
+.supervision-notice p:first-child {
+  font-weight: 600;
+}

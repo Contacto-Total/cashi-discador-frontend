@@ -7,6 +7,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { LucideAngularModule } from 'lucide-angular';
 import { AdminMonitoringService } from '../../../core/services/admin-monitoring.service';
 import { SipService } from '../../../core/services/sip.service';
+import { SupervisionService, SupervisionMode } from '../../../core/services/supervision.service';
 import { Subscription, interval } from 'rxjs';
 
 interface ActiveCall {
@@ -18,7 +19,7 @@ interface ActiveCall {
   callState: string;  // Changed from 'state' to 'callState' to match service
 }
 
-type SupervisionMode = 'none' | 'spy' | 'whisper' | 'barge';
+// SupervisionMode type is imported from supervision.service
 
 @Component({
   selector: 'app-admin-call-supervision',
@@ -48,7 +49,8 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminMonitoringService,
-    private sipService: SipService
+    private sipService: SipService,
+    private supervisionService: SupervisionService
   ) {}
 
   ngOnInit(): void {
@@ -81,6 +83,9 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     if (this.currentMode !== 'none') {
       this.disconnectSupervision();
     }
+
+    // Ensure global supervision state is cleared
+    this.supervisionService.stopSupervision();
 
     // Disable auto-answer mode
     this.sipService.disableAutoAnswer();
@@ -154,6 +159,15 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
         console.log('✅ SPY mode activated');
         this.currentMode = 'spy';
         this.isConnecting = false;
+
+        // Update SupervisionService state for global access
+        if (this.call) {
+          this.supervisionService.startSupervision(this.callUuid, 'spy', {
+            agentName: this.call.agentName,
+            agentExtension: this.call.agentExtension,
+            clientNumber: this.call.clientNumber
+          });
+        }
       },
       error: (error) => {
         console.error('❌ Error starting spy mode:', error);
@@ -178,6 +192,15 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
         console.log('✅ WHISPER mode activated');
         this.currentMode = 'whisper';
         this.isConnecting = false;
+
+        // Update SupervisionService state for global access
+        if (this.call) {
+          this.supervisionService.startSupervision(this.callUuid, 'whisper', {
+            agentName: this.call.agentName,
+            agentExtension: this.call.agentExtension,
+            clientNumber: this.call.clientNumber
+          });
+        }
       },
       error: (error) => {
         console.error('❌ Error starting whisper mode:', error);
@@ -202,6 +225,15 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
         console.log('✅ BARGE mode activated');
         this.currentMode = 'barge';
         this.isConnecting = false;
+
+        // Update SupervisionService state for global access
+        if (this.call) {
+          this.supervisionService.startSupervision(this.callUuid, 'barge', {
+            agentName: this.call.agentName,
+            agentExtension: this.call.agentExtension,
+            clientNumber: this.call.clientNumber
+          });
+        }
       },
       error: (error) => {
         console.error('❌ Error starting barge mode:', error);
@@ -217,6 +249,9 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
 
     // Hangup admin's call
     this.sipService.hangup();
+
+    // Clear global supervision state
+    this.supervisionService.stopSupervision();
 
     this.currentMode = 'none';
     this.isMuted = false;

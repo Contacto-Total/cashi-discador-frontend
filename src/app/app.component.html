@@ -124,6 +124,9 @@
   <!-- Overlay de alerta de tiempo para agentes -->
   <app-agent-time-alert-overlay></app-agent-time-alert-overlay>
 
+  <!-- Panel flotante de supervisión de llamadas -->
+  <app-supervision-panel></app-supervision-panel>
+
   <!-- Panel flotante de notificaciones del sistema -->
   <div *ngIf="isNotificacionesDropdownOpen && (authService.currentUser$ | async)?.role === 'ADMIN'"
        class="notif-panel fixed z-[9999]"

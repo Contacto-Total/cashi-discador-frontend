@@ -15,6 +15,7 @@ import { MenuPermissionService, MenuItem } from './core/services/menu-permission
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
 import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
+import { SupervisionPanelComponent } from './shared/components/supervision-panel/supervision-panel.component';
 import { RecordatoriosModalComponent } from './shared/components/recordatorios-modal/recordatorios-modal.component';
 import { RecordatoriosService } from './core/services/recordatorios.service';
 import { environment } from '../environments/environment';
@@ -30,7 +31,8 @@ import { Subscription } from 'rxjs';
     RouterModule,
     LucideAngularModule,
     AuthorizationNotificationComponent,
-    AgentTimeAlertOverlayComponent
+    AgentTimeAlertOverlayComponent,
+    SupervisionPanelComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
