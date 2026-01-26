@@ -1,18 +1,20 @@
 <div class="campaign-container">
-  <!-- Header -->
-  <div class="flex items-center gap-2 mb-2">
-    <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="clipboard-list" [size]="16" class="text-white"></lucide-angular>
+  <!-- Header estilo monitoring -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <lucide-angular name="megaphone" [size]="22"></lucide-angular>
+      </div>
+      <div class="header-text">
+        <h1>Gestión de Campañas</h1>
+        <p>Administración y configuración de campañas de marcación</p>
+      </div>
     </div>
-    <div>
-      <h1 class="text-lg font-bold text-white">Gestión de Campañas</h1>
-      <p class="text-xs text-gray-400">Administración y configuración de campañas de marcación</p>
-    </div>
-  </div>
-
-  <div class="header">
-    <div class="header-actions">
-      <!-- New Campaign Button -->
+    <div class="header-right">
+      <div class="stat-badge" [class.active]="campaigns.length > 0">
+        <span class="stat-number">{{ campaigns.length }}</span>
+        <span class="stat-label">Campañas</span>
+      </div>
       <button class="btn-create" routerLink="/admin/campaigns/new">
         <lucide-angular name="plus-circle" [size]="18"></lucide-angular>
         <span>Nueva Campaña</span>
