@@ -1,19 +1,18 @@
 <div class="campaign-detail-container">
-  <!-- Header with back button -->
-  <div class="flex items-center gap-2 mb-2">
-    <div class="w-8 h-8 bg-gradient-to-br from-purple-600 to-purple-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="clipboard-list" [size]="16" class="text-white"></lucide-angular>
+  <!-- Header estilo monitoring -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <lucide-angular name="bar-chart-3" [size]="22"></lucide-angular>
+      </div>
+      <div class="header-text">
+        <h1>Detalle de Campaña</h1>
+        <p>Información detallada y métricas de la campaña</p>
+      </div>
     </div>
-    <div>
-      <h1 class="text-lg font-bold text-white">Detalle de Campaña</h1>
-      <p class="text-xs text-gray-400">Información detallada y métricas de la campaña</p>
-    </div>
-  </div>
-
-  <div class="header">
     <button class="btn-back" (click)="goBack()">
-      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
-      <span>Volver a Campañas</span>
+      <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
+      <span>Volver</span>
     </button>
   </div>
 
