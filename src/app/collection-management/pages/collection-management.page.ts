@@ -2213,6 +2213,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.selectedSubPortfolioId = subPortfolioId;
     this.reloadTypifications();
     this.loadCustomerOutputConfig();
+    this.loadFirstInstallmentConfig(); // Cargar config de primera cuota para esta subcartera
 
     // Buscar cliente en la tabla dinámica
     this.http.get<any>(`${environment.apiUrl}/client-search/find`, {
