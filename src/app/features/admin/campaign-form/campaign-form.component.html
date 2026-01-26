@@ -1,10 +1,15 @@
 <div class="campaign-form-container">
-  <!-- Header -->
+  <!-- Header estilo monitoring -->
   <div class="form-header">
-    <h1>
-      <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="24" class="header-icon"></lucide-angular>
-      {{ isEditMode ? 'Editar Campaña' : 'Nueva Campaña' }}
-    </h1>
+    <div class="header-left">
+      <div class="header-icon-box" [class.edit-mode]="isEditMode">
+        <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="22"></lucide-angular>
+      </div>
+      <div class="header-text">
+        <h1>{{ isEditMode ? 'Editar Campaña' : 'Nueva Campaña' }}</h1>
+        <p>{{ isEditMode ? 'Modificar configuración de campaña' : 'Configurar nueva campaña de llamadas' }}</p>
+      </div>
+    </div>
     <button class="btn-back" (click)="onCancel()">
       <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
       <span>Volver</span>

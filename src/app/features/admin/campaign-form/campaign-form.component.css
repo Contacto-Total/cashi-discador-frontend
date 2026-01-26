@@ -7,26 +7,50 @@
   background: linear-gradient(to bottom right, #0f172a, #1e293b, #0f172a);
 }
 
-/* Header */
+/* Header estilo monitoring */
 .form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 12px;
+  border: 1px solid #334155;
 }
 
-.form-header h1 {
-  font-size: 1.5rem;
-  color: #f8fafc;
-  margin: 0;
+.header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-weight: 600;
+  gap: 14px;
 }
 
-.header-icon {
-  color: #60a5fa;
+.header-icon-box {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.header-icon-box.edit-mode {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.header-text p {
+  margin: 2px 0 0 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 .btn-back {
@@ -34,17 +58,18 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #334155;
+  background: rgba(255,255,255,0.05);
   border: 1px solid #475569;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: #e2e8f0;
   transition: all 0.2s;
 }
 
 .btn-back:hover {
-  background: #475569;
+  background: rgba(255,255,255,0.1);
+  border-color: #64748b;
 }
 
 /* Mensajes */
@@ -548,8 +573,25 @@
 
   .form-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1rem;
+  }
+
+  .header-left {
+    justify-content: flex-start;
+  }
+
+  .header-icon-box {
+    width: 40px;
+    height: 40px;
+  }
+
+  .header-text h1 {
+    font-size: 1.1rem;
+  }
+
+  .btn-back {
+    justify-content: center;
   }
 
   .form-actions {
@@ -571,18 +613,28 @@
   background: linear-gradient(to bottom right, #f8fafc, #f1f5f9, #e2e8f0);
 }
 
-:host-context(body.light-theme) .form-header h1 {
-  color: #1e293b;
+:host-context(body.light-theme) .form-header {
+  background: linear-gradient(135deg, #fff 0%, #f8fafc 100%);
+  border-color: #e2e8f0;
+}
+
+:host-context(body.light-theme) .header-text h1 {
+  color: #0f172a;
+}
+
+:host-context(body.light-theme) .header-text p {
+  color: #64748b;
 }
 
 :host-context(body.light-theme) .btn-back {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
   color: #475569;
 }
 
 :host-context(body.light-theme) .btn-back:hover {
-  background: #cbd5e1;
+  background: #e2e8f0;
+  border-color: #cbd5e1;
 }
 
 :host-context(body.light-theme) .form-section {
