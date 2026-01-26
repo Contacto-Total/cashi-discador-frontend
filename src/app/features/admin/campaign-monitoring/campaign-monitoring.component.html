@@ -1,30 +1,29 @@
 <div class="monitoring-container">
-  <!-- Header -->
-  <div class="flex items-center gap-2 mb-2">
-    <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="bar-chart-2" [size]="16" class="text-white"></lucide-angular>
+  <!-- Header estilo monitoring -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="header-icon-box">
+        <lucide-angular name="activity" [size]="22"></lucide-angular>
+      </div>
+      <div class="header-text">
+        <h1>Monitoreo por Campaña</h1>
+        <p>Métricas del auto-dialer en tiempo real</p>
+      </div>
     </div>
-    <div>
-      <h1 class="text-lg font-bold text-white">Monitoreo por Campaña</h1>
-      <p class="text-xs text-gray-400">Métricas del auto-dialer en tiempo real</p>
+    <div class="header-right">
+      <button
+        class="btn-sound"
+        [class.active]="soundEnabled"
+        (click)="toggleSound()"
+        [title]="soundEnabled ? 'Desactivar sonido de alertas' : 'Activar sonido de alertas'">
+        <lucide-angular [name]="soundEnabled ? 'volume-2' : 'volume-x'" [size]="18"></lucide-angular>
+        <span>{{ soundEnabled ? 'ON' : 'OFF' }}</span>
+      </button>
+      <button class="btn-back" (click)="goBack()">
+        <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
+        <span>Volver</span>
+      </button>
     </div>
-  </div>
-
-  <div class="header">
-    <button class="btn-back" (click)="goBack()">
-      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
-      <span>Volver a Campañas</span>
-    </button>
-
-    <!-- Botón para activar/desactivar sonido de alertas -->
-    <button
-      class="btn-sound"
-      [class.active]="soundEnabled"
-      (click)="toggleSound()"
-      [title]="soundEnabled ? 'Desactivar sonido de alertas' : 'Activar sonido de alertas (requerido para escuchar alarmas)'">
-      <lucide-angular [name]="soundEnabled ? 'volume-2' : 'volume-x'" [size]="18"></lucide-angular>
-      <span>{{ soundEnabled ? 'Sonido ON' : 'Sonido OFF' }}</span>
-    </button>
   </div>
 
   <!-- Campaign Selector -->
