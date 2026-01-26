@@ -851,9 +851,10 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadSoundPreference();
+    const agentRoles = ['AGENT', 'ASESOR'];
 
     const user = this.authService.getCurrentUser();
-    if (user?.role === 'AGENT' && user.id) {
+    if (user?.role && agentRoles.includes(user.role) && user.id) {
       this.isVisible = true;
       this.userId = user.id;
       this.userName = user.firstName || user.username || 'Asesor';
@@ -861,7 +862,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
     }
 
     this.authService.currentUser$.subscribe(user => {
-      if (user?.role === 'AGENT' && user.id) {
+      if (user?.role && agentRoles.includes(user.role) && user.id) {
         this.isVisible = true;
         this.userId = user.id;
         this.userName = user.firstName || user.username || 'Asesor';

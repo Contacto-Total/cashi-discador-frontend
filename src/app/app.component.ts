@@ -377,9 +377,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
               // ✅ CHECK 2: Solo agentes deben ser redirigidos a collection-management
               // Admin y supervisores no deben ser redirigidos automáticamente
+              // Aceptamos tanto 'AGENT' como 'ASESOR' como roles de agente
               const currentUser = this.authService.getCurrentUser();
-              if (currentUser && currentUser.role !== 'AGENT') {
-                console.log(`🔇 [App] Usuario no es AGENT (${currentUser.role}) - NO navegando a tipificación`);
+              const agentRoles = ['AGENT', 'ASESOR'];
+              if (currentUser && !agentRoles.includes(currentUser.role)) {
+                console.log(`🔇 [App] Usuario no es AGENT/ASESOR (${currentUser.role}) - NO navegando a tipificación`);
                 return;
               }
 
@@ -423,7 +425,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!user?.id) return;
 
     // Solo mostrar para agentes (no admin/supervisor)
-    if (user.role !== 'AGENT') return;
+    const agentRoles = ['AGENT', 'ASESOR'];
+    if (!agentRoles.includes(user.role)) return;
 
     // Pequeño delay para no saturar al usuario al entrar
     setTimeout(() => {
@@ -754,7 +757,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   isAgent(): boolean {
     const currentUser = this.authService.getCurrentUser();
-    return currentUser?.role === 'AGENT';
+    const agentRoles = ['AGENT', 'ASESOR'];
+    return currentUser?.role ? agentRoles.includes(currentUser.role) : false;
   }
 
   // ============== Dynamic Menu Methods ==============

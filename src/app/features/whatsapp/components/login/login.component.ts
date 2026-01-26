@@ -65,7 +65,8 @@ export class LoginComponent {
 
         // Redirigir según el rol del usuario
         const user = this.authService.getCurrentUser();
-        if (user?.role === 'AGENT') {
+        const agentRoles = ['AGENT', 'ASESOR'];
+        if (user?.role && agentRoles.includes(user.role)) {
           // Agentes van a WhatsApp
           this.router.navigate(['/whatsapp']);
         } else {
