@@ -870,6 +870,153 @@
   to { transform: rotate(360deg); }
 }
 
+/* ========================================
+   AUDIO VISUALIZER - REAL-TIME LEVEL METER
+   ======================================== */
+.audio-visualizer {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.audio-visualizer.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%);
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.1);
+}
+
+.visualizer-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 60px;
+  padding: 0 1rem;
+}
+
+.visualizer-bar {
+  flex: 1;
+  max-width: 20px;
+  min-height: 5%;
+  background: linear-gradient(to top, #334155, #475569);
+  border-radius: 3px;
+  transition: height 0.05s ease-out, background 0.2s ease;
+}
+
+.visualizer-bar.low {
+  background: linear-gradient(to top, #10b981, #34d399);
+}
+
+.visualizer-bar.medium {
+  background: linear-gradient(to top, #f59e0b, #fbbf24);
+}
+
+.visualizer-bar.high {
+  background: linear-gradient(to top, #ef4444, #f97316);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.visualizer-info {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+.level-indicator,
+.peak-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.level-label,
+.peak-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.level-value,
+.peak-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #94a3b8;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.level-value.low { color: #10b981; }
+.level-value.medium { color: #f59e0b; }
+.level-value.high { color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+
+.visualizer-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.visualizer-placeholder lucide-angular {
+  opacity: 0.5;
+}
+
+/* Mic card monitoring state */
+.mic-card.monitoring {
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.15);
+}
+
+.mic-card.monitoring .device-icon-wrapper.active {
+  animation: micPulse 1s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 4px 25px rgba(239, 68, 68, 0.6); }
+}
+
+.device-status.recording {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
+  animation: recordingPulse 1s ease-in-out infinite;
+}
+
+@keyframes recordingPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.test-btn-premium.monitoring {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.test-btn-premium.monitoring .test-btn-icon {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.test-btn-premium.monitoring:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
 /* Audio Footer */
 .audio-footer {
   display: flex;
@@ -1177,6 +1324,44 @@
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%);
   border-color: rgba(16, 185, 129, 0.15);
   color: #059669;
+}
+
+/* Light Mode - Audio Visualizer */
+:host-context(body.light-theme) .audio-visualizer {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+:host-context(body.light-theme) .audio-visualizer.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.05) 0%, rgba(249, 115, 22, 0.05) 100%);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+:host-context(body.light-theme) .visualizer-bar {
+  background: linear-gradient(to top, #e2e8f0, #cbd5e1);
+}
+
+:host-context(body.light-theme) .visualizer-info {
+  border-top-color: #e2e8f0;
+}
+
+:host-context(body.light-theme) .level-label,
+:host-context(body.light-theme) .peak-label {
+  color: #94a3b8;
+}
+
+:host-context(body.light-theme) .level-value,
+:host-context(body.light-theme) .peak-value {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .visualizer-placeholder {
+  color: #94a3b8;
+}
+
+:host-context(body.light-theme) .mic-card.monitoring {
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.08);
 }
 
 /* ========================================

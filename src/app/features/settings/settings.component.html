@@ -170,19 +170,19 @@
       <!-- Audio Devices Grid -->
       <div class="audio-devices-grid">
         <!-- Microphone Card -->
-        <div class="audio-device-card mic-card">
+        <div class="audio-device-card mic-card" [class.monitoring]="isMicMonitoring">
           <div class="device-card-header">
-            <div class="device-icon-wrapper mic-icon">
+            <div class="device-icon-wrapper mic-icon" [class.active]="isMicMonitoring">
               <lucide-angular name="mic" [size]="24"></lucide-angular>
-              <div class="icon-pulse"></div>
+              <div class="icon-pulse" *ngIf="isMicMonitoring"></div>
             </div>
             <div class="device-title-group">
               <h3 class="device-title">Micr&oacute;fono</h3>
               <span class="device-subtitle">Entrada de audio</span>
             </div>
-            <div class="device-status" [class.active]="selectedInputId !== 'default'">
+            <div class="device-status" [class.active]="isMicMonitoring" [class.recording]="isMicMonitoring">
               <span class="status-dot"></span>
-              <span class="status-text">{{ selectedInputId !== 'default' ? 'Personalizado' : 'Por defecto' }}</span>
+              <span class="status-text">{{ isMicMonitoring ? 'Escuchando...' : (selectedInputId !== 'default' ? 'Personalizado' : 'Por defecto') }}</span>
             </div>
           </div>
 
@@ -194,6 +194,7 @@
               class="device-select-premium"
               [(ngModel)]="selectedInputId"
               (ngModelChange)="onInputDeviceSelect($event)"
+              [disabled]="isMicMonitoring"
             >
               <option value="default">Usar dispositivo del sistema</option>
               <option *ngFor="let device of inputDevices" [value]="device.deviceId">
@@ -202,25 +203,56 @@
             </select>
           </div>
 
+          <!-- Audio Level Visualizer -->
+          <div class="audio-visualizer" [class.active]="isMicMonitoring">
+            <div class="visualizer-bars">
+              <div
+                *ngFor="let bar of audioLevel.bars; let i = index"
+                class="visualizer-bar"
+                [style.height.%]="isMicMonitoring ? (bar > 5 ? bar : 5) : 5"
+                [class.low]="bar < 30"
+                [class.medium]="bar >= 30 && bar < 60"
+                [class.high]="bar >= 60"
+              ></div>
+            </div>
+            <div class="visualizer-info" *ngIf="isMicMonitoring">
+              <div class="level-indicator">
+                <span class="level-label">Nivel</span>
+                <span class="level-value" [class.low]="audioLevel.level < 30" [class.medium]="audioLevel.level >= 30 && audioLevel.level < 60" [class.high]="audioLevel.level >= 60">
+                  {{ audioLevel.level }}%
+                </span>
+              </div>
+              <div class="peak-indicator">
+                <span class="peak-label">Pico</span>
+                <span class="peak-value">{{ audioLevel.peakLevel }}%</span>
+              </div>
+            </div>
+            <div class="visualizer-placeholder" *ngIf="!isMicMonitoring">
+              <lucide-angular name="audio-waveform" [size]="20"></lucide-angular>
+              <span>Haz clic en "Probar" para ver el nivel de audio</span>
+            </div>
+          </div>
+
+          <!-- Test Button -->
           <button
             class="test-btn-premium mic-test"
-            (click)="testMicrophone()"
+            (click)="toggleMicrophoneMonitoring()"
             [disabled]="isTestingMic"
             [class.testing]="isTestingMic"
-            [class.success]="micTestResult === 'success'"
+            [class.monitoring]="isMicMonitoring"
             [class.error]="micTestResult === 'error'"
           >
             <div class="test-btn-icon">
               <lucide-angular
-                [name]="isTestingMic ? 'loader-2' : (micTestResult === 'success' ? 'check-circle' : (micTestResult === 'error' ? 'x-circle' : 'play'))"
+                [name]="isTestingMic ? 'loader-2' : (isMicMonitoring ? 'square' : (micTestResult === 'error' ? 'x-circle' : 'play'))"
                 [size]="18"
                 [class.spin]="isTestingMic"
               ></lucide-angular>
             </div>
             <span class="test-btn-text">
-              {{ isTestingMic ? 'Probando micr&oacute;fono...' : (micTestResult === 'success' ? 'Funciona correctamente' : (micTestResult === 'error' ? 'Error en la prueba' : 'Probar micr&oacute;fono')) }}
+              {{ isTestingMic ? 'Iniciando...' : (isMicMonitoring ? 'Detener prueba' : (micTestResult === 'error' ? 'Error - Reintentar' : 'Probar micr&oacute;fono')) }}
             </span>
-            <div class="test-btn-arrow" *ngIf="!isTestingMic && !micTestResult">
+            <div class="test-btn-arrow" *ngIf="!isTestingMic && !isMicMonitoring && !micTestResult">
               <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
             </div>
           </button>

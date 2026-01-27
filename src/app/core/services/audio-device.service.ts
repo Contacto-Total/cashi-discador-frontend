@@ -1,10 +1,17 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 export interface AudioDevice {
   deviceId: string;
   label: string;
   kind: 'audioinput' | 'audiooutput';
+}
+
+export interface AudioLevelData {
+  level: number;        // 0-100
+  bars: number[];       // Array of 12 bar heights (0-100)
+  isActive: boolean;
+  peakLevel: number;
 }
 
 const STORAGE_KEY_INPUT = 'cashi_audio_input_device';
@@ -18,6 +25,19 @@ export class AudioDeviceService {
   private outputDevices$ = new BehaviorSubject<AudioDevice[]>([]);
   private selectedInputId$ = new BehaviorSubject<string>('default');
   private selectedOutputId$ = new BehaviorSubject<string>('default');
+
+  // Audio level monitoring
+  private audioLevel$ = new BehaviorSubject<AudioLevelData>({
+    level: 0,
+    bars: Array(12).fill(0),
+    isActive: false,
+    peakLevel: 0
+  });
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private micStream: MediaStream | null = null;
+  private animationFrameId: number | null = null;
+  private isMonitoring = false;
 
   constructor() {
     this.loadSavedDevices();
@@ -72,6 +92,20 @@ export class AudioDeviceService {
    */
   getCurrentOutputDeviceId(): string {
     return this.selectedOutputId$.value;
+  }
+
+  /**
+   * Get audio level data as observable (for real-time visualization)
+   */
+  getAudioLevel(): Observable<AudioLevelData> {
+    return this.audioLevel$.asObservable();
+  }
+
+  /**
+   * Check if audio monitoring is active
+   */
+  isAudioMonitoringActive(): boolean {
+    return this.isMonitoring;
   }
 
   /**
@@ -203,7 +237,133 @@ export class AudioDeviceService {
   }
 
   /**
-   * Test the selected microphone by creating a short recording
+   * Start real-time microphone monitoring with audio level visualization
+   */
+  async startMicrophoneMonitoring(): Promise<boolean> {
+    if (this.isMonitoring) {
+      console.log('🎤 Already monitoring microphone');
+      return true;
+    }
+
+    try {
+      const deviceId = this.selectedInputId$.value;
+      const constraints: MediaStreamConstraints = {
+        audio: deviceId === 'default'
+          ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+          : { deviceId: { exact: deviceId }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      };
+
+      this.micStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Create audio context and analyser
+      this.audioContext = new AudioContext();
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256;
+      this.analyser.smoothingTimeConstant = 0.8;
+
+      // Connect microphone to analyser
+      const source = this.audioContext.createMediaStreamSource(this.micStream);
+      source.connect(this.analyser);
+
+      this.isMonitoring = true;
+      console.log('🎤 Microphone monitoring started');
+
+      // Start the visualization loop
+      this.updateAudioLevel();
+
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to start microphone monitoring:', error);
+      this.stopMicrophoneMonitoring();
+      return false;
+    }
+  }
+
+  /**
+   * Stop microphone monitoring and cleanup
+   */
+  stopMicrophoneMonitoring(): void {
+    this.isMonitoring = false;
+
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(track => track.stop());
+      this.micStream = null;
+    }
+
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+
+    this.analyser = null;
+
+    // Reset audio level
+    this.audioLevel$.next({
+      level: 0,
+      bars: Array(12).fill(0),
+      isActive: false,
+      peakLevel: 0
+    });
+
+    console.log('🎤 Microphone monitoring stopped');
+  }
+
+  /**
+   * Update audio level visualization (called in animation loop)
+   */
+  private updateAudioLevel(): void {
+    if (!this.isMonitoring || !this.analyser) return;
+
+    const bufferLength = this.analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    this.analyser.getByteFrequencyData(dataArray);
+
+    // Calculate overall level (RMS)
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      sum += dataArray[i] * dataArray[i];
+    }
+    const rms = Math.sqrt(sum / bufferLength);
+    const level = Math.min(100, (rms / 128) * 100);
+
+    // Create 12 bars from frequency data
+    const bars: number[] = [];
+    const barsCount = 12;
+    const samplesPerBar = Math.floor(bufferLength / barsCount);
+
+    for (let i = 0; i < barsCount; i++) {
+      let barSum = 0;
+      for (let j = 0; j < samplesPerBar; j++) {
+        barSum += dataArray[i * samplesPerBar + j];
+      }
+      const barAvg = barSum / samplesPerBar;
+      // Apply some smoothing and scaling
+      const barHeight = Math.min(100, (barAvg / 255) * 150);
+      bars.push(barHeight);
+    }
+
+    // Track peak level
+    const currentData = this.audioLevel$.value;
+    const peakLevel = Math.max(currentData.peakLevel * 0.95, level);
+
+    this.audioLevel$.next({
+      level: Math.round(level),
+      bars,
+      isActive: true,
+      peakLevel: Math.round(peakLevel)
+    });
+
+    // Continue the loop
+    this.animationFrameId = requestAnimationFrame(() => this.updateAudioLevel());
+  }
+
+  /**
+   * Simple microphone test (legacy - just checks if it works)
    */
   async testMicrophone(): Promise<boolean> {
     try {
@@ -213,8 +373,6 @@ export class AudioDeviceService {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // Check if we got audio tracks
       const audioTracks = stream.getAudioTracks();
       const hasAudio = audioTracks.length > 0;
 
@@ -223,9 +381,7 @@ export class AudioDeviceService {
         label: audioTracks[0]?.label
       });
 
-      // Clean up
       stream.getTracks().forEach(track => track.stop());
-
       return hasAudio;
     } catch (error) {
       console.error('❌ Microphone test failed:', error);

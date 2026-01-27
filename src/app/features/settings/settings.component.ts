@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { FontSizeService } from '../../core/services/font-size.service';
 import { ThemeService, Theme } from '../../shared/services/theme.service';
-import { AudioDeviceService, AudioDevice } from '../../core/services/audio-device.service';
+import { AudioDeviceService, AudioDevice, AudioLevelData } from '../../core/services/audio-device.service';
 
 @Component({
   selector: 'app-settings',
@@ -46,6 +46,15 @@ export class SettingsComponent implements OnInit, OnDestroy {
   micTestResult: 'success' | 'error' | null = null;
   speakerTestResult: 'success' | 'error' | null = null;
 
+  // Audio level monitoring
+  audioLevel: AudioLevelData = {
+    level: 0,
+    bars: Array(12).fill(0),
+    isActive: false,
+    peakLevel: 0
+  };
+  isMicMonitoring: boolean = false;
+
   private subscriptions: Subscription[] = [];
 
   constructor(
@@ -82,12 +91,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
       }),
       this.audioDeviceService.getSelectedOutputId().subscribe(id => {
         this.selectedOutputId = id;
+      }),
+      // Subscribe to audio level for real-time visualization
+      this.audioDeviceService.getAudioLevel().subscribe(level => {
+        this.audioLevel = level;
       })
     );
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    // Stop microphone monitoring when leaving the page
+    this.stopMicrophoneMonitoring();
   }
 
   /**
@@ -185,7 +200,51 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Test the selected microphone
+   * Toggle microphone monitoring (start/stop)
+   */
+  async toggleMicrophoneMonitoring(): Promise<void> {
+    if (this.isMicMonitoring) {
+      this.stopMicrophoneMonitoring();
+    } else {
+      await this.startMicrophoneMonitoring();
+    }
+  }
+
+  /**
+   * Start microphone monitoring with real-time visualization
+   */
+  async startMicrophoneMonitoring(): Promise<void> {
+    this.isTestingMic = true;
+    this.micTestResult = null;
+
+    const success = await this.audioDeviceService.startMicrophoneMonitoring();
+
+    if (success) {
+      this.isMicMonitoring = true;
+      this.isTestingMic = false;
+    } else {
+      this.micTestResult = 'error';
+      this.isTestingMic = false;
+      this.isMicMonitoring = false;
+
+      // Clear error after 3 seconds
+      setTimeout(() => {
+        this.micTestResult = null;
+      }, 3000);
+    }
+  }
+
+  /**
+   * Stop microphone monitoring
+   */
+  stopMicrophoneMonitoring(): void {
+    this.audioDeviceService.stopMicrophoneMonitoring();
+    this.isMicMonitoring = false;
+    this.isTestingMic = false;
+  }
+
+  /**
+   * Legacy test microphone (simple check)
    */
   async testMicrophone(): Promise<void> {
     this.isTestingMic = true;
