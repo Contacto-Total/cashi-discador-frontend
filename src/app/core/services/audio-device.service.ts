@@ -80,7 +80,10 @@ export class AudioDeviceService {
   setInputDevice(deviceId: string): void {
     this.selectedInputId$.next(deviceId);
     localStorage.setItem(STORAGE_KEY_INPUT, deviceId);
-    console.log('🎤 Input device set to:', deviceId);
+    console.log('🎤 Input device set and saved to localStorage:', deviceId);
+    // Verify it was saved
+    const verified = localStorage.getItem(STORAGE_KEY_INPUT);
+    console.log('🎤 Verified localStorage value:', verified);
   }
 
   /**
@@ -89,7 +92,10 @@ export class AudioDeviceService {
   setOutputDevice(deviceId: string): void {
     this.selectedOutputId$.next(deviceId);
     localStorage.setItem(STORAGE_KEY_OUTPUT, deviceId);
-    console.log('🔊 Output device set to:', deviceId);
+    console.log('🔊 Output device set and saved to localStorage:', deviceId);
+    // Verify it was saved
+    const verified = localStorage.getItem(STORAGE_KEY_OUTPUT);
+    console.log('🔊 Verified localStorage value:', verified);
   }
 
   /**
@@ -148,6 +154,11 @@ export class AudioDeviceService {
     const savedInput = localStorage.getItem(STORAGE_KEY_INPUT);
     const savedOutput = localStorage.getItem(STORAGE_KEY_OUTPUT);
 
+    console.log('🔧 [AudioDevice] Loading saved devices from localStorage:', {
+      savedInput,
+      savedOutput
+    });
+
     if (savedInput) {
       this.selectedInputId$.next(savedInput);
     }
@@ -163,16 +174,31 @@ export class AudioDeviceService {
     const currentInputId = this.selectedInputId$.value;
     const currentOutputId = this.selectedOutputId$.value;
 
+    console.log('🔧 [AudioDevice] Validating saved devices:', {
+      currentInputId,
+      currentOutputId,
+      availableInputIds: inputs.map(d => d.deviceId),
+      availableOutputIds: outputs.map(d => d.deviceId)
+    });
+
     // Check if saved input device still exists
     if (currentInputId !== 'default' && !inputs.some(d => d.deviceId === currentInputId)) {
       console.warn('⚠️ Saved input device no longer exists, resetting to default');
+      console.warn('   Saved ID:', currentInputId);
+      console.warn('   Available IDs:', inputs.map(d => d.deviceId));
       this.setInputDevice('default');
+    } else {
+      console.log('✅ Input device validated:', currentInputId);
     }
 
     // Check if saved output device still exists
     if (currentOutputId !== 'default' && !outputs.some(d => d.deviceId === currentOutputId)) {
       console.warn('⚠️ Saved output device no longer exists, resetting to default');
+      console.warn('   Saved ID:', currentOutputId);
+      console.warn('   Available IDs:', outputs.map(d => d.deviceId));
       this.setOutputDevice('default');
+    } else {
+      console.log('✅ Output device validated:', currentOutputId);
     }
   }
 

@@ -167,21 +167,19 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Handle input device selection
+   * Handle input device selection (ngModel)
    */
-  onInputDeviceChange(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    this.audioDeviceService.setInputDevice(select.value);
+  onInputDeviceSelect(deviceId: string): void {
+    this.audioDeviceService.setInputDevice(deviceId);
     // Clear previous test result
     this.micTestResult = null;
   }
 
   /**
-   * Handle output device selection
+   * Handle output device selection (ngModel)
    */
-  onOutputDeviceChange(event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    this.audioDeviceService.setOutputDevice(select.value);
+  onOutputDeviceSelect(deviceId: string): void {
+    this.audioDeviceService.setOutputDevice(deviceId);
     // Clear previous test result
     this.speakerTestResult = null;
   }

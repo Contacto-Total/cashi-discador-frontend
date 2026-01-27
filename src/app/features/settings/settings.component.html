@@ -165,8 +165,8 @@
         <div class="device-select-row">
           <select
             class="device-select"
-            [value]="selectedInputId"
-            (change)="onInputDeviceChange($event)"
+            [(ngModel)]="selectedInputId"
+            (ngModelChange)="onInputDeviceSelect($event)"
           >
             <option value="default">Por defecto del sistema</option>
             <option *ngFor="let device of inputDevices" [value]="device.deviceId">
@@ -206,8 +206,8 @@
         <div class="device-select-row">
           <select
             class="device-select"
-            [value]="selectedOutputId"
-            (change)="onOutputDeviceChange($event)"
+            [(ngModel)]="selectedOutputId"
+            (ngModelChange)="onOutputDeviceSelect($event)"
           >
             <option value="default">Por defecto del sistema</option>
             <option *ngFor="let device of outputDevices" [value]="device.deviceId">
