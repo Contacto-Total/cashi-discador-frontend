@@ -28,6 +28,17 @@
         </div>
         <span>Tama&ntilde;o de Texto</span>
       </button>
+
+      <button
+        class="nav-item"
+        [class.active]="activeSection === 'audio'"
+        (click)="activeSection = 'audio'"
+      >
+        <div class="nav-icon" style="background: linear-gradient(135deg, #10b981, #34d399);">
+          <lucide-angular name="headphones" [size]="16"></lucide-angular>
+        </div>
+        <span>Audio</span>
+      </button>
     </nav>
   </aside>
 
@@ -131,6 +142,108 @@
           <lucide-angular name="info" [size]="14"></lucide-angular>
           <span>Tienes cambios sin guardar</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Audio Section -->
+    <div class="content-section" *ngIf="activeSection === 'audio'">
+      <h2 class="section-title">Dispositivos de Audio</h2>
+      <p class="section-description">Selecciona el micr&oacute;fono y altavoz para las llamadas</p>
+
+      <!-- Microphone Selection -->
+      <div class="setting-card">
+        <div class="audio-device-row">
+          <div class="setting-info">
+            <lucide-angular name="mic" [size]="20" class="setting-icon"></lucide-angular>
+            <div>
+              <span class="setting-label">Micr&oacute;fono</span>
+              <span class="setting-hint">Dispositivo de entrada de audio</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="device-select-row">
+          <select
+            class="device-select"
+            [value]="selectedInputId"
+            (change)="onInputDeviceChange($event)"
+          >
+            <option value="default">Por defecto del sistema</option>
+            <option *ngFor="let device of inputDevices" [value]="device.deviceId">
+              {{ device.label }}
+            </option>
+          </select>
+
+          <button
+            class="test-btn"
+            (click)="testMicrophone()"
+            [disabled]="isTestingMic"
+            [class.success]="micTestResult === 'success'"
+            [class.error]="micTestResult === 'error'"
+          >
+            <lucide-angular
+              [name]="isTestingMic ? 'loader-2' : (micTestResult === 'success' ? 'check' : (micTestResult === 'error' ? 'x' : 'mic'))"
+              [size]="16"
+              [class.spin]="isTestingMic"
+            ></lucide-angular>
+            <span>{{ isTestingMic ? 'Probando...' : 'Probar' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Speaker Selection -->
+      <div class="setting-card">
+        <div class="audio-device-row">
+          <div class="setting-info">
+            <lucide-angular name="volume-2" [size]="20" class="setting-icon"></lucide-angular>
+            <div>
+              <span class="setting-label">Altavoz</span>
+              <span class="setting-hint">Dispositivo de salida de audio</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="device-select-row">
+          <select
+            class="device-select"
+            [value]="selectedOutputId"
+            (change)="onOutputDeviceChange($event)"
+          >
+            <option value="default">Por defecto del sistema</option>
+            <option *ngFor="let device of outputDevices" [value]="device.deviceId">
+              {{ device.label }}
+            </option>
+          </select>
+
+          <button
+            class="test-btn"
+            (click)="testSpeaker()"
+            [disabled]="isTestingSpeaker"
+            [class.success]="speakerTestResult === 'success'"
+            [class.error]="speakerTestResult === 'error'"
+          >
+            <lucide-angular
+              [name]="isTestingSpeaker ? 'loader-2' : (speakerTestResult === 'success' ? 'check' : (speakerTestResult === 'error' ? 'x' : 'volume-2'))"
+              [size]="16"
+              [class.spin]="isTestingSpeaker"
+            ></lucide-angular>
+            <span>{{ isTestingSpeaker ? 'Probando...' : 'Probar' }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Refresh Button -->
+      <div class="audio-actions">
+        <button class="btn-secondary" (click)="refreshAudioDevices()">
+          <lucide-angular name="refresh-cw" [size]="14"></lucide-angular>
+          Actualizar lista de dispositivos
+        </button>
+      </div>
+
+      <!-- Info Notice -->
+      <div class="audio-notice">
+        <lucide-angular name="info" [size]="14"></lucide-angular>
+        <span>Los cambios de dispositivo se aplicar&aacute;n a la pr&oacute;xima llamada</span>
       </div>
     </div>
   </main>

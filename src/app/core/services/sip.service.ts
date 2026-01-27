@@ -1,6 +1,7 @@
 import { Injectable, EventEmitter, inject } from '@angular/core';
 import JsSIP from 'jssip';
 import { WebsocketService } from './websocket.service';
+import { AudioDeviceService } from './audio-device.service';
 
 export enum CallState {
   IDLE = 'IDLE',
@@ -35,6 +36,7 @@ export class SipService {
   private currentOutgoingNumber: string | null = null;
 
   private websocketService = inject(WebsocketService);
+  private audioDeviceService = inject(AudioDeviceService);
   private currentExtension: string | null = null;
 
   constructor() {
@@ -285,17 +287,38 @@ export class SipService {
         // Start the UA
         this.ua.start();
 
-        // Get microphone access (don't block registration on this)
+        // Get microphone access with selected device (don't block registration on this)
         try {
+          const inputDeviceId = this.audioDeviceService.getCurrentInputDeviceId();
+          const audioConstraints: MediaTrackConstraints = {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          };
+
+          // Add deviceId constraint if not using default
+          if (inputDeviceId && inputDeviceId !== 'default') {
+            audioConstraints.deviceId = { exact: inputDeviceId };
+          }
+
           this.localStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            },
+            audio: audioConstraints,
             video: false
           });
-          console.log('🎤 Microphone access granted');
+          console.log('🎤 Microphone access granted, device:', inputDeviceId || 'default');
+
+          // Set output device on remote audio element
+          const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+          if (outputDeviceId && outputDeviceId !== 'default' && this.remoteAudio) {
+            try {
+              if ('setSinkId' in this.remoteAudio) {
+                await (this.remoteAudio as any).setSinkId(outputDeviceId);
+                console.log('🔊 Audio output device set to:', outputDeviceId);
+              }
+            } catch (sinkError) {
+              console.warn('⚠️ Could not set audio output device:', sinkError);
+            }
+          }
         } catch (error) {
           console.warn('⚠️ Microphone access denied (will retry when making a call):', error);
           // Don't emit error or reject - microphone can be requested later
@@ -560,7 +583,7 @@ export class SipService {
       console.log('🔧 [AUDIO] Setting up remote audio track handlers');
 
       // Listen for remote audio tracks
-      pc.addEventListener('track', (event: RTCTrackEvent) => {
+      pc.addEventListener('track', async (event: RTCTrackEvent) => {
         console.log('🎵 Received remote audio track:', {
           trackId: event.track.id,
           trackKind: event.track.kind,
@@ -569,6 +592,17 @@ export class SipService {
         });
 
         if (this.remoteAudio && event.streams[0]) {
+          // Set output device before playing
+          const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+          if (outputDeviceId && outputDeviceId !== 'default' && 'setSinkId' in this.remoteAudio) {
+            try {
+              await (this.remoteAudio as any).setSinkId(outputDeviceId);
+              console.log('🔊 Audio output set to:', outputDeviceId);
+            } catch (sinkError) {
+              console.warn('⚠️ Could not set audio output device:', sinkError);
+            }
+          }
+
           this.remoteAudio.srcObject = event.streams[0];
           this.remoteAudio.play()
             .then(() => console.log('✅ Playing remote audio'))
@@ -578,7 +612,7 @@ export class SipService {
 
       // Monitor for tracks appearing over time
       let trackCheckCount = 0;
-      const trackCheckInterval = setInterval(() => {
+      const trackCheckInterval = setInterval(async () => {
         trackCheckCount++;
         const receivers = pc.getReceivers();
         const hasTrack = receivers.length > 0 && receivers[0].track;
@@ -587,6 +621,17 @@ export class SipService {
           console.log(`🎵 Found remote track on check #${trackCheckCount}`);
           const remoteStream = new MediaStream(receivers.map(r => r.track).filter(t => t !== null));
           if (remoteStream.getTracks().length > 0) {
+            // Set output device before playing
+            const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+            if (outputDeviceId && outputDeviceId !== 'default' && 'setSinkId' in this.remoteAudio) {
+              try {
+                await (this.remoteAudio as any).setSinkId(outputDeviceId);
+                console.log('🔊 Audio output set to:', outputDeviceId);
+              } catch (sinkError) {
+                console.warn('⚠️ Could not set audio output device:', sinkError);
+              }
+            }
+
             this.remoteAudio.srcObject = remoteStream;
             this.remoteAudio.play()
               .then(() => console.log('✅ Playing remote audio from monitoring'))

@@ -5,6 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
 import { FontSizeService } from '../../core/services/font-size.service';
 import { ThemeService, Theme } from '../../shared/services/theme.service';
+import { AudioDeviceService, AudioDevice } from '../../core/services/audio-device.service';
 
 @Component({
   selector: 'app-settings',
@@ -15,7 +16,7 @@ import { ThemeService, Theme } from '../../shared/services/theme.service';
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   // Active section for sidebar navigation
-  activeSection: 'appearance' | 'font' = 'appearance';
+  activeSection: 'appearance' | 'font' | 'audio' = 'appearance';
 
   // Font size - applied (saved)
   appliedFontSize: number = 16;
@@ -35,11 +36,22 @@ export class SettingsComponent implements OnInit, OnDestroy {
   // Preview text
   previewText: string = 'Este es un texto de ejemplo para visualizar el tamaño de la fuente seleccionada.';
 
+  // Audio devices
+  inputDevices: AudioDevice[] = [];
+  outputDevices: AudioDevice[] = [];
+  selectedInputId: string = 'default';
+  selectedOutputId: string = 'default';
+  isTestingMic: boolean = false;
+  isTestingSpeaker: boolean = false;
+  micTestResult: 'success' | 'error' | null = null;
+  speakerTestResult: 'success' | 'error' | null = null;
+
   private subscriptions: Subscription[] = [];
 
   constructor(
     private fontSizeService: FontSizeService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private audioDeviceService: AudioDeviceService
   ) {}
 
   ngOnInit(): void {
@@ -56,6 +68,22 @@ export class SettingsComponent implements OnInit, OnDestroy {
       })
     );
     // Theme is read directly from service signal via getter
+
+    // Subscribe to audio devices
+    this.subscriptions.push(
+      this.audioDeviceService.getInputDevices().subscribe(devices => {
+        this.inputDevices = devices;
+      }),
+      this.audioDeviceService.getOutputDevices().subscribe(devices => {
+        this.outputDevices = devices;
+      }),
+      this.audioDeviceService.getSelectedInputId().subscribe(id => {
+        this.selectedInputId = id;
+      }),
+      this.audioDeviceService.getSelectedOutputId().subscribe(id => {
+        this.selectedOutputId = id;
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -136,5 +164,68 @@ export class SettingsComponent implements OnInit, OnDestroy {
    */
   getSliderPercentage(): number {
     return ((this.previewFontSize - this.minFontSize) / (this.maxFontSize - this.minFontSize)) * 100;
+  }
+
+  /**
+   * Handle input device selection
+   */
+  onInputDeviceChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.audioDeviceService.setInputDevice(select.value);
+    // Clear previous test result
+    this.micTestResult = null;
+  }
+
+  /**
+   * Handle output device selection
+   */
+  onOutputDeviceChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    this.audioDeviceService.setOutputDevice(select.value);
+    // Clear previous test result
+    this.speakerTestResult = null;
+  }
+
+  /**
+   * Test the selected microphone
+   */
+  async testMicrophone(): Promise<void> {
+    this.isTestingMic = true;
+    this.micTestResult = null;
+
+    const success = await this.audioDeviceService.testMicrophone();
+
+    this.micTestResult = success ? 'success' : 'error';
+    this.isTestingMic = false;
+
+    // Clear result after 3 seconds
+    setTimeout(() => {
+      this.micTestResult = null;
+    }, 3000);
+  }
+
+  /**
+   * Test the selected speaker
+   */
+  async testSpeaker(): Promise<void> {
+    this.isTestingSpeaker = true;
+    this.speakerTestResult = null;
+
+    const success = await this.audioDeviceService.testSpeaker();
+
+    this.speakerTestResult = success ? 'success' : 'error';
+    this.isTestingSpeaker = false;
+
+    // Clear result after 3 seconds
+    setTimeout(() => {
+      this.speakerTestResult = null;
+    }, 3000);
+  }
+
+  /**
+   * Refresh audio device list
+   */
+  async refreshAudioDevices(): Promise<void> {
+    await this.audioDeviceService.refreshDevices();
   }
 }
