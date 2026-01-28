@@ -72,6 +72,8 @@ export interface ImportPreview {
   totalClientesSubcartera: number;
   totalDespuesBlacklist: number;
   excluidosPorBlacklist: number;
+  excluidosPorPagoCumplido?: number;
+  excluidosPorFiltros?: number;
   totalConFiltros: number;
   totalConEstadoCalculado: number;
   porTipoContacto: { [key: string]: number };
