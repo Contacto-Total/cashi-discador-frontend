@@ -154,6 +154,7 @@ export interface CampoOpcionDTO {
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
   minCuotas?: number;  // Número mínimo de cuotas permitidas (default 1)
   maxCuotas?: number;  // Número máximo de cuotas permitidas (default 6)
+  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
 }
 
 export interface ConfigurarOpcionesCampoRequest {
@@ -169,6 +170,7 @@ export interface OpcionToggleDTO {
   generaCartaAcuerdo?: boolean;  // Indica si genera Carta de Acuerdo al seleccionar este monto
   minCuotas?: number;  // Número mínimo de cuotas permitidas
   maxCuotas?: number;  // Número máximo de cuotas permitidas
+  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
 }
 
 export interface CampoConOpcionesResponse {
@@ -204,6 +206,7 @@ export interface PaymentScheduleConfig {
   campoMontoOrigen?: string;  // Nombre del campo de donde viene el monto (ej: sld_mora)
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   generaCartaAcuerdo?: boolean;  // Si el monto seleccionado genera carta de acuerdo
+  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
 }
 
 export interface PaymentScheduleRequest {
@@ -217,4 +220,5 @@ export interface PaymentScheduleRequest {
   observaciones?: string;
   metodoContacto?: string;
   schedule: PaymentScheduleConfig;
+  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
 }

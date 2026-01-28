@@ -464,7 +464,9 @@ export class CallNotesComponent implements OnInit {
             observaciones: this.notesForm.value.notes,
             metodoContacto: 'GESTION_PROGRESIVO',
             canalContacto: 'LLAMADA_SALIENTE',
-            schedule: this.paymentScheduleConfig
+            schedule: this.paymentScheduleConfig,
+            // Porcentaje de auto-aprobación para excepciones (solo si viene del schedule)
+            porcentajeAutoAprobacion: this.paymentScheduleConfig.porcentajeAutoAprobacion
           };
 
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({

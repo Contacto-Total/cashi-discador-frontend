@@ -12,6 +12,7 @@ export interface AmountOption {
   generaCartaAcuerdo?: boolean;  // Indica si al seleccionar este monto se genera carta de acuerdo
   minCuotas?: number;  // Número mínimo de cuotas permitidas
   maxCuotas?: number;  // Número máximo de cuotas permitidas
+  porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo para personalizado)
 }
 
 @Component({
@@ -19,7 +20,7 @@ export interface AmountOption {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    <div class="payment-schedule-container bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 transition-colors duration-300">
+    <div class="payment-schedule-container bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-3 transition-colors duration-300">
       <!-- Selector de Monto -->
       <div class="field-group mb-4">
         <label class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200 text-xs mb-2 transition-colors duration-300">
@@ -309,6 +310,7 @@ export class PaymentScheduleComponent implements OnInit {
   selectedGeneraCartaAcuerdo = signal<boolean>(false);  // Si la opción seleccionada genera carta de acuerdo
   selectedMinCuotas = signal<number>(1);   // Min cuotas de la opción seleccionada
   selectedMaxCuotas = signal<number>(6);   // Max cuotas de la opción seleccionada
+  selectedPorcentajeAutoAprobacion = signal<number>(10);  // Porcentaje máximo de descuento para auto-aprobación
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
@@ -484,6 +486,7 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedGeneraCartaAcuerdo.set(customOption?.generaCartaAcuerdo || false);
     this.selectedMinCuotas.set(customOption?.minCuotas ?? this.minInstallments);
     this.selectedMaxCuotas.set(customOption?.maxCuotas ?? this.maxInstallments);
+    this.selectedPorcentajeAutoAprobacion.set(customOption?.porcentajeAutoAprobacion ?? 10);
 
     // Ajustar número de cuotas si está fuera del nuevo rango
     const currentNum = this.numberOfInstallments();
@@ -789,7 +792,8 @@ export class PaymentScheduleComponent implements OnInit {
       cuotas: installments,
       campoMontoOrigen: this.selectedField(),
       montoBase: this.montoBase(),  // Monto original del campo (undefined si es monto libre)
-      generaCartaAcuerdo: this.selectedGeneraCartaAcuerdo()  // Si el monto seleccionado genera carta
+      generaCartaAcuerdo: this.selectedGeneraCartaAcuerdo(),  // Si el monto seleccionado genera carta
+      porcentajeAutoAprobacion: this._isCustomAmount() ? this.selectedPorcentajeAutoAprobacion() : undefined
     };
 
     this.scheduleChange.emit(config);
