@@ -434,7 +434,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Verifica si el agente tiene recordatorios pendientes y muestra el modal
+   * Verifica si el agente tiene recordatorios pendientes y muestra el modal.
+   * Solo muestra el modal si estamos dentro del horario configurado para la subcartera.
    */
   private verificarRecordatoriosPendientes(user: any): void {
     if (!user?.id) return;
@@ -445,8 +446,17 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Pequeño delay para no saturar al usuario al entrar
     setTimeout(() => {
-      this.recordatoriosService.getMisRecordatoriosHoy(user.id).subscribe({
-        next: (recordatorios) => {
+      // Usar el método que verifica horario antes de obtener recordatorios
+      const idSubcartera = user.subPortfolioId;
+
+      this.recordatoriosService.getMisRecordatoriosSiEnHorario(user.id, idSubcartera).subscribe({
+        next: ({ recordatorios, horarioInfo }) => {
+          // Si hay info de horario y no está permitido, no mostrar modal
+          if (horarioInfo && !horarioInfo.permitido) {
+            console.log(`⏰ Modal de recordatorios no mostrado: ${horarioInfo.mensaje}`);
+            return;
+          }
+
           const pendientes = recordatorios.filter(r => !r.yaLlamoHoy).length;
 
           if (pendientes > 0) {

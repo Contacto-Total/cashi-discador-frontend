@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, switchMap } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   RecordatorioPromesa,
@@ -12,6 +13,21 @@ import {
   CompletarRecordatorioResponse,
   EstadoDialerResponse
 } from '../models/recordatorio.model';
+
+export interface VerificacionHorarioResponse {
+  permitido: boolean;
+  tieneConfiguracion: boolean;
+  mensaje: string;
+}
+
+export interface ConfiguracionHorarioRecordatorio {
+  id?: number;
+  idSubcartera: number;
+  horaInicio: string; // Format: "HH:mm:ss" or "HH:mm"
+  horaFin: string;
+  descripcion?: string;
+  activo: boolean;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -115,5 +131,118 @@ export class RecordatoriosService {
    */
   obtenerEstadoDialer(idAgente: number): Observable<EstadoDialerResponse> {
     return this.http.get<EstadoDialerResponse>(`${this.baseUrl}/dialer/estado/${idAgente}`);
+  }
+
+  // ==================== HORARIOS METHODS ====================
+
+  /**
+   * Verifica si la hora actual está dentro del horario permitido para recordatorios.
+   * El frontend usa este endpoint antes de mostrar el modal.
+   */
+  verificarHorario(idSubcartera: number): Observable<VerificacionHorarioResponse> {
+    return this.http.get<VerificacionHorarioResponse>(`${this.baseUrl}/horarios/verificar/${idSubcartera}`);
+  }
+
+  /**
+   * Obtiene las configuraciones de horario de una subcartera
+   */
+  obtenerHorarios(idSubcartera: number, incluirInactivos = false): Observable<ConfiguracionHorarioRecordatorio[]> {
+    return this.http.get<ConfiguracionHorarioRecordatorio[]>(
+      `${this.baseUrl}/horarios/subcartera/${idSubcartera}?incluirInactivos=${incluirInactivos}`
+    );
+  }
+
+  /**
+   * Crea los horarios por defecto para una subcartera (8-9am, 2-3pm, 5-6pm)
+   */
+  crearHorariosDefecto(idSubcartera: number): Observable<ConfiguracionHorarioRecordatorio[]> {
+    return this.http.post<ConfiguracionHorarioRecordatorio[]>(
+      `${this.baseUrl}/horarios/subcartera/${idSubcartera}/defecto`,
+      {}
+    );
+  }
+
+  /**
+   * Actualiza todos los horarios de una subcartera
+   */
+  actualizarHorarios(idSubcartera: number, horarios: ConfiguracionHorarioRecordatorio[]): Observable<ConfiguracionHorarioRecordatorio[]> {
+    return this.http.put<ConfiguracionHorarioRecordatorio[]>(
+      `${this.baseUrl}/horarios/subcartera/${idSubcartera}`,
+      horarios
+    );
+  }
+
+  /**
+   * Guarda o actualiza un horario específico
+   */
+  guardarHorario(config: ConfiguracionHorarioRecordatorio): Observable<ConfiguracionHorarioRecordatorio> {
+    return this.http.post<ConfiguracionHorarioRecordatorio>(`${this.baseUrl}/horarios`, config);
+  }
+
+  /**
+   * Elimina un horario específico
+   */
+  eliminarHorario(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/horarios/${id}`);
+  }
+
+  /**
+   * Cambia el estado de un horario (activo/inactivo)
+   */
+  cambiarEstadoHorario(id: number, activo: boolean): Observable<ConfiguracionHorarioRecordatorio> {
+    return this.http.patch<ConfiguracionHorarioRecordatorio>(
+      `${this.baseUrl}/horarios/${id}/estado?activo=${activo}`,
+      {}
+    );
+  }
+
+  // ==================== COMBINED METHODS ====================
+
+  /**
+   * Obtiene los recordatorios solo si estamos en horario permitido.
+   * Primero verifica el horario y luego obtiene los recordatorios.
+   * Si no hay subcartera configurada o el horario no está permitido, devuelve lista vacía.
+   *
+   * @param idAgente ID del agente
+   * @param idSubcartera ID de la subcartera (opcional, si no se proporciona, no verifica horario)
+   * @returns Observable con recordatorios o lista vacía si no está en horario
+   */
+  getMisRecordatoriosSiEnHorario(
+    idAgente: number,
+    idSubcartera?: number
+  ): Observable<{ recordatorios: RecordatorioPromesa[]; horarioInfo: VerificacionHorarioResponse | null }> {
+    // Si no hay subcartera, obtener recordatorios sin verificar horario
+    if (!idSubcartera) {
+      return this.getMisRecordatoriosHoy(idAgente).pipe(
+        map(recordatorios => ({
+          recordatorios,
+          horarioInfo: null
+        })),
+        catchError(() => of({ recordatorios: [], horarioInfo: null }))
+      );
+    }
+
+    // Verificar horario primero, luego obtener recordatorios
+    return this.verificarHorario(idSubcartera).pipe(
+      switchMap(horarioInfo => {
+        if (horarioInfo.permitido) {
+          return this.getMisRecordatoriosHoy(idAgente).pipe(
+            map(recordatorios => ({ recordatorios, horarioInfo })),
+            catchError(() => of({ recordatorios: [], horarioInfo }))
+          );
+        } else {
+          console.log(`⏰ Fuera del horario de recordatorios: ${horarioInfo.mensaje}`);
+          return of({ recordatorios: [], horarioInfo });
+        }
+      }),
+      catchError(err => {
+        // Si falla la verificación de horario, asumir que está permitido
+        console.warn('Error verificando horario, continuando sin restricción:', err);
+        return this.getMisRecordatoriosHoy(idAgente).pipe(
+          map(recordatorios => ({ recordatorios, horarioInfo: null })),
+          catchError(() => of({ recordatorios: [], horarioInfo: null }))
+        );
+      })
+    );
   }
 }
