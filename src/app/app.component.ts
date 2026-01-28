@@ -354,12 +354,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
           // Marcar timestamp cuando la llamada se activa
           this.callActivatedTimestamp = Date.now();
-          console.log('📞 [App] Llamada ACTIVA, esperando 2s para confirmar conexión estable...');
+          console.log('📞 [App] Llamada ACTIVA, esperando 1s para confirmar conexión estable...');
 
-          // DELAY DE 2 SEGUNDOS: Esperar a que el audio WebRTC se establezca completamente
+          // DELAY DE 1 SEGUNDO: Esperar a que el audio WebRTC se establezca completamente
           // Y verificar que la llamada sigue activa (no se cortó inmediatamente)
           this.navigationTimeout = setTimeout(() => {
-            // Verificar que la llamada sigue activa y lleva al menos 2 segundos
+            // Verificar que la llamada sigue activa y lleva al menos 1 segundo
             const callDuration = this.callActivatedTimestamp
               ? Date.now() - this.callActivatedTimestamp
               : 0;
@@ -367,7 +367,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             // Obtener el estado actual de la llamada del servicio
             const currentState = this.sipService.getCallState();
 
-            if (callDuration >= 2000 && currentState === CallState.ACTIVE && !this.hasNavigatedToTypification) {
+            if (callDuration >= 1000 && currentState === CallState.ACTIVE && !this.hasNavigatedToTypification) {
               // ✅ CHECK 1: Si estamos en modo supervisión, NO navegar a collection-management
               // La supervisión usa SIP calls pero no deben redirigir al supervisor
               if (this.supervisionService.isSupervisionActive()) {
@@ -391,7 +391,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             } else {
               console.log(`⚠️ [App] Llamada terminó antes de establecerse (${callDuration}ms, estado: ${currentState}), NO navegando`);
             }
-          }, 2000);
+          }, 1000);
         }
 
         // Cuando la llamada termina, cancelar navegación y resetear flags
@@ -401,6 +401,18 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             clearTimeout(this.navigationTimeout);
             this.navigationTimeout = null;
             console.log('🚫 [App] Navegación cancelada - llamada terminó sin establecerse');
+
+            // ✅ FIX: Restaurar estado del agente a DISPONIBLE si la llamada falló
+            // Esto evita que el agente se quede "pegado" en TIPIFICANDO
+            const currentUser = this.authService.getCurrentUser();
+            const agentRoles = ['AGENT', 'ASESOR'];
+            if (currentUser && agentRoles.includes(currentUser.role)) {
+              console.log('🔄 [App] Restaurando estado del agente a DISPONIBLE...');
+              this.agentStatusService.finalizarTipificacion(currentUser.id).subscribe({
+                next: () => console.log('✅ [App] Estado del agente restaurado a DISPONIBLE'),
+                error: (err) => console.error('❌ [App] Error restaurando estado:', err)
+              });
+            }
           }
 
           // Reset flags
