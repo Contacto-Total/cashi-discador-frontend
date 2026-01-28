@@ -249,7 +249,7 @@ interface ConfiguracionCabecera {
                                   [value]="opcion.porcentajeAutoAprobacion || 10"
                                   (input)="onPorcentajeChange(opcion.codigoOpcion, $event)"
                                   min="0"
-                                  max="50"
+                                  max="100"
                                   step="5"
                                   class="flex-1 h-2 bg-violet-200 dark:bg-violet-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
                                 >
