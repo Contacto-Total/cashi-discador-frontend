@@ -420,13 +420,21 @@
             <span class="info-label">Total en Subcartera:</span>
             <span class="info-value">{{ previewData.totalClientesSubcartera | number }}</span>
           </div>
-          <div class="info-item">
+          <div class="info-item" *ngIf="previewData.excluidosPorBlacklist > 0">
             <span class="info-label">Excluidos por Blacklist:</span>
             <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | number }}</span>
           </div>
+          <div class="info-item" *ngIf="previewData.excluidosPorPagoCumplido > 0">
+            <span class="info-label">Excluidos por Pago Cumplido:</span>
+            <span class="info-value text-red">-{{ previewData.excluidosPorPagoCumplido | number }}</span>
+          </div>
+          <div class="info-item" *ngIf="previewData.excluidosPorFiltros > 0">
+            <span class="info-label">Excluidos por Filtros:</span>
+            <span class="info-value text-orange">-{{ previewData.excluidosPorFiltros | number }}</span>
+          </div>
           <div class="info-item">
             <span class="info-label">Disponibles:</span>
-            <span class="info-value text-green">{{ previewData.totalDespuesBlacklist | number }}</span>
+            <span class="info-value text-green">{{ (previewData.totalConFiltros ?? previewData.totalDespuesBlacklist) | number }}</span>
           </div>
         </div>
 
