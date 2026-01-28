@@ -366,20 +366,38 @@ export class CallNotesComponent implements OnInit {
 
     // Si el campo tiene opciones predefinidas
     if (field.options && field.options.length > 0) {
-      field.options.forEach(opt => {
-        if (opt.value !== null && opt.value !== undefined) {
+      field.options.forEach((opt: any) => {
+        // Opción personalizado (monto libre) - no tiene value
+        if (opt.codigoOpcion === 'personalizado' || opt.field === 'personalizado') {
           options.push({
-            label: opt.label,
+            label: opt.label || opt.labelOpcion || 'Personalizado',
+            value: 0,  // Monto libre, el usuario lo define
+            field: 'personalizado',
+            restriccionFecha: opt.restriccionFecha || 'SIN_RESTRICCION',
+            generaCartaAcuerdo: opt.generaCartaAcuerdo || false,
+            minCuotas: opt.minCuotas || 1,
+            maxCuotas: opt.maxCuotas || 6,
+            porcentajeAutoAprobacion: opt.porcentajeAutoAprobacion || 10
+          });
+        } else if (opt.value !== null && opt.value !== undefined) {
+          // Opciones con valor de tabla dinámica
+          options.push({
+            label: opt.label || opt.labelOpcion,
             value: Number(opt.value),
-            field: field.campoTablaDinamica
+            field: opt.codigoOpcion || opt.campoTablaDinamica || field.campoTablaDinamica,
+            restriccionFecha: opt.restriccionFecha || 'SIN_RESTRICCION',
+            generaCartaAcuerdo: opt.generaCartaAcuerdo || false,
+            minCuotas: opt.minCuotas || 1,
+            maxCuotas: opt.maxCuotas || 6,
+            porcentajeAutoAprobacion: opt.porcentajeAutoAprobacion
           });
         }
       });
     }
 
-    // Si el campo tiene un valor desde la tabla dinámica
+    // Si el campo tiene un valor desde la tabla dinámica (fallback)
     if (field.value !== null && field.value !== undefined) {
-      const exists = options.some(o => o.value === Number(field.value));
+      const exists = options.some(o => o.value === Number(field.value) && o.field !== 'personalizado');
       if (!exists) {
         options.push({
           label: field.labelCampo,
