@@ -265,6 +265,7 @@ export class CallNotesComponent implements OnInit {
       clientId
     ).subscribe({
       next: (response) => {
+        console.log('📋 loadAdditionalFields - backend response fields:', JSON.stringify(response.fields, null, 2));
         this.additionalFieldsV2 = response.fields;
         this.addDynamicFieldsToFormV2(response.fields);
         this.loadingAdditionalFields = false;
@@ -364,6 +365,8 @@ export class CallNotesComponent implements OnInit {
   buildPaymentAmountOptions(field: AdditionalFieldV2): AmountOption[] {
     const options: AmountOption[] = [];
 
+    console.log('📊 buildPaymentAmountOptions - field.options:', JSON.stringify(field.options, null, 2));
+
     // Si el campo tiene opciones predefinidas
     if (field.options && field.options.length > 0) {
       field.options.forEach((opt: any) => {
@@ -407,6 +410,7 @@ export class CallNotesComponent implements OnInit {
       }
     }
 
+    console.log('📊 buildPaymentAmountOptions - built options:', JSON.stringify(options, null, 2));
     return options;
   }
 
@@ -489,9 +493,17 @@ export class CallNotesComponent implements OnInit {
 
           this.typificationV2Service.createPaymentSchedule(paymentScheduleRequest).subscribe({
             next: (record) => {
-              console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas);
-              // Mostrar modal para generar carta de acuerdo y esperar a que se cierre
-              this.mostrarModalGenerarCarta(record.id, user.id);
+              console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas, '- Estado:', record.estadoPago);
+              // Solo mostrar modal de carta de acuerdo si el estado es PENDIENTE (no EN_EVALUACION)
+              if (record.estadoPago === 'PENDIENTE' && this.paymentScheduleConfig?.generaCartaAcuerdo) {
+                this.mostrarModalGenerarCarta(record.id, user.id);
+              } else {
+                // Si está EN_EVALUACION o no genera carta, finalizar directamente
+                if (record.estadoPago === 'EN_EVALUACION') {
+                  this.snackBar.open('Promesa creada. Pendiente de aprobación por supervisor.', 'OK', { duration: 4000 });
+                }
+                this.finalizarTipificacionYSalir(user.id);
+              }
             },
             error: (error) => {
               console.error('Error creating payment schedule:', error);
