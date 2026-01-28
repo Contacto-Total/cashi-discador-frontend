@@ -387,6 +387,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
               console.log(`📞 [App] Llamada estable (${callDuration}ms), navegando a tipificación...`);
               this.hasNavigatedToTypification = true;
+              // ✅ FIX: Limpiar timeout después de navegación exitosa
+              // Esto evita que IDLE dispare restauración incorrecta del estado
+              this.navigationTimeout = null;
               this.router.navigate(['/collection-management']);
             } else {
               console.log(`⚠️ [App] Llamada terminó antes de establecerse (${callDuration}ms, estado: ${currentState}), NO navegando`);
