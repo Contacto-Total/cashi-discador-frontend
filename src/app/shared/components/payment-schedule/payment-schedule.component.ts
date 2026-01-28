@@ -19,29 +19,29 @@ export interface AmountOption {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
-    <div class="payment-schedule-container bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 transition-colors duration-300">
+    <div class="payment-schedule-container bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 transition-colors duration-300">
       <!-- Selector de Monto -->
-      <div class="field-group mb-5">
-        <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
-          <div class="w-6 h-6 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
-            <lucide-angular name="wallet" [size]="14" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
+      <div class="field-group mb-4">
+        <label class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200 text-xs mb-2 transition-colors duration-300">
+          <div class="w-5 h-5 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+            <lucide-angular name="wallet" [size]="12" class="text-emerald-600 dark:text-emerald-400"></lucide-angular>
           </div>
           Seleccionar Monto
         </label>
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           @for (option of regularAmountOptions(); track option.field) {
             <button
               type="button"
-              [class]="'flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ' +
+              [class]="'flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md min-w-0 ' +
                 (selectedField() === option.field && !isCustomAmount()
                   ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
               (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo, option.minCuotas, option.maxCuotas)"
             >
-              <span class="text-[10px] opacity-70 leading-tight text-center">{{ option.label }}</span>
-              <span class="text-sm font-bold mt-1">{{ formatCurrency(option.value) }}</span>
+              <span class="text-[9px] opacity-70 leading-tight text-center truncate w-full">{{ option.label }}</span>
+              <span class="text-xs font-bold mt-0.5">{{ formatCurrency(option.value) }}</span>
               @if (option.restriccionFecha && option.restriccionFecha !== 'SIN_RESTRICCION') {
-                <span class="text-[8px] mt-1 px-1.5 py-0.5 rounded-full"
+                <span class="text-[7px] mt-0.5 px-1 py-0.5 rounded-full"
                   [class]="option.restriccionFecha === 'DENTRO_MES'
                     ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
                     : 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'">
@@ -54,17 +54,17 @@ export interface AmountOption {
           @if (hasCustomOption()) {
             <button
               type="button"
-              [class]="'flex flex-col items-center p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ' +
+              [class]="'flex flex-col items-center p-2 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md min-w-0 ' +
                 (isCustomAmount()
-                  ? 'col-span-2 border-purple-500 bg-purple-500 dark:bg-purple-600 text-white shadow-lg shadow-purple-500/30'
+                  ? 'sm:col-span-2 border-purple-500 bg-purple-500 dark:bg-purple-600 text-white shadow-lg shadow-purple-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-purple-400 dark:hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-slate-600')"
               (click)="enableCustomAmount()"
             >
-              <span class="text-[10px] opacity-70">Excepción</span>
+              <span class="text-[9px] opacity-70">Excepción</span>
               @if (isCustomAmount()) {
                 <input
                   type="number"
-                  class="w-full mt-1 px-3 py-1.5 border border-white/30 rounded text-center text-base font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white min-w-[120px]"
+                  class="w-full mt-0.5 px-2 py-1 border border-white/30 rounded text-center text-sm font-bold bg-white/90 dark:bg-slate-800 text-slate-800 dark:text-white min-w-[90px]"
                   [(ngModel)]="customAmountValue"
                   (ngModelChange)="onCustomAmountChange($event)"
                   (click)="$event.stopPropagation()"
@@ -73,7 +73,7 @@ export interface AmountOption {
                   step="0.01"
                 >
               } @else {
-                <lucide-angular name="edit-3" [size]="16" class="mt-1"></lucide-angular>
+                <lucide-angular name="edit-3" [size]="14" class="mt-0.5"></lucide-angular>
               }
             </button>
           }
@@ -81,11 +81,11 @@ export interface AmountOption {
 
         <!-- Selector de campo base para "Excepción" -->
         @if (isCustomAmount()) {
-          <div class="mt-3 flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-            <lucide-angular name="link" [size]="16" class="text-purple-500 flex-shrink-0"></lucide-angular>
-            <span class="text-xs text-purple-700 dark:text-purple-300">Campo base:</span>
+          <div class="mt-2 flex flex-wrap items-center gap-2 p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+            <lucide-angular name="link" [size]="14" class="text-purple-500 flex-shrink-0"></lucide-angular>
+            <span class="text-[10px] text-purple-700 dark:text-purple-300">Campo base:</span>
             <select
-              class="flex-1 px-2 py-1.5 text-sm border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              class="flex-1 min-w-[100px] px-1.5 py-1 text-xs border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
               [ngModel]="selectedBaseField()"
               (ngModelChange)="onBaseFieldChange($event)"
             >
@@ -166,18 +166,18 @@ export interface AmountOption {
 
       <!-- Selector de Cuotas -->
       @if (selectedAmount() > 0) {
-        <div class="field-group mb-5">
-          <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
-            <div class="w-6 h-6 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
-              <lucide-angular name="calendar-days" [size]="14" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+        <div class="field-group mb-4">
+          <label class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200 text-xs mb-2 transition-colors duration-300">
+            <div class="w-5 h-5 bg-blue-100 dark:bg-blue-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+              <lucide-angular name="calendar-days" [size]="12" class="text-blue-600 dark:text-blue-400"></lucide-angular>
             </div>
             Número de Cuotas
           </label>
-          <div class="flex flex-wrap gap-2">
+          <div class="flex flex-wrap gap-1.5">
             @for (num of installmentOptionsComputed(); track num) {
               <button
                 type="button"
-                [class]="'px-4 py-2 border-2 rounded-lg cursor-pointer transition-all duration-200 text-sm font-medium hover:shadow-md ' +
+                [class]="'px-3 py-1.5 border-2 rounded-lg cursor-pointer transition-all duration-200 text-xs font-medium hover:shadow-md ' +
                   (numberOfInstallments() === num
                     ? 'border-emerald-500 bg-emerald-500 dark:bg-emerald-600 text-white shadow-lg shadow-emerald-500/30'
                     : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-emerald-400 dark:hover:border-emerald-500 hover:bg-emerald-50 dark:hover:bg-slate-600')"
@@ -193,49 +193,49 @@ export interface AmountOption {
       <!-- Detalle de Cuotas -->
       @if (installments().length > 0) {
         <div class="field-group">
-          <label class="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200 text-sm mb-3 transition-colors duration-300">
-            <div class="w-6 h-6 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
-              <lucide-angular name="list-ordered" [size]="14" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+          <label class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-200 text-xs mb-2 transition-colors duration-300">
+            <div class="w-5 h-5 bg-amber-100 dark:bg-amber-900/50 rounded-lg flex items-center justify-center transition-colors duration-300">
+              <lucide-angular name="list-ordered" [size]="12" class="text-amber-600 dark:text-amber-400"></lucide-angular>
             </div>
             Detalle del Cronograma
           </label>
           <!-- Mensaje de restricción de fecha -->
           @if (dateRestrictionInfo().message) {
-            <div class="mb-3 px-3 py-2 rounded-lg text-xs flex items-center gap-2"
+            <div class="mb-2 px-2 py-1.5 rounded-lg text-[10px] flex items-center gap-1.5"
               [class]="selectedRestriccion() === 'DENTRO_MES'
                 ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
                 : 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'">
-              <lucide-angular name="info" [size]="14"></lucide-angular>
+              <lucide-angular name="info" [size]="12"></lucide-angular>
               <span>{{ dateRestrictionInfo().message }}</span>
             </div>
           }
           <div class="bg-white dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden transition-colors duration-300">
             @for (installment of installments(); track installment.numeroCuota) {
-              <div class="grid grid-cols-1 sm:grid-cols-[100px_1fr_1fr] gap-3 p-3 border-b border-slate-100 dark:border-slate-600 last:border-b-0 items-center transition-colors duration-300">
-                <div class="font-bold text-blue-600 dark:text-blue-400 text-sm flex items-center gap-2">
-                  <lucide-angular name="hash" [size]="14"></lucide-angular>
+              <div class="flex flex-wrap gap-2 p-2.5 border-b border-slate-100 dark:border-slate-600 last:border-b-0 items-center transition-colors duration-300">
+                <div class="font-bold text-blue-600 dark:text-blue-400 text-xs flex items-center gap-1 min-w-[70px]">
+                  <lucide-angular name="hash" [size]="12"></lucide-angular>
                   Cuota {{ installment.numeroCuota }}
                 </div>
-                <div class="flex items-center gap-2">
-                  <label class="text-xs text-slate-500 dark:text-slate-400 min-w-[50px]">Monto:</label>
+                <div class="flex items-center gap-1.5 flex-1 min-w-[120px]">
+                  <label class="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">Monto:</label>
                   <input
                     type="number"
                     [(ngModel)]="installment.monto"
                     (ngModelChange)="onInstallmentAmountChange(installment.numeroCuota)"
                     [min]="1"
                     step="0.01"
-                    class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    class="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 dark:border-slate-500 rounded-lg text-xs bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                 </div>
-                <div class="flex items-center gap-2">
-                  <label class="text-xs text-slate-500 dark:text-slate-400 min-w-[50px]">Fecha:</label>
+                <div class="flex items-center gap-1.5 flex-1 min-w-[130px]">
+                  <label class="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">Fecha:</label>
                   <input
                     type="date"
                     [(ngModel)]="installment.fechaPago"
                     (ngModelChange)="onInstallmentChange()"
                     [min]="dateRestrictionInfo().minDate"
                     [max]="dateRestrictionInfo().maxDate"
-                    class="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-500 rounded-lg text-sm bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    class="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 dark:border-slate-500 rounded-lg text-xs bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                   >
                 </div>
               </div>
@@ -243,16 +243,16 @@ export interface AmountOption {
           </div>
 
           <!-- Resumen -->
-          <div class="mt-4 p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl border border-emerald-200 dark:border-emerald-800 transition-colors duration-300">
-            <div class="flex justify-between items-center text-sm text-emerald-700 dark:text-emerald-300">
-              <span class="flex items-center gap-2">
-                <lucide-angular name="calculator" [size]="16"></lucide-angular>
+          <div class="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl border border-emerald-200 dark:border-emerald-800 transition-colors duration-300">
+            <div class="flex justify-between items-center text-xs text-emerald-700 dark:text-emerald-300">
+              <span class="flex items-center gap-1.5">
+                <lucide-angular name="calculator" [size]="14"></lucide-angular>
                 Monto Total:
               </span>
-              <span class="text-lg font-bold">{{ formatCurrency(totalAmount()) }}</span>
+              <span class="text-sm font-bold">{{ formatCurrency(totalAmount()) }}</span>
             </div>
             @if (numberOfInstallments() > 1) {
-              <div class="flex justify-between items-center text-sm text-emerald-600 dark:text-emerald-400 mt-2 pt-2 border-t border-emerald-200 dark:border-emerald-700">
+              <div class="flex justify-between items-center text-xs text-emerald-600 dark:text-emerald-400 mt-1.5 pt-1.5 border-t border-emerald-200 dark:border-emerald-700">
                 <span>Monto por cuota:</span>
                 <span class="font-semibold">{{ formatCurrency(amountPerInstallment()) }}</span>
               </div>
