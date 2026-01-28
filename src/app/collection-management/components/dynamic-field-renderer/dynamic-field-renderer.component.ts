@@ -22,10 +22,13 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
           <h3 class="font-bold text-xs uppercase tracking-wide">Campos Adicionales</h3>
         </div>
 
-        <!-- Dynamic Fields in Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <!-- Dynamic Fields in Flex Container (responsive to zoom) -->
+        <div class="flex flex-wrap gap-3">
           @for (field of schema()!.fields; track field.id) {
-            <div [class.md:col-span-2]="field.type === 'table' || field.type === 'textarea' || field.type === 'payment_schedule'">
+            <div class="min-w-[200px] flex-1"
+                 [class.w-full]="field.type === 'table' || field.type === 'textarea' || field.type === 'payment_schedule'"
+                 [class.basis-full]="field.type === 'table' || field.type === 'textarea' || field.type === 'payment_schedule'"
+                 [class.basis-[calc(50%-0.375rem)]]="field.type !== 'table' && field.type !== 'textarea' && field.type !== 'payment_schedule'">
               <label class="text-[11px] font-bold text-gray-800 dark:text-gray-100 mb-1 flex items-center gap-1">
                 {{ field.label }}
                 @if (field.required) {
