@@ -1463,7 +1463,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             field: 'personalizado',
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
-            maxCuotas: option.maxCuotas || 6
+            maxCuotas: option.maxCuotas || 6,
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
           });
           continue;
         }
@@ -1492,7 +1493,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             restriccionFecha: option.restriccionFecha || 'SIN_RESTRICCION',
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
-            maxCuotas: option.maxCuotas || 6
+            maxCuotas: option.maxCuotas || 6,
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
           });
         }
       }
