@@ -4173,25 +4173,41 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             numeroCuota: cuota.numeroCuota,
             monto: cuota.monto,
             fechaPago: cuota.fechaPago
-          }))
-        }
+          })),
+          // Porcentaje de auto-aprobación para calcular excepciones
+          porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+          generaCartaAcuerdo: paymentScheduleData.generaCartaAcuerdo
+        },
+        // También a nivel raíz para que el backend lo procese
+        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion
       };
 
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);
+      console.log('[SAVE] porcentajeAutoAprobacion from paymentScheduleData:', paymentScheduleData.porcentajeAutoAprobacion);
+      console.log('[SAVE] porcentajeAutoAprobacion in request:', scheduleRequest.porcentajeAutoAprobacion);
 
       this.managementService.createPaymentSchedule(scheduleRequest).subscribe({
         next: (records) => {
           console.log('[SAVE] Payment schedule created successfully:', records);
-          // Mostrar modal para generar Carta de Acuerdo SOLO si el monto seleccionado tiene generaCartaAcuerdo = true
-          // records puede ser un array o un objeto con id
-          const idGestion = Array.isArray(records) && records.length > 0 ? records[0].id : records?.id;
+          // Mostrar modal para generar Carta de Acuerdo SOLO si:
+          // 1. El monto seleccionado tiene generaCartaAcuerdo = true
+          // 2. El estado del pago es PENDIENTE (no EN_EVALUACION)
+          const firstRecord = Array.isArray(records) && records.length > 0 ? records[0] : records;
+          const idGestion = firstRecord?.id;
+          const estadoPago = firstRecord?.estadoPago;
           const debeGenerarCarta = paymentScheduleData.generaCartaAcuerdo === true;
 
-          if (idGestion && debeGenerarCarta) {
-            console.log('[CARTA] Monto seleccionado requiere carta de acuerdo, mostrando modal...');
+          console.log('[CARTA] estadoPago:', estadoPago, 'debeGenerarCarta:', debeGenerarCarta);
+
+          // Solo mostrar modal de carta si el estado es PENDIENTE (no EN_EVALUACION)
+          if (idGestion && debeGenerarCarta && estadoPago === 'PENDIENTE') {
+            console.log('[CARTA] Monto seleccionado requiere carta de acuerdo y estado es PENDIENTE, mostrando modal...');
             this.mostrarModalGenerarCarta(idGestion, contactClassification?.label || '', managementClassification?.label || '-');
           } else {
-            if (idGestion && !debeGenerarCarta) {
+            if (estadoPago === 'EN_EVALUACION') {
+              console.log('[CARTA] Promesa en estado EN_EVALUACION, no se muestra modal de carta.');
+              alert('✅ Promesa de pago creada.\n\n⚠️ Pendiente de aprobación por supervisor debido a excepción en descuento.');
+            } else if (idGestion && !debeGenerarCarta) {
               console.log('[CARTA] Monto seleccionado NO requiere carta de acuerdo, omitiendo modal.');
             }
             this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');

@@ -229,10 +229,14 @@ export interface PaymentScheduleRequest {
   esExcepcionPrimeraCuota?: boolean; // true si la fecha de primera cuota excede el límite configurado
   diasPrimeraCuota?: number;         // Días desde hoy hasta la fecha de la primera cuota
   maxDiasPermitidos?: number;        // Máximo de días permitidos según configuración
+  // Porcentaje de auto-aprobación para excepciones
+  porcentajeAutoAprobacion?: number;
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
     cuotas: PaymentInstallmentRequest[];
+    porcentajeAutoAprobacion?: number;  // Porcentaje para calcular excepciones
+    generaCartaAcuerdo?: boolean;       // Si el monto genera carta de acuerdo
   };
 }
 
