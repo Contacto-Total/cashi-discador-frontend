@@ -37,7 +37,7 @@ export interface AmountOption {
                 (selectedField() === option.field && !isCustomAmount()
                   ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
-              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo, option.minCuotas, option.maxCuotas)"
+              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo, option.minCuotas, option.maxCuotas, option.porcentajeAutoAprobacion)"
             >
               <span class="text-[9px] opacity-70 leading-tight text-center truncate w-full">{{ option.label }}</span>
               <span class="text-xs font-bold mt-0.5">{{ formatCurrency(option.value) }}</span>
@@ -427,7 +427,7 @@ export class PaymentScheduleComponent implements OnInit {
         // Si solo hay una opción (como en CONTINUIDAD), auto-seleccionarla
         if (amounts.length === 1 && amounts[0].value > 0) {
           console.log('[PaymentSchedule] Auto-selecting single amount option:', amounts[0]);
-          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo, amounts[0].minCuotas, amounts[0].maxCuotas);
+          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo, amounts[0].minCuotas, amounts[0].maxCuotas, amounts[0].porcentajeAutoAprobacion);
         }
       }
 
@@ -445,7 +445,7 @@ export class PaymentScheduleComponent implements OnInit {
     return this._isCustomAmount();
   }
 
-  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean, minCuotas?: number, maxCuotas?: number): void {
+  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean, minCuotas?: number, maxCuotas?: number, porcentajeAutoAprobacion?: number): void {
     this._isCustomAmount.set(false);
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
@@ -453,6 +453,7 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedGeneraCartaAcuerdo.set(generaCartaAcuerdo || false);  // Guardar si genera carta
     this.selectedMinCuotas.set(minCuotas ?? this.minInstallments);  // Min cuotas de la opción o default
     this.selectedMaxCuotas.set(maxCuotas ?? this.maxInstallments);  // Max cuotas de la opción o default
+    this.selectedPorcentajeAutoAprobacion.set(porcentajeAutoAprobacion ?? 10);  // Porcentaje auto-aprobación
     this.montoBase.set(amount);  // Guardar monto original del campo
 
     // Ajustar número de cuotas si está fuera del nuevo rango
@@ -793,7 +794,7 @@ export class PaymentScheduleComponent implements OnInit {
       campoMontoOrigen: this.selectedField(),
       montoBase: this.montoBase(),  // Monto original del campo (undefined si es monto libre)
       generaCartaAcuerdo: this.selectedGeneraCartaAcuerdo(),  // Si el monto seleccionado genera carta
-      porcentajeAutoAprobacion: this._isCustomAmount() ? this.selectedPorcentajeAutoAprobacion() : undefined
+      porcentajeAutoAprobacion: this.selectedPorcentajeAutoAprobacion()  // Siempre enviar para calcular excepciones
     };
 
     this.scheduleChange.emit(config);
