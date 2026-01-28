@@ -254,6 +254,11 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/plantilla-carta-maintenance/plantilla-carta-maintenance.component').then(m => m.PlantillaCartaMaintenanceComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/maintenance/horarios-recordatorios',
+    loadComponent: () => import('./maintenance/components/horarios-recordatorios/horarios-recordatorios.component').then(m => m.HorariosRecordatoriosComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   // ========================================
   // PAGOS BANCARIOS

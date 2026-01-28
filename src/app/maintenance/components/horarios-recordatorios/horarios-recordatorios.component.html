@@ -1,0 +1,172 @@
+<div class="horarios-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <lucide-angular name="clock" [size]="24"></lucide-angular>
+      </div>
+      <div>
+        <h1>Horarios de Recordatorios</h1>
+        <p>Configura las franjas horarias en que se muestra el modal de recordatorios por subcartera</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros de seleccion -->
+  <div class="filters-card">
+    <div class="filters-row">
+      <div class="filter-group">
+        <label>Inquilino</label>
+        <select [(ngModel)]="selectedTenant" (change)="onTenantChange()">
+          <option [ngValue]="null">Seleccione inquilino</option>
+          <option *ngFor="let t of tenants" [ngValue]="t.id">{{ t.tenantName }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Cartera</label>
+        <select [(ngModel)]="selectedPortfolio" (change)="onPortfolioChange()" [disabled]="!selectedTenant">
+          <option [ngValue]="null">Seleccione cartera</option>
+          <option *ngFor="let p of filteredPortfolios" [ngValue]="p.id">{{ p.portfolioName }}</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Subcartera</label>
+        <select [(ngModel)]="selectedSubcartera" (change)="onSubcarteraChange()" [disabled]="!selectedPortfolio">
+          <option [ngValue]="null">Seleccione subcartera</option>
+          <option *ngFor="let s of filteredSubPortfolios" [ngValue]="s.id">{{ s.subPortfolioName }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acciones -->
+  <div class="actions-bar" *ngIf="selectedSubcartera">
+    <button class="btn-secondary" (click)="crearHorariosDefecto()" [disabled]="saving">
+      <lucide-angular name="wand-2" [size]="18"></lucide-angular>
+      <span>Crear Horarios Por Defecto</span>
+    </button>
+    <button class="btn-primary" (click)="openNewModal()">
+      <lucide-angular name="plus" [size]="18"></lucide-angular>
+      <span>Nuevo Horario</span>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="loading-spinner">
+      <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+      <span>Cargando...</span>
+    </div>
+  </div>
+
+  <!-- Info de horarios por defecto -->
+  <div class="info-card" *ngIf="selectedSubcartera && horarios.length === 0 && !loading">
+    <lucide-angular name="info" [size]="20"></lucide-angular>
+    <div>
+      <p><strong>Sin horarios configurados</strong></p>
+      <p>Esta subcartera no tiene horarios de recordatorios configurados. El modal se mostrara siempre.</p>
+      <p>Horarios sugeridos: <strong>8-9am, 2-3pm, 5-6pm</strong></p>
+    </div>
+  </div>
+
+  <!-- Tabla de Horarios -->
+  <div class="table-card" *ngIf="selectedSubcartera && !loading && horarios.length > 0">
+    <div class="table-wrapper">
+      <table class="horarios-table">
+        <thead>
+          <tr>
+            <th>Descripcion</th>
+            <th>Hora Inicio</th>
+            <th>Hora Fin</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let horario of horarios" [class.inactive]="!horario.activo">
+            <td>
+              <span class="descripcion">{{ horario.descripcion || 'Sin descripcion' }}</span>
+            </td>
+            <td class="time-cell">
+              <lucide-angular name="clock" [size]="14"></lucide-angular>
+              {{ formatTimeForDisplay(horario.horaInicio) }}
+            </td>
+            <td class="time-cell">
+              <lucide-angular name="clock" [size]="14"></lucide-angular>
+              {{ formatTimeForDisplay(horario.horaFin) }}
+            </td>
+            <td>
+              <span class="status-badge" [class.active]="horario.activo" [class.inactive]="!horario.activo">
+                {{ horario.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td class="actions-cell">
+              <button class="btn-icon" (click)="toggleActivo(horario)" [title]="horario.activo ? 'Desactivar' : 'Activar'">
+                <lucide-angular [name]="horario.activo ? 'eye-off' : 'eye'" [size]="16"></lucide-angular>
+              </button>
+              <button class="btn-icon" (click)="openEditModal(horario)" title="Editar">
+                <lucide-angular name="pencil" [size]="16"></lucide-angular>
+              </button>
+              <button class="btn-icon danger" (click)="deleteHorario(horario)" title="Eliminar">
+                <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Empty State (sin subcartera seleccionada) -->
+  <div class="empty-state" *ngIf="!selectedSubcartera && !loading">
+    <lucide-angular name="clock" [size]="48"></lucide-angular>
+    <p>Seleccione una subcartera para ver y configurar sus horarios de recordatorios</p>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ editMode ? 'Editar Horario' : 'Nuevo Horario' }}</h2>
+        <button class="btn-close" (click)="closeModal()">
+          <lucide-angular name="x" [size]="20"></lucide-angular>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Descripcion</label>
+          <input type="text" [(ngModel)]="currentHorario.descripcion" placeholder="Ej: Manana, Tarde 1, Tarde 2">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Hora Inicio</label>
+            <input type="time" [(ngModel)]="currentHorario.horaInicio">
+          </div>
+          <div class="form-group">
+            <label>Hora Fin</label>
+            <input type="time" [(ngModel)]="currentHorario.horaFin">
+          </div>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="currentHorario.activo">
+            <span>Activo</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeModal()">Cancelar</button>
+        <button class="btn-primary" (click)="saveHorario()" [disabled]="saving">
+          <lucide-angular *ngIf="saving" name="loader" [size]="16" class="spin"></lucide-angular>
+          <span>{{ saving ? 'Guardando...' : 'Guardar' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
