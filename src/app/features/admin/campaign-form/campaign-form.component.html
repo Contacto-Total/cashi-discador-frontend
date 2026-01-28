@@ -424,11 +424,11 @@
             <span class="info-label">Excluidos por Blacklist:</span>
             <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | number }}</span>
           </div>
-          <div class="info-item" *ngIf="previewData.excluidosPorPagoCumplido > 0">
+          <div class="info-item" *ngIf="(previewData.excluidosPorPagoCumplido ?? 0) > 0">
             <span class="info-label">Excluidos por Pago Cumplido:</span>
             <span class="info-value text-red">-{{ previewData.excluidosPorPagoCumplido | number }}</span>
           </div>
-          <div class="info-item" *ngIf="previewData.excluidosPorFiltros > 0">
+          <div class="info-item" *ngIf="(previewData.excluidosPorFiltros ?? 0) > 0">
             <span class="info-label">Excluidos por Filtros:</span>
             <span class="info-value text-orange">-{{ previewData.excluidosPorFiltros | number }}</span>
           </div>
