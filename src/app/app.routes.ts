@@ -249,6 +249,11 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/menu-configuration/menu-configuration.component').then(m => m.MenuConfigurationComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/maintenance/plantillas-carta',
+    loadComponent: () => import('./maintenance/components/plantilla-carta-maintenance/plantilla-carta-maintenance.component').then(m => m.PlantillaCartaMaintenanceComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   // ========================================
   // PAGOS BANCARIOS
