@@ -5,10 +5,7 @@ import { environment } from '../../../environments/environment';
 
 export interface AutoDialerStatus {
   activo: boolean;
-  fechaActivacion?: string;
-  fechaDesactivacion?: string;
-  usuarioActivacion?: string;
-  notas?: string;
+  mensaje?: string;
 }
 
 export interface AutoDialerEstadisticas {
@@ -62,11 +59,6 @@ export interface LlamadaTiempoReal {
   idAgente: number;
 }
 
-export interface AutoDialerConfiguracion {
-  intensidadMarcacion: number;
-  intervaloMarcacionSegundos: number;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -84,40 +76,7 @@ export class AutoDialerService {
   }
 
   /**
-   * Activa el auto-dialer
-   */
-  activar(usuario: string = 'admin', notas: string = 'Activación desde panel'): Observable<any> {
-    return this.http.post(
-      `${this.apiUrl}/activar`,
-      { usuario, notas },
-      { headers: this.getHeaders() }
-    );
-  }
-
-  /**
-   * Desactiva el auto-dialer
-   */
-  desactivar(notas: string = 'Desactivación desde panel'): Observable<any> {
-    return this.http.post(
-      `${this.apiUrl}/desactivar`,
-      { notas },
-      { headers: this.getHeaders() }
-    );
-  }
-
-  /**
-   * Toggle (activar/desactivar) el auto-dialer
-   */
-  toggle(usuario: string = 'admin'): Observable<any> {
-    return this.http.post(
-      `${this.apiUrl}/toggle`,
-      { usuario },
-      { headers: this.getHeaders() }
-    );
-  }
-
-  /**
-   * Obtiene el estado actual del auto-dialer
+   * Obtiene el estado actual del auto-dialer (si hay campañas discando)
    */
   getEstado(): Observable<AutoDialerStatus> {
     return this.http.get<AutoDialerStatus>(
@@ -213,27 +172,6 @@ export class AutoDialerService {
           ? this.getLlamadasEnTiempoRealByCampaign(campaignId)
           : this.getLlamadasEnTiempoReal()
       )
-    );
-  }
-
-  /**
-   * Obtiene la configuración actual del autodialer
-   */
-  getConfiguracion(): Observable<AutoDialerConfiguracion> {
-    return this.http.get<AutoDialerConfiguracion>(
-      `${this.apiUrl}/configuracion`,
-      { headers: this.getHeaders() }
-    );
-  }
-
-  /**
-   * Actualiza la configuración del autodialer
-   */
-  updateConfiguracion(config: AutoDialerConfiguracion): Observable<void> {
-    return this.http.put<void>(
-      `${this.apiUrl}/configuracion`,
-      config,
-      { headers: this.getHeaders() }
     );
   }
 

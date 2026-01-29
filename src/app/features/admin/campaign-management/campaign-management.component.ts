@@ -2,10 +2,8 @@ import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign, ImportStats } from '../../../core/services/campaign-admin.service';
-import { AutoDialerService } from '../../../core/services/autodialer.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -51,14 +49,8 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   selectedPortfolioId: number = 0;
   selectedSubPortfolioId: number = 0;
 
-  // Auto-Dialer state
-  isAutoDialerActive: boolean = false;
-  autoDialerLoading: boolean = false;
-  private autoDialerSubscription?: Subscription;
-
   constructor(
     private campaignService: CampaignAdminService,
-    private autoDialerService: AutoDialerService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService,
     private router: Router
@@ -66,7 +58,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadCampaigns();
-    this.loadAutoDialerState();
     this.loadTenants();
   }
 
@@ -110,9 +101,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.autoDialerSubscription) {
-      this.autoDialerSubscription.unsubscribe();
-    }
+    // Cleanup if needed
   }
 
   /**
@@ -456,65 +445,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
    */
   canStopDialing(campaign: Campaign): boolean {
     return campaign.estaDiscando === true;
-  }
-
-  // ========================================
-  // AUTO-DIALER METHODS (DEPRECATED)
-  // ========================================
-
-  /**
-   * Carga el estado actual del auto-dialer
-   */
-  loadAutoDialerState(): void {
-    this.autoDialerService.getEstado().subscribe({
-      next: (response) => {
-        this.isAutoDialerActive = response.activo;
-      },
-      error: (err) => {
-        console.error('Error loading auto-dialer state:', err);
-      }
-    });
-  }
-
-  /**
-   * Toggle auto-dialer (activar/desactivar)
-   */
-  toggleAutoDialer(): void {
-    this.autoDialerLoading = true;
-
-    this.autoDialerService.toggle('admin').subscribe({
-      next: (response) => {
-        this.autoDialerLoading = false;
-        this.isAutoDialerActive = response.activo;
-        console.log('Auto-Dialer toggled:', response.mensaje);
-      },
-      error: (err) => {
-        console.error('Error toggling auto-dialer:', err);
-        this.autoDialerLoading = false;
-      }
-    });
-  }
-
-  /**
-   * Obtiene el texto del botón del auto-dialer
-   */
-  getAutoDialerButtonText(): string {
-    if (this.autoDialerLoading) return 'Procesando...';
-    return this.isAutoDialerActive ? 'PAUSAR DISCADO' : 'INICIAR DISCADO';
-  }
-
-  /**
-   * Obtiene el ícono del botón del auto-dialer
-   */
-  getAutoDialerButtonIcon(): string {
-    return this.isAutoDialerActive ? 'pause' : 'play';
-  }
-
-  /**
-   * Obtiene el color del botón del auto-dialer
-   */
-  getAutoDialerButtonClass(): string {
-    return this.isAutoDialerActive ? 'btn-pause' : 'btn-activate';
   }
 
   /**
