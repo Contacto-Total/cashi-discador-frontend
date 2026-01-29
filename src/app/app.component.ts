@@ -473,17 +473,21 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             return;
           }
 
-          const pendientes = recordatorios.filter(r => !r.yaLlamoHoy).length;
+          const recordatoriosPendientes = recordatorios.filter(r => !r.yaLlamoHoy);
+          const pendientes = recordatoriosPendientes.length;
 
           if (pendientes > 0) {
-            console.log(`🔔 Mostrando modal de recordatorios: ${pendientes} pendientes`);
+            // Usar la subcartera del primer recordatorio pendiente para la configuración
+            const idSubcartera = recordatoriosPendientes[0]?.idSubcartera;
+            console.log(`🔔 Mostrando modal de recordatorios: ${pendientes} pendientes (subcartera: ${idSubcartera})`);
             const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
               width: '450px',
               disableClose: true,
               data: {
                 cantidad: recordatorios.length,
                 pendientes: pendientes,
-                idAgente: user.id
+                idAgente: user.id,
+                idSubcartera: idSubcartera
               },
               panelClass: 'recordatorios-modal'
             });

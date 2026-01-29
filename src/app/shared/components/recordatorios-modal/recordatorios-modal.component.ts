@@ -11,6 +11,7 @@ export interface RecordatoriosModalData {
   cantidad: number;
   pendientes: number;
   idAgente: number;
+  idSubcartera?: number;
   modoSiguiente?: boolean;
   modoFinalizado?: boolean;
   recordatorio?: RecordatorioPromesa;
@@ -399,7 +400,10 @@ export class RecordatoriosModalComponent implements OnInit, OnDestroy {
   iniciarDiscado(): void {
     this.isLoading = true;
 
-    this.recordatoriosService.iniciarDialer(this.data.idAgente).subscribe({
+    // Usar idSubcartera si está disponible (directamente o del recordatorio)
+    const idSubcartera = this.data.idSubcartera || this.data.recordatorio?.idSubcartera;
+
+    this.recordatoriosService.iniciarDialer(this.data.idAgente, idSubcartera).subscribe({
       next: (response) => {
         this.isLoading = false;
         if (response.success) {
