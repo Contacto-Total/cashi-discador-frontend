@@ -190,7 +190,7 @@ export class RecordatoriosService {
    * Cambia el estado de un horario (activo/inactivo)
    */
   cambiarEstadoHorario(id: number, activo: boolean): Observable<ConfiguracionHorarioRecordatorio> {
-    return this.http.patch<ConfiguracionHorarioRecordatorio>(
+    return this.http.post<ConfiguracionHorarioRecordatorio>(
       `${this.baseUrl}/horarios/${id}/estado?activo=${activo}`,
       {}
     );
