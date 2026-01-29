@@ -424,7 +424,8 @@ export class CampaignFormComponent implements OnInit {
         const newCampaignId = response.campaignId || response.campaign?.id || response.id;
         console.log('Campaña creada, respuesta:', response, 'ID extraído:', newCampaignId);
         if (newCampaignId && typeof newCampaignId === 'number') {
-          this.saveFiltersAndNavigate(newCampaignId);
+          // Pasar true para exportar Excel solo en campañas NUEVAS
+          this.saveFiltersAndNavigate(newCampaignId, true);
         } else {
           console.error('No se pudo obtener el ID de la campaña creada. Respuesta:', response);
           this.error = 'Error: No se pudo obtener el ID de la campaña';
@@ -456,7 +457,7 @@ export class CampaignFormComponent implements OnInit {
     return ((count / total) * 100).toFixed(1);
   }
 
-  private saveFiltersAndNavigate(campaignId: number): void {
+  private saveFiltersAndNavigate(campaignId: number, exportExcel: boolean = false): void {
     // SIEMPRE llamar a saveCampaignFilters (incluso con array vacío)
     // Esto dispara el auto-import de contactos en el backend
     console.log('📤 Enviando filtros para campaña', campaignId, ':', this.campaignFilters);
@@ -468,11 +469,17 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        // Exportar Excel con resumen y lista de clientes
-        this.exportCampaignToExcel(campaignId);
+        // Solo exportar Excel para campañas NUEVAS, no en edición
+        if (exportExcel) {
+          this.exportCampaignToExcel(campaignId);
+        } else {
+          this.loading = false;
+          this.router.navigate(['/admin/campaigns']);
+        }
       },
       error: (err) => {
         console.error('Error guardando filtros:', err);
+        this.loading = false;
         // Navegar de todos modos aunque fallen los filtros
         this.router.navigate(['/admin/campaigns']);
       }
