@@ -11,7 +11,8 @@ import {
   IniciarDialerResponse,
   SiguienteRecordatorioResponse,
   CompletarRecordatorioResponse,
-  EstadoDialerResponse
+  EstadoDialerResponse,
+  ResultadoLlamadaAMD
 } from '../models/recordatorio.model';
 
 export interface VerificacionHorarioResponse {
@@ -91,6 +92,16 @@ export class RecordatoriosService {
    */
   obtenerSiguiente(idAgente: number): Observable<SiguienteRecordatorioResponse> {
     return this.http.get<SiguienteRecordatorioResponse>(`${this.baseUrl}/dialer/siguiente/${idAgente}`);
+  }
+
+  /**
+   * Inicia una llamada con detección AMD para el recordatorio actual.
+   * El backend hace la llamada, analiza si es humano o buzón.
+   * - Si es buzón: auto-registra y pasa al siguiente
+   * - Si es humano: conecta al agente
+   */
+  iniciarLlamadaConAMD(idAgente: number): Observable<ResultadoLlamadaAMD> {
+    return this.http.post<ResultadoLlamadaAMD>(`${this.baseUrl}/dialer/llamar/${idAgente}`, {});
   }
 
   /**

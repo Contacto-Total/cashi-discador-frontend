@@ -4592,8 +4592,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result?.action === 'call' && result.recordatorio) {
-        // Iniciar la llamada
+      if (result?.action === 'connected' && result.recordatorio) {
+        // La llamada ya fue conectada por el backend (AMD detectó humano)
+        // El audio debería llegar automáticamente vía WebRTC bridge
+        console.log('📞 Llamada conectada con cliente:', result.recordatorio.nombreCliente);
+        // Guardar info del recordatorio en curso
+        sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
+          recordatorio: result.recordatorio,
+          callUuid: result.callUuid,
+          estado: result.estado
+        }));
+      } else if (result?.action === 'call' && result.recordatorio) {
+        // Flujo legacy: Iniciar la llamada manualmente
         this.sipService.call(result.recordatorio.telefono);
       } else if (result?.action === 'cancelled') {
         sessionStorage.removeItem('recordatorioEnCurso');

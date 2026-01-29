@@ -6,6 +6,10 @@ export interface RecordatorioPromesa {
   fechaPago: string;
   estadoCuota: string;
 
+  // Estado de la promesa para mostrar en UI
+  estadoPromesa: 'AL_DIA' | 'PENDIENTE_HOY' | 'VENCIDA' | 'SIN_FECHA';
+  diasVencida: number | null;
+
   idCliente: number;
   nombreCliente: string;
   documentoCliente: string;
@@ -83,4 +87,24 @@ export interface CompletarRecordatorioResponse {
 export interface EstadoDialerResponse {
   activo: boolean;
   estado: EstadoDiscadoRecordatorios | null;
+}
+
+// ==================== AMD INTERFACES ====================
+
+export interface ResultadoLlamadaAMD {
+  estado: 'HUMANO' | 'BUZON' | 'NO_CONTESTO' | 'ERROR';
+  mensaje: string;
+  callUuid: string | null;
+  agentUuid: string | null;
+  razonAMD: string | null;
+  recordatorio: RecordatorioPromesa | null;
+
+  // Indicadores booleanos
+  esHumano: boolean;
+  esBuzon: boolean;
+  noContesto: boolean;
+  esError: boolean;
+
+  // Estado del dialer (si aplica)
+  estadoDialer: EstadoDiscadoRecordatorios | null;
 }
