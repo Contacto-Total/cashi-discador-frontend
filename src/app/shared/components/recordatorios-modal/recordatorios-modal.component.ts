@@ -17,7 +17,7 @@ export interface RecordatoriosModalData {
   recordatorio?: RecordatorioPromesa;
 }
 
-type ModalState = 'initial' | 'countdown' | 'calling' | 'analyzing' | 'buzon' | 'connecting' | 'finished';
+type ModalState = 'initial' | 'countdown' | 'calling' | 'analyzing' | 'buzon' | 'connecting' | 'in_call' | 'finished';
 
 @Component({
   selector: 'app-recordatorios-modal',
@@ -245,33 +245,96 @@ type ModalState = 'initial' | 'countdown' | 'calling' | 'analyzing' | 'buzon' | 
       <!-- ========== ESTADO CONECTANDO CON AGENTE ========== -->
       <ng-container *ngIf="modalState === 'connecting'">
         <div class="py-4 text-center" [@fadeSlide]>
-          <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <lucide-angular name="user-check" [size]="28" class="text-white"></lucide-angular>
+          <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg animate-pulse">
+            <lucide-angular name="phone-call" [size]="28" class="text-white"></lucide-angular>
           </div>
 
           <h3 class="text-lg font-bold text-green-600 dark:text-green-400 mb-2">
-            ¡Cliente en línea!
+            Conectando...
           </h3>
           <p class="text-sm text-slate-500 dark:text-gray-400 mb-4">
-            Conectándote con el cliente...
+            Estableciendo conexión con el cliente
           </p>
+        </div>
+      </ng-container>
 
-          <div *ngIf="recordatorioActual" class="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-left">
-            <p class="font-semibold text-slate-800 dark:text-white mb-2">{{ recordatorioActual.nombreCliente }}</p>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span class="text-slate-400">Cuota:</span>
-                <span class="font-medium text-slate-700 dark:text-gray-300 ml-1">
-                  {{ recordatorioActual.numeroCuota }}/{{ recordatorioActual.totalCuotas }}
-                </span>
+      <!-- ========== ESTADO EN LLAMADA (CONECTADO) ========== -->
+      <ng-container *ngIf="modalState === 'in_call'">
+        <div class="py-4" [@fadeSlide]>
+          <!-- Header -->
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center animate-pulse">
+                <lucide-angular name="phone-call" [size]="20" class="text-white"></lucide-angular>
               </div>
               <div>
-                <span class="text-slate-400">Monto:</span>
-                <span class="font-bold text-green-600 ml-1">
-                  S/ {{ recordatorioActual.monto | number:'1.2-2' }}
-                </span>
+                <p class="text-sm font-bold text-green-600 dark:text-green-400">En llamada</p>
+                <p class="text-xs text-slate-400">{{ callDuration }}</p>
               </div>
             </div>
+            <span class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded">
+              {{ estadoDialer?.recordatoriosCompletados || 0 }}/{{ estadoDialer?.totalRecordatorios || 0 }}
+            </span>
+          </div>
+
+          <!-- Info del cliente -->
+          <div *ngIf="recordatorioActual" class="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200 dark:border-green-700 mb-4">
+            <div class="flex items-start justify-between mb-3">
+              <div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">
+                  {{ recordatorioActual.nombreCliente }}
+                </h3>
+                <p class="text-sm text-slate-500 dark:text-gray-400">
+                  {{ recordatorioActual.documentoCliente }}
+                </p>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-slate-400">Teléfono</p>
+                <p class="text-sm font-mono font-semibold text-slate-700 dark:text-gray-300">
+                  {{ recordatorioActual.telefono }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Detalles de la promesa -->
+            <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-green-100 dark:border-slate-600">
+              <div class="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p class="text-xs text-slate-400">Cuota</p>
+                  <p class="text-sm font-bold text-slate-700 dark:text-gray-300">
+                    {{ recordatorioActual.numeroCuota }}/{{ recordatorioActual.totalCuotas }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-400">Monto</p>
+                  <p class="text-sm font-bold text-green-600">
+                    S/ {{ recordatorioActual.monto | number:'1.2-2' }}
+                  </p>
+                </div>
+                <div>
+                  <p class="text-xs text-slate-400">Fecha</p>
+                  <p class="text-sm font-bold text-slate-700 dark:text-gray-300">
+                    {{ recordatorioActual.fechaPago | date:'dd/MM' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botones de acción -->
+          <div class="flex gap-3">
+            <button
+              (click)="completarYSiguiente('CONTACTADO')"
+              [disabled]="isLoading"
+              class="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white text-sm font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50">
+              <lucide-angular name="check" [size]="18"></lucide-angular>
+              Completar y Siguiente
+            </button>
+            <button
+              (click)="terminarDiscado()"
+              class="px-4 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-lg transition-all duration-200">
+              <lucide-angular name="x" [size]="18"></lucide-angular>
+            </button>
           </div>
         </div>
       </ng-container>
@@ -338,8 +401,14 @@ export class RecordatoriosModalComponent implements OnInit, OnDestroy {
   recordatorioActual: RecordatorioPromesa | null = null;
   estadoDialer: { recordatoriosCompletados: number; totalRecordatorios: number } | null = null;
 
+  // Para llamada en curso
+  currentCallUuid: string | null = null;
+  callDuration = '00:00';
+  private callStartTime: Date | null = null;
+
   private countdownInterval: any = null;
   private autoSkipInterval: any = null;
+  private callDurationInterval: any = null;
 
   constructor(
     public dialogRef: MatDialogRef<RecordatoriosModalComponent>,
@@ -467,18 +536,15 @@ export class RecordatoriosModalComponent implements OnInit, OnDestroy {
     this.recordatoriosService.iniciarLlamadaConAMD(this.data.idAgente).subscribe({
       next: (resultado: ResultadoLlamadaAMD) => {
         if (resultado.esHumano) {
-          // Humano detectado - conectar al agente
+          // Humano detectado - mostrar "conectando" brevemente
           this.modalState = 'connecting';
+          this.currentCallUuid = resultado.callUuid;
 
+          // Después de 1 segundo, pasar a estado "en llamada"
           setTimeout(() => {
-            this.dialogRef.close({
-              action: 'connected',
-              recordatorio: this.recordatorioActual,
-              callUuid: resultado.callUuid,
-              agentUuid: resultado.agentUuid,
-              estado: this.estadoDialer
-            });
-          }, 1500);
+            this.modalState = 'in_call';
+            this.iniciarContadorLlamada();
+          }, 1000);
 
         } else if (resultado.esBuzon || resultado.noContesto) {
           // Buzón o no contestó - mostrar y pasar al siguiente
@@ -515,6 +581,74 @@ export class RecordatoriosModalComponent implements OnInit, OnDestroy {
     });
   }
 
+  private iniciarContadorLlamada(): void {
+    this.callStartTime = new Date();
+    this.callDuration = '00:00';
+
+    this.callDurationInterval = setInterval(() => {
+      if (this.callStartTime) {
+        const diff = Math.floor((new Date().getTime() - this.callStartTime.getTime()) / 1000);
+        const mins = Math.floor(diff / 60).toString().padStart(2, '0');
+        const secs = (diff % 60).toString().padStart(2, '0');
+        this.callDuration = `${mins}:${secs}`;
+      }
+    }, 1000);
+  }
+
+  completarYSiguiente(resultado: string): void {
+    this.isLoading = true;
+    this.limpiarIntervals();
+
+    // Completar el recordatorio actual
+    this.recordatoriosService.completarActual(
+      this.data.idAgente,
+      resultado,
+      this.currentCallUuid || undefined
+    ).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+
+        // Actualizar estado
+        if (response.estado) {
+          this.estadoDialer = {
+            recordatoriosCompletados: response.estado.recordatoriosCompletados,
+            totalRecordatorios: response.estado.totalRecordatorios
+          };
+        }
+
+        // Limpiar estado de llamada
+        this.currentCallUuid = null;
+        this.callDuration = '00:00';
+        this.callStartTime = null;
+
+        // Obtener siguiente si no ha terminado
+        if (!response.terminado) {
+          this.obtenerSiguienteYMostrar();
+        } else {
+          this.modalState = 'finished';
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        console.error('Error completando recordatorio:', err);
+        // Intentar continuar de todos modos
+        this.obtenerSiguienteYMostrar();
+      }
+    });
+  }
+
+  terminarDiscado(): void {
+    this.limpiarIntervals();
+    this.recordatoriosService.detenerDialer(this.data.idAgente).subscribe({
+      next: () => {
+        this.dialogRef.close({ action: 'stopped' });
+      },
+      error: () => {
+        this.dialogRef.close({ action: 'stopped' });
+      }
+    });
+  }
+
   cancelarDiscado(): void {
     this.limpiarIntervals();
     this.recordatoriosService.detenerDialer(this.data.idAgente).subscribe({
@@ -535,6 +669,10 @@ export class RecordatoriosModalComponent implements OnInit, OnDestroy {
     if (this.autoSkipInterval) {
       clearInterval(this.autoSkipInterval);
       this.autoSkipInterval = null;
+    }
+    if (this.callDurationInterval) {
+      clearInterval(this.callDurationInterval);
+      this.callDurationInterval = null;
     }
   }
 }
