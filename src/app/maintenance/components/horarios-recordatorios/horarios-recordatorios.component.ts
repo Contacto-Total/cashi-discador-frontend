@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { RecordatoriosService, ConfiguracionHorarioRecordatorio } from '../../../core/services/recordatorios.service';
+import { RecordatoriosService, ConfiguracionHorarioRecordatorio, ConfiguracionPromesasRecordatorio, ResumenConfiguracionPromesas } from '../../../core/services/recordatorios.service';
 import { TenantService } from '../../services/tenant.service';
 import { PortfolioService } from '../../services/portfolio.service';
 import { Tenant } from '../../models/tenant.model';
@@ -39,6 +39,11 @@ export class HorariosRecordatoriosComponent implements OnInit {
   selectedPortfolio: number | null = null;
 
   currentHorario: ConfiguracionHorarioRecordatorio = this.getEmptyHorario();
+
+  // Configuración de promesas
+  configPromesas: ConfiguracionPromesasRecordatorio | null = null;
+  resumenPromesas: ResumenConfiguracionPromesas | null = null;
+  savingPromesas = false;
 
   constructor(
     private recordatoriosService: RecordatoriosService,
@@ -142,8 +147,11 @@ export class HorariosRecordatoriosComponent implements OnInit {
   onSubcarteraChange(): void {
     if (this.selectedSubcartera) {
       this.loadHorarios();
+      this.loadConfigPromesas();
     } else {
       this.horarios = [];
+      this.configPromesas = null;
+      this.resumenPromesas = null;
     }
   }
 
@@ -309,5 +317,60 @@ export class HorariosRecordatoriosComponent implements OnInit {
       return `${parts[0]}:${parts[1]}:00`;
     }
     return time;
+  }
+
+  // ==================== CONFIGURACIÓN DE PROMESAS ====================
+
+  loadConfigPromesas(): void {
+    if (!this.selectedSubcartera) return;
+
+    this.recordatoriosService.obtenerConfigPromesas(this.selectedSubcartera).subscribe({
+      next: (config) => {
+        this.configPromesas = config;
+        this.loadResumenPromesas();
+      },
+      error: (err) => {
+        console.error('Error loading config promesas:', err);
+        // Si no existe, crear uno por defecto
+        this.configPromesas = {
+          idSubcartera: this.selectedSubcartera!,
+          diasProximosPromesas: 0,
+          diasVencidasPromesas: 0,
+          activo: true
+        };
+      }
+    });
+  }
+
+  loadResumenPromesas(): void {
+    if (!this.selectedSubcartera) return;
+
+    this.recordatoriosService.obtenerResumenConfigPromesas(this.selectedSubcartera).subscribe({
+      next: (resumen) => {
+        this.resumenPromesas = resumen;
+      },
+      error: (err) => {
+        console.error('Error loading resumen promesas:', err);
+      }
+    });
+  }
+
+  saveConfigPromesas(): void {
+    if (!this.selectedSubcartera || !this.configPromesas) return;
+
+    this.savingPromesas = true;
+    this.recordatoriosService.guardarConfigPromesas(this.selectedSubcartera, this.configPromesas).subscribe({
+      next: (saved) => {
+        this.configPromesas = saved;
+        this.savingPromesas = false;
+        this.loadResumenPromesas();
+        alert('Configuración de promesas guardada correctamente');
+      },
+      error: (err) => {
+        console.error('Error saving config promesas:', err);
+        this.savingPromesas = false;
+        alert('Error al guardar la configuración de promesas');
+      }
+    });
   }
 }

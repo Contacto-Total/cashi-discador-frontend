@@ -30,6 +30,28 @@ export interface ConfiguracionHorarioRecordatorio {
   activo: boolean;
 }
 
+export interface ConfiguracionPromesasRecordatorio {
+  id?: number;
+  idSubcartera: number;
+  diasProximosPromesas: number;  // 0 = solo hoy, 1 = hoy + mañana, etc.
+  diasVencidasPromesas: number;  // 0 = no incluir, 1+ = días hacia atrás (saltando ayer)
+  activo: boolean;
+}
+
+export interface ResumenConfiguracionPromesas {
+  config: ConfiguracionPromesasRecordatorio;
+  proximas: {
+    desde: string;
+    hasta: string;
+    descripcion: string;
+  };
+  vencidas: {
+    desde: string | null;
+    hasta: string | null;
+    descripcion: string;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -82,9 +104,12 @@ export class RecordatoriosService {
 
   /**
    * Inicia el discado automático de recordatorios
+   * @param idAgente ID del agente
+   * @param idSubcartera ID de la subcartera (opcional, para usar configuración de promesas)
    */
-  iniciarDialer(idAgente: number): Observable<IniciarDialerResponse> {
-    return this.http.post<IniciarDialerResponse>(`${this.baseUrl}/dialer/iniciar/${idAgente}`, {});
+  iniciarDialer(idAgente: number, idSubcartera?: number): Observable<IniciarDialerResponse> {
+    const params = idSubcartera ? `?idSubcartera=${idSubcartera}` : '';
+    return this.http.post<IniciarDialerResponse>(`${this.baseUrl}/dialer/iniciar/${idAgente}${params}`, {});
   }
 
   /**
@@ -254,6 +279,36 @@ export class RecordatoriosService {
           catchError(() => of({ recordatorios: [], horarioInfo: null }))
         );
       })
+    );
+  }
+
+  // ==================== CONFIGURACIÓN DE PROMESAS ====================
+
+  /**
+   * Obtiene la configuración de promesas para una subcartera
+   */
+  obtenerConfigPromesas(idSubcartera: number): Observable<ConfiguracionPromesasRecordatorio> {
+    return this.http.get<ConfiguracionPromesasRecordatorio>(
+      `${this.baseUrl}/config-promesas/subcartera/${idSubcartera}`
+    );
+  }
+
+  /**
+   * Guarda la configuración de promesas para una subcartera
+   */
+  guardarConfigPromesas(idSubcartera: number, config: ConfiguracionPromesasRecordatorio): Observable<ConfiguracionPromesasRecordatorio> {
+    return this.http.post<ConfiguracionPromesasRecordatorio>(
+      `${this.baseUrl}/config-promesas/subcartera/${idSubcartera}`,
+      config
+    );
+  }
+
+  /**
+   * Obtiene un resumen de la configuración con ejemplos de fechas
+   */
+  obtenerResumenConfigPromesas(idSubcartera: number): Observable<ResumenConfiguracionPromesas> {
+    return this.http.get<ResumenConfiguracionPromesas>(
+      `${this.baseUrl}/config-promesas/subcartera/${idSubcartera}/resumen`
     );
   }
 }

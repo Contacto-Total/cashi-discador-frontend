@@ -119,6 +119,109 @@
     </div>
   </div>
 
+  <!-- ==================== CONFIGURACIÓN DE PROMESAS ==================== -->
+  <div class="config-promesas-section" *ngIf="selectedSubcartera && configPromesas">
+    <div class="section-header">
+      <div class="header-icon">
+        <lucide-angular name="calendar-check" [size]="24"></lucide-angular>
+      </div>
+      <div>
+        <h2>Configuracion de Promesas para Recordatorios</h2>
+        <p>Define que promesas se incluiran en el discado automatico</p>
+      </div>
+    </div>
+
+    <div class="config-cards-row">
+      <!-- Promesas Próximas -->
+      <div class="config-card proximas">
+        <div class="config-card-header">
+          <lucide-angular name="calendar-plus" [size]="20"></lucide-angular>
+          <h3>Promesas Vigentes (Proximas)</h3>
+        </div>
+        <div class="config-card-body">
+          <div class="config-input-row">
+            <span>Incluir promesas de hoy +</span>
+            <select [(ngModel)]="configPromesas.diasProximosPromesas">
+              <option [ngValue]="0">0</option>
+              <option [ngValue]="1">1</option>
+              <option [ngValue]="2">2</option>
+              <option [ngValue]="3">3</option>
+              <option [ngValue]="4">4</option>
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="6">6</option>
+              <option [ngValue]="7">7</option>
+            </select>
+            <span>dia(s) adelante</span>
+          </div>
+          <div class="config-description" *ngIf="resumenPromesas">
+            <lucide-angular name="info" [size]="14"></lucide-angular>
+            <span>{{ resumenPromesas.proximas.descripcion }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Promesas Vencidas -->
+      <div class="config-card vencidas">
+        <div class="config-card-header">
+          <lucide-angular name="calendar-x" [size]="20"></lucide-angular>
+          <h3>Promesas Vencidas (Caidas)</h3>
+        </div>
+        <div class="config-card-body">
+          <div class="config-input-row">
+            <span>Incluir promesas vencidas de</span>
+            <select [(ngModel)]="configPromesas.diasVencidasPromesas">
+              <option [ngValue]="0">No incluir</option>
+              <option [ngValue]="1">1</option>
+              <option [ngValue]="2">2</option>
+              <option [ngValue]="3">3</option>
+              <option [ngValue]="4">4</option>
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="6">6</option>
+              <option [ngValue]="7">7</option>
+            </select>
+            <span>dia(s) atras</span>
+          </div>
+          <div class="config-description vencidas-note">
+            <lucide-angular name="alert-circle" [size]="14"></lucide-angular>
+            <span>Sin contar el dia anterior (ayer se omite)</span>
+          </div>
+          <div class="config-description" *ngIf="resumenPromesas && resumenPromesas.vencidas.descripcion">
+            <lucide-angular name="info" [size]="14"></lucide-angular>
+            <span>{{ resumenPromesas.vencidas.descripcion }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen de fechas -->
+    <div class="resumen-fechas" *ngIf="resumenPromesas">
+      <h4>Resumen de Rangos de Fecha</h4>
+      <div class="resumen-row">
+        <div class="resumen-item proximas">
+          <span class="label">Proximas:</span>
+          <span class="fechas">{{ resumenPromesas.proximas.desde }} al {{ resumenPromesas.proximas.hasta }}</span>
+        </div>
+        <div class="resumen-item vencidas" *ngIf="resumenPromesas.vencidas.desde">
+          <span class="label">Vencidas:</span>
+          <span class="fechas">{{ resumenPromesas.vencidas.desde }} al {{ resumenPromesas.vencidas.hasta }}</span>
+        </div>
+        <div class="resumen-item vencidas no-vencidas" *ngIf="!resumenPromesas.vencidas.desde">
+          <span class="label">Vencidas:</span>
+          <span class="fechas">No se incluyen</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón guardar -->
+    <div class="config-actions">
+      <button class="btn-primary" (click)="saveConfigPromesas()" [disabled]="savingPromesas">
+        <lucide-angular *ngIf="savingPromesas" name="loader" [size]="16" class="spin"></lucide-angular>
+        <lucide-angular *ngIf="!savingPromesas" name="save" [size]="16"></lucide-angular>
+        <span>{{ savingPromesas ? 'Guardando...' : 'Guardar Configuracion de Promesas' }}</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Empty State (sin subcartera seleccionada) -->
   <div class="empty-state" *ngIf="!selectedSubcartera && !loading">
     <lucide-angular name="clock" [size]="48"></lucide-angular>
