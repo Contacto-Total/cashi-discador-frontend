@@ -2266,6 +2266,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Carga datos básicos del cliente desde el recordatorio (fallback)
+   * Solo se usa si no se encuentra el cliente en la base de datos
    */
   private loadCustomerBasicFromRecordatorio(recordatorio: any) {
     console.log('📋 [RECORDATORIO] Cargando datos básicos del recordatorio');
@@ -2286,11 +2287,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       },
       cuenta: {
         numero_cuenta: '',
+        tipo_producto: '',
+        fecha_desembolso: '',
+        monto_original: recordatorio.monto || 0,
+        plazo_meses: recordatorio.totalCuotas || 0,
+        tasa_interes: 0
+      },
+      deuda: {
+        saldo_capital: recordatorio.monto || 0,
+        intereses_vencidos: 0,
+        mora_acumulada: 0,
+        gastos_cobranza: 0,
         saldo_total: recordatorio.monto || 0,
-        cuotas_vencidas: recordatorio.numeroCuota || 1,
         dias_mora: 0,
-        ultimo_pago: '',
-        monto_minimo: recordatorio.monto || 0
+        fecha_ultimo_pago: '',
+        monto_ultimo_pago: 0
       }
     });
   }
