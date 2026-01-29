@@ -540,6 +540,25 @@ export class RecordatoriosModalComponent implements OnInit, OnDestroy {
           this.modalState = 'connecting';
           this.currentCallUuid = resultado.callUuid;
 
+          // IMPORTANTE: Guardar datos del recordatorio en sessionStorage
+          // para que la pantalla de tipificación los use
+          if (this.recordatorioActual) {
+            sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
+              idCuota: this.recordatorioActual.idCuota,
+              idAgente: this.data.idAgente,
+              idCliente: this.recordatorioActual.idCliente,
+              nombreCliente: this.recordatorioActual.nombreCliente,
+              documentoCliente: this.recordatorioActual.documentoCliente,
+              telefono: this.recordatorioActual.telefono,
+              monto: this.recordatorioActual.monto,
+              numeroCuota: this.recordatorioActual.numeroCuota,
+              totalCuotas: this.recordatorioActual.totalCuotas,
+              callUuid: resultado.callUuid,
+              idSubcartera: this.recordatorioActual.idSubcartera
+            }));
+            console.log('📝 [RECORDATORIO] Datos guardados en sessionStorage para tipificación');
+          }
+
           // Después de 1 segundo, pasar a estado "en llamada"
           setTimeout(() => {
             this.modalState = 'in_call';

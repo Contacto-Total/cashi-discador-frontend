@@ -2177,10 +2177,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Busca y carga automáticamente un cliente por su número de teléfono
    * Se llama cuando llega una llamada entrante
    * Busca en todos los tenants/carteras/subcarteras
+   *
+   * PRIORIDAD: Si hay un recordatorio en curso, usa esos datos primero
    */
   private autoLoadCustomerByPhone(phoneNumber: string) {
     console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
 
+    // PRIORIDAD 1: Verificar si hay un recordatorio en curso con datos del cliente
+    const recordatorioEnCursoStr = sessionStorage.getItem('recordatorioEnCurso');
+    if (recordatorioEnCursoStr) {
+      try {
+        const recordatorioEnCurso = JSON.parse(recordatorioEnCursoStr);
+        console.log('📝 [AUTO-LOAD] Recordatorio en curso detectado:', recordatorioEnCurso);
+
+        // Si tiene datos del cliente del recordatorio, usarlos
+        if (recordatorioEnCurso.documentoCliente && recordatorioEnCurso.idSubcartera) {
+          console.log('✅ [AUTO-LOAD] Usando datos del recordatorio en curso');
+          this.loadCustomerFromRecordatorio(recordatorioEnCurso);
+          return;
+        }
+      } catch (e) {
+        console.warn('⚠️ [AUTO-LOAD] Error parseando recordatorioEnCurso:', e);
+      }
+    }
+
+    // PRIORIDAD 2: Buscar por teléfono en todos los tenants
     this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber).subscribe({
       next: (customers) => {
         if (customers && customers.length > 0) {
@@ -2193,6 +2214,80 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('❌ [AUTO-LOAD] Error buscando cliente:', error);
+      }
+    });
+  }
+
+  /**
+   * Carga los datos del cliente desde un recordatorio en curso
+   * Busca por documento en la subcartera del recordatorio
+   */
+  private loadCustomerFromRecordatorio(recordatorio: any) {
+    console.log('🔍 [RECORDATORIO] Cargando cliente desde recordatorio:', recordatorio);
+
+    // Si tenemos idSubcartera, obtener configuración de la subcartera
+    if (recordatorio.idSubcartera) {
+      // Buscar cliente por documento en la subcartera específica
+      this.http.get<any>(`${environment.apiUrl}/client-search/find-by-documento`, {
+        params: {
+          subPortfolioId: recordatorio.idSubcartera.toString(),
+          documento: recordatorio.documentoCliente
+        }
+      }).subscribe({
+        next: (clientData) => {
+          if (clientData) {
+            console.log('✅ [RECORDATORIO] Cliente encontrado:', clientData);
+            // Establecer contexto de subcartera
+            this.selectedSubPortfolioId = recordatorio.idSubcartera;
+            this.reloadTypifications();
+            this.loadCustomerOutputConfig();
+            this.loadFirstInstallmentConfig();
+            // Cargar datos del cliente
+            this.loadCustomerFromDynamicTable(clientData);
+          } else {
+            console.warn('⚠️ [RECORDATORIO] Cliente no encontrado, usando datos básicos');
+            this.loadCustomerBasicFromRecordatorio(recordatorio);
+          }
+        },
+        error: (error) => {
+          console.error('❌ [RECORDATORIO] Error buscando cliente:', error);
+          // Fallback: cargar datos básicos del recordatorio
+          this.loadCustomerBasicFromRecordatorio(recordatorio);
+        }
+      });
+    } else {
+      // Sin idSubcartera, cargar datos básicos
+      this.loadCustomerBasicFromRecordatorio(recordatorio);
+    }
+  }
+
+  /**
+   * Carga datos básicos del cliente desde el recordatorio (fallback)
+   */
+  private loadCustomerBasicFromRecordatorio(recordatorio: any) {
+    console.log('📋 [RECORDATORIO] Cargando datos básicos del recordatorio');
+    this.customerData.set({
+      id: recordatorio.idCliente || 0,
+      id_cliente: recordatorio.documentoCliente || '',
+      nombre_completo: recordatorio.nombreCliente || 'Cliente Recordatorio',
+      tipo_documento: 'DNI',
+      numero_documento: recordatorio.documentoCliente || '',
+      fecha_nacimiento: '',
+      edad: 0,
+      contacto: {
+        telefono_principal: recordatorio.telefono || '',
+        telefono_alternativo: '',
+        telefono_trabajo: '',
+        email: '',
+        direccion: ''
+      },
+      cuenta: {
+        numero_cuenta: '',
+        saldo_total: recordatorio.monto || 0,
+        cuotas_vencidas: recordatorio.numeroCuota || 1,
+        dias_mora: 0,
+        ultimo_pago: '',
+        monto_minimo: recordatorio.monto || 0
       }
     });
   }
