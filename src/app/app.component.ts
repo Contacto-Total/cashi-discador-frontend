@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
-import { RouterOutlet, RouterModule, Router } from '@angular/router';
+import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from './core/services/auth.service';
@@ -148,6 +149,21 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Auto-colapsar sidebar en pantalla de tipificación
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: NavigationEnd) => {
+      // Colapsar sidebar en collection-management para más espacio
+      if (event.urlAfterRedirects.startsWith('/collection-management')) {
+        this.isSidebarCollapsed = true;
+      }
+    });
+
+    // Verificar ruta inicial
+    if (this.router.url.startsWith('/collection-management')) {
+      this.isSidebarCollapsed = true;
+    }
+
     // Cargar configuraciones de sesión
     this.sessionConfig.cargarConfiguracion().subscribe();
 
