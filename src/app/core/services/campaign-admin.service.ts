@@ -333,10 +333,12 @@ export class CampaignAdminService {
 
   /**
    * Guarda filtros para una campaña (reemplaza los existentes)
+   * @param skipImport Si es true, no re-importa contactos (útil para edición)
    */
-  saveCampaignFilters(campaignId: number, filters: CampaignFilterRange[]): Observable<CampaignFilterRange[]> {
+  saveCampaignFilters(campaignId: number, filters: CampaignFilterRange[], skipImport: boolean = false): Observable<CampaignFilterRange[]> {
+    const params = skipImport ? '?skipImport=true' : '';
     return this.http.post<CampaignFilterRange[]>(
-      `${this.apiUrl}/${campaignId}/filters`,
+      `${this.apiUrl}/${campaignId}/filters${params}`,
       filters,
       { headers: this.getHeaders() }
     );

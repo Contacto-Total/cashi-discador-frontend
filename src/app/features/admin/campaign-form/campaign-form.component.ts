@@ -459,14 +459,17 @@ export class CampaignFormComponent implements OnInit {
 
   private saveFiltersAndNavigate(campaignId: number, exportExcel: boolean = false): void {
     // SIEMPRE llamar a saveCampaignFilters (incluso con array vacío)
-    // Esto dispara el auto-import de contactos en el backend
+    // En modo EDICIÓN (exportExcel=false), pasamos skipImport=true para no re-importar contactos
+    // En modo CREAR (exportExcel=true), pasamos skipImport=false para importar contactos
+    const skipImport = !exportExcel; // Edit mode = skip import, Create mode = do import
+
     console.log('📤 Enviando filtros para campaña', campaignId, ':', this.campaignFilters);
-    console.log('📋 Cantidad de filtros a enviar:', this.campaignFilters.length);
+    console.log('📋 Cantidad de filtros a enviar:', this.campaignFilters.length, '| skipImport:', skipImport);
     this.campaignFilters.forEach((f, i) => {
       console.log(`  Filtro[${i}]:`, f.fieldCode, f.fieldName, 'min:', f.minValue, 'max:', f.maxValue);
     });
 
-    this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters).subscribe({
+    this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
         // Solo exportar Excel para campañas NUEVAS, no en edición
