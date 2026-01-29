@@ -62,10 +62,13 @@ export class RecordatoriosService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Obtiene los recordatorios de promesas de pago para hoy del agente
+   * Obtiene los recordatorios de promesas de pago del agente.
+   * Si se proporciona idSubcartera, usa la configuración de esa subcartera
+   * para determinar el rango de fechas (próximas y vencidas).
    */
-  getMisRecordatoriosHoy(idAgente: number): Observable<RecordatorioPromesa[]> {
-    return this.http.get<RecordatorioPromesa[]>(`${this.baseUrl}/hoy/${idAgente}`);
+  getMisRecordatoriosHoy(idAgente: number, idSubcartera?: number): Observable<RecordatorioPromesa[]> {
+    const params = idSubcartera ? `?idSubcartera=${idSubcartera}` : '';
+    return this.http.get<RecordatorioPromesa[]>(`${this.baseUrl}/hoy/${idAgente}${params}`);
   }
 
   /**
@@ -247,7 +250,7 @@ export class RecordatoriosService {
     idAgente: number,
     idSubcartera?: number
   ): Observable<{ recordatorios: RecordatorioPromesa[]; horarioInfo: VerificacionHorarioResponse | null }> {
-    // Si no hay subcartera, obtener recordatorios sin verificar horario
+    // Si no hay subcartera, obtener recordatorios sin verificar horario (solo hoy)
     if (!idSubcartera) {
       return this.getMisRecordatoriosHoy(idAgente).pipe(
         map(recordatorios => ({
@@ -258,11 +261,12 @@ export class RecordatoriosService {
       );
     }
 
-    // Verificar horario primero, luego obtener recordatorios
+    // Verificar horario primero, luego obtener recordatorios con configuración
     return this.verificarHorario(idSubcartera).pipe(
       switchMap(horarioInfo => {
         if (horarioInfo.permitido) {
-          return this.getMisRecordatoriosHoy(idAgente).pipe(
+          // Pasar idSubcartera para usar la configuración de fechas
+          return this.getMisRecordatoriosHoy(idAgente, idSubcartera).pipe(
             map(recordatorios => ({ recordatorios, horarioInfo })),
             catchError(() => of({ recordatorios: [], horarioInfo }))
           );
@@ -274,7 +278,7 @@ export class RecordatoriosService {
       catchError(err => {
         // Si falla la verificación de horario, asumir que está permitido
         console.warn('Error verificando horario, continuando sin restricción:', err);
-        return this.getMisRecordatoriosHoy(idAgente).pipe(
+        return this.getMisRecordatoriosHoy(idAgente, idSubcartera).pipe(
           map(recordatorios => ({ recordatorios, horarioInfo: null })),
           catchError(() => of({ recordatorios: [], horarioInfo: null }))
         );
