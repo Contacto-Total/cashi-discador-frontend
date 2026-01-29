@@ -90,12 +90,16 @@
               <span class="descripcion">{{ horario.descripcion || 'Sin descripcion' }}</span>
             </td>
             <td class="time-cell">
-              <lucide-angular name="clock" [size]="14"></lucide-angular>
-              {{ formatTimeForDisplay(horario.horaInicio) }}
+              <span>
+                <lucide-angular name="clock" [size]="14"></lucide-angular>
+                {{ formatTimeForDisplay(horario.horaInicio) }}
+              </span>
             </td>
             <td class="time-cell">
-              <lucide-angular name="clock" [size]="14"></lucide-angular>
-              {{ formatTimeForDisplay(horario.horaFin) }}
+              <span>
+                <lucide-angular name="clock" [size]="14"></lucide-angular>
+                {{ formatTimeForDisplay(horario.horaFin) }}
+              </span>
             </td>
             <td>
               <span class="status-badge" [class.active]="horario.activo" [class.inactive]="!horario.activo">
@@ -103,15 +107,17 @@
               </span>
             </td>
             <td class="actions-cell">
-              <button class="btn-icon" (click)="toggleActivo(horario)" [title]="horario.activo ? 'Desactivar' : 'Activar'">
-                <lucide-angular [name]="horario.activo ? 'eye-off' : 'eye'" [size]="16"></lucide-angular>
-              </button>
-              <button class="btn-icon" (click)="openEditModal(horario)" title="Editar">
-                <lucide-angular name="pencil" [size]="16"></lucide-angular>
-              </button>
-              <button class="btn-icon danger" (click)="deleteHorario(horario)" title="Eliminar">
-                <lucide-angular name="trash-2" [size]="16"></lucide-angular>
-              </button>
+              <div>
+                <button class="btn-icon" (click)="toggleActivo(horario)" [title]="horario.activo ? 'Desactivar' : 'Activar'">
+                  <lucide-angular [name]="horario.activo ? 'eye-off' : 'eye'" [size]="16"></lucide-angular>
+                </button>
+                <button class="btn-icon" (click)="openEditModal(horario)" title="Editar">
+                  <lucide-angular name="pencil" [size]="16"></lucide-angular>
+                </button>
+                <button class="btn-icon danger" (click)="deleteHorario(horario)" title="Eliminar">
+                  <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

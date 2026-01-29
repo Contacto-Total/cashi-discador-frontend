@@ -201,8 +201,8 @@
   font-weight: 500;
 }
 
-.time-cell {
-  display: flex;
+.time-cell span {
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   font-family: 'Roboto Mono', monospace;
@@ -230,8 +230,8 @@
   color: #6b7280;
 }
 
-.actions-cell {
-  display: flex;
+.actions-cell > div {
+  display: inline-flex;
   gap: 0.25rem;
 }
 
