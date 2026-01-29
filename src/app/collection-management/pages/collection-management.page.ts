@@ -2220,45 +2220,48 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   /**
    * Carga los datos del cliente desde un recordatorio en curso
-   * Busca por documento en la subcartera del recordatorio
+   * Busca por documento usando el endpoint global
    */
   private loadCustomerFromRecordatorio(recordatorio: any) {
     console.log('🔍 [RECORDATORIO] Cargando cliente desde recordatorio:', recordatorio);
 
-    // Si tenemos idSubcartera, obtener configuración de la subcartera
-    if (recordatorio.idSubcartera) {
-      // Buscar cliente por documento en la subcartera específica
-      this.http.get<any>(`${environment.apiUrl}/client-search/find-by-documento`, {
-        params: {
-          subPortfolioId: recordatorio.idSubcartera.toString(),
-          documento: recordatorio.documentoCliente
-        }
-      }).subscribe({
-        next: (clientData) => {
-          if (clientData) {
-            console.log('✅ [RECORDATORIO] Cliente encontrado:', clientData);
-            // Establecer contexto de subcartera
+    // Buscar cliente por documento usando endpoint global
+    this.http.get<any>(`${environment.apiUrl}/client-search/global`, {
+      params: {
+        documento: recordatorio.documentoCliente
+      }
+    }).subscribe({
+      next: (clientData) => {
+        if (clientData) {
+          console.log('✅ [RECORDATORIO] Cliente encontrado:', clientData);
+          // Establecer contexto de subcartera desde la respuesta
+          if (clientData.subPortfolioId) {
+            this.selectedSubPortfolioId = clientData.subPortfolioId;
+          } else if (recordatorio.idSubcartera) {
             this.selectedSubPortfolioId = recordatorio.idSubcartera;
-            this.reloadTypifications();
-            this.loadCustomerOutputConfig();
-            this.loadFirstInstallmentConfig();
-            // Cargar datos del cliente
-            this.loadCustomerFromDynamicTable(clientData);
-          } else {
-            console.warn('⚠️ [RECORDATORIO] Cliente no encontrado, usando datos básicos');
-            this.loadCustomerBasicFromRecordatorio(recordatorio);
           }
-        },
-        error: (error) => {
-          console.error('❌ [RECORDATORIO] Error buscando cliente:', error);
-          // Fallback: cargar datos básicos del recordatorio
+          if (clientData.portfolioId) {
+            this.selectedPortfolioId = clientData.portfolioId;
+          }
+          if (clientData.tenantId) {
+            this.selectedTenantId = clientData.tenantId;
+          }
+          this.reloadTypifications();
+          this.loadCustomerOutputConfig();
+          this.loadFirstInstallmentConfig();
+          // Cargar datos del cliente
+          this.loadCustomerFromDynamicTable(clientData);
+        } else {
+          console.warn('⚠️ [RECORDATORIO] Cliente no encontrado, usando datos básicos');
           this.loadCustomerBasicFromRecordatorio(recordatorio);
         }
-      });
-    } else {
-      // Sin idSubcartera, cargar datos básicos
-      this.loadCustomerBasicFromRecordatorio(recordatorio);
-    }
+      },
+      error: (error) => {
+        console.error('❌ [RECORDATORIO] Error buscando cliente:', error);
+        // Fallback: cargar datos básicos del recordatorio
+        this.loadCustomerBasicFromRecordatorio(recordatorio);
+      }
+    });
   }
 
   /**
