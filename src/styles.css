@@ -2098,9 +2098,9 @@ body.light-theme .bg-gradient-to-br tbody tr:hover {
   background-color: #f5f3f0 !important;
 }
 
-/* Cards and panels */
-body.light-theme .bg-gradient-to-br .rounded-lg,
-body.light-theme .bg-gradient-to-br .rounded-xl {
+/* Cards and panels - excluye botones para preservar sus colores (bg-red-500, bg-green-500, etc.) */
+body.light-theme .bg-gradient-to-br .rounded-lg:not(button),
+body.light-theme .bg-gradient-to-br .rounded-xl:not(button) {
   background-color: #fefdfb !important;
 }
 
