@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Router, NavigationStart } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -26,6 +26,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   private statusSubscription?: Subscription;
+  private routerSubscription?: Subscription;
+  private userId: number | null = null;
 
   // Estados disponibles
   AgentState = AgentState;
@@ -45,6 +47,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.userId = user.id;
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
     this.loadAgentStatus(user.id);
 
@@ -52,11 +55,49 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription = this.agentStatusService
       .startStatusPolling(user.id)
       .subscribe();
+
+    // Escuchar navegación para desconectar al salir de esta pantalla
+    this.routerSubscription = this.router.events.pipe(
+      filter(event => event instanceof NavigationStart)
+    ).subscribe((event: any) => {
+      const targetUrl = event.url;
+      // Si NO va a collection-management (tipificación), desconectar
+      // Permitir también /login para logout normal
+      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/login')) {
+        this.setDesconectado();
+      }
+    });
   }
 
   ngOnDestroy(): void {
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
+    }
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+  }
+
+  /**
+   * Marca al agente como DESCONECTADO cuando sale de esta pantalla
+   * (excepto si va a tipificación)
+   */
+  private setDesconectado(): void {
+    if (!this.userId) return;
+
+    // Solo desconectar si está en un estado que permite recibir llamadas
+    const currentState = this.currentStatus?.estadoActual;
+    if (currentState === AgentState.DISPONIBLE ||
+        currentState === AgentState.EN_REUNION ||
+        currentState === AgentState.REFRIGERIO ||
+        currentState === AgentState.SSHH) {
+      console.log('[AgentDashboard] Saliendo de pantalla de agente - marcando como DESCONECTADO');
+      this.agentStatusService.changeStatus(this.userId, {
+        estado: AgentState.DESCONECTADO,
+        notas: 'Salió de la pantalla de agente'
+      }).subscribe({
+        error: (err) => console.error('Error al desconectar agente:', err)
+      });
     }
   }
 
@@ -76,11 +117,29 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           sessionId: response.sessionId
         };
         this.loading = false;
+
+        // Si está DESCONECTADO, cambiar a DISPONIBLE automáticamente
+        if (response.estadoActual === 'DESCONECTADO') {
+          console.log('[AgentDashboard] Agente DESCONECTADO - activando como DISPONIBLE');
+          this.agentStatusService.changeStatus(this.userId!, {
+            estado: AgentState.DISPONIBLE,
+            notas: 'Entró a la pantalla de agente'
+          }).subscribe();
+        }
       },
       error: (err) => {
         console.error('Error loading agent status:', err);
         this.error = 'Error al cargar el estado del agente';
         this.loading = false;
+
+        // Si no existe estado (agente nuevo o desconectado), crear como DISPONIBLE
+        if (err.status === 404 && this.userId) {
+          console.log('[AgentDashboard] Sin estado previo - creando como DISPONIBLE');
+          this.agentStatusService.changeStatus(this.userId, {
+            estado: AgentState.DISPONIBLE,
+            notas: 'Entró a la pantalla de agente (nuevo)'
+          }).subscribe();
+        }
       }
     });
 
@@ -141,7 +200,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       [AgentState.SSHH]: '#9c27b0',
       [AgentState.EN_LLAMADA]: '#f44336',
       [AgentState.TIPIFICANDO]: '#ff5722',
-      [AgentState.EN_MANUAL]: '#607d8b'
+      [AgentState.EN_MANUAL]: '#607d8b',
+      [AgentState.DESCONECTADO]: '#9e9e9e'
     };
     return colors[state] || '#757575';
   }

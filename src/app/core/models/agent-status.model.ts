@@ -22,7 +22,8 @@ export enum AgentState {
   SSHH = 'SSHH',
   EN_LLAMADA = 'EN_LLAMADA',
   TIPIFICANDO = 'TIPIFICANDO',
-  EN_MANUAL = 'EN_MANUAL'
+  EN_MANUAL = 'EN_MANUAL',
+  DESCONECTADO = 'DESCONECTADO'
 }
 
 export interface AgentStatusResponse {
@@ -60,7 +61,8 @@ export const AGENT_STATE_LABELS: Record<AgentState, string> = {
   [AgentState.SSHH]: 'Baño',
   [AgentState.EN_LLAMADA]: 'En Llamada',
   [AgentState.TIPIFICANDO]: 'Tipificando',
-  [AgentState.EN_MANUAL]: 'Modo Manual'
+  [AgentState.EN_MANUAL]: 'Modo Manual',
+  [AgentState.DESCONECTADO]: 'Desconectado'
 };
 
 // Estados que el agente puede cambiar manualmente
