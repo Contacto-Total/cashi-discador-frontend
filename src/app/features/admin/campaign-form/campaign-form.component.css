@@ -1209,3 +1209,57 @@
     justify-content: center;
   }
 }
+
+/* ============================================
+   ORDENAMIENTO DE CONTACTOS
+   ============================================ */
+
+.section-description {
+  display: block;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.ordenamiento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ordenamiento-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  color: #93c5fd;
+  font-size: 0.85rem;
+}
+
+.ordenamiento-preview lucide-angular {
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .ordenamiento-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Light theme para ordenamiento */
+:host-context(body.light-theme) .section-description {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .ordenamiento-preview {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.15);
+  color: #2563eb;
+}

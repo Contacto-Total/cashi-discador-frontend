@@ -28,6 +28,10 @@ export interface Campaign {
   // Tipo de filtro de estado para rangos por tipo de contacto
   tipoFiltroEstado?: 'ULTIMO_ESTADO' | 'MEJOR_ESTADO_MES' | 'MEJOR_ESTADO_HISTORICO';
 
+  // Ordenamiento de contactos al importar
+  ordenarPorCampo?: string;  // Campo por el cual ordenar (ej: "monto_capital")
+  ordenarDireccion?: 'DESC' | 'ASC'; // DESC = mayor a menor, ASC = menor a mayor
+
   // Estadísticas (solo para lectura)
   totalContacts?: number;
   pendingContacts?: number;

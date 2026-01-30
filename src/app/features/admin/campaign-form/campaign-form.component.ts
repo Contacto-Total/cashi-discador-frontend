@@ -33,7 +33,9 @@ export class CampaignFormComponent implements OnInit {
     tenantId: undefined,
     portfolioId: undefined,
     subPortfolioId: undefined,
-    tipoFiltroEstado: 'ULTIMO_ESTADO'
+    tipoFiltroEstado: 'ULTIMO_ESTADO',
+    ordenarPorCampo: undefined,
+    ordenarDireccion: 'DESC'
   };
 
   isEditMode: boolean = false;
@@ -248,6 +250,25 @@ export class CampaignFormComponent implements OnInit {
   getFieldNameByCode(fieldCode: string): string {
     const field = this.filterableFields.find(f => f.fieldCode === fieldCode);
     return field?.fieldName || fieldCode;
+  }
+
+  /**
+   * Obtiene los campos únicos que tienen filtros de rango configurados
+   * Para usarlos en el selector de ordenamiento
+   */
+  getCamposConFiltros(): { fieldCode: string, fieldName: string }[] {
+    const camposUnicos = new Map<string, string>();
+    this.campaignFilters
+      .filter(f => f.fieldCode && f.fieldCode !== '')
+      .forEach(f => {
+        if (!camposUnicos.has(f.fieldCode)) {
+          camposUnicos.set(f.fieldCode, f.fieldName || f.fieldCode);
+        }
+      });
+    return Array.from(camposUnicos.entries()).map(([fieldCode, fieldName]) => ({
+      fieldCode,
+      fieldName
+    }));
   }
 
   loadCampaign(id: number): void {

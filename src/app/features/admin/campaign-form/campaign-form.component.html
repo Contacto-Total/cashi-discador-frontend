@@ -372,6 +372,56 @@
       </ng-template>
     </div>
 
+    <!-- SECCIÓN: Ordenamiento de Contactos -->
+    <div class="form-section full-width" *ngIf="getCamposConFiltros().length > 0">
+      <h2>
+        <lucide-angular name="arrow-up-down" [size]="20"></lucide-angular>
+        Ordenamiento de Contactos
+      </h2>
+      <p class="section-description">
+        Define el orden en que se importarán y llamarán los contactos. Los contactos se ordenarán según el campo seleccionado.
+      </p>
+
+      <div class="ordenamiento-grid">
+        <div class="form-group">
+          <label for="ordenarPorCampo">Ordenar por Campo</label>
+          <select
+            id="ordenarPorCampo"
+            [(ngModel)]="campaign.ordenarPorCampo"
+            name="ordenarPorCampo"
+            class="form-select">
+            <option [ngValue]="undefined">Sin ordenamiento específico</option>
+            <option *ngFor="let campo of getCamposConFiltros()" [ngValue]="campo.fieldCode">
+              {{ campo.fieldName }}
+            </option>
+          </select>
+          <small class="help-text">Solo aparecen los campos que tienen filtros de rango configurados</small>
+        </div>
+
+        <div class="form-group">
+          <label for="ordenarDireccion">Dirección</label>
+          <select
+            id="ordenarDireccion"
+            [(ngModel)]="campaign.ordenarDireccion"
+            name="ordenarDireccion"
+            class="form-select"
+            [disabled]="!campaign.ordenarPorCampo">
+            <option value="DESC">Mayor a menor (primero los más altos)</option>
+            <option value="ASC">Menor a mayor (primero los más bajos)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ordenamiento-preview" *ngIf="campaign.ordenarPorCampo">
+        <lucide-angular name="info" [size]="16"></lucide-angular>
+        <span>
+          Los contactos se ordenarán por <strong>{{ getFieldNameByCode(campaign.ordenarPorCampo) }}</strong>
+          de <strong>{{ campaign.ordenarDireccion === 'DESC' ? 'mayor a menor' : 'menor a mayor' }}</strong>.
+          Se llamará primero a los clientes con valores {{ campaign.ordenarDireccion === 'DESC' ? 'más altos' : 'más bajos' }}.
+        </span>
+      </div>
+    </div>
+
     <!-- Botones de Acción -->
     <div class="form-actions">
       <button type="button" class="btn-cancel" (click)="onCancel()">
