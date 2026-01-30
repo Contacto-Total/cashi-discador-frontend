@@ -671,13 +671,14 @@ export class PaymentScheduleComponent implements OnInit {
         dueDate = new Date(startDate);
         dueDate.setDate(dueDate.getDate() + (30 * i));
       } else {
-        // SIN_RESTRICCION: comportamiento original
+        // SIN_RESTRICCION: cuota 1 = hoy, siguientes cada 30 días
         dueDate = new Date(today);
-        dueDate.setDate(dueDate.getDate() + (30 * (i + 1)));
+        dueDate.setDate(dueDate.getDate() + (30 * i));
       }
 
+      // Última cuota incluye el remainder, con redondeo para evitar decimales flotantes
       const installmentAmount = i === numInstallments - 1
-        ? amountPerInstallment + remainder
+        ? Math.round((amountPerInstallment + remainder) * 100) / 100
         : amountPerInstallment;
 
       newInstallments.push({
