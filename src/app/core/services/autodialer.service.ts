@@ -122,21 +122,24 @@ export class AutoDialerService {
 
   /**
    * Obtiene lista de agentes para monitoreo en tiempo real
+   * @param campaignId ID de campaña para filtrar agentes por subcartera (opcional)
    */
-  getAgentesMonitoreo(): Observable<AgenteMonitoreo[]> {
-    return this.http.get<AgenteMonitoreo[]>(
-      `${this.apiUrl}/agentes-monitoreo`,
-      { headers: this.getHeaders() }
-    );
+  getAgentesMonitoreo(campaignId?: number): Observable<AgenteMonitoreo[]> {
+    let url = `${this.apiUrl}/agentes-monitoreo`;
+    if (campaignId) {
+      url += `?campaignId=${campaignId}`;
+    }
+    return this.http.get<AgenteMonitoreo[]>(url, { headers: this.getHeaders() });
   }
 
   /**
    * Inicia polling de agentes cada 3 segundos
+   * @param campaignId ID de campaña para filtrar agentes por subcartera (opcional)
    */
-  startAgentesPolling(): Observable<AgenteMonitoreo[]> {
+  startAgentesPolling(campaignId?: number): Observable<AgenteMonitoreo[]> {
     return interval(3000).pipe(
       startWith(0),
-      switchMap(() => this.getAgentesMonitoreo())
+      switchMap(() => this.getAgentesMonitoreo(campaignId))
     );
   }
 

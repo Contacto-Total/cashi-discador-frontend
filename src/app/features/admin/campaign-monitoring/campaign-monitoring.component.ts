@@ -225,6 +225,12 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     }
     this.startAutoDialerPolling();
 
+    // Restart agentes polling with new campaign filter
+    if (this.agentesSubscription) {
+      this.agentesSubscription.unsubscribe();
+    }
+    this.startAgentesPolling();
+
     // Restart llamadas polling with new campaign filter
     if (this.llamadasSubscription) {
       this.llamadasSubscription.unsubscribe();
@@ -250,9 +256,11 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   /**
    * Inicia polling de agentes cada 3 segundos
+   * Filtra por campaña si hay una seleccionada
    */
   startAgentesPolling(): void {
-    this.agentesSubscription = this.autoDialerService.startAgentesPolling().subscribe({
+    const campaignId = this.selectedCampaignId || undefined;
+    this.agentesSubscription = this.autoDialerService.startAgentesPolling(campaignId).subscribe({
       next: (agentes) => {
         this.agentesMonitoreo = agentes;
 
