@@ -4042,12 +4042,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const currentLength = this.scheduleForm.cuotas.length;
 
     if (numInstallments > currentLength) {
-      // Add missing installments
+      // Add missing installments with default dates
       for (let i = currentLength + 1; i <= numInstallments; i++) {
         this.scheduleForm.cuotas.push({
           numero: i,
           monto: '',
-          fechaVencimiento: ''
+          fechaVencimiento: this.calcularFechaCuota(i)
         });
       }
     } else if (numInstallments < currentLength) {
@@ -4067,13 +4067,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Generar array de cuotas vacías
+    // Generar array de cuotas con fechas por defecto
     this.scheduleForm.cuotas = [];
     for (let i = 1; i <= numCuotas; i++) {
       this.scheduleForm.cuotas.push({
         numero: i,
         monto: '',
-        fechaVencimiento: ''
+        fechaVencimiento: this.calcularFechaCuota(i)
       });
     }
   }
@@ -4083,7 +4083,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.scheduleForm.cuotas.push({
       numero: nextNumber,
       monto: '',
-      fechaVencimiento: ''
+      fechaVencimiento: this.calcularFechaCuota(nextNumber)
     });
     // Actualizar el número de cuotas
     this.scheduleForm.numeroCuotas = nextNumber.toString();
@@ -4107,6 +4107,39 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Calcula la fecha de una cuota basándose en la periodicidad seleccionada
+   * Cuota 1 = hoy, Cuota 2 = hoy + intervalo, etc.
+   */
+  calcularFechaCuota(numeroCuota: number): string {
+    const today = new Date();
+    const diasIntervalo = this.getDiasPeriodicidad();
+    const diasASumar = (numeroCuota - 1) * diasIntervalo;
+    const targetDate = new Date(today.getTime() + diasASumar * 24 * 60 * 60 * 1000);
+
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Obtiene los días de intervalo según la periodicidad seleccionada
+   */
+  getDiasPeriodicidad(): number {
+    const periodicidad = this.scheduleForm.periodicidad?.toLowerCase() || '';
+
+    if (periodicidad.includes('semanal')) return 7;
+    if (periodicidad.includes('quincenal')) return 15;
+    if (periodicidad.includes('mensual')) return 30;
+    if (periodicidad.includes('45')) return 45;
+    if (periodicidad.includes('bimestral')) return 60;
+    if (periodicidad.includes('trimestral')) return 90;
+
+    // Por defecto: semanal (7 días)
+    return 7;
   }
 
   loadMontoNegociadoFromOutput(fieldId: string) {
