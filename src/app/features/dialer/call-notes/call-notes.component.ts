@@ -419,8 +419,17 @@ export class CallNotesComponent implements OnInit {
   }
 
   isPaymentScheduleField(field: AdditionalFieldV2): boolean {
-    const tipo = String(field.tipoCampo).toLowerCase();
-    return tipo === 'payment_schedule';
+    const tipo = String(field.tipoCampo).toUpperCase();
+    return tipo === 'PAYMENT_SCHEDULE';
+  }
+
+  /**
+   * Compara el tipo de campo de forma case-insensitive
+   * El backend envía strings que pueden variar en mayúsculas/minúsculas
+   */
+  isFieldType(field: AdditionalFieldV2, type: FieldTypeV2): boolean {
+    const fieldType = String(field.tipoCampo).toUpperCase();
+    return fieldType === type;
   }
 
   onSubmit(): void {

@@ -103,7 +103,7 @@
               <h4 class="subsection-title">Información Adicional</h4>
 
               @for (field of additionalFieldsV2; track field.id) {
-                @if (field.tipoCampo === FieldTypeV2.CHIP_SELECT && field.fuenteValor === FieldDataSourceV2.DYNAMIC_TABLE) {
+                @if (isFieldType(field, FieldTypeV2.CHIP_SELECT) && field.fuenteValor === FieldDataSourceV2.DYNAMIC_TABLE) {
                   <!-- Campo con chip-select dinámico -->
                   <div class="chip-select-field">
                     <app-chip-select
@@ -114,7 +114,7 @@
                       (valueChange)="onChipValueChange(field.id, $event)"
                     />
                   </div>
-                } @else if (field.tipoCampo === FieldTypeV2.DATE) {
+                } @else if (isFieldType(field, FieldTypeV2.DATE)) {
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
                     <input
@@ -128,7 +128,7 @@
                       <mat-error>Este campo es requerido</mat-error>
                     }
                   </mat-form-field>
-                } @else if (field.tipoCampo === FieldTypeV2.NUMBER) {
+                } @else if (isFieldType(field, FieldTypeV2.NUMBER)) {
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
                     <input
@@ -148,7 +148,7 @@
                       <mat-error>Valor máximo: {{ field.valorMaximo }}</mat-error>
                     }
                   </mat-form-field>
-                } @else if (field.tipoCampo === FieldTypeV2.TEXTAREA) {
+                } @else if (isFieldType(field, FieldTypeV2.TEXTAREA)) {
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
                     <textarea
@@ -164,7 +164,7 @@
                       <mat-hint align="end">{{ notesForm.get('campo_' + field.id)?.value?.length || 0 }} / {{ field.longitudMaxima }}</mat-hint>
                     }
                   </mat-form-field>
-                } @else if (field.tipoCampo === FieldTypeV2.TEXT) {
+                } @else if (isFieldType(field, FieldTypeV2.TEXT)) {
                   <mat-form-field appearance="outline" class="full-width">
                     <mat-label>{{ field.labelCampo }} @if (field.esRequerido) {*}</mat-label>
                     <input
