@@ -102,6 +102,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/reports/excepciones-report/excepciones-report.component').then(m => m.ExcepcionesReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'reports/gestiones',
+    loadComponent: () => import('./features/reports/gestiones-report/gestiones-report.component').then(m => m.GestionesReportComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // SMS
