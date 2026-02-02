@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Router, NavigationStart } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -26,6 +26,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   private statusSubscription?: Subscription;
+  private routerSubscription?: Subscription;
   private userId: number | null = null;
   private previousState: AgentState | null = null;
   private audioContext: AudioContext | null = null;
@@ -56,11 +57,49 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription = this.agentStatusService
       .startStatusPolling(user.id)
       .subscribe();
+
+    // Escuchar navegación para desconectar al salir de esta pantalla
+    this.routerSubscription = this.router.events.pipe(
+      filter(event => event instanceof NavigationStart)
+    ).subscribe((event: any) => {
+      const targetUrl = event.url;
+      // Si NO va a collection-management (tipificación), desconectar
+      // Permitir también /login para logout normal
+      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/login')) {
+        this.setDesconectado();
+      }
+    });
   }
 
   ngOnDestroy(): void {
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
+    }
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+  }
+
+  /**
+   * Marca al agente como DESCONECTADO cuando sale de esta pantalla
+   * (excepto si va a tipificación)
+   */
+  private setDesconectado(): void {
+    if (!this.userId) return;
+
+    // Solo desconectar si está en un estado que permite recibir llamadas
+    const currentState = this.currentStatus?.estadoActual;
+    if (currentState === AgentState.DISPONIBLE ||
+        currentState === AgentState.EN_REUNION ||
+        currentState === AgentState.REFRIGERIO ||
+        currentState === AgentState.SSHH) {
+      console.log('[AgentDashboard] Saliendo de pantalla de agente - marcando como DESCONECTADO');
+      this.agentStatusService.changeStatus(this.userId, {
+        estado: AgentState.DESCONECTADO,
+        notas: 'Salió de la pantalla de agente'
+      }).subscribe({
+        error: (err) => console.error('Error al desconectar agente:', err)
+      });
     }
   }
 
