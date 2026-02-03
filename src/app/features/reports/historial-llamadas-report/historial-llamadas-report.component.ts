@@ -210,21 +210,49 @@ import {
 
         <!-- Métricas secundarias -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-gray-300 uppercase">Total Transiciones</p>
-            <p class="text-xl font-bold">{{ metricas()!.totalTransiciones }}</p>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <lucide-angular name="repeat" [size]="24" class="text-gray-600 dark:text-gray-400"></lucide-angular>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ metricas()!.totalTransiciones }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Total Transiciones</p>
+              </div>
+            </div>
           </div>
-          <div class="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-orange-100 uppercase">Abandonadas</p>
-            <p class="text-xl font-bold">{{ metricas()!.llamadasAbandonadas }}</p>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <lucide-angular name="phone-off" [size]="24" class="text-orange-600 dark:text-orange-400"></lucide-angular>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-orange-600 dark:text-orange-400">{{ metricas()!.llamadasAbandonadas }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Abandonadas</p>
+              </div>
+            </div>
           </div>
-          <div class="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-indigo-100 uppercase">Tiempo Prom. en Cola</p>
-            <p class="text-xl font-bold">{{ formatMillis(metricas()!.tiempoPromedioEnColaMs) }}</p>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                <lucide-angular name="timer" [size]="24" class="text-indigo-600 dark:text-indigo-400"></lucide-angular>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ formatMillis(metricas()!.tiempoPromedioEnColaMs) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Tiempo Prom. en Cola</p>
+              </div>
+            </div>
           </div>
-          <div class="bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-cyan-100 uppercase">Tiempo Prom. Marcando</p>
-            <p class="text-xl font-bold">{{ formatMillis(metricas()!.tiempoPromedioMarcandoMs) }}</p>
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                <lucide-angular name="phone-outgoing" [size]="24" class="text-cyan-600 dark:text-cyan-400"></lucide-angular>
+              </div>
+              <div>
+                <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ formatMillis(metricas()!.tiempoPromedioMarcandoMs) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Tiempo Prom. Marcando</p>
+              </div>
+            </div>
           </div>
         </div>
       }
