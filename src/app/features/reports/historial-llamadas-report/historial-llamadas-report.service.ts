@@ -10,6 +10,7 @@ export interface HistorialLlamadaDTO {
   anexoAgente: string;
   nombreAgente: string;
   fechaInicioLlamada: string;
+  fechaRinging: string;
   fechaFinLlamada: string;
   duracionTotalSegundos: number;
   resultadoFinal: string;
@@ -30,6 +31,11 @@ export interface HistorialLlamadaDTO {
   nombreCartera: string;
   idSubcartera: number;
   nombreSubcartera: string;
+  // Tiempos desglosados
+  tiempoSenalizacionMs: number;
+  tiempoTimbradoMs: number;
+  tiempoSenalizacionFormato: string;
+  tiempoTimbradoFormato: string;
 }
 
 export interface ResumenMetricas {

@@ -273,21 +273,22 @@ import {
                 <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Duración</th>
                 <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Resultado</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Transición</th>
-                <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tiempo Estado</th>
+                <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" title="Tiempo de señalización (red)">T. Señal</th>
+                <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase" title="Tiempo real de timbrado">T. Timbrado</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Detalle</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="12" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="13" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="loader-2" [size]="32" class="animate-spin mx-auto mb-2"></lucide-angular>
                     <p>Cargando historial...</p>
                   </td>
                 </tr>
               } @else if (data().length === 0) {
                 <tr>
-                  <td colspan="12" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="13" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="phone-off" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
                     <p>No hay registros de llamadas</p>
                     <p class="text-xs mt-1">Aplica los filtros y presiona "Buscar"</p>
@@ -340,8 +341,19 @@ import {
                         <span class="text-gray-400">-</span>
                       }
                     </td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ item.duracionEstadoAnteriorFormato || '-' }}
+                    <td class="px-3 py-2 text-center text-xs" [title]="'Tiempo de red antes de timbrar'">
+                      @if (item.tiempoSenalizacionFormato && item.tiempoSenalizacionFormato !== '-') {
+                        <span class="text-orange-600 dark:text-orange-400">{{ item.tiempoSenalizacionFormato }}</span>
+                      } @else {
+                        <span class="text-gray-400">-</span>
+                      }
+                    </td>
+                    <td class="px-3 py-2 text-center text-xs" [title]="'Tiempo real que timbró'">
+                      @if (item.tiempoTimbradoFormato && item.tiempoTimbradoFormato !== '-') {
+                        <span class="text-green-600 dark:text-green-400">{{ item.tiempoTimbradoFormato }}</span>
+                      } @else {
+                        <span class="text-gray-400">-</span>
+                      }
                     </td>
                     <td class="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs">
                       {{ item.detalle | slice:0:30 }}{{ item.detalle && item.detalle.length > 30 ? '...' : '' }}
