@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -294,7 +294,7 @@ import {
                   </td>
                 </tr>
               } @else {
-                @for (item of data(); track item.idHistorial || item.idLlamada) {
+                @for (item of paginatedData(); track item.idHistorial || item.idLlamada) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-medium">{{ item.idLlamada }}</td>
                     <td class="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs font-mono truncate max-w-[120px]" [title]="item.uuidLlamada || ''">
@@ -353,12 +353,70 @@ import {
           </table>
         </div>
 
-        <!-- Footer -->
+        <!-- Footer con paginación -->
         @if (data().length > 0) {
-          <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+          <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex flex-col md:flex-row items-center justify-between gap-3">
             <p class="text-sm text-gray-600 dark:text-gray-400">
-              Mostrando <span class="font-semibold">{{ data().length }}</span> registros
+              Mostrando <span class="font-semibold">{{ (currentPage() - 1) * pageSize() + 1 }}</span> -
+              <span class="font-semibold">{{ Math.min(currentPage() * pageSize(), data().length) }}</span>
+              de <span class="font-semibold">{{ data().length }}</span> registros
             </p>
+            <div class="flex items-center gap-2">
+              <button
+                (click)="goToPage(1)"
+                [disabled]="currentPage() === 1"
+                class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800
+                       text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Primera página"
+              >
+                <lucide-angular name="chevrons-left" [size]="16"></lucide-angular>
+              </button>
+              <button
+                (click)="goToPage(currentPage() - 1)"
+                [disabled]="currentPage() === 1"
+                class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800
+                       text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Página anterior"
+              >
+                <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+              </button>
+              <span class="px-3 py-1 text-sm text-gray-700 dark:text-gray-300">
+                Página <span class="font-semibold">{{ currentPage() }}</span> de <span class="font-semibold">{{ totalPages() }}</span>
+              </span>
+              <button
+                (click)="goToPage(currentPage() + 1)"
+                [disabled]="currentPage() >= totalPages()"
+                class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800
+                       text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Página siguiente"
+              >
+                <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+              </button>
+              <button
+                (click)="goToPage(totalPages())"
+                [disabled]="currentPage() >= totalPages()"
+                class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800
+                       text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Última página"
+              >
+                <lucide-angular name="chevrons-right" [size]="16"></lucide-angular>
+              </button>
+              <select
+                [ngModel]="pageSize()"
+                (ngModelChange)="changePageSize($event)"
+                class="ml-2 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-lg
+                       bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm"
+              >
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+            </div>
           </div>
         }
       </div>
@@ -371,6 +429,18 @@ export class HistorialLlamadasReportComponent implements OnInit {
   data = signal<HistorialLlamadaDTO[]>([]);
   metricas = signal<ResumenMetricas | null>(null);
 
+  // Paginación
+  currentPage = signal(1);
+  pageSize = signal(10);
+
+  totalPages = computed(() => Math.ceil(this.data().length / this.pageSize()) || 1);
+
+  paginatedData = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize();
+    const end = start + this.pageSize();
+    return this.data().slice(start, end);
+  });
+
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
@@ -378,6 +448,8 @@ export class HistorialLlamadasReportComponent implements OnInit {
     idCartera: null as number | null,
     estadoFinal: ''
   };
+
+  Math = Math; // Para usar en el template
 
   constructor(private reporteService: HistorialLlamadasReportService) {}
 
@@ -391,6 +463,7 @@ export class HistorialLlamadasReportComponent implements OnInit {
 
   buscar(): void {
     this.loading.set(true);
+    this.currentPage.set(1); // Resetear a primera página
 
     this.reporteService.getReporte(
       this.filtros.fechaDesde || undefined,
@@ -485,5 +558,16 @@ export class HistorialLlamadasReportComponent implements OnInit {
       case 'BUSY': return 'Ocupado';
       default: return resultado || '-';
     }
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
+    }
+  }
+
+  changePageSize(size: number): void {
+    this.pageSize.set(size);
+    this.currentPage.set(1); // Volver a primera página al cambiar tamaño
   }
 }
