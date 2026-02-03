@@ -236,6 +236,7 @@ import {
             <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">ID</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Nombre Audio</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Fecha/Hora</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cliente</th>
@@ -251,14 +252,14 @@ import {
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="12" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="loader-2" [size]="32" class="animate-spin mx-auto mb-2"></lucide-angular>
                     <p>Cargando historial...</p>
                   </td>
                 </tr>
               } @else if (data().length === 0) {
                 <tr>
-                  <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="12" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="phone-off" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
                     <p>No hay registros de llamadas</p>
                     <p class="text-xs mt-1">Aplica los filtros y presiona "Buscar"</p>
@@ -268,6 +269,9 @@ import {
                 @for (item of data(); track item.idHistorial || item.idLlamada) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-medium">{{ item.idLlamada }}</td>
+                    <td class="px-3 py-2 text-gray-500 dark:text-gray-400 text-xs font-mono truncate max-w-[120px]" [title]="item.uuidLlamada || ''">
+                      {{ item.uuidLlamada || '-' }}
+                    </td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">
                       {{ item.fechaInicioLlamada | date:'dd/MM/yy HH:mm' }}
                     </td>
