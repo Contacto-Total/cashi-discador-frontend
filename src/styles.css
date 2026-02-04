@@ -1581,8 +1581,8 @@ body.light-theme .registry-container {
   background: #f5f3f0 !important;
 }
 
-/* All gradients to warm cream gradients */
-body.light-theme *[style*="linear-gradient"] {
+/* All gradients to warm cream gradients - except icons and specific elements */
+body.light-theme *[style*="linear-gradient"]:not(.nav-icon):not(.device-icon-wrapper):not(.audio-header-icon):not(.test-btn-icon):not([class*="icon"]) {
   background: linear-gradient(to bottom right, #f5f3f0, #faf8f5, #f5f3f0) !important;
 }
 
