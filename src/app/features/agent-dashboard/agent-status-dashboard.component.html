@@ -2,7 +2,14 @@
   <!-- Header -->
   <div class="dashboard-header">
     <div class="header-content">
-      <h1>Panel de Asesor</h1>
+      <div class="header-title">
+        <h1>Panel de Asesor</h1>
+        <span class="header-separator">│</span>
+        <div class="campaign-status" [class.discando]="isDiscando" [class.inactivo]="!isDiscando">
+          <span class="status-dot"></span>
+          <span class="status-text">{{ isDiscando ? 'Discando' : 'Sin Campaña' }}</span>
+        </div>
+      </div>
       <div class="agent-info">
         <span class="agent-name">{{ agentName }}</span>
         <button class="logout-btn" (click)="logout()">

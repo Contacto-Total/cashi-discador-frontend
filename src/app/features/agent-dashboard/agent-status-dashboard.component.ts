@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, NavigationStart } from '@angular/router';
-import { Subscription, filter } from 'rxjs';
+import { Subscription, filter, interval } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
+import { CampaignService } from '../../core/services/campaign.service';
 import {
   AgentStatus,
   AgentState,
@@ -25,9 +26,15 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   loading: boolean = false;
   error: string | null = null;
 
+  // Campaign status indicator
+  isDiscando: boolean = false;
+  campaignName: string | null = null;
+
   private statusSubscription?: Subscription;
   private routerSubscription?: Subscription;
+  private campaignStatusSubscription?: Subscription;
   private userId: number | null = null;
+  private subPortfolioId: number | null = null;
   private previousState: AgentState | null = null;
   private audioContext: AudioContext | null = null;
 
@@ -39,6 +46,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   constructor(
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
+    private campaignService: CampaignService,
     private router: Router
   ) {}
 
@@ -50,6 +58,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
 
     this.userId = user.id;
+    this.subPortfolioId = user.subPortfolioId || null;
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
     this.loadAgentStatus(user.id);
 
@@ -57,6 +66,14 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.statusSubscription = this.agentStatusService
       .startStatusPolling(user.id)
       .subscribe();
+
+    // Polling para estado de campaña cada 15 segundos
+    if (this.subPortfolioId) {
+      this.checkCampaignStatus();
+      this.campaignStatusSubscription = interval(15000).subscribe(() => {
+        this.checkCampaignStatus();
+      });
+    }
 
     // Escuchar navegación para desconectar al salir de esta pantalla
     this.routerSubscription = this.router.events.pipe(
@@ -77,6 +94,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
+    }
+    if (this.campaignStatusSubscription) {
+      this.campaignStatusSubscription.unsubscribe();
     }
   }
 
@@ -199,6 +219,24 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
     oscillator.start(ctx.currentTime + delay);
     oscillator.stop(ctx.currentTime + delay + 0.15);
+  }
+
+  /**
+   * Verifica el estado de discado de campañas para la subcartera del agente
+   */
+  private checkCampaignStatus(): void {
+    if (!this.subPortfolioId) return;
+
+    this.campaignService.getDiscandoStatus(this.subPortfolioId).subscribe({
+      next: (response) => {
+        this.isDiscando = response.discando;
+        this.campaignName = response.nombreCampana || null;
+      },
+      error: (err) => {
+        console.error('[AgentDashboard] Error checking campaign status:', err);
+        // En caso de error, no cambiar el estado actual
+      }
+    });
   }
 
   changeStatus(newState: AgentState): void {

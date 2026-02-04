@@ -63,4 +63,15 @@ export class CampaignService {
   getActiveCampaigns(): Observable<Campaign[]> {
     return this.http.get<Campaign[]>(`${this.apiUrl}/active`);
   }
+
+  /**
+   * Verifica si hay una campaña discando para la subcartera del agente
+   * @param subPortfolioId ID de la subcartera
+   * @returns { discando: boolean, nombreCampana?: string, idCampana?: number }
+   */
+  getDiscandoStatus(subPortfolioId: number): Observable<{ discando: boolean; nombreCampana?: string; idCampana?: number }> {
+    return this.http.get<{ discando: boolean; nombreCampana?: string; idCampana?: number }>(
+      `${this.apiUrl}/discando-status/${subPortfolioId}`
+    );
+  }
 }
