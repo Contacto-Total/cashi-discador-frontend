@@ -820,6 +820,16 @@ export class SipService {
       console.log('📴 Call ended');
       // Stop ringtone when call ends
       this.stopRingtone();
+
+      // CRITICAL FIX: Block incoming calls IMMEDIATELY when call ends
+      // This prevents race condition where auto-dialer sends a new call
+      // before Angular subscription processes the ENDED state.
+      // The collection-management page will unblock when tipification is complete.
+      if (this.currentCallState === CallState.ACTIVE) {
+        this.blockIncomingCalls = true;
+        console.log('🚫 [SIP] Auto-blocking incoming calls - call ended, agent entering ACW');
+      }
+
       this.currentCallState = CallState.ENDED;
       this.onCallStatus.emit(this.currentCallState);
 
@@ -835,6 +845,14 @@ export class SipService {
       console.error('❌ Call failed:', data);
       // Stop ringtone when call fails
       this.stopRingtone();
+
+      // CRITICAL FIX: Block incoming calls if the call was active before failing
+      // This handles edge case where call drops during conversation
+      if (this.currentCallState === CallState.ACTIVE) {
+        this.blockIncomingCalls = true;
+        console.log('🚫 [SIP] Auto-blocking incoming calls - active call failed, agent entering ACW');
+      }
+
       this.currentCallState = CallState.ENDED;
       this.onCallStatus.emit(this.currentCallState);
 
