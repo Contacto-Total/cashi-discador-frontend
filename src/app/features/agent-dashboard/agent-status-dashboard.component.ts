@@ -6,6 +6,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CampaignService } from '../../core/services/campaign.service';
+import { SipService } from '../../core/services/sip.service';
 import {
   AgentStatus,
   AgentState,
@@ -47,7 +48,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
     private campaignService: CampaignService,
-    private router: Router
+    private router: Router,
+    private sipService: SipService
   ) {}
 
   ngOnInit(): void {
@@ -148,6 +150,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
             notas: 'Entró a la pantalla de agente'
           }).subscribe();
         }
+
+        // SYNC: Si ya está DISPONIBLE al cargar, asegurar que llamadas estén desbloqueadas
+        if (response.estadoActual === 'DISPONIBLE') {
+          console.log('[AgentDashboard] ✅ Carga inicial con estado DISPONIBLE - desbloqueando llamadas');
+          this.sipService.blockIncomingCallsMode(false);
+        }
       },
       error: (err) => {
         console.error('Error loading agent status:', err);
@@ -174,6 +182,14 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           console.log('[AgentDashboard] 📞 Llamada entrante - reproduciendo alerta');
           this.playCallAlert();
         }
+
+        // SYNC: Si el estado del backend es DISPONIBLE, desbloquear llamadas entrantes
+        // Esto soluciona la desincronización cuando blockIncomingCalls quedó en true
+        if (status.estadoActual === AgentState.DISPONIBLE) {
+          console.log('[AgentDashboard] ✅ Estado DISPONIBLE - desbloqueando llamadas entrantes');
+          this.sipService.blockIncomingCallsMode(false);
+        }
+
         this.previousState = status.estadoActual;
         this.currentStatus = status;
       }
