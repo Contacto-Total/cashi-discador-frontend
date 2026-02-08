@@ -56,7 +56,7 @@ export const routes: Routes = [
   {
     path: 'admin/system-health',
     loadComponent: () => import('./features/admin/system-health/system-health.component').then(m => m.SystemHealthComponent),
-    canActivate: [authGuard, adminGuard]
+    canActivate: [authGuard]
   },
 
   // ========================================
