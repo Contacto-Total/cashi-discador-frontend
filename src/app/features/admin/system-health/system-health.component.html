@@ -1,0 +1,335 @@
+<div class="health-container">
+  <!-- Header -->
+  <div class="health-header">
+    <div class="header-left">
+      <lucide-angular name="activity" [size]="28" class="header-icon"></lucide-angular>
+      <h1>Salud del Sistema</h1>
+    </div>
+    <div class="header-right">
+      @if (lastUpdated) {
+        <span class="last-updated">
+          <span class="pulse-dot"></span>
+          Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}
+        </span>
+      }
+    </div>
+  </div>
+
+  <!-- Loading -->
+  @if (loading && !health) {
+    <div class="loading-state">
+      <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+      <p>Cargando datos del sistema...</p>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error && !health) {
+    <div class="error-state">
+      <lucide-angular name="alert-triangle" [size]="32"></lucide-angular>
+      <p>{{ error }}</p>
+    </div>
+  }
+
+  @if (health) {
+    <!-- Alerts Banner -->
+    @if (health.alerts && health.alerts.length > 0) {
+      <div class="alerts-section">
+        <h3 class="section-title">
+          <lucide-angular name="bell" [size]="18"></lucide-angular>
+          Alertas ({{ health.alerts.length }})
+        </h3>
+        <div class="alerts-list">
+          @for (alert of health.alerts; track alert.message) {
+            <div class="alert-item" [ngClass]="getSeverityClass(alert.severity)">
+              <div class="alert-header">
+                @if (alert.severity === 'CRITICAL') {
+                  <lucide-angular name="x-circle" [size]="16"></lucide-angular>
+                } @else if (alert.severity === 'WARNING') {
+                  <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+                } @else {
+                  <lucide-angular name="info" [size]="16"></lucide-angular>
+                }
+                <span class="alert-badge">{{ alert.severity }}</span>
+                <span class="alert-category">{{ alert.category }}</span>
+                <span class="alert-message">{{ alert.message }}</span>
+              </div>
+              @if (alert.detail) {
+                <div class="alert-detail">{{ alert.detail }}</div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Main Grid -->
+    <div class="health-grid">
+
+      <!-- Database Card -->
+      <div class="health-card">
+        <div class="card-header">
+          <lucide-angular name="database" [size]="20"></lucide-angular>
+          <h2>Base de Datos</h2>
+        </div>
+        <div class="card-body">
+          <!-- Pool Stats -->
+          <div class="stat-group">
+            <h4>Pool HikariCP</h4>
+            <div class="progress-row">
+              <div class="progress-label">
+                <span>Conexiones</span>
+                <span>{{ health.database.pool.activeConnections }} / {{ health.database.pool.maxPoolSize }}</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill"
+                     [ngClass]="getStatusColor(getPoolUsagePercent())"
+                     [style.width]="getBarWidth(getPoolUsagePercent())">
+                </div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Activas</span>
+              <span class="stat-value">{{ health.database.pool.activeConnections }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Idle</span>
+              <span class="stat-value">{{ health.database.pool.idleConnections }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Total</span>
+              <span class="stat-value">{{ health.database.pool.totalConnections }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Pendientes</span>
+              <span class="stat-value" [ngClass]="{'text-critical': health.database.pool.pendingThreads > 0}">
+                {{ health.database.pool.pendingThreads }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Query Stats -->
+          <div class="stat-group">
+            <h4>Queries</h4>
+            <div class="stat-row">
+              <span class="stat-label">Activas</span>
+              <span class="stat-value">{{ health.database.activeQueries }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Lentas (>1s)</span>
+              <span class="stat-value" [ngClass]="{'text-warning': health.database.slowQueries > 0}">
+                {{ health.database.slowQueries }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Active Queries Table -->
+          @if (health.database.queryList && health.database.queryList.length > 0) {
+            <div class="queries-table-wrapper">
+              <h4>Queries Activas</h4>
+              <table class="queries-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Tiempo</th>
+                    <th>Estado</th>
+                    <th>Query</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (q of health.database.queryList; track q.id) {
+                    <tr [ngClass]="{'slow-query': q.timeSeconds > 1}">
+                      <td>{{ q.id }}</td>
+                      <td>{{ q.user }}</td>
+                      <td>{{ q.timeSeconds }}s</td>
+                      <td>{{ q.state || '-' }}</td>
+                      <td class="query-info" [title]="q.info || ''">{{ truncateQuery(q.info) }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Server Card -->
+      <div class="health-card">
+        <div class="card-header">
+          <lucide-angular name="server" [size]="20"></lucide-angular>
+          <h2>Servidor</h2>
+        </div>
+        <div class="card-body">
+          <!-- CPU -->
+          <div class="progress-row">
+            <div class="progress-label">
+              <span>CPU</span>
+              <span>{{ health.server.cpuUsagePercent }}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill"
+                   [ngClass]="getStatusColor(health.server.cpuUsagePercent)"
+                   [style.width]="getBarWidth(health.server.cpuUsagePercent)">
+              </div>
+            </div>
+          </div>
+
+          <!-- RAM -->
+          <div class="progress-row">
+            <div class="progress-label">
+              <span>RAM</span>
+              <span>{{ health.server.memoryUsagePercent }}% ({{ health.server.usedMemoryMb }} / {{ health.server.totalMemoryMb }} MB)</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill"
+                   [ngClass]="getStatusColor(health.server.memoryUsagePercent)"
+                   [style.width]="getBarWidth(health.server.memoryUsagePercent)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Disk -->
+          <div class="progress-row">
+            <div class="progress-label">
+              <span>Disco</span>
+              <span>{{ health.server.diskUsagePercent }}% ({{ health.server.usedDiskGb }} / {{ health.server.totalDiskGb }} GB)</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill"
+                   [ngClass]="getStatusColor(health.server.diskUsagePercent)"
+                   [style.width]="getBarWidth(health.server.diskUsagePercent)">
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-group" style="margin-top: 1rem;">
+            <div class="stat-row">
+              <span class="stat-label">RAM Libre</span>
+              <span class="stat-value">{{ health.server.freeMemoryMb }} MB</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Disco Libre</span>
+              <span class="stat-value">{{ health.server.freeDiskGb }} GB</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FreeSWITCH Card -->
+      <div class="health-card">
+        <div class="card-header">
+          <lucide-angular name="phone" [size]="20"></lucide-angular>
+          <h2>FreeSWITCH</h2>
+          <span class="status-badge" [ngClass]="health.freeswitch.connected ? 'online' : 'offline'">
+            {{ health.freeswitch.connected ? 'Conectado' : 'Desconectado' }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="stat-row">
+            <span class="stat-label">Estado ESL</span>
+            <span class="stat-value">
+              <span class="status-dot" [ngClass]="health.freeswitch.connected ? 'dot-green' : 'dot-red'"></span>
+              {{ health.freeswitch.connected ? 'Online' : 'Offline' }}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Canales Activos</span>
+            <span class="stat-value">{{ health.freeswitch.activeChannels }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Gateway</span>
+            <span class="stat-value">{{ health.freeswitch.gatewayName }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Estado Gateway</span>
+            <span class="stat-value" [ngClass]="{
+              'text-ok': health.freeswitch.gatewayStatus === 'REGISTRADO',
+              'text-warning': health.freeswitch.gatewayStatus === 'NO REGISTRADO' || health.freeswitch.gatewayStatus === 'DESREGISTRADO',
+              'text-critical': health.freeswitch.gatewayStatus === 'FALLIDO' || health.freeswitch.gatewayStatus === 'ERROR'
+            }">
+              {{ health.freeswitch.gatewayStatus }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AMD Card -->
+      <div class="health-card">
+        <div class="card-header">
+          <lucide-angular name="brain" [size]="20"></lucide-angular>
+          <h2>AMD (Deteccion IA)</h2>
+          <span class="status-badge" [ngClass]="health.amd.available ? 'online' : 'offline'">
+            {{ health.amd.available ? 'Disponible' : 'No Disponible' }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="stat-row">
+            <span class="stat-label">Estado</span>
+            <span class="stat-value">
+              <span class="status-dot" [ngClass]="health.amd.available ? 'dot-green' : 'dot-red'"></span>
+              {{ health.amd.available ? 'Online' : 'Offline' }}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Tiempo de Respuesta</span>
+            <span class="stat-value" [ngClass]="{
+              'text-ok': health.amd.responseTimeMs > 0 && health.amd.responseTimeMs < 1000,
+              'text-warning': health.amd.responseTimeMs >= 1000 && health.amd.responseTimeMs < 2000,
+              'text-critical': health.amd.responseTimeMs >= 2000 || !health.amd.available
+            }">
+              {{ health.amd.available ? health.amd.responseTimeMs + 'ms' : 'N/A' }}
+            </span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">URL</span>
+            <span class="stat-value stat-url">{{ health.amd.serviceUrl }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- JVM Card -->
+      <div class="health-card">
+        <div class="card-header">
+          <lucide-angular name="cpu" [size]="20"></lucide-angular>
+          <h2>JVM (Java)</h2>
+        </div>
+        <div class="card-body">
+          <!-- Heap -->
+          <div class="progress-row">
+            <div class="progress-label">
+              <span>Heap</span>
+              <span>{{ health.jvm.heapUsagePercent }}% ({{ health.jvm.heapUsedMb }} / {{ health.jvm.heapMaxMb }} MB)</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill"
+                   [ngClass]="getStatusColor(health.jvm.heapUsagePercent)"
+                   [style.width]="getBarWidth(health.jvm.heapUsagePercent)">
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-group" style="margin-top: 1rem;">
+            <div class="stat-row">
+              <span class="stat-label">Non-Heap</span>
+              <span class="stat-value">{{ health.jvm.nonHeapUsedMb }} MB</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Threads Activos</span>
+              <span class="stat-value">{{ health.jvm.activeThreads }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Threads Daemon</span>
+              <span class="stat-value">{{ health.jvm.daemonThreads }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Uptime</span>
+              <span class="stat-value">{{ formatUptime(health.jvm.uptimeMinutes) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  }
+</div>
