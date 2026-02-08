@@ -130,6 +130,12 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
           <div class="flex-1 overflow-y-auto p-2">
             <div>
               @if (activeTab() === 'cliente') {
+                @if (isLoadingCustomer()) {
+                  <div class="flex flex-col items-center justify-center py-8 gap-3">
+                    <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-xs text-slate-400">Cargando datos del cliente...</span>
+                  </div>
+                } @else {
                 <div class="space-y-2">
                   <!-- Lista vertical de campos (excluyendo contacto que va abajo) -->
                   @for (field of customerOutputFields(); track field.id) {
@@ -202,6 +208,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   </div>
                   }
                 </div>
+                }
               }
 
               @if (activeTab() === 'pautas') {
@@ -1719,6 +1726,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   };
 
   customerData = signal<CustomerData>({} as CustomerData);
+  isLoadingCustomer = signal(false);
 
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
@@ -2151,6 +2159,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * PRIORIDAD: Si hay un recordatorio en curso, usa esos datos primero
    */
   private autoLoadCustomerByPhone(phoneNumber: string) {
+    this.isLoadingCustomer.set(true);
     console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
 
     // PRIORIDAD 1: Verificar si hay un recordatorio en curso con datos del cliente
@@ -2382,6 +2391,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.loadActivePaymentSchedules(customerId);
     }
 
+    this.isLoadingCustomer.set(false);
     console.log('✅ Cliente cargado exitosamente, customerId:', customerId);
   }
 
@@ -2572,6 +2582,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
   loadFirstCustomer() {
+    this.isLoadingCustomer.set(true);
     // Obtener el usuario actual con su extensión SIP
     const currentUser = this.authService.getCurrentUser();
 
@@ -2659,6 +2670,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             }
           });
         } else {
+          this.isLoadingCustomer.set(false);
           console.log('⚠️ No se pudieron cargar los datos del cliente');
         }
       }
@@ -2721,6 +2733,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     });
 
+    this.isLoadingCustomer.set(false);
     console.warn('⚠️ Datos del cliente cargados en modo FALLBACK, customerId:', customerId);
 
     // 📅 Cargar cronogramas de promesas de pago activos (puede no encontrar resultados correctos)
