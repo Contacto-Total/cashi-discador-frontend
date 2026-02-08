@@ -149,6 +149,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   }
 
                   <!-- Información de Contacto -->
+                  @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
                     <!-- Teléfono Principal -->
                     <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
@@ -199,6 +200,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                       </div>
                     }
                   </div>
+                  }
                 </div>
               }
 
@@ -1716,39 +1718,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     cuotas: [] as Array<{numero: number, monto: string, fechaVencimiento: string}>
   };
 
-  customerData = signal<CustomerData>({
-    id_cliente: 'CLI-2025-0087453',
-    nombre_completo: 'GARCÍA RODRIGUEZ, CARMEN ROSA',
-    tipo_documento: 'DNI',
-    numero_documento: '45621378',
-    fecha_nacimiento: '15/03/1985',
-    edad: 40,
-    contacto: {
-      telefono_principal: '+51 987 654 321',
-      telefono_alternativo: '+51 945 123 456',
-      telefono_trabajo: '+51 01 4567890',
-      email: 'carmen.garcia@email.com',
-      direccion: 'Av. Los Álamos 458, Dpto 302, San Borja, Lima',
-    },
-    cuenta: {
-      numero_cuenta: '****5678',
-      tipo_producto: 'Préstamo Personal',
-      fecha_desembolso: '15/01/2024',
-      monto_original: 15000.00,
-      plazo_meses: 24,
-      tasa_interes: 18.5,
-    },
-    deuda: {
-      saldo_capital: 8750.50,
-      intereses_vencidos: 456.78,
-      mora_acumulada: 234.50,
-      gastos_cobranza: 120.00,
-      saldo_total: 9561.78,
-      dias_mora: 45,
-      fecha_ultimo_pago: '15/10/2024',
-      monto_ultimo_pago: 458.33,
-    }
-  });
+  customerData = signal<CustomerData>({} as CustomerData);
 
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
@@ -4501,7 +4471,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!this.callStartTime) return;
 
     const startCallRequest: StartCallRequest = {
-      phoneNumber: this.customerData().contacto.telefono_principal,
+      phoneNumber: this.customerData()?.contacto?.telefono_principal || '',
       startTime: this.callStartTime
     };
 
@@ -4847,7 +4817,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   calculateRemaining(): string {
     if (!this.managementForm.montoPago) return '0.00';
     const monto = parseFloat(this.managementForm.montoPago);
-    const restante = this.customerData().deuda.saldo_total - monto;
+    const restante = (this.customerData()?.deuda?.saldo_total || 0) - monto;
     return restante.toFixed(2);
   }
 
