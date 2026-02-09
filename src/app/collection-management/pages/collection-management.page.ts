@@ -148,6 +148,17 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                     </div>
                   }
 
+                  <!-- Edad del cliente -->
+                  @if (customerAge()) {
+                    <div class="flex items-center gap-2 p-1.5 bg-violet-50 dark:bg-violet-950/30 rounded border border-violet-200 dark:border-violet-800">
+                      <lucide-angular name="cake" [size]="14" class="text-violet-500 dark:text-violet-400"></lucide-angular>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-xs text-violet-500 dark:text-violet-400">Edad</div>
+                        <div class="text-xs font-bold text-violet-700 dark:text-violet-300">{{ customerAge() }} años</div>
+                      </div>
+                    </div>
+                  }
+
                   <!-- Información de Contacto -->
                   @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
@@ -1722,6 +1733,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
 
+  customerAge = computed(() => {
+    const data = this.customerData();
+    if (data?.fecha_nacimiento) {
+      const birth = new Date(data.fecha_nacimiento);
+      if (!isNaN(birth.getTime())) {
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const monthDiff = today.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+          age--;
+        }
+        return age > 0 ? age : null;
+      }
+    }
+    if (data?.edad && data.edad > 0) return data.edad;
+    return null;
+  });
+
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
 
@@ -2348,7 +2377,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       nombre_completo: client.nombre_completo || client.nombre || client.nombres + ' ' + (client.apellidos || ''),
       tipo_documento: 'DNI',
       numero_documento: client.documento,
-      fecha_nacimiento: '',
+      fecha_nacimiento: client.fecha_nacimiento || client.fec_nacimiento || client.fechanacimiento || '',
       edad: 0,
       contacto: {
         telefono_principal: client.telefono_celular || client.telefono_principal || client.telefono || client.telefono_1 || '',
