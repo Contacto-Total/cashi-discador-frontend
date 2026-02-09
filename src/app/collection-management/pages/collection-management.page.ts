@@ -70,33 +70,27 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
       }
 
 
-      <!-- Header Principal - ULTRA COMPACTO -->
-      <div class="bg-gradient-to-r from-gray-700 via-gray-800 to-gray-700 dark:from-slate-950 dark:via-blue-950 dark:to-slate-950 text-white shadow-md relative overflow-hidden">
-        <div class="relative px-4 py-2">
+      <!-- Header Principal -->
+      <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="px-4 py-1.5">
           <div class="flex items-center justify-between">
             <!-- Lado Izquierdo: Título -->
             <div class="flex items-center gap-2">
-              <div class="w-8 h-8 bg-blue-600/30 dark:bg-blue-600/30 rounded-lg flex items-center justify-center">
-                <lucide-angular name="clipboard-list" [size]="18" class="text-white"></lucide-angular>
-              </div>
-              <h1 class="text-base font-bold">Gestión de Cobranza</h1>
+              <h1 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Gestión de Cobranza</h1>
             </div>
 
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
-            <div class="flex items-center gap-4">
-              <div class="text-right">
-                <div class="text-blue-200 dark:text-blue-300 text-xs">Estado</div>
-                <div [class]="'font-semibold text-sm transition-all duration-300 ' + (callActive() ? 'text-green-400 animate-pulse' : isTipifying() ? 'text-yellow-400' : 'text-white/80')">
-                  {{ callActive() ? '● EN LLAMADA' : isTipifying() ? '✎ TIPIFICANDO' : '○ DISPONIBLE' }}
-                </div>
+            <div class="flex items-center gap-3">
+              <div [class]="'px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
+                {{ callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
               </div>
               <!-- Indicador de umbral de tiempo (reloj de alarma) -->
               <app-status-alarm-clock
                 [color]="colorIndicador()"
                 [excedido]="excedeTiempoMaximo()"
-                [size]="22">
+                [size]="18">
               </app-status-alarm-clock>
-              <div [class]="'px-4 py-1.5 rounded-lg font-mono text-lg font-bold transition-all duration-300 ' + (callActive() ? 'bg-gradient-to-r from-red-600 to-red-700 animate-pulse shadow-lg shadow-red-500/30' : 'bg-blue-800/50 dark:bg-gray-900/80')">
+              <div [class]="'px-3 py-0.5 rounded-md font-mono text-sm font-bold transition-all duration-300 ' + (callActive() ? 'bg-red-600 text-white animate-pulse shadow-md shadow-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300')">
                 {{ formatTime(callDuration()) }}
               </div>
             </div>
