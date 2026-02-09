@@ -72,25 +72,25 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
 
       <!-- Header Principal -->
       <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div class="px-4 py-2.5">
+        <div class="px-5 py-3.5">
           <div class="flex items-center justify-between">
             <!-- Lado Izquierdo: Título -->
             <div class="flex items-center gap-2">
-              <h1 class="text-base font-bold text-slate-800 dark:text-white">Gestión de Cobranza</h1>
+              <h1 class="text-lg font-bold text-slate-800 dark:text-white">Gestión de Cobranza</h1>
             </div>
 
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
             <div class="flex items-center gap-4">
-              <div [class]="'px-3 py-1 rounded-full text-xs font-bold transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
+              <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
                 {{ callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
               </div>
               <!-- Indicador de umbral de tiempo (reloj de alarma) -->
               <app-status-alarm-clock
                 [color]="colorIndicador()"
                 [excedido]="excedeTiempoMaximo()"
-                [size]="20">
+                [size]="22">
               </app-status-alarm-clock>
-              <div [class]="'px-4 py-1 rounded-lg font-mono text-base font-bold transition-all duration-300 ' + (callActive() ? 'bg-red-600 text-white animate-pulse shadow-md shadow-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')">
+              <div [class]="'px-4 py-1.5 rounded-lg font-mono text-lg font-bold transition-all duration-300 ' + (callActive() ? 'bg-red-600 text-white animate-pulse shadow-md shadow-red-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')">
                 {{ formatTime(callDuration()) }}
               </div>
             </div>
