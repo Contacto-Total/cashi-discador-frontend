@@ -2881,10 +2881,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Mapear gestiones
         const historial = managements.map(m => {
-          // Formatear solo fecha (sin hora)
-          const fecha = m.managementDate
-            ? this.formatDateOnly(m.managementDate)
-            : '-';
+          // Formatear fecha con hora
+          const fechaOnly = m.managementDate ? this.formatDateOnly(m.managementDate) : '-';
+          const hora = m.managementTime ? m.managementTime.substring(0, 5) : '';
+          const fecha = hora ? `${fechaOnly} ${hora}` : fechaOnly;
 
           // Construir ruta completa de tipificación
           const tipificacionParts = [m.level1Name, m.level2Name, m.level3Name, m.level4Name].filter(Boolean);
@@ -2968,10 +2968,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Mapear al formato del frontend
         const historial = response.content.map((g, index) => {
-          // Formatear fecha
-          const fecha = g.fechaGestion
-            ? this.formatDateOnly(g.fechaGestion)
-            : '-';
+          // Formatear fecha con hora
+          const fechaOnly = g.fechaGestion ? this.formatDateOnly(g.fechaGestion) : '-';
+          const hora = g.horaGestion ? g.horaGestion.substring(0, 5) : '';
+          const fecha = hora ? `${fechaOnly} ${hora}` : fechaOnly;
 
           // Construir tipificación: buscar en catálogo por nombre de resultado
           const tipificacionCompleta = [g.resultado, g.solucion].filter(Boolean).join(' > ') || '-';
