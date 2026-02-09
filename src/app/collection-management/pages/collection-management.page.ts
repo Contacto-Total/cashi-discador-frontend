@@ -110,11 +110,11 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
               <button
                 (click)="activeTab.set(tab.id)"
                 [class]="'flex-1 px-2 py-1.5 text-xs font-semibold transition-all relative ' +
-                  (activeTab() === tab.id ? 'text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/50' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')"
+                  (activeTab() === tab.id ? 'text-emerald-700 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-950/50' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800')"
               >
                 {{ tab.label }}
                 @if (activeTab() === tab.id) {
-                  <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-700 dark:bg-blue-500"></div>
+                  <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-700 dark:bg-emerald-500"></div>
                 }
               </button>
             }
@@ -126,7 +126,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
               @if (activeTab() === 'cliente') {
                 @if (isLoadingCustomer()) {
                   <div class="flex flex-col items-center justify-center py-8 gap-3">
-                    <div class="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
                     <span class="text-xs text-slate-400">Cargando datos del cliente...</span>
                   </div>
                 } @else {
@@ -181,11 +181,11 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                     }
                     <!-- Email -->
                     @if (customerData().contacto.email) {
-                      <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
-                        <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                      <div class="flex items-center gap-2 p-1.5 bg-emerald-50 dark:bg-emerald-950/30 rounded border border-emerald-200 dark:border-emerald-800">
+                        <lucide-angular name="mail" [size]="14" class="text-emerald-500 dark:text-emerald-400"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-xs text-blue-500 dark:text-blue-400">Email</div>
-                          <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                          <div class="text-xs text-emerald-500 dark:text-emerald-400">Email</div>
+                          <div class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 truncate">{{ customerData().contacto.email }}</div>
                         </div>
                       </div>
                     }
@@ -221,13 +221,13 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
         </div>
 
         <!-- Panel Central - ULTRA COMPACTO -->
-        <div class="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-slate-50 to-blue-50 dark:from-slate-900 dark:via-gray-900 dark:to-slate-900 transition-colors duration-300">
+        <div class="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 via-slate-50 to-emerald-50 dark:from-slate-900 dark:via-gray-900 dark:to-slate-900 transition-colors duration-300">
           <div class="p-3 space-y-2">
             <!-- Control de Llamada - COMPACTO -->
             <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2 transition-colors duration-300 ' + (callActive() ? 'border-green-400 dark:border-green-500' : 'border-gray-200 dark:border-gray-700')">
               <div class="flex items-center justify-between">
                 <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs">
-                  <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
+                  <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-emerald-100 dark:bg-emerald-900/30')">
                   </div>
                   Control de Llamada
                 </h3>
@@ -239,7 +239,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                       (callActive()
                         ? (isMuted()
                           ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white'
-                          : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white')
+                          : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white')
                         : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
                   >
                     {{ isMuted() ? '🔇 Activar' : '🔊 Silenciar' }}
@@ -257,7 +257,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
 
             @if (!usesHierarchicalClassifications()) {
             <!-- Resultado de Contacto - COMPACTO -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-300">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-emerald-300 dark:hover:border-emerald-600 transition-colors duration-300">
               <label class="block font-bold text-gray-800 dark:text-white mb-1 text-xs flex items-center gap-1">
                 <div class="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                 Resultado de Contacto *
@@ -266,9 +266,9 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                 <select
                   [(ngModel)]="managementForm.resultadoContacto"
                   (ngModelChange)="onContactResultChange()"
-                  [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-800 hover:border-blue-400 dark:hover:border-blue-600 text-xs ' +
+                  [class]="'w-full p-2 pr-8 border rounded-lg font-semibold text-gray-700 dark:text-white appearance-none cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 hover:border-emerald-400 dark:hover:border-emerald-600 text-xs ' +
                     (errors().resultadoContacto ? 'border-red-500 bg-red-50 dark:bg-red-950/30 dark:border-red-600' : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900') + ' ' +
-                    (managementForm.resultadoContacto ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-400 dark:border-blue-600' : '')"
+                    (managementForm.resultadoContacto ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-600' : '')"
                 >
                   <option value="">-- Seleccionar resultado --</option>
                   @for (tip of contactClassifications(); track tip.id) {
@@ -342,7 +342,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
                               <span class="bg-gray-600 text-white text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
                             } @else {
-                              <span class="bg-blue-700 text-white text-xs dark:bg-blue-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
+                              <span class="bg-emerald-700 text-white text-xs dark:bg-emerald-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
                           </div>
                         }
@@ -372,7 +372,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                         <select
                           [ngModel]="selectedClassifications()[$index]"
                           (ngModelChange)="onClassificationLevelChange($index, $event)"
-                          [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-blue-400 ' +
+                          [class]="'w-full p-1.5 border rounded text-xs font-medium transition-all focus:outline-none focus:ring-1 focus:ring-emerald-400 ' +
                             (errors().tipoGestion && $index === 0 ? 'border-red-400 bg-red-50 dark:bg-red-950/30' : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-700 dark:text-white') + ' ' +
                             (selectedClassifications()[$index] ? 'border-green-400 bg-green-50 dark:bg-green-950/30' : '')"
                         >
@@ -547,7 +547,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                           <span>Cancelar la promesa activa si el cliente no cumplirá</span>
                         </li>
                         <li class="flex items-center gap-2">
-                          <lucide-angular name="arrow-right" [size]="14" class="text-blue-500"></lucide-angular>
+                          <lucide-angular name="arrow-right" [size]="14" class="text-emerald-500"></lucide-angular>
                           <span>Esperar a que venzan las cuotas actuales</span>
                         </li>
                       </ul>
@@ -797,7 +797,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                       <div class="mt-2 p-2 rounded-lg text-xs"
                            [class]="montoPagoEditable() < selectedInstallmentForCancellation()?.monto
                              ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700'
-                             : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700'">
+                             : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700'">
                         @if (montoPagoEditable() < selectedInstallmentForCancellation()?.monto) {
                           <span class="flex items-center gap-1">
                             <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
@@ -941,7 +941,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   (click)="cambiarTabHistorial('actual')"
                   [class]="'px-2 py-0.5 text-xs font-medium transition-colors ' +
                     (historialTabActivo() === 'actual'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-emerald-600 text-white'
                       : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')">
                   Actual
                 </button>
@@ -974,7 +974,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   (click)="historialFilter.set('TODOS')"
                   [class]="'px-2 py-0.5 text-xs rounded transition-colors ' +
                     (historialFilter() === 'TODOS'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-emerald-600 text-white'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
                   Todos
                 </button>
@@ -994,7 +994,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
                   [CI]
                 </button>
-                <button (click)="loadManagementHistory()" class="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                <button (click)="loadManagementHistory()" class="ml-2 text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1">
                   <span>↻</span>
                 </button>
               </div>
@@ -1056,11 +1056,11 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   </thead>
                   <tbody>
                     @for (gestion of historialGestionesFiltrado(); track gestion.id) {
-                      <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
                         <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
                         <td class="px-2 py-1.5 max-w-[180px]">
-                          <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                          <span class="text-emerald-600 dark:text-emerald-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
                             {{ gestion.tipificacionCompleta }}
                           </span>
                         </td>
@@ -1071,7 +1071,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                         <td class="px-2 py-1.5">
                           <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                             gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                             gestion.canal?.includes('ENTRANTE') ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
                              gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
                              gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
                              'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
@@ -1100,7 +1100,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                               (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
                                gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
                                gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                               gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                               gestion.estadoPago === 'PARCIAL' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
                                'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
                               {{ gestion.estadoPagoDisplay }}
                             </span>
@@ -1155,7 +1155,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                         <td class="px-2 py-1.5">
                           <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                             gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                             gestion.canal?.includes('ENTRANTE') ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
                              gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
                              gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
                              'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
@@ -1184,7 +1184,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                               (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
                                gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
                                gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                               gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                               gestion.estadoPago === 'PARCIAL' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
                                'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
                               {{ gestion.estadoPagoDisplay }}
                             </span>
