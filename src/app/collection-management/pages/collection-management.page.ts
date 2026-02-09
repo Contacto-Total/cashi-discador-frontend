@@ -1051,35 +1051,34 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   No hay gestiones con el filtro seleccionado
                 </div>
               } @else {
-                <table class="w-full text-xs">
+                <table class="text-xs table-fixed" style="min-width: max-content;">
                   <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      <th class="px-2 py-1 font-semibold">Fecha</th>
-                      <th class="px-2 py-1 font-semibold">Asesor</th>
-                      <th class="px-2 py-1 font-semibold">Tipificación</th>
-                      <th class="px-2 py-1 font-semibold">Teléfono</th>
-                      <th class="px-2 py-1 font-semibold">Observación</th>
-                      <th class="px-2 py-1 font-semibold">Canal</th>
-                      <th class="px-2 py-1 font-semibold">Método</th>
-                      <th class="px-2 py-1 font-semibold text-right">Monto Promesa</th>
-                      <th class="px-2 py-1 font-semibold text-center">Estado Pago</th>
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Observación','Canal','Método','Monto Promesa','Estado Pago']; track col; let i = $index) {
+                        <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
+                            [class.text-right]="col === 'Monto Promesa'" [class.text-center]="col === 'Estado Pago'">
+                          {{ col }}
+                          <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/50"
+                               (mousedown)="onResizeStart($event, i)"></div>
+                        </th>
+                      }
                     </tr>
                   </thead>
                   <tbody>
                     @for (gestion of historialGestionesFiltrado(); track gestion.id) {
                       <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
-                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
-                        <td class="px-2 py-1.5 max-w-[180px]">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
+                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
                           <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
                             {{ gestion.tipificacionCompleta }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[120px] truncate" [title]="gestion.observacion">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.observacion">
                           {{ gestion.observacion || '-' }}
                         </td>
-                        <td class="px-2 py-1.5">
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[5]">
                           <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
                              gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
@@ -1089,7 +1088,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                             {{ gestion.canalDisplay }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5">
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[6]">
                           <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
                              gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
@@ -1098,14 +1097,14 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                             {{ gestion.metodoDisplay }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5 text-right font-mono whitespace-nowrap">
+                        <td class="px-2 py-1.5 text-right font-mono overflow-hidden" [style.width.px]="historialColWidths()[7]">
                           @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
                             <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
                         </td>
-                        <td class="px-2 py-1.5 text-center">
+                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[8]">
                           @if (gestion.estadoPago) {
                             <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                               (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
@@ -1135,35 +1134,34 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   Sin gestiones históricas para este cliente
                 </div>
               } @else {
-                <table class="w-full text-xs">
+                <table class="text-xs table-fixed" style="min-width: max-content;">
                   <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      <th class="px-2 py-1 font-semibold">Fecha</th>
-                      <th class="px-2 py-1 font-semibold">Asesor</th>
-                      <th class="px-2 py-1 font-semibold">Tipificación</th>
-                      <th class="px-2 py-1 font-semibold">Teléfono</th>
-                      <th class="px-2 py-1 font-semibold">Observación</th>
-                      <th class="px-2 py-1 font-semibold">Canal</th>
-                      <th class="px-2 py-1 font-semibold">Método</th>
-                      <th class="px-2 py-1 font-semibold text-right">Monto Promesa</th>
-                      <th class="px-2 py-1 font-semibold text-center">Estado Pago</th>
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Observación','Canal','Método','Monto Promesa','Estado Pago']; track col; let i = $index) {
+                        <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
+                            [class.text-right]="col === 'Monto Promesa'" [class.text-center]="col === 'Estado Pago'">
+                          {{ col }}
+                          <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400/50"
+                               (mousedown)="onResizeStart($event, i)"></div>
+                        </th>
+                      }
                     </tr>
                   </thead>
                   <tbody>
                     @for (gestion of historialHistorico(); track gestion.id) {
                       <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
-                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium whitespace-nowrap" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
-                        <td class="px-2 py-1.5 max-w-[180px]">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
+                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
                           <span class="text-purple-600 dark:text-purple-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
                             {{ gestion.tipificacionCompleta }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono whitespace-nowrap">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[120px] truncate" [title]="gestion.observacion">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.observacion">
                           {{ gestion.observacion || '-' }}
                         </td>
-                        <td class="px-2 py-1.5">
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[5]">
                           <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
                              gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
@@ -1173,7 +1171,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                             {{ gestion.canalDisplay }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5">
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[6]">
                           <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                             (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
                              gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
@@ -1182,14 +1180,14 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                             {{ gestion.metodoDisplay }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5 text-right font-mono whitespace-nowrap">
+                        <td class="px-2 py-1.5 text-right font-mono overflow-hidden" [style.width.px]="historialColWidths()[7]">
                           @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
                             <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
                         </td>
-                        <td class="px-2 py-1.5 text-center">
+                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[8]">
                           @if (gestion.estadoPago) {
                             <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                               (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
@@ -1750,6 +1748,42 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (data?.edad && data.edad > 0) return data.edad;
     return null;
   });
+
+  // Column widths para historial de gestiones (resizable)
+  historialColWidths = signal<number[]>([110, 90, 180, 90, 130, 80, 80, 100, 90]);
+  private resizingColIndex = -1;
+  private resizeStartX = 0;
+  private resizeStartWidth = 0;
+  private resizeMoveHandler = (e: MouseEvent) => this.onResizeMove(e);
+  private resizeEndHandler = () => this.onResizeEnd();
+
+  onResizeStart(event: MouseEvent, colIndex: number): void {
+    event.preventDefault();
+    this.resizingColIndex = colIndex;
+    this.resizeStartX = event.clientX;
+    this.resizeStartWidth = this.historialColWidths()[colIndex];
+    document.addEventListener('mousemove', this.resizeMoveHandler);
+    document.addEventListener('mouseup', this.resizeEndHandler);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+
+  private onResizeMove(event: MouseEvent): void {
+    if (this.resizingColIndex < 0) return;
+    const diff = event.clientX - this.resizeStartX;
+    const newWidth = Math.max(50, this.resizeStartWidth + diff);
+    const widths = [...this.historialColWidths()];
+    widths[this.resizingColIndex] = newWidth;
+    this.historialColWidths.set(widths);
+  }
+
+  private onResizeEnd(): void {
+    this.resizingColIndex = -1;
+    document.removeEventListener('mousemove', this.resizeMoveHandler);
+    document.removeEventListener('mouseup', this.resizeEndHandler);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
 
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
