@@ -166,7 +166,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let llamada of llamadasEnTiempoReal" class="llamada-row">
+              <tr *ngFor="let llamada of llamadasEnTiempoReal; trackBy: trackByLlamada" class="llamada-row">
                 <td class="llamada-hora">{{ llamada.fechaInicio | date: 'HH:mm:ss' }}</td>
                 <td class="llamada-telefono">{{ llamada.anexoDestino }}</td>
                 <td class="llamada-agente">{{ llamada.nombreAgente }}</td>
@@ -207,7 +207,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let agente of agentesMonitoreo" class="agente-row clickable-row"
+              <tr *ngFor="let agente of agentesMonitoreo; trackBy: trackByAgente" class="agente-row clickable-row"
                   [class.alert-row]="agente.excedeTiempoMaximo"
                   (click)="openChangeStatusModal(agente)"
                   title="Click para cambiar estado">

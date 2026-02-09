@@ -603,6 +603,15 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     });
   }
 
+  // trackBy para evitar re-render completo del DOM en cada polling
+  trackByLlamada(index: number, llamada: any): string {
+    return llamada.id || llamada.uuidLlamada || index.toString();
+  }
+
+  trackByAgente(index: number, agente: any): number {
+    return agente.idUsuario || index;
+  }
+
   /**
    * Obtiene la hora actual en formato HH:MM:SS
    */
