@@ -35,7 +35,7 @@
         <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
       </div>
 
-      <div *ngFor="let campaign of campaigns; let i = index"
+      <div *ngFor="let campaign of campaigns; trackBy: trackByCampaignId; let i = index"
            class="campaign-card"
            [class.is-active]="campaign.status === 'ACTIVE'"
            [class.is-dialing]="campaign.estaDiscando"
@@ -69,9 +69,9 @@
               <button *ngIf="canPause(campaign)" class="btn-action-small btn-pause" (click)="pausarCampaign(campaign)" title="Pausar">
                 <lucide-angular name="pause" [size]="15"></lucide-angular>
               </button>
-              <button class="btn-action-small btn-import" (click)="openImportModal(campaign)" title="Importar contactos">
+              <!-- <button class="btn-action-small btn-import" (click)="openImportModal(campaign)" title="Importar contactos">
                 <lucide-angular name="download" [size]="15"></lucide-angular>
-              </button>
+              </button> -->
               <button *ngIf="campaign.status === 'ACTIVE'"
                 [class]="campaign.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
                 (click)="toggleDialing(campaign)"

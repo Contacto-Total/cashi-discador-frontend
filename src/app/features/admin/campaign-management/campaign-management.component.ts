@@ -208,14 +208,13 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   activarCampaign(campaign: Campaign): void {
     if (!campaign.id) return;
 
-    this.loading = true;
     this.error = null;
 
     this.campaignService.activarCampaign(campaign.id).subscribe({
       next: () => {
+        campaign.status = 'ACTIVE';
         this.successMessage = `Campaña "${campaign.name}" activada`;
-        this.loadCampaigns();
-        this.loading = false;
+        this.refreshCampaignsSilently();
 
         setTimeout(() => {
           this.successMessage = null;
@@ -224,7 +223,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error activating campaign:', err);
         this.error = err.error?.error || 'Error al activar la campaña';
-        this.loading = false;
       }
     });
   }
@@ -235,14 +233,14 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   pausarCampaign(campaign: Campaign): void {
     if (!campaign.id) return;
 
-    this.loading = true;
     this.error = null;
 
     this.campaignService.pausarCampaign(campaign.id).subscribe({
       next: () => {
+        campaign.status = 'PAUSED';
+        campaign.estaDiscando = false;
         this.successMessage = `Campaña "${campaign.name}" pausada`;
-        this.loadCampaigns();
-        this.loading = false;
+        this.refreshCampaignsSilently();
 
         setTimeout(() => {
           this.successMessage = null;
@@ -251,7 +249,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error pausing campaign:', err);
         this.error = 'Error al pausar la campaña';
-        this.loading = false;
       }
     });
   }
@@ -315,14 +312,12 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.loading = true;
     this.error = null;
 
     this.campaignService.deleteCampaign(campaign.id).subscribe({
       next: () => {
+        this.campaigns = this.campaigns.filter(c => c.id !== campaign.id);
         this.successMessage = `Campaña "${campaign.name}" eliminada`;
-        this.loadCampaigns();
-        this.loading = false;
 
         setTimeout(() => {
           this.successMessage = null;
@@ -331,7 +326,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error deleting campaign:', err);
         this.error = err.error?.error || 'Error al eliminar la campaña';
-        this.loading = false;
       }
     });
   }
@@ -385,14 +379,13 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   startDialing(campaign: Campaign): void {
     if (!campaign.id) return;
 
-    this.loading = true;
     this.error = null;
 
     this.campaignService.startDialing(campaign.id).subscribe({
       next: () => {
+        campaign.estaDiscando = true;
         this.successMessage = `Discado iniciado para "${campaign.name}"`;
-        this.loadCampaigns();
-        this.loading = false;
+        this.refreshCampaignsSilently();
 
         setTimeout(() => {
           this.successMessage = null;
@@ -401,7 +394,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error starting dialing:', err);
         this.error = err.error?.message || 'Error al iniciar el discado';
-        this.loading = false;
       }
     });
   }
@@ -412,14 +404,13 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   stopDialing(campaign: Campaign): void {
     if (!campaign.id) return;
 
-    this.loading = true;
     this.error = null;
 
     this.campaignService.stopDialing(campaign.id).subscribe({
       next: () => {
+        campaign.estaDiscando = false;
         this.successMessage = `Discado detenido para "${campaign.name}"`;
-        this.loadCampaigns();
-        this.loading = false;
+        this.refreshCampaignsSilently();
 
         setTimeout(() => {
           this.successMessage = null;
@@ -428,7 +419,6 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Error stopping dialing:', err);
         this.error = 'Error al detener el discado';
-        this.loading = false;
       }
     });
   }
@@ -450,6 +440,20 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   /**
    * Navega al detalle de una campaña
    */
+  /**
+   * Recarga campañas en background sin mostrar spinner ni re-renderizar la lista
+   */
+  private refreshCampaignsSilently(): void {
+    this.campaignService.getAllCampaigns().subscribe({
+      next: (campaigns) => {
+        this.campaigns = campaigns;
+      },
+      error: (err) => {
+        console.error('Error refreshing campaigns:', err);
+      }
+    });
+  }
+
   viewCampaignDetail(campaign: Campaign): void {
     if (campaign.id) {
       this.router.navigate(['/admin/campaigns', campaign.id]);
@@ -459,6 +463,10 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   /**
    * Navega a la pantalla de monitoreo por campaña
    */
+  trackByCampaignId(index: number, campaign: Campaign): number {
+    return campaign.id || index;
+  }
+
   navigateToMonitoring(): void {
     this.router.navigate(['/admin/campaign-monitoring']);
   }

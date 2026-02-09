@@ -214,7 +214,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
               @if (activeTab() === 'pautas') {
                 <div class="flex flex-col items-center justify-center h-full py-8">
                   <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
-                    <lucide-angular name="construction" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+                    <lucide-angular name="wrench" [size]="24" class="text-amber-600 dark:text-amber-400"></lucide-angular>
                   </div>
                   <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Funcionalidad en Desarrollo</p>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center px-4">
