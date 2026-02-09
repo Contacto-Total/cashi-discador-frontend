@@ -44,7 +44,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'text') {
                 <input
                   type="text"
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [placeholder]="field.placeholder || ''"
                   [required]="field.required ?? false"
                   [minlength]="field.minLength ?? null"
@@ -88,7 +89,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'date') {
                 <input
                   type="date"
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 />
@@ -98,7 +100,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'datetime') {
                 <input
                   type="datetime-local"
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 />
@@ -107,7 +110,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               <!-- Select Input -->
               @if (field.type === 'select') {
                 <select
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 >
@@ -121,7 +125,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               <!-- Textarea Input -->
               @if (field.type === 'textarea') {
                 <textarea
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [placeholder]="field.placeholder || ''"
                   [required]="field.required ?? false"
                   [minlength]="field.minLength ?? null"
@@ -136,7 +141,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
                 <div class="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    [(ngModel)]="fieldData()[field.id]"
+                    [ngModel]="fieldData()[field.id]"
+                    (ngModelChange)="updateFieldValue(field.id, $event)"
                     [required]="field.required ?? false"
                     class="w-4 h-4 text-purple-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500 cursor-pointer"
                   />
@@ -150,7 +156,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
                   <span class="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 dark:text-gray-400 font-semibold">📱</span>
                   <input
                     type="tel"
-                    [(ngModel)]="fieldData()[field.id]"
+                    [ngModel]="fieldData()[field.id]"
+                    (ngModelChange)="updateFieldValue(field.id, $event)"
                     [placeholder]="field.placeholder || '999 999 999'"
                     [required]="field.required ?? false"
                     pattern="[0-9]{9}"
@@ -164,7 +171,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'time') {
                 <input
                   type="time"
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 />
@@ -174,7 +182,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'email') {
                 <input
                   type="email"
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [placeholder]="field.placeholder || 'ejemplo@correo.com'"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
@@ -185,7 +194,8 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
               @if (field.type === 'url') {
                 <input
                   type="url"
-                  [(ngModel)]="fieldData()[field.id]"
+                  [ngModel]="fieldData()[field.id]"
+                  (ngModelChange)="updateFieldValue(field.id, $event)"
                   [placeholder]="field.placeholder || 'https://ejemplo.com'"
                   [required]="field.required ?? false"
                   class="w-full px-2 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded focus:ring-1 focus:ring-purple-500 focus:border-purple-500 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100"
