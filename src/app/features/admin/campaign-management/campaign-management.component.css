@@ -285,74 +285,180 @@
   padding: 2rem 1rem;
 }
 
-/* Compact Campaign Card */
-.campaign-card-compact {
-  background: #0A0E27;
-  border: 1px solid #334155;
-  border-radius: 6px;
+/* ========================================
+   CAMPAIGN CARDS - Premium Design
+   ======================================== */
+
+/* Entrance animation */
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.campaign-card {
+  display: flex;
+  border-radius: 10px;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  background: #0f1629;
+  border: 1px solid #1e293b;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardSlideIn 0.4s ease-out both;
+  position: relative;
 }
 
-.campaign-card-compact:hover {
+.campaign-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  opacity: 0;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.06) 0%, rgba(59, 130, 246, 0.04) 100%);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.campaign-card:hover {
+  border-color: #334155;
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(139, 92, 246, 0.1);
 }
 
-.campaign-header-compact {
-  padding: 0.8rem;
+.campaign-card:hover::before {
+  opacity: 1;
+}
+
+.campaign-card.is-dialing {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.08);
+}
+
+/* Left accent bar */
+.card-accent {
+  width: 4px;
+  flex-shrink: 0;
+  transition: width 0.3s ease;
+}
+
+.campaign-card:hover .card-accent {
+  width: 5px;
+}
+
+.card-content {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+/* Top row: Title + Actions */
+.card-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #334155;
+  gap: 0.75rem;
 }
 
-.campaign-title-compact {
+.card-title-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex: 1;
+  min-width: 0;
 }
 
-.campaign-title-compact h3 {
+.card-title-row h3 {
   margin: 0;
-  font-size: 0.9rem;
-  color: #ffffff;
+  font-size: 0.92rem;
+  color: #e2e8f0;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.2s;
+}
+
+.campaign-card:hover .card-title-row h3 {
+  color: #fff;
 }
 
 .status-badge {
   padding: 0.2rem 0.6rem;
   border-radius: 50px;
   color: white;
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.6rem;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.campaign-actions {
+/* Dialing indicator with pulse */
+.dialing-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #10b981;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  display: inline-block;
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+/* Actions */
+.card-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.campaign-card:hover .card-actions {
+  opacity: 1;
 }
 
 .btn-action-small {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  padding: 0.4rem;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid transparent;
+  padding: 0.35rem;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  height: 28px;
+  min-width: 30px;
+  height: 30px;
+  color: #94a3b8;
 }
 
 .btn-action-small:hover {
-  transform: scale(1.1);
+  transform: scale(1.12);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .btn-action {
@@ -409,55 +515,107 @@
   background: rgba(239, 68, 68, 0.2);
 }
 
-/* Compact Campaign Body */
-.campaign-body-compact {
-  padding: 0.7rem 0.8rem;
-}
-
-.campaign-description-compact {
-  color: #94a3b8;
+/* Card description */
+.card-description {
+  color: #64748b;
   font-size: 0.75rem;
-  margin: 0 0 0.6rem 0;
-  line-height: 1.3;
+  margin: 0;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
 }
 
-.campaign-stats-compact {
+/* Bottom row: Stats + Meta */
+.card-bottom {
   display: flex;
-  gap: 0.8rem;
-  margin-bottom: 0.6rem;
-  padding: 0.5rem;
-  background: #1E293B;
-  border-radius: 4px;
-}
-
-.stat-compact {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.stat-label-compact {
-  font-size: 0.65rem;
-  color: #64748b;
-}
-
-.stat-value-compact {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #10B981;
-}
-
-.campaign-meta-compact {
-  display: flex;
-  gap: 0.7rem;
-  font-size: 0.7rem;
-  color: #64748b;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   flex-wrap: wrap;
+}
+
+/* Stat pills */
+.card-stats {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 20px;
+  transition: all 0.25s ease;
+}
+
+.stat-pill:hover {
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.stat-pill.stat-pending {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+.stat-pill.stat-pending:hover {
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.stat-pill.stat-contacted {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+.stat-pill.stat-contacted:hover {
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.stat-pill-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.stat-pill-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Meta tags */
+.card-meta {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.meta-tag {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.meta-tag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+.meta-date {
+  color: #64748b;
+  font-style: italic;
 }
 
 /* Empty State */
@@ -765,60 +923,127 @@ body.light-theme .campaigns-scrollable::-webkit-scrollbar-thumb:hover {
 }
 
 /* Campaign Cards - Light Mode */
-:root.light .campaign-card-compact,
-body.light-theme .campaign-card-compact {
+:root.light .campaign-card,
+body.light-theme .campaign-card {
   background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+:root.light .campaign-card::before,
+body.light-theme .campaign-card::before {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, rgba(59, 130, 246, 0.02) 100%);
+}
+
+:root.light .campaign-card:hover,
+body.light-theme .campaign-card:hover {
   border-color: #cbd5e1;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(139, 92, 246, 0.08);
 }
 
-:root.light .campaign-card-compact:hover,
-body.light-theme .campaign-card-compact:hover {
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+:root.light .campaign-card.is-dialing,
+body.light-theme .campaign-card.is-dialing {
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.06);
 }
 
-:root.light .campaign-header-compact,
-body.light-theme .campaign-header-compact {
-  border-bottom-color: #e2e8f0;
+:root.light .card-title-row h3,
+body.light-theme .card-title-row h3 {
+  color: #1e293b;
 }
 
-:root.light .campaign-title-compact h3,
-body.light-theme .campaign-title-compact h3 {
+:root.light .campaign-card:hover .card-title-row h3,
+body.light-theme .campaign-card:hover .card-title-row h3 {
   color: #0f172a;
 }
 
 :root.light .btn-action-small,
 body.light-theme .btn-action-small {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.04);
+  color: #64748b;
+  border-color: transparent;
 }
 
 :root.light .btn-action-small:hover,
 body.light-theme .btn-action-small:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.06);
 }
 
-:root.light .campaign-description-compact,
-body.light-theme .campaign-description-compact {
+:root.light .btn-action-small.btn-activate,
+body.light-theme .btn-action-small.btn-activate {
+  background: #10B981;
+  color: white;
+}
+
+:root.light .btn-action-small.btn-pause,
+body.light-theme .btn-action-small.btn-pause {
+  background: #F59E0B;
+  color: white;
+}
+
+:root.light .btn-action-small.btn-delete,
+body.light-theme .btn-action-small.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+:root.light .btn-action-small.btn-view,
+body.light-theme .btn-action-small.btn-view {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+:root.light .btn-action-small.btn-edit,
+body.light-theme .btn-action-small.btn-edit {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
+:root.light .btn-action-small.btn-import,
+body.light-theme .btn-action-small.btn-import {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+:root.light .card-description,
+body.light-theme .card-description {
   color: #475569;
 }
 
-:root.light .campaign-stats-compact,
-body.light-theme .campaign-stats-compact {
-  background: #f8fafc;
+:root.light .stat-pill,
+body.light-theme .stat-pill {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.15);
 }
 
-:root.light .stat-label-compact,
-body.light-theme .stat-label-compact {
+:root.light .stat-pill.stat-pending,
+body.light-theme .stat-pill.stat-pending {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.15);
+}
+
+:root.light .stat-pill.stat-contacted,
+body.light-theme .stat-pill.stat-contacted {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
+:root.light .stat-pill-value,
+body.light-theme .stat-pill-value {
+  color: #1e293b;
+}
+
+:root.light .meta-tag,
+body.light-theme .meta-tag {
   color: #64748b;
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
 }
 
-:root.light .stat-value-compact,
-body.light-theme .stat-value-compact {
-  color: #16a34a;
-}
-
-:root.light .campaign-meta-compact,
-body.light-theme .campaign-meta-compact {
-  color: #64748b;
+:root.light .meta-tag:hover,
+body.light-theme .meta-tag:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #475569;
 }
 
 /* Empty/Loading State - Light Mode */

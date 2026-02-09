@@ -28,8 +28,6 @@
 
   <!-- Campaigns List Section -->
   <div class="campaigns-section">
-    <h2 class="section-title"><lucide-angular name="clipboard-list" [size]="20"></lucide-angular> Campañas</h2>
-
     <!-- Campaigns List -->
     <div class="campaigns-scrollable" *ngIf="!loading">
       <div *ngIf="campaigns.length === 0" class="empty-state">
@@ -37,93 +35,81 @@
         <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
       </div>
 
-      <div *ngFor="let campaign of campaigns" class="campaign-card-compact">
-        <div class="campaign-header-compact">
-          <div class="campaign-title-compact" (click)="viewCampaignDetail(campaign)" style="cursor: pointer;">
-            <h3>{{ campaign.name }}</h3>
-            <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
-              {{ getStatusText(campaign.status) }}
-            </span>
-          </div>
-          <div class="campaign-actions">
-            <button
-              class="btn-action-small btn-view"
-              (click)="viewCampaignDetail(campaign)"
-              title="Ver detalle">
-              <lucide-angular name="eye" [size]="16"></lucide-angular>
-            </button>
-            <button
-              class="btn-action-small btn-edit"
-              [routerLink]="['/admin/campaigns', campaign.id, 'edit']"
-              title="Editar campaña">
-              <lucide-angular name="pencil" [size]="16"></lucide-angular>
-            </button>
-            <button
-              *ngIf="canActivate(campaign)"
-              class="btn-action-small btn-activate"
-              (click)="activarCampaign(campaign)"
-              title="Activar campaña">
-              <lucide-angular name="play" [size]="16"></lucide-angular>
-            </button>
-            <button
-              *ngIf="canPause(campaign)"
-              class="btn-action-small btn-pause"
-              (click)="pausarCampaign(campaign)"
-              title="Pausar campaña">
-              <lucide-angular name="pause" [size]="16"></lucide-angular>
-            </button>
-            <button
-              class="btn-action-small btn-import"
-              (click)="openImportModal(campaign)"
-              title="Importar contactos">
-              <lucide-angular name="download" [size]="16"></lucide-angular>
-            </button>
-            <button
-              *ngIf="campaign.status === 'ACTIVE'"
-              [class]="campaign.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
-              (click)="toggleDialing(campaign)"
-              [title]="campaign.estaDiscando ? 'Detener Discado' : 'Iniciar Discado'">
-              <lucide-angular *ngIf="campaign.estaDiscando" name="square" [size]="16"></lucide-angular>
-              <lucide-angular *ngIf="!campaign.estaDiscando" name="phone-call" [size]="16"></lucide-angular>
-            </button>
-            <button
-              *ngIf="campaign.status !== 'ACTIVE'"
-              class="btn-action-small btn-delete"
-              (click)="deleteCampaign(campaign)"
-              title="Eliminar campaña">
-              <lucide-angular name="trash-2" [size]="16"></lucide-angular>
-            </button>
-          </div>
-        </div>
+      <div *ngFor="let campaign of campaigns; let i = index"
+           class="campaign-card"
+           [class.is-active]="campaign.status === 'ACTIVE'"
+           [class.is-dialing]="campaign.estaDiscando"
+           [style.animation-delay]="(i * 60) + 'ms'">
 
-        <div class="campaign-body-compact">
-          <p *ngIf="campaign.description" class="campaign-description-compact">
-            {{ campaign.description }}
-          </p>
+        <!-- Left accent bar -->
+        <div class="card-accent" [style.background]="getStatusColor(campaign.status)"></div>
 
-          <div class="campaign-stats-compact" *ngIf="campaign.totalContacts !== undefined">
-            <div class="stat-compact">
-              <span class="stat-label-compact">Total:</span>
-              <span class="stat-value-compact">{{ campaign.totalContacts || 0 }}</span>
+        <div class="card-content">
+          <!-- Row 1: Title + Status + Actions -->
+          <div class="card-top">
+            <div class="card-title-row" (click)="viewCampaignDetail(campaign)" style="cursor: pointer;">
+              <h3>{{ campaign.name }}</h3>
+              <span class="status-badge" [style.background-color]="getStatusColor(campaign.status)">
+                {{ getStatusText(campaign.status) }}
+              </span>
+              <span *ngIf="campaign.estaDiscando" class="dialing-indicator">
+                <span class="pulse-dot"></span> Discando
+              </span>
             </div>
-            <div class="stat-compact">
-              <span class="stat-label-compact">Pendientes:</span>
-              <span class="stat-value-compact">{{ campaign.pendingContacts || 0 }}</span>
-            </div>
-            <div class="stat-compact">
-              <span class="stat-label-compact">Contactados:</span>
-              <span class="stat-value-compact">{{ campaign.contactedContacts || 0 }}</span>
+            <div class="card-actions">
+              <button class="btn-action-small btn-view" (click)="viewCampaignDetail(campaign)" title="Ver detalle">
+                <lucide-angular name="eye" [size]="15"></lucide-angular>
+              </button>
+              <button class="btn-action-small btn-edit" [routerLink]="['/admin/campaigns', campaign.id, 'edit']" title="Editar">
+                <lucide-angular name="pencil" [size]="15"></lucide-angular>
+              </button>
+              <button *ngIf="canActivate(campaign)" class="btn-action-small btn-activate" (click)="activarCampaign(campaign)" title="Activar">
+                <lucide-angular name="play" [size]="15"></lucide-angular>
+              </button>
+              <button *ngIf="canPause(campaign)" class="btn-action-small btn-pause" (click)="pausarCampaign(campaign)" title="Pausar">
+                <lucide-angular name="pause" [size]="15"></lucide-angular>
+              </button>
+              <button class="btn-action-small btn-import" (click)="openImportModal(campaign)" title="Importar contactos">
+                <lucide-angular name="download" [size]="15"></lucide-angular>
+              </button>
+              <button *ngIf="campaign.status === 'ACTIVE'"
+                [class]="campaign.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
+                (click)="toggleDialing(campaign)"
+                [title]="campaign.estaDiscando ? 'Detener Discado' : 'Iniciar Discado'">
+                <lucide-angular *ngIf="campaign.estaDiscando" name="square" [size]="15"></lucide-angular>
+                <lucide-angular *ngIf="!campaign.estaDiscando" name="phone-call" [size]="15"></lucide-angular>
+              </button>
+              <button *ngIf="campaign.status !== 'ACTIVE'" class="btn-action-small btn-delete" (click)="deleteCampaign(campaign)" title="Eliminar">
+                <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+              </button>
             </div>
           </div>
 
-          <div class="campaign-meta-compact">
-            <span>{{ campaign.dialMode }}</span>
-            <span>Max: {{ campaign.maxAttempts }}</span>
-            <span>Intensidad: {{ campaign.intensidad || 50 }}</span>
-            <span *ngIf="campaign.estaDiscando" style="color: green; font-weight: bold;">
-              <lucide-angular name="activity" [size]="14" style="vertical-align: middle;"></lucide-angular> Discando
-            </span>
-            <span *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
+          <!-- Row 2: Description (optional) -->
+          <p *ngIf="campaign.description" class="card-description">{{ campaign.description }}</p>
+
+          <!-- Row 3: Stats + Meta -->
+          <div class="card-bottom">
+            <div class="card-stats" *ngIf="campaign.totalContacts !== undefined">
+              <div class="stat-pill">
+                <span class="stat-pill-value">{{ campaign.totalContacts || 0 }}</span>
+                <span class="stat-pill-label">Total</span>
+              </div>
+              <div class="stat-pill stat-pending">
+                <span class="stat-pill-value">{{ campaign.pendingContacts || 0 }}</span>
+                <span class="stat-pill-label">Pend.</span>
+              </div>
+              <div class="stat-pill stat-contacted">
+                <span class="stat-pill-value">{{ campaign.contactedContacts || 0 }}</span>
+                <span class="stat-pill-label">Contact.</span>
+              </div>
+            </div>
+            <div class="card-meta">
+              <span class="meta-tag">{{ campaign.dialMode }}</span>
+              <span class="meta-tag">Max: {{ campaign.maxAttempts }}</span>
+              <span class="meta-tag">Int: {{ campaign.intensidad || 50 }}</span>
+              <span class="meta-tag meta-date" *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
+            </div>
           </div>
         </div>
       </div>
