@@ -3071,7 +3071,7 @@ body.dark-theme .collection-management-container {
    ======================================== */
 
 .collection-management-header {
-  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb);
+  background: #ffffff;
 }
 
 :root.dark .collection-management-header,
@@ -3258,7 +3258,7 @@ body.light-theme app-collection-management > div {
 /* Header - Modo Claro */
 :root:not(.dark) app-collection-management > div > div:nth-child(3),
 body.light-theme app-collection-management > div > div:nth-child(3) {
-  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+  background: #ffffff !important;
 }
 
 /* Paneles laterales - Modo Claro */
@@ -3693,9 +3693,9 @@ html:not(.dark) app-collection-management .collection-management-container {
   background: linear-gradient(to bottom right, #f8fafc, #eff6ff, #f1f5f9) !important;
 }
 
-/* HEADER - Gradiente azul claro */
+/* HEADER - Fondo blanco */
 html:not(.dark) app-collection-management > div > div:first-of-type:has(h1) {
-  background: linear-gradient(to right, #2563eb, #1d4ed8, #2563eb) !important;
+  background: #ffffff !important;
 }
 
 /* PANELES LATERALES - Fondo blanco */
