@@ -2377,8 +2377,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       nombre_completo: client.nombre_completo || client.nombre || client.nombres + ' ' + (client.apellidos || ''),
       tipo_documento: 'DNI',
       numero_documento: client.documento,
-      fecha_nacimiento: client.fecha_nacimiento || client.fec_nacimiento || client.fechanacimiento || '',
-      edad: 0,
+      fecha_nacimiento: client.fecha_nacimiento || '',
+      edad: client.edad || 0,
       contacto: {
         telefono_principal: client.telefono_celular || client.telefono_principal || client.telefono || client.telefono_1 || '',
         telefono_alternativo: client.telefono_domicilio || client.telefono_secundario || client.telefono_2 || '',
