@@ -2583,37 +2583,46 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   loadFirstCustomer() {
     this.isLoadingCustomer.set(true);
-    // Obtener el usuario actual con su extensión SIP
     const currentUser = this.authService.getCurrentUser();
 
     if (!currentUser || !currentUser.sipExtension) {
       console.error('❌ No se pudo obtener la extensión SIP del agente logueado');
-      // Fallback a contacto de prueba
-      this.loadClienteDetalle(475);
+      this.isLoadingCustomer.set(false);
       return;
     }
 
-    console.log(`📋 Buscando llamada activa del agente con extensión SIP ${currentUser.sipExtension}...`);
+    const sipExt = currentUser.sipExtension;
+    console.log(`📋 [FULL-DATA] Cargando datos completos del cliente en 1 llamada para extensión ${sipExt}...`);
 
-    // Primero obtener la llamada activa del agente usando su extensión SIP
-    this.http.get<any>(`${environment.gatewayUrl}/autodialer/active-call/extension/${currentUser.sipExtension}`).pipe(
+    // Endpoint unificado: obtiene llamada activa + detalle cliente + datos dinámicos en 1 sola llamada
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/extension/${sipExt}`).pipe(
       catchError((error) => {
-        console.warn('⚠️ No hay llamada activa o error consultando:', error);
-        // Si no hay llamada activa, usar contacto de prueba (475)
-        console.log('📋 Usando contacto de prueba 475');
-        return of({ contactId: 475 });
+        console.error('❌ [FULL-DATA] Error cargando datos completos:', error);
+        this.isLoadingCustomer.set(false);
+        return of(null);
       })
     ).subscribe({
-      next: (activeCall) => {
-        const contactId = activeCall?.contactId;
-
-        if (!contactId) {
-          console.warn('⚠️ No se obtuvo contactId de la llamada activa');
+      next: (fullData) => {
+        if (!fullData) {
+          console.warn('⚠️ [FULL-DATA] No se obtuvieron datos (sin llamada activa)');
+          this.isLoadingCustomer.set(false);
           return;
         }
 
-        console.log(`✅ Llamada activa encontrada, contactId: ${contactId}`);
-        this.loadClienteDetalle(contactId);
+        console.log(`✅ [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
+
+        // Si tiene datos dinámicos completos, usar loadCustomerFromDynamicTable
+        if (fullData.dynamicData) {
+          console.log('✅ [FULL-DATA] Datos dinámicos disponibles, cargando con loadCustomerFromDynamicTable');
+          this.loadCustomerFromDynamicTable(fullData.dynamicData);
+        } else if (fullData.clienteDetalle) {
+          // Fallback: solo tiene datos básicos del cliente
+          console.warn('⚠️ [FULL-DATA] Sin datos dinámicos, usando fallback con clienteDetalle');
+          this.loadClienteDetalleFallback(fullData.clienteDetalle);
+        } else {
+          console.warn('⚠️ [FULL-DATA] Sin datos del cliente');
+          this.isLoadingCustomer.set(false);
+        }
       }
     });
   }
