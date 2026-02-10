@@ -55,6 +55,9 @@ export interface ReporteResponse {
   data: HistorialLlamadaDTO[];
   metricas: ResumenMetricas;
   total: number;
+  page: number;
+  size: number;
+  totalPages: number;
   fechaDesde: string;
   fechaHasta: string;
 }
@@ -73,7 +76,9 @@ export class HistorialLlamadasReportService {
     idCampana?: number,
     idCartera?: number,
     idSubcartera?: number,
-    estadoFinal?: string
+    estadoFinal?: string,
+    page: number = 0,
+    size: number = 50
   ): Observable<ReporteResponse> {
     let params = new HttpParams();
 
@@ -83,6 +88,8 @@ export class HistorialLlamadasReportService {
     if (idCartera) params = params.set('idCartera', idCartera.toString());
     if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
     if (estadoFinal) params = params.set('estadoFinal', estadoFinal);
+    params = params.set('page', page.toString());
+    params = params.set('size', size.toString());
 
     return this.http.get<ReporteResponse>(this.baseUrl, { params });
   }

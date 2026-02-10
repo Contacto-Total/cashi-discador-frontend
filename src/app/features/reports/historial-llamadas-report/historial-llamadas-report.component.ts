@@ -125,7 +125,7 @@ import {
             </button>
             <button
               (click)="exportarExcel()"
-              [disabled]="loading() || data().length === 0"
+              [disabled]="loading() || totalRecords() === 0"
               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
                      rounded-lg transition-colors flex items-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -366,12 +366,12 @@ import {
         </div>
 
         <!-- Footer con paginación -->
-        @if (data().length > 0) {
+        @if (totalRecords() > 0) {
           <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600 flex flex-col md:flex-row items-center justify-between gap-3">
             <p class="text-sm text-gray-600 dark:text-gray-400">
               Mostrando <span class="font-semibold">{{ (currentPage() - 1) * pageSize() + 1 }}</span> -
-              <span class="font-semibold">{{ Math.min(currentPage() * pageSize(), data().length) }}</span>
-              de <span class="font-semibold">{{ data().length }}</span> registros
+              <span class="font-semibold">{{ Math.min(currentPage() * pageSize(), totalRecords()) }}</span>
+              de <span class="font-semibold">{{ totalRecords() }}</span> registros
             </p>
             <div class="flex items-center gap-2">
               <button
@@ -441,17 +441,15 @@ export class HistorialLlamadasReportComponent implements OnInit {
   data = signal<HistorialLlamadaDTO[]>([]);
   metricas = signal<ResumenMetricas | null>(null);
 
-  // Paginación
+  // Paginación server-side
   currentPage = signal(1);
-  pageSize = signal(10);
+  pageSize = signal(50);
+  totalRecords = signal(0);
 
-  totalPages = computed(() => Math.ceil(this.data().length / this.pageSize()) || 1);
+  totalPages = computed(() => Math.ceil(this.totalRecords() / this.pageSize()) || 1);
 
-  paginatedData = computed(() => {
-    const start = (this.currentPage() - 1) * this.pageSize();
-    const end = start + this.pageSize();
-    return this.data().slice(start, end);
-  });
+  // Data ya viene paginada del servidor
+  paginatedData = computed(() => this.data());
 
   filtros = {
     fechaDesde: '',
@@ -473,9 +471,9 @@ export class HistorialLlamadasReportComponent implements OnInit {
     this.buscar();
   }
 
-  buscar(): void {
+  buscar(page: number = 0): void {
     this.loading.set(true);
-    this.currentPage.set(1); // Resetear a primera página
+    if (page === 0) this.currentPage.set(1);
 
     this.reporteService.getReporte(
       this.filtros.fechaDesde || undefined,
@@ -483,11 +481,14 @@ export class HistorialLlamadasReportComponent implements OnInit {
       this.filtros.idCampana || undefined,
       this.filtros.idCartera || undefined,
       undefined,
-      this.filtros.estadoFinal || undefined
+      this.filtros.estadoFinal || undefined,
+      page,
+      this.pageSize()
     ).subscribe({
       next: (response) => {
         this.data.set(response.data);
         this.metricas.set(response.metricas);
+        this.totalRecords.set(response.total);
         this.loading.set(false);
       },
       error: (error) => {
@@ -575,11 +576,13 @@ export class HistorialLlamadasReportComponent implements OnInit {
   goToPage(page: number): void {
     if (page >= 1 && page <= this.totalPages()) {
       this.currentPage.set(page);
+      this.buscar(page - 1); // backend usa 0-indexed
     }
   }
 
   changePageSize(size: number): void {
     this.pageSize.set(size);
-    this.currentPage.set(1); // Volver a primera página al cambiar tamaño
+    this.currentPage.set(1);
+    this.buscar(0);
   }
 }
