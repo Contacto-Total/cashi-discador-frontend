@@ -3239,6 +3239,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   endCall(navigate: boolean = false) {
     console.log('📵 Finalizando llamada...');
 
+    // Si está en hold, parar música y colgar la pata del cliente en FreeSWITCH
+    if (this.isOnHold()) {
+      const currentUser = this.authService.getCurrentUser();
+      const agentId = currentUser?.id;
+      if (agentId) {
+        this.http.post(`${environment.apiUrl}/calls/agent/${agentId}/unhold-hangup`, {}).subscribe({
+          error: (err: any) => console.warn('Error al colgar hold:', err)
+        });
+      }
+      this.isOnHold.set(false);
+      this.isMuted.set(false);
+    }
+
     // Colgar la llamada SIP
     this.sipService.hangup();
 
