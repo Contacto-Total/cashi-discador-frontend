@@ -256,6 +256,18 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                     {{ isMuted() ? '🔇 Activar' : '🔊 Silenciar' }}
                   </button>
                   <button
+                    (click)="toggleHold()"
+                    [disabled]="!callActive()"
+                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                      (callActive()
+                        ? (isOnHold()
+                          ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white animate-pulse'
+                          : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white')
+                        : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
+                  >
+                    {{ isOnHold() ? '▶ Reanudar' : '⏸ Espera' }}
+                  </button>
+                  <button
                     (click)="endCall()"
                     [disabled]="!callActive()"
                     class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
@@ -2052,6 +2064,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   private outgoingCallSubscription?: Subscription;
   public callState: CallState = CallState.IDLE;
   public isMuted = signal(false);
+  public isOnHold = signal(false);
   private incomingPhoneNumber: string | null = null;
   private outgoingPhoneNumber: string | null = null;
 
@@ -2117,6 +2130,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // El agente debe quedarse en la pantalla para completar la tipificación
       if ((state === CallState.ENDED || state === CallState.IDLE) && this.callActive()) {
         this.callActive.set(false);
+        // Resetear hold si estaba activo
+        this.isOnHold.set(false);
+        this.isMuted.set(false);
 
         // INMEDIATAMENTE bloquear llamadas entrantes ANTES de cambiar estado en backend
         // Esto previene la race condition con el auto-dialer
@@ -5258,6 +5274,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       console.log('🔇 Muteando...');
       this.sipService.mute();
       this.isMuted.set(true);
+    }
+  }
+
+  /**
+   * Poner/quitar en espera (mute + música de espera al cliente)
+   */
+  toggleHold() {
+    if (!this.callActive()) return;
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id;
+    if (!agentId) return;
+
+    if (this.isOnHold()) {
+      // Quitar espera: unmute + parar música
+      this.http.post(`${environment.apiUrl}/calls/agent/${agentId}/unhold`, {}).subscribe({
+        next: () => {
+          this.sipService.unmute();
+          this.isMuted.set(false);
+          this.isOnHold.set(false);
+          console.log('▶ Llamada reanudada');
+        },
+        error: (err: any) => console.error('Error al quitar espera:', err)
+      });
+    } else {
+      // Poner en espera: mute + reproducir música
+      this.http.post(`${environment.apiUrl}/calls/agent/${agentId}/hold`, {}).subscribe({
+        next: () => {
+          this.sipService.mute();
+          this.isMuted.set(true);
+          this.isOnHold.set(true);
+          console.log('⏸ Llamada en espera');
+        },
+        error: (err: any) => console.error('Error al poner en espera:', err)
+      });
     }
   }
 
