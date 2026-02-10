@@ -900,7 +900,13 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.initialDataLoaded = true;
         this.excedeTiempoMaximo = response.excedeTiempoMaximo || false;
-        this.segundosEnEstado = response.segundosEnEstado || 0;
+
+        // Solo sincronizar segundos con backend cuando cambia el estado
+        // Mientras el estado sea el mismo, el timer local (cada 1s) se encarga
+        if (response.estadoActual !== this.estadoActual) {
+          this.segundosEnEstado = response.segundosEnEstado || 0;
+        }
+
         this.estadoActual = response.estadoActual;
         this.estadoTexto = this.getEstadoTexto(response.estadoActual);
         this.estadoColor = this.getEstadoColorClass(response.estadoActual);
