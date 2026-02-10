@@ -26,7 +26,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
   standalone: true,
   imports: [CommonModule, LucideAngularModule],
   template: `
-    @if (isVisible) {
+    @if (isVisible && initialDataLoaded) {
       <div class="agent-overlay-container">
         <!-- Menú desplegable -->
         @if (isMenuOpen) {
@@ -834,6 +834,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   estadoTexto = '';
   estadoColor = 'disponible';
   soundEnabled = false;
+  initialDataLoaded = false;
 
   private readonly SOUND_STORAGE_KEY = 'agent_sound_enabled';
   private readonly AUTO_CLOSE_DELAY = 5000;
@@ -897,6 +898,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       switchMap(() => this.agentStatusService.getAgentStatus(this.userId!))
     ).subscribe({
       next: (response) => {
+        this.initialDataLoaded = true;
         this.excedeTiempoMaximo = response.excedeTiempoMaximo || false;
         this.segundosEnEstado = response.segundosEnEstado || 0;
         this.estadoActual = response.estadoActual;
