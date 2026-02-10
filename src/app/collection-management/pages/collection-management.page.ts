@@ -721,42 +721,49 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   </div>
                 }
 
-                <!-- Cuotas VENCIDAS (no se pueden cancelar) -->
+                <!-- Cuotas VENCIDAS (seleccionables para pago retroactivo) -->
                 @if (overdueInstallments().length > 0) {
-                  <div class="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                  <div class="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
                     <div class="flex items-center gap-2 mb-2">
-                      <span class="text-sm">⛔</span>
-                      <span class="text-xs font-bold text-red-700 dark:text-red-400">CUOTAS VENCIDAS (No se pueden cancelar)</span>
+                      <span class="text-sm">⚠️</span>
+                      <span class="text-xs font-bold text-amber-700 dark:text-amber-400">CUOTAS VENCIDAS - Pago retroactivo</span>
                     </div>
-                    <div class="space-y-1">
+                    <div class="space-y-1.5">
                       @for (cuota of overdueInstallments(); track cuota.numeroCuota) {
-                        <div class="flex items-center justify-between p-2 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 opacity-75">
+                        <label
+                          class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
+                          [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
+                            ? 'bg-amber-600 text-white shadow-md dark:bg-amber-500'
+                            : 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-300 dark:border-amber-700'"
+                        >
                           <div class="flex items-center gap-3">
-                            <span class="text-red-500 dark:text-red-400 text-xs">✗</span>
+                            <input
+                              type="radio"
+                              name="cuotaCancelacion"
+                              [value]="cuota"
+                              [checked]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota"
+                              (change)="onSelectCuotaForCancellation(cuota)"
+                              class="w-4 h-4 text-amber-600"
+                            />
                             <div>
-                              <span class="font-bold text-xs text-red-800 dark:text-red-300">Cuota {{ cuota.numeroCuota }}</span>
-                              <span class="text-xs ml-2 text-red-600 dark:text-red-400">
+                              <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
                             </div>
                           </div>
-                          <span class="font-bold text-sm text-red-700 dark:text-red-400">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
-                        </div>
+                          <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                        </label>
                       }
                     </div>
-                    <div class="text-xs text-red-600 dark:text-red-400 mt-2">
-                      La fecha de pago ya pasó. Estas cuotas serán marcadas como promesa rota.
+                    <div class="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                      Cliente pagó a tiempo pero envió comprobante después del vencimiento. Al registrar el pago completo, las cuotas siguientes se reactivarán.
                     </div>
                   </div>
                 }
 
-                <!-- Mensaje cuando no hay cuotas disponibles para cancelar -->
-                @if (pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0) {
-                  <div class="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded flex items-center gap-1">
-                    <span>🚫</span>
-                    <span>No hay cuotas disponibles para cancelar. Todas las cuotas están vencidas.</span>
-                  </div>
-                } @else if (!selectedInstallmentForCancellation() && pendingInstallmentsForCancellation().length > 0) {
+                <!-- Mensaje cuando no hay cuota seleccionada -->
+                @if (!selectedInstallmentForCancellation() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0)) {
                   <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
                     <span>Debe seleccionar una cuota para registrar la cancelación</span>
@@ -891,7 +898,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation()) || (isCancellationTypification() && pendingInstallmentsForCancellation().length === 0 && overdueInstallments().length > 0)"
+                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation())"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -1810,33 +1817,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
            selected.label?.toUpperCase().includes('CANCELACIÓN');
   });
 
-  // Computed para obtener las cuotas pendientes de todas las promesas activas
+  // Computed para obtener las cuotas pendientes de la ÚLTIMA promesa activa
   // IMPORTANTE: Solo incluye cuotas que pueden ser canceladas (fecha de pago >= hoy)
   pendingInstallmentsForCancellation = computed(() => {
     const schedules = this.activePaymentSchedules();
+    if (schedules.length === 0) return [];
+
+    // Solo la última promesa (la más reciente, ya viene ordenada DESC del backend)
+    const latestSchedule = schedules[0];
     const allPending: any[] = [];
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalizar a inicio del día
+    today.setHours(0, 0, 0, 0);
 
-    for (const schedule of schedules) {
-      if (schedule.installments) {
-        for (const cuota of schedule.installments) {
-          // El backend usa PAGADA/CANCELADA, no PAGADO/CANCELADO
-          const estado = cuota.status?.toUpperCase();
-          if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO' && estado !== 'VENCIDA' && estado !== 'VENCIDO') {
-            // Validar que la fecha de pago no haya pasado
-            const fechaPago = cuota.dueDate || cuota.fechaPago;
-            if (fechaPago) {
-              // Usar parseDateLocal para evitar bug de timezone
-              const fechaPagoDate = this.parseDateLocal(fechaPago);
-              // Solo incluir si la fecha de pago es hoy o futura
-              if (fechaPagoDate >= today) {
-                allPending.push({
-                  ...cuota,
-                  scheduleId: schedule.id,
-                  grupoPromesaUuid: schedule.grupoPromesaUuid
-                });
-              }
+    if (latestSchedule.installments) {
+      for (const cuota of latestSchedule.installments) {
+        const estado = cuota.status?.toUpperCase();
+        if (estado !== 'PAGADA' && estado !== 'PAGADO' && estado !== 'CUMPLIDO' && estado !== 'CANCELADA' && estado !== 'CANCELADO' && estado !== 'VENCIDA' && estado !== 'VENCIDO') {
+          const fechaPago = cuota.dueDate || cuota.fechaPago;
+          if (fechaPago) {
+            const fechaPagoDate = this.parseDateLocal(fechaPago);
+            if (fechaPagoDate >= today) {
+              allPending.push({
+                ...cuota,
+                scheduleId: latestSchedule.id,
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+              });
             }
           }
         }
@@ -1846,37 +1851,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return allPending;
   });
 
-  // Computed para obtener cuotas VENCIDAS (fecha de pago pasada, no se pueden cancelar)
+  // Computed para obtener cuotas VENCIDAS de la ÚLTIMA promesa (seleccionables para pago retroactivo)
   overdueInstallments = computed(() => {
     const schedules = this.activePaymentSchedules();
+    if (schedules.length === 0) return [];
+
+    // Solo la última promesa (la más reciente)
+    const latestSchedule = schedules[0];
     const overdue: any[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (const schedule of schedules) {
-      if (schedule.installments) {
-        for (const cuota of schedule.installments) {
-          const estado = cuota.status?.toUpperCase();
-          // Cuotas pendientes con fecha vencida o cuotas ya marcadas como VENCIDA
-          if (estado === 'VENCIDA' || estado === 'VENCIDO') {
-            overdue.push({
-              ...cuota,
-              scheduleId: schedule.id,
-              grupoPromesaUuid: schedule.grupoPromesaUuid
-            });
-          } else if (estado === 'PENDIENTE') {
-            const fechaPago = cuota.dueDate || cuota.fechaPago;
-            if (fechaPago) {
-              // Usar parseDateLocal para evitar bug de timezone
-              const fechaPagoDate = this.parseDateLocal(fechaPago);
-              // Si la fecha de pago ya pasó, está vencida
-              if (fechaPagoDate < today) {
-                overdue.push({
-                  ...cuota,
-                  scheduleId: schedule.id,
-                  grupoPromesaUuid: schedule.grupoPromesaUuid
-                });
-              }
+    if (latestSchedule.installments) {
+      for (const cuota of latestSchedule.installments) {
+        const estado = cuota.status?.toUpperCase();
+        if (estado === 'VENCIDA' || estado === 'VENCIDO') {
+          overdue.push({
+            ...cuota,
+            scheduleId: latestSchedule.id,
+            grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+          });
+        } else if (estado === 'PENDIENTE') {
+          const fechaPago = cuota.dueDate || cuota.fechaPago;
+          if (fechaPago) {
+            const fechaPagoDate = this.parseDateLocal(fechaPago);
+            if (fechaPagoDate < today) {
+              overdue.push({
+                ...cuota,
+                scheduleId: latestSchedule.id,
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+              });
             }
           }
         }
@@ -2871,8 +2875,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        // Filtrar solo cronogramas que tienen al menos una cuota pendiente
-        const activeSchedules = schedules.filter((s: any) => s.cuotasPendientes > 0);
+        // Filtrar cronogramas que tienen cuotas pendientes o vencidas (pago retroactivo)
+        const activeSchedules = schedules.filter((s: any) =>
+          s.cuotasPendientes > 0 ||
+          s.installments?.some((c: any) => c.status === 'VENCIDA' || c.status === 'VENCIDO')
+        );
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
