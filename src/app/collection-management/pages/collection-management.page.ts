@@ -296,7 +296,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
             }
 
             <!-- Alerta de Promesa de Pago Activa - Solo cuando hay cuotas realmente pendientes -->
-            @if (activePaymentSchedules() && activePaymentSchedules().some(s => s.cuotasPendientes > 0)) {
+            @if (hasActivePromiseWithPending()) {
               <div class="animate-[slideInDown_0.3s_ease-out]">
                 @for (schedule of activePaymentSchedules(); track schedule.id) {
                   <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-gray-900 dark:text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-amber-400 dark:border-amber-500">
@@ -1980,6 +1980,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   isLoadingContinuidad = signal<boolean>(false);
   // Error de continuidad (cuando no aplica)
   continuidadError = signal<string | null>(null);
+
+  // Computed: true si hay al menos una promesa con cuotas realmente pendientes (no solo vencidas)
+  hasActivePromiseWithPending = computed(() => {
+    const schedules = this.activePaymentSchedules();
+    return schedules && schedules.some((s: any) => s.cuotasPendientes > 0);
+  });
 
   // ==================== BLOQUEO PROMESA DE PAGO ACTIVA ====================
   // Flag para mostrar alerta de bloqueo cuando cliente tiene promesa activa
