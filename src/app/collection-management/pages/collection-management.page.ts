@@ -295,8 +295,8 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
             </div>
             }
 
-            <!-- Alerta de Promesa de Pago Activa - Compacto -->
-            @if (activePaymentSchedules() && activePaymentSchedules().length > 0) {
+            <!-- Alerta de Promesa de Pago Activa - Solo cuando hay cuotas realmente pendientes -->
+            @if (activePaymentSchedules() && activePaymentSchedules().some(s => s.cuotasPendientes > 0)) {
               <div class="animate-[slideInDown_0.3s_ease-out]">
                 @for (schedule of activePaymentSchedules(); track schedule.id) {
                   <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-gray-900 dark:text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-amber-400 dark:border-amber-500">
