@@ -199,6 +199,17 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           this.sipService.blockIncomingCallsMode(false);
         }
 
+        // FIX: Si estamos en agent-dashboard y el estado es TIPIFICANDO, corregir a DISPONIBLE
+        // TIPIFICANDO no tiene sentido aquí - el formulario de tipificación está en /collection-management
+        // Esto ocurre cuando una llamada se corta antes de que el frontend navegue
+        if (status.estadoActual === AgentState.TIPIFICANDO && this.userId) {
+          console.log('[AgentDashboard] ⚠️ Estado TIPIFICANDO detectado en agent-dashboard - corrigiendo a DISPONIBLE');
+          this.agentStatusService.finalizarTipificacion(this.userId).subscribe({
+            next: () => console.log('[AgentDashboard] ✅ Estado corregido a DISPONIBLE'),
+            error: (err: any) => console.error('[AgentDashboard] ❌ Error corrigiendo estado:', err)
+          });
+        }
+
         this.previousState = status.estadoActual;
         this.currentStatus = status;
       }
