@@ -38,6 +38,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   private subPortfolioId: number | null = null;
   private previousState: AgentState | null = null;
   private audioContext: AudioContext | null = null;
+  private isPageRefreshing = false;
+  private boundBeforeUnload = () => { this.isPageRefreshing = true; };
 
   // Estados disponibles
   AgentState = AgentState;
@@ -77,10 +79,16 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       });
     }
 
+    // Detectar refresh de página para NO marcar como DESCONECTADO
+    window.addEventListener('beforeunload', this.boundBeforeUnload);
+
     // Escuchar navegación para desconectar al salir de esta pantalla
     this.routerSubscription = this.router.events.pipe(
       filter(event => event instanceof NavigationStart)
     ).subscribe((event: any) => {
+      // Si es un refresh del navegador, no desconectar
+      if (this.isPageRefreshing) return;
+
       const targetUrl = event.url;
       // Si NO va a collection-management (tipificación), desconectar
       // Permitir también /login para logout normal
@@ -91,6 +99,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('beforeunload', this.boundBeforeUnload);
     if (this.statusSubscription) {
       this.statusSubscription.unsubscribe();
     }
