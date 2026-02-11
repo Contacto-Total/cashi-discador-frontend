@@ -1102,7 +1102,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'SSHH': 'user',
       'EN_MANUAL': 'pencil',
       'PAUSADO': 'pause-circle',
-      'DESCONECTADO': 'wifi-off'
+      'DESCONECTADO': 'circle'
     };
     return iconos[estado] || 'circle';
   }
