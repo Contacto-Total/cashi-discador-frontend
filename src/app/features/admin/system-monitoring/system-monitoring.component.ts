@@ -33,6 +33,8 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   private errorsChart: Chart | null = null;
 
   private pollSubscription?: Subscription;
+  private themeObserver?: MutationObserver;
+  private lastTheme: boolean = true; // true = dark
 
   snapshots: MetricsSnapshot[] = [];
   loading = true;
@@ -51,16 +53,48 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   constructor(private metricsService: SystemMetricsService) {}
 
   ngOnInit(): void {
+    this.lastTheme = this.isDark();
     this.startPolling();
+    this.watchThemeChanges();
   }
 
-  ngAfterViewInit(): void {
-    // Charts will be initialized when data arrives
-  }
+  ngAfterViewInit(): void {}
 
   ngOnDestroy(): void {
     this.pollSubscription?.unsubscribe();
+    this.themeObserver?.disconnect();
     this.destroyCharts();
+  }
+
+  private isDark(): boolean {
+    return document.body.classList.contains('dark-theme');
+  }
+
+  /** Theme colors helper */
+  private tc() {
+    const dark = this.isDark();
+    return {
+      text: dark ? '#94a3b8' : '#475569',
+      textMuted: dark ? '#64748b' : '#94a3b8',
+      grid: dark ? 'rgba(148, 163, 184, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+      legendText: dark ? '#94a3b8' : '#475569',
+      donutBorder: dark ? '#1e293b' : '#ffffff',
+    };
+  }
+
+  /** Watch for theme class changes on body to rebuild charts */
+  private watchThemeChanges(): void {
+    this.themeObserver = new MutationObserver(() => {
+      const currentTheme = this.isDark();
+      if (currentTheme !== this.lastTheme) {
+        this.lastTheme = currentTheme;
+        this.destroyCharts();
+        if (this.snapshots.length > 0) {
+          this.updateCharts();
+        }
+      }
+    });
+    this.themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
   startPolling(): void {
@@ -123,6 +157,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   // ─── Panel 1: Sesiones Activas ────────────────────────────────
   private updateSessionsChart(labels: string[]): void {
     if (!this.sessionsChartRef?.nativeElement) return;
+    const c = this.tc();
 
     const wsData = this.snapshots.map(s => s.websocketSessions);
     const sipData = this.snapshots.map(s => s.sipRegistrations);
@@ -146,7 +181,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
             label: 'WebSocket Sessions',
             data: wsData,
             borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
             borderWidth: 2,
             tension: 0.3,
             fill: true,
@@ -157,7 +192,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
             label: 'SIP Registrations',
             data: sipData,
             borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
             borderWidth: 2,
             tension: 0.3,
             fill: true,
@@ -183,29 +218,14 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 15 }
-          }
+          legend: { labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 15 } }
         },
         scales: {
-          x: {
-            ticks: { color: '#64748b', maxTicksLimit: 10 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { color: '#64748b', stepSize: 1 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          },
+          x: { ticks: { color: c.text, maxTicksLimit: 10 }, grid: { color: c.grid } },
+          y: { beginAtZero: true, ticks: { color: c.text, stepSize: 1 }, grid: { color: c.grid } },
           y1: {
-            position: 'right' as const,
-            min: 0,
-            max: 1,
-            ticks: {
-              color: '#f59e0b',
-              stepSize: 1,
-              callback: (val: any) => val === 1 ? 'ON' : 'OFF'
-            },
+            position: 'right' as const, min: 0, max: 1,
+            ticks: { color: '#f59e0b', stepSize: 1, callback: (val: any) => val === 1 ? 'ON' : 'OFF' },
             grid: { display: false }
           }
         }
@@ -216,6 +236,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   // ─── Panel 2: FreeSWITCH Calls ─────────────────────────────────
   private updateFreeSwitchChart(labels: string[]): void {
     if (!this.freeswitchChartRef?.nativeElement) return;
+    const c = this.tc();
 
     const channelsData = this.snapshots.map(s => s.activeChannels);
     const successData = this.snapshots.map(s => s.callsSuccess);
@@ -238,51 +259,25 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         labels,
         datasets: [
           {
-            type: 'line',
-            label: 'Canales Activos',
-            data: channelsData,
-            borderColor: '#8b5cf6',
-            backgroundColor: 'rgba(139, 92, 246, 0.1)',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            yAxisID: 'y1',
-            order: 0
+            type: 'line', label: 'Canales Activos', data: channelsData,
+            borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.15)',
+            borderWidth: 2, tension: 0.3, fill: true, pointRadius: 0, pointHoverRadius: 4,
+            yAxisID: 'y1', order: 0
           },
           {
-            type: 'bar',
-            label: 'Exitosas',
-            data: successData,
-            backgroundColor: 'rgba(16, 185, 129, 0.7)',
-            borderColor: '#10b981',
-            borderWidth: 1,
-            borderRadius: 2,
-            yAxisID: 'y',
-            order: 1
+            type: 'bar', label: 'Exitosas', data: successData,
+            backgroundColor: 'rgba(16, 185, 129, 0.7)', borderColor: '#10b981',
+            borderWidth: 1, borderRadius: 2, yAxisID: 'y', order: 1
           },
           {
-            type: 'bar',
-            label: 'Fallidas',
-            data: failedData,
-            backgroundColor: 'rgba(239, 68, 68, 0.7)',
-            borderColor: '#ef4444',
-            borderWidth: 1,
-            borderRadius: 2,
-            yAxisID: 'y',
-            order: 2
+            type: 'bar', label: 'Fallidas', data: failedData,
+            backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: '#ef4444',
+            borderWidth: 1, borderRadius: 2, yAxisID: 'y', order: 2
           },
           {
-            type: 'bar',
-            label: 'Abandonadas',
-            data: abandonedData,
-            backgroundColor: 'rgba(245, 158, 11, 0.7)',
-            borderColor: '#f59e0b',
-            borderWidth: 1,
-            borderRadius: 2,
-            yAxisID: 'y',
-            order: 3
+            type: 'bar', label: 'Abandonadas', data: abandonedData,
+            backgroundColor: 'rgba(245, 158, 11, 0.7)', borderColor: '#f59e0b',
+            borderWidth: 1, borderRadius: 2, yAxisID: 'y', order: 3
           }
         ]
       },
@@ -291,28 +286,18 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 15 }
-          }
+          legend: { labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 15 } }
         },
         scales: {
-          x: {
-            stacked: true,
-            ticks: { color: '#64748b', maxTicksLimit: 10 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          },
+          x: { stacked: true, ticks: { color: c.text, maxTicksLimit: 10 }, grid: { color: c.grid } },
           y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: { color: '#64748b', stepSize: 1 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' },
-            title: { display: true, text: 'Llamadas / 10s', color: '#64748b' }
+            stacked: true, beginAtZero: true,
+            ticks: { color: c.text, stepSize: 1 }, grid: { color: c.grid },
+            title: { display: true, text: 'Llamadas / 10s', color: c.text }
           },
           y1: {
-            position: 'right' as const,
-            beginAtZero: true,
-            ticks: { color: '#8b5cf6' },
-            grid: { display: false },
+            position: 'right' as const, beginAtZero: true,
+            ticks: { color: '#8b5cf6' }, grid: { display: false },
             title: { display: true, text: 'Canales', color: '#8b5cf6' }
           }
         }
@@ -323,6 +308,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   // ─── Panel 3: AMD ────────────────────────────────────────────
   private updateAmdChart(labels: string[]): void {
     if (!this.amdChartRef?.nativeElement) return;
+    const c = this.tc();
 
     const responseData = this.snapshots.map(s => s.amdResponseTimeMs);
 
@@ -341,32 +327,21 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
           label: 'AMD Response Time (ms)',
           data: responseData,
           borderColor: '#06b6d4',
-          backgroundColor: 'rgba(6, 182, 212, 0.1)',
-          borderWidth: 2,
-          tension: 0.3,
-          fill: true,
-          pointRadius: 0,
-          pointHoverRadius: 4
+          backgroundColor: 'rgba(6, 182, 212, 0.15)',
+          borderWidth: 2, tension: 0.3, fill: true, pointRadius: 0, pointHoverRadius: 4
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 15 }
-          }
+          legend: { labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 15 } }
         },
         scales: {
-          x: {
-            ticks: { color: '#64748b', maxTicksLimit: 10 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          },
+          x: { ticks: { color: c.text, maxTicksLimit: 10 }, grid: { color: c.grid } },
           y: {
-            beginAtZero: true,
-            ticks: { color: '#64748b' },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' },
-            title: { display: true, text: 'ms', color: '#64748b' }
+            beginAtZero: true, ticks: { color: c.text }, grid: { color: c.grid },
+            title: { display: true, text: 'ms', color: c.text }
           }
         }
       }
@@ -375,6 +350,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
 
   private updateAmdDonut(): void {
     if (!this.amdDonutChartRef?.nativeElement) return;
+    const c = this.tc();
 
     const totalHuman = this.snapshots.reduce((s, d) => s + d.amdHuman, 0);
     const totalMachine = this.snapshots.reduce((s, d) => s + d.amdMachine, 0);
@@ -393,8 +369,8 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         datasets: [{
           data: [totalHuman, totalMachine, totalUnknown],
           backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
-          borderColor: ['#065f46', '#991b1b', '#92400e'],
-          borderWidth: 1
+          borderColor: c.donutBorder,
+          borderWidth: 2
         }]
       },
       options: {
@@ -404,7 +380,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         plugins: {
           legend: {
             position: 'bottom',
-            labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 11 } }
+            labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 11 } }
           }
         }
       }
@@ -414,6 +390,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   // ─── Panel 4: API Traffic ─────────────────────────────────────
   private updateTrafficChart(labels: string[]): void {
     if (!this.trafficChartRef?.nativeElement) return;
+    const c = this.tc();
 
     const avgLatency = this.snapshots.map(s => s.avgLatencyMs);
     const p95Latency = this.snapshots.map(s => s.p95LatencyMs);
@@ -434,42 +411,19 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         labels,
         datasets: [
           {
-            type: 'bar',
-            label: 'Requests / 10s',
-            data: requests,
-            backgroundColor: 'rgba(59, 130, 246, 0.5)',
-            borderColor: '#3b82f6',
-            borderWidth: 1,
-            borderRadius: 2,
-            yAxisID: 'y',
-            order: 1
+            type: 'bar', label: 'Requests / 10s', data: requests,
+            backgroundColor: 'rgba(59, 130, 246, 0.5)', borderColor: '#3b82f6',
+            borderWidth: 1, borderRadius: 2, yAxisID: 'y', order: 1
           },
           {
-            type: 'line',
-            label: 'Avg Latency (ms)',
-            data: avgLatency,
-            borderColor: '#10b981',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            yAxisID: 'y1',
-            order: 0
+            type: 'line', label: 'Avg Latency (ms)', data: avgLatency,
+            borderColor: '#10b981', borderWidth: 2, tension: 0.3, fill: false,
+            pointRadius: 0, pointHoverRadius: 4, yAxisID: 'y1', order: 0
           },
           {
-            type: 'line',
-            label: 'P95 Latency (ms)',
-            data: p95Latency,
-            borderColor: '#f59e0b',
-            borderWidth: 2,
-            tension: 0.3,
-            fill: false,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            borderDash: [5, 5],
-            yAxisID: 'y1',
-            order: 0
+            type: 'line', label: 'P95 Latency (ms)', data: p95Latency,
+            borderColor: '#f59e0b', borderWidth: 2, tension: 0.3, fill: false,
+            pointRadius: 0, pointHoverRadius: 4, borderDash: [5, 5], yAxisID: 'y1', order: 0
           }
         ]
       },
@@ -478,26 +432,17 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: {
-            labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 15 }
-          }
+          legend: { labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 15 } }
         },
         scales: {
-          x: {
-            ticks: { color: '#64748b', maxTicksLimit: 10 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          },
+          x: { ticks: { color: c.text, maxTicksLimit: 10 }, grid: { color: c.grid } },
           y: {
-            beginAtZero: true,
-            ticks: { color: '#3b82f6' },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' },
+            beginAtZero: true, ticks: { color: '#3b82f6' }, grid: { color: c.grid },
             title: { display: true, text: 'Requests', color: '#3b82f6' }
           },
           y1: {
-            position: 'right' as const,
-            beginAtZero: true,
-            ticks: { color: '#10b981' },
-            grid: { display: false },
+            position: 'right' as const, beginAtZero: true,
+            ticks: { color: '#10b981' }, grid: { display: false },
             title: { display: true, text: 'Latencia (ms)', color: '#10b981' }
           }
         }
@@ -507,6 +452,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
 
   private updateErrorsChart(labels: string[]): void {
     if (!this.errorsChartRef?.nativeElement) return;
+    const c = this.tc();
 
     const err4xx = this.snapshots.map(s => s.errors4xx);
     const err5xx = this.snapshots.map(s => s.errors5xx);
@@ -525,20 +471,14 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         labels,
         datasets: [
           {
-            label: 'Errores 4xx',
-            data: err4xx,
-            backgroundColor: 'rgba(245, 158, 11, 0.7)',
-            borderColor: '#f59e0b',
-            borderWidth: 1,
-            borderRadius: 2
+            label: 'Errores 4xx', data: err4xx,
+            backgroundColor: 'rgba(245, 158, 11, 0.7)', borderColor: '#f59e0b',
+            borderWidth: 1, borderRadius: 2
           },
           {
-            label: 'Errores 5xx',
-            data: err5xx,
-            backgroundColor: 'rgba(239, 68, 68, 0.7)',
-            borderColor: '#ef4444',
-            borderWidth: 1,
-            borderRadius: 2
+            label: 'Errores 5xx', data: err5xx,
+            backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: '#ef4444',
+            borderWidth: 1, borderRadius: 2
           }
         ]
       },
@@ -546,22 +486,11 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle', padding: 15 }
-          }
+          legend: { labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 15 } }
         },
         scales: {
-          x: {
-            stacked: true,
-            ticks: { color: '#64748b', maxTicksLimit: 10 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            ticks: { color: '#64748b', stepSize: 1 },
-            grid: { color: 'rgba(148, 163, 184, 0.08)' }
-          }
+          x: { stacked: true, ticks: { color: c.text, maxTicksLimit: 10 }, grid: { color: c.grid } },
+          y: { stacked: true, beginAtZero: true, ticks: { color: c.text, stepSize: 1 }, grid: { color: c.grid } }
         }
       }
     });
