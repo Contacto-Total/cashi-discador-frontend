@@ -92,8 +92,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
       const targetUrl = event.url;
       // Si NO va a collection-management (tipificación), desconectar
-      // Permitir también /login para logout normal
-      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/login')) {
+      if (!targetUrl.startsWith('/collection-management')) {
         this.setDesconectado();
       }
     });
