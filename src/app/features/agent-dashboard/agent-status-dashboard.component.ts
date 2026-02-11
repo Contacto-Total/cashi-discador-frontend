@@ -32,6 +32,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   campaignName: string | null = null;
 
   private statusSubscription?: Subscription;
+  private currentStatusSubscription?: Subscription;
   private routerSubscription?: Subscription;
   private campaignStatusSubscription?: Subscription;
   private userId: number | null = null;
@@ -105,6 +106,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
+    }
+    if (this.currentStatusSubscription) {
+      this.currentStatusSubscription.unsubscribe();
     }
     if (this.campaignStatusSubscription) {
       this.campaignStatusSubscription.unsubscribe();
@@ -183,7 +187,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     });
 
     // Suscribirse a cambios del estado
-    this.agentStatusService.currentStatus$.subscribe(status => {
+    this.currentStatusSubscription = this.agentStatusService.currentStatus$.subscribe(status => {
       if (status) {
         // Detectar cambio a EN_LLAMADA para reproducir beep
         if (status.estadoActual === AgentState.EN_LLAMADA &&
