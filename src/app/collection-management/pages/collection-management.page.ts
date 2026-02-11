@@ -3170,20 +3170,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.sipService.blockIncomingCallsMode(false);
     console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
 
-    // Cambiar estado a DISPONIBLE y LUEGO navegar
+    // Navegar PRIMERO, luego cambiar a DISPONIBLE
+    // Esto evita que el auto-dialer asigne una llamada mientras el agente aún está aquí
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id || 1;
-    this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-      next: () => {
-        console.log('✅ Estado cambiado a DISPONIBLE, navegando al agent-dashboard...');
-        // Navegar DESPUÉS de cambiar el estado exitosamente
-        this.router.navigate(['/agent-dashboard']);
-      },
-      error: (error) => {
-        console.error('❌ Error al cambiar estado:', error);
-        // Navegar igual aunque falle el cambio de estado
-        this.router.navigate(['/agent-dashboard']);
-      }
+    this.router.navigate(['/agent-dashboard']).then(() => {
+      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+        next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
+        error: (err: any) => console.error('❌ Error cambiando estado:', err)
+      });
     });
   }
 
@@ -4712,29 +4707,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Flujo normal: cambiar estado a DISPONIBLE y volver al dashboard
-    console.log('✅ Gestión guardada, cambiando estado a DISPONIBLE...');
+    // Flujo normal: navegar PRIMERO, luego cambiar a DISPONIBLE
+    // Esto evita que el auto-dialer asigne una llamada mientras el agente aún está en esta pantalla
+    console.log('✅ Gestión guardada, navegando a agent-dashboard...');
 
     const currentUser = this.authService.getCurrentUser();
-    const agentId = currentUser?.id || 1; // Fallback a 1 si no se obtiene
-    this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-      next: () => {
-        console.log('✅ Estado cambiado a DISPONIBLE');
-        // Esperar 2 segundos para mostrar mensaje de éxito, luego navegar
-        setTimeout(() => {
-          this.showSuccess.set(false);
-          console.log('🔄 Navegando a /agent-dashboard...');
-          this.router.navigate(['/agent-dashboard']);
-        }, 2000);
-      },
-      error: (err: any) => {
-        console.error('❌ Error cambiando estado:', err);
-        // Navegar de todas formas aunque falle el cambio de estado
-        setTimeout(() => {
-          this.showSuccess.set(false);
-          this.router.navigate(['/agent-dashboard']);
-        }, 2000);
-      }
+    const agentId = currentUser?.id || 1;
+    setTimeout(() => {
+      this.showSuccess.set(false);
+      console.log('🔄 Navegando a /agent-dashboard...');
+      this.router.navigate(['/agent-dashboard']).then(() => {
+        // Solo cambiar a DISPONIBLE después de llegar al dashboard
+        this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+          next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
+          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+        });
+      });
+    }, 2000);
     });
   }
 
@@ -4861,10 +4850,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe(() => {
-      // Cambiar estado a disponible y navegar al dashboard
-      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-        next: () => this.router.navigate(['/agent-dashboard']),
-        error: () => this.router.navigate(['/agent-dashboard'])
+      // Navegar PRIMERO, luego cambiar a DISPONIBLE
+      this.router.navigate(['/agent-dashboard']).then(() => {
+        this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+          next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
+          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+        });
       });
     });
   }
