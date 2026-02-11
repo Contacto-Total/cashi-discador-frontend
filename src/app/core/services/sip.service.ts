@@ -35,6 +35,7 @@ export class SipService {
   // Permite que collection-management lo lea al inicializarse
   private currentOutgoingNumber: string | null = null;
 
+
   private websocketService = inject(WebsocketService);
   private audioDeviceService = inject(AudioDeviceService);
   private currentExtension: string | null = null;
@@ -100,6 +101,7 @@ export class SipService {
     console.log('📤 [SipService] Número de llamada saliente establecido:', phoneNumber);
     this.onOutgoingCall.emit({ to: phoneNumber });
   }
+
 
   /**
    * Initialize and register to FreeSWITCH

@@ -2197,6 +2197,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.sipService.clearCurrentOutgoingNumber();
     }
 
+
     // Verificar si viene desde gestión manual con parámetros de cliente
     this.route.queryParams.subscribe(params => {
       if (params['source'] === 'manual' && params['documento']) {
@@ -2664,7 +2665,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Carga el cliente de la llamada activa del agente
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
-  loadFirstCustomer() {
+  loadFirstCustomer(retryCount: number = 0) {
     this.isLoadingCustomer.set(true);
     const currentUser = this.authService.getCurrentUser();
 
@@ -2675,7 +2676,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     const sipExt = currentUser.sipExtension;
-    console.log(`📋 [FULL-DATA] Cargando datos completos del cliente en 1 llamada para extensión ${sipExt}...`);
+    console.log(`📋 [FULL-DATA] Cargando datos completos del cliente para extensión ${sipExt}... (intento ${retryCount + 1})`);
 
     // Endpoint unificado: obtiene llamada activa + detalle cliente + datos dinámicos en 1 sola llamada
     this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/extension/${sipExt}`).pipe(
@@ -2687,8 +2688,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     ).subscribe({
       next: (fullData) => {
         if (!fullData) {
-          console.warn('⚠️ [FULL-DATA] No se obtuvieron datos (sin llamada activa)');
-          this.isLoadingCustomer.set(false);
+          // Si no hay datos y hay una llamada activa, reintentar después de 2s
+          // Esto cubre la race condition donde la transacción del backend
+          // aún no se ha commiteado cuando el frontend consulta
+          if (retryCount < 2 && this.callActive()) {
+            console.warn(`⚠️ [FULL-DATA] Sin datos pero llamada activa - reintentando en 2s (intento ${retryCount + 1}/3)`);
+            setTimeout(() => this.loadFirstCustomer(retryCount + 1), 2000);
+          } else {
+            console.warn('⚠️ [FULL-DATA] No se obtuvieron datos (sin llamada activa)');
+            this.isLoadingCustomer.set(false);
+          }
           return;
         }
 
