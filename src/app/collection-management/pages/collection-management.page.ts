@@ -4724,7 +4724,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         });
       });
     }, 2000);
-    });
   }
 
   /**
