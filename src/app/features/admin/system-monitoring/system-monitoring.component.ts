@@ -120,7 +120,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   onTimeRangeChange(): void {
-    this.loading = true;
+    this.destroyCharts();
     this.startPolling();
   }
 
