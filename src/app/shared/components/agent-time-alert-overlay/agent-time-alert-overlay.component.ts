@@ -223,6 +223,11 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       box-shadow: 0 4px 16px rgba(107, 114, 128, 0.3);
     }
 
+    .main-btn[data-estado="desconectado"] {
+      background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+      box-shadow: 0 4px 16px rgba(158, 158, 158, 0.3);
+    }
+
     /* Estado de alerta - animación sutil pero perceptible */
     .main-btn.alert-mode {
       background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
@@ -308,6 +313,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-badge[data-estado="sshh"] { color: #a855f7; }
     .time-badge[data-estado="en_manual"] { color: #94a3b8; }
     .time-badge[data-estado="pausado"] { color: #9ca3af; }
+    .time-badge[data-estado="desconectado"] { color: #9e9e9e; }
 
     .time-badge.alert-mode {
       color: #ef4444;
@@ -348,6 +354,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .status-indicator[data-estado="sshh"] { background: #a855f7; }
     .status-indicator[data-estado="en_manual"] { background: #64748b; }
     .status-indicator[data-estado="pausado"] { background: #6b7280; }
+    .status-indicator[data-estado="desconectado"] { background: #9e9e9e; }
 
     .status-indicator.alert-mode {
       background: #ef4444;
@@ -414,6 +421,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .menu-header[data-estado="sshh"] { background: rgba(168, 85, 247, 0.08); border-bottom-color: rgba(168, 85, 247, 0.15); }
     .menu-header[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.08); border-bottom-color: rgba(100, 116, 139, 0.15); }
     .menu-header[data-estado="pausado"] { background: rgba(107, 114, 128, 0.08); border-bottom-color: rgba(107, 114, 128, 0.15); }
+    .menu-header[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.08); border-bottom-color: rgba(158, 158, 158, 0.15); }
 
     .menu-header.alert-mode {
       background: rgba(239, 68, 68, 0.08);
@@ -440,6 +448,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .menu-header[data-estado="sshh"] .header-icon { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
     .menu-header[data-estado="en_manual"] .header-icon { background: rgba(100, 116, 139, 0.15); color: #64748b; }
     .menu-header[data-estado="pausado"] .header-icon { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
+    .menu-header[data-estado="desconectado"] .header-icon { background: rgba(158, 158, 158, 0.15); color: #9e9e9e; }
 
     .menu-header.alert-mode .header-icon {
       background: rgba(239, 68, 68, 0.15);
@@ -512,6 +521,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-card[data-estado="sshh"] { background: rgba(168, 85, 247, 0.06); border-color: rgba(168, 85, 247, 0.12); }
     .time-card[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.06); border-color: rgba(100, 116, 139, 0.12); }
     .time-card[data-estado="pausado"] { background: rgba(107, 114, 128, 0.06); border-color: rgba(107, 114, 128, 0.12); }
+    .time-card[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.06); border-color: rgba(158, 158, 158, 0.12); }
 
     .time-card.alert-mode {
       background: rgba(239, 68, 68, 0.08);
@@ -538,6 +548,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-card[data-estado="sshh"] .time-icon { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
     .time-card[data-estado="en_manual"] .time-icon { background: rgba(100, 116, 139, 0.12); color: #64748b; }
     .time-card[data-estado="pausado"] .time-icon { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
+    .time-card[data-estado="desconectado"] .time-icon { background: rgba(158, 158, 158, 0.12); color: #9e9e9e; }
 
     .time-card.alert-mode .time-icon {
       background: rgba(239, 68, 68, 0.15);
@@ -576,6 +587,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-card[data-estado="sshh"] .time-value { color: #a855f7; }
     .time-card[data-estado="en_manual"] .time-value { color: #94a3b8; }
     .time-card[data-estado="pausado"] .time-value { color: #9ca3af; }
+    .time-card[data-estado="desconectado"] .time-value { color: #9e9e9e; }
 
     .time-card.alert-mode .time-value {
       color: #ef4444;
@@ -732,6 +744,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       .menu-header[data-estado="sshh"] { background: rgba(168, 85, 247, 0.04); border-bottom-color: rgba(168, 85, 247, 0.08); }
       .menu-header[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.04); border-bottom-color: rgba(100, 116, 139, 0.08); }
       .menu-header[data-estado="pausado"] { background: rgba(107, 114, 128, 0.04); border-bottom-color: rgba(107, 114, 128, 0.08); }
+      .menu-header[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.04); border-bottom-color: rgba(158, 158, 158, 0.08); }
 
       .menu-header.alert-mode {
         background: rgba(239, 68, 68, 0.04);
@@ -763,6 +776,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       .time-card[data-estado="sshh"] { background: rgba(168, 85, 247, 0.04); border-color: rgba(168, 85, 247, 0.08); }
       .time-card[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.04); border-color: rgba(100, 116, 139, 0.08); }
       .time-card[data-estado="pausado"] { background: rgba(107, 114, 128, 0.04); border-color: rgba(107, 114, 128, 0.08); }
+      .time-card[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.04); border-color: rgba(158, 158, 158, 0.08); }
 
       .time-card.alert-mode {
         background: rgba(239, 68, 68, 0.04);
@@ -1043,7 +1057,8 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'Refrigerio',
       'SSHH': 'SSHH',
       'EN_MANUAL': 'Modo Manual',
-      'PAUSADO': 'Pausado'
+      'PAUSADO': 'Pausado',
+      'DESCONECTADO': 'Desconectado'
     };
     return estados[estado] || estado || 'Sin estado';
   }
@@ -1071,7 +1086,8 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'refrigerio',
       'SSHH': 'sshh',
       'EN_MANUAL': 'en_manual',
-      'PAUSADO': 'pausado'
+      'PAUSADO': 'pausado',
+      'DESCONECTADO': 'desconectado'
     };
     return colores[estado] || 'disponible';
   }
@@ -1085,7 +1101,8 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'coffee',
       'SSHH': 'user',
       'EN_MANUAL': 'pencil',
-      'PAUSADO': 'pause-circle'
+      'PAUSADO': 'pause-circle',
+      'DESCONECTADO': 'wifi-off'
     };
     return iconos[estado] || 'circle';
   }
