@@ -2688,14 +2688,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     ).subscribe({
       next: (fullData) => {
         if (!fullData) {
-          // Si no hay datos y hay una llamada activa, reintentar después de 2s
-          // Esto cubre la race condition donde la transacción del backend
-          // aún no se ha commiteado cuando el frontend consulta
-          if (retryCount < 2 && this.callActive()) {
-            console.warn(`⚠️ [FULL-DATA] Sin datos pero llamada activa - reintentando en 2s (intento ${retryCount + 1}/3)`);
+          // Reintentar si no hay datos - cubre dos escenarios:
+          // 1. Llamada activa: transacción del backend aún no commiteada
+          // 2. Llamada terminó rápido (<3s): agente ya está tipificando pero los datos no llegaron
+          if (retryCount < 2 && (this.callActive() || this.isTipifying())) {
+            console.warn(`⚠️ [FULL-DATA] Sin datos pero en llamada/tipificando - reintentando en 2s (intento ${retryCount + 1}/3)`);
             setTimeout(() => this.loadFirstCustomer(retryCount + 1), 2000);
           } else {
-            console.warn('⚠️ [FULL-DATA] No se obtuvieron datos (sin llamada activa)');
+            console.warn('⚠️ [FULL-DATA] No se obtuvieron datos después de todos los intentos');
             this.isLoadingCustomer.set(false);
           }
           return;
