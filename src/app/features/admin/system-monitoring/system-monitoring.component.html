@@ -1,0 +1,172 @@
+<div class="monitoring-container">
+
+  <!-- Header -->
+  <div class="monitoring-header">
+    <div class="header-left">
+      <lucide-angular name="activity" [size]="24" class="header-icon"></lucide-angular>
+      <h1>System Monitoring</h1>
+    </div>
+    <div class="header-right">
+      <select [(ngModel)]="selectedMinutes" (change)="onTimeRangeChange()" class="time-select">
+        <option [value]="5">5 min</option>
+        <option [value]="15">15 min</option>
+        <option [value]="30">30 min</option>
+        <option [value]="60">60 min</option>
+      </select>
+      <div class="last-updated" *ngIf="lastUpdated">
+        <span class="pulse-dot"></span>
+        <span>{{ lastUpdated | date:'HH:mm:ss' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading-state" *ngIf="loading">
+    <lucide-angular name="loader-2" [size]="32" class="spin"></lucide-angular>
+    <span>Cargando métricas...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error-state" *ngIf="error && !loading">
+    <lucide-angular name="alert-triangle" [size]="24"></lucide-angular>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- Content -->
+  <div class="monitoring-content" *ngIf="!loading && !error">
+
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="card-icon ws">
+          <lucide-angular name="users" [size]="18"></lucide-angular>
+        </div>
+        <div class="card-info">
+          <span class="card-value">{{ latestWsSessions }}</span>
+          <span class="card-label">WebSocket Sessions</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="card-icon sip">
+          <lucide-angular name="phone" [size]="18"></lucide-angular>
+        </div>
+        <div class="card-info">
+          <span class="card-value">{{ latestSipRegs }}</span>
+          <span class="card-label">SIP Registrations</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="card-icon channels">
+          <lucide-angular name="radio" [size]="18"></lucide-angular>
+        </div>
+        <div class="card-info">
+          <span class="card-value">{{ latestChannels }}</span>
+          <span class="card-label">Canales Activos</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="card-icon" [class.esl-on]="latestEsl" [class.esl-off]="!latestEsl">
+          <lucide-angular name="plug" [size]="18"></lucide-angular>
+        </div>
+        <div class="card-info">
+          <span class="card-value" [class.status-on]="latestEsl" [class.status-off]="!latestEsl">
+            {{ latestEsl ? 'CONNECTED' : 'DISCONNECTED' }}
+          </span>
+          <span class="card-label">ESL Connection</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="card-icon amd">
+          <lucide-angular name="cpu" [size]="18"></lucide-angular>
+        </div>
+        <div class="card-info">
+          <span class="card-value" [class.amd-slow]="latestAmdMs > 500" [class.amd-down]="latestAmdMs < 0">
+            {{ latestAmdMs >= 0 ? latestAmdMs + ' ms' : 'DOWN' }}
+          </span>
+          <span class="card-label">AMD Response</span>
+        </div>
+      </div>
+      <div class="summary-card">
+        <div class="card-icon traffic">
+          <lucide-angular name="bar-chart-3" [size]="18"></lucide-angular>
+        </div>
+        <div class="card-info">
+          <span class="card-value">{{ latestRequests }}</span>
+          <span class="card-label">Requests / 10s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+
+      <!-- Panel 1: Sesiones Activas -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <lucide-angular name="users" [size]="18" class="panel-icon sessions"></lucide-angular>
+          <h3>Sesiones Activas</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #sessionsChart></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 2: FreeSWITCH Calls -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <lucide-angular name="phone-call" [size]="18" class="panel-icon freeswitch"></lucide-angular>
+          <h3>FreeSWITCH - Llamadas</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #freeswitchChart></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 3: AMD -->
+      <div class="chart-panel amd-panel">
+        <div class="panel-header">
+          <lucide-angular name="cpu" [size]="18" class="panel-icon amd"></lucide-angular>
+          <h3>AMD - Detección</h3>
+        </div>
+        <div class="amd-charts">
+          <div class="chart-wrapper amd-line">
+            <canvas #amdChart></canvas>
+          </div>
+          <div class="chart-wrapper amd-donut">
+            <canvas #amdDonutChart></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 4: API Traffic -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <lucide-angular name="globe" [size]="18" class="panel-icon traffic"></lucide-angular>
+          <h3>API Traffic - Requests & Latencia</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #trafficChart></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 5: HTTP Errors -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <lucide-angular name="alert-circle" [size]="18" class="panel-icon errors"></lucide-angular>
+          <h3>HTTP Errors</h3>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #errorsChart></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- No Data -->
+    <div class="no-data" *ngIf="snapshots.length === 0">
+      <lucide-angular name="clock" [size]="32"></lucide-angular>
+      <p>Esperando datos... El buffer se llena cada 10 segundos.</p>
+    </div>
+
+  </div>
+</div>

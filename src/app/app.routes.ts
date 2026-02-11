@@ -58,6 +58,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/system-health/system-health.component').then(m => m.SystemHealthComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'admin/system-monitoring',
+    loadComponent: () => import('./features/admin/system-monitoring/system-monitoring.component').then(m => m.SystemMonitoringComponent),
+    canActivate: [authGuard]
+  },
 
   // ========================================
   // REPORTES LEGACY
