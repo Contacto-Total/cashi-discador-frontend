@@ -13,6 +13,7 @@ import {
   AGENT_STATE_LABELS,
   MANUAL_STATES
 } from '../../core/models/agent-status.model';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-agent-status-dashboard',
@@ -41,7 +42,25 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   private previousState: AgentState | null = null;
   private audioContext: AudioContext | null = null;
   private isPageRefreshing = false;
-  private boundBeforeUnload = () => { this.isPageRefreshing = true; };
+  private boundBeforeUnload = () => {
+    this.isPageRefreshing = true;
+    // Notificar al backend que la página se está cerrando (beacon disconnect)
+    // El backend espera 5s y verifica si el usuario reconectó (refresh = reconecta, cierre = no)
+    if (this.userId) {
+      const token = localStorage.getItem('callcenter_token');
+      if (token) {
+        fetch(`${environment.apiUrl}/agent-status/${this.userId}/beacon-disconnect`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ userId: this.userId }),
+          keepalive: true  // Asegura que el request se complete incluso después de cerrar la página
+        }).catch(() => {}); // Ignorar errores silenciosamente
+      }
+    }
+  };
 
   // Estados disponibles
   AgentState = AgentState;
