@@ -33,6 +33,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
 
   private statusSubscription?: Subscription;
   private currentStatusSubscription?: Subscription;
+  private wsStatusSubscription?: Subscription;
   private routerSubscription?: Subscription;
   private campaignStatusSubscription?: Subscription;
   private userId: number | null = null;
@@ -67,7 +68,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
     this.loadAgentStatus(user.id);
 
-    // Polling cada 30 segundos
+    // WebSocket: cambios de estado en tiempo real (instantáneo)
+    this.wsStatusSubscription = this.agentStatusService
+      .subscribeToStatusUpdates(user.id)
+      .subscribe();
+
+    // Polling cada 30 segundos (fallback + sync umbrales/colores)
     this.statusSubscription = this.agentStatusService
       .startStatusPolling(user.id)
       .subscribe();
@@ -108,6 +114,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.currentStatusSubscription) {
       this.currentStatusSubscription.unsubscribe();
+    }
+    if (this.wsStatusSubscription) {
+      this.wsStatusSubscription.unsubscribe();
     }
     if (this.campaignStatusSubscription) {
       this.campaignStatusSubscription.unsubscribe();

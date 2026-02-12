@@ -10,6 +10,7 @@ import {
   EstadosDisponibles,
   AgentState
 } from '../models/agent-status.model';
+import { WebsocketService } from './websocket.service';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +21,7 @@ export class AgentStatusService {
   private currentStatusSubject = new BehaviorSubject<AgentStatus | null>(null);
   public currentStatus$ = this.currentStatusSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private websocketService: WebsocketService) {}
 
   /**
    * Obtiene el estado actual de un agente
@@ -99,13 +100,36 @@ export class AgentStatusService {
   }
 
   /**
-   * Inicia el polling automático del estado del agente cada 10 segundos
-   * para mantener actualizado el indicador de umbral de tiempo
+   * Inicia el polling automático del estado del agente cada 30 segundos (fallback).
+   * Los cambios instantáneos llegan via WebSocket (subscribeToStatusUpdates).
+   * El polling sincroniza datos completos: umbrales, colores, porcentajes.
    */
   startStatusPolling(idUsuario: number): Observable<AgentStatusResponse> {
-    return interval(10000).pipe(
+    return interval(30000).pipe(
       startWith(0),
       switchMap(() => this.getAgentStatus(idUsuario))
+    );
+  }
+
+  /**
+   * Suscripción WebSocket para cambios de estado en tiempo real.
+   * El backend envía push a /topic/agent-status/{userId} cada vez que cambia el estado.
+   */
+  subscribeToStatusUpdates(idUsuario: number): Observable<any> {
+    return this.websocketService.subscribe(`/topic/agent-status/${idUsuario}`).pipe(
+      tap(data => {
+        console.log(`📡 [WS] Estado recibido en tiempo real:`, data.estadoActual);
+        const status: AgentStatus = {
+          idUsuario: data.idUsuario,
+          estadoActual: data.estadoActual as AgentState,
+          estadoAnterior: data.estadoAnterior as AgentState,
+          timestampCambio: data.timestampCambio,
+          tiempoEnEstadoMinutos: 0,
+          segundosEnEstado: data.segundosEnEstado || 0,
+          notas: data.notas
+        };
+        this.currentStatusSubject.next(status);
+      })
     );
   }
 
