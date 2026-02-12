@@ -3174,6 +3174,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   cancelarTipificacion() {
     console.log('❌ Cancelando tipificación...');
 
+    // Si hay llamada activa, colgarla primero
+    if (this.callActive()) {
+      console.log('📵 Colgando llamada activa antes de cancelar tipificación...');
+      this.endCall(false);
+    }
+
     // Desbloquear llamadas entrantes
     this.isTipifying.set(false);
     this.sipService.blockIncomingCallsMode(false);
