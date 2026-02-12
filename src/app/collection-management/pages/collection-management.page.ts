@@ -2675,6 +2675,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
+    // ========================================
+    // FAST PATH: Usar datos buffereados del WebSocket PREDICTIVE_CALL_CONNECTED
+    // El backend envía phoneNumber, contactId, etc. ANTES del bridge.
+    // app.component los guarda en sessionStorage porque llegan antes de que esta página cargue.
+    // ========================================
+    if (retryCount === 0) {
+      const predictiveDataStr = sessionStorage.getItem('predictive_call_data');
+      if (predictiveDataStr) {
+        sessionStorage.removeItem('predictive_call_data');
+        try {
+          const predictiveData = JSON.parse(predictiveDataStr);
+          if (predictiveData.phoneNumber) {
+            console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
+            this.autoLoadCustomerByPhone(predictiveData.phoneNumber);
+            return;
+          }
+        } catch (e) {
+          console.warn('⚠️ [FAST-PATH] Error parseando datos buffereados:', e);
+        }
+      }
+    }
+
     const sipExt = currentUser.sipExtension;
     console.log(`📋 [FULL-DATA] Cargando datos completos del cliente para extensión ${sipExt}... (intento ${retryCount + 1})`);
 

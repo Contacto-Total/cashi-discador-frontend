@@ -45,6 +45,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   private warningSubscription?: Subscription;
   private timeoutSubscription?: Subscription;
   private callStatusSubscription?: Subscription; // ✅ CRITICAL FIX: Guardar subscription para evitar duplicados
+  private predictiveCallSubscription?: Subscription;
   private dialogRef: any;
   private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
   private sessionClosing = false; // Prevenir múltiples cierres de sesión
@@ -214,6 +215,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
     this.callStatusSubscription?.unsubscribe(); // ✅ Limpiar subscription de call status
+    this.predictiveCallSubscription?.unsubscribe();
     this.inactivityService.detener();
 
     // Limpiar timeout de navegación si existe
@@ -437,6 +439,16 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           // Reset flags
           this.hasNavigatedToTypification = false;
           this.callActivatedTimestamp = null;
+        }
+      });
+
+      // Escuchar PREDICTIVE_CALL_CONNECTED del backend via WebSocket
+      // El backend envía datos del cliente (phoneNumber, contactId, etc.) al asignar la llamada.
+      // Se guardan en sessionStorage porque el mensaje llega ANTES de que collection-management cargue.
+      this.predictiveCallSubscription = this.websocketService.subscribe('/user/queue/messages').subscribe((message: any) => {
+        if (message.type === 'PREDICTIVE_CALL_CONNECTED' && message.payload) {
+          console.log('📞 [App] PREDICTIVE_CALL_CONNECTED recibido:', message.payload);
+          sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
         }
       });
 
