@@ -85,6 +85,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.userId = user.id;
     this.subPortfolioId = user.subPortfolioId || null;
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
+
+    // SIEMPRE desbloquear llamadas al entrar al dashboard
+    // Esto previene que blockIncomingCalls quede pegado en true si la tipificación
+    // falló, hubo error de red, o el agente navegó sin guardar/cancelar correctamente
+    this.sipService.blockIncomingCallsMode(false);
+
     this.loadAgentStatus(user.id);
 
     // WebSocket: cambios de estado en tiempo real (instantáneo)
