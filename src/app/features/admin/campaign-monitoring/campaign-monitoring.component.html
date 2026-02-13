@@ -43,11 +43,45 @@
     </select>
   </div>
 
-  <!-- Metrics Panel -->
+  <!-- Metrics: Tiempo Real -->
   <div class="metrics-panel" *ngIf="autoDialerStats">
-    <h3><lucide-angular name="bar-chart-2" [size]="20"></lucide-angular> Métricas del Auto-Dialer en Tiempo Real</h3>
+    <h3><lucide-angular name="activity" [size]="20"></lucide-angular> Actividad en Tiempo Real</h3>
+    <div class="metrics-grid metrics-grid-realtime">
+      <div class="metric-item metric-realtime">
+        <span class="metric-icon icon-cola"><lucide-angular name="clock" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasEnCola }}</span>
+          <span class="metric-label">En cola</span>
+        </div>
+      </div>
+      <div class="metric-item metric-realtime">
+        <span class="metric-icon icon-marcando"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
+          <span class="metric-label">Marcando</span>
+        </div>
+      </div>
+      <div class="metric-item metric-realtime">
+        <span class="metric-icon icon-conectadas"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasConectadas }}</span>
+          <span class="metric-label">Conectadas</span>
+        </div>
+      </div>
+      <div class="metric-item metric-realtime">
+        <span class="metric-icon icon-activas"><lucide-angular name="activity" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
+          <span class="metric-label">En curso</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metrics: Resumen de Campaña -->
+  <div class="metrics-panel" *ngIf="autoDialerStats">
+    <h3><lucide-angular name="bar-chart-2" [size]="20"></lucide-angular> Resumen de Campaña</h3>
     <div class="metrics-grid">
-      <!-- Total llamadas -->
       <div class="metric-item">
         <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="24"></lucide-angular></span>
         <div class="metric-info">
@@ -55,94 +89,53 @@
           <span class="metric-label">Total llamadas</span>
         </div>
       </div>
-
-      <!-- Llamadas en cola -->
       <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="clock" [size]="24"></lucide-angular></span>
+        <span class="metric-icon icon-finalizadas"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
         <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasEnCola }}</span>
-          <span class="metric-label">Llamadas en cola</span>
+          <span class="metric-value">{{ autoDialerStats.llamadasFinalizadas }}</span>
+          <span class="metric-label">Finalizadas</span>
         </div>
       </div>
-
-      <!-- Llamadas conectadas -->
       <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasConectadas }}</span>
-          <span class="metric-label">Llamadas conectadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas por realizar (contactos pendientes) -->
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="clipboard-list" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
-          <span class="metric-label">Llamadas por realizar</span>
-        </div>
-      </div>
-
-      <!-- Llamadas siendo marcadas -->
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
-          <span class="metric-label">Llamadas siendo marcadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas activas (en curso) -->
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="activity" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
-          <span class="metric-label">Llamadas siendo procesadas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas fallidas -->
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="x-circle" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.contactosFallidos }}</span>
-          <span class="metric-label">Llamadas fallidas</span>
-        </div>
-      </div>
-
-      <!-- Llamadas no contestadas -->
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="phone-missed" [size]="24"></lucide-angular></span>
+        <span class="metric-icon icon-no-contestadas"><lucide-angular name="phone-missed" [size]="24"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasNoContestadas }}</span>
-          <span class="metric-label">Llamadas no contestadas</span>
+          <span class="metric-label">No contestadas</span>
         </div>
       </div>
-
-      <!-- Llamadas abandonadas -->
       <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="phone-off" [size]="24"></lucide-angular></span>
+        <span class="metric-icon icon-abandonadas"><lucide-angular name="phone-off" [size]="24"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasAbandonadas }}</span>
-          <span class="metric-label">Llamadas abandonadas</span>
+          <span class="metric-label">Abandonadas</span>
         </div>
       </div>
-
-      <!-- Duración promedio -->
+      <div class="metric-item">
+        <span class="metric-icon icon-pendientes"><lucide-angular name="clipboard-list" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
+          <span class="metric-label">Contactos pendientes</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon icon-invalidos"><lucide-angular name="x-circle" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.contactosFallidos }}</span>
+          <span class="metric-label">Contactos inválidos</span>
+        </div>
+      </div>
       <div class="metric-item">
         <span class="metric-icon"><lucide-angular name="clock" [size]="24"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.duracionPromedioFormato }}</span>
-          <span class="metric-label">Duración promedio de llamada</span>
+          <span class="metric-label">Duración promedio</span>
         </div>
       </div>
-
-      <!-- Duración máxima -->
       <div class="metric-item">
         <span class="metric-icon"><lucide-angular name="timer" [size]="24"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.duracionMaximaFormato }}</span>
-          <span class="metric-label">Duración máxima de llamada</span>
+          <span class="metric-label">Duración máxima</span>
         </div>
       </div>
     </div>

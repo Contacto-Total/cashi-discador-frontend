@@ -215,6 +215,31 @@
   text-overflow: ellipsis;
 }
 
+/* Real-time metrics grid: 4 columns */
+.metrics-grid-realtime {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+.metric-realtime {
+  border-color: #1e3a5f;
+  background: linear-gradient(135deg, #0A0E27 0%, #0f1d3a 100%);
+}
+
+.metric-realtime .metric-value {
+  font-size: 1.5rem;
+}
+
+/* Icon colors */
+.icon-cola { color: #f59e0b; }
+.icon-marcando { color: #3b82f6; }
+.icon-conectadas { color: #10b981; }
+.icon-activas { color: #06b6d4; }
+.icon-finalizadas { color: #10b981; }
+.icon-no-contestadas { color: #f59e0b; }
+.icon-abandonadas { color: #ef4444; }
+.icon-pendientes { color: #8b5cf6; }
+.icon-invalidos { color: #ef4444; }
+
 /* Two Column Layout */
 .two-column-layout {
   display: grid;
@@ -596,6 +621,10 @@
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .metrics-grid-realtime {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }
 
 /* ============================================
@@ -671,6 +700,11 @@ body.light-theme .metric-item {
 
 body.light-theme .metric-value {
   color: #16a34a;
+}
+
+body.light-theme .metric-realtime {
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+  border-color: #bfdbfe;
 }
 
 body.light-theme .metric-label {
