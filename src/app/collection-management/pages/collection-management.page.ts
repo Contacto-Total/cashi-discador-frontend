@@ -2407,6 +2407,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         if (clientData) {
           console.log('✅ [MANUAL] Cliente encontrado:', clientData);
           this.loadCustomerFromDynamicTable(clientData);
+
+          // Cambiar estado a TIPIFICANDO al entrar desde gestión manual
+          const currentUser = this.authService.getCurrentUser();
+          if (currentUser?.id) {
+            this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+              next: () => console.log('✅ [MANUAL] Estado cambiado a TIPIFICANDO'),
+              error: (err: any) => console.error('❌ [MANUAL] Error cambiando estado:', err)
+            });
+          }
+          this.isTipifying.set(true);
         } else {
           console.warn('⚠️ [MANUAL] Cliente no encontrado');
         }
