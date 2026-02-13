@@ -118,6 +118,13 @@
         </div>
       </div>
       <div class="metric-item">
+        <span class="metric-icon icon-fallidas"><lucide-angular name="alert-triangle" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasFallidas }}</span>
+          <span class="metric-label">Fallidas</span>
+        </div>
+      </div>
+      <div class="metric-item">
         <span class="metric-icon icon-pendientes"><lucide-angular name="clipboard-list" [size]="24"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
