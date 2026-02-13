@@ -150,13 +150,37 @@
       </div>
 
       <!-- Panel 5: HTTP Errors -->
-      <div class="chart-panel">
+      <div class="chart-panel errors-panel full-width">
         <div class="panel-header">
           <lucide-angular name="alert-circle" [size]="18" class="panel-icon errors"></lucide-angular>
           <h3>HTTP Errors</h3>
+          <span class="error-count-badge" *ngIf="recentHttpErrors.length > 0">{{ recentHttpErrors.length }}</span>
         </div>
-        <div class="chart-wrapper">
-          <canvas #errorsChart></canvas>
+        <div class="errors-layout">
+          <div class="chart-wrapper errors-chart">
+            <canvas #errorsChart></canvas>
+          </div>
+          <div class="errors-list-wrapper">
+            <div class="errors-list-header">
+              <span>Errores Recientes</span>
+            </div>
+            <div class="errors-list" *ngIf="recentHttpErrors.length > 0">
+              <div class="error-item" *ngFor="let err of recentHttpErrors"
+                   [class.error-4xx]="err.statusCode >= 400 && err.statusCode < 500"
+                   [class.error-5xx]="err.statusCode >= 500">
+                <div class="error-status">{{ err.statusCode }}</div>
+                <div class="error-details">
+                  <span class="error-method">{{ err.method }}</span>
+                  <span class="error-url" [title]="err.url">{{ err.url }}</span>
+                  <span class="error-time">{{ err.timestamp | date:'HH:mm:ss' }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="errors-empty" *ngIf="recentHttpErrors.length === 0">
+              <lucide-angular name="check-circle" [size]="20"></lucide-angular>
+              <span>Sin errores en el período</span>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Subscription, interval } from 'rxjs';
 import { startWith, switchMap } from 'rxjs/operators';
 import { Chart, registerables } from 'chart.js';
-import { SystemMetricsService, MetricsSnapshot } from '../../../core/services/system-metrics.service';
+import { SystemMetricsService, MetricsSnapshot, HttpErrorDetail } from '../../../core/services/system-metrics.service';
 
 Chart.register(...registerables);
 
@@ -49,6 +49,9 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   latestEsl = false;
   latestAmdMs = 0;
   latestRequests = 0;
+
+  // Aggregated HTTP error details from all snapshots
+  recentHttpErrors: HttpErrorDetail[] = [];
 
   constructor(private metricsService: SystemMetricsService) {}
 
@@ -133,6 +136,12 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
     this.latestEsl = latest.eslConnected === 1;
     this.latestAmdMs = latest.amdResponseTimeMs;
     this.latestRequests = latest.requestsPerMinute;
+
+    // Agregar errores HTTP de todos los snapshots, más recientes primero
+    this.recentHttpErrors = this.snapshots
+      .flatMap(s => s.httpErrors || [])
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 50);
   }
 
   private updateCharts(): void {

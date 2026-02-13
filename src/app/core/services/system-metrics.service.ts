@@ -3,6 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface HttpErrorDetail {
+  timestamp: number;
+  method: string;
+  url: string;
+  statusCode: number;
+}
+
 export interface MetricsSnapshot {
   timestamp: number;
 
@@ -30,6 +37,9 @@ export interface MetricsSnapshot {
   p95LatencyMs: number;
   errors4xx: number;
   errors5xx: number;
+
+  // Detalle de errores HTTP
+  httpErrors?: HttpErrorDetail[];
 }
 
 @Injectable({
