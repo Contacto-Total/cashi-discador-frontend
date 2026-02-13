@@ -23,7 +23,8 @@ export interface AutoDialerEstadisticas {
   llamadasMarcando: number;
   llamadasNoContestadas: number;
   llamadasAbandonadas: number;
-  llamadasFinalizadas: number;
+  llamadasConectadasConAsesor: number;
+  llamadasFinalizadasSinAsesor: number;
   duracionPromedioSegundos: number;
   duracionPromedioFormato: string;
   duracionMaximaSegundos: number;

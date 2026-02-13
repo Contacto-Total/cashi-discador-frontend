@@ -234,7 +234,8 @@
 .icon-marcando { color: #3b82f6; }
 .icon-conectadas { color: #10b981; }
 .icon-activas { color: #06b6d4; }
-.icon-finalizadas { color: #10b981; }
+.icon-conectadas-asesor { color: #10b981; }
+.icon-sin-asesor { color: #f97316; }
 .icon-no-contestadas { color: #f59e0b; }
 .icon-abandonadas { color: #ef4444; }
 .icon-pendientes { color: #8b5cf6; }

@@ -90,10 +90,17 @@
         </div>
       </div>
       <div class="metric-item">
-        <span class="metric-icon icon-finalizadas"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
+        <span class="metric-icon icon-conectadas-asesor"><lucide-angular name="user-check" [size]="24"></lucide-angular></span>
         <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasFinalizadas }}</span>
-          <span class="metric-label">Finalizadas</span>
+          <span class="metric-value">{{ autoDialerStats.llamadasConectadasConAsesor }}</span>
+          <span class="metric-label">Conectadas con asesor</span>
+        </div>
+      </div>
+      <div class="metric-item">
+        <span class="metric-icon icon-sin-asesor"><lucide-angular name="user-x" [size]="24"></lucide-angular></span>
+        <div class="metric-info">
+          <span class="metric-value">{{ autoDialerStats.llamadasFinalizadasSinAsesor }}</span>
+          <span class="metric-label">Finalizadas sin asesor</span>
         </div>
       </div>
       <div class="metric-item">
