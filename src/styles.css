@@ -4568,8 +4568,8 @@ html:not(.dark) app-payment-schedule .text-slate-500 {
 
 /* Alerta de promesa de pago - mejor contraste en modo claro */
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 {
-  background: linear-gradient(to right, #f59e0b, #eab308, #f97316) !important;
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
+  background: linear-gradient(to right, #fcd34d, #fde68a, #fdba74) !important;
+  box-shadow: 0 4px 15px rgba(252, 211, 77, 0.4) !important;
 }
 
 /* Alerta promesa de pago - todo negro en modo claro */
