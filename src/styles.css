@@ -4624,6 +4624,11 @@ html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-g
   background-color: #4b5563 !important;
 }
 
+/* Contenedor del icono de advertencia - override del [class*="bg-white"] que lo pone blanco */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .w-6.h-6[class*="bg-black"] {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
 /* Icono de advertencia en alerta de promesa */
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/20 lucide-angular {
   color: #000000 !important;
