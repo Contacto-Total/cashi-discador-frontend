@@ -266,7 +266,11 @@ export class SipService {
 
               // Auto-answer after a short delay to ensure session is ready
               setTimeout(() => {
-                this.answer();
+                this.answer().catch(err => {
+                  console.error('❌ Auto-answer FAILED:', err.message || err);
+                  console.error('❌ localStream:', this.localStream ? 'EXISTS' : 'NULL');
+                  console.error('❌ currentSession:', this.currentSession ? 'EXISTS' : 'NULL');
+                });
               }, 100);
             } else {
               // Normal incoming call with ringtone

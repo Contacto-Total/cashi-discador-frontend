@@ -274,6 +274,59 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   >
                     Finalizar
                   </button>
+                  <!-- Botón WhatsApp -->
+                  <div class="relative">
+                    <button
+                      (click)="showWhatsappDropdown.set(!showWhatsappDropdown())"
+                      class="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                    >
+                      <lucide-angular name="message-circle" [size]="14"></lucide-angular>
+                      WhatsApp
+                    </button>
+                    <!-- Dropdown WhatsApp -->
+                    @if (showWhatsappDropdown()) {
+                      <div class="fixed inset-0 z-40" (click)="showWhatsappDropdown.set(false)"></div>
+                      <div class="absolute right-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 p-3">
+                        <div class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">Enviar mensaje por WhatsApp</div>
+                        <!-- Números del cliente -->
+                        @for (num of whatsappNumbers(); track num.label) {
+                          <button
+                            (click)="sendWhatsapp(num.number)"
+                            class="w-full text-left px-3 py-2 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center gap-2 mb-1 transition-colors"
+                          >
+                            <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
+                            <div>
+                              <div class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ num.number }}</div>
+                              <div class="text-xs text-gray-500 dark:text-gray-400">{{ num.label }}</div>
+                            </div>
+                          </button>
+                        }
+                        @if (whatsappNumbers().length === 0) {
+                          <div class="text-xs text-gray-400 dark:text-gray-500 py-1 mb-1">No hay celulares registrados</div>
+                        }
+                        <!-- Input manual -->
+                        <div class="border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
+                          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Otro número:</div>
+                          <div class="flex gap-1.5">
+                            <input
+                              type="text"
+                              [(ngModel)]="whatsappManualNumber"
+                              placeholder="987654321"
+                              maxlength="9"
+                              class="flex-1 px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-400"
+                            />
+                            <button
+                              (click)="sendWhatsapp(whatsappManualNumber)"
+                              [disabled]="!isValidCellphone(whatsappManualNumber)"
+                              class="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-md text-xs font-bold transition-colors"
+                            >
+                              Enviar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
                 </div>
               </div>
             </div>
@@ -1749,6 +1802,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
+
+  // WhatsApp
+  showWhatsappDropdown = signal(false);
+  whatsappManualNumber = '';
+
+  whatsappNumbers = computed(() => {
+    const data = this.customerData();
+    const nums: { number: string; label: string }[] = [];
+    if (data?.contacto) {
+      const check = (val: string | undefined, label: string) => {
+        if (val && /^9\d{8}$/.test(val.trim())) {
+          nums.push({ number: val.trim(), label });
+        }
+      };
+      check(data.contacto.telefono_principal, 'Principal');
+      check(data.contacto.telefono_alternativo, 'Alternativo');
+      check(data.contacto.telefono_trabajo, 'Trabajo');
+    }
+    return nums;
+  });
 
   customerAge = computed(() => {
     const data = this.customerData();
@@ -5782,5 +5855,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.onSaveSuccess(contactLabel, managementLabel);
       }
     });
+  }
+
+  // --- WhatsApp ---
+  isValidCellphone(num: string): boolean {
+    return /^9\d{8}$/.test((num || '').trim());
+  }
+
+  sendWhatsapp(phone: string): void {
+    const num = (phone || '').trim();
+    if (!this.isValidCellphone(num)) return;
+    const nombre = this.customerData()?.nombre_completo || 'cliente';
+    const mensaje = encodeURIComponent(`Buenos días, me comunico con el Sr(a). ${nombre}.`);
+    const url = `https://web.whatsapp.com/send?phone=51${num}&text=${mensaje}`;
+    window.open(url, 'whatsapp-chat');
+    this.showWhatsappDropdown.set(false);
+    this.whatsappManualNumber = '';
   }
 }
