@@ -4572,15 +4572,25 @@ html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 {
   box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
 }
 
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-white,
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-bold,
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-semibold {
-  color: #ffffff !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+/* Alerta promesa de pago - TODO el texto oscuro en modo claro */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 {
+  color: #78350f !important;
 }
 
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-white,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-bold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-semibold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-xs,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-base {
+  color: #78350f !important;
+  text-shadow: none !important;
+}
+
+/* Texto secundario un poco más claro */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-gray-700,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-gray-800,
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .opacity-80 {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: #92400e !important;
 }
 
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-white\/20 {
@@ -4615,6 +4625,26 @@ html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-b
 
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-gray-600 {
   background-color: #4b5563 !important;
+}
+
+/* Icono de advertencia en alerta de promesa - debe verse oscuro sobre fondo amber */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/20 lucide-angular {
+  color: #78350f !important;
+}
+
+/* Botón Voucher en alerta de promesa - fondo oscuro semi-transparente para contraste */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 button.bg-black\/20 {
+  background-color: rgba(120, 53, 15, 0.25) !important;
+  border-color: rgba(120, 53, 15, 0.4) !important;
+  color: #78350f !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 button.bg-black\/20:hover {
+  background-color: rgba(120, 53, 15, 0.35) !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 button.bg-black\/20 lucide-angular {
+  color: #78350f !important;
 }
 
 /* ===============================================
