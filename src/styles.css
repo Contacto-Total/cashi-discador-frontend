@@ -4567,44 +4567,54 @@ html:not(.dark) app-payment-schedule .text-slate-500 {
    =============================================== */
 
 /* Alerta de promesa de pago - mejor contraste en modo claro */
-/* Alerta promesa de pago - mismo estilo oscuro en ambos modos */
+/* Alerta promesa de pago - gradiente medio con texto blanco en modo claro */
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 {
-  background: linear-gradient(to right, #d97706, #ca8a04, #ea580c) !important;
-  box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4) !important;
+  background: linear-gradient(to right, #f59e0b, #eab308, #f97316) !important;
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4) !important;
   color: #ffffff !important;
 }
 
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-gray-900,
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-gray-700,
-html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-gray-800 {
-  color: rgba(255, 255, 255, 0.85) !important;
-}
-
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-gray-800,
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-bold,
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .font-semibold,
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-xs,
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .text-base {
   color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Contenedor del icono - override del [class*="bg-white"] genérico */
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .w-6.h-6[class*="bg-black"] {
-  background-color: rgba(255, 255, 255, 0.2) !important;
+  background-color: rgba(255, 255, 255, 0.25) !important;
 }
 
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 lucide-angular {
   color: #ffffff !important;
 }
 
+/* Botón Voucher */
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 button[class*="bg-black"] {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
+}
+
+html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 button[class*="bg-black"]:hover {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/10 {
-  background-color: rgba(0, 0, 0, 0.15) !important;
+  background-color: rgba(0, 0, 0, 0.1) !important;
 }
 
 html:not(.dark) app-collection-management .bg-gradient-to-r.from-amber-500 .bg-black\/5 {
-  background-color: rgba(0, 0, 0, 0.08) !important;
+  background-color: rgba(0, 0, 0, 0.05) !important;
 }
 
 html:not(.dark) app-collection-management .border-amber-400 {
-  border-color: #b45309 !important;
+  border-color: #fbbf24 !important;
 }
 
 /* ===============================================
