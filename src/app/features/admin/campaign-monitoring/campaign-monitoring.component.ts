@@ -281,8 +281,8 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
     this.autoDialerService.getAgentesMonitoreo(campaignId).subscribe({
       next: (agentes) => {
-        this.agentesMonitoreo = agentes;
-        this.checkAgentAlerts(agentes);
+        this.mergeAgentes(agentes);
+        this.checkAgentAlerts(this.agentesMonitoreo);
       },
       error: (err) => { console.error('Error fetching agentes:', err); }
     });
@@ -292,9 +292,84 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       : this.autoDialerService.getLlamadasEnTiempoReal();
 
     llamadas$.subscribe({
-      next: (llamadas) => { this.llamadasEnTiempoReal = llamadas; },
+      next: (llamadas) => { this.mergeLlamadas(llamadas); },
       error: (err) => { console.error('Error fetching llamadas:', err); }
     });
+  }
+
+  /**
+   * Actualiza agentes en-place para evitar flickering del DOM.
+   * Solo agrega/elimina filas cuando hay cambios reales en la lista.
+   */
+  private mergeAgentes(newAgentes: AgenteMonitoreo[]): void {
+    const existingMap = new Map<number, AgenteMonitoreo>();
+    this.agentesMonitoreo.forEach(a => existingMap.set(a.idUsuario, a));
+
+    const newIds = new Set<number>();
+
+    for (const newAgent of newAgentes) {
+      newIds.add(newAgent.idUsuario);
+      const existing = existingMap.get(newAgent.idUsuario);
+
+      if (existing) {
+        // Actualizar propiedades en el objeto existente (sin reemplazar la referencia)
+        existing.sipExtension = newAgent.sipExtension;
+        existing.nombreCompleto = newAgent.nombreCompleto;
+        existing.estadoActual = newAgent.estadoActual;
+        existing.telefonoDestino = newAgent.telefonoDestino;
+        existing.segundosEnEstado = newAgent.segundosEnEstado;
+        existing.uuidLlamadaActual = newAgent.uuidLlamadaActual;
+        existing.colorIndicador = newAgent.colorIndicador;
+        existing.porcentajeTiempo = newAgent.porcentajeTiempo;
+        existing.excedeTiempoMaximo = newAgent.excedeTiempoMaximo;
+        existing.tiempoMaximoSegundos = newAgent.tiempoMaximoSegundos;
+        existing.mensajeAlerta = newAgent.mensajeAlerta;
+        existing.sonidoAlerta = newAgent.sonidoAlerta;
+        existing.peripheralStatus = newAgent.peripheralStatus;
+      } else {
+        // Agente nuevo: agregar al array
+        this.agentesMonitoreo.push(newAgent);
+      }
+    }
+
+    // Eliminar agentes que ya no están en la respuesta
+    for (let i = this.agentesMonitoreo.length - 1; i >= 0; i--) {
+      if (!newIds.has(this.agentesMonitoreo[i].idUsuario)) {
+        this.agentesMonitoreo.splice(i, 1);
+      }
+    }
+  }
+
+  /**
+   * Actualiza llamadas en-place para evitar flickering del DOM.
+   */
+  private mergeLlamadas(newLlamadas: LlamadaTiempoReal[]): void {
+    const existingMap = new Map<number, LlamadaTiempoReal>();
+    this.llamadasEnTiempoReal.forEach(l => existingMap.set(l.id, l));
+
+    const newIds = new Set<number>();
+
+    for (const newLlamada of newLlamadas) {
+      newIds.add(newLlamada.id);
+      const existing = existingMap.get(newLlamada.id);
+
+      if (existing) {
+        existing.anexoDestino = newLlamada.anexoDestino;
+        existing.anexoAgente = newLlamada.anexoAgente;
+        existing.nombreAgente = newLlamada.nombreAgente;
+        existing.estadoLlamada = newLlamada.estadoLlamada;
+        existing.duracionSegundos = newLlamada.duracionSegundos;
+      } else {
+        this.llamadasEnTiempoReal.push(newLlamada);
+      }
+    }
+
+    // Eliminar llamadas que ya no están activas
+    for (let i = this.llamadasEnTiempoReal.length - 1; i >= 0; i--) {
+      if (!newIds.has(this.llamadasEnTiempoReal[i].id)) {
+        this.llamadasEnTiempoReal.splice(i, 1);
+      }
+    }
   }
 
   /**
