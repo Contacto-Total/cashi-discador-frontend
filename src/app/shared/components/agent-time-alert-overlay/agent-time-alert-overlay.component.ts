@@ -853,6 +853,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
   private readonly SOUND_STORAGE_KEY = 'agent_sound_enabled';
   private readonly AUTO_CLOSE_DELAY = 5000;
   private statusSubscription?: Subscription;
+  private wsSubscription?: Subscription;
   private localTimerSubscription?: Subscription;
   private autoCloseTimer?: any;
   private lastAlertState = '';
@@ -906,41 +907,58 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Polling al backend cada 5 segundos
-    this.statusSubscription = interval(5000).pipe(
+    // Fetch inicial + fallback cada 30s para datos completos (umbrales, colores)
+    this.statusSubscription = interval(30000).pipe(
       startWith(0),
       switchMap(() => this.agentStatusService.getAgentStatus(this.userId!))
     ).subscribe({
-      next: (response) => {
-        this.initialDataLoaded = true;
-        this.excedeTiempoMaximo = response.excedeTiempoMaximo || false;
-
-        // Solo sincronizar segundos con backend cuando cambia el estado
-        // Mientras el estado sea el mismo, el timer local (cada 1s) se encarga
-        if (response.estadoActual !== this.estadoActual) {
-          this.segundosEnEstado = response.segundosEnEstado || 0;
-        }
-
-        this.estadoActual = response.estadoActual;
-        this.estadoTexto = this.getEstadoTexto(response.estadoActual);
-        this.estadoColor = this.getEstadoColorClass(response.estadoActual);
-
-        // Alerta de voz solo cuando cambia a estado excedido
-        if (this.soundEnabled && this.excedeTiempoMaximo) {
-          const alertKey = `${this.estadoActual}-excedido`;
-          if (this.lastAlertState !== alertKey) {
-            this.lastAlertState = alertKey;
-            this.speakAlert();
-          }
-        }
-
-        // Reset del estado de alerta cuando cambia el estado
-        if (this.estadoActual !== this.lastAlertState.split('-')[0]) {
-          this.lastAlertState = '';
-        }
-      },
+      next: (response) => this.handleStatusUpdate(response),
       error: (err) => console.error('Error polling agent status:', err)
     });
+
+    // WebSocket push: reaccionar instantáneamente a cambios de estado
+    this.wsSubscription = this.agentStatusService.subscribeToStatusUpdates(this.userId).subscribe({
+      next: (data) => {
+        // Actualizar estado instantáneamente desde WebSocket
+        if (data.estadoActual && data.estadoActual !== this.estadoActual) {
+          this.segundosEnEstado = data.segundosEnEstado || 0;
+          this.estadoActual = data.estadoActual;
+          this.estadoTexto = this.getEstadoTexto(data.estadoActual);
+          this.estadoColor = this.getEstadoColorClass(data.estadoActual);
+          this.initialDataLoaded = true;
+
+          // Fetch completo para obtener umbrales actualizados
+          this.agentStatusService.getAgentStatus(this.userId!).subscribe({
+            next: (response) => this.handleStatusUpdate(response)
+          });
+        }
+      }
+    });
+  }
+
+  private handleStatusUpdate(response: any): void {
+    this.initialDataLoaded = true;
+    this.excedeTiempoMaximo = response.excedeTiempoMaximo || false;
+
+    if (response.estadoActual !== this.estadoActual) {
+      this.segundosEnEstado = response.segundosEnEstado || 0;
+    }
+
+    this.estadoActual = response.estadoActual;
+    this.estadoTexto = this.getEstadoTexto(response.estadoActual);
+    this.estadoColor = this.getEstadoColorClass(response.estadoActual);
+
+    if (this.soundEnabled && this.excedeTiempoMaximo) {
+      const alertKey = `${this.estadoActual}-excedido`;
+      if (this.lastAlertState !== alertKey) {
+        this.lastAlertState = alertKey;
+        this.speakAlert();
+      }
+    }
+
+    if (this.estadoActual !== this.lastAlertState.split('-')[0]) {
+      this.lastAlertState = '';
+    }
   }
 
   private stopStatusPolling(): void {
@@ -948,6 +966,8 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
     this.localTimerSubscription = undefined;
     this.statusSubscription?.unsubscribe();
     this.statusSubscription = undefined;
+    this.wsSubscription?.unsubscribe();
+    this.wsSubscription = undefined;
   }
 
   toggleMenu(): void {
