@@ -2,10 +2,12 @@ import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
+import { WebsocketService } from '../../../core/services/websocket.service';
 import { StatusAlarmClockComponent } from '../../../shared/components/status-alarm-clock/status-alarm-clock.component';
 
 // Interfaz para alertas de agentes
@@ -39,6 +41,11 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   // Llamadas en tiempo real
   llamadasEnTiempoReal: LlamadaTiempoReal[] = [];
   private llamadasSubscription?: Subscription;
+
+  // WebSocket real-time push
+  private wsSubscription?: Subscription;
+  private fallbackSubscription?: Subscription;
+  private refreshTrigger$ = new Subject<void>();
 
   // Timer local para conteo fluido de segundos
   private localTimerSubscription?: Subscription;
@@ -86,6 +93,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   constructor(
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
+    private websocketService: WebsocketService,
     private router: Router
   ) {}
 
@@ -95,10 +103,10 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.initAlarmAudio();
     this.initSpeechVoices(); // Pre-cargar voces de texto a voz
     this.loadCampaigns();
-    this.startAutoDialerPolling();
-    this.startAgentesPolling();
-    this.startLlamadasPolling();
-    this.startLocalTimer(); // Timer local para conteo fluido
+    this.setupWebSocketMonitoring(); // WebSocket push en tiempo real
+    this.setupFallbackPolling();     // Poll de respaldo cada 30s
+    this.refreshAllData();           // Fetch inicial
+    this.startLocalTimer();          // Timer local para conteo fluido
   }
 
   /**
@@ -175,23 +183,15 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.localTimerSubscription) {
-      this.localTimerSubscription.unsubscribe();
-    }
-    if (this.autoDialerSubscription) {
-      this.autoDialerSubscription.unsubscribe();
-    }
-    if (this.agentesSubscription) {
-      this.agentesSubscription.unsubscribe();
-    }
-    if (this.llamadasSubscription) {
-      this.llamadasSubscription.unsubscribe();
-    }
-    if (this.alertTimerSubscription) {
-      this.alertTimerSubscription.unsubscribe();
-    }
+    this.wsSubscription?.unsubscribe();
+    this.fallbackSubscription?.unsubscribe();
+    this.localTimerSubscription?.unsubscribe();
+    this.autoDialerSubscription?.unsubscribe();
+    this.agentesSubscription?.unsubscribe();
+    this.llamadasSubscription?.unsubscribe();
+    this.alertTimerSubscription?.unsubscribe();
+    this.refreshTrigger$.complete();
     this.stopAlarm();
-    // Cerrar el AudioContext
     if (this.audioContext) {
       this.audioContext.close();
     }
@@ -240,75 +240,68 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Configura la suscripción WebSocket para actualizaciones instantáneas.
+   * Cada evento se debouncea 500ms para agrupar ráfagas de eventos.
+   */
+  private setupWebSocketMonitoring(): void {
+    // Debounce: agrupar múltiples eventos en 500ms y hacer un solo refresh
+    this.wsSubscription = this.websocketService.subscribe('/topic/campaign-monitoring')
+      .pipe(debounceTime(500))
+      .subscribe({
+        next: () => {
+          this.refreshAllData();
+        },
+        error: (err) => {
+          console.error('[Monitor] Error en WebSocket campaign-monitoring:', err);
+        }
+      });
+    console.log('[Monitor] WebSocket suscrito a /topic/campaign-monitoring');
+  }
+
+  /**
+   * Poll de respaldo cada 30s por si el WebSocket se desconecta
+   */
+  private setupFallbackPolling(): void {
+    this.fallbackSubscription = interval(30000).subscribe(() => {
+      this.refreshAllData();
+    });
+  }
+
+  /**
+   * Fetch de todos los datos (estadísticas, agentes, llamadas) en paralelo
+   */
+  refreshAllData(): void {
+    const campaignId = this.selectedCampaignId || undefined;
+
+    this.autoDialerService.getEstadisticas(campaignId).subscribe({
+      next: (stats) => { this.autoDialerStats = stats; },
+      error: (err) => { console.error('Error fetching stats:', err); }
+    });
+
+    this.autoDialerService.getAgentesMonitoreo(campaignId).subscribe({
+      next: (agentes) => {
+        this.agentesMonitoreo = agentes;
+        this.checkAgentAlerts(agentes);
+      },
+      error: (err) => { console.error('Error fetching agentes:', err); }
+    });
+
+    const llamadas$ = campaignId
+      ? this.autoDialerService.getLlamadasEnTiempoRealByCampaign(campaignId)
+      : this.autoDialerService.getLlamadasEnTiempoReal();
+
+    llamadas$.subscribe({
+      next: (llamadas) => { this.llamadasEnTiempoReal = llamadas; },
+      error: (err) => { console.error('Error fetching llamadas:', err); }
+    });
+  }
+
+  /**
    * Handler cuando se selecciona una campaña diferente
    */
   onCampaignChange(): void {
     console.log('Selected campaign changed to:', this.selectedCampaignId);
-
-    // Restart stats polling with new campaign filter
-    if (this.autoDialerSubscription) {
-      this.autoDialerSubscription.unsubscribe();
-    }
-    this.startAutoDialerPolling();
-
-    // Restart agentes polling with new campaign filter
-    if (this.agentesSubscription) {
-      this.agentesSubscription.unsubscribe();
-    }
-    this.startAgentesPolling();
-
-    // Restart llamadas polling with new campaign filter
-    if (this.llamadasSubscription) {
-      this.llamadasSubscription.unsubscribe();
-    }
-    this.startLlamadasPolling();
-  }
-
-  /**
-   * Inicia polling del estado del auto-dialer cada 5 segundos
-   * Filtra por campaña si hay una seleccionada
-   */
-  startAutoDialerPolling(): void {
-    const campaignId = this.selectedCampaignId || undefined;
-    this.autoDialerSubscription = this.autoDialerService.startStatsPolling(campaignId).subscribe({
-      next: (stats) => {
-        this.autoDialerStats = stats;
-      },
-      error: (err) => {
-        console.error('Error polling auto-dialer stats:', err);
-      }
-    });
-  }
-
-  /**
-   * Inicia polling de agentes cada 3 segundos
-   * Filtra por campaña si hay una seleccionada
-   */
-  startAgentesPolling(): void {
-    const campaignId = this.selectedCampaignId || undefined;
-    this.agentesSubscription = this.autoDialerService.startAgentesPolling(campaignId).subscribe({
-      next: (agentes) => {
-        this.agentesMonitoreo = agentes;
-
-        // Debug: mostrar agentes con tiempo excedido
-        const agentesExcedidos = agentes.filter(a => a.excedeTiempoMaximo);
-        if (agentesExcedidos.length > 0) {
-          console.log('[Monitor] Agentes con tiempo excedido:', agentesExcedidos.map(a => ({
-            nombre: a.nombreCompleto,
-            estado: a.estadoActual,
-            excede: a.excedeTiempoMaximo,
-            mensaje: a.mensajeAlerta,
-            sonido: a.sonidoAlerta
-          })));
-        }
-
-        // Verificar alertas de tiempo excedido
-        this.checkAgentAlerts(agentes);
-      },
-      error: (err) => {
-        console.error('Error polling agentes:', err);
-      }
-    });
+    this.refreshAllData(); // Fetch inmediato con nueva campaña
   }
 
   // Mapa para rastrear el estado anterior de cada agente
@@ -616,21 +609,6 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     keysToRemove.forEach(key => this.alertasDismissed.delete(key));
   }
 
-  /**
-   * Inicia polling de llamadas en tiempo real
-   * Filtra por campaña si hay una seleccionada
-   */
-  startLlamadasPolling(): void {
-    const campaignId = this.selectedCampaignId || undefined;
-    this.llamadasSubscription = this.autoDialerService.startLlamadasPolling(campaignId).subscribe({
-      next: (llamadas) => {
-        this.llamadasEnTiempoReal = llamadas;
-      },
-      error: (err) => {
-        console.error('Error polling llamadas en tiempo real:', err);
-      }
-    });
-  }
 
   // trackBy para evitar re-render completo del DOM en cada polling
   trackByLlamada(index: number, llamada: any): string {
