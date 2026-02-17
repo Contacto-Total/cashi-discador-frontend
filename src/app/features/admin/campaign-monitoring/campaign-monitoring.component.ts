@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription, interval, Subject } from 'rxjs';
-import { debounceTime } from 'rxjs/operators';
+import { throttleTime } from 'rxjs/operators';
+import { asyncScheduler } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
@@ -244,9 +245,9 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    * Cada evento se debouncea 500ms para agrupar ráfagas de eventos.
    */
   private setupWebSocketMonitoring(): void {
-    // Debounce: agrupar múltiples eventos en 500ms y hacer un solo refresh
+    // Throttle: reaccionar inmediato al primer evento, luego 1 refresh por segundo máximo
     this.wsSubscription = this.websocketService.subscribe('/topic/campaign-monitoring')
-      .pipe(debounceTime(500))
+      .pipe(throttleTime(1000, asyncScheduler, { leading: true, trailing: true }))
       .subscribe({
         next: () => {
           this.refreshAllData();
