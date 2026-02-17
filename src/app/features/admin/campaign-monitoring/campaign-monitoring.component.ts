@@ -68,6 +68,8 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   private readonly DEFAULT_ALERT_DURATION = 10;
 
   private readonly SOUND_STORAGE_KEY = 'supervisor_sound_enabled';
+  private readonly ALERTS_STORAGE_KEY = 'supervisor_alerts_enabled';
+  alertsEnabled = true; // Mostrar modales de alerta (se guarda en localStorage)
 
   // Modal de cambio de estado de agente
   showChangeStatusModal = false;
@@ -89,6 +91,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadSoundPreference(); // Cargar preferencia guardada
+    this.loadAlertsPreference(); // Cargar preferencia de alertas
     this.initAlarmAudio();
     this.initSpeechVoices(); // Pre-cargar voces de texto a voz
     this.loadCampaigns();
@@ -148,6 +151,27 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   private saveSoundPreference(): void {
     localStorage.setItem(this.SOUND_STORAGE_KEY, String(this.soundEnabled));
+  }
+
+  /**
+   * Carga la preferencia de alertas desde localStorage
+   */
+  private loadAlertsPreference(): void {
+    const saved = localStorage.getItem(this.ALERTS_STORAGE_KEY);
+    this.alertsEnabled = saved !== 'false'; // Por defecto activadas
+  }
+
+  /**
+   * Activa/desactiva los modales de alerta (solo para este navegador)
+   */
+  toggleAlerts(): void {
+    this.alertsEnabled = !this.alertsEnabled;
+    localStorage.setItem(this.ALERTS_STORAGE_KEY, String(this.alertsEnabled));
+
+    // Si se desactivan, cerrar alerta activa
+    if (!this.alertsEnabled && this.alertaActiva) {
+      this.dismissAlert();
+    }
   }
 
   ngOnDestroy(): void {
@@ -304,6 +328,9 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       }
       this.previousAgentStates.set(agente.idUsuario, agente.estadoActual);
     }
+
+    // Si las alertas están desactivadas, no mostrar ninguna
+    if (!this.alertsEnabled) return;
 
     // Si ya hay una alerta activa, no mostrar otra
     if (this.alertaActiva) {
@@ -674,6 +701,34 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Obtiene la etiqueta legible del estado de llamada
+   */
+  getEstadoLlamadaLabel(estado: string): string {
+    const map: Record<string, string> = {
+      'INICIADA': 'Iniciada',
+      'MARCANDO': 'Timbrando',
+      'CONECTADA': 'Contestada',
+      'EN_COLA': 'En cola',
+      'EN_CURSO': 'Con asesor'
+    };
+    return map[estado] || estado;
+  }
+
+  /**
+   * Obtiene el color del badge según el estado de llamada
+   */
+  getEstadoLlamadaColor(estado: string): string {
+    const map: Record<string, string> = {
+      'INICIADA': '#64748b',   // gris
+      'MARCANDO': '#eab308',   // amarillo
+      'CONECTADA': '#f97316',  // naranja
+      'EN_COLA': '#a855f7',    // morado
+      'EN_CURSO': '#22c55e'    // verde
+    };
+    return map[estado] || '#3B82F6';
+  }
+
+  /**
    * Formatea segundos a formato MM:SS o HH:MM:SS
    */
   formatTiempo(segundos: number): string {
@@ -779,5 +834,26 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   isCurrentStatus(estado: string): boolean {
     return this.selectedAgentForStatusChange?.estadoActual === estado;
+  }
+
+  // ==================== PERIFÉRICOS ====================
+
+  getPeripheralColor(status: string): string {
+    if (!status || status === 'OK') return '#22c55e'; // verde
+    if (status === 'DESCONOCIDO') return '#94a3b8'; // gris
+    return '#ef4444'; // rojo
+  }
+
+  getPeripheralTooltip(status: string): string {
+    switch (status) {
+      case 'OK': return 'Periféricos OK';
+      case 'MIC_MISSING': return 'Sin micrófono detectado';
+      case 'MIC_PERMISSION': return 'Permiso de micrófono bloqueado';
+      case 'MIC_DISCONNECTED': return 'Micrófono desconectado';
+      case 'SPEAKER_MISSING': return 'Sin parlante detectado';
+      case 'SIP_DISCONNECTED': return 'Sin conexión SIP';
+      case 'DESCONOCIDO': return 'Sin información de periféricos';
+      default: return 'Problema con periféricos';
+    }
   }
 }

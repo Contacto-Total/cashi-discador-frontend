@@ -17,6 +17,8 @@ import { SessionWarningModalComponent } from './shared/components/session-warnin
 import { AuthorizationNotificationComponent } from './shared/components/authorization-notification/authorization-notification.component';
 import { AgentTimeAlertOverlayComponent } from './shared/components/agent-time-alert-overlay/agent-time-alert-overlay.component';
 import { SupervisionPanelComponent } from './shared/components/supervision-panel/supervision-panel.component';
+import { PeripheralStatusBannerComponent } from './shared/components/peripheral-status-banner/peripheral-status-banner.component';
+import { PeripheralHealthService } from './core/services/peripheral-health.service';
 import { RecordatoriosModalComponent } from './shared/components/recordatorios-modal/recordatorios-modal.component';
 import { RecordatoriosService } from './core/services/recordatorios.service';
 import { SupervisionService } from './core/services/supervision.service';
@@ -34,7 +36,8 @@ import { Subscription } from 'rxjs';
     LucideAngularModule,
     AuthorizationNotificationComponent,
     AgentTimeAlertOverlayComponent,
-    SupervisionPanelComponent
+    SupervisionPanelComponent,
+    PeripheralStatusBannerComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -86,6 +89,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private notificacionesService: NotificacionesSistemaService,
     private menuPermissionService: MenuPermissionService,
     private supervisionService: SupervisionService,
+    private peripheralHealthService: PeripheralHealthService,
     private dialog: MatDialog,
     private router: Router
   ) {}
@@ -189,6 +193,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         // Conectar a FreeSWITCH automáticamente
         this.conectarFreeSWITCH(user);
 
+        // Iniciar monitoreo de periféricos para agentes
+        const agentRoles = ['AGENT', 'ASESOR'];
+        if (agentRoles.includes(user.role)) {
+          this.peripheralHealthService.start();
+        }
+
         // Cargar contador de notificaciones (solo para admin)
         if (user.role === 'ADMIN') {
           this.refreshNotificacionesCount();
@@ -198,6 +208,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         this.inactivityService.detener();
         this.websocketService.disconnect();
         this.sipService.unregister();
+        this.peripheralHealthService.stop();
         // Limpiar menú al cerrar sesión
         this.menuPermissionService.clearMenu();
       }

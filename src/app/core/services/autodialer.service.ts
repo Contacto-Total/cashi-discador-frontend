@@ -47,6 +47,7 @@ export interface AgenteMonitoreo {
   tiempoMaximoSegundos: number | null;
   mensajeAlerta: string | null;
   sonidoAlerta: boolean;
+  peripheralStatus: string;
 }
 
 export interface LlamadaTiempoReal {

@@ -13,6 +13,14 @@
     <div class="header-right">
       <button
         class="btn-sound"
+        [class.active]="alertsEnabled"
+        (click)="toggleAlerts()"
+        [title]="alertsEnabled ? 'Desactivar alertas' : 'Activar alertas'">
+        <lucide-angular [name]="alertsEnabled ? 'bell' : 'bell-off'" [size]="18"></lucide-angular>
+        <span>{{ alertsEnabled ? 'Alertas' : 'Sin alertas' }}</span>
+      </button>
+      <button
+        class="btn-sound"
         [class.active]="soundEnabled"
         (click)="toggleSound()"
         [title]="soundEnabled ? 'Desactivar sonido de alertas' : 'Activar sonido de alertas'">
@@ -58,7 +66,7 @@
         <span class="metric-icon icon-marcando"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
-          <span class="metric-label">Marcando</span>
+          <span class="metric-label">Timbrando</span>
         </div>
       </div>
       <div class="metric-item metric-realtime">
@@ -178,7 +186,9 @@
                 <td class="llamada-telefono">{{ llamada.anexoDestino }}</td>
                 <td class="llamada-agente">{{ llamada.nombreAgente }}</td>
                 <td class="llamada-estado">
-                  <span class="estado-badge-mini">{{ llamada.estadoLlamada }}</span>
+                  <span class="estado-badge-mini" [style.background]="getEstadoLlamadaColor(llamada.estadoLlamada)">
+                    {{ getEstadoLlamadaLabel(llamada.estadoLlamada) }}
+                  </span>
                 </td>
                 <td class="llamada-duracion">{{ formatTiempo(llamada.duracionSegundos) }}</td>
               </tr>
@@ -210,6 +220,7 @@
                 <th>Estado</th>
                 <th>Teléfono</th>
                 <th>Tiempo</th>
+                <th style="width: 40px; text-align: center;" title="Periféricos">🎧</th>
                 <th style="width: 50px; text-align: center;">Alerta</th>
               </tr>
             </thead>
@@ -233,6 +244,11 @@
                 <td class="agente-tiempo">
                   {{ formatTiempo(agente.segundosEnEstado) }}
                 </td>
+                <td style="text-align: center;" [title]="getPeripheralTooltip(agente.peripheralStatus)">
+                  <lucide-angular name="headphones" [size]="16"
+                    [style.color]="getPeripheralColor(agente.peripheralStatus)">
+                  </lucide-angular>
+                </td>
                 <td class="agente-alerta" style="text-align: center;">
                   <app-status-alarm-clock
                     [color]="agente.colorIndicador"
@@ -243,7 +259,7 @@
                 </td>
               </tr>
               <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
-                <td colspan="5" style="text-align: center; color: #94a3b8;">
+                <td colspan="6" style="text-align: center; color: #94a3b8;">
                   No hay agentes registrados
                 </td>
               </tr>
