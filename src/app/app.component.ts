@@ -182,6 +182,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       if (user && this.authService.isAuthenticated()) {
         // Usuario autenticado - iniciar servicios
         this.websocketService.connect();
+        this.subscribeForceLogout();
         this.iniciarMonitoreoInactividad();
 
         // Cargar menú dinámico según el rol del usuario
@@ -225,8 +226,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.warningSubscription?.unsubscribe();
     this.timeoutSubscription?.unsubscribe();
-    this.callStatusSubscription?.unsubscribe(); // ✅ Limpiar subscription de call status
+    this.callStatusSubscription?.unsubscribe();
     this.predictiveCallSubscription?.unsubscribe();
+    this.forceLogoutSubscription?.unsubscribe();
     this.inactivityService.detener();
 
     // Limpiar timeout de navegación si existe
@@ -265,6 +267,27 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         element.classList.remove('text-overflowing');
       }
     });
+  }
+
+  private forceLogoutSubscription?: Subscription;
+
+  /**
+   * Se suscribe al evento FORCE_LOGOUT del WebSocket.
+   * Cuando el mismo usuario inicia sesión en otro dispositivo/navegador,
+   * el backend envía este evento para cerrar la sesión anterior.
+   */
+  private subscribeForceLogout(): void {
+    this.forceLogoutSubscription?.unsubscribe();
+    this.forceLogoutSubscription = this.websocketService.subscribe('/user/queue/messages')
+      .subscribe((message: any) => {
+        if (message?.type === 'FORCE_LOGOUT') {
+          console.log('[AUTH] FORCE_LOGOUT recibido:', message.payload?.reason);
+          this.websocketService.disconnect();
+          this.sipService.unregister();
+          alert(message.payload?.reason || 'Se inició sesión en otro dispositivo');
+          this.authService.logout();
+        }
+      });
   }
 
   private iniciarMonitoreoInactividad(): void {
