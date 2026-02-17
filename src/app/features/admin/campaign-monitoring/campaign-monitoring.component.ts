@@ -144,6 +144,12 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
           agente.segundosEnEstado++;
         }
       });
+      // Incrementar duración de cada llamada activa
+      this.llamadasEnTiempoReal.forEach(llamada => {
+        if (llamada.duracionSegundos !== undefined) {
+          llamada.duracionSegundos++;
+        }
+      });
     });
   }
 
