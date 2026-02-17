@@ -19,6 +19,8 @@ export class PeripheralHealthService implements OnDestroy {
   private problems$ = new BehaviorSubject<PeripheralProblem[]>([]);
   private checking$ = new BehaviorSubject<boolean>(false);
   private checkInterval?: Subscription;
+  private sipSubscription?: Subscription;
+  private initialTimeout?: any;
   private lastReportedStatus = '';
 
   constructor(
@@ -39,14 +41,25 @@ export class PeripheralHealthService implements OnDestroy {
   start(): void {
     if (this.checkInterval) return;
     console.log('[PeripheralHealth] Starting periodic checks (every 30s)');
-    this.runCheck();
+
+    // Delay first check 5s to let SIP register
+    this.initialTimeout = setTimeout(() => this.runCheck(), 5000);
     this.checkInterval = interval(30000).subscribe(() => this.runCheck());
+
+    // Re-check immediately when SIP registers or disconnects
+    this.sipSubscription = this.sipService.onRegistered.subscribe(() => {
+      console.log('[PeripheralHealth] SIP status changed, re-checking...');
+      this.runCheck();
+    });
   }
 
   /** Stop checks (call on logout) */
   stop(): void {
+    clearTimeout(this.initialTimeout);
     this.checkInterval?.unsubscribe();
     this.checkInterval = undefined;
+    this.sipSubscription?.unsubscribe();
+    this.sipSubscription = undefined;
     this.problems$.next([]);
     this.lastReportedStatus = '';
   }
