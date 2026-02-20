@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { Subscription, interval } from 'rxjs';
@@ -862,7 +862,8 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private agentStatusService: AgentStatusService
+    private agentStatusService: AgentStatusService,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit(): void {
@@ -917,15 +918,17 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
     });
 
     // WebSocket push: reaccionar instantáneamente a cambios de estado
+    // NgZone.run() fuerza change detection inmediato (STOMP callback corre fuera de Angular zone)
     this.wsSubscription = this.agentStatusService.subscribeToStatusUpdates(this.userId).subscribe({
       next: (data) => {
-        // Actualizar estado instantáneamente desde WebSocket
         if (data.estadoActual && data.estadoActual !== this.estadoActual) {
-          this.segundosEnEstado = data.segundosEnEstado || 0;
-          this.estadoActual = data.estadoActual;
-          this.estadoTexto = this.getEstadoTexto(data.estadoActual);
-          this.estadoColor = this.getEstadoColorClass(data.estadoActual);
-          this.initialDataLoaded = true;
+          this.ngZone.run(() => {
+            this.segundosEnEstado = data.segundosEnEstado || 0;
+            this.estadoActual = data.estadoActual;
+            this.estadoTexto = this.getEstadoTexto(data.estadoActual);
+            this.estadoColor = this.getEstadoColorClass(data.estadoActual);
+            this.initialDataLoaded = true;
+          });
 
           // Fetch completo para obtener umbrales actualizados
           this.agentStatusService.getAgentStatus(this.userId!).subscribe({
