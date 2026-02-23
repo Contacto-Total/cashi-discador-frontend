@@ -322,7 +322,10 @@ export class SipService {
                 console.log('🔊 Audio output device set to:', outputDeviceId);
               }
             } catch (sinkError) {
-              console.warn('⚠️ Could not set audio output device:', sinkError);
+              console.warn('⚠️ Could not set audio output device (will use system default):', sinkError);
+              // Recreate audio element to prevent corrupted state (Bluetooth devices)
+              this.remoteAudio = new Audio();
+              this.remoteAudio.autoplay = true;
             }
           }
         } catch (error) {
@@ -600,19 +603,34 @@ export class SipService {
         if (this.remoteAudio && event.streams[0]) {
           // Set output device before playing
           const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+          let sinkFailed = false;
           if (outputDeviceId && outputDeviceId !== 'default' && 'setSinkId' in this.remoteAudio) {
             try {
               await (this.remoteAudio as any).setSinkId(outputDeviceId);
               console.log('🔊 Audio output set to:', outputDeviceId);
             } catch (sinkError) {
-              console.warn('⚠️ Could not set audio output device:', sinkError);
+              console.warn('⚠️ Could not set audio output device, recreating audio element:', sinkError);
+              sinkFailed = true;
+              // Recreate audio element to clear corrupted state (common with Bluetooth)
+              this.remoteAudio = new Audio();
+              this.remoteAudio.autoplay = true;
             }
           }
 
           this.remoteAudio.srcObject = event.streams[0];
-          this.remoteAudio.play()
-            .then(() => console.log('✅ Playing remote audio'))
-            .catch(err => console.error('❌ Error playing audio:', err));
+          try {
+            await this.remoteAudio.play();
+            console.log('✅ Playing remote audio' + (sinkFailed ? ' (using system default device)' : ''));
+          } catch (playErr) {
+            console.error('❌ Error playing audio, retrying with new element:', playErr);
+            // Last resort: create fresh audio element and try again
+            this.remoteAudio = new Audio();
+            this.remoteAudio.autoplay = true;
+            this.remoteAudio.srcObject = event.streams[0];
+            this.remoteAudio.play()
+              .then(() => console.log('✅ Playing remote audio (retry succeeded)'))
+              .catch(err => console.error('❌ Error playing audio after retry:', err));
+          }
         }
       });
 
@@ -629,19 +647,32 @@ export class SipService {
           if (remoteStream.getTracks().length > 0) {
             // Set output device before playing
             const outputDeviceId = this.audioDeviceService.getCurrentOutputDeviceId();
+            let sinkFailed = false;
             if (outputDeviceId && outputDeviceId !== 'default' && 'setSinkId' in this.remoteAudio) {
               try {
                 await (this.remoteAudio as any).setSinkId(outputDeviceId);
                 console.log('🔊 Audio output set to:', outputDeviceId);
               } catch (sinkError) {
-                console.warn('⚠️ Could not set audio output device:', sinkError);
+                console.warn('⚠️ Could not set audio output device, recreating audio element:', sinkError);
+                sinkFailed = true;
+                this.remoteAudio = new Audio();
+                this.remoteAudio.autoplay = true;
               }
             }
 
             this.remoteAudio.srcObject = remoteStream;
-            this.remoteAudio.play()
-              .then(() => console.log('✅ Playing remote audio from monitoring'))
-              .catch(err => console.error('❌ Error playing audio:', err));
+            try {
+              await this.remoteAudio.play();
+              console.log('✅ Playing remote audio from monitoring' + (sinkFailed ? ' (using system default device)' : ''));
+            } catch (playErr) {
+              console.error('❌ Error playing audio, retrying with new element:', playErr);
+              this.remoteAudio = new Audio();
+              this.remoteAudio.autoplay = true;
+              this.remoteAudio.srcObject = remoteStream;
+              this.remoteAudio.play()
+                .then(() => console.log('✅ Playing remote audio from monitoring (retry succeeded)'))
+                .catch(err => console.error('❌ Error playing audio after retry:', err));
+            }
             clearInterval(trackCheckInterval);
           }
         }
