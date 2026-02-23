@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -113,5 +113,39 @@ export class SoftphoneComponent {
       '9': 'WXYZ'
     };
     return letters[key] || '';
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyDown(event: KeyboardEvent): void {
+    if (this.callState !== CallState.IDLE) return;
+
+    const tag = (event.target as HTMLElement).tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    const key = event.key;
+
+    if (/^[0-9*#]$/.test(key)) {
+      event.preventDefault();
+      this.dialedNumber += key;
+    } else if (key === 'Backspace') {
+      event.preventDefault();
+      this.onBackspace();
+    } else if (key === 'Enter' && this.dialedNumber) {
+      event.preventDefault();
+      this.onCall();
+    }
+  }
+
+  @HostListener('window:paste', ['$event'])
+  handlePaste(event: ClipboardEvent): void {
+    if (this.callState !== CallState.IDLE) return;
+
+    const tag = (event.target as HTMLElement).tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    event.preventDefault();
+    const pasted = event.clipboardData?.getData('text') || '';
+    const cleaned = pasted.replace(/[^0-9*#]/g, '');
+    this.dialedNumber += cleaned;
   }
 }
