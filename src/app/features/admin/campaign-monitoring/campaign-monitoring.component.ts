@@ -692,6 +692,28 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
 
+  // Jerarquía de estados de llamada (menor número = mayor prioridad)
+  private readonly CALL_STATE_PRIORITY: Record<string, number> = {
+    'EN_CURSO': 1,
+    'CONECTADA': 2,
+    'EN_COLA': 3,
+    'MARCANDO': 4,
+    'INICIADA': 5
+  };
+
+  /**
+   * Retorna las llamadas ordenadas por jerarquía de estado
+   */
+  get llamadasOrdenadas(): LlamadaTiempoReal[] {
+    return [...this.llamadasEnTiempoReal].sort((a, b) => {
+      const prioA = this.CALL_STATE_PRIORITY[a.estadoLlamada] ?? 99;
+      const prioB = this.CALL_STATE_PRIORITY[b.estadoLlamada] ?? 99;
+      if (prioA !== prioB) return prioA - prioB;
+      // Mismo estado: ordenar por duración descendente
+      return (b.duracionSegundos || 0) - (a.duracionSegundos || 0);
+    });
+  }
+
   // trackBy para evitar re-render completo del DOM en cada polling
   trackByLlamada(index: number, llamada: any): string {
     return llamada.id || llamada.uuidLlamada || index.toString();
