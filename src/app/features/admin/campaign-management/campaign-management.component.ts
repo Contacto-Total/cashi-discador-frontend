@@ -41,6 +41,10 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     subPortfolioId: undefined
   };
 
+  // Pagination
+  pageSize: number = 10;
+  currentPage: number = 1;
+
   // Datos para selectores en cascada
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
@@ -107,13 +111,18 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   /**
    * Carga todas las campañas
    */
-  loadCampaigns(): void {
+  loadCampaigns(goToLastPage: boolean = false): void {
     this.loading = true;
     this.error = null;
 
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
         this.campaigns = campaigns;
+        if (goToLastPage) {
+          this.currentPage = this.totalPages || 1;
+        } else if (this.currentPage > this.totalPages) {
+          this.currentPage = this.totalPages || 1;
+        }
         this.loading = false;
       },
       error: (err) => {
@@ -187,7 +196,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       next: (response) => {
         this.successMessage = 'Campaña creada exitosamente';
         this.showCreateModal = false;
-        this.loadCampaigns();
+        this.loadCampaigns(true);
         this.loading = false;
 
         setTimeout(() => {
@@ -469,5 +478,21 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
 
   navigateToMonitoring(): void {
     this.router.navigate(['/admin/campaign-monitoring']);
+  }
+
+  // Pagination
+  get totalPages(): number {
+    return Math.ceil(this.campaigns.length / this.pageSize);
+  }
+
+  get paginatedCampaigns(): Campaign[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.campaigns.slice(start, start + this.pageSize);
+  }
+
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+    }
   }
 }

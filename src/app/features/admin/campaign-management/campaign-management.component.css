@@ -289,18 +289,6 @@
    CAMPAIGN CARDS - Premium Design
    ======================================== */
 
-/* Entrance animation */
-@keyframes cardSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .campaign-card {
   display: flex;
   border-radius: 10px;
@@ -308,7 +296,6 @@
   background: #0f1629;
   border: 1px solid #1e293b;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: cardSlideIn 0.4s ease-out both;
   position: relative;
 }
 
@@ -616,6 +603,73 @@
 .meta-date {
   color: #64748b;
   font-style: italic;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.btn-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-page:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.15);
+  border-color: #8b5cf6;
+  color: #fff;
+}
+
+.btn-page:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Light theme pagination */
+:root.light .pagination,
+body.light-theme .pagination {
+  border-top-color: #e2e8f0;
+}
+
+:root.light .btn-page,
+body.light-theme .btn-page {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+:root.light .btn-page:hover:not(:disabled),
+body.light-theme .btn-page:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: #8b5cf6;
+  color: #7c3aed;
+}
+
+:root.light .page-info,
+body.light-theme .page-info {
+  color: #475569;
 }
 
 /* Empty State */

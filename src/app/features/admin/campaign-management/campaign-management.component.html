@@ -35,11 +35,10 @@
         <button class="btn-create" (click)="openCreateModal()">Crear Primera Campaña</button>
       </div>
 
-      <div *ngFor="let campaign of campaigns; trackBy: trackByCampaignId; let i = index"
+      <div *ngFor="let campaign of paginatedCampaigns; trackBy: trackByCampaignId"
            class="campaign-card"
            [class.is-active]="campaign.status === 'ACTIVE'"
-           [class.is-dialing]="campaign.estaDiscando"
-           [style.animation-delay]="(i * 60) + 'ms'">
+           [class.is-dialing]="campaign.estaDiscando">
 
         <!-- Left accent bar -->
         <div class="card-accent" [style.background]="getStatusColor(campaign.status)"></div>
@@ -113,6 +112,17 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="!loading && totalPages > 1">
+      <button class="btn-page" (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">
+        <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+      </button>
+      <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+      <button class="btn-page" (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">
+        <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+      </button>
     </div>
 
     <!-- Loading State -->
