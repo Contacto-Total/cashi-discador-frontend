@@ -5323,10 +5323,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.rawClientData.set(customer);
     console.log('[PAYMENT] Raw client data from resource:', customer);
 
+    // Establecer contexto de subcartera desde CustomerResource
+    if (customer.subPortfolioId) {
+      this.selectedSubPortfolioId = customer.subPortfolioId;
+    }
+    if (customer.portfolioId) {
+      this.selectedPortfolioId = customer.portfolioId;
+    }
+    if (customer.tenantId) {
+      this.selectedTenantId = customer.tenantId;
+    }
+
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
 
-    // Mapear CustomerResource a CustomerData
+    // Mapear CustomerResource a CustomerData (datos básicos iniciales)
     this.customerData.set({
       id: customer.id,
       id_cliente: customer.documentNumber || customer.identificationCode,
@@ -5368,6 +5379,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Cargar promesas de pago activas
     if (customer.id) {
       this.loadActivePaymentSchedules(customer.id);
+    }
+
+    // Intentar cargar datos completos de la tabla dinámica (deuda real, dias_mora, etc.)
+    if (customer.tenantId && customer.portfolioId && customer.subPortfolioId && customer.documentNumber) {
+      console.log('🔍 [RESOURCE] Buscando datos completos de tabla dinámica para documento:', customer.documentNumber);
+      this.customerService.findClientByDocumento(
+        customer.tenantId, customer.portfolioId, customer.subPortfolioId, customer.documentNumber
+      ).subscribe({
+        next: (clienteCompleto) => {
+          if (clienteCompleto) {
+            console.log('✅ [RESOURCE] Datos dinámicos obtenidos, actualizando con datos reales de deuda');
+            this.reloadTypifications();
+            this.loadCustomerOutputConfig();
+            this.loadFirstInstallmentConfig();
+            this.loadCustomerFromDynamicTable(clienteCompleto);
+          } else {
+            console.warn('⚠️ [RESOURCE] No se encontraron datos en tabla dinámica, manteniendo datos básicos');
+          }
+        },
+        error: (error) => {
+          console.warn('⚠️ [RESOURCE] Error obteniendo datos dinámicos, manteniendo datos básicos:', error);
+        }
+      });
     }
 
     console.log('[TEST] Cliente cargado exitosamente');
