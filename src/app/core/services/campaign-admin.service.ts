@@ -32,6 +32,9 @@ export interface Campaign {
   ordenarPorCampo?: string;  // Campo por el cual ordenar (ej: "monto_capital")
   ordenarDireccion?: 'DESC' | 'ASC'; // DESC = mayor a menor, ASC = menor a mayor
 
+  // Filtro categórico de rango de antigüedad (comma-separated)
+  filtroRangoAntiguedad?: string;
+
   // Estadísticas (solo para lectura)
   totalContacts?: number;
   pendingContacts?: number;
@@ -356,6 +359,16 @@ export class CampaignAdminService {
   }
 
   /**
+   * Obtiene los valores distintos de rango_antiguedad para una subcartera
+   */
+  getRangoAntiguedadValues(tenantId: number, portfolioId: number, subPortfolioId: number): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${environment.gatewayUrl}/admin/campaigns/rango-antiguedad-values?tenantId=${tenantId}&portfolioId=${portfolioId}&subPortfolioId=${subPortfolioId}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
    * Preview de importación: obtiene conteos por tipo de contacto SIN crear la campaña
    */
   previewImportacion(
@@ -363,7 +376,8 @@ export class CampaignAdminService {
     portfolioId: number,
     subPortfolioId: number,
     tipoFiltroEstado: string,
-    filtros: CampaignFilterRange[]
+    filtros: CampaignFilterRange[],
+    filtroRangoAntiguedad?: string
   ): Observable<ImportPreview> {
     return this.http.post<ImportPreview>(
       `${environment.gatewayUrl}/admin/campaigns/preview-import`,
@@ -372,6 +386,7 @@ export class CampaignAdminService {
         portfolioId,
         subPortfolioId,
         tipoFiltroEstado,
+        filtroRangoAntiguedad: filtroRangoAntiguedad || null,
         filtros: filtros.map(f => ({
           fieldCode: f.fieldCode,
           minValue: f.minValue,

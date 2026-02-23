@@ -67,6 +67,10 @@ export class CampaignFormComponent implements OnInit {
   tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
   selectedTipoContacto: TipoContacto | null = null;
 
+  // Rango de antigüedad (filtro categórico)
+  rangosAntiguedad: string[] = [];
+  selectedRangosAntiguedad: string[] = [];
+
   // Modal de preview/confirmación
   showPreviewModal: boolean = false;
   previewLoading: boolean = false;
@@ -137,9 +141,39 @@ export class CampaignFormComponent implements OnInit {
 
   onSubPortfolioChange(): void {
     this.filterableFields = [];
+    this.rangosAntiguedad = [];
+    this.selectedRangosAntiguedad = [];
     if (this.selectedSubPortfolioId > 0) {
       this.loadFilterableFields(this.selectedSubPortfolioId);
+      this.loadRangosAntiguedad();
     }
+  }
+
+  loadRangosAntiguedad(): void {
+    if (this.selectedTenantId > 0 && this.selectedPortfolioId > 0 && this.selectedSubPortfolioId > 0) {
+      this.campaignService.getRangoAntiguedadValues(
+        this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId
+      ).subscribe({
+        next: (valores) => {
+          this.rangosAntiguedad = valores;
+          console.log('Rangos de antigüedad cargados:', valores);
+        },
+        error: (err) => console.error('Error loading rangos de antigüedad:', err)
+      });
+    }
+  }
+
+  toggleRangoAntiguedad(valor: string): void {
+    const index = this.selectedRangosAntiguedad.indexOf(valor);
+    if (index >= 0) {
+      this.selectedRangosAntiguedad.splice(index, 1);
+    } else {
+      this.selectedRangosAntiguedad.push(valor);
+    }
+  }
+
+  isRangoSelected(valor: string): boolean {
+    return this.selectedRangosAntiguedad.includes(valor);
   }
 
   loadFilterableFields(subcarteraId: number): void {
@@ -325,9 +359,15 @@ export class CampaignFormComponent implements OnInit {
               // Cargar campos filtrables y filtros existentes
               if (campaign.subPortfolioId) {
                 this.loadFilterableFields(campaign.subPortfolioId);
+                this.loadRangosAntiguedad();
               }
               if (campaign.id) {
                 this.loadCampaignFilters(campaign.id);
+              }
+
+              // Restaurar selección de rangos de antigüedad
+              if (campaign.filtroRangoAntiguedad) {
+                this.selectedRangosAntiguedad = campaign.filtroRangoAntiguedad.split(',').map(s => s.trim());
               }
 
               this.loading = false;
@@ -375,6 +415,11 @@ export class CampaignFormComponent implements OnInit {
       this.campaign.endDate = this.endDateString;
     }
 
+    // Filtro rango antigüedad: convertir selección a comma-separated string
+    this.campaign.filtroRangoAntiguedad = this.selectedRangosAntiguedad.length > 0
+      ? this.selectedRangosAntiguedad.join(',')
+      : undefined;
+
     this.error = null;
 
     if (this.isEditMode && this.campaignId) {
@@ -404,12 +449,16 @@ export class CampaignFormComponent implements OnInit {
     this.previewError = null;
     this.showPreviewModal = true;
 
+    const filtroRangoAnt = this.selectedRangosAntiguedad.length > 0
+      ? this.selectedRangosAntiguedad.join(',') : undefined;
+
     this.campaignService.previewImportacion(
       this.selectedTenantId,
       this.selectedPortfolioId,
       this.selectedSubPortfolioId,
       this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
-      this.campaignFilters
+      this.campaignFilters,
+      filtroRangoAnt
     ).subscribe({
       next: (preview) => {
         this.previewData = preview;

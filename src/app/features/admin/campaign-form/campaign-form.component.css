@@ -1263,3 +1263,95 @@
   border-color: rgba(59, 130, 246, 0.15);
   color: #2563eb;
 }
+
+/* ============================================
+   FILTRO RANGO DE ANTIGÜEDAD
+   ============================================ */
+
+.rango-antiguedad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.rango-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.875rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.rango-checkbox-label:hover {
+  border-color: #60a5fa;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.rango-checkbox-label.selected {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+.rango-checkbox-label input[type="checkbox"] {
+  accent-color: #3b82f6;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.rango-checkbox-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rango-selected-count {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  color: #6ee7b7;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.rango-selected-count lucide-angular {
+  color: #10b981;
+}
+
+/* Light theme */
+:host-context(body.light-theme) .rango-checkbox-label {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+:host-context(body.light-theme) .rango-checkbox-label:hover {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+:host-context(body.light-theme) .rango-checkbox-label.selected {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  color: #1e40af;
+}
+
+:host-context(body.light-theme) .rango-selected-count {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #059669;
+}

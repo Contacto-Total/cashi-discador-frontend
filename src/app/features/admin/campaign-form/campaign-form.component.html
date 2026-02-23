@@ -242,6 +242,35 @@
       </div>
     </div>
 
+    <!-- SECCIÓN: Filtro por Rango de Antigüedad -->
+    <div class="form-section full-width" *ngIf="rangosAntiguedad.length > 0">
+      <h2>
+        <lucide-angular name="calendar-range" [size]="20"></lucide-angular>
+        Filtro por Rango de Antigüedad
+      </h2>
+      <p class="section-description">
+        Seleccione los rangos de antigüedad que desea incluir en la campaña. Si no selecciona ninguno, se incluirán todos.
+      </p>
+
+      <div class="rango-antiguedad-grid">
+        <label
+          *ngFor="let rango of rangosAntiguedad"
+          class="rango-checkbox-label"
+          [class.selected]="isRangoSelected(rango)">
+          <input
+            type="checkbox"
+            [checked]="isRangoSelected(rango)"
+            (change)="toggleRangoAntiguedad(rango)">
+          <span class="rango-checkbox-text">{{ rango }}</span>
+        </label>
+      </div>
+
+      <div class="rango-selected-count" *ngIf="selectedRangosAntiguedad.length > 0">
+        <lucide-angular name="check-circle" [size]="16"></lucide-angular>
+        <span>{{ selectedRangosAntiguedad.length }} rango(s) seleccionado(s)</span>
+      </div>
+    </div>
+
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section">
       <h2>
