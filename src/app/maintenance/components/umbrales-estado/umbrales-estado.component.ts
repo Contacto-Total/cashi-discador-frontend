@@ -149,11 +149,11 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                           <button (click)="editForm.alertaSupervisor = !editForm.alertaSupervisor"
                                   class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors mx-auto"
                                   [class]="editForm.alertaSupervisor ? 'bg-blue-600 text-white' : 'bg-slate-700 text-gray-500'">
-                            <lucide-angular [name]="editForm.alertaSupervisor ? 'bell-ring' : 'bell-off'" [size]="16"></lucide-angular>
+                            <lucide-angular [name]="editForm.alertaSupervisor ? 'bell' : 'bell-off'" [size]="16"></lucide-angular>
                           </button>
                         } @else {
                           <div class="flex justify-center">
-                            <lucide-angular [name]="umbral.alertaSupervisor ? 'bell-ring' : 'bell-off'" [size]="16"
+                            <lucide-angular [name]="umbral.alertaSupervisor ? 'bell' : 'bell-off'" [size]="16"
                                             [class]="umbral.alertaSupervisor ? 'text-blue-400' : 'text-gray-600'"></lucide-angular>
                           </div>
                         }
