@@ -592,7 +592,52 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     // Obtener el usuario actual antes de limpiar todo
     const currentUser = this.authService.getCurrentUser();
 
-    // Notificar al backend que el agente se desconecta (para actualizar monitoreo)
+    // Función para completar el logout (limpiar tokens y navegar a login)
+    const finalizarLogout = () => {
+      // Detener servicios de forma segura (con try-catch para evitar bloqueos)
+      try {
+        this.inactivityService.detener();
+        console.log('[LOGOUT] Servicio de inactividad detenido');
+      } catch (e) {
+        console.error('[LOGOUT] Error deteniendo inactividad:', e);
+      }
+
+      try {
+        this.websocketService.disconnect();
+        console.log('[LOGOUT] WebSocket desconectado');
+      } catch (e) {
+        console.error('[LOGOUT] Error desconectando WebSocket:', e);
+      }
+
+      try {
+        this.sipService.unregister();
+        console.log('[LOGOUT] SIP desregistrado');
+      } catch (e) {
+        console.error('[LOGOUT] Error desregistrando SIP:', e);
+      }
+
+      // Limpiar sessionStorage (recordatorios en curso, etc.)
+      try {
+        sessionStorage.removeItem('recordatorioEnCurso');
+        console.log('[LOGOUT] SessionStorage limpiado');
+      } catch (e) {
+        // Ignorar
+      }
+
+      // Siempre ejecutar el logout del auth service (limpia tokens y navega a login)
+      console.log('[LOGOUT] Ejecutando authService.logout()...');
+      this.authService.logout();
+
+      // Forzar navegación a login como respaldo (por si el router.navigate del authService falla)
+      setTimeout(() => {
+        if (this.router.url !== '/login') {
+          console.log('[LOGOUT] Forzando navegación a /login...');
+          this.router.navigate(['/login'], { replaceUrl: true });
+        }
+      }, 100);
+    };
+
+    // Notificar al backend que el agente se desconecta ANTES de borrar el token
     if (currentUser?.id) {
       // Detener el dialer de recordatorios si estaba activo
       try {
@@ -606,55 +651,22 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
       try {
         this.agentStatusService.disconnectAgent(currentUser.id).subscribe({
-          next: () => console.log('[LOGOUT] Estado de agente eliminado en backend'),
-          error: (e) => console.error('[LOGOUT] Error eliminando estado de agente:', e)
+          next: () => {
+            console.log('[LOGOUT] Estado de agente eliminado en backend');
+            finalizarLogout();
+          },
+          error: (e) => {
+            console.error('[LOGOUT] Error eliminando estado de agente:', e);
+            finalizarLogout();
+          }
         });
       } catch (e) {
         console.error('[LOGOUT] Error llamando disconnectAgent:', e);
+        finalizarLogout();
       }
+    } else {
+      finalizarLogout();
     }
-
-    // Detener servicios de forma segura (con try-catch para evitar bloqueos)
-    try {
-      this.inactivityService.detener();
-      console.log('[LOGOUT] Servicio de inactividad detenido');
-    } catch (e) {
-      console.error('[LOGOUT] Error deteniendo inactividad:', e);
-    }
-
-    try {
-      this.websocketService.disconnect();
-      console.log('[LOGOUT] WebSocket desconectado');
-    } catch (e) {
-      console.error('[LOGOUT] Error desconectando WebSocket:', e);
-    }
-
-    try {
-      this.sipService.unregister();
-      console.log('[LOGOUT] SIP desregistrado');
-    } catch (e) {
-      console.error('[LOGOUT] Error desregistrando SIP:', e);
-    }
-
-    // Limpiar sessionStorage (recordatorios en curso, etc.)
-    try {
-      sessionStorage.removeItem('recordatorioEnCurso');
-      console.log('[LOGOUT] SessionStorage limpiado');
-    } catch (e) {
-      // Ignorar
-    }
-
-    // Siempre ejecutar el logout del auth service (limpia tokens y navega a login)
-    console.log('[LOGOUT] Ejecutando authService.logout()...');
-    this.authService.logout();
-
-    // Forzar navegación a login como respaldo (por si el router.navigate del authService falla)
-    setTimeout(() => {
-      if (this.router.url !== '/login') {
-        console.log('[LOGOUT] Forzando navegación a /login...');
-        this.router.navigate(['/login'], { replaceUrl: true });
-      }
-    }, 100);
   }
 
   isLoginPage(): boolean {
