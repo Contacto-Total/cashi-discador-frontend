@@ -6,6 +6,7 @@ export interface User {
   lastName: string;
   role: UserRole;
   sipExtension: string;
+  sipPassword?: string;
   active: boolean;
   tenantId?: number;
   portfolioId?: number;
@@ -32,6 +33,7 @@ export interface LoginResponse {
   email: string;
   nombreCompleto: string;
   extensionSip: string;
+  sipPassword?: string;
   accessToken: string;
   refreshToken: string;
   tipoToken: string;

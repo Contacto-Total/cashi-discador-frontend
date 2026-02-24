@@ -20,6 +20,7 @@ interface User {
   nombreCompleto: string;
   nombreUsuario: string;
   extensionSip?: string;
+  sipPassword?: string;
   generatedPassword?: string;
   roleIds: number[];
   activo: boolean;
@@ -349,6 +350,25 @@ interface Role {
                       </div>
                     }
 
+                    @if (selectedUser()!.id && selectedUser()!.extensionSip) {
+                      <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1">Contraseña SIP</label>
+                        <div class="flex gap-2">
+                          <input type="text"
+                                 [value]="selectedUser()!.sipPassword || 'Sin asignar'"
+                                 readonly
+                                 class="flex-1 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-gray-300 text-sm font-mono cursor-not-allowed">
+                          <button (click)="regenerarSipPassword()"
+                                  [disabled]="regenerandoSip()"
+                                  class="px-2 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded text-xs font-semibold transition-colors flex items-center gap-1">
+                            <lucide-angular [name]="regenerandoSip() ? 'loader-2' : 'refresh-cw'" [size]="12"></lucide-angular>
+                            {{ regenerandoSip() ? 'Regenerando...' : 'Regenerar' }}
+                          </button>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">Contraseña para registro SIP en FreeSWITCH</p>
+                      </div>
+                    }
+
                     <div class="flex items-center gap-2">
                       <input type="checkbox"
                              [(ngModel)]="selectedUser()!.activo"
@@ -499,6 +519,7 @@ export class UserManagementComponent implements OnInit {
   showPasswordModal = signal(false);
   generatedUserInfo = signal<{ nombreUsuario: string; password: string } | null>(null);
   passwordCopied = signal(false);
+  regenerandoSip = signal(false);
 
   // Datos para filtros
   tenants = signal<Tenant[]>([]);
@@ -650,6 +671,7 @@ export class UserManagementComponent implements OnInit {
       nombreCompleto: response.nombreCompleto,
       nombreUsuario: response.nombreUsuario,
       extensionSip: response.extensionSip,
+      sipPassword: response.sipPassword,
       roleIds: response.roleIds,
       activo: response.activo
     };
@@ -787,6 +809,10 @@ export class UserManagementComponent implements OnInit {
             currentUsers[index] = this.mapUsuarioResponseToUser(response);
             this.users.set([...currentUsers]);
           }
+          // Sync to FreeSWITCH if has extension and sipPassword
+          if (response.extensionSip && response.sipPassword) {
+            this.syncToFreeSWITCH(response.extensionSip, response.sipPassword);
+          }
           this.selectedUser.set(null);
           alert('Usuario actualizado correctamente');
         },
@@ -801,6 +827,11 @@ export class UserManagementComponent implements OnInit {
         next: (response) => {
           const newUser = this.mapUsuarioResponseToUser(response);
           this.users.set([...this.users(), newUser]);
+
+          // Sync to FreeSWITCH if has extension and sipPassword
+          if (response.extensionSip && response.sipPassword) {
+            this.syncToFreeSWITCH(response.extensionSip, response.sipPassword);
+          }
 
           // Mostrar modal con contraseña generada por el backend
           if (response.generatedPassword) {
@@ -836,6 +867,48 @@ export class UserManagementComponent implements OnInit {
       this.generatedUserInfo.set(null);
       this.passwordCopied.set(false);
     }
+  }
+
+  regenerarSipPassword() {
+    const user = this.selectedUser();
+    if (!user?.id) return;
+
+    this.regenerandoSip.set(true);
+    this.usuarioService.regenerarSipPassword(user.id).subscribe({
+      next: (response) => {
+        // Update selected user
+        user.sipPassword = response.sipPassword;
+        this.selectedUser.set({ ...user });
+
+        // Update user list
+        const currentUsers = this.users();
+        const index = currentUsers.findIndex(u => u.id === user.id);
+        if (index > -1) {
+          currentUsers[index] = this.mapUsuarioResponseToUser(response);
+          this.users.set([...currentUsers]);
+        }
+
+        // Sync to FreeSWITCH
+        if (response.extensionSip && response.sipPassword) {
+          this.syncToFreeSWITCH(response.extensionSip, response.sipPassword);
+        }
+
+        this.regenerandoSip.set(false);
+        alert('Contraseña SIP regenerada exitosamente');
+      },
+      error: (err) => {
+        console.error('Error al regenerar SIP password:', err);
+        alert('Error al regenerar contraseña SIP: ' + (err.error?.message || err.message));
+        this.regenerandoSip.set(false);
+      }
+    });
+  }
+
+  private syncToFreeSWITCH(extension: string, password: string) {
+    this.usuarioService.syncFreeSwitchExtension(extension, password).subscribe({
+      next: () => console.log('Extension synced to FreeSWITCH:', extension),
+      error: (err) => console.error('Error syncing to FreeSWITCH:', err)
+    });
   }
 
   cancelEdit() {

@@ -132,6 +132,7 @@ export class AuthService {
           lastName: lastName,
           role: (response.roles?.[0] || 'AGENT') as UserRole,
           sipExtension: response.extensionSip,
+          sipPassword: response.sipPassword,
           active: true,
           tenantId: response.tenantId,
           portfolioId: response.portfolioId,

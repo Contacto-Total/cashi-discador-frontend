@@ -27,6 +27,7 @@ export interface UsuarioResponse {
   email: string;
   telefono?: string;
   extensionSip?: string;
+  sipPassword?: string;
   activo: boolean;
   verificadoEmail: boolean;
   fechaCreacion: string;
@@ -61,5 +62,17 @@ export class UsuarioService {
 
   eliminar(id: number): Observable<{ mensaje: string }> {
     return this.http.delete<{ mensaje: string }>(`${this.apiUrl}/${id}`);
+  }
+
+  regenerarSipPassword(id: number): Observable<UsuarioResponse> {
+    return this.http.post<UsuarioResponse>(`${this.apiUrl}/${id}/regenerar-sip-password`, {});
+  }
+
+  syncFreeSwitchExtension(extension: string, password: string): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/admin/freeswitch/sync-extension`, { extension, password });
+  }
+
+  syncAllFreeSwitchExtensions(): Observable<any> {
+    return this.http.post(`${environment.apiUrl}/admin/freeswitch/sync-all`, {});
   }
 }

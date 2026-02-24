@@ -903,7 +903,7 @@ export class TestSoftphoneComponent implements OnInit, OnDestroy {
 
       await this.sipService.register(
         this.currentUser.sipExtension,
-        '1234',
+        this.currentUser.sipPassword || '1234',
         environment.freeswitchWsUrl,
         environment.freeswitchDomain
       );

@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { LucideAngularModule } from 'lucide-angular';
 import { AdminMonitoringService } from '../../../core/services/admin-monitoring.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { SipService } from '../../../core/services/sip.service';
 import { SupervisionService, SupervisionMode } from '../../../core/services/supervision.service';
 import { Subscription, interval } from 'rxjs';
@@ -49,6 +50,7 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private adminService: AdminMonitoringService,
+    private authService: AuthService,
     private sipService: SipService,
     public supervisionService: SupervisionService
   ) {}
@@ -106,10 +108,10 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
   }
 
   private initializeAdminSip(): void {
-    // Admin credentials (extension 1000)
+    const currentUser = this.authService.getCurrentUser();
     const adminConfig = {
-      extension: '1000',
-      password: 'admin1234',
+      extension: currentUser?.sipExtension || '1000',
+      password: currentUser?.sipPassword || 'admin1234',
       wsUrl: 'cobranza.contactototal.com.pe:7443',
       domain: 'cobranza.contactototal.com.pe'
     };

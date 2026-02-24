@@ -373,7 +373,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
       await this.sipService.register(
         user.sipExtension,
-        '1234',
+        user.sipPassword || '1234',
         environment.freeswitchWsUrl,
         environment.freeswitchDomain
       );
