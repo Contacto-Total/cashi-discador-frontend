@@ -46,7 +46,7 @@ export class ExtensionsRegistryComponent implements OnInit, OnDestroy {
 
     this.monitoringService.getExtensionRegistrations().subscribe({
       next: (extensions) => {
-        this.extensions = extensions;
+        this.extensions = extensions.sort((a, b) => Number(a.extension) - Number(b.extension));
         this.loading = false;
       },
       error: (err) => {
@@ -65,7 +65,7 @@ export class ExtensionsRegistryComponent implements OnInit, OnDestroy {
       switchMap(() => this.monitoringService.getExtensionRegistrations())
     ).subscribe({
       next: (extensions) => {
-        this.extensions = extensions;
+        this.extensions = extensions.sort((a, b) => Number(a.extension) - Number(b.extension));
       },
       error: (err) => {
         console.error('Error polling extensions:', err);
