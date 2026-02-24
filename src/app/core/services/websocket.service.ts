@@ -35,10 +35,26 @@ export class WebsocketService {
   constructor(private authService: AuthService) {}
 
   connect(): void {
+    // Guard: prevent duplicate connections
+    if (this.stompClient && this.stompClient.active) {
+      console.log('[WebSocket] Already connected/connecting, skipping duplicate connect()');
+      return;
+    }
+
     const token = this.authService.getToken();
     if (!token) {
       console.error('Cannot connect to WebSocket: No authentication token');
       return;
+    }
+
+    // Deactivate any orphaned client before creating a new one
+    if (this.stompClient) {
+      try {
+        this.stompClient.deactivate();
+      } catch (e) {
+        // Ignore errors from orphaned client
+      }
+      this.stompClient = null;
     }
 
     const config: StompConfig = {
