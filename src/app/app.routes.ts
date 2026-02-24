@@ -323,6 +323,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/agent-productivity/agent-productivity.component').then(m => m.AgentProductivityComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'admin/recordings',
+    loadComponent: () => import('./features/admin/admin-recordings/admin-recordings.component').then(m => m.AdminRecordingsComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // GESTIÓN MANUAL (Tipificación sin llamada)
