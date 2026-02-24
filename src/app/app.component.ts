@@ -22,6 +22,7 @@ import { PeripheralHealthService } from './core/services/peripheral-health.servi
 import { RecordatoriosModalComponent } from './shared/components/recordatorios-modal/recordatorios-modal.component';
 import { RecordatoriosService } from './core/services/recordatorios.service';
 import { SupervisionService } from './core/services/supervision.service';
+import { ToastNotificationComponent } from './shared/components/toast-notification/toast-notification.component';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 
@@ -37,7 +38,8 @@ import { Subscription } from 'rxjs';
     AuthorizationNotificationComponent,
     AgentTimeAlertOverlayComponent,
     SupervisionPanelComponent,
-    PeripheralStatusBannerComponent
+    PeripheralStatusBannerComponent,
+    ToastNotificationComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
