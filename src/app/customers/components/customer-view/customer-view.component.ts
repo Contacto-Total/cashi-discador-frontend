@@ -797,7 +797,8 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                               </thead>
                               <tbody>
                                 @for (gestion of historialGestionesFiltrado(); track gestion.id) {
-                                  <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                  <tr (click)="historialExpandedRow.set(historialExpandedRow() === gestion.id ? null : gestion.id)"
+                                      class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer">
                                     <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
                                     <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
                                     <td class="px-2 py-1.5">
@@ -806,7 +807,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       </span>
                                     </td>
                                     <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono">{{ gestion.telefono || '-' }}</td>
-                                    <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[200px] truncate" [title]="gestion.observacion">
+                                    <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[200px] truncate">
                                       {{ gestion.observacion || '-' }}
                                     </td>
                                     <td class="px-2 py-1.5">
@@ -829,6 +830,15 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       </span>
                                     </td>
                                   </tr>
+                                  @if (historialExpandedRow() === gestion.id && gestion.observacion) {
+                                    <tr class="bg-blue-50/50 dark:bg-blue-900/10">
+                                      <td colspan="7" class="px-3 py-2">
+                                        <div class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                                          <span class="font-semibold text-slate-500 dark:text-slate-400">Observación:</span> {{ gestion.observacion }}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  }
                                 }
                               </tbody>
                             </table>
@@ -858,7 +868,8 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                               </thead>
                               <tbody>
                                 @for (gestion of historialHistorico(); track gestion.id) {
-                                  <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+                                  <tr (click)="historialExpandedRow.set(historialExpandedRow() === gestion.id ? null : gestion.id)"
+                                      class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors cursor-pointer">
                                     <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
                                     <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
                                     <td class="px-2 py-1.5">
@@ -867,7 +878,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       </span>
                                     </td>
                                     <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono">{{ gestion.telefono || '-' }}</td>
-                                    <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[200px] truncate" [title]="gestion.observacion">
+                                    <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[200px] truncate">
                                       {{ gestion.observacion || '-' }}
                                     </td>
                                     <td class="px-2 py-1.5">
@@ -890,6 +901,15 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       </span>
                                     </td>
                                   </tr>
+                                  @if (historialExpandedRow() === gestion.id && gestion.observacion) {
+                                    <tr class="bg-purple-50/50 dark:bg-purple-900/10">
+                                      <td colspan="7" class="px-3 py-2">
+                                        <div class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                                          <span class="font-semibold text-slate-500 dark:text-slate-400">Observación:</span> {{ gestion.observacion }}
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  }
                                 }
                               </tbody>
                             </table>
@@ -1058,6 +1078,7 @@ export class CustomerViewComponent implements OnInit {
     if (filter === 'TODOS') return gestiones;
     return gestiones.filter(g => g.canal?.includes(filter));
   });
+  historialExpandedRow = signal<number | null>(null);
 
   // TODO: Obtener este valor del contexto del usuario/sesión
   private subPortfolioId = 1; // Por ahora hardcodeado, debe venir de la sesión
