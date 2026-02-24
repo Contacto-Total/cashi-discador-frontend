@@ -295,6 +295,16 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                   }
                 </div>
               </button>
+              <button (click)="onTabGestionesClick()"
+                      [class]="activeTab() === 'gestiones' ? 'border-b-2 border-slate-500 text-slate-700 dark:text-white bg-slate-100 dark:bg-slate-900/20' : 'text-gray-600 dark:text-gray-400'"
+                      class="px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900/30 rounded-t-lg">
+                <div class="flex items-center gap-1.5">
+                  <span>Gestiones</span>
+                  @if (historialGestiones().length > 0) {
+                    <span class="px-1.5 py-0.5 bg-slate-600 text-white text-[0.625rem] rounded-full">{{ historialGestiones().length }}</span>
+                  }
+                </div>
+              </button>
             </div>
 
             <!-- Content Area - Mini Secciones -->
@@ -680,6 +690,216 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                   </div>
                 }
 
+                <!-- Gestiones Tab - Historial de Gestiones -->
+                @if (activeTab() === 'gestiones') {
+                  <div class="space-y-2">
+                    <!-- Header con sub-tabs y controles -->
+                    <div class="bg-white dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-600/20">
+                      <div class="px-3 py-2 flex items-center justify-between border-b border-slate-200 dark:border-slate-700">
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
+                          <!-- Sub-tabs Actual / Histórico -->
+                          <div class="flex items-center border border-slate-300 dark:border-slate-600 rounded overflow-hidden">
+                            <button
+                              (click)="cambiarTabHistorial('actual')"
+                              [class]="'px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer ' +
+                                (historialTabActivo() === 'actual'
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')">
+                              Actual
+                            </button>
+                            <button
+                              (click)="cambiarTabHistorial('historico')"
+                              [class]="'px-2 py-0.5 text-xs font-medium transition-colors cursor-pointer border-l border-slate-300 dark:border-slate-600 ' +
+                                (historialTabActivo() === 'historico'
+                                  ? 'bg-purple-600 text-white'
+                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')">
+                              Histórico
+                            </button>
+                          </div>
+                          <!-- Row count -->
+                          @if (historialTabActivo() === 'actual') {
+                            <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialGestionesFiltrado().length }}/{{ historialGestiones().length }})</span>
+                          } @else {
+                            <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialHistorico().length }}/{{ historialHistoricoTotalElements() }})</span>
+                          }
+                        </div>
+                        <!-- Filtros / Paginación -->
+                        @if (historialTabActivo() === 'actual') {
+                          <div class="flex items-center gap-1">
+                            <button (click)="historialFilter.set('TODOS')"
+                              [class]="'px-2 py-0.5 text-xs rounded transition-colors cursor-pointer ' +
+                                (historialFilter() === 'TODOS' ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                              Todos
+                            </button>
+                            <button (click)="historialFilter.set('CD')"
+                              [class]="'px-2 py-0.5 text-xs rounded transition-colors cursor-pointer ' +
+                                (historialFilter() === 'CD' ? 'bg-green-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                              [CD]
+                            </button>
+                            <button (click)="historialFilter.set('CI')"
+                              [class]="'px-2 py-0.5 text-xs rounded transition-colors cursor-pointer ' +
+                                (historialFilter() === 'CI' ? 'bg-amber-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                              [CI]
+                            </button>
+                            <button (click)="loadManagementHistory()" class="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer">↻</button>
+                          </div>
+                        } @else {
+                          <div class="flex items-center gap-2">
+                            <button (click)="cambiarPaginaHistorico('anterior')"
+                              [disabled]="historialHistoricoPage() === 0 || historialHistoricoLoading()"
+                              [class]="'px-2 py-0.5 text-xs rounded transition-colors cursor-pointer ' +
+                                (historialHistoricoPage() === 0 || historialHistoricoLoading()
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                              ← Ant
+                            </button>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">
+                              Pág {{ historialHistoricoPage() + 1 }} de {{ historialHistoricoTotalPages() }}
+                            </span>
+                            <button (click)="cambiarPaginaHistorico('siguiente')"
+                              [disabled]="historialHistoricoPage() >= historialHistoricoTotalPages() - 1 || historialHistoricoLoading()"
+                              [class]="'px-2 py-0.5 text-xs rounded transition-colors cursor-pointer ' +
+                                (historialHistoricoPage() >= historialHistoricoTotalPages() - 1 || historialHistoricoLoading()
+                                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
+                              Sig →
+                            </button>
+                            <button (click)="loadHistorialHistorico(historialHistoricoPage())" class="ml-1 text-xs text-purple-600 dark:text-purple-400 hover:underline cursor-pointer">↻</button>
+                          </div>
+                        }
+                      </div>
+
+                      <!-- Tabla de gestiones -->
+                      <div class="overflow-auto" style="max-height: 60vh;">
+                        @if (historialTabActivo() === 'actual') {
+                          <!-- TAB ACTUAL -->
+                          @if (historialGestiones().length === 0) {
+                            <div class="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500 text-xs">
+                              Sin gestiones registradas para este cliente
+                            </div>
+                          } @else if (historialGestionesFiltrado().length === 0) {
+                            <div class="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500 text-xs">
+                              No hay gestiones con el filtro seleccionado
+                            </div>
+                          } @else {
+                            <table class="w-full text-xs">
+                              <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                                <tr class="text-left text-slate-600 dark:text-slate-300">
+                                  <th class="px-2 py-1 font-semibold">Fecha</th>
+                                  <th class="px-2 py-1 font-semibold">Asesor</th>
+                                  <th class="px-2 py-1 font-semibold">Tipificación</th>
+                                  <th class="px-2 py-1 font-semibold">Teléfono</th>
+                                  <th class="px-2 py-1 font-semibold">Observación</th>
+                                  <th class="px-2 py-1 font-semibold">Canal</th>
+                                  <th class="px-2 py-1 font-semibold">Método</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (gestion of historialGestionesFiltrado(); track gestion.id) {
+                                  <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                    <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
+                                    <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                                    <td class="px-2 py-1.5">
+                                      <span class="text-blue-600 dark:text-blue-400 font-medium" [title]="gestion.tipificacionCompleta">
+                                        {{ gestion.tipificacionCompleta }}
+                                      </span>
+                                    </td>
+                                    <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono">{{ gestion.telefono || '-' }}</td>
+                                    <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[200px] truncate" [title]="gestion.observacion">
+                                      {{ gestion.observacion || '-' }}
+                                    </td>
+                                    <td class="px-2 py-1.5">
+                                      <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                                        (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                         gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                         gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                                         gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                         'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                                        {{ gestion.canalDisplay }}
+                                      </span>
+                                    </td>
+                                    <td class="px-2 py-1.5">
+                                      <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                                        (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                                         gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                                         gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                                         'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                                        {{ gestion.metodoDisplay }}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          }
+                        } @else {
+                          <!-- TAB HISTÓRICO -->
+                          @if (historialHistoricoLoading()) {
+                            <div class="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500 text-xs">
+                              <span class="animate-pulse">Cargando historial histórico...</span>
+                            </div>
+                          } @else if (historialHistorico().length === 0) {
+                            <div class="flex items-center justify-center py-8 text-slate-400 dark:text-slate-500 text-xs">
+                              Sin gestiones históricas para este cliente
+                            </div>
+                          } @else {
+                            <table class="w-full text-xs">
+                              <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
+                                <tr class="text-left text-slate-600 dark:text-slate-300">
+                                  <th class="px-2 py-1 font-semibold">Fecha</th>
+                                  <th class="px-2 py-1 font-semibold">Asesor</th>
+                                  <th class="px-2 py-1 font-semibold">Tipificación</th>
+                                  <th class="px-2 py-1 font-semibold">Teléfono</th>
+                                  <th class="px-2 py-1 font-semibold">Observación</th>
+                                  <th class="px-2 py-1 font-semibold">Canal</th>
+                                  <th class="px-2 py-1 font-semibold">Método</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                @for (gestion of historialHistorico(); track gestion.id) {
+                                  <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+                                    <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{{ gestion.fecha }}</td>
+                                    <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                                    <td class="px-2 py-1.5">
+                                      <span class="text-purple-600 dark:text-purple-400 font-medium" [title]="gestion.tipificacionCompleta">
+                                        {{ gestion.tipificacionCompleta }}
+                                      </span>
+                                    </td>
+                                    <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono">{{ gestion.telefono || '-' }}</td>
+                                    <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 max-w-[200px] truncate" [title]="gestion.observacion">
+                                      {{ gestion.observacion || '-' }}
+                                    </td>
+                                    <td class="px-2 py-1.5">
+                                      <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                                        (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                         gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                         gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
+                                         gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                         'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                                        {{ gestion.canalDisplay }}
+                                      </span>
+                                    </td>
+                                    <td class="px-2 py-1.5">
+                                      <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                                        (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
+                                         gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                                         gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
+                                         'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                                        {{ gestion.metodoDisplay }}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                }
+                              </tbody>
+                            </table>
+                          }
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+
               </div>
             </div>
 
@@ -801,7 +1021,7 @@ export class CustomerViewComponent implements OnInit {
   private managementService = inject(ManagementService);
 
   customer = signal<CustomerResource | null>(null);
-  activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias' | 'cuentas' | 'pagos'>('cuentas');
+  activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias' | 'cuentas' | 'pagos' | 'gestiones'>('cuentas');
   searchDocument = '';
   searchCriteria = 'documento'; // Criterio de búsqueda por defecto
   searchPerformed = signal(false);
@@ -814,6 +1034,30 @@ export class CustomerViewComponent implements OnInit {
   pagosCliente = signal<PagosClienteResponse | null>(null);
   loadingPagos = signal(false);
   expandedGrupos = signal<Set<string>>(new Set());
+
+  // Historial de Gestiones
+  historialTabActivo = signal<'actual' | 'historico'>('actual');
+  historialGestiones = signal<Array<{
+    id: number; fecha: string; nombreAgente: string; tipificacionCompleta: string;
+    telefono: string; observacion: string; canal: string; canalDisplay: string;
+    metodo: string; metodoDisplay: string;
+  }>>([]);
+  historialHistorico = signal<Array<{
+    id: number; fecha: string; nombreAgente: string; tipificacionCompleta: string;
+    telefono: string; observacion: string; canal: string; canalDisplay: string;
+    metodo: string; metodoDisplay: string;
+  }>>([]);
+  historialFilter = signal<'TODOS' | 'CI' | 'CD'>('TODOS');
+  historialHistoricoPage = signal<number>(0);
+  historialHistoricoTotalPages = signal<number>(0);
+  historialHistoricoTotalElements = signal<number>(0);
+  historialHistoricoLoading = signal<boolean>(false);
+  historialGestionesFiltrado = computed(() => {
+    const filter = this.historialFilter();
+    const gestiones = this.historialGestiones();
+    if (filter === 'TODOS') return gestiones;
+    return gestiones.filter(g => g.canal?.includes(filter));
+  });
 
   // TODO: Obtener este valor del contexto del usuario/sesión
   private subPortfolioId = 1; // Por ahora hardcodeado, debe venir de la sesión
@@ -932,6 +1176,11 @@ export class CustomerViewComponent implements OnInit {
     // Limpiar pagos del cliente anterior
     this.pagosCliente.set(null);
     this.expandedGrupos.set(new Set());
+    // Limpiar gestiones del cliente anterior
+    this.historialGestiones.set([]);
+    this.historialHistorico.set([]);
+    this.historialTabActivo.set('actual');
+    this.historialFilter.set('TODOS');
 
     // Register access for this specific customer
     this.customerService.registerCustomerAccess(selectedCustomer.id).subscribe({
@@ -1006,6 +1255,135 @@ export class CustomerViewComponent implements OnInit {
     return this.expandedGrupos().has(grupoUuid);
   }
 
+  // ============== Métodos para Tab de Gestiones ==============
+
+  onTabGestionesClick() {
+    this.activeTab.set('gestiones');
+    const currentCustomer = this.customer();
+    if (currentCustomer && this.historialGestiones().length === 0) {
+      this.loadManagementHistory();
+    }
+  }
+
+  loadManagementHistory() {
+    const documento = this.customer()?.documentNumber;
+    if (!documento) return;
+
+    this.managementService.getManagementsByDocumento(documento).subscribe({
+      next: (managements) => {
+        const historial = managements.map(m => {
+          const fechaOnly = m.managementDate ? this.formatDateOnly(m.managementDate) : '-';
+          const hora = m.managementTime ? m.managementTime.substring(0, 5) : '';
+          const fecha = hora ? `${fechaOnly} ${hora}` : fechaOnly;
+          const tipificacionParts = [m.level1Name, m.level2Name, m.level3Name, m.level4Name].filter(Boolean);
+          const tipificacionCompleta = tipificacionParts.join(' > ') || '-';
+          return {
+            id: m.id,
+            fecha,
+            nombreAgente: m.nombreAgente || `Agente ${m.advisorId}`,
+            tipificacionCompleta,
+            telefono: m.telefonoContacto || '',
+            observacion: m.observations || '',
+            canal: m.canalContacto || '',
+            canalDisplay: this.formatCanalDisplay(m.canalContacto),
+            metodo: m.metodoContacto || '',
+            metodoDisplay: this.formatMetodoDisplay(m.metodoContacto),
+          };
+        });
+        this.historialGestiones.set(historial);
+      },
+      error: (error) => {
+        console.error('Error al cargar historial de gestiones:', error);
+      }
+    });
+  }
+
+  loadHistorialHistorico(page: number = 0) {
+    const documento = this.customer()?.documentNumber;
+    if (!documento) return;
+
+    this.historialHistoricoLoading.set(true);
+    this.managementService.getGestionesHistoricas(documento, page, 10).subscribe({
+      next: (response) => {
+        const historial = response.content.map((g: any, index: number) => {
+          const fechaOnly = g.fechaGestion ? this.formatDateOnly(g.fechaGestion) : '-';
+          const hora = g.horaGestion ? g.horaGestion.substring(0, 5) : '';
+          const fecha = hora ? `${fechaOnly} ${hora}` : fechaOnly;
+          const tipificacionCompleta = [g.resultado, g.solucion].filter(Boolean).join(' > ') || '-';
+          return {
+            id: index + (page * 10),
+            fecha,
+            nombreAgente: g.agente || '-',
+            tipificacionCompleta,
+            telefono: g.telefono || '',
+            observacion: g.observacion || '',
+            canal: g.canal || '',
+            canalDisplay: this.formatCanalDisplay(g.canal),
+            metodo: g.metodo || '',
+            metodoDisplay: this.formatMetodoDisplay(g.metodo),
+          };
+        });
+        this.historialHistorico.set(historial);
+        this.historialHistoricoPage.set(response.page);
+        this.historialHistoricoTotalPages.set(response.totalPages);
+        this.historialHistoricoTotalElements.set(response.totalElements);
+        this.historialHistoricoLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error al cargar historial histórico:', error);
+        this.historialHistoricoLoading.set(false);
+        this.historialHistorico.set([]);
+      }
+    });
+  }
+
+  cambiarTabHistorial(tab: 'actual' | 'historico') {
+    this.historialTabActivo.set(tab);
+    if (tab === 'historico' && this.historialHistorico().length === 0) {
+      this.loadHistorialHistorico();
+    }
+  }
+
+  cambiarPaginaHistorico(direccion: 'anterior' | 'siguiente') {
+    const currentPage = this.historialHistoricoPage();
+    const totalPages = this.historialHistoricoTotalPages();
+    if (direccion === 'anterior' && currentPage > 0) {
+      this.loadHistorialHistorico(currentPage - 1);
+    } else if (direccion === 'siguiente' && currentPage < totalPages - 1) {
+      this.loadHistorialHistorico(currentPage + 1);
+    }
+  }
+
+  private formatDateOnly(dateStr: string): string {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return dateStr;
+  }
+
+  private formatCanalDisplay(canal: string | undefined): string {
+    if (!canal) return '-';
+    const map: { [key: string]: string } = {
+      'LLAMADA_SALIENTE': 'Llamada Saliente', 'LLAMADA_ENTRANTE': 'Llamada Entrante',
+      'SMS': 'SMS', 'WHATSAPP': 'WhatsApp', 'EMAIL': 'Email'
+    };
+    return map[canal] || this.formatSnakeCase(canal);
+  }
+
+  private formatMetodoDisplay(metodo: string | undefined): string {
+    if (!metodo) return '-';
+    const map: { [key: string]: string } = {
+      'GESTION_MANUAL': 'Manual', 'GESTION_PROGRESIVO': 'Progresivo',
+      'GESTION_PREDICTIVO': 'Predictivo', 'GESTION_AUTOMATICA': 'Automática'
+    };
+    return map[metodo] || this.formatSnakeCase(metodo);
+  }
+
+  private formatSnakeCase(value: string): string {
+    if (!value) return '-';
+    return value.toLowerCase().split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+
   quickSearch(document: string) {
     this.searchDocument = document;
     this.searchCustomer();
@@ -1018,6 +1396,14 @@ export class CustomerViewComponent implements OnInit {
     this.showMultipleResults.set(false);
     this.searchResults.set([]);
     this.activeTab.set('personal');
+    // Limpiar historial de gestiones
+    this.historialGestiones.set([]);
+    this.historialHistorico.set([]);
+    this.historialTabActivo.set('actual');
+    this.historialFilter.set('TODOS');
+    this.historialHistoricoPage.set(0);
+    this.historialHistoricoTotalPages.set(0);
+    this.historialHistoricoTotalElements.set(0);
   }
 
   clearSearch() {
