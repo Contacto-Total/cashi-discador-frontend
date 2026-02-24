@@ -279,6 +279,11 @@ export const routes: Routes = [
     loadComponent: () => import('./maintenance/components/horarios-recordatorios/horarios-recordatorios.component').then(m => m.HorariosRecordatoriosComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/maintenance/umbrales-estado',
+    loadComponent: () => import('./maintenance/components/umbrales-estado/umbrales-estado.component').then(m => m.UmbralesEstadoComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   // ========================================
   // PAGOS BANCARIOS
