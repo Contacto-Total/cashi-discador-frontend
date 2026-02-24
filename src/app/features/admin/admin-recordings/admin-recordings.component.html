@@ -1,221 +1,164 @@
-<div>
-  <!-- Loading Overlay -->
-  <div *ngIf="isLoading" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="w-12 h-12 border-4 border-slate-700 border-t-blue-500 rounded-full animate-spin"></div>
+<div class="recordings-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon">
+        <lucide-angular name="disc" [size]="24"></lucide-angular>
+      </div>
+      <div>
+        <h1>Grabaciones del Discador</h1>
+        <p>Busca y descarga las grabaciones de llamadas por proveedor, cartera y subcartera</p>
+      </div>
+    </div>
+    <div class="header-stats" *ngIf="hasSearched">
+      <div class="stat-badge">
+        <span class="stat-value">{{ filteredRecordings.length }}</span>
+        <span class="stat-label">grabaciones</span>
+      </div>
+    </div>
   </div>
 
-  <!-- Search Form -->
-  <div class="bg-slate-800 p-3 rounded-lg mb-3">
-    <div class="flex gap-2 overflow-x-auto flex-wrap">
-      <!-- Proveedor (Tenant) -->
-      <div class="flex flex-col gap-1 w-[150px] flex-shrink-0">
-        <label class="text-slate-400 text-xs font-medium">Proveedor</label>
-        <select
-          [(ngModel)]="selectedTenantId"
-          (change)="onTenantChange()"
-          class="w-full h-10 px-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-row">
+      <!-- Proveedor -->
+      <div class="filter-group">
+        <label>Proveedor</label>
+        <select [(ngModel)]="selectedTenantId" (change)="onTenantChange()">
           <option [value]="0">Seleccionar...</option>
           <option *ngFor="let tenant of tenants" [value]="tenant.id">{{ tenant.tenantName }}</option>
         </select>
       </div>
 
-      <!-- Cartera (Portfolio) -->
-      <div class="flex flex-col gap-1 w-[150px] flex-shrink-0">
-        <label class="text-slate-400 text-xs font-medium">Cartera</label>
-        <select
-          [(ngModel)]="selectedPortfolioId"
-          (change)="onPortfolioChange()"
-          [disabled]="portfolios.length === 0"
-          class="w-full h-10 px-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
+      <!-- Cartera -->
+      <div class="filter-group">
+        <label>Cartera</label>
+        <select [(ngModel)]="selectedPortfolioId" (change)="onPortfolioChange()" [disabled]="portfolios.length === 0">
           <option [value]="0">Seleccionar...</option>
           <option *ngFor="let portfolio of portfolios" [value]="portfolio.id">{{ portfolio.portfolioName }}</option>
         </select>
       </div>
 
-      <!-- Subcartera (SubPortfolio) -->
-      <div class="flex flex-col gap-1 w-[150px] flex-shrink-0">
-        <label class="text-slate-400 text-xs font-medium">Subcartera</label>
-        <select
-          [(ngModel)]="selectedSubPortfolioId"
-          [disabled]="subPortfolios.length === 0"
-          class="w-full h-10 px-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50">
+      <!-- Subcartera -->
+      <div class="filter-group">
+        <label>Subcartera</label>
+        <select [(ngModel)]="selectedSubPortfolioId" [disabled]="subPortfolios.length === 0">
           <option [value]="0">Seleccionar...</option>
           <option *ngFor="let sub of subPortfolios" [value]="sub.id">{{ sub.subPortfolioName }}</option>
         </select>
       </div>
 
-      <!-- Divider -->
-      <div class="w-px bg-slate-700 self-stretch flex-shrink-0"></div>
+      <div class="filter-divider"></div>
 
-      <!-- Type Search -->
-      <div class="flex flex-col gap-1 w-[140px] flex-shrink-0">
-        <label class="text-slate-400 text-xs font-medium">Tipo de Busqueda</label>
-        <app-custom-select
-          [options]="tipoBusqueda"
-          [(ngModel)]="selectedTipoBusqueda"
-          (selectionChange)="changeTypeSearch()"
-          placeholder="Tipo de busqueda">
-        </app-custom-select>
+      <!-- Tipo de busqueda -->
+      <div class="filter-group">
+        <label>Buscar por</label>
+        <select [(ngModel)]="selectedTipoBusqueda" (change)="changeTypeSearch()">
+          <option value="fechas">Fechas</option>
+          <option value="documento">Documento</option>
+          <option value="telefono">Teléfono</option>
+        </select>
       </div>
 
       <!-- Search by Dates -->
-      <div *ngIf="selectedTipoBusqueda === 'fechas'" class="flex gap-2 items-end flex-shrink-0">
-        <div class="flex flex-col gap-1 w-[140px]">
-          <label class="text-slate-400 text-xs font-medium">Fecha Inicio</label>
-          <input
-            type="date"
-            [(ngModel)]="startDate"
-            (change)="validateDates()"
-            class="w-full h-10 pl-3 pr-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+      <ng-container *ngIf="selectedTipoBusqueda === 'fechas'">
+        <div class="filter-group">
+          <label>Desde</label>
+          <input type="date" [(ngModel)]="startDate" (change)="validateDates()">
         </div>
-
-        <div class="flex flex-col gap-1 w-[140px]">
-          <label class="text-slate-400 text-xs font-medium">Fecha Fin</label>
-          <input
-            type="date"
-            [(ngModel)]="endDate"
-            (change)="validateDates()"
-            class="w-full h-10 pl-3 pr-2 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        <div class="filter-group">
+          <label>Hasta</label>
+          <input type="date" [(ngModel)]="endDate" (change)="validateDates()">
         </div>
-
-        <button
-          (click)="searchByDates()"
-          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
-          <lucide-angular [img]="Search" [size]="16"></lucide-angular>
-          Buscar
-        </button>
-      </div>
+      </ng-container>
 
       <!-- Search by Document -->
-      <div *ngIf="selectedTipoBusqueda === 'documento'" class="flex gap-2 items-end flex-shrink-0">
-        <div class="flex flex-col gap-1 w-[180px]">
-          <label class="text-slate-400 text-xs font-medium">Documento</label>
-          <input
-            type="text"
-            [(ngModel)]="documento"
-            placeholder="Ingrese documento"
-            class="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-        </div>
-
-        <button
-          (click)="searchByDocumento()"
-          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
-          <lucide-angular [img]="Search" [size]="16"></lucide-angular>
-          Buscar
-        </button>
+      <div class="filter-group" *ngIf="selectedTipoBusqueda === 'documento'">
+        <label>Documento</label>
+        <input type="text" [(ngModel)]="documento" placeholder="Ingrese documento"
+               (keyup.enter)="searchByDocumento()">
       </div>
 
       <!-- Search by Phone -->
-      <div *ngIf="selectedTipoBusqueda === 'telefono'" class="flex gap-2 items-end flex-shrink-0">
-        <div class="flex flex-col gap-1 w-[180px]">
-          <label class="text-slate-400 text-xs font-medium">Telefono</label>
-          <input
-            type="text"
-            [(ngModel)]="telefono"
-            placeholder="Ingrese telefono"
-            class="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded text-slate-100 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-        </div>
+      <div class="filter-group" *ngIf="selectedTipoBusqueda === 'telefono'">
+        <label>Teléfono</label>
+        <input type="text" [(ngModel)]="telefono" placeholder="Ingrese teléfono"
+               (keyup.enter)="searchByTelefono()">
+      </div>
 
-        <button
-          (click)="searchByTelefono()"
-          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
-          <lucide-angular [img]="Search" [size]="16"></lucide-angular>
-          Buscar
+      <!-- Search Button -->
+      <div class="filter-group filter-action">
+        <button class="btn-primary" [disabled]="isLoading"
+                (click)="selectedTipoBusqueda === 'fechas' ? searchByDates() : selectedTipoBusqueda === 'documento' ? searchByDocumento() : searchByTelefono()">
+          <lucide-angular [img]="isLoading ? Loader : Search" [size]="16" [class.spin]="isLoading"></lucide-angular>
+          <span>{{ isLoading ? 'Buscando...' : 'Buscar' }}</span>
         </button>
       </div>
 
-      <!-- Divider -->
-      <div class="w-px bg-slate-700 self-stretch flex-shrink-0"></div>
+      <div class="filter-divider" *ngIf="recordings.length > 0"></div>
 
       <!-- Massive Download -->
-      <div class="flex flex-col gap-1 flex-shrink-0">
-        <label class="text-slate-400 text-xs font-medium">Descarga masiva</label>
-        <button
-          (click)="massiveDownloadAudios()"
-          [disabled]="isDownloadingMassive || recordings.length === 0"
-          class="h-10 inline-flex items-center gap-1.5 px-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-sm font-medium rounded transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 whitespace-nowrap cursor-pointer">
-          <lucide-angular [img]="Volume2" [size]="16"></lucide-angular>
-          Audios
+      <div class="filter-group filter-action" *ngIf="recordings.length > 0">
+        <button class="btn-download" (click)="massiveDownloadAudios()"
+                [disabled]="isDownloadingMassive">
+          <lucide-angular [img]="isDownloadingMassive ? Loader : Download" [size]="16"
+                          [class.spin]="isDownloadingMassive"></lucide-angular>
+          <span>{{ isDownloadingMassive ? 'Descargando...' : 'Descargar todo' }}</span>
         </button>
       </div>
     </div>
 
     <!-- Error Message -->
-    <div *ngIf="errorMessage" class="mt-2 p-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded text-xs">
+    <div *ngIf="errorMessage" class="error-message">
+      <lucide-angular [img]="X" [size]="16"></lucide-angular>
       {{ errorMessage }}
     </div>
   </div>
 
-  <!-- Table Section -->
-  <div class="bg-slate-800 p-3 rounded-lg" *ngIf="recordings.length > 0">
-    <div class="overflow-x-auto rounded border border-slate-700">
-      <table class="w-full border-collapse text-xs">
-        <thead class="bg-slate-900">
+  <!-- Loading -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-spinner">
+      <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+      <span>Buscando grabaciones...</span>
+    </div>
+  </div>
+
+  <!-- Results Table -->
+  <div class="table-card animate-in" *ngIf="recordings.length > 0 && !isLoading">
+    <div class="table-header">
+      <h3>Resultados</h3>
+      <span class="record-count">{{ filteredRecordings.length }} de {{ recordings.length }} registros</span>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="recordings-table">
+        <thead>
           <!-- Filter Row -->
-          <tr class="border-b border-slate-700">
-            <th class="px-2 py-2">
-              <div class="relative">
-                <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
-                <input
-                  type="text"
-                  [(ngModel)]="filterDocumento"
-                  (input)="applyFilters()"
-                  placeholder="DNI..."
-                  class="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
+          <tr class="filter-row">
+            <th>
+              <input type="text" [(ngModel)]="filterDocumento" (input)="applyFilters()" placeholder="Filtrar DNI...">
             </th>
-            <th class="px-2 py-2">
-              <div class="relative">
-                <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
-                <input
-                  type="text"
-                  [(ngModel)]="filterTelefono"
-                  (input)="applyFilters()"
-                  placeholder="Telefono..."
-                  class="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
+            <th>
+              <input type="text" [(ngModel)]="filterTelefono" (input)="applyFilters()" placeholder="Filtrar tel...">
             </th>
-            <th class="px-2 py-2"></th>
-            <th class="px-2 py-2">
-              <div class="relative">
-                <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
-                <input
-                  type="text"
-                  [(ngModel)]="filterCampana"
-                  (input)="applyFilters()"
-                  placeholder="Campaña..."
-                  class="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
+            <th></th>
+            <th>
+              <input type="text" [(ngModel)]="filterCampana" (input)="applyFilters()" placeholder="Filtrar campaña...">
             </th>
-            <th class="px-2 py-2">
-              <div class="relative">
-                <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
-                <input
-                  type="text"
-                  [(ngModel)]="filterAgente"
-                  (input)="applyFilters()"
-                  placeholder="Agente..."
-                  class="w-full pl-7 pr-2 py-1.5 bg-slate-800 border border-slate-600 rounded text-slate-100 text-xs placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
+            <th>
+              <input type="text" [(ngModel)]="filterAgente" (input)="applyFilters()" placeholder="Filtrar agente...">
             </th>
-            <th class="px-2 py-2"></th>
-            <th class="px-2 py-2"></th>
-            <th class="px-2 py-2"></th>
-            <th class="px-2 py-2">
-              <app-custom-select
-                [options]="getUniqueEstados()"
-                [(ngModel)]="filterEstado"
-                (selectionChange)="applyFilters()"
-                [compact]="true"
-                placeholder="Filtrar...">
-              </app-custom-select>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>
+              <select [(ngModel)]="filterEstado" (change)="applyFilters()">
+                <option *ngFor="let estado of getUniqueEstados()" [value]="estado.value">{{ estado.label }}</option>
+              </select>
             </th>
-            <th class="px-2 py-2"></th>
-            <th class="px-2 py-2 text-center">
-              <button
-                (click)="clearFilters()"
-                class="inline-flex items-center justify-center w-full px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors cursor-pointer"
-                title="Limpiar filtros">
+            <th></th>
+            <th class="col-action">
+              <button class="btn-clear-filters" (click)="clearFilters()" title="Limpiar filtros">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
               </button>
             </th>
@@ -223,107 +166,70 @@
 
           <!-- Header Row -->
           <tr>
-            <th
-              (click)="sort('documento')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('documento')" class="sortable">
               Documento
-              <span *ngIf="sortField === 'documento'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'documento'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('telefono')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
-              Telefono
-              <span *ngIf="sortField === 'telefono'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+            <th (click)="sort('telefono')" class="sortable">
+              Teléfono
+              <span class="sort-icon" *ngIf="sortField === 'telefono'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('cliente')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('cliente')" class="sortable">
               Cliente
-              <span *ngIf="sortField === 'cliente'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'cliente'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('campana')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('campana')" class="sortable">
               Campaña
-              <span *ngIf="sortField === 'campana'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'campana'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('agente')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('agente')" class="sortable">
               Agente
-              <span *ngIf="sortField === 'agente'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'agente'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('fechaInicio')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('fechaInicio')" class="sortable">
               Fecha
-              <span *ngIf="sortField === 'fechaInicio'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap">
-              Hora
+            <th>Hora</th>
+            <th (click)="sort('duracionSegundos')" class="sortable">
+              Duración
+              <span class="sort-icon" *ngIf="sortField === 'duracionSegundos'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('duracionSegundos')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
-              Duracion
-              <span *ngIf="sortField === 'duracionSegundos'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
-            </th>
-            <th
-              (click)="sort('estadoLlamada')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('estadoLlamada')" class="sortable">
               Estado
-              <span *ngIf="sortField === 'estadoLlamada'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'estadoLlamada'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th
-              (click)="sort('resultado')"
-              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+            <th (click)="sort('resultado')" class="sortable">
               Resultado
-              <span *ngIf="sortField === 'resultado'" class="ml-1 text-[10px] text-blue-400">
-                {{ sortOrder === 1 ? '&#9650;' : '&#9660;' }}
-              </span>
+              <span class="sort-icon" *ngIf="sortField === 'resultado'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Audio</th>
+            <th class="col-action">Audio</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let recording of paginatedRecordings" class="transition-colors even:bg-slate-900/30 hover:bg-blue-500/10">
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ recording.documento }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ recording.telefono }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 max-w-[150px] truncate" [title]="recording.cliente">{{ recording.cliente }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 max-w-[120px] truncate" [title]="recording.campana">{{ recording.campana }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ recording.agente }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 whitespace-nowrap">{{ formatDate(recording.fechaInicio) }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 whitespace-nowrap">{{ formatTime(recording.fechaInicio) }}</td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 whitespace-nowrap">{{ formatDuration(recording.duracionSegundos) }}</td>
-            <td class="px-2 py-2 border-b border-slate-700">
-              <span class="inline-block px-2 py-0.5 border rounded text-[10px] font-medium whitespace-nowrap"
-                    [ngClass]="getEstadoColor(recording.estadoLlamada)">
+          <tr *ngFor="let recording of paginatedRecordings; let i = index"
+              class="animate-row" [style.animation-delay]="(i * 30) + 'ms'">
+            <td class="cell-mono">{{ recording.documento }}</td>
+            <td class="cell-mono">{{ recording.telefono }}</td>
+            <td class="cell-truncate" [title]="recording.cliente">{{ recording.cliente }}</td>
+            <td class="cell-truncate" [title]="recording.campana">{{ recording.campana }}</td>
+            <td>{{ recording.agente || '-' }}</td>
+            <td class="cell-mono">{{ formatDate(recording.fechaInicio) }}</td>
+            <td class="cell-mono">{{ formatTime(recording.fechaInicio) }}</td>
+            <td class="cell-mono">{{ formatDuration(recording.duracionSegundos) }}</td>
+            <td>
+              <span class="status-badge" [ngClass]="getEstadoClass(recording.estadoLlamada)">
                 {{ recording.estadoLlamada }}
               </span>
             </td>
-            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 max-w-[120px] truncate" [title]="recording.resultado">{{ recording.resultado || '-' }}</td>
-            <td class="px-2 py-2 text-center border-b border-slate-700">
-              <button
-                (click)="downloadAudio(recording)"
-                class="inline-flex items-center justify-center w-7 h-7 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
-                title="Descargar audio">
-                <lucide-angular [img]="Volume2" [size]="14"></lucide-angular>
+            <td class="cell-truncate" [title]="recording.resultado">{{ recording.resultado || '-' }}</td>
+            <td class="col-action">
+              <button class="btn-audio" (click)="downloadAudio(recording)"
+                      [disabled]="downloadingUuid === recording.uuidLlamada"
+                      title="Descargar audio">
+                <lucide-angular [img]="downloadingUuid === recording.uuidLlamada ? Loader : Volume2"
+                                [size]="15"
+                                [class.spin]="downloadingUuid === recording.uuidLlamada"></lucide-angular>
               </button>
             </td>
           </tr>
@@ -332,70 +238,52 @@
     </div>
 
     <!-- Pagination -->
-    <div class="flex justify-between items-center mt-3 gap-3 overflow-x-auto">
-      <div class="text-slate-400 text-xs whitespace-nowrap flex-shrink-0">
+    <div class="pagination">
+      <div class="pagination-info">
         Mostrando {{ (currentPage - 1) * pageSize + 1 }} a
         {{ Math.min(currentPage * pageSize, filteredRecordings.length) }} de
-        {{ filteredRecordings.length }} registros
+        {{ filteredRecordings.length }}
       </div>
 
-      <div class="flex gap-1.5 flex-shrink-0">
-        <button
-          (click)="goToPage(1)"
-          [disabled]="currentPage === 1"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
-          &laquo;
-        </button>
-
-        <button
-          (click)="goToPage(currentPage - 1)"
-          [disabled]="currentPage === 1"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
-          &lsaquo;
-        </button>
-
-        <button
-          *ngFor="let page of getPageNumbers()"
-          (click)="goToPage(page)"
-          [class.bg-blue-600]="page === currentPage"
-          [class.border-blue-600]="page === currentPage"
-          [class.bg-slate-700]="page !== currentPage"
-          [class.border-slate-600]="page !== currentPage"
-          [class.hover:bg-slate-600]="page !== currentPage"
-          class="min-w-[28px] px-2 py-1 border text-white text-xs rounded transition-colors cursor-pointer">
+      <div class="pagination-controls">
+        <button (click)="goToPage(1)" [disabled]="currentPage === 1">&laquo;</button>
+        <button (click)="goToPage(currentPage - 1)" [disabled]="currentPage === 1">&lsaquo;</button>
+        <button *ngFor="let page of getPageNumbers()"
+                (click)="goToPage(page)"
+                [class.active]="page === currentPage">
           {{ page }}
         </button>
-
-        <button
-          (click)="goToPage(currentPage + 1)"
-          [disabled]="currentPage === totalPages"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
-          &rsaquo;
-        </button>
-
-        <button
-          (click)="goToPage(totalPages)"
-          [disabled]="currentPage === totalPages"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
-          &raquo;
-        </button>
+        <button (click)="goToPage(currentPage + 1)" [disabled]="currentPage === totalPages">&rsaquo;</button>
+        <button (click)="goToPage(totalPages)" [disabled]="currentPage === totalPages">&raquo;</button>
       </div>
 
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <label class="text-slate-400 text-xs whitespace-nowrap">Filas por pagina:</label>
-        <div class="w-16">
-          <app-custom-select
-            [options]="pageSizeOptions"
-            [(ngModel)]="pageSize"
-            (selectionChange)="onPageSizeChange($event)">
-          </app-custom-select>
-        </div>
+      <div class="pagination-size">
+        <label>Filas:</label>
+        <select [(ngModel)]="pageSize" (change)="onPageSizeChange(pageSize)">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+        </select>
       </div>
     </div>
   </div>
 
-  <!-- Empty State -->
-  <div *ngIf="recordings.length === 0 && !isLoading" class="bg-slate-800 p-8 rounded-lg text-center">
-    <p class="text-slate-400 text-sm">No hay grabaciones para mostrar. Selecciona Proveedor, Cartera y Subcartera, luego realiza una busqueda.</p>
+  <!-- Empty State: No search yet -->
+  <div class="empty-state animate-in" *ngIf="!hasSearched && !isLoading">
+    <div class="empty-icon">
+      <lucide-angular name="disc" [size]="48"></lucide-angular>
+    </div>
+    <h3>Buscar grabaciones</h3>
+    <p>Selecciona un proveedor, cartera y subcartera, luego realiza una búsqueda para ver las grabaciones disponibles.</p>
+  </div>
+
+  <!-- Empty State: No results -->
+  <div class="empty-state animate-in" *ngIf="hasSearched && recordings.length === 0 && !isLoading">
+    <div class="empty-icon warning">
+      <lucide-angular name="search" [size]="48"></lucide-angular>
+    </div>
+    <h3>Sin resultados</h3>
+    <p>No se encontraron grabaciones con los criterios seleccionados. Intenta con otros filtros.</p>
   </div>
 </div>

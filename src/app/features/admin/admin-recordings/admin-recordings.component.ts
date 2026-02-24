@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Volume2, Download, Search, Calendar, X, ChevronDown } from 'lucide-angular';
+import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, FileAudio, Loader } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -19,21 +19,21 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
   styleUrls: ['./admin-recordings.component.css']
 })
 export class AdminRecordingsComponent implements OnInit {
-  // Lucide icons
   readonly Volume2 = Volume2;
   readonly Download = Download;
   readonly Search = Search;
   readonly Calendar = Calendar;
   readonly X = X;
-  readonly ChevronDown = ChevronDown;
-
-  // Math utility for template
+  readonly Disc = Disc;
+  readonly FileAudio = FileAudio;
+  readonly Loader = Loader;
   readonly Math = Math;
 
   // Data
   recordings: RecordingDTO[] = [];
   filteredRecordings: RecordingDTO[] = [];
   paginatedRecordings: RecordingDTO[] = [];
+  hasSearched: boolean = false;
 
   // Tenant/Portfolio/SubPortfolio cascade
   tenants: Tenant[] = [];
@@ -68,12 +68,7 @@ export class AdminRecordingsComponent implements OnInit {
   filterEstado: string = '';
   filterAgente: string = '';
 
-  // Dropdowns
-  tipoBusqueda: SelectOption[] = [
-    { label: 'Fechas', value: 'fechas' },
-    { label: 'Documento', value: 'documento' },
-    { label: 'Teléfono', value: 'telefono' }
-  ];
+  // Search type
   selectedTipoBusqueda: string = 'fechas';
 
   // Sort
@@ -83,6 +78,7 @@ export class AdminRecordingsComponent implements OnInit {
   // Loading
   isLoading: boolean = false;
   isDownloadingMassive: boolean = false;
+  downloadingUuid: string = '';
 
   constructor(
     private recordingsService: AdminRecordingsService,
@@ -99,12 +95,8 @@ export class AdminRecordingsComponent implements OnInit {
 
   loadTenants(): void {
     this.tenantService.getAllTenants().subscribe({
-      next: (data) => {
-        this.tenants = data;
-      },
-      error: (err) => {
-        console.error('Error loading tenants:', err);
-      }
+      next: (data) => { this.tenants = data; },
+      error: (err) => { console.error('Error loading tenants:', err); }
     });
   }
 
@@ -116,12 +108,8 @@ export class AdminRecordingsComponent implements OnInit {
 
     if (this.selectedTenantId > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
-        next: (data) => {
-          this.portfolios = data;
-        },
-        error: (err) => {
-          console.error('Error loading portfolios:', err);
-        }
+        next: (data) => { this.portfolios = data; },
+        error: (err) => { console.error('Error loading portfolios:', err); }
       });
     }
   }
@@ -132,12 +120,8 @@ export class AdminRecordingsComponent implements OnInit {
 
     if (this.selectedPortfolioId > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
-        next: (data) => {
-          this.subPortfolios = data;
-        },
-        error: (err) => {
-          console.error('Error loading sub-portfolios:', err);
-        }
+        next: (data) => { this.subPortfolios = data; },
+        error: (err) => { console.error('Error loading sub-portfolios:', err); }
       });
     }
   }
@@ -170,8 +154,6 @@ export class AdminRecordingsComponent implements OnInit {
       if (diffDays > 7) {
         this.errorMessage = 'La diferencia entre las fechas no puede ser mayor a 7 días.';
       }
-    } else {
-      this.errorMessage = 'Por favor, selecciona ambas fechas.';
     }
   }
 
@@ -185,12 +167,10 @@ export class AdminRecordingsComponent implements OnInit {
 
   searchByDates(): void {
     if (!this.validatePortfolioSelection()) return;
-
     if (!this.startDate || !this.endDate) {
       this.toastService.error('Por favor, selecciona ambas fechas.');
       return;
     }
-
     if (this.errorMessage) {
       this.toastService.error('Verificar la validación de las fechas.');
       return;
@@ -203,12 +183,13 @@ export class AdminRecordingsComponent implements OnInit {
     ).subscribe({
       next: (data) => {
         this.recordings = data;
+        this.hasSearched = true;
         this.applyFilters();
         this.isLoading = false;
         this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
       },
       error: (err) => {
-        console.error('Error searching recordings:', err);
+        console.error(err);
         this.toastService.error('No se pudo cargar los datos.');
         this.isLoading = false;
       }
@@ -217,7 +198,6 @@ export class AdminRecordingsComponent implements OnInit {
 
   searchByDocumento(): void {
     if (!this.validatePortfolioSelection()) return;
-
     if (!this.documento) {
       this.toastService.error('Por favor, ingresa un documento.');
       return;
@@ -230,12 +210,13 @@ export class AdminRecordingsComponent implements OnInit {
     ).subscribe({
       next: (data) => {
         this.recordings = data;
+        this.hasSearched = true;
         this.applyFilters();
         this.isLoading = false;
         this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
       },
       error: (err) => {
-        console.error('Error searching recordings:', err);
+        console.error(err);
         this.toastService.error('No se pudo cargar los datos.');
         this.isLoading = false;
       }
@@ -244,7 +225,6 @@ export class AdminRecordingsComponent implements OnInit {
 
   searchByTelefono(): void {
     if (!this.validatePortfolioSelection()) return;
-
     if (!this.telefono) {
       this.toastService.error('Por favor, ingresa un teléfono.');
       return;
@@ -257,12 +237,13 @@ export class AdminRecordingsComponent implements OnInit {
     ).subscribe({
       next: (data) => {
         this.recordings = data;
+        this.hasSearched = true;
         this.applyFilters();
         this.isLoading = false;
         this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
       },
       error: (err) => {
-        console.error('Error searching recordings:', err);
+        console.error(err);
         this.toastService.error('No se pudo cargar los datos.');
         this.isLoading = false;
       }
@@ -275,31 +256,19 @@ export class AdminRecordingsComponent implements OnInit {
     let filtered = [...this.recordings];
 
     if (this.filterDocumento) {
-      filtered = filtered.filter(r =>
-        r.documento?.toLowerCase().includes(this.filterDocumento.toLowerCase())
-      );
+      filtered = filtered.filter(r => r.documento?.toLowerCase().includes(this.filterDocumento.toLowerCase()));
     }
-
     if (this.filterTelefono) {
-      filtered = filtered.filter(r =>
-        r.telefono?.toLowerCase().includes(this.filterTelefono.toLowerCase())
-      );
+      filtered = filtered.filter(r => r.telefono?.toLowerCase().includes(this.filterTelefono.toLowerCase()));
     }
-
     if (this.filterCampana) {
-      filtered = filtered.filter(r =>
-        r.campana?.toLowerCase().includes(this.filterCampana.toLowerCase())
-      );
+      filtered = filtered.filter(r => r.campana?.toLowerCase().includes(this.filterCampana.toLowerCase()));
     }
-
     if (this.filterEstado) {
       filtered = filtered.filter(r => r.estadoLlamada === this.filterEstado);
     }
-
     if (this.filterAgente) {
-      filtered = filtered.filter(r =>
-        r.agente?.toLowerCase().includes(this.filterAgente.toLowerCase())
-      );
+      filtered = filtered.filter(r => r.agente?.toLowerCase().includes(this.filterAgente.toLowerCase()));
     }
 
     this.filteredRecordings = filtered;
@@ -325,7 +294,6 @@ export class AdminRecordingsComponent implements OnInit {
       } else if (this.sortOrder === -1) {
         this.sortOrder = 0;
         this.sortField = '';
-        this.filteredRecordings = [...this.recordings];
         this.applyFilters();
         return;
       }
@@ -335,19 +303,13 @@ export class AdminRecordingsComponent implements OnInit {
     }
 
     this.filteredRecordings.sort((a: any, b: any) => {
-      const value1 = a[field];
-      const value2 = b[field];
+      const v1 = a[field], v2 = b[field];
       let result = 0;
-
-      if (value1 == null && value2 != null) result = -1;
-      else if (value1 != null && value2 == null) result = 1;
-      else if (value1 == null && value2 == null) result = 0;
-      else if (typeof value1 === 'string' && typeof value2 === 'string') {
-        result = value1.localeCompare(value2);
-      } else {
-        result = value1 < value2 ? -1 : value1 > value2 ? 1 : 0;
-      }
-
+      if (v1 == null && v2 != null) result = -1;
+      else if (v1 != null && v2 == null) result = 1;
+      else if (v1 == null && v2 == null) result = 0;
+      else if (typeof v1 === 'string') result = v1.localeCompare(v2);
+      else result = v1 < v2 ? -1 : v1 > v2 ? 1 : 0;
       return this.sortOrder * result;
     });
 
@@ -357,14 +319,10 @@ export class AdminRecordingsComponent implements OnInit {
   // === Pagination ===
 
   updatePagination(): void {
-    this.totalPages = Math.ceil(this.filteredRecordings.length / this.pageSize);
-    if (this.totalPages === 0) this.totalPages = 1;
-    if (this.currentPage > this.totalPages) {
-      this.currentPage = 1;
-    }
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
-    this.paginatedRecordings = this.filteredRecordings.slice(startIndex, endIndex);
+    this.totalPages = Math.max(1, Math.ceil(this.filteredRecordings.length / this.pageSize));
+    if (this.currentPage > this.totalPages) this.currentPage = 1;
+    const start = (this.currentPage - 1) * this.pageSize;
+    this.paginatedRecordings = this.filteredRecordings.slice(start, start + this.pageSize);
   }
 
   onPageSizeChange(newSize: number): void {
@@ -385,42 +343,38 @@ export class AdminRecordingsComponent implements OnInit {
     const maxVisible = 5;
     let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
     let end = Math.min(this.totalPages, start + maxVisible - 1);
-
-    if (end - start < maxVisible - 1) {
-      start = Math.max(1, end - maxVisible + 1);
-    }
-
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
+    if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
     return pages;
   }
 
   // === Downloads ===
 
   downloadAudio(recording: RecordingDTO): void {
+    this.downloadingUuid = recording.uuidLlamada;
     this.recordingsService.downloadAudio(recording.uuidLlamada).subscribe({
       next: (data: Blob) => {
         const url = window.URL.createObjectURL(data);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `audio-${recording.uuidLlamada}.wav`;
+        a.download = `audio-${recording.documento}-${this.formatDate(recording.fechaInicio)}-${recording.agente || 'sin-agente'}.wav`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        this.downloadingUuid = '';
         this.toastService.success('Audio descargado correctamente.');
       },
       error: (err) => {
-        console.error('Error downloading audio:', err);
-        this.toastService.error('No se encontró el audio.');
+        console.error(err);
+        this.downloadingUuid = '';
+        this.toastService.error('No se encontró el archivo de audio para esta grabación.');
       }
     });
   }
 
   massiveDownloadAudios(): void {
     const source = this.filteredRecordings.length > 0 ? this.filteredRecordings : this.recordings;
-
     if (source.length === 0) {
       this.toastService.error('No hay datos para descargar.');
       return;
@@ -430,7 +384,6 @@ export class AdminRecordingsComponent implements OnInit {
     this.toastService.info('Procesando descarga masiva de audios...');
 
     const uuids = source.map(r => r.uuidLlamada).filter(u => u != null);
-
     this.recordingsService.downloadAudiosZip(uuids).subscribe({
       next: (data: Blob) => {
         const url = window.URL.createObjectURL(data);
@@ -445,7 +398,7 @@ export class AdminRecordingsComponent implements OnInit {
         this.toastService.success('Los audios fueron descargados correctamente.');
       },
       error: (err) => {
-        console.error('Error downloading audios:', err);
+        console.error(err);
         this.isDownloadingMassive = false;
         this.toastService.error('Un error ha ocurrido al realizar la descarga.');
       }
@@ -471,13 +424,13 @@ export class AdminRecordingsComponent implements OnInit {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  getEstadoColor(estado: string): string {
+  getEstadoClass(estado: string): string {
     switch (estado) {
-      case 'FINALIZADA': return 'bg-green-500/10 border-green-500/30 text-green-400';
-      case 'EN_CURSO': case 'CONECTADA': return 'bg-blue-500/10 border-blue-500/30 text-blue-400';
-      case 'NO_CONTESTADA': case 'SIN_RESPUESTA': return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
-      case 'FALLIDA': case 'ABANDONADA': return 'bg-red-500/10 border-red-500/30 text-red-400';
-      default: return 'bg-slate-500/10 border-slate-500/30 text-slate-400';
+      case 'FINALIZADA': return 'status-success';
+      case 'EN_CURSO': case 'CONECTADA': return 'status-info';
+      case 'NO_CONTESTADA': case 'SIN_RESPUESTA': return 'status-warning';
+      case 'FALLIDA': case 'ABANDONADA': return 'status-danger';
+      default: return 'status-default';
     }
   }
 
