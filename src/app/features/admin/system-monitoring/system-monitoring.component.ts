@@ -20,6 +20,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
 
   @ViewChild('sessionsChart') sessionsChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('freeswitchChart') freeswitchChartRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('registrationsChart') registrationsChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('amdChart') amdChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('amdDonutChart') amdDonutChartRef!: ElementRef<HTMLCanvasElement>;
   @ViewChild('trafficChart') trafficChartRef!: ElementRef<HTMLCanvasElement>;
@@ -27,6 +28,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
 
   private sessionsChart: Chart | null = null;
   private freeswitchChart: Chart | null = null;
+  private registrationsChart: Chart | null = null;
   private amdChart: Chart | null = null;
   private amdDonutChart: Chart | null = null;
   private trafficChart: Chart | null = null;
@@ -45,6 +47,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   // Latest snapshot values for summary cards
   latestWsSessions = 0;
   latestSipRegs = 0;
+  latestTotalExtensions = 0;
   latestChannels = 0;
   latestEsl = false;
   latestAmdMs = 0;
@@ -132,6 +135,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
     const latest = this.snapshots[this.snapshots.length - 1];
     this.latestWsSessions = latest.websocketSessions;
     this.latestSipRegs = latest.sipRegistrations;
+    this.latestTotalExtensions = latest.totalExtensions || 0;
     this.latestChannels = latest.activeChannels;
     this.latestEsl = latest.eslConnected === 1;
     this.latestAmdMs = latest.amdResponseTimeMs;
@@ -150,6 +154,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
 
     this.updateSessionsChart(labels);
     this.updateFreeSwitchChart(labels);
+    this.updateRegistrationsChart(labels);
     this.updateAmdChart(labels);
     this.updateAmdDonut();
     this.updateTrafficChart(labels);
@@ -309,6 +314,67 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
             ticks: { color: '#8b5cf6' }, grid: { display: false },
             title: { display: true, text: 'Canales', color: '#8b5cf6' }
           }
+        }
+      }
+    });
+  }
+
+  // ─── Panel: Registros FreeSWITCH ──────────────────────────────
+  private updateRegistrationsChart(labels: string[]): void {
+    if (!this.registrationsChartRef?.nativeElement) return;
+    const c = this.tc();
+
+    const regData = this.snapshots.map(s => s.sipRegistrations);
+    const totalData = this.snapshots.map(s => s.totalExtensions || 0);
+
+    if (this.registrationsChart) {
+      this.registrationsChart.data.labels = labels;
+      this.registrationsChart.data.datasets[0].data = regData;
+      this.registrationsChart.data.datasets[1].data = totalData;
+      this.registrationsChart.update('none');
+      return;
+    }
+
+    this.registrationsChart = new Chart(this.registrationsChartRef.nativeElement, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Registrados',
+            data: regData,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 4
+          },
+          {
+            label: 'Total Extensiones',
+            data: totalData,
+            borderColor: '#64748b',
+            backgroundColor: 'rgba(100, 116, 139, 0.08)',
+            borderWidth: 2,
+            tension: 0.3,
+            fill: false,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            borderDash: [5, 5]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { labels: { color: c.legendText, usePointStyle: true, pointStyle: 'circle', padding: 15 } }
+        },
+        scales: {
+          x: { ticks: { color: c.text, maxTicksLimit: 10 }, grid: { color: c.grid } },
+          y: { beginAtZero: true, ticks: { color: c.text, stepSize: 1 }, grid: { color: c.grid } }
         }
       }
     });
@@ -508,6 +574,7 @@ export class SystemMonitoringComponent implements OnInit, OnDestroy, AfterViewIn
   private destroyCharts(): void {
     if (this.sessionsChart) { this.sessionsChart.destroy(); this.sessionsChart = null; }
     if (this.freeswitchChart) { this.freeswitchChart.destroy(); this.freeswitchChart = null; }
+    if (this.registrationsChart) { this.registrationsChart.destroy(); this.registrationsChart = null; }
     if (this.amdChart) { this.amdChart.destroy(); this.amdChart = null; }
     if (this.amdDonutChart) { this.amdDonutChart.destroy(); this.amdDonutChart = null; }
     if (this.trafficChart) { this.trafficChart.destroy(); this.trafficChart = null; }

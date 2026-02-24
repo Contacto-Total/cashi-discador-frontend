@@ -16,6 +16,7 @@ export interface MetricsSnapshot {
   // Sesiones
   websocketSessions: number;
   sipRegistrations: number;
+  totalExtensions: number;
   eslConnected: number;
 
   // FreeSWITCH

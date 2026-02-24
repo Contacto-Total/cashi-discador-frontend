@@ -51,8 +51,8 @@
           <lucide-angular name="phone" [size]="18"></lucide-angular>
         </div>
         <div class="card-info">
-          <span class="card-value">{{ latestSipRegs }}</span>
-          <span class="card-label">SIP Registrations</span>
+          <span class="card-value">{{ latestSipRegs }} / {{ latestTotalExtensions }}</span>
+          <span class="card-label">SIP Registrados</span>
         </div>
       </div>
       <div class="summary-card">
@@ -119,6 +119,18 @@
         </div>
         <div class="chart-wrapper">
           <canvas #freeswitchChart></canvas>
+        </div>
+      </div>
+
+      <!-- Panel: Registros FreeSWITCH -->
+      <div class="chart-panel full-width">
+        <div class="panel-header">
+          <lucide-angular name="signal" [size]="18" class="panel-icon registrations"></lucide-angular>
+          <h3>FreeSWITCH - Registros SIP</h3>
+          <span class="registrations-badge">{{ latestSipRegs }}/{{ latestTotalExtensions }}</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas #registrationsChart></canvas>
         </div>
       </div>
 

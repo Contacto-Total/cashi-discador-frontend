@@ -207,9 +207,20 @@
 
 .panel-icon.sessions { color: #3b82f6; }
 .panel-icon.freeswitch { color: #8b5cf6; }
+.panel-icon.registrations { color: #10b981; }
 .panel-icon.amd { color: #06b6d4; }
 .panel-icon.traffic { color: #3b82f6; }
 .panel-icon.errors { color: #ef4444; }
+
+.registrations-badge {
+  margin-left: auto;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 10px;
+}
 
 .chart-wrapper {
   position: relative;
