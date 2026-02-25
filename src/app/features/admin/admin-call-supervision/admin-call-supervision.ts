@@ -211,7 +211,7 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     });
   }
 
-  // Disconnect from supervision
+  // Disconnect from supervision (sin navegar - te quedas en la pantalla)
   disconnectSupervision(): void {
     console.log('🔌 Disconnecting from supervision');
 
@@ -237,9 +237,6 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     this.supervisionService.stopSupervision();
 
     this.isMuted = false;
-
-    // Navegar al monitoreo
-    this.router.navigate(['/admin/monitoring']);
   }
 
   // Toggle mute/unmute
@@ -255,12 +252,10 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     console.log(this.isMuted ? '🔇 Muted' : '🔊 Unmuted');
   }
 
-  // Go back to monitoring list
+  // Go back to monitoring list (desconecta si hay supervisión activa)
   goBack(): void {
-    // Si hay supervisión activa, desconectar primero
     if (this.supervisionService.isSupervisionActive()) {
       this.disconnectSupervision();
-      return;
     }
     this.router.navigate(['/admin/monitoring']);
   }

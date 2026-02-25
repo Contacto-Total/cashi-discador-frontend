@@ -418,21 +418,14 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
 
     // Hangup SIP call
     this.sipService.hangup();
-
-    // Disable auto-answer mode
     this.sipService.disableAutoAnswer();
-
-    // Unregister SIP
     this.sipService.unregister();
 
-    // Clear supervision state
+    // Clear supervision state (esto oculta el panel flotante)
     this.supervisionService.stopSupervision();
 
     // Reset duration
     this.duration.set(0);
-
-    // Navigate back to monitoring
-    this.router.navigate(['/admin/monitoring']);
   }
 
   formatDuration(seconds: number): string {
