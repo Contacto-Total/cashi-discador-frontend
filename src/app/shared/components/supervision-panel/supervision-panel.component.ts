@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { SupervisionService, SupervisionMode } from '../../../core/services/supervision.service';
 import { SipService } from '../../../core/services/sip.service';
+import { WebsocketService } from '../../../core/services/websocket.service';
 import { interval, Subscription } from 'rxjs';
 
 @Component({
@@ -12,86 +13,95 @@ import { interval, Subscription } from 'rxjs';
   imports: [CommonModule, LucideAngularModule],
   template: `
     @if (supervisionService.isSupervisionActive()) {
-      <div class="supervision-panel" [class.minimized]="isMinimized()">
-        <!-- Header -->
-        <div class="panel-header" (click)="toggleMinimize()">
-          <div class="header-left">
-            <lucide-angular
-              [name]="supervisionService.getModeIcon(supervisionService.currentMode())"
-              [size]="18"
-              [style.color]="supervisionService.getModeColor(supervisionService.currentMode())">
-            </lucide-angular>
-            <span class="mode-label">{{ supervisionService.getModeLabel(supervisionService.currentMode()) }}</span>
+      <div class="supervision-panel" [class.minimized]="isMinimized()" [class.call-ended]="callEnded()">
+        <!-- Call Ended Overlay -->
+        @if (callEnded()) {
+          <div class="call-ended-overlay">
+            <lucide-angular name="phone-off" [size]="24" style="color: #ef4444;"></lucide-angular>
+            <span class="ended-text">Llamada finalizada</span>
+            <span class="ended-subtext">Desconectando...</span>
           </div>
-          <div class="header-right">
-            <span class="duration">{{ formatDuration(duration()) }}</span>
-            <lucide-angular
-              [name]="isMinimized() ? 'chevron-up' : 'chevron-down'"
-              [size]="16">
-            </lucide-angular>
+        } @else {
+          <!-- Header -->
+          <div class="panel-header" (click)="toggleMinimize()">
+            <div class="header-left">
+              <lucide-angular
+                [name]="supervisionService.getModeIcon(supervisionService.currentMode())"
+                [size]="18"
+                [style.color]="supervisionService.getModeColor(supervisionService.currentMode())">
+              </lucide-angular>
+              <span class="mode-label">{{ supervisionService.getModeLabel(supervisionService.currentMode()) }}</span>
+            </div>
+            <div class="header-right">
+              <span class="duration">{{ formatDuration(duration()) }}</span>
+              <lucide-angular
+                [name]="isMinimized() ? 'chevron-up' : 'chevron-down'"
+                [size]="16">
+              </lucide-angular>
+            </div>
           </div>
-        </div>
 
-        <!-- Body (collapsible) -->
-        @if (!isMinimized()) {
-          <div class="panel-body">
-            <!-- Call Info -->
-            <div class="call-info">
-              <div class="info-row">
-                <lucide-angular name="user" [size]="14"></lucide-angular>
-                <span>{{ supervisionService.state().agentName }}</span>
+          <!-- Body (collapsible) -->
+          @if (!isMinimized()) {
+            <div class="panel-body">
+              <!-- Call Info -->
+              <div class="call-info">
+                <div class="info-row">
+                  <lucide-angular name="user" [size]="14"></lucide-angular>
+                  <span>{{ supervisionService.state().agentName }}</span>
+                </div>
+                <div class="info-row">
+                  <lucide-angular name="phone" [size]="14"></lucide-angular>
+                  <span>{{ formatPhoneNumber(supervisionService.state().clientNumber) }}</span>
+                </div>
               </div>
-              <div class="info-row">
-                <lucide-angular name="phone" [size]="14"></lucide-angular>
-                <span>{{ formatPhoneNumber(supervisionService.state().clientNumber) }}</span>
+
+              <!-- Mode Buttons -->
+              <div class="mode-buttons">
+                <button
+                  class="mode-btn"
+                  [class.active]="supervisionService.currentMode() === 'spy'"
+                  [disabled]="changingMode()"
+                  (click)="changeMode('spy')"
+                  title="Vigía - Solo escuchar">
+                  <lucide-angular name="eye" [size]="16"></lucide-angular>
+                </button>
+                <button
+                  class="mode-btn"
+                  [class.active]="supervisionService.currentMode() === 'whisper'"
+                  [disabled]="changingMode()"
+                  (click)="changeMode('whisper')"
+                  title="Susurro - Hablar al agente">
+                  <lucide-angular name="mic" [size]="16"></lucide-angular>
+                </button>
+                <button
+                  class="mode-btn"
+                  [class.active]="supervisionService.currentMode() === 'barge'"
+                  [disabled]="changingMode()"
+                  (click)="changeMode('barge')"
+                  title="Tripartita - Todos escuchan">
+                  <lucide-angular name="users" [size]="16"></lucide-angular>
+                </button>
+              </div>
+
+              <!-- Control Buttons -->
+              <div class="control-buttons">
+                <button
+                  class="control-btn"
+                  [class.muted]="isMuted()"
+                  (click)="toggleMute()"
+                  [title]="isMuted() ? 'Activar micrófono' : 'Silenciar'">
+                  <lucide-angular [name]="isMuted() ? 'mic-off' : 'mic'" [size]="16"></lucide-angular>
+                </button>
+                <button
+                  class="control-btn disconnect"
+                  (click)="disconnect()"
+                  title="Desconectar">
+                  <lucide-angular name="phone-off" [size]="16"></lucide-angular>
+                </button>
               </div>
             </div>
-
-            <!-- Mode Buttons -->
-            <div class="mode-buttons">
-              <button
-                class="mode-btn"
-                [class.active]="supervisionService.currentMode() === 'spy'"
-                [disabled]="changingMode()"
-                (click)="changeMode('spy')"
-                title="Vigía - Solo escuchar">
-                <lucide-angular name="eye" [size]="16"></lucide-angular>
-              </button>
-              <button
-                class="mode-btn"
-                [class.active]="supervisionService.currentMode() === 'whisper'"
-                [disabled]="changingMode()"
-                (click)="changeMode('whisper')"
-                title="Susurro - Hablar al agente">
-                <lucide-angular name="mic" [size]="16"></lucide-angular>
-              </button>
-              <button
-                class="mode-btn"
-                [class.active]="supervisionService.currentMode() === 'barge'"
-                [disabled]="changingMode()"
-                (click)="changeMode('barge')"
-                title="Tripartita - Todos escuchan">
-                <lucide-angular name="users" [size]="16"></lucide-angular>
-              </button>
-            </div>
-
-            <!-- Control Buttons -->
-            <div class="control-buttons">
-              <button
-                class="control-btn"
-                [class.muted]="isMuted()"
-                (click)="toggleMute()"
-                [title]="isMuted() ? 'Activar micrófono' : 'Silenciar'">
-                <lucide-angular [name]="isMuted() ? 'mic-off' : 'mic'" [size]="16"></lucide-angular>
-              </button>
-              <button
-                class="control-btn disconnect"
-                (click)="disconnect()"
-                title="Desconectar">
-                <lucide-angular name="phone-off" [size]="16"></lucide-angular>
-              </button>
-            </div>
-          </div>
+          }
         }
       </div>
     }
@@ -249,25 +259,70 @@ import { interval, Subscription } from 'rxjs';
     .control-btn.disconnect:hover {
       background: #ef4444;
     }
+
+    .supervision-panel.call-ended {
+      border-color: #ef4444;
+    }
+
+    .call-ended-overlay {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 8px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .ended-text {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ef4444;
+    }
+
+    .ended-subtext {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
   `]
 })
 export class SupervisionPanelComponent implements OnInit, OnDestroy {
   supervisionService = inject(SupervisionService);
   private sipService = inject(SipService);
+  private websocketService = inject(WebsocketService);
   private router = inject(Router);
 
   isMinimized = signal(false);
   isMuted = signal(false);
   changingMode = signal(false);
   duration = signal(0);
+  callEnded = signal(false);
 
   private timerSubscription?: Subscription;
+  private callEventSubscription?: Subscription;
 
   ngOnInit(): void {
     // Start duration timer
     this.timerSubscription = interval(1000).subscribe(() => {
-      if (this.supervisionService.isSupervisionActive()) {
+      if (this.supervisionService.isSupervisionActive() && !this.callEnded()) {
         this.duration.update(d => d + 1);
+      }
+    });
+
+    // Escuchar eventos de llamadas para detectar cuando la llamada supervisada termina
+    this.callEventSubscription = this.websocketService.subscribe('/topic/admin/calls').subscribe({
+      next: (event: any) => {
+        const data = event.data || event;
+        const supervisedCallUuid = this.supervisionService.state().callUuid;
+        if (supervisedCallUuid && data.callUuid === supervisedCallUuid && data.callState === 'ENDED') {
+          console.log('[SupervisionPanel] Llamada supervisada finalizada:', supervisedCallUuid);
+          this.handleCallEnded();
+        }
       }
     });
   }
@@ -276,6 +331,24 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
     if (this.timerSubscription) {
       this.timerSubscription.unsubscribe();
     }
+    if (this.callEventSubscription) {
+      this.callEventSubscription.unsubscribe();
+    }
+  }
+
+  private handleCallEnded(): void {
+    this.callEnded.set(true);
+
+    // Esperar 3 segundos mostrando el mensaje, luego desconectar
+    setTimeout(() => {
+      this.sipService.hangup();
+      this.sipService.disableAutoAnswer();
+      this.sipService.unregister();
+      this.supervisionService.stopSupervision();
+      this.duration.set(0);
+      this.callEnded.set(false);
+      this.router.navigate(['/admin/monitoring']);
+    }, 3000);
   }
 
   toggleMinimize(): void {
