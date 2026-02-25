@@ -232,10 +232,8 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
       });
     }
 
-    // Hangup SIP local
+    // Hangup SIP local (NO desregistrar — mantener SIP activo para reconectar)
     this.sipService.hangup();
-    this.sipService.disableAutoAnswer();
-    this.sipService.unregister();
 
     // Clear global supervision state
     this.supervisionService.stopSupervision();
