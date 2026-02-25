@@ -104,7 +104,8 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                       <!-- Verde -->
                       <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
                         @if (editingId() === umbral.id) {
-                          <input type="number" [(ngModel)]="editForm.umbralVerdeMin" min="0" step="0.5"
+                          <input type="number" [(ngModel)]="editForm.umbralVerdeMin" min="0" [max]="editForm.umbralAmarilloMin" step="0.5"
+                                 (ngModelChange)="clampValues()"
                                  class="w-20 px-2 py-1 bg-slate-700 border border-emerald-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         } @else {
                           <span class="text-emerald-400 font-medium">{{ toMin(umbral.umbralVerdeSegundos) }}</span>
@@ -114,7 +115,8 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                       <!-- Amarillo -->
                       <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
                         @if (editingId() === umbral.id) {
-                          <input type="number" [(ngModel)]="editForm.umbralAmarilloMin" min="0" step="0.5"
+                          <input type="number" [(ngModel)]="editForm.umbralAmarilloMin" [min]="editForm.umbralVerdeMin" [max]="editForm.tiempoMaximoMin" step="0.5"
+                                 (ngModelChange)="clampValues()"
                                  class="w-20 px-2 py-1 bg-slate-700 border border-amber-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-500">
                         } @else {
                           <span class="text-amber-400 font-medium">{{ toMin(umbral.umbralAmarilloSegundos) }}</span>
@@ -125,6 +127,7 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                       <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
                         @if (editingId() === umbral.id) {
                           <input type="number" [(ngModel)]="editForm.tiempoMaximoMin" min="0" step="0.5"
+                                 (ngModelChange)="onMaximoChange($event)"
                                  class="w-20 px-2 py-1 bg-slate-700 border border-red-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-500">
                         } @else {
                           <span class="text-red-400 font-medium">{{ toMin(umbral.tiempoMaximoSegundos) }}</span>
@@ -284,6 +287,26 @@ export class UmbralesEstadoComponent implements OnInit {
       case 'amarillo': return ((umbral.umbralAmarilloSegundos - umbral.umbralVerdeSegundos) / total) * 100;
       case 'rojo': return ((total - umbral.umbralAmarilloSegundos) / total) * 100;
       default: return 0;
+    }
+  }
+
+  onMaximoChange(max: number): void {
+    if (!max || max <= 0) return;
+    // Autocalcular verde (50%) y amarillo (80%) del máximo
+    this.editForm.umbralVerdeMin = Math.round(max * 0.5 * 100) / 100;
+    this.editForm.umbralAmarilloMin = Math.round(max * 0.8 * 100) / 100;
+  }
+
+  clampValues(): void {
+    const max = this.editForm.tiempoMaximoMin;
+    if (this.editForm.umbralVerdeMin > this.editForm.umbralAmarilloMin) {
+      this.editForm.umbralVerdeMin = this.editForm.umbralAmarilloMin;
+    }
+    if (this.editForm.umbralAmarilloMin > max) {
+      this.editForm.umbralAmarilloMin = max;
+    }
+    if (this.editForm.umbralVerdeMin > max) {
+      this.editForm.umbralVerdeMin = max;
     }
   }
 
