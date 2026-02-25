@@ -37,6 +37,7 @@ export interface ReporteGestionesDTO {
   estadoPago: string;
   fechaPagoReal: string;
   montoPagadoReal: number;
+  campoMontoOrigen: string;
   esContinuidad: boolean;
   promesaOrigenUuid: string;
   motivoAnulacion: string;
@@ -65,6 +66,9 @@ export interface ReporteResponse {
   data: ReporteGestionesDTO[];
   metricas: ResumenMetricas;
   total: number;
+  page: number;
+  size: number;
+  totalPages: number;
 }
 
 @Injectable({
@@ -82,9 +86,13 @@ export class GestionesReportService {
     idSubcartera?: number,
     idAgente?: number,
     idCampana?: number,
-    estadoGestion?: string
+    estadoGestion?: string,
+    page: number = 0,
+    size: number = 50
   ): Observable<ReporteResponse> {
-    let params = new HttpParams();
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
 
     if (fechaDesde) params = params.set('fechaDesde', fechaDesde);
     if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
