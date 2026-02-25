@@ -7,7 +7,7 @@ import {
   ResumenMetricas,
   ReporteResponse
 } from '../gestiones-report/gestiones-report.service';
-import { CompromisosReportService } from './compromisos-report.service';
+import { CompromisosReportService, AgenteCompromiso } from './compromisos-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
 
@@ -28,49 +28,34 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
         </p>
       </div>
 
-      <!-- Filtros -->
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
+      <!-- Filtros Fila 1 -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-4">
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <!-- Fecha Desde -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Fecha Desde *
-            </label>
-            <input
-              type="date"
-              [(ngModel)]="filtros.fechaDesde"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Desde *</label>
+            <input type="date" [(ngModel)]="filtros.fechaDesde"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            />
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
           </div>
 
           <!-- Fecha Hasta -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Fecha Hasta *
-            </label>
-            <input
-              type="date"
-              [(ngModel)]="filtros.fechaHasta"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Hasta *</label>
+            <input type="date" [(ngModel)]="filtros.fechaHasta"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            />
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
           </div>
 
           <!-- Proveedor -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Proveedor
-            </label>
-            <select
-              [(ngModel)]="filtros.idProveedor"
-              (ngModelChange)="onProveedorChange($event)"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
+            <select [(ngModel)]="filtros.idProveedor" (ngModelChange)="onProveedorChange($event)"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-            >
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
               <option [ngValue]="null">Todos</option>
               @for (prov of proveedores(); track prov.id) {
                 <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
@@ -80,18 +65,13 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Cartera -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Cartera
-            </label>
-            <select
-              [(ngModel)]="filtros.idCartera"
-              (ngModelChange)="onCarteraChange($event)"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cartera</label>
+            <select [(ngModel)]="filtros.idCartera" (ngModelChange)="onCarteraChange($event)"
               [disabled]="!filtros.idProveedor"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-purple-500 focus:border-purple-500
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               <option [ngValue]="null">Todas</option>
               @for (cart of carteras(); track cart.id) {
                 <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
@@ -101,17 +81,12 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Subcartera -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Subcartera
-            </label>
-            <select
-              [(ngModel)]="filtros.idSubcartera"
-              [disabled]="!filtros.idCartera"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcartera</label>
+            <select [(ngModel)]="filtros.idSubcartera" [disabled]="!filtros.idCartera"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-purple-500 focus:border-purple-500
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               <option [ngValue]="null">Todas</option>
               @for (sub of subcarteras(); track sub.id) {
                 <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
@@ -119,15 +94,76 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </select>
           </div>
 
+          <!-- Asesor -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asesor</label>
+            <select [(ngModel)]="filtros.idAgente"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+              <option [ngValue]="null">Todos</option>
+              @for (ag of agentes(); track ag.id) {
+                <option [ngValue]="ag.id">{{ ag.nombre }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Filtros Fila 2 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
+          <!-- Tipo Compromiso -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo Compromiso</label>
+            <select [(ngModel)]="filtros.rutaNivel2"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+              <option value="">Todos</option>
+              @for (tipo of tiposCompromiso(); track tipo) {
+                <option [value]="tipo">{{ tipo }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Estado Compromiso -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado Compromiso</label>
+            <select [(ngModel)]="filtros.estadoPago"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+              <option value="">Todos</option>
+              @for (est of estadosCompromiso(); track est) {
+                <option [value]="est">{{ est }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Documento -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Documento</label>
+            <input type="text" [(ngModel)]="filtros.documento" placeholder="Ej: 12345678"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+          </div>
+
+          <!-- Nombre -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
+            <input type="text" [(ngModel)]="filtros.nombre" placeholder="Buscar por nombre..."
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+          </div>
+
           <!-- Botones -->
-          <div class="flex items-end gap-2">
-            <button
-              (click)="buscar()"
+          <div class="flex items-end gap-2 lg:col-span-2">
+            <button (click)="buscar()"
               [disabled]="loading() || !filtros.fechaDesde || !filtros.fechaHasta"
               class="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold
                      rounded-lg transition-colors flex items-center justify-center gap-2
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               @if (loading()) {
                 <lucide-angular name="loader-2" [size]="18" class="animate-spin"></lucide-angular>
               } @else {
@@ -135,20 +171,17 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               }
               Buscar
             </button>
-            <button
-              (click)="exportarExcel()"
+            <button (click)="exportarExcel()"
               [disabled]="loading() || data().length === 0"
               class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
                      rounded-lg transition-colors flex items-center gap-2
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               <lucide-angular name="download" [size]="18"></lucide-angular>
               Excel
             </button>
           </div>
         </div>
 
-        <!-- Mensaje de fechas requeridas -->
         @if (!filtros.fechaDesde || !filtros.fechaHasta) {
           <p class="mt-2 text-sm text-amber-600 dark:text-amber-400">
             * Las fechas son obligatorias para evitar consultas muy grandes
@@ -159,7 +192,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
       <!-- Metricas -->
       @if (metricas()) {
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-          <!-- Total Promesas -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -172,7 +204,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </div>
           </div>
 
-          <!-- Pagadas -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -185,7 +216,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </div>
           </div>
 
-          <!-- Pendientes -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
@@ -198,7 +228,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </div>
           </div>
 
-          <!-- Vencidas -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
@@ -211,7 +240,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </div>
           </div>
 
-          <!-- Gestiones Completadas -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -224,7 +252,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </div>
           </div>
 
-          <!-- Anuladas -->
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
             <div class="flex items-center gap-3">
               <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
@@ -238,7 +265,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           </div>
         </div>
 
-        <!-- Montos Totales -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-purple-100 uppercase">Monto Total Promesas</p>
@@ -268,12 +294,12 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cartera</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Telefono</th>
+                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tipo</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Variable PDP</th>
                 <th class="px-3 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Monto Promesa</th>
                 <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cuotas</th>
                 <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado Pago</th>
                 <th class="px-3 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagado</th>
-                <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tipificacion</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
@@ -302,33 +328,23 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreAgente | slice:0:15 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreCartera | slice:0:15 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs font-mono">{{ item.telefonoContacto || '-' }}</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.rutaNivel2 || '-' }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.campoMontoOrigen || '-' }}</td>
                     <td class="px-3 py-2 text-right text-gray-900 dark:text-white">
                       @if (item.montoPromesa) {
                         S/ {{ item.montoPromesa | number:'1.2-2' }}
-                      } @else {
-                        -
-                      }
+                      } @else { - }
                     </td>
                     <td class="px-3 py-2 text-center text-gray-900 dark:text-white">{{ item.totalCuotas || '-' }}</td>
                     <td class="px-3 py-2 text-center">
                       @if (item.estadoPago) {
-                        <span [class]="getEstadoPagoClass(item.estadoPago)">
-                          {{ item.estadoPago }}
-                        </span>
-                      } @else {
-                        -
-                      }
+                        <span [class]="getEstadoPagoClass(item.estadoPago)">{{ item.estadoPago }}</span>
+                      } @else { - }
                     </td>
                     <td class="px-3 py-2 text-right text-green-600 dark:text-green-400">
                       @if (item.montoPagadoReal) {
                         S/ {{ item.montoPagadoReal | number:'1.2-2' }}
-                      } @else {
-                        -
-                      }
-                    </td>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs" [title]="item.rutaJerarquia">
-                      {{ item.rutaNivel1 | slice:0:20 }}
+                      } @else { - }
                     </td>
                   </tr>
                 }
@@ -337,7 +353,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           </table>
         </div>
 
-        <!-- Footer con paginacion -->
+        <!-- Paginacion -->
         @if (totalRecords() > 0) {
           <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600
                       flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -347,53 +363,30 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               de <span class="font-semibold">{{ totalRecords() }}</span> registros
             </p>
             <div class="flex items-center gap-1">
-              <button
-                (click)="goToPage(0)"
-                [disabled]="currentPage() === 0 || loading()"
+              <button (click)="goToPage(0)" [disabled]="currentPage() === 0 || loading()"
                 class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
                        hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &laquo;
-              </button>
-              <button
-                (click)="goToPage(currentPage() - 1)"
-                [disabled]="currentPage() === 0 || loading()"
+                       text-gray-700 dark:text-gray-300">&laquo;</button>
+              <button (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0 || loading()"
                 class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
                        hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &lsaquo;
-              </button>
+                       text-gray-700 dark:text-gray-300">&lsaquo;</button>
               @for (p of getVisiblePages(); track p) {
-                <button
-                  (click)="goToPage(p)"
-                  [disabled]="loading()"
+                <button (click)="goToPage(p)" [disabled]="loading()"
                   [class]="p === currentPage()
                     ? 'px-3 py-1 text-sm rounded border font-bold bg-purple-500 text-white border-purple-500'
-                    : 'px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'"
-                >
+                    : 'px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'">
                   {{ p + 1 }}
                 </button>
               }
-              <button
-                (click)="goToPage(currentPage() + 1)"
-                [disabled]="currentPage() >= totalPages() - 1 || loading()"
+              <button (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= totalPages() - 1 || loading()"
                 class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
                        hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &rsaquo;
-              </button>
-              <button
-                (click)="goToPage(totalPages() - 1)"
-                [disabled]="currentPage() >= totalPages() - 1 || loading()"
+                       text-gray-700 dark:text-gray-300">&rsaquo;</button>
+              <button (click)="goToPage(totalPages() - 1)" [disabled]="currentPage() >= totalPages() - 1 || loading()"
                 class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
                        hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &raquo;
-              </button>
+                       text-gray-700 dark:text-gray-300">&raquo;</button>
             </div>
           </div>
         }
@@ -403,32 +396,36 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
   styles: []
 })
 export class CompromisosReportComponent implements OnInit {
-  // Signals
   loading = signal(false);
   data = signal<ReporteGestionesDTO[]>([]);
   metricas = signal<ResumenMetricas | null>(null);
 
-  // Pagination
   currentPage = signal(0);
   pageSize = 50;
   totalRecords = signal(0);
   totalPages = signal(0);
 
-  // Expose Math to template
   Math = Math;
 
   // Dropdown data
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
+  tiposCompromiso = signal<string[]>([]);
+  estadosCompromiso = signal<string[]>([]);
+  agentes = signal<AgenteCompromiso[]>([]);
 
-  // Filtros
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
     idProveedor: null as number | null,
     idCartera: null as number | null,
-    idSubcartera: null as number | null
+    idSubcartera: null as number | null,
+    idAgente: null as number | null,
+    estadoPago: '',
+    rutaNivel2: '',
+    documento: '',
+    nombre: ''
   };
 
   constructor(
@@ -441,9 +438,25 @@ export class CompromisosReportComponent implements OnInit {
     this.filtros.fechaDesde = today.toISOString().split('T')[0];
     this.filtros.fechaHasta = today.toISOString().split('T')[0];
 
+    // Cargar dropdowns en paralelo
     this.comisionesService.obtenerInquilinos().subscribe({
       next: (data) => this.proveedores.set(data),
       error: (err) => console.error('Error cargando proveedores:', err)
+    });
+
+    this.compromisosService.getTiposCompromiso().subscribe({
+      next: (data) => this.tiposCompromiso.set(data),
+      error: (err) => console.error('Error cargando tipos:', err)
+    });
+
+    this.compromisosService.getEstadosCompromiso().subscribe({
+      next: (data) => this.estadosCompromiso.set(data),
+      error: (err) => console.error('Error cargando estados:', err)
+    });
+
+    this.compromisosService.getAgentesCompromiso().subscribe({
+      next: (data) => this.agentes.set(data),
+      error: (err) => console.error('Error cargando agentes:', err)
     });
   }
 
@@ -478,7 +491,6 @@ export class CompromisosReportComponent implements OnInit {
       alert('Las fechas son obligatorias');
       return;
     }
-
     this.currentPage.set(0);
     this.loadPage(0);
   }
@@ -496,6 +508,11 @@ export class CompromisosReportComponent implements OnInit {
       this.filtros.fechaHasta,
       this.filtros.idCartera || undefined,
       this.filtros.idSubcartera || undefined,
+      this.filtros.idAgente || undefined,
+      this.filtros.estadoPago || undefined,
+      this.filtros.rutaNivel2 || undefined,
+      this.filtros.documento || undefined,
+      this.filtros.nombre || undefined,
       page,
       this.pageSize
     ).subscribe({
@@ -539,7 +556,12 @@ export class CompromisosReportComponent implements OnInit {
       this.filtros.fechaDesde,
       this.filtros.fechaHasta,
       this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined
+      this.filtros.idSubcartera || undefined,
+      this.filtros.idAgente || undefined,
+      this.filtros.estadoPago || undefined,
+      this.filtros.rutaNivel2 || undefined,
+      this.filtros.documento || undefined,
+      this.filtros.nombre || undefined
     ).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
