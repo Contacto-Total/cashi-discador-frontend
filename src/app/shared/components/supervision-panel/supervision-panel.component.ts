@@ -288,8 +288,11 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
     this.changingMode.set(true);
 
     this.supervisionService.changeMode(newMode).subscribe({
-      next: () => {
+      next: (response) => {
         this.supervisionService.updateMode(newMode);
+        if (response?.adminCallUuid) {
+          this.supervisionService.setAdminCallUuid(response.adminCallUuid);
+        }
         this.changingMode.set(false);
       },
       error: (error) => {

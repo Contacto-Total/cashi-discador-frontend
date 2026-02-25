@@ -195,9 +195,12 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     console.log(`🔄 Changing mode from ${this.currentMode} to ${newMode}`);
 
     this.supervisionService.changeMode(newMode).subscribe({
-      next: () => {
-        console.log(`✅ Mode changed to ${newMode.toUpperCase()}`);
+      next: (response) => {
+        console.log(`✅ Mode changed to ${newMode.toUpperCase()}, new adminCallUuid: ${response?.adminCallUuid}`);
         this.supervisionService.updateMode(newMode);
+        if (response?.adminCallUuid) {
+          this.supervisionService.setAdminCallUuid(response.adminCallUuid);
+        }
         this.isConnecting = false;
       },
       error: (error) => {
