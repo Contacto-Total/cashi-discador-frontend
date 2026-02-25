@@ -136,7 +136,7 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
 
     this.adminMonitoringService.startSpyMode({
       callUuid: call.callUuid,
-      adminExtension: '1003', // TODO: Get from current user
+      adminExtension: this.currentUser.sipExtension || '1000',
       adminUsername: this.currentUser.username
     }).subscribe({
       next: (response) => {
@@ -161,7 +161,7 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
 
     this.adminMonitoringService.startWhisperMode({
       callUuid: call.callUuid,
-      adminExtension: '1003', // TODO: Get from current user
+      adminExtension: this.currentUser.sipExtension || '1000',
       adminUsername: this.currentUser.username
     }).subscribe({
       next: (response) => {
@@ -186,7 +186,7 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
 
     this.adminMonitoringService.startBargeMode({
       callUuid: call.callUuid,
-      adminExtension: '1003', // TODO: Get from current user
+      adminExtension: this.currentUser.sipExtension || '1000',
       adminUsername: this.currentUser.username
     }).subscribe({
       next: (response) => {

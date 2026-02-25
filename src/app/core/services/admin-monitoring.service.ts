@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export interface ActiveCall {
   callUuid: string;
@@ -44,7 +45,20 @@ export interface ExtensionRegistration {
 export class AdminMonitoringService {
   private apiUrl = `${environment.gatewayUrl}/admin/monitoring`;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private authService: AuthService
+  ) {}
+
+  private getCurrentExtension(): string {
+    const user = this.authService.getCurrentUser();
+    return user?.sipExtension || '1000';
+  }
+
+  private getCurrentUsername(): string {
+    const user = this.authService.getCurrentUser();
+    return user?.username || 'admin';
+  }
 
   /**
    * Get all active calls
@@ -114,35 +128,35 @@ export class AdminMonitoringService {
   }
 
   /**
-   * SPY mode - simplified (admin extension 1000)
+   * SPY mode - uses current user's SIP extension
    */
   spyCall(callUuid: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/spy`, {
       callUuid,
-      adminExtension: '1000',
-      adminUsername: 'admin'
+      adminExtension: this.getCurrentExtension(),
+      adminUsername: this.getCurrentUsername()
     });
   }
 
   /**
-   * WHISPER mode - simplified (admin extension 1000)
+   * WHISPER mode - uses current user's SIP extension
    */
   whisperCall(callUuid: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/whisper`, {
       callUuid,
-      adminExtension: '1000',
-      adminUsername: 'admin'
+      adminExtension: this.getCurrentExtension(),
+      adminUsername: this.getCurrentUsername()
     });
   }
 
   /**
-   * BARGE mode - simplified (admin extension 1000)
+   * BARGE mode - uses current user's SIP extension
    */
   bargeCall(callUuid: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/barge`, {
       callUuid,
-      adminExtension: '1000',
-      adminUsername: 'admin'
+      adminExtension: this.getCurrentExtension(),
+      adminUsername: this.getCurrentUsername()
     });
   }
 
@@ -155,8 +169,8 @@ export class AdminMonitoringService {
       callUuid,
       adminCallUuid,
       newMode,
-      adminExtension: '1000',
-      adminUsername: 'admin'
+      adminExtension: this.getCurrentExtension(),
+      adminUsername: this.getCurrentUsername()
     });
   }
 
