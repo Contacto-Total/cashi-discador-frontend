@@ -167,8 +167,8 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
                       : this.adminService.bargeCall(this.callUuid);
 
     serviceCall.subscribe({
-      next: () => {
-        console.log(`✅ ${mode.toUpperCase()} mode activated`);
+      next: (response) => {
+        console.log(`✅ ${mode.toUpperCase()} mode activated, adminCallUuid: ${response?.adminCallUuid}`);
         this.isConnecting = false;
 
         // Update SupervisionService state - this sets the mode globally
@@ -178,6 +178,10 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
             agentExtension: this.call.agentExtension,
             clientNumber: this.call.clientNumber
           });
+          // Guardar el adminCallUuid para poder cambiar modo después
+          if (response?.adminCallUuid) {
+            this.supervisionService.setAdminCallUuid(response.adminCallUuid);
+          }
         }
       },
       error: (error) => {
