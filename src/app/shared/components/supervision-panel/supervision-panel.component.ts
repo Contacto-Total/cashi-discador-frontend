@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { SupervisionService, SupervisionMode } from '../../../core/services/supervision.service';
+import { AdminMonitoringService } from '../../../core/services/admin-monitoring.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { SipService } from '../../../core/services/sip.service';
 import { WebsocketService } from '../../../core/services/websocket.service';
 import { interval, Subscription } from 'rxjs';
@@ -293,6 +295,8 @@ import { interval, Subscription } from 'rxjs';
 })
 export class SupervisionPanelComponent implements OnInit, OnDestroy {
   supervisionService = inject(SupervisionService);
+  private adminMonitoringService = inject(AdminMonitoringService);
+  private authService = inject(AuthService);
   private sipService = inject(SipService);
   private websocketService = inject(WebsocketService);
   private router = inject(Router);
@@ -338,6 +342,19 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
 
   private handleCallEnded(): void {
     this.callEnded.set(true);
+
+    // Notificar al backend para limpiar el monitoreo
+    const state = this.supervisionService.state();
+    if (state.callUuid && state.adminCallUuid) {
+      const currentUser = this.authService.getCurrentUser();
+      this.adminMonitoringService.stopMonitoring(
+        state.callUuid,
+        state.adminCallUuid,
+        currentUser?.username || 'admin'
+      ).subscribe({
+        error: (err) => console.error('Error stopping monitoring on backend:', err)
+      });
+    }
 
     // Esperar 3 segundos mostrando el mensaje, luego desconectar
     setTimeout(() => {
@@ -386,6 +403,19 @@ export class SupervisionPanelComponent implements OnInit, OnDestroy {
   }
 
   disconnect(): void {
+    // Notificar al backend para colgar la pata del admin en FreeSWITCH
+    const state = this.supervisionService.state();
+    if (state.callUuid && state.adminCallUuid) {
+      const currentUser = this.authService.getCurrentUser();
+      this.adminMonitoringService.stopMonitoring(
+        state.callUuid,
+        state.adminCallUuid,
+        currentUser?.username || 'admin'
+      ).subscribe({
+        error: (err) => console.error('Error stopping monitoring on backend:', err)
+      });
+    }
+
     // Hangup SIP call
     this.sipService.hangup();
 

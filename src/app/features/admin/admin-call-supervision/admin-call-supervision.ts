@@ -215,13 +215,31 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
   disconnectSupervision(): void {
     console.log('🔌 Disconnecting from supervision');
 
-    // Hangup admin's call
-    this.sipService.hangup();
+    // Notificar al backend para colgar la pata del admin en FreeSWITCH
+    const state = this.supervisionService.state();
+    if (state.callUuid && state.adminCallUuid) {
+      const currentUser = this.authService.getCurrentUser();
+      this.adminService.stopMonitoring(
+        state.callUuid,
+        state.adminCallUuid,
+        currentUser?.username || 'admin'
+      ).subscribe({
+        error: (err) => console.error('Error stopping monitoring on backend:', err)
+      });
+    }
 
-    // Clear global supervision state (this resets the mode to 'none')
+    // Hangup SIP local
+    this.sipService.hangup();
+    this.sipService.disableAutoAnswer();
+    this.sipService.unregister();
+
+    // Clear global supervision state
     this.supervisionService.stopSupervision();
 
     this.isMuted = false;
+
+    // Navegar al monitoreo
+    this.router.navigate(['/admin/monitoring']);
   }
 
   // Toggle mute/unmute
@@ -239,6 +257,11 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
 
   // Go back to monitoring list
   goBack(): void {
+    // Si hay supervisión activa, desconectar primero
+    if (this.supervisionService.isSupervisionActive()) {
+      this.disconnectSupervision();
+      return;
+    }
     this.router.navigate(['/admin/monitoring']);
   }
 
