@@ -70,8 +70,7 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                     <th class="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Umbrales</th>
                     <th class="text-center px-4 py-3 text-xs font-semibold text-emerald-400 uppercase tracking-wider">Verde (min)</th>
                     <th class="text-center px-4 py-3 text-xs font-semibold text-amber-400 uppercase tracking-wider">Amarillo (min)</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-red-400 uppercase tracking-wider">Rojo (min)</th>
-                    <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Máximo (min)</th>
+                    <th class="text-center px-4 py-3 text-xs font-semibold text-red-400 uppercase tracking-wider">Rojo/Máx (min)</th>
                     <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Alerta Sup.</th>
                     <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Sonido</th>
                     <th class="text-center px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Activo</th>
@@ -99,7 +98,6 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                           <div class="bg-emerald-500" [style.width.%]="getBarPercent(umbral, 'verde')"></div>
                           <div class="bg-amber-500" [style.width.%]="getBarPercent(umbral, 'amarillo')"></div>
                           <div class="bg-red-500" [style.width.%]="getBarPercent(umbral, 'rojo')"></div>
-                          <div class="bg-gray-600" [style.width.%]="getBarPercent(umbral, 'maximo')"></div>
                         </div>
                       </td>
 
@@ -123,23 +121,13 @@ import { UmbralesEstadoService, ConfigUmbralEstado } from '../../services/umbral
                         }
                       </td>
 
-                      <!-- Rojo -->
-                      <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
-                        @if (editingId() === umbral.id) {
-                          <input type="number" [(ngModel)]="editForm.umbralRojoMin" min="0" step="0.5"
-                                 class="w-20 px-2 py-1 bg-slate-700 border border-red-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-500">
-                        } @else {
-                          <span class="text-red-400 font-medium">{{ toMin(umbral.umbralRojoSegundos) }}</span>
-                        }
-                      </td>
-
-                      <!-- Máximo -->
+                      <!-- Rojo / Máximo (siempre iguales) -->
                       <td class="px-4 py-3 text-center" (click)="$event.stopPropagation()">
                         @if (editingId() === umbral.id) {
                           <input type="number" [(ngModel)]="editForm.tiempoMaximoMin" min="0" step="0.5"
-                                 class="w-20 px-2 py-1 bg-slate-700 border border-gray-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-gray-400">
+                                 class="w-20 px-2 py-1 bg-slate-700 border border-red-500/50 rounded text-white text-sm text-center focus:outline-none focus:ring-2 focus:ring-red-500">
                         } @else {
-                          <span class="text-gray-300 font-medium">{{ toMin(umbral.tiempoMaximoSegundos) }}</span>
+                          <span class="text-red-400 font-medium">{{ toMin(umbral.tiempoMaximoSegundos) }}</span>
                         }
                       </td>
 
@@ -243,7 +231,6 @@ export class UmbralesEstadoComponent implements OnInit {
   editForm = {
     umbralVerdeMin: 0,
     umbralAmarilloMin: 0,
-    umbralRojoMin: 0,
     tiempoMaximoMin: 0,
     alertaSupervisor: false,
     sonidoAlerta: false,
@@ -295,8 +282,7 @@ export class UmbralesEstadoComponent implements OnInit {
     switch (segment) {
       case 'verde': return (umbral.umbralVerdeSegundos / total) * 100;
       case 'amarillo': return ((umbral.umbralAmarilloSegundos - umbral.umbralVerdeSegundos) / total) * 100;
-      case 'rojo': return ((umbral.umbralRojoSegundos - umbral.umbralAmarilloSegundos) / total) * 100;
-      case 'maximo': return ((total - umbral.umbralRojoSegundos) / total) * 100;
+      case 'rojo': return ((total - umbral.umbralAmarilloSegundos) / total) * 100;
       default: return 0;
     }
   }
@@ -307,7 +293,6 @@ export class UmbralesEstadoComponent implements OnInit {
     this.editForm = {
       umbralVerdeMin: this.toMin(umbral.umbralVerdeSegundos),
       umbralAmarilloMin: this.toMin(umbral.umbralAmarilloSegundos),
-      umbralRojoMin: this.toMin(umbral.umbralRojoSegundos),
       tiempoMaximoMin: this.toMin(umbral.tiempoMaximoSegundos),
       alertaSupervisor: umbral.alertaSupervisor,
       sonidoAlerta: umbral.sonidoAlerta,
@@ -321,11 +306,12 @@ export class UmbralesEstadoComponent implements OnInit {
 
   saveUmbral(umbral: ConfigUmbralEstado): void {
     this.saving.set(true);
+    const tiempoMaxSeg = Math.round(this.editForm.tiempoMaximoMin * 60);
     const payload: Partial<ConfigUmbralEstado> = {
       umbralVerdeSegundos: Math.round(this.editForm.umbralVerdeMin * 60),
       umbralAmarilloSegundos: Math.round(this.editForm.umbralAmarilloMin * 60),
-      umbralRojoSegundos: Math.round(this.editForm.umbralRojoMin * 60),
-      tiempoMaximoSegundos: Math.round(this.editForm.tiempoMaximoMin * 60),
+      umbralRojoSegundos: tiempoMaxSeg,
+      tiempoMaximoSegundos: tiempoMaxSeg,
       alertaSupervisor: this.editForm.alertaSupervisor,
       sonidoAlerta: this.editForm.sonidoAlerta,
       activo: this.editForm.activo
