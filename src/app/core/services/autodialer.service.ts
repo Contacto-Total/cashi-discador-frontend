@@ -30,6 +30,12 @@ export interface AutoDialerEstadisticas {
   duracionPromedioFormato: string;
   duracionMaximaSegundos: number;
   duracionMaximaFormato: string;
+  // Métricas de vueltas (rondas de discado)
+  vueltaActual?: number;
+  llamadosEnVuelta?: number;
+  pendientesEnVuelta?: number;
+  totalEnVuelta?: number;
+  detalleVueltas?: { vuelta: number; cantidad: number }[];
 }
 
 export interface AgenteMonitoreo {

@@ -242,6 +242,164 @@
 .icon-fallidas { color: #ef4444; }
 .icon-invalidos { color: #ef4444; }
 
+/* ========================================
+   VUELTAS DE DISCADO
+   ======================================== */
+.vueltas-summary {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.vuelta-actual-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  border-radius: 12px;
+  padding: 1rem 1.5rem;
+  min-width: 100px;
+}
+
+.vuelta-numero {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1;
+}
+
+.vuelta-label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
+.vueltas-progress-info {
+  flex: 1;
+  display: flex;
+  gap: 1.5rem;
+}
+
+.vuelta-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.vuelta-stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #10B981;
+}
+
+.vuelta-stat-label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.vuelta-progress-bar {
+  position: relative;
+  height: 24px;
+  background: #0A0E27;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.vuelta-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);
+  border-radius: 12px;
+  transition: width 0.5s ease;
+}
+
+.vuelta-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.vueltas-detalle {
+  margin-top: 0.75rem;
+}
+
+.vueltas-detalle-header {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.vueltas-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.vuelta-chip {
+  padding: 0.3rem 0.6rem;
+  background: #0A0E27;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.vuelta-chip-actual {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3B82F6;
+  color: #60a5fa;
+}
+
+@media (max-width: 768px) {
+  .vueltas-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vuelta-actual-card {
+    flex-direction: row;
+    gap: 0.75rem;
+    min-width: unset;
+  }
+
+  .vueltas-progress-info {
+    flex-wrap: wrap;
+  }
+}
+
+/* Light theme vueltas */
+body.light-theme .vuelta-stat-value {
+  color: #16a34a;
+}
+
+body.light-theme .vuelta-progress-bar {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+body.light-theme .vuelta-chip {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+body.light-theme .vuelta-chip-actual {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3B82F6;
+  color: #2563eb;
+}
+
 /* Two Column Layout */
 .two-column-layout {
   display: grid;

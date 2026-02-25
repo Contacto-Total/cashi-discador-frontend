@@ -156,6 +156,50 @@
     </div>
   </div>
 
+  <!-- Metrics: Vueltas de Discado -->
+  <div class="metrics-panel" *ngIf="autoDialerStats && autoDialerStats.vueltaActual !== undefined">
+    <h3><lucide-angular name="repeat" [size]="20"></lucide-angular> Vueltas de Discado</h3>
+    <div class="vueltas-summary">
+      <div class="vuelta-actual-card">
+        <span class="vuelta-numero">{{ autoDialerStats.vueltaActual }}</span>
+        <span class="vuelta-label">Vuelta actual</span>
+      </div>
+      <div class="vueltas-progress-info">
+        <div class="vuelta-stat">
+          <span class="vuelta-stat-value icon-conectadas">{{ autoDialerStats.llamadosEnVuelta }}</span>
+          <span class="vuelta-stat-label">Llamados en esta vuelta</span>
+        </div>
+        <div class="vuelta-stat">
+          <span class="vuelta-stat-value icon-pendientes">{{ autoDialerStats.pendientesEnVuelta }}</span>
+          <span class="vuelta-stat-label">Faltan por llamar</span>
+        </div>
+        <div class="vuelta-stat">
+          <span class="vuelta-stat-value">{{ autoDialerStats.totalEnVuelta }}</span>
+          <span class="vuelta-stat-label">Total en vuelta</span>
+        </div>
+      </div>
+    </div>
+    <!-- Barra de progreso de la vuelta actual -->
+    <div class="vuelta-progress-bar" *ngIf="autoDialerStats.totalEnVuelta && autoDialerStats.totalEnVuelta > 0">
+      <div class="vuelta-progress-fill"
+           [style.width.%]="(autoDialerStats.llamadosEnVuelta! / autoDialerStats.totalEnVuelta!) * 100">
+      </div>
+      <span class="vuelta-progress-text">
+        {{ ((autoDialerStats.llamadosEnVuelta! / autoDialerStats.totalEnVuelta!) * 100) | number:'1.0-0' }}% completado
+      </span>
+    </div>
+    <!-- Detalle por vuelta -->
+    <div class="vueltas-detalle" *ngIf="autoDialerStats.detalleVueltas && autoDialerStats.detalleVueltas.length > 1">
+      <div class="vueltas-detalle-header">Pendientes por vuelta:</div>
+      <div class="vueltas-chips">
+        <span class="vuelta-chip" *ngFor="let v of autoDialerStats.detalleVueltas"
+              [class.vuelta-chip-actual]="v.vuelta === autoDialerStats.vueltaActual">
+          V{{ v.vuelta }}: {{ v.cantidad }}
+        </span>
+      </div>
+    </div>
+  </div>
+
   <!-- Two Column Layout: Discado en Tiempo Real + Agentes -->
   <div class="two-column-layout">
     <!-- LEFT COLUMN: Discado en Tiempo Real -->

@@ -994,17 +994,61 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
             </div>
           </div>
 
-          <!-- Montos de la Cuenta -->
+          <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
           <div class="p-2 flex-1 overflow-y-auto">
             @if (clientAmountFields().length > 0) {
               <div class="space-y-1.5">
                 @for (field of clientAmountFields(); track field.field; let i = $index) {
-                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs"
-                       [class]="getAmountRowClass(i)">
-                    <span class="truncate mr-2 font-medium" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-red-800'">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm" [ngClass]="themeService.isDarkMode() ? 'text-red-300' : 'text-red-800'">
+                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs cursor-pointer transition-all"
+                       [class]="(calcCampoSeleccionado() === field.field)
+                         ? 'ring-1 ring-blue-500 bg-blue-50 dark:bg-blue-950/40'
+                         : getAmountRowClass(i)"
+                       (click)="calcCampoSeleccionado.set(field.field)">
+                    <span class="truncate mr-2 font-medium"
+                          [ngClass]="calcCampoSeleccionado() === field.field
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">{{ field.label }}</span>
+                    <span class="font-bold whitespace-nowrap text-sm"
+                          [ngClass]="calcCampoSeleccionado() === field.field
+                            ? 'text-blue-700 dark:text-blue-300'
+                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">
                       {{ formatCurrency(field.value) }}
                     </span>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Calculadora de Oferta - Compacta -->
+            @if (clientAmountFields().length > 0) {
+              <div class="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
+                <div class="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">Calcular oferta</div>
+                <!-- Fila: [% dcto] + S/[transf] -->
+                <div class="flex items-center gap-1">
+                  <input type="number" [ngModel]="calcDescuento() ?? ''" (ngModelChange)="calcDescuento.set($event === '' ? null : +$event)"
+                         placeholder="% dcto" min="0" max="100" step="1"
+                         class="w-14 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
+                                bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+                                focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                  <span class="text-[10px] text-slate-400">% dcto</span>
+                  <span class="text-[10px] text-slate-400 mx-0.5">+</span>
+                  <input type="number" [ngModel]="calcCostoTransferencia()" (ngModelChange)="calcCostoTransferencia.set(+$event)"
+                         min="0" step="1"
+                         class="w-12 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
+                                bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+                                focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                  <span class="text-[10px] text-slate-400">transf.</span>
+                </div>
+                <!-- Resultado -->
+                @if (calcResultado(); as r) {
+                  <div class="mt-2 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5">
+                    <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                      <span>{{ r.campoLabel }} -{{ calcDescuento() }}% +S/{{ calcCostoTransferencia() }}</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-0.5">
+                      <span class="text-[10px] font-bold text-green-700 dark:text-green-400">COBRAR</span>
+                      <span class="text-sm font-black text-green-700 dark:text-green-400">{{ formatCurrency(r.total) }}</span>
+                    </div>
                   </div>
                 }
               </div>
@@ -2055,6 +2099,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   paymentScheduleFieldId = signal<number | null>(null);
   // Flag to indicate if payment options have been configured (even if all are disabled)
   hasPaymentOptionsConfig = signal<boolean>(false);
+
+  // ==================== CALCULADORA DE OFERTA ====================
+  calcDescuento = signal<number | null>(null);   // % de descuento (null = no activo)
+  calcCampoSeleccionado = signal<string>('');     // campo base seleccionado (click en monto)
+  calcCostoTransferencia = signal<number>(20);    // costo transferencia default S/ 20
+
+  calcResultado = computed(() => {
+    const campos = this.clientAmountFields();
+    const campoSel = this.calcCampoSeleccionado();
+    const descuento = this.calcDescuento();
+    const costoTransf = this.calcCostoTransferencia();
+
+    const campo = campos.find(c => c.field === campoSel) || campos[0];
+    if (!campo || descuento === null) return null;
+
+    const base = campo.value;
+    // descuento = lo que se perdona, cliente paga el resto
+    const pago = base * ((100 - descuento) / 100);
+    const total = pago + costoTransf;
+    return { base, pago, total, campoLabel: campo.label };
+  });
 
   // ==================== CONTINUIDAD DE PROMESAS ====================
   // Flag para indicar si se seleccionó tipificación CONTINUIDAD
