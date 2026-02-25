@@ -1,14 +1,23 @@
 <div class="monitoring-container">
-  <!-- Header estilo monitoring -->
+  <!-- Header compacto con selector de campaña integrado -->
   <div class="page-header">
     <div class="header-left">
       <div class="header-icon-box">
-        <lucide-angular name="activity" [size]="22"></lucide-angular>
+        <lucide-angular name="activity" [size]="20"></lucide-angular>
       </div>
-      <div class="header-text">
-        <h1>Monitoreo por Campaña</h1>
-        <p>Métricas del auto-dialer en tiempo real</p>
-      </div>
+      <h1>Monitoreo</h1>
+      <select
+        id="campaignSelect"
+        [(ngModel)]="selectedCampaignId"
+        (change)="onCampaignChange()"
+        class="campaign-select-inline">
+        <option [value]="null" disabled>-- Campaña --</option>
+        <option
+          *ngFor="let campaign of campaigns"
+          [value]="campaign.id">
+          {{ campaign.name }} ({{ campaign.status }})
+        </option>
+      </select>
     </div>
     <div class="header-right">
       <button
@@ -16,16 +25,14 @@
         [class.active]="alertsEnabled"
         (click)="toggleAlerts()"
         [title]="alertsEnabled ? 'Desactivar alertas' : 'Activar alertas'">
-        <lucide-angular [name]="alertsEnabled ? 'bell' : 'bell-off'" [size]="18"></lucide-angular>
-        <span>{{ alertsEnabled ? 'Alertas' : 'Sin alertas' }}</span>
+        <lucide-angular [name]="alertsEnabled ? 'bell' : 'bell-off'" [size]="16"></lucide-angular>
       </button>
       <button
         class="btn-sound"
         [class.active]="soundEnabled"
         (click)="toggleSound()"
         [title]="soundEnabled ? 'Desactivar sonido de alertas' : 'Activar sonido de alertas'">
-        <lucide-angular [name]="soundEnabled ? 'volume-2' : 'volume-x'" [size]="18"></lucide-angular>
-        <span>{{ soundEnabled ? 'ON' : 'OFF' }}</span>
+        <lucide-angular [name]="soundEnabled ? 'volume-2' : 'volume-x'" [size]="16"></lucide-angular>
       </button>
       <button class="btn-back" (click)="goBack()">
         <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
@@ -34,178 +41,153 @@
     </div>
   </div>
 
-  <!-- Campaign Selector -->
-  <div class="campaign-selector">
-    <label for="campaignSelect">Seleccionar Campaña:</label>
-    <select
-      id="campaignSelect"
-      [(ngModel)]="selectedCampaignId"
-      (change)="onCampaignChange()"
-      class="campaign-select">
-      <option [value]="null" disabled>-- Seleccione una campaña --</option>
-      <option
-        *ngFor="let campaign of campaigns"
-        [value]="campaign.id">
-        {{ campaign.name }} ({{ campaign.status }})
-      </option>
-    </select>
-  </div>
+  <!-- Row: Tiempo Real + Vueltas lado a lado -->
+  <div class="top-metrics-row" *ngIf="autoDialerStats">
+    <!-- Actividad en Tiempo Real -->
+    <div class="metrics-panel metrics-panel-compact panel-realtime">
+      <h3><lucide-angular name="activity" [size]="16"></lucide-angular> Tiempo Real</h3>
+      <div class="metrics-grid metrics-grid-realtime">
+        <div class="metric-item metric-realtime metric-compact">
+          <span class="metric-icon icon-cola"><lucide-angular name="clock" [size]="18"></lucide-angular></span>
+          <div class="metric-info">
+            <span class="metric-value">{{ autoDialerStats.llamadasEnCola }}</span>
+            <span class="metric-label">En cola</span>
+          </div>
+        </div>
+        <div class="metric-item metric-realtime metric-compact">
+          <span class="metric-icon icon-marcando"><lucide-angular name="phone-call" [size]="18"></lucide-angular></span>
+          <div class="metric-info">
+            <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
+            <span class="metric-label">Timbrando</span>
+          </div>
+        </div>
+        <div class="metric-item metric-realtime metric-compact">
+          <span class="metric-icon icon-conectadas"><lucide-angular name="check-circle" [size]="18"></lucide-angular></span>
+          <div class="metric-info">
+            <span class="metric-value">{{ autoDialerStats.llamadasConectadas }}</span>
+            <span class="metric-label">Conectadas</span>
+          </div>
+        </div>
+        <div class="metric-item metric-realtime metric-compact">
+          <span class="metric-icon icon-activas"><lucide-angular name="activity" [size]="18"></lucide-angular></span>
+          <div class="metric-info">
+            <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
+            <span class="metric-label">En curso</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-  <!-- Metrics: Tiempo Real -->
-  <div class="metrics-panel" *ngIf="autoDialerStats">
-    <h3><lucide-angular name="activity" [size]="20"></lucide-angular> Actividad en Tiempo Real</h3>
-    <div class="metrics-grid metrics-grid-realtime">
-      <div class="metric-item metric-realtime">
-        <span class="metric-icon icon-cola"><lucide-angular name="clock" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasEnCola }}</span>
-          <span class="metric-label">En cola</span>
+    <!-- Vueltas de Discado -->
+    <div class="metrics-panel metrics-panel-compact panel-vueltas" *ngIf="autoDialerStats.vueltaActual !== undefined && autoDialerStats.vueltaActual > 0">
+      <h3><lucide-angular name="repeat" [size]="16"></lucide-angular> Vuelta {{ autoDialerStats.vueltaActual }}</h3>
+      <div class="vueltas-summary-compact" *ngIf="autoDialerStats.vueltaStats">
+        <div class="vueltas-stats-row">
+          <div class="vuelta-stat-mini">
+            <span class="vuelta-stat-val icon-conectadas">{{ autoDialerStats.vueltaStats.procesados }}</span>
+            <span class="vuelta-stat-lbl">Procesados</span>
+          </div>
+          <div class="vuelta-stat-mini">
+            <span class="vuelta-stat-val" style="color: #27ae60;">{{ autoDialerStats.vueltaStats.contactados }}</span>
+            <span class="vuelta-stat-lbl">Contactados</span>
+          </div>
+          <div class="vuelta-stat-mini">
+            <span class="vuelta-stat-val icon-pendientes">{{ autoDialerStats.vueltaStats.pendientes }}</span>
+            <span class="vuelta-stat-lbl">Pendientes</span>
+          </div>
+          <div class="vuelta-stat-mini">
+            <span class="vuelta-stat-val" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad }}%</span>
+            <span class="vuelta-stat-lbl">Tasa</span>
+          </div>
         </div>
-      </div>
-      <div class="metric-item metric-realtime">
-        <span class="metric-icon icon-marcando"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasMarcando }}</span>
-          <span class="metric-label">Timbrando</span>
+        <!-- Barra de progreso compacta -->
+        <div class="vuelta-progress-bar vuelta-progress-compact" *ngIf="autoDialerStats.vueltaStats.total > 0">
+          <div class="vuelta-progress-fill"
+               [style.width.%]="(autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100">
+          </div>
+          <span class="vuelta-progress-text">
+            {{ ((autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100) | number:'1.0-0' }}%
+          </span>
         </div>
-      </div>
-      <div class="metric-item metric-realtime">
-        <span class="metric-icon icon-conectadas"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasConectadas }}</span>
-          <span class="metric-label">Conectadas</span>
-        </div>
-      </div>
-      <div class="metric-item metric-realtime">
-        <span class="metric-icon icon-activas"><lucide-angular name="activity" [size]="24"></lucide-angular></span>
-        <div class="metric-info">
-          <span class="metric-value">{{ autoDialerStats.llamadasActivas }}</span>
-          <span class="metric-label">En curso</span>
+        <!-- Chips por vuelta -->
+        <div class="vueltas-chips" *ngIf="autoDialerStats.detalleVueltas && autoDialerStats.detalleVueltas.length > 0">
+          <span class="vuelta-chip" *ngFor="let v of autoDialerStats.detalleVueltas"
+                [class.vuelta-chip-actual]="v.vuelta === autoDialerStats.vueltaActual"
+                [class.vuelta-chip-completada]="v.completada">
+            V{{ v.vuelta }}: {{ v.contactados }} ({{ v.tasaContactabilidad }}%)
+            <span *ngIf="v.completada" style="font-size: 10px; margin-left: 2px;">&#10003;</span>
+          </span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Metrics: Resumen de Campaña -->
-  <div class="metrics-panel" *ngIf="autoDialerStats">
-    <h3><lucide-angular name="bar-chart-2" [size]="20"></lucide-angular> Resumen de Campaña</h3>
-    <div class="metrics-grid">
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="24"></lucide-angular></span>
+  <!-- Resumen de Campaña: una sola fila compacta -->
+  <div class="metrics-panel metrics-panel-compact" *ngIf="autoDialerStats">
+    <h3><lucide-angular name="bar-chart-2" [size]="16"></lucide-angular> Resumen</h3>
+    <div class="metrics-grid metrics-grid-resumen">
+      <div class="metric-item metric-compact">
+        <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.totalLlamadas }}</span>
-          <span class="metric-label">Total llamadas</span>
+          <span class="metric-label">Total</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon icon-conectadas-asesor"><lucide-angular name="user-check" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon icon-conectadas-asesor"><lucide-angular name="user-check" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasConectadasConAsesor }}</span>
-          <span class="metric-label">Conectadas con asesor</span>
+          <span class="metric-label">Con asesor</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon icon-no-contestadas"><lucide-angular name="phone-missed" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon icon-no-contestadas"><lucide-angular name="phone-missed" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasNoContestadas }}</span>
           <span class="metric-label">No contestadas</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon icon-abandonadas"><lucide-angular name="phone-off" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon icon-abandonadas"><lucide-angular name="phone-off" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasAbandonadas }}</span>
           <span class="metric-label">Abandonadas</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon icon-fallidas"><lucide-angular name="alert-triangle" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon icon-fallidas"><lucide-angular name="alert-triangle" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.llamadasFallidas }}</span>
           <span class="metric-label">Fallidas</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon icon-pendientes"><lucide-angular name="clipboard-list" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon icon-pendientes"><lucide-angular name="clipboard-list" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
-          <span class="metric-label">Contactos pendientes</span>
+          <span class="metric-label">Pendientes</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon icon-invalidos"><lucide-angular name="x-circle" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon icon-invalidos"><lucide-angular name="x-circle" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.contactosFallidos }}</span>
-          <span class="metric-label">Contactos inválidos</span>
+          <span class="metric-label">Inválidos</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="clock" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon"><lucide-angular name="clock" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.duracionPromedioFormato }}</span>
-          <span class="metric-label">Duración promedio</span>
+          <span class="metric-label">Prom.</span>
         </div>
       </div>
-      <div class="metric-item">
-        <span class="metric-icon"><lucide-angular name="timer" [size]="24"></lucide-angular></span>
+      <div class="metric-item metric-compact">
+        <span class="metric-icon"><lucide-angular name="timer" [size]="18"></lucide-angular></span>
         <div class="metric-info">
           <span class="metric-value">{{ autoDialerStats.duracionMaximaFormato }}</span>
-          <span class="metric-label">Duración máxima</span>
+          <span class="metric-label">Máx.</span>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Metrics: Vueltas de Discado -->
-  <div class="metrics-panel" *ngIf="autoDialerStats && autoDialerStats.vueltaActual !== undefined && autoDialerStats.vueltaActual > 0">
-    <h3><lucide-angular name="repeat" [size]="20"></lucide-angular> Vueltas de Discado</h3>
-    <div class="vueltas-summary">
-      <div class="vuelta-actual-card">
-        <span class="vuelta-numero">{{ autoDialerStats.vueltaActual }}</span>
-        <span class="vuelta-label">Vuelta actual</span>
-      </div>
-      <div class="vueltas-progress-info" *ngIf="autoDialerStats.vueltaStats">
-        <div class="vuelta-stat">
-          <span class="vuelta-stat-value icon-conectadas">{{ autoDialerStats.vueltaStats.procesados }}</span>
-          <span class="vuelta-stat-label">Procesados</span>
-        </div>
-        <div class="vuelta-stat">
-          <span class="vuelta-stat-value" style="color: #27ae60;">{{ autoDialerStats.vueltaStats.contactados }}</span>
-          <span class="vuelta-stat-label">Contactados</span>
-        </div>
-        <div class="vuelta-stat">
-          <span class="vuelta-stat-value icon-pendientes">{{ autoDialerStats.vueltaStats.pendientes }}</span>
-          <span class="vuelta-stat-label">Pendientes</span>
-        </div>
-        <div class="vuelta-stat">
-          <span class="vuelta-stat-value">{{ autoDialerStats.vueltaStats.total }}</span>
-          <span class="vuelta-stat-label">Total en vuelta</span>
-        </div>
-        <div class="vuelta-stat">
-          <span class="vuelta-stat-value" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad }}%</span>
-          <span class="vuelta-stat-label">Tasa contactabilidad</span>
-        </div>
-      </div>
-    </div>
-    <!-- Barra de progreso de la vuelta actual -->
-    <div class="vuelta-progress-bar" *ngIf="autoDialerStats.vueltaStats && autoDialerStats.vueltaStats.total > 0">
-      <div class="vuelta-progress-fill"
-           [style.width.%]="(autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100">
-      </div>
-      <span class="vuelta-progress-text">
-        {{ ((autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100) | number:'1.0-0' }}% procesado
-      </span>
-    </div>
-    <!-- Detalle por vuelta -->
-    <div class="vueltas-detalle" *ngIf="autoDialerStats.detalleVueltas && autoDialerStats.detalleVueltas.length > 0">
-      <div class="vueltas-detalle-header">Detalle por vuelta:</div>
-      <div class="vueltas-chips">
-        <span class="vuelta-chip" *ngFor="let v of autoDialerStats.detalleVueltas"
-              [class.vuelta-chip-actual]="v.vuelta === autoDialerStats.vueltaActual"
-              [class.vuelta-chip-completada]="v.completada">
-          V{{ v.vuelta }}: {{ v.contactados }} contactados ({{ v.tasaContactabilidad }}%)
-          <span *ngIf="v.completada" style="font-size: 10px; margin-left: 2px;">&#10003;</span>
-        </span>
       </div>
     </div>
   </div>
