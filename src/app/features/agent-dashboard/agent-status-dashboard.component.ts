@@ -160,7 +160,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     if (currentState === AgentState.DISPONIBLE ||
         currentState === AgentState.EN_REUNION ||
         currentState === AgentState.REFRIGERIO ||
-        currentState === AgentState.SSHH) {
+        currentState === AgentState.SSHH ||
+        currentState === AgentState.GESTION_MANUAL) {
       console.log('[AgentDashboard] Saliendo de pantalla de agente - marcando como DESCONECTADO');
       this.agentStatusService.changeStatus(this.userId, {
         estado: AgentState.DESCONECTADO,
@@ -362,7 +363,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       [AgentState.EN_LLAMADA]: '#f44336',
       [AgentState.TIPIFICANDO]: '#ff5722',
       [AgentState.EN_MANUAL]: '#607d8b',
-      [AgentState.DESCONECTADO]: '#9e9e9e'
+      [AgentState.DESCONECTADO]: '#9e9e9e',
+      [AgentState.GESTION_MANUAL]: '#e67e22'
     };
     return colors[state] || '#757575';
   }

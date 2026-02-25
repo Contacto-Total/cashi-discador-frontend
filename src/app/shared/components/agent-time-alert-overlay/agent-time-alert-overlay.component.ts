@@ -1080,7 +1080,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'Refrigerio',
       'SSHH': 'SSHH',
       'EN_MANUAL': 'Modo Manual',
-      'PAUSADO': 'Pausado',
+      'GESTION_MANUAL': 'Gestión Manual',
       'DESCONECTADO': 'Desconectado'
     };
     return estados[estado] || estado || 'Sin estado';
@@ -1095,7 +1095,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'refrigerio',
       'SSHH': 'en el baño',
       'EN_MANUAL': 'modo manual',
-      'PAUSADO': 'pausado'
+      'GESTION_MANUAL': 'gestión manual'
     };
     return estados[estado] || estado;
   }
@@ -1109,7 +1109,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'refrigerio',
       'SSHH': 'sshh',
       'EN_MANUAL': 'en_manual',
-      'PAUSADO': 'pausado',
+      'GESTION_MANUAL': 'gestión manual',
       'DESCONECTADO': 'desconectado'
     };
     return colores[estado] || 'disponible';
@@ -1124,7 +1124,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'coffee',
       'SSHH': 'user',
       'EN_MANUAL': 'pencil',
-      'PAUSADO': 'pause-circle',
+      'GESTION_MANUAL': 'clipboard-list',
       'DESCONECTADO': 'circle'
     };
     return iconos[estado] || 'circle';

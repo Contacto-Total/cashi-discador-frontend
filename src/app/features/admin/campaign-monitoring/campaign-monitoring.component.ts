@@ -71,7 +71,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     'REFRIGERIO': 12,
     'SSHH': 10,
     'EN_MANUAL': 8,
-    'PAUSADO': 8
+    'GESTION_MANUAL': 8
   };
   private readonly DEFAULT_ALERT_DURATION = 10;
 
@@ -88,6 +88,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     { value: 'EN_REUNION', label: 'En Reunión', icon: 'users', color: '#8B5CF6' },
     { value: 'REFRIGERIO', label: 'Refrigerio', icon: 'coffee', color: '#F59E0B' },
     { value: 'SSHH', label: 'SSHH', icon: 'user', color: '#F59E0B' },
+    { value: 'GESTION_MANUAL', label: 'Gestión Manual', icon: 'clipboard-list', color: '#E67E22' },
     { value: 'EN_MANUAL', label: 'Modo Manual', icon: 'pencil', color: '#6B7280' }
   ];
 
@@ -534,7 +535,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'refrigerio',
       'SSHH': 'baño',
       'EN_MANUAL': 'modo manual',
-      'PAUSADO': 'pausado'
+      'GESTION_MANUAL': 'gestión manual'
     };
     return estados[estado] || estado;
   }
@@ -739,7 +740,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'DISPONIBLE': return '#10B981'; // Verde
       case 'EN_LLAMADA': return '#3B82F6'; // Azul
       case 'DESCONECTADO': return '#EF4444'; // Rojo
-      case 'PAUSADO': return '#F59E0B'; // Amarillo
+      case 'GESTION_MANUAL': return '#E67E22'; // Naranja
       case 'EN_REUNION': return '#8B5CF6'; // Púrpura
       case 'REFRIGERIO': return '#F59E0B'; // Amarillo
       case 'SSHH': return '#F59E0B'; // Amarillo
@@ -756,7 +757,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'DISPONIBLE': return 'circle';
       case 'EN_LLAMADA': return 'phone-call';
       case 'DESCONECTADO': return 'circle';
-      case 'PAUSADO': return 'pause';
+      case 'GESTION_MANUAL': return 'clipboard-edit';
       case 'EN_REUNION': return 'users';
       case 'REFRIGERIO': return 'coffee';
       case 'SSHH': return 'user';
@@ -773,7 +774,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'DISPONIBLE': return 'Libre';
       case 'EN_LLAMADA': return 'En Llamada';
       case 'DESCONECTADO': return 'Desconectado';
-      case 'PAUSADO': return 'Pausado';
+      case 'GESTION_MANUAL': return 'Gestión Manual';
       case 'EN_REUNION': return 'En Reunión';
       case 'REFRIGERIO': return 'Refrigerio';
       case 'SSHH': return 'SSHH';
