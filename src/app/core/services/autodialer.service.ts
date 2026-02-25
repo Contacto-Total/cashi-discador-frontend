@@ -35,7 +35,22 @@ export interface AutoDialerEstadisticas {
   llamadosEnVuelta?: number;
   pendientesEnVuelta?: number;
   totalEnVuelta?: number;
-  detalleVueltas?: { vuelta: number; cantidad: number }[];
+  vueltaStats?: {
+    procesados: number;
+    contactados: number;
+    pendientes: number;
+    total: number;
+    tasaContactabilidad: number;
+  };
+  detalleVueltas?: {
+    vuelta: number;
+    total: number;
+    contactados: number;
+    pendientes: number;
+    procesados?: number;
+    completada: boolean;
+    tasaContactabilidad: number;
+  }[];
 }
 
 export interface AgenteMonitoreo {

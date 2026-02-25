@@ -361,6 +361,12 @@
   color: #60a5fa;
 }
 
+.vuelta-chip-completada {
+  background: rgba(39, 174, 96, 0.15);
+  border-color: #27ae60;
+  color: #2ecc71;
+}
+
 @media (max-width: 768px) {
   .vueltas-summary {
     flex-direction: column;
@@ -398,6 +404,12 @@ body.light-theme .vuelta-chip-actual {
   background: rgba(59, 130, 246, 0.1);
   border-color: #3B82F6;
   color: #2563eb;
+}
+
+body.light-theme .vuelta-chip-completada {
+  background: rgba(39, 174, 96, 0.1);
+  border-color: #27ae60;
+  color: #16a34a;
 }
 
 /* Two Column Layout */
