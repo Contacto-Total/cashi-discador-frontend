@@ -118,6 +118,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    path: 'reports/compromisos',
+    loadComponent: () => import('./features/reports/compromisos-report/compromisos-report.component').then(m => m.CompromisosReportComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
     path: 'reports/historial-llamadas',
     loadComponent: () => import('./features/reports/historial-llamadas-report/historial-llamadas-report.component').then(m => m.HistorialLlamadasReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
