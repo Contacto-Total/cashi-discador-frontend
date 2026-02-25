@@ -30,7 +30,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
       <!-- Filtros -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <!-- Fecha Desde -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -116,25 +116,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               @for (sub of subcarteras(); track sub.id) {
                 <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
               }
-            </select>
-          </div>
-
-          <!-- Estado Gestion -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Estado
-            </label>
-            <select
-              [(ngModel)]="filtros.estadoGestion"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Todos</option>
-              <option value="COMPLETADA">Completada</option>
-              <option value="SIN_CONTACTO">Sin Contacto</option>
-              <option value="NO_GESTIONADA">No Gestionada</option>
-              <option value="ANULADA">Anulada</option>
             </select>
           </div>
 
@@ -274,7 +255,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
         </div>
       }
 
-      <!-- Tabla -->
+      <!-- Tabla Preview -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -360,64 +341,24 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           </table>
         </div>
 
-        <!-- Footer con paginación -->
+        <!-- Footer: preview message -->
         @if (totalRecords() > 0) {
-          <div class="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600
+          <div class="px-4 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600
                       flex flex-col sm:flex-row items-center justify-between gap-3">
             <p class="text-sm text-gray-600 dark:text-gray-400">
-              Mostrando <span class="font-semibold">{{ currentPage() * pageSize + 1 }}</span>
-              - <span class="font-semibold">{{ Math.min((currentPage() + 1) * pageSize, totalRecords()) }}</span>
-              de <span class="font-semibold">{{ totalRecords() }}</span> registros
+              Vista previa de <span class="font-semibold">{{ data().length }}</span> de
+              <span class="font-semibold">{{ totalRecords() | number }}</span> registros
             </p>
-            <div class="flex items-center gap-1">
-              <button
-                (click)="goToPage(0)"
-                [disabled]="currentPage() === 0 || loading()"
-                class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
-                       hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &laquo;
-              </button>
-              <button
-                (click)="goToPage(currentPage() - 1)"
-                [disabled]="currentPage() === 0 || loading()"
-                class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
-                       hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &lsaquo;
-              </button>
-              @for (p of getVisiblePages(); track p) {
-                <button
-                  (click)="goToPage(p)"
-                  [disabled]="loading()"
-                  [class]="p === currentPage()
-                    ? 'px-3 py-1 text-sm rounded border font-bold bg-blue-500 text-white border-blue-500'
-                    : 'px-3 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'"
-                >
-                  {{ p + 1 }}
-                </button>
-              }
-              <button
-                (click)="goToPage(currentPage() + 1)"
-                [disabled]="currentPage() >= totalPages() - 1 || loading()"
-                class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
-                       hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &rsaquo;
-              </button>
-              <button
-                (click)="goToPage(totalPages() - 1)"
-                [disabled]="currentPage() >= totalPages() - 1 || loading()"
-                class="px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600
-                       hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed
-                       text-gray-700 dark:text-gray-300"
-              >
-                &raquo;
-              </button>
-            </div>
+            <button
+              (click)="exportarExcel()"
+              [disabled]="loading()"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
+                     rounded-lg transition-colors flex items-center gap-2
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <lucide-angular name="download" [size]="18"></lucide-angular>
+              Exportar todo a Excel ({{ totalRecords() | number }} registros)
+            </button>
           </div>
         }
       </div>
@@ -426,33 +367,24 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
   styles: []
 })
 export class GestionesReportComponent implements OnInit {
-  // Signals
   loading = signal(false);
   data = signal<ReporteGestionesDTO[]>([]);
   metricas = signal<ResumenMetricas | null>(null);
-
-  // Pagination
-  currentPage = signal(0);
-  pageSize = 50;
   totalRecords = signal(0);
-  totalPages = signal(0);
 
-  // Expose Math to template
-  Math = Math;
+  previewSize = 4;
 
   // Dropdown data
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
 
-  // Filtros
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
     idProveedor: null as number | null,
     idCartera: null as number | null,
-    idSubcartera: null as number | null,
-    estadoGestion: ''
+    idSubcartera: null as number | null
   };
 
   constructor(
@@ -461,12 +393,10 @@ export class GestionesReportComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Establecer fecha por defecto (hoy)
     const today = new Date();
     this.filtros.fechaDesde = today.toISOString().split('T')[0];
     this.filtros.fechaHasta = today.toISOString().split('T')[0];
 
-    // Cargar proveedores
     this.comisionesService.obtenerInquilinos().subscribe({
       next: (data) => this.proveedores.set(data),
       error: (err) => console.error('Error cargando proveedores:', err)
@@ -504,17 +434,10 @@ export class GestionesReportComponent implements OnInit {
       alert('Las fechas son obligatorias');
       return;
     }
-
-    this.currentPage.set(0);
-    this.loadPage(0);
+    this.loadPreview();
   }
 
-  goToPage(page: number): void {
-    if (page < 0 || page >= this.totalPages()) return;
-    this.loadPage(page);
-  }
-
-  private loadPage(page: number): void {
+  private loadPreview(): void {
     this.loading.set(true);
 
     this.reporteService.getReporte(
@@ -524,16 +447,14 @@ export class GestionesReportComponent implements OnInit {
       this.filtros.idSubcartera || undefined,
       undefined,
       undefined,
-      this.filtros.estadoGestion || undefined,
-      page,
-      this.pageSize
+      undefined,
+      0,
+      this.previewSize
     ).subscribe({
       next: (response) => {
         this.data.set(response.data);
         this.metricas.set(response.metricas);
         this.totalRecords.set(response.total);
-        this.totalPages.set(response.totalPages);
-        this.currentPage.set(response.page);
         this.loading.set(false);
       },
       error: (error) => {
@@ -542,18 +463,6 @@ export class GestionesReportComponent implements OnInit {
         alert('Error al cargar el reporte de gestiones');
       }
     });
-  }
-
-  getVisiblePages(): number[] {
-    const total = this.totalPages();
-    const current = this.currentPage();
-    const pages: number[] = [];
-    const start = Math.max(0, current - 2);
-    const end = Math.min(total - 1, current + 2);
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
-    return pages;
   }
 
   exportarExcel(): void {
@@ -568,10 +477,7 @@ export class GestionesReportComponent implements OnInit {
       this.filtros.fechaDesde,
       this.filtros.fechaHasta,
       this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined,
-      undefined,
-      undefined,
-      this.filtros.estadoGestion || undefined
+      this.filtros.idSubcartera || undefined
     ).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
