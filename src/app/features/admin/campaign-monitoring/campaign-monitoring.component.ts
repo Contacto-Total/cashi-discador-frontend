@@ -88,7 +88,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     { value: 'EN_REUNION', label: 'En Reunión', icon: 'users', color: '#8B5CF6' },
     { value: 'REFRIGERIO', label: 'Refrigerio', icon: 'coffee', color: '#F59E0B' },
     { value: 'SSHH', label: 'SSHH', icon: 'user', color: '#F59E0B' },
-    { value: 'GESTION_MANUAL', label: 'Gestión Manual', icon: 'clipboard-list', color: '#E67E22' },
+    { value: 'GESTION_MANUAL', label: 'Gestión Manual', icon: 'clipboard-list', color: '#009688' },
     { value: 'EN_MANUAL', label: 'Modo Manual', icon: 'pencil', color: '#6B7280' }
   ];
 
@@ -740,7 +740,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'DISPONIBLE': return '#10B981'; // Verde
       case 'EN_LLAMADA': return '#3B82F6'; // Azul
       case 'DESCONECTADO': return '#EF4444'; // Rojo
-      case 'GESTION_MANUAL': return '#E67E22'; // Naranja
+      case 'GESTION_MANUAL': return '#009688'; // Teal
       case 'EN_REUNION': return '#8B5CF6'; // Púrpura
       case 'REFRIGERIO': return '#F59E0B'; // Amarillo
       case 'SSHH': return '#F59E0B'; // Amarillo
