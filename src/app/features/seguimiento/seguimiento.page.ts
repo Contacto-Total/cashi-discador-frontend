@@ -363,26 +363,25 @@ export class SeguimientoPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Muestra la pantalla de "¡Terminaste!" e inmediatamente limpia el estado:
+   * Muestra la pantalla de "¡Terminaste!":
    * - Detiene el dialer en el backend
-   * - Cambia estado de TIPIFICANDO/SEGUIMIENTO → DISPONIBLE
+   * - Mantiene estado SEGUIMIENTO (aún estamos en la página)
+   * - El cambio a DISPONIBLE ocurre al hacer click en "Ir al Dashboard"
    */
   private mostrarFinalizacion(): void {
     this.pageState = 'finished';
 
     if (this.userId && this.authService.isAuthenticated()) {
+      // Limpiar sesión del dialer
       this.recordatoriosService.detenerDialer(this.userId).subscribe({
-        next: () => this.cambiarADisponible(),
-        error: () => this.cambiarADisponible()
-      });
-    }
-  }
-
-  private cambiarADisponible(): void {
-    if (this.userId && this.authService.isAuthenticated()) {
-      this.agentStatusService.finalizarTipificacion(this.userId).subscribe({
         error: () => {}
       });
+
+      // Si venimos de tipificación, volver a SEGUIMIENTO (no DISPONIBLE)
+      this.agentStatusService.changeStatus(this.userId, {
+        estado: AgentState.SEGUIMIENTO,
+        notas: 'Seguimiento completado, esperando confirmación'
+      }).subscribe({ error: () => {} });
     }
   }
 
