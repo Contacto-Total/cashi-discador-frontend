@@ -24,6 +24,7 @@ export class SipService {
   private localStream: MediaStream | null = null;
   private autoAnswerEnabled: boolean = false;  // For admin supervision mode
   private blockIncomingCalls: boolean = false;  // Block incoming calls during ACW/tipification
+  private _isRellamadaActive: boolean = false;  // Flag: rellamada en progreso (ignore call events in app.component)
 
   public onCallStatus = new EventEmitter<CallState>();
   public onError = new EventEmitter<string>();
@@ -75,6 +76,14 @@ export class SipService {
   blockIncomingCallsMode(block: boolean): void {
     this.blockIncomingCalls = block;
     console.log(block ? '🚫 Incoming calls BLOCKED (agent tipifying)' : '✅ Incoming calls UNBLOCKED (agent available)');
+  }
+
+  setRellamadaActive(active: boolean): void {
+    this._isRellamadaActive = active;
+  }
+
+  isRellamadaActive(): boolean {
+    return this._isRellamadaActive;
   }
 
   /**

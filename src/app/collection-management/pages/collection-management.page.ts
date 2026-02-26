@@ -2334,6 +2334,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           console.log('📞 [Rellamada] Terminada');
           this.isRellamada.set(false);
           this.rellamadaCallActive.set(false);
+          this.sipService.setRellamadaActive(false);
           this.showRellamadaDropdown.set(false);
           this.isMuted.set(false);
           this.isOnHold.set(false);
@@ -3437,10 +3438,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   iniciarRellamada(phoneNumber: string) {
     if (this.rellamadaCallActive() || this.callActive()) return;
     this.isRellamada.set(true);
+    this.sipService.setRellamadaActive(true);
     this.showRellamadaDropdown.set(false);
 
     // Llamada SIP directa desde WebRTC — sin pasar por backend/FreeSWITCH
-    // El backend originate falla con USER_BUSY porque el agente ya tiene sesión SIP
     console.log('📞 [Rellamada] Iniciando llamada SIP directa a:', phoneNumber);
     this.sipService.call(phoneNumber);
   }
@@ -3460,6 +3461,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.sipService.hangup();
       this.isRellamada.set(false);
       this.rellamadaCallActive.set(false);
+      this.sipService.setRellamadaActive(false);
       this.showRellamadaDropdown.set(false);
     }
 

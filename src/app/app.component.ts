@@ -398,6 +398,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.callStatusSubscription = this.sipService.onCallStatus.subscribe((state) => {
         console.log(`📡 [App] Estado de llamada: ${state}`);
 
+        // Ignorar ACTIVE durante rellamada (no navegar ni cambiar estado)
+        if (state === CallState.ACTIVE && this.sipService.isRellamadaActive()) {
+          console.log('📞 [App] Ignorando ACTIVE de rellamada');
+          return;
+        }
+
         if (state === CallState.ACTIVE && !this.hasNavigatedToTypification) {
           // ✅ CRITICAL FIX: Cancelar timeout anterior si existe
           // Evita múltiples timeouts cuando ACTIVE se emite múltiples veces (por ACK, etc)
@@ -449,6 +455,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
               console.log(`⚠️ [App] Llamada terminó antes de establecerse (${callDuration}ms, estado: ${currentState}), NO navegando`);
             }
           }, 1000);
+        }
+
+        // Ignorar eventos de fin de llamada durante rellamada (manejada por collection-management)
+        if ((state === CallState.ENDED || state === CallState.IDLE) && this.sipService.isRellamadaActive()) {
+          console.log('📞 [App] Ignorando evento de fin de rellamada');
+          return;
         }
 
         // Cuando la llamada termina, cancelar navegación y resetear flags
