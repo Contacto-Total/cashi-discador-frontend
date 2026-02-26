@@ -43,6 +43,7 @@ import { ComprobanteUploadResponse } from '../models/comprobante.model';
 import { CartaAcuerdoService } from '../../core/services/carta-acuerdo.service';
 import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/confirm-carta-dialog/confirm-carta-dialog.component';
 import { FirstInstallmentConfigService } from '../../maintenance/services/first-installment-config.service';
+import { CallService } from '../../core/services/call.service';
 
 @Component({
   selector: 'app-collection-management',
@@ -81,8 +82,8 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
 
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
             <div class="flex items-center gap-4">
-              <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
-                {{ callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
+              <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (rellamadaCallActive() ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 animate-pulse' : callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
+                {{ rellamadaCallActive() ? 'RELLAMADA' : callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
               </div>
               <!-- Indicador de umbral de tiempo (reloj de alarma) -->
               <app-status-alarm-clock
@@ -245,9 +246,9 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                 <div class="flex gap-2">
                   <button
                     (click)="toggleMute()"
-                    [disabled]="!callActive()"
+                    [disabled]="!callActive() && !rellamadaCallActive()"
                     [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
-                      (callActive()
+                      ((callActive() || rellamadaCallActive())
                         ? (isMuted()
                           ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white'
                           : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white')
@@ -257,9 +258,9 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                   </button>
                   <button
                     (click)="toggleHold()"
-                    [disabled]="!callActive()"
+                    [disabled]="!callActive() && !rellamadaCallActive()"
                     [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
-                      (callActive()
+                      ((callActive() || rellamadaCallActive())
                         ? (isOnHold()
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white animate-pulse'
                           : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white')
@@ -324,6 +325,56 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
                             </button>
                           </div>
                         </div>
+                      </div>
+                    }
+                  </div>
+                  <!-- Botón Rellamar -->
+                  <div class="relative">
+                    @if (!rellamadaCallActive()) {
+                      <button
+                        (click)="canRellamar() && showRellamadaDropdown.set(!showRellamadaDropdown())"
+                        [disabled]="!canRellamar()"
+                        [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                          (canRellamar()
+                            ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
+                            : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
+                      >
+                        <lucide-angular name="phone-outgoing" [size]="14"></lucide-angular>
+                        Rellamar
+                      </button>
+                    } @else {
+                      <div class="flex items-center gap-2">
+                        <div class="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-bold animate-pulse">
+                          RELLAMADA
+                        </div>
+                        <button
+                          (click)="colgarRellamada()"
+                          class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                        >
+                          <lucide-angular name="phone-off" [size]="14"></lucide-angular>
+                          Colgar
+                        </button>
+                      </div>
+                    }
+                    @if (showRellamadaDropdown()) {
+                      <div class="fixed inset-0 z-40" (click)="showRellamadaDropdown.set(false)"></div>
+                      <div class="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 p-3">
+                        <div class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">Seleccionar número</div>
+                        @for (num of rellamadaPhoneNumbers(); track num.label) {
+                          <button
+                            (click)="iniciarRellamada(num.number)"
+                            class="w-full text-left px-3 py-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 flex items-center gap-2 mb-1 transition-colors"
+                          >
+                            <lucide-angular name="phone" [size]="14" class="text-blue-600 dark:text-blue-400"></lucide-angular>
+                            <div>
+                              <div class="text-xs font-semibold text-gray-800 dark:text-gray-200">{{ num.number }}</div>
+                              <div class="text-xs text-gray-500 dark:text-gray-400">{{ num.label }}</div>
+                            </div>
+                          </button>
+                        }
+                        @if (rellamadaPhoneNumbers().length === 0) {
+                          <div class="text-xs text-gray-400 dark:text-gray-500 py-1">No hay teléfonos registrados</div>
+                        }
                       </div>
                     }
                   </div>
@@ -963,7 +1014,7 @@ import { FirstInstallmentConfigService } from '../../maintenance/services/first-
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation())"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation())"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -1413,6 +1464,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
+
+  // Rellamada signals
+  protected isRellamada = signal(false);          // Flag: rellamada en progreso
+  protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
+  protected showRellamadaDropdown = signal(false); // UI: dropdown de números
+  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !!this.customerData()?.id);
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
@@ -1867,6 +1924,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return nums;
   });
 
+  rellamadaPhoneNumbers = computed(() => {
+    const data = this.customerData();
+    const nums: { number: string; label: string }[] = [];
+    if (data?.contacto) {
+      const check = (val: string | undefined, label: string) => {
+        if (val && val.trim().length >= 7) {
+          nums.push({ number: val.trim(), label });
+        }
+      };
+      check(data.contacto.telefono_principal, 'Principal');
+      check(data.contacto.telefono_alternativo, 'Alternativo');
+      check(data.contacto.telefono_trabajo, 'Trabajo');
+    }
+    return nums;
+  });
+
   customerAge = computed(() => {
     const data = this.customerData();
     if (data?.fecha_nacimiento) {
@@ -2228,7 +2301,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private dialog: MatDialog,
     private comprobanteService: ComprobanteService,
     private cartaAcuerdoService: CartaAcuerdoService,
-    private firstInstallmentConfigService: FirstInstallmentConfigService
+    private firstInstallmentConfigService: FirstInstallmentConfigService,
+    private callService: CallService
   ) {}
 
   ngOnInit() {
@@ -2249,6 +2323,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.callStateSubscription = this.sipService.onCallStatus.subscribe((state: CallState) => {
       console.log('📞 [CollectionManagement] Estado de llamada:', state);
       this.callState = state;
+
+      // Guard: si es rellamada, manejar aislado sin tocar estado principal
+      if (this.isRellamada()) {
+        if (state === CallState.ACTIVE) {
+          this.rellamadaCallActive.set(true);
+          console.log('📞 [Rellamada] Conectada');
+        }
+        if ((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
+          console.log('📞 [Rellamada] Terminada');
+          this.isRellamada.set(false);
+          this.rellamadaCallActive.set(false);
+          this.showRellamadaDropdown.set(false);
+          this.isMuted.set(false);
+          this.isOnHold.set(false);
+        }
+        return; // No ejecutar lógica normal
+      }
 
       // Cuando la llamada se activa, cambiar estado a EN_LLAMADA
       if (state === CallState.ACTIVE && !this.callActive()) {
@@ -2314,6 +2405,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Suscribirse a llamadas SALIENTES (desde /dialer manual) para cargar automáticamente el cliente
     this.outgoingCallSubscription = this.sipService.onOutgoingCall.subscribe((callInfo: { to: string }) => {
       console.log('📤 [CollectionManagement] Llamada saliente a:', callInfo.to);
+      // Si es rellamada, no recargar datos del cliente
+      if (this.isRellamada()) return;
       this.outgoingPhoneNumber = callInfo.to;
 
       // Buscar y cargar automáticamente el cliente por el número al que se llama
@@ -3341,8 +3434,48 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
+  iniciarRellamada(phoneNumber: string) {
+    if (this.rellamadaCallActive() || this.callActive()) return;
+    this.isRellamada.set(true);
+    this.showRellamadaDropdown.set(false);
+
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id;
+    if (!agentId) {
+      this.isRellamada.set(false);
+      return;
+    }
+
+    // Registrar como llamada MANUAL en backend
+    this.callService.makeCall({ agentId, phoneNumber }).subscribe({
+      next: () => {
+        console.log('📞 [Rellamada] Registrada en backend, iniciando SIP...');
+        this.sipService.call(phoneNumber);
+      },
+      error: (err: any) => {
+        console.error('❌ [Rellamada] Error registrando en backend:', err);
+        this.isRellamada.set(false);
+      }
+    });
+  }
+
+  colgarRellamada() {
+    if (!this.rellamadaCallActive()) return;
+    this.sipService.hangup();
+    // El handler de onCallStatus limpia los flags automáticamente
+  }
+
   cancelarTipificacion() {
     console.log('❌ Cancelando tipificación...');
+
+    // Si hay rellamada activa, colgarla primero
+    if (this.rellamadaCallActive()) {
+      console.log('📵 Colgando rellamada activa antes de cancelar tipificación...');
+      this.sipService.hangup();
+      this.isRellamada.set(false);
+      this.rellamadaCallActive.set(false);
+      this.showRellamadaDropdown.set(false);
+    }
 
     // Si hay llamada activa, colgarla primero
     if (this.callActive()) {
@@ -5402,7 +5535,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Poner/quitar en espera (mute + música de espera al cliente)
    */
   toggleHold() {
-    if (!this.callActive()) return;
+    if (!this.callActive() && !this.rellamadaCallActive()) return;
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id;
     if (!agentId) return;
