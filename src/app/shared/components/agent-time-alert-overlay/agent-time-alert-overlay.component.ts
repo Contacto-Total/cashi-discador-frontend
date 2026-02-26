@@ -223,6 +223,10 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       box-shadow: 0 4px 16px rgba(107, 114, 128, 0.3);
     }
 
+    .main-btn[data-estado="seguimiento"] {
+      background: linear-gradient(135deg, #E91E63, #C2185B);
+      box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
+    }
     .main-btn[data-estado="desconectado"] {
       background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
       box-shadow: 0 4px 16px rgba(158, 158, 158, 0.3);
@@ -312,6 +316,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-badge[data-estado="refrigerio"] { color: #38bdf8; }
     .time-badge[data-estado="sshh"] { color: #a855f7; }
     .time-badge[data-estado="en_manual"] { color: #94a3b8; }
+    .time-badge[data-estado="seguimiento"] { color: #E91E63; }
     .time-badge[data-estado="pausado"] { color: #9ca3af; }
     .time-badge[data-estado="desconectado"] { color: #9e9e9e; }
 
@@ -353,6 +358,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .status-indicator[data-estado="refrigerio"] { background: #38bdf8; }
     .status-indicator[data-estado="sshh"] { background: #a855f7; }
     .status-indicator[data-estado="en_manual"] { background: #64748b; }
+    .status-indicator[data-estado="seguimiento"] { background: #E91E63; }
     .status-indicator[data-estado="pausado"] { background: #6b7280; }
     .status-indicator[data-estado="desconectado"] { background: #9e9e9e; }
 
@@ -420,6 +426,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .menu-header[data-estado="refrigerio"] { background: rgba(56, 189, 248, 0.08); border-bottom-color: rgba(56, 189, 248, 0.15); }
     .menu-header[data-estado="sshh"] { background: rgba(168, 85, 247, 0.08); border-bottom-color: rgba(168, 85, 247, 0.15); }
     .menu-header[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.08); border-bottom-color: rgba(100, 116, 139, 0.15); }
+    .menu-header[data-estado="seguimiento"] { background: rgba(233, 30, 99, 0.08); border-bottom-color: rgba(233, 30, 99, 0.15); }
     .menu-header[data-estado="pausado"] { background: rgba(107, 114, 128, 0.08); border-bottom-color: rgba(107, 114, 128, 0.15); }
     .menu-header[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.08); border-bottom-color: rgba(158, 158, 158, 0.15); }
 
@@ -447,6 +454,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .menu-header[data-estado="refrigerio"] .header-icon { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
     .menu-header[data-estado="sshh"] .header-icon { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
     .menu-header[data-estado="en_manual"] .header-icon { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+    .menu-header[data-estado="seguimiento"] .header-icon { background: rgba(233, 30, 99, 0.15); color: #E91E63; }
     .menu-header[data-estado="pausado"] .header-icon { background: rgba(107, 114, 128, 0.15); color: #6b7280; }
     .menu-header[data-estado="desconectado"] .header-icon { background: rgba(158, 158, 158, 0.15); color: #9e9e9e; }
 
@@ -520,6 +528,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-card[data-estado="refrigerio"] { background: rgba(56, 189, 248, 0.06); border-color: rgba(56, 189, 248, 0.12); }
     .time-card[data-estado="sshh"] { background: rgba(168, 85, 247, 0.06); border-color: rgba(168, 85, 247, 0.12); }
     .time-card[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.06); border-color: rgba(100, 116, 139, 0.12); }
+    .time-card[data-estado="seguimiento"] { background: rgba(233, 30, 99, 0.06); border-color: rgba(233, 30, 99, 0.12); }
     .time-card[data-estado="pausado"] { background: rgba(107, 114, 128, 0.06); border-color: rgba(107, 114, 128, 0.12); }
     .time-card[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.06); border-color: rgba(158, 158, 158, 0.12); }
 
@@ -547,6 +556,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-card[data-estado="refrigerio"] .time-icon { background: rgba(56, 189, 248, 0.12); color: #38bdf8; }
     .time-card[data-estado="sshh"] .time-icon { background: rgba(168, 85, 247, 0.12); color: #a855f7; }
     .time-card[data-estado="en_manual"] .time-icon { background: rgba(100, 116, 139, 0.12); color: #64748b; }
+    .time-card[data-estado="seguimiento"] .time-icon { background: rgba(233, 30, 99, 0.12); color: #E91E63; }
     .time-card[data-estado="pausado"] .time-icon { background: rgba(107, 114, 128, 0.12); color: #6b7280; }
     .time-card[data-estado="desconectado"] .time-icon { background: rgba(158, 158, 158, 0.12); color: #9e9e9e; }
 
@@ -586,6 +596,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
     .time-card[data-estado="refrigerio"] .time-value { color: #38bdf8; }
     .time-card[data-estado="sshh"] .time-value { color: #a855f7; }
     .time-card[data-estado="en_manual"] .time-value { color: #94a3b8; }
+    .time-card[data-estado="seguimiento"] .time-value { color: #E91E63; }
     .time-card[data-estado="pausado"] .time-value { color: #9ca3af; }
     .time-card[data-estado="desconectado"] .time-value { color: #9e9e9e; }
 
@@ -743,6 +754,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       .menu-header[data-estado="refrigerio"] { background: rgba(56, 189, 248, 0.04); border-bottom-color: rgba(56, 189, 248, 0.08); }
       .menu-header[data-estado="sshh"] { background: rgba(168, 85, 247, 0.04); border-bottom-color: rgba(168, 85, 247, 0.08); }
       .menu-header[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.04); border-bottom-color: rgba(100, 116, 139, 0.08); }
+      .menu-header[data-estado="seguimiento"] { background: rgba(233, 30, 99, 0.04); border-bottom-color: rgba(233, 30, 99, 0.08); }
       .menu-header[data-estado="pausado"] { background: rgba(107, 114, 128, 0.04); border-bottom-color: rgba(107, 114, 128, 0.08); }
       .menu-header[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.04); border-bottom-color: rgba(158, 158, 158, 0.08); }
 
@@ -775,6 +787,7 @@ import { AgentStatusService } from '../../../core/services/agent-status.service'
       .time-card[data-estado="refrigerio"] { background: rgba(56, 189, 248, 0.04); border-color: rgba(56, 189, 248, 0.08); }
       .time-card[data-estado="sshh"] { background: rgba(168, 85, 247, 0.04); border-color: rgba(168, 85, 247, 0.08); }
       .time-card[data-estado="en_manual"] { background: rgba(100, 116, 139, 0.04); border-color: rgba(100, 116, 139, 0.08); }
+      .time-card[data-estado="seguimiento"] { background: rgba(233, 30, 99, 0.04); border-color: rgba(233, 30, 99, 0.08); }
       .time-card[data-estado="pausado"] { background: rgba(107, 114, 128, 0.04); border-color: rgba(107, 114, 128, 0.08); }
       .time-card[data-estado="desconectado"] { background: rgba(158, 158, 158, 0.04); border-color: rgba(158, 158, 158, 0.08); }
 
@@ -1081,6 +1094,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'SSHH': 'SSHH',
       'EN_MANUAL': 'Modo Manual',
       'GESTION_MANUAL': 'Gestión Manual',
+      'SEGUIMIENTO': 'Seguimiento',
       'DESCONECTADO': 'Desconectado'
     };
     return estados[estado] || estado || 'Sin estado';
@@ -1095,7 +1109,8 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'REFRIGERIO': 'refrigerio',
       'SSHH': 'en el baño',
       'EN_MANUAL': 'modo manual',
-      'GESTION_MANUAL': 'gestión manual'
+      'GESTION_MANUAL': 'gestión manual',
+      'SEGUIMIENTO': 'seguimiento'
     };
     return estados[estado] || estado;
   }
@@ -1110,6 +1125,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'SSHH': 'sshh',
       'EN_MANUAL': 'en_manual',
       'GESTION_MANUAL': 'gestión manual',
+      'SEGUIMIENTO': 'seguimiento',
       'DESCONECTADO': 'desconectado'
     };
     return colores[estado] || 'disponible';
@@ -1125,6 +1141,7 @@ export class AgentTimeAlertOverlayComponent implements OnInit, OnDestroy {
       'SSHH': 'user',
       'EN_MANUAL': 'pencil',
       'GESTION_MANUAL': 'clipboard-list',
+      'SEGUIMIENTO': 'bell-ring',
       'DESCONECTADO': 'circle'
     };
     return iconos[estado] || 'circle';
