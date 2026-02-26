@@ -2450,8 +2450,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.reloadTypifications();
           this.loadCustomerOutputConfig();
           this.loadFirstInstallmentConfig();
-          // Cargar datos del cliente
-          this.loadCustomerFromDynamicTable(clientData);
+          // Cargar datos del cliente (clientData.clientData tiene los datos dinámicos del ini_*)
+          this.loadCustomerFromDynamicTable(clientData.clientData || clientData);
         } else {
           console.warn('⚠️ [RECORDATORIO] Cliente no encontrado, usando datos básicos');
           this.loadCustomerBasicFromRecordatorio(recordatorio);
