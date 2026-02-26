@@ -300,24 +300,42 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       next: (response) => {
         this.isLoading = false;
         if (response.success) {
-          this.estadoDialer = {
-            recordatoriosCompletados: response.estado.recordatoriosCompletados,
-            totalRecordatorios: response.estado.totalRecordatorios
-          };
-          this.pendientesCount = response.estado.totalRecordatorios - response.estado.recordatoriosCompletados;
-
-          if (this.pendientesCount === 0) {
-            this.pageState = 'finished';
-          }
+          this.aplicarEstadoDialer(response.estado);
         } else {
           console.error('Error iniciando dialer:', response.mensaje);
         }
       },
       error: (err) => {
-        this.isLoading = false;
-        console.error('Error iniciando dialer:', err);
+        // 400 = dialer ya activo de sesión anterior. Recuperar estado existente.
+        console.warn('[Seguimiento] iniciarDialer falló, recuperando estado existente...');
+        this.recordatoriosService.obtenerEstadoDialer(this.userId!).subscribe({
+          next: (estado) => {
+            this.isLoading = false;
+            this.aplicarEstadoDialer(estado);
+          },
+          error: () => {
+            this.isLoading = false;
+            // Si tampoco hay estado, intentar detener y reiniciar limpio
+            this.recordatoriosService.detenerDialer(this.userId!).subscribe({
+              next: () => this.iniciarDialerAlEntrar(),
+              error: () => console.error('[Seguimiento] No se pudo recuperar el dialer')
+            });
+          }
+        });
       }
     });
+  }
+
+  private aplicarEstadoDialer(estado: any): void {
+    this.estadoDialer = {
+      recordatoriosCompletados: estado.recordatoriosCompletados,
+      totalRecordatorios: estado.totalRecordatorios
+    };
+    this.pendientesCount = estado.totalRecordatorios - estado.recordatoriosCompletados;
+
+    if (this.pendientesCount === 0) {
+      this.pageState = 'finished';
+    }
   }
 
   /**
