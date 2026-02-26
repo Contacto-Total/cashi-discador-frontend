@@ -4918,6 +4918,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id || recordatorioActual.idAgente;
 
+    // Limpiar datos del cliente anterior antes de pasar al siguiente recordatorio
+    this.customerData.set({} as any);
+    this.rawClientData.set({});
+    this.historialGestiones.set([]);
+    this.historialHistorico.set([]);
+
     // Completar el recordatorio actual en el backend
     this.recordatoriosService.completarActual(agentId, 'CONTESTADO').subscribe({
       next: (response) => {
