@@ -342,9 +342,14 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     }
 
     this.recordatoriosService.obtenerEstadoDialer(this.userId).subscribe({
-      next: (estado) => {
+      next: (response) => {
         this.isLoading = false;
-        this.aplicarEstadoDialer(estado);
+        if (response.estado) {
+          this.aplicarEstadoDialer(response.estado);
+        } else {
+          // Dialer reporta activo pero sin estado - reiniciar
+          this.volverAlDashboard();
+        }
       },
       error: (err) => {
         // Si la sesión expiró, no hacer más requests
