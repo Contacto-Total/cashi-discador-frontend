@@ -194,7 +194,7 @@ type PageState = 'initial' | 'countdown' | 'finished';
 
             <div class="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 rounded-xl p-4 mb-5">
               <div class="flex items-center justify-center gap-3">
-                <lucide-angular name="headset" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
+                <lucide-angular name="headphones" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
                 <p class="text-green-700 dark:text-green-300 font-medium">
                   Ya puedes ponerte en línea para gestionar
                 </p>
@@ -204,7 +204,7 @@ type PageState = 'initial' | 'countdown' | 'finished';
             <button
               (click)="volverAlDashboard()"
               class="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-400 hover:to-green-500 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2">
-              <lucide-angular name="log-in" [size]="18"></lucide-angular>
+              <lucide-angular name="arrow-right" [size]="18"></lucide-angular>
               Ir al Dashboard
             </button>
           </div>
@@ -218,8 +218,7 @@ type PageState = 'initial' | 'countdown' | 'finished';
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      min-height: calc(100vh - 60px);
       padding: 2rem;
     }
 
@@ -229,11 +228,12 @@ type PageState = 'initial' | 'countdown' | 'finished';
       padding: 2rem;
       max-width: 480px;
       width: 100%;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
     }
 
     :host-context(.dark) .seguimiento-card {
       background: #1e293b;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
     }
   `]
 })
@@ -267,16 +267,8 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.userId = user.id;
     this.subPortfolioId = user.subPortfolioId || null;
 
-    // Cambiar estado a SEGUIMIENTO
-    this.agentStatusService.changeStatus(user.id, {
-      estado: AgentState.SEGUIMIENTO,
-      notas: 'Entró a pantalla de seguimiento'
-    }).subscribe({
-      error: (err) => console.error('Error cambiando a SEGUIMIENTO:', err)
-    });
-
-    // Bloquear llamadas entrantes del autodialer
-    this.sipService.blockIncomingCallsMode(true);
+    // NO cambiar estado a SEGUIMIENTO manualmente - el backend lo hace en iniciarDialer()
+    // NO bloquear llamadas aquí - se bloquean solo entre llamadas, no durante el originate
 
     // Verificar si venimos de collection-management con recordatorio en curso
     const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
@@ -453,7 +445,10 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     // 2. Notificar al SipService el número de destino
     this.sipService.setCurrentOutgoingNumber(this.recordatorioActual.telefono);
 
-    // 3. Llamar al backend para originar la llamada directa
+    // 3. Desbloquear llamadas para que el originate (FreeSWITCH -> agente) sea aceptado
+    this.sipService.blockIncomingCallsMode(false);
+
+    // 4. Llamar al backend para originar la llamada directa
     this.recordatoriosService.iniciarLlamadaDirecta(this.userId).subscribe({
       next: (resultado) => {
         if (resultado.success) {
@@ -485,14 +480,12 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.limpiarIntervals();
     sessionStorage.removeItem('recordatorioEnCurso');
 
-    if (this.userId) {
-      // Desbloquear llamadas entrantes
-      this.sipService.blockIncomingCallsMode(false);
+    // Desbloquear llamadas entrantes
+    this.sipService.blockIncomingCallsMode(false);
 
-      this.agentStatusService.changeStatus(this.userId, {
-        estado: AgentState.DISPONIBLE,
-        notas: 'Salió de pantalla de seguimiento'
-      }).subscribe({
+    if (this.userId) {
+      // finalizarTipificacion cambia a DISPONIBLE internamente (sistema, no manual)
+      this.agentStatusService.finalizarTipificacion(this.userId).subscribe({
         next: () => this.router.navigate(['/agent-dashboard']),
         error: () => this.router.navigate(['/agent-dashboard'])
       });
