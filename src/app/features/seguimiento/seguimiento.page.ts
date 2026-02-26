@@ -356,7 +356,31 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.pendientesCount = estado.totalRecordatorios - estado.recordatoriosCompletados;
 
     if (this.pendientesCount === 0) {
-      this.pageState = 'finished';
+      this.mostrarFinalizacion();
+    }
+  }
+
+  /**
+   * Muestra la pantalla de "¡Terminaste!" e inmediatamente limpia el estado:
+   * - Detiene el dialer en el backend
+   * - Cambia estado de TIPIFICANDO/SEGUIMIENTO → DISPONIBLE
+   */
+  private mostrarFinalizacion(): void {
+    this.pageState = 'finished';
+
+    if (this.userId && this.authService.isAuthenticated()) {
+      this.recordatoriosService.detenerDialer(this.userId).subscribe({
+        next: () => this.cambiarADisponible(),
+        error: () => this.cambiarADisponible()
+      });
+    }
+  }
+
+  private cambiarADisponible(): void {
+    if (this.userId && this.authService.isAuthenticated()) {
+      this.agentStatusService.finalizarTipificacion(this.userId).subscribe({
+        error: () => {}
+      });
     }
   }
 
@@ -377,7 +401,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
         sessionStorage.removeItem('recordatorioEnCurso');
 
         if (response.terminado) {
-          this.pageState = 'finished';
+          this.mostrarFinalizacion();
           return;
         }
 
@@ -395,18 +419,18 @@ export class SeguimientoPage implements OnInit, OnDestroy {
               }
               this.iniciarCountdown();
             } else {
-              this.pageState = 'finished';
+              this.mostrarFinalizacion();
             }
           },
           error: () => {
-            this.pageState = 'finished';
+            this.mostrarFinalizacion();
           }
         });
       },
       error: (err) => {
         console.error('Error completando recordatorio:', err);
         sessionStorage.removeItem('recordatorioEnCurso');
-        this.pageState = 'finished';
+        this.mostrarFinalizacion();
       }
     });
   }
@@ -436,13 +460,13 @@ export class SeguimientoPage implements OnInit, OnDestroy {
           }
           this.iniciarCountdown();
         } else {
-          this.pageState = 'finished';
+          this.mostrarFinalizacion();
         }
       },
       error: (err) => {
         this.isLoading = false;
         console.error('Error obteniendo siguiente:', err);
-        this.pageState = 'finished';
+        this.mostrarFinalizacion();
       }
     });
   }
