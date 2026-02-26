@@ -287,10 +287,12 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.isDestroying = true;
     this.limpiarIntervals();
 
-    // Limpiar dialer al salir de la página (refresh, navegación, etc.)
-    if (this.userId && this.authService.isAuthenticated()) {
+    // Solo detener dialer si NO estamos navegando a tipificación.
+    // Si hay recordatorioEnCurso, el agente va a /collection-management y el dialer debe seguir vivo.
+    const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
+    if (!recordatorioEnCurso && this.userId && this.authService.isAuthenticated()) {
       this.recordatoriosService.detenerDialer(this.userId).subscribe({
-        error: () => {} // Ignorar errores silenciosamente
+        error: () => {}
       });
     }
   }
