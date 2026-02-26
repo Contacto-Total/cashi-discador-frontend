@@ -248,6 +248,8 @@ export class SeguimientoPage implements OnInit, OnDestroy {
   private countdownInterval: any = null;
   private userId: number | null = null;
   private subPortfolioId: number | null = null;
+  private dialerRetryCount = 0;
+  private readonly MAX_DIALER_RETRIES = 1;
 
   constructor(
     private router: Router,
@@ -291,7 +293,10 @@ export class SeguimientoPage implements OnInit, OnDestroy {
    * El backend cambia estado a SEGUIMIENTO y carga la cola de recordatorios.
    */
   private iniciarDialerAlEntrar(): void {
-    if (!this.userId) return;
+    if (!this.userId || !this.authService.isAuthenticated()) {
+      this.isLoading = false;
+      return;
+    }
 
     this.isLoading = true;
     const idSubcartera = this.subPortfolioId || undefined;
@@ -302,24 +307,77 @@ export class SeguimientoPage implements OnInit, OnDestroy {
         if (response.success) {
           this.aplicarEstadoDialer(response.estado);
         } else {
-          console.error('Error iniciando dialer:', response.mensaje);
+          console.error('[Seguimiento] Error iniciando dialer:', response.mensaje);
         }
       },
       error: (err) => {
-        // 400 = dialer ya activo de sesión anterior. Recuperar estado existente.
-        console.warn('[Seguimiento] iniciarDialer falló, recuperando estado existente...');
-        this.recordatoriosService.obtenerEstadoDialer(this.userId!).subscribe({
-          next: (estado) => {
-            this.isLoading = false;
-            this.aplicarEstadoDialer(estado);
+        // Si la sesión expiró, dejar que el sistema de auth maneje el redirect
+        if (!this.authService.isAuthenticated() || err.status === 401 || err.status === 403) {
+          this.isLoading = false;
+          console.warn('[Seguimiento] Sesión no válida, abortando');
+          return;
+        }
+
+        if (err.status === 400) {
+          // 400 = dialer ya activo de sesión anterior. Recuperar estado existente.
+          console.warn('[Seguimiento] Dialer ya activo, recuperando estado...');
+          this.recuperarEstadoDialer();
+        } else {
+          this.isLoading = false;
+          console.error('[Seguimiento] Error inesperado:', err.status);
+          this.volverAlDashboard();
+        }
+      }
+    });
+  }
+
+  /**
+   * Recupera el estado del dialer cuando ya está activo (400).
+   * Si falla, intenta detener y reiniciar UNA sola vez.
+   */
+  private recuperarEstadoDialer(): void {
+    if (!this.userId || !this.authService.isAuthenticated()) {
+      this.isLoading = false;
+      return;
+    }
+
+    this.recordatoriosService.obtenerEstadoDialer(this.userId).subscribe({
+      next: (estado) => {
+        this.isLoading = false;
+        this.aplicarEstadoDialer(estado);
+      },
+      error: (err) => {
+        // Si la sesión expiró, no hacer más requests
+        if (!this.authService.isAuthenticated() || err.status === 401 || err.status === 403) {
+          this.isLoading = false;
+          console.warn('[Seguimiento] Sesión no válida durante recuperación');
+          return;
+        }
+
+        // Intentar detener y reiniciar, pero solo 1 vez
+        if (this.dialerRetryCount >= this.MAX_DIALER_RETRIES) {
+          this.isLoading = false;
+          console.error('[Seguimiento] Máximo de reintentos alcanzado, volviendo al dashboard');
+          this.volverAlDashboard();
+          return;
+        }
+
+        this.dialerRetryCount++;
+        console.warn('[Seguimiento] Deteniendo dialer para reiniciar (intento', this.dialerRetryCount, ')');
+        this.recordatoriosService.detenerDialer(this.userId!).subscribe({
+          next: () => {
+            setTimeout(() => {
+              if (this.authService.isAuthenticated()) {
+                this.iniciarDialerAlEntrar();
+              } else {
+                this.isLoading = false;
+              }
+            }, 500);
           },
           error: () => {
             this.isLoading = false;
-            // Si tampoco hay estado, intentar detener y reiniciar limpio
-            this.recordatoriosService.detenerDialer(this.userId!).subscribe({
-              next: () => this.iniciarDialerAlEntrar(),
-              error: () => console.error('[Seguimiento] No se pudo recuperar el dialer')
-            });
+            console.error('[Seguimiento] No se pudo recuperar el dialer, volviendo');
+            this.volverAlDashboard();
           }
         });
       }
@@ -343,7 +401,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
    * completamos el recordatorio actual y cargamos el siguiente.
    */
   private cargarSiguienteDesdeRecordatorio(recordatorioActual: any): void {
-    if (!this.userId) return;
+    if (!this.userId || !this.authService.isAuthenticated()) return;
 
     const agentId = this.userId;
 
@@ -493,7 +551,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     // Desbloquear llamadas entrantes
     this.sipService.blockIncomingCallsMode(false);
 
-    if (this.userId) {
+    if (this.userId && this.authService.isAuthenticated()) {
       // finalizarTipificacion cambia a DISPONIBLE internamente (sistema, no manual)
       this.agentStatusService.finalizarTipificacion(this.userId).subscribe({
         next: () => this.router.navigate(['/agent-dashboard']),
