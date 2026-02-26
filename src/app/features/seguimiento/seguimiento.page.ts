@@ -104,7 +104,7 @@ type PageState = 'initial' | 'countdown' | 'finished';
                   <lucide-angular name="phone" [size]="16" class="text-white"></lucide-angular>
                 </div>
                 <span class="text-sm font-medium text-slate-600 dark:text-gray-400">
-                  Llamando en {{ countdownNumber }}s...
+                  {{ llamadaIniciada ? 'Llamando...' : 'Llamando en ' + countdownNumber + 's...' }}
                 </span>
               </div>
               <span class="text-xs text-slate-400">
@@ -174,7 +174,7 @@ type PageState = 'initial' | 'countdown' | 'finished';
             <!-- Botón cancelar -->
             <button
               (click)="cancelarDiscado()"
-              class="w-full mt-4 px-4 py-2.5 text-sm text-slate-500 hover:text-slate-700 dark:text-gray-400 dark:hover:text-gray-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-all">
+              class="w-full mt-4 px-4 py-2.5 text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 border border-red-300 dark:border-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
               Cancelar
             </button>
           </div>
@@ -242,14 +242,14 @@ export class SeguimientoPage implements OnInit, OnDestroy {
   pendientesCount = 0;
   isLoading = false;
   countdownNumber = 3;
+  llamadaIniciada = false;
   recordatorioActual: RecordatorioPromesa | null = null;
   estadoDialer: { recordatoriosCompletados: number; totalRecordatorios: number } | null = null;
 
   private countdownInterval: any = null;
   private userId: number | null = null;
   private subPortfolioId: number | null = null;
-  private dialerRetryCount = 0;
-  private readonly MAX_DIALER_RETRIES = 1;
+  private isDestroying = false;
 
   constructor(
     private router: Router,
@@ -278,22 +278,30 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Llamar iniciarDialer inmediatamente al entrar a la página.
-    // Esto hace que el backend cambie el estado a SEGUIMIENTO (con manual=false)
-    // y cargue la cola de recordatorios. El botón "Iniciar" solo dispara obtenerSiguiente.
-    this.iniciarDialerAlEntrar();
+    // Siempre limpiar dialer stale y crear uno nuevo.
+    // iniciarDialer es el ÚNICO endpoint que cambia el estado a SEGUIMIENTO.
+    this.iniciarDialerLimpio();
   }
 
   ngOnDestroy(): void {
+    this.isDestroying = true;
     this.limpiarIntervals();
+
+    // Limpiar dialer al salir de la página (refresh, navegación, etc.)
+    if (this.userId && this.authService.isAuthenticated()) {
+      this.recordatoriosService.detenerDialer(this.userId).subscribe({
+        error: () => {} // Ignorar errores silenciosamente
+      });
+    }
   }
 
+  // ==================== INICIALIZACIÓN ====================
+
   /**
-   * Intenta reusar un dialer existente, o crear uno nuevo.
-   * Primero consulta obtenerEstadoDialer (no produce error 400).
-   * Solo llama iniciarDialer si no hay dialer activo.
+   * Detiene cualquier dialer stale y crea uno nuevo.
+   * iniciarDialer es el ÚNICO endpoint que cambia estado a SEGUIMIENTO en el backend.
    */
-  private iniciarDialerAlEntrar(): void {
+  private iniciarDialerLimpio(): void {
     if (!this.userId || !this.authService.isAuthenticated()) {
       this.isLoading = false;
       return;
@@ -301,27 +309,10 @@ export class SeguimientoPage implements OnInit, OnDestroy {
 
     this.isLoading = true;
 
-    // 1. Primero verificar si ya hay un dialer activo (evita el 400)
-    this.recordatoriosService.obtenerEstadoDialer(this.userId).subscribe({
-      next: (response) => {
-        if (response.activo && response.estado) {
-          // Dialer ya activo - reusar
-          console.log('[Seguimiento] Dialer ya activo, reusando estado existente');
-          this.isLoading = false;
-          this.aplicarEstadoDialer(response.estado);
-        } else {
-          // No hay dialer activo - crear uno nuevo
-          this.crearNuevoDialer();
-        }
-      },
-      error: (err) => {
-        if (!this.authService.isAuthenticated() || err.status === 401 || err.status === 403) {
-          this.isLoading = false;
-          return;
-        }
-        // No hay dialer (404 o error) - crear uno nuevo
-        this.crearNuevoDialer();
-      }
+    // Primero detener cualquier dialer stale (ignorar si no hay ninguno)
+    this.recordatoriosService.detenerDialer(this.userId).subscribe({
+      next: () => this.crearNuevoDialer(),
+      error: () => this.crearNuevoDialer() // Si no había dialer, igual continuar
     });
   }
 
@@ -340,6 +331,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       next: (response) => {
         this.isLoading = false;
         if (response.success) {
+          console.log('[Seguimiento] Dialer iniciado, estado: SEGUIMIENTO');
           this.aplicarEstadoDialer(response.estado);
         } else {
           console.error('[Seguimiento] Error iniciando dialer:', response.mensaje);
@@ -348,19 +340,10 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       error: (err) => {
         this.isLoading = false;
         if (!this.authService.isAuthenticated() || err.status === 401 || err.status === 403) {
-          console.warn('[Seguimiento] Sesión no válida, abortando');
           return;
         }
-
-        if (err.status === 400 && this.dialerRetryCount < this.MAX_DIALER_RETRIES) {
-          // Race condition: dialer became active between our check and create
-          this.dialerRetryCount++;
-          console.warn('[Seguimiento] Race condition, reintentando...');
-          this.iniciarDialerAlEntrar();
-        } else {
-          console.error('[Seguimiento] Error iniciando dialer:', err.status);
-          this.volverAlDashboard();
-        }
+        console.error('[Seguimiento] Error iniciando dialer:', err.status);
+        this.router.navigate(['/agent-dashboard']);
       }
     });
   }
@@ -376,6 +359,8 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       this.pageState = 'finished';
     }
   }
+
+  // ==================== FLUJO DE LLAMADAS ====================
 
   /**
    * Cuando venimos de collection-management tras tipificar,
@@ -406,6 +391,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
                   recordatoriosCompletados: siguienteResp.estado.recordatoriosCompletados,
                   totalRecordatorios: siguienteResp.estado.totalRecordatorios
                 };
+                this.pendientesCount = siguienteResp.estado.totalRecordatorios - siguienteResp.estado.recordatoriosCompletados;
               }
               this.iniciarCountdown();
             } else {
@@ -425,17 +411,20 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Click en "Iniciar" → obtener siguiente recordatorio y comenzar countdown.
+   */
   iniciarDiscado(): void {
-    // El dialer ya fue iniciado en ngOnInit (iniciarDialerAlEntrar).
-    // Solo obtenemos el siguiente recordatorio y comenzamos el countdown.
     this.obtenerSiguienteYMostrar();
   }
 
   private obtenerSiguienteYMostrar(): void {
     if (!this.userId) return;
 
+    this.isLoading = true;
     this.recordatoriosService.obtenerSiguiente(this.userId).subscribe({
       next: (response) => {
+        this.isLoading = false;
         if (response.hayMas && response.recordatorio) {
           this.recordatorioActual = response.recordatorio;
           if (response.estado) {
@@ -443,6 +432,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
               recordatoriosCompletados: response.estado.recordatoriosCompletados,
               totalRecordatorios: response.estado.totalRecordatorios
             };
+            this.pendientesCount = response.estado.totalRecordatorios - response.estado.recordatoriosCompletados;
           }
           this.iniciarCountdown();
         } else {
@@ -450,6 +440,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
         }
       },
       error: (err) => {
+        this.isLoading = false;
         console.error('Error obteniendo siguiente:', err);
         this.pageState = 'finished';
       }
@@ -459,6 +450,7 @@ export class SeguimientoPage implements OnInit, OnDestroy {
   private iniciarCountdown(): void {
     this.pageState = 'countdown';
     this.countdownNumber = 3;
+    this.llamadaIniciada = false;
 
     this.countdownInterval = setInterval(() => {
       this.countdownNumber--;
@@ -475,6 +467,8 @@ export class SeguimientoPage implements OnInit, OnDestroy {
       this.obtenerSiguienteYMostrar();
       return;
     }
+
+    this.llamadaIniciada = true;
 
     // 1. Guardar datos del recordatorio en sessionStorage
     sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
@@ -504,36 +498,72 @@ export class SeguimientoPage implements OnInit, OnDestroy {
           console.log('[Seguimiento] Llamada directa iniciada, UUID:', resultado.callUuid);
           // El flujo SIP normal navega a /collection-management
         } else {
-          console.error('Error iniciando llamada directa:', resultado.mensaje);
+          console.error('[Seguimiento] Error iniciando llamada directa:', resultado.mensaje);
+          this.limpiarLlamadaCancelada();
           this.obtenerSiguienteYMostrar();
         }
       },
       error: (err) => {
-        console.error('Error en llamada directa:', err);
+        console.error('[Seguimiento] Error en llamada directa:', err);
+        this.limpiarLlamadaCancelada();
         this.obtenerSiguienteYMostrar();
       }
     });
   }
 
-  cancelarDiscado(): void {
-    if (!this.userId) return;
+  // ==================== CANCELAR / VOLVER ====================
 
+  /**
+   * Click en "Cancelar" durante countdown o llamada en curso.
+   * - Para el countdown
+   * - Cuelga la llamada si ya se inició
+   * - Limpia sessionStorage (no cuenta como completado)
+   * - Vuelve al estado "initial" (se queda en la página)
+   */
+  cancelarDiscado(): void {
+    console.log('[Seguimiento] Cancelando discado, llamadaIniciada:', this.llamadaIniciada);
+
+    // 1. Parar countdown
     this.limpiarIntervals();
+
+    // 2. Si la llamada ya se originó, colgar
+    if (this.llamadaIniciada) {
+      console.log('[Seguimiento] Colgando llamada en curso...');
+      this.sipService.hangup();
+      this.limpiarLlamadaCancelada();
+    }
+
+    // 3. Volver al estado initial (quedarse en la página)
+    this.llamadaIniciada = false;
+    this.recordatorioActual = null;
+    this.pageState = 'initial';
+  }
+
+  /**
+   * Click en "Volver" desde initial o finished.
+   * - Detiene el dialer en el backend
+   * - Cambia estado a DISPONIBLE
+   * - Navega al dashboard
+   */
+  volverAlDashboard(): void {
+    this.limpiarIntervals();
+    this.limpiarLlamadaCancelada();
+    this.sipService.blockIncomingCallsMode(false);
+
+    if (!this.userId || !this.authService.isAuthenticated()) {
+      this.router.navigate(['/agent-dashboard']);
+      return;
+    }
+
+    // Detener dialer + cambiar a DISPONIBLE, luego navegar
     this.recordatoriosService.detenerDialer(this.userId).subscribe({
-      next: () => this.volverAlDashboard(),
-      error: () => this.volverAlDashboard()
+      next: () => this.finalizarYNavegar(),
+      error: () => this.finalizarYNavegar()
     });
   }
 
-  volverAlDashboard(): void {
-    this.limpiarIntervals();
-    sessionStorage.removeItem('recordatorioEnCurso');
-
-    // Desbloquear llamadas entrantes
-    this.sipService.blockIncomingCallsMode(false);
-
+  private finalizarYNavegar(): void {
     if (this.userId && this.authService.isAuthenticated()) {
-      // finalizarTipificacion cambia a DISPONIBLE internamente (sistema, no manual)
       this.agentStatusService.finalizarTipificacion(this.userId).subscribe({
         next: () => this.router.navigate(['/agent-dashboard']),
         error: () => this.router.navigate(['/agent-dashboard'])
@@ -541,6 +571,16 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/agent-dashboard']);
     }
+  }
+
+  // ==================== HELPERS ====================
+
+  /**
+   * Limpia datos de llamada cancelada (que no llegó a tipificación).
+   */
+  private limpiarLlamadaCancelada(): void {
+    sessionStorage.removeItem('recordatorioEnCurso');
+    this.llamadaIniciada = false;
   }
 
   getEstadoPromesaClass(): string {
