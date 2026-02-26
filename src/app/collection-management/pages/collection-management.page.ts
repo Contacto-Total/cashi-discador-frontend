@@ -4940,16 +4940,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               if (siguienteResp.hayMas && siguienteResp.recordatorio) {
                 console.log('🔔 Siguiente recordatorio:', siguienteResp.recordatorio);
 
-                // Guardar el nuevo recordatorio en sesión
+                // Guardar el nuevo recordatorio en sesión con TODOS los campos
                 sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
                   idCuota: siguienteResp.recordatorio.idCuota,
                   idAgente: agentId,
                   idCliente: siguienteResp.recordatorio.idCliente,
                   nombreCliente: siguienteResp.recordatorio.nombreCliente,
+                  documentoCliente: siguienteResp.recordatorio.documentoCliente,
                   telefono: siguienteResp.recordatorio.telefono,
                   monto: siguienteResp.recordatorio.monto,
                   numeroCuota: siguienteResp.recordatorio.numeroCuota,
-                  totalCuotas: siguienteResp.recordatorio.totalCuotas
+                  totalCuotas: siguienteResp.recordatorio.totalCuotas,
+                  idSubcartera: siguienteResp.recordatorio.idSubcartera,
+                  idGestion: siguienteResp.recordatorio.idGestion
                 }));
 
                 // Iniciar cuenta regresiva y luego llamar
@@ -4998,19 +5001,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
 
     dialogRef.afterClosed().subscribe((result) => {
-      if (result?.action === 'connected' && result.recordatorio) {
-        // La llamada ya fue conectada por el backend (AMD detectó humano)
-        // El audio debería llegar automáticamente vía WebRTC bridge
-        console.log('📞 Llamada conectada con cliente:', result.recordatorio.nombreCliente);
-        // Guardar info del recordatorio en curso
-        sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
-          recordatorio: result.recordatorio,
-          callUuid: result.callUuid,
-          estado: result.estado
-        }));
-      } else if (result?.action === 'call' && result.recordatorio) {
-        // Flujo legacy: Iniciar la llamada manualmente
-        this.sipService.call(result.recordatorio.telefono);
+      if (result?.action === 'llamada_iniciada') {
+        // Llamada directa iniciada: el flujo SIP normal maneja la navegación
+        // sessionStorage ya fue guardado por el modal
+        console.log('📞 [RECORDATORIO] Llamada directa iniciada, esperando flujo SIP...');
       } else if (result?.action === 'cancelled') {
         sessionStorage.removeItem('recordatorioEnCurso');
         this.router.navigate(['/agent-dashboard']);

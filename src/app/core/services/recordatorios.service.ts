@@ -133,6 +133,17 @@ export class RecordatoriosService {
   }
 
   /**
+   * Inicia una llamada directa (sin AMD) para el recordatorio actual.
+   * Funciona como llamada manual: originate al agente, bridge al cliente.
+   * El agente escucha timbrar y tipifica SIEMPRE.
+   */
+  iniciarLlamadaDirecta(idAgente: number): Observable<{ success: boolean; callUuid: string; recordatorio: any; mensaje: string }> {
+    return this.http.post<{ success: boolean; callUuid: string; recordatorio: any; mensaje: string }>(
+      `${this.baseUrl}/dialer/llamar-directo/${idAgente}`, {}
+    );
+  }
+
+  /**
    * Marca el recordatorio actual como completado
    */
   completarActual(
