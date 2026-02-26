@@ -267,43 +267,55 @@ export class SeguimientoPage implements OnInit, OnDestroy {
     this.userId = user.id;
     this.subPortfolioId = user.subPortfolioId || null;
 
-    // NO cambiar estado a SEGUIMIENTO manualmente - el backend lo hace en iniciarDialer()
-    // NO bloquear llamadas aquí - se bloquean solo entre llamadas, no durante el originate
-
     // Verificar si venimos de collection-management con recordatorio en curso
     const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
     if (recordatorioEnCurso) {
-      // Venimos de tipificación - cargar siguiente automáticamente
+      // Venimos de tipificación - dialer ya activo, cargar siguiente
       console.log('[Seguimiento] Recordatorio en curso detectado, cargando siguiente...');
       this.cargarSiguienteDesdeRecordatorio(JSON.parse(recordatorioEnCurso));
       return;
     }
 
-    // Cargar pendientes normalmente
-    this.cargarPendientes();
+    // Llamar iniciarDialer inmediatamente al entrar a la página.
+    // Esto hace que el backend cambie el estado a SEGUIMIENTO (con manual=false)
+    // y cargue la cola de recordatorios. El botón "Iniciar" solo dispara obtenerSiguiente.
+    this.iniciarDialerAlEntrar();
   }
 
   ngOnDestroy(): void {
     this.limpiarIntervals();
   }
 
-  private cargarPendientes(): void {
+  /**
+   * Llama iniciarDialer al entrar a la página.
+   * El backend cambia estado a SEGUIMIENTO y carga la cola de recordatorios.
+   */
+  private iniciarDialerAlEntrar(): void {
     if (!this.userId) return;
 
     this.isLoading = true;
-    this.recordatoriosService.getMisRecordatoriosSiEnHorario(this.userId, this.subPortfolioId || undefined).subscribe({
-      next: ({ recordatorios, horarioInfo }) => {
-        this.isLoading = false;
-        const pendientes = recordatorios.filter(r => !r.yaLlamoHoy);
-        this.pendientesCount = pendientes.length;
+    const idSubcartera = this.subPortfolioId || undefined;
 
-        if (this.pendientesCount === 0) {
-          this.pageState = 'finished';
+    this.recordatoriosService.iniciarDialer(this.userId, idSubcartera).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        if (response.success) {
+          this.estadoDialer = {
+            recordatoriosCompletados: response.estado.recordatoriosCompletados,
+            totalRecordatorios: response.estado.totalRecordatorios
+          };
+          this.pendientesCount = response.estado.totalRecordatorios - response.estado.recordatoriosCompletados;
+
+          if (this.pendientesCount === 0) {
+            this.pageState = 'finished';
+          }
+        } else {
+          console.error('Error iniciando dialer:', response.mensaje);
         }
       },
       error: (err) => {
         this.isLoading = false;
-        console.error('Error cargando recordatorios:', err);
+        console.error('Error iniciando dialer:', err);
       }
     });
   }
@@ -357,29 +369,9 @@ export class SeguimientoPage implements OnInit, OnDestroy {
   }
 
   iniciarDiscado(): void {
-    if (!this.userId) return;
-
-    this.isLoading = true;
-    const idSubcartera = this.subPortfolioId || undefined;
-
-    this.recordatoriosService.iniciarDialer(this.userId, idSubcartera).subscribe({
-      next: (response) => {
-        this.isLoading = false;
-        if (response.success) {
-          this.estadoDialer = {
-            recordatoriosCompletados: response.estado.recordatoriosCompletados,
-            totalRecordatorios: response.estado.totalRecordatorios
-          };
-          this.obtenerSiguienteYMostrar();
-        } else {
-          console.error('Error iniciando dialer:', response.mensaje);
-        }
-      },
-      error: (err) => {
-        this.isLoading = false;
-        console.error('Error iniciando dialer:', err);
-      }
-    });
+    // El dialer ya fue iniciado en ngOnInit (iniciarDialerAlEntrar).
+    // Solo obtenemos el siguiente recordatorio y comenzamos el countdown.
+    this.obtenerSiguienteYMostrar();
   }
 
   private obtenerSiguienteYMostrar(): void {
