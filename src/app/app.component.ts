@@ -498,62 +498,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Verifica si el agente tiene recordatorios pendientes y muestra el modal.
-   * Solo muestra el modal si estamos dentro del horario configurado para la subcartera.
+   * Verifica si el agente tiene recordatorios pendientes.
+   * Ya NO abre modal automático - el botón en agent-dashboard reemplaza esa funcionalidad.
    */
   private verificarRecordatoriosPendientes(user: any): void {
-    if (!user?.id) return;
-
-    // Solo mostrar para agentes (no admin/supervisor)
-    const agentRoles = ['AGENT', 'ASESOR'];
-    if (!agentRoles.includes(user.role)) return;
-
-    // Pequeño delay para no saturar al usuario al entrar
-    setTimeout(() => {
-      // Usar el método que verifica horario antes de obtener recordatorios
-      const idSubcartera = user.subPortfolioId;
-
-      this.recordatoriosService.getMisRecordatoriosSiEnHorario(user.id, idSubcartera).subscribe({
-        next: ({ recordatorios, horarioInfo }) => {
-          // Si hay info de horario y no está permitido, no mostrar modal
-          if (horarioInfo && !horarioInfo.permitido) {
-            console.log(`⏰ Modal de recordatorios no mostrado: ${horarioInfo.mensaje}`);
-            return;
-          }
-
-          const recordatoriosPendientes = recordatorios.filter(r => !r.yaLlamoHoy);
-          const pendientes = recordatoriosPendientes.length;
-
-          if (pendientes > 0) {
-            // Usar la subcartera del primer recordatorio pendiente para la configuración
-            const idSubcartera = recordatoriosPendientes[0]?.idSubcartera;
-            console.log(`🔔 Mostrando modal de recordatorios: ${pendientes} pendientes (subcartera: ${idSubcartera})`);
-            const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
-              width: '450px',
-              disableClose: true,
-              data: {
-                cantidad: recordatorios.length,
-                pendientes: pendientes,
-                idAgente: user.id,
-                idSubcartera: idSubcartera
-              },
-              panelClass: 'recordatorios-modal'
-            });
-
-            // Manejar el resultado del modal
-            dialogRef.afterClosed().subscribe((result) => {
-              if (result?.action === 'call' && result.recordatorio) {
-                console.log('📞 Iniciando llamada de recordatorio:', result.recordatorio);
-                this.iniciarLlamadaRecordatorio(result.recordatorio, user.id);
-              }
-            });
-          }
-        },
-        error: (err) => {
-          console.error('Error verificando recordatorios:', err);
-        }
-      });
-    }, 2000); // Esperar 2 segundos después de conectar
+    // No-op: la funcionalidad de recordatorios se maneja ahora desde
+    // el botón "Seguimiento" en el agent-dashboard y la pantalla /seguimiento.
   }
 
   /**

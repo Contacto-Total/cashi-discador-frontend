@@ -7,6 +7,7 @@ import { AgentStatusService } from '../../core/services/agent-status.service';
 import { AuthService } from '../../core/services/auth.service';
 import { CampaignService } from '../../core/services/campaign.service';
 import { SipService } from '../../core/services/sip.service';
+import { RecordatoriosService } from '../../core/services/recordatorios.service';
 import {
   AgentStatus,
   AgentState,
@@ -32,11 +33,16 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   isDiscando: boolean = false;
   campaignName: string | null = null;
 
+  // Seguimiento/Recordatorios
+  recordatoriosPendientes: number = 0;
+  recordatoriosHabilitado: boolean = false;
+
   private statusSubscription?: Subscription;
   private currentStatusSubscription?: Subscription;
   private wsStatusSubscription?: Subscription;
   private routerSubscription?: Subscription;
   private campaignStatusSubscription?: Subscription;
+  private recordatoriosSubscription?: Subscription;
   private userId: number | null = null;
   private subPortfolioId: number | null = null;
   private previousState: AgentState | null = null;
@@ -71,6 +77,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
     private campaignService: CampaignService,
+    private recordatoriosService: RecordatoriosService,
     private router: Router,
     private sipService: SipService
   ) {}
@@ -111,6 +118,12 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       });
     }
 
+    // Verificar recordatorios pendientes
+    this.checkRecordatoriosDisponibles();
+    this.recordatoriosSubscription = interval(60000).subscribe(() => {
+      this.checkRecordatoriosDisponibles();
+    });
+
     // Detectar refresh de página para NO marcar como DESCONECTADO
     window.addEventListener('beforeunload', this.boundBeforeUnload);
 
@@ -122,8 +135,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       if (this.isPageRefreshing) return;
 
       const targetUrl = event.url;
-      // Si NO va a collection-management (tipificación), desconectar
-      if (!targetUrl.startsWith('/collection-management')) {
+      // Si NO va a collection-management (tipificación) ni a seguimiento, desconectar
+      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/seguimiento')) {
         this.setDesconectado();
       }
     });
@@ -142,6 +155,9 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     }
     if (this.wsStatusSubscription) {
       this.wsStatusSubscription.unsubscribe();
+    }
+    if (this.recordatoriosSubscription) {
+      this.recordatoriosSubscription.unsubscribe();
     }
     if (this.campaignStatusSubscription) {
       this.campaignStatusSubscription.unsubscribe();
@@ -313,6 +329,26 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private checkRecordatoriosDisponibles(): void {
+    if (!this.userId) return;
+
+    this.recordatoriosService.getMisRecordatoriosSiEnHorario(this.userId, this.subPortfolioId || undefined).subscribe({
+      next: ({ recordatorios, horarioInfo }) => {
+        const pendientes = recordatorios.filter(r => !r.yaLlamoHoy);
+        this.recordatoriosPendientes = pendientes.length;
+        this.recordatoriosHabilitado = (!horarioInfo || horarioInfo.permitido) && pendientes.length > 0;
+      },
+      error: () => {
+        this.recordatoriosPendientes = 0;
+        this.recordatoriosHabilitado = false;
+      }
+    });
+  }
+
+  enterSeguimiento(): void {
+    this.router.navigate(['/seguimiento']);
+  }
+
   changeStatus(newState: AgentState): void {
     if (!this.currentStatus || this.loading) return;
 
@@ -364,7 +400,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       [AgentState.TIPIFICANDO]: '#ff5722',
       [AgentState.EN_MANUAL]: '#607d8b',
       [AgentState.DESCONECTADO]: '#9e9e9e',
-      [AgentState.GESTION_MANUAL]: '#009688'
+      [AgentState.GESTION_MANUAL]: '#009688',
+      [AgentState.SEGUIMIENTO]: '#E91E63'
     };
     return colors[state] || '#757575';
   }

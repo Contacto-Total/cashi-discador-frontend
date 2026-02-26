@@ -89,6 +89,24 @@
             Estás en modo manual. Ve al softphone para hacer llamadas.
           </p>
         </div>
+
+        <!-- Seguimiento Section -->
+        <div class="manual-calling-section" *ngIf="recordatoriosPendientes > 0">
+          <h2>Seguimiento de Promesas</h2>
+          <p class="section-subtitle">Llamar a clientes con promesas de pago pendientes</p>
+
+          <button
+            class="manual-call-btn"
+            [disabled]="!recordatoriosHabilitado || loading || currentStatus.estadoActual === AgentState.EN_LLAMADA || currentStatus.estadoActual === AgentState.TIPIFICANDO"
+            (click)="enterSeguimiento()">
+            <span class="btn-icon"><lucide-angular name="bell-ring" [size]="20"></lucide-angular></span>
+            <span>SEGUIMIENTO ({{ recordatoriosPendientes }})</span>
+          </button>
+
+          <p class="manual-call-note" *ngIf="!recordatoriosHabilitado && recordatoriosPendientes > 0">
+            Fuera de horario de seguimiento
+          </p>
+        </div>
       </div>
 
     </div>

@@ -745,6 +745,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'REFRIGERIO': return '#F59E0B'; // Amarillo
       case 'SSHH': return '#F59E0B'; // Amarillo
       case 'TIPIFICANDO': return '#06B6D4'; // Cyan
+      case 'SEGUIMIENTO': return '#E91E63'; // Rosa/Pink
       default: return '#6B7280'; // Gris
     }
   }
@@ -762,6 +763,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'REFRIGERIO': return 'coffee';
       case 'SSHH': return 'user';
       case 'TIPIFICANDO': return 'edit';
+      case 'SEGUIMIENTO': return 'bell-ring';
       default: return 'circle';
     }
   }
@@ -779,6 +781,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
       case 'REFRIGERIO': return 'Refrigerio';
       case 'SSHH': return 'SSHH';
       case 'TIPIFICANDO': return 'Tipificando';
+      case 'SEGUIMIENTO': return 'Seguimiento';
       default: return estado;
     }
   }

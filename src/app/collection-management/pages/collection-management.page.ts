@@ -4912,134 +4912,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
-   * Procesa el siguiente recordatorio después de completar la tipificación
+   * Procesa el siguiente recordatorio después de completar la tipificación.
+   * Navega a /seguimiento donde se maneja el flujo completo (completar actual, obtener siguiente, countdown, llamar).
    */
   private procesarSiguienteRecordatorio(recordatorioActual: any): void {
-    const currentUser = this.authService.getCurrentUser();
-    const agentId = currentUser?.id || recordatorioActual.idAgente;
-
-    // Limpiar datos del cliente anterior antes de pasar al siguiente recordatorio
-    this.customerData.set({} as any);
-    this.rawClientData.set({});
-    this.historialGestiones.set([]);
-    this.historialHistorico.set([]);
-
-    // Completar el recordatorio actual en el backend
-    this.recordatoriosService.completarActual(agentId, 'CONTESTADO').subscribe({
-      next: (response) => {
-        console.log('🔔 Recordatorio completado:', response);
-
-        if (response.terminado) {
-          // Ya no hay más recordatorios - mostrar modal de finalización
-          console.log('🔔 Todos los recordatorios completados');
-          sessionStorage.removeItem('recordatorioEnCurso');
-
-          // Mostrar modal de finalización
-          setTimeout(() => {
-            this.showSuccess.set(false);
-            this.mostrarModalRecordatoriosFinalizado(agentId);
-          }, 1000);
-        } else {
-          // Obtener el siguiente recordatorio
-          this.recordatoriosService.obtenerSiguiente(agentId).subscribe({
-            next: (siguienteResp) => {
-              if (siguienteResp.hayMas && siguienteResp.recordatorio) {
-                console.log('🔔 Siguiente recordatorio:', siguienteResp.recordatorio);
-
-                // Guardar el nuevo recordatorio en sesión con TODOS los campos
-                sessionStorage.setItem('recordatorioEnCurso', JSON.stringify({
-                  idCuota: siguienteResp.recordatorio.idCuota,
-                  idAgente: agentId,
-                  idCliente: siguienteResp.recordatorio.idCliente,
-                  nombreCliente: siguienteResp.recordatorio.nombreCliente,
-                  documentoCliente: siguienteResp.recordatorio.documentoCliente,
-                  telefono: siguienteResp.recordatorio.telefono,
-                  monto: siguienteResp.recordatorio.monto,
-                  numeroCuota: siguienteResp.recordatorio.numeroCuota,
-                  totalCuotas: siguienteResp.recordatorio.totalCuotas,
-                  idSubcartera: siguienteResp.recordatorio.idSubcartera,
-                  idGestion: siguienteResp.recordatorio.idGestion
-                }));
-
-                // Iniciar cuenta regresiva y luego llamar
-                this.showSuccess.set(false);
-                this.mostrarCountdownYLlamar(siguienteResp.recordatorio);
-              } else {
-                // No hay más recordatorios
-                sessionStorage.removeItem('recordatorioEnCurso');
-                this.showSuccess.set(false);
-                this.mostrarModalRecordatoriosFinalizado(agentId);
-              }
-            },
-            error: (err) => {
-              console.error('Error obteniendo siguiente recordatorio:', err);
-              sessionStorage.removeItem('recordatorioEnCurso');
-              this.showSuccess.set(false);
-              this.router.navigate(['/agent-dashboard']);
-            }
-          });
-        }
-      },
-      error: (err) => {
-        console.error('Error completando recordatorio:', err);
-        sessionStorage.removeItem('recordatorioEnCurso');
-        this.showSuccess.set(false);
-        this.router.navigate(['/agent-dashboard']);
-      }
-    });
+    console.log('[CollectionManagement] Navegando a /seguimiento para siguiente recordatorio...');
+    setTimeout(() => {
+      this.showSuccess.set(false);
+      this.router.navigate(['/seguimiento']);
+    }, 1500);
   }
 
   /**
-   * Muestra countdown animado y luego inicia la llamada
+   * @deprecated No longer used - seguimiento flow is handled by /seguimiento page
    */
   private mostrarCountdownYLlamar(recordatorio: any): void {
-    const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
-      width: '450px',
-      disableClose: true,
-      data: {
-        cantidad: 0,
-        pendientes: 1,
-        idAgente: this.authService.getCurrentUser()?.id || 0,
-        // Indicar que es un "siguiente" no un inicio
-        modoSiguiente: true,
-        recordatorio: recordatorio
-      }
-    });
-
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.action === 'llamada_iniciada') {
-        // Llamada directa iniciada: el flujo SIP normal maneja la navegación
-        // sessionStorage ya fue guardado por el modal
-        console.log('📞 [RECORDATORIO] Llamada directa iniciada, esperando flujo SIP...');
-      } else if (result?.action === 'cancelled') {
-        sessionStorage.removeItem('recordatorioEnCurso');
-        this.router.navigate(['/agent-dashboard']);
-      }
-    });
+    this.router.navigate(['/seguimiento']);
   }
 
   /**
-   * Muestra el modal de recordatorios finalizados
+   * @deprecated No longer used - seguimiento flow is handled by /seguimiento page
    */
   private mostrarModalRecordatoriosFinalizado(agentId: number): void {
-    const dialogRef = this.dialog.open(RecordatoriosModalComponent, {
-      width: '450px',
-      disableClose: true,
-      data: {
-        cantidad: 0,
-        pendientes: 0,
-        idAgente: agentId,
-        modoFinalizado: true
-      }
-    });
-
-    dialogRef.afterClosed().subscribe(() => {
-      // Navegar PRIMERO, luego cambiar a DISPONIBLE
-      this.router.navigate(['/agent-dashboard']).then(() => {
-        this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-          next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-          error: (err: any) => console.error('❌ Error cambiando estado:', err)
-        });
+    sessionStorage.removeItem('recordatorioEnCurso');
+    this.router.navigate(['/agent-dashboard']).then(() => {
+      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
+        next: () => console.log('Estado cambiado a DISPONIBLE'),
+        error: (err: any) => console.error('Error cambiando estado:', err)
       });
     });
   }

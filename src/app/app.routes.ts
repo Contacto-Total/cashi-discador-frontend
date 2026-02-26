@@ -196,6 +196,11 @@ export const routes: Routes = [
     loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage),
     canActivate: [authGuard]
   },
+  {
+    path: 'seguimiento',
+    loadComponent: () => import('./features/seguimiento/seguimiento.page').then(m => m.SeguimientoPage),
+    canActivate: [authGuard]
+  },
 
   // ========================================
   // CARGA DE DATOS (Solo Admin)
