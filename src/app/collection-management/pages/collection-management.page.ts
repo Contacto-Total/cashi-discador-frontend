@@ -3439,24 +3439,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.isRellamada.set(true);
     this.showRellamadaDropdown.set(false);
 
-    const currentUser = this.authService.getCurrentUser();
-    const agentId = currentUser?.id;
-    if (!agentId) {
-      this.isRellamada.set(false);
-      return;
-    }
-
-    // Registrar como llamada MANUAL en backend
-    this.callService.makeCall({ agentId, phoneNumber }).subscribe({
-      next: () => {
-        console.log('📞 [Rellamada] Registrada en backend, iniciando SIP...');
-        this.sipService.call(phoneNumber);
-      },
-      error: (err: any) => {
-        console.error('❌ [Rellamada] Error registrando en backend:', err);
-        this.isRellamada.set(false);
-      }
-    });
+    // Llamada SIP directa desde WebRTC — sin pasar por backend/FreeSWITCH
+    // El backend originate falla con USER_BUSY porque el agente ya tiene sesión SIP
+    console.log('📞 [Rellamada] Iniciando llamada SIP directa a:', phoneNumber);
+    this.sipService.call(phoneNumber);
   }
 
   colgarRellamada() {
