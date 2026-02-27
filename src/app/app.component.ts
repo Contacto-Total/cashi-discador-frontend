@@ -208,8 +208,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           this.agentStatusSubscription = this.agentStatusService.subscribeToStatusUpdates(user.id).subscribe();
           this.agentStatusService.currentStatus$.subscribe(status => {
             if (!status) return;
-            // No navegar para estados del sistema que tienen su propio flujo
-            if (status.estadoActual === AgentState.EN_LLAMADA || status.estadoActual === AgentState.TIPIFICANDO) return;
+            // No navegar para estados que tienen su propio flujo de navegación
+            if (status.estadoActual === AgentState.EN_LLAMADA
+              || status.estadoActual === AgentState.TIPIFICANDO
+              || status.estadoActual === AgentState.EN_MANUAL
+              || status.estadoActual === AgentState.SEGUIMIENTO) return;
             // Si ya está en el dashboard, no hacer nada
             if (this.router.url.startsWith('/agent-dashboard')) return;
             // Navegar al dashboard
