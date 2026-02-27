@@ -428,7 +428,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             const currentState = this.sipService.getCallState();
 
             if (callDuration >= 1000 && currentState === CallState.ACTIVE && !this.hasNavigatedToTypification) {
-              // ✅ CHECK 1: Si estamos en modo supervisión, NO navegar a collection-management
+              // ✅ CHECK 1: Si estamos en /dialer (softphone manual), NO navegar
+              // El dialer-main maneja su propio flujo de llamada
+              if (this.router.url.startsWith('/dialer')) {
+                console.log('📞 [App] En /dialer - softphone maneja su propio flujo, NO navegando');
+                return;
+              }
+
+              // ✅ CHECK 2: Si estamos en modo supervisión, NO navegar a collection-management
               // La supervisión usa SIP calls pero no deben redirigir al supervisor
               if (this.supervisionService.isSupervisionActive()) {
                 console.log('🔇 [App] Supervisión activa - NO navegando a tipificación');
