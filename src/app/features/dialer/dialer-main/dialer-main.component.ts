@@ -12,6 +12,7 @@ import { WebsocketService } from '../../../core/services/websocket.service';
 import { WebrtcService, CallState } from '../../../core/services/webrtc.service';
 import { AgentService } from '../../../core/services/agent.service';
 import { SipService } from '../../../core/services/sip.service';
+import { ErrorModalService } from '../../../shared/services/error-modal.service';
 import { Contact } from '../../../core/models/contact.model';
 import { Call, CallEvent, CallEventType, CallStatus, MakeCallRequest } from '../../../core/models/call.model';
 import { AgentState } from '../../../core/models/agent-status.model';
@@ -56,7 +57,8 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     private websocketService: WebsocketService,
     private webrtcService: WebrtcService,
     private agentService: AgentService,
-    private sipService: SipService
+    private sipService: SipService,
+    private errorModalService: ErrorModalService
   ) {}
 
   ngOnInit(): void {
@@ -122,6 +124,22 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     this.webrtcService.onError.subscribe((error: string) => {
       console.error('WebRTC error:', error);
       alert(error);
+    });
+
+    // Subscribe to SIP call status changes
+    this.sipService.onCallStatus.subscribe((state: CallState) => {
+      this.callState = state;
+      console.log('SIP call state changed:', state);
+    });
+
+    // Subscribe to SIP errors (call failed, rejected, etc.)
+    this.sipService.onError.subscribe((error: string) => {
+      console.error('SIP error:', error);
+      const message = this.translateSipError(error);
+      this.errorModalService.showError(message, 'Llamada No Conectada');
+      this.callState = CallState.IDLE;
+      this.loading = false;
+      this.stopCallTimer();
     });
   }
 
@@ -357,5 +375,16 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
   isInCall(): boolean {
     return this.callState === CallState.ACTIVE || this.callState === CallState.CONNECTING || this.callState === CallState.RINGING;
+  }
+
+  private translateSipError(error: string): string {
+    const normalized = error.toLowerCase();
+    if (normalized.includes('no answer')) return 'El cliente no contestó la llamada';
+    if (normalized.includes('busy')) return 'La línea está ocupada';
+    if (normalized.includes('rejected') || normalized.includes('decline')) return 'La llamada fue rechazada';
+    if (normalized.includes('not found')) return 'Número no válido o no existe';
+    if (normalized.includes('unavailable')) return 'El número no está disponible';
+    if (normalized.includes('request timeout')) return 'Tiempo de espera agotado';
+    return error;
   }
 }
