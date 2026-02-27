@@ -851,16 +851,6 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    * Abre el modal para cambiar el estado de un agente
    */
   openChangeStatusModal(agente: AgenteMonitoreo): void {
-    const estadosProtegidos = ['EN_LLAMADA', 'TIPIFICANDO', 'SEGUIMIENTO'];
-    if (estadosProtegidos.includes(agente.estadoActual)) {
-      const nombres: Record<string, string> = {
-        'EN_LLAMADA': 'en llamada',
-        'TIPIFICANDO': 'tipificando',
-        'SEGUIMIENTO': 'en seguimiento'
-      };
-      alert(`No se puede cambiar el estado mientras el agente está ${nombres[agente.estadoActual]}`);
-      return;
-    }
     this.selectedAgentForStatusChange = agente;
     this.showChangeStatusModal = true;
   }
