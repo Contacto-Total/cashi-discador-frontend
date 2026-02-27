@@ -157,7 +157,18 @@ export class DialerMainComponent implements OnInit, OnDestroy {
         break;
 
       case CallEventType.CALL_ENDED:
-        this.onCallEnded();
+        // If call never connected (still CONNECTING/RINGING), show error modal
+        if (this.callState === CallState.CONNECTING || this.callState === CallState.RINGING) {
+          const cause = event.data?.hangupCause || event.data?.cause || '';
+          const message = this.translateSipError(cause);
+          this.errorModalService.showError(message, 'Llamada No Conectada');
+          this.callState = CallState.IDLE;
+          this.loading = false;
+          this.currentCall = null;
+          this.stopCallTimer();
+        } else {
+          this.onCallEnded();
+        }
         break;
 
       case CallEventType.NEW_CONTACT_ASSIGNED:
@@ -378,13 +389,17 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   }
 
   private translateSipError(error: string): string {
-    const normalized = error.toLowerCase();
+    if (!error) return 'La llamada no pudo conectarse';
+    const normalized = error.toLowerCase().replace(/_/g, ' ');
     if (normalized.includes('no answer')) return 'El cliente no contestó la llamada';
-    if (normalized.includes('busy')) return 'La línea está ocupada';
-    if (normalized.includes('rejected') || normalized.includes('decline')) return 'La llamada fue rechazada';
-    if (normalized.includes('not found')) return 'Número no válido o no existe';
-    if (normalized.includes('unavailable')) return 'El número no está disponible';
-    if (normalized.includes('request timeout')) return 'Tiempo de espera agotado';
+    if (normalized.includes('no user response')) return 'El cliente no contestó la llamada';
+    if (normalized.includes('busy') || normalized.includes('user busy')) return 'La línea está ocupada';
+    if (normalized.includes('rejected') || normalized.includes('decline') || normalized.includes('call rejected')) return 'La llamada fue rechazada';
+    if (normalized.includes('not found') || normalized.includes('unallocated') || normalized.includes('invalid number')) return 'Número no válido o no existe';
+    if (normalized.includes('unavailable') || normalized.includes('subscriber absent')) return 'El número no está disponible';
+    if (normalized.includes('request timeout') || normalized.includes('recovery on timer')) return 'Tiempo de espera agotado';
+    if (normalized.includes('normal clearing') || normalized.includes('originator cancel')) return 'La llamada fue cancelada';
+    if (normalized.includes('network') || normalized.includes('congestion')) return 'Error de red, intente de nuevo';
     return error;
   }
 }
