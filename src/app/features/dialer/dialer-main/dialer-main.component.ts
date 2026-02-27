@@ -132,8 +132,10 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
       // If call ended and timer never started, client never answered
       if (state === CallState.ENDED && this.currentCall !== null && this.callTimer === null) {
-        console.log('SIP call ended without client answering - showing error modal');
-        this.errorModalService.showError('La llamada no pudo conectarse con el cliente', 'Llamada No Conectada');
+        const cause = this.sipService.lastHangupCause;
+        const message = this.translateSipError(cause);
+        console.log('SIP call ended without client answering - cause:', cause);
+        this.errorModalService.showError(message, 'Llamada No Conectada');
         this.callState = CallState.IDLE;
         this.loading = false;
         this.currentCall = null;

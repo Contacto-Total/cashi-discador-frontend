@@ -29,6 +29,7 @@ export class SipService {
   public onCallStatus = new EventEmitter<CallState>();
   public onError = new EventEmitter<string>();
   public onRegistered = new EventEmitter<boolean>();
+  public lastHangupCause: string = '';
   public onIncomingCall = new EventEmitter<{ from: string }>();
   public onOutgoingCall = new EventEmitter<{ to: string }>();
 
@@ -862,8 +863,10 @@ export class SipService {
       this.onCallStatus.emit(this.currentCallState);
     });
 
-    session.on('ended', () => {
-      console.log('📴 Call ended');
+    session.on('ended', (data: any) => {
+      const cause = data?.cause || data?.message?.reason_phrase || '';
+      this.lastHangupCause = cause;
+      console.log('📴 Call ended, cause:', cause);
       // Stop ringtone when call ends
       this.stopRingtone();
 
@@ -883,7 +886,9 @@ export class SipService {
     });
 
     session.on('failed', (data: any) => {
-      console.error('❌ Call failed:', data);
+      const cause = data?.cause || '';
+      this.lastHangupCause = cause;
+      console.error('❌ Call failed:', cause, data);
       // Stop ringtone when call fails
       this.stopRingtone();
 
