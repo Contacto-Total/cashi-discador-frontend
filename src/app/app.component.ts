@@ -204,19 +204,25 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           this.peripheralHealthService.start();
 
           // Suscribirse a cambios de estado del agente para navegar al dashboard
+          // Solo navegar cuando el estado REALMENTE cambia (no en cada polling)
           this.agentStatusSubscription?.unsubscribe();
+          let lastKnownState: string | null = null;
           this.agentStatusSubscription = this.agentStatusService.subscribeToStatusUpdates(user.id).subscribe();
           this.agentStatusService.currentStatus$.subscribe(status => {
             if (!status) return;
+            const newState = status.estadoActual;
+            // Ignorar si el estado no cambió (polling repite el mismo)
+            if (newState === lastKnownState) return;
+            lastKnownState = newState;
             // No navegar para estados que tienen su propio flujo de navegación
-            if (status.estadoActual === AgentState.EN_LLAMADA
-              || status.estadoActual === AgentState.TIPIFICANDO
-              || status.estadoActual === AgentState.EN_MANUAL
-              || status.estadoActual === AgentState.SEGUIMIENTO) return;
+            if (newState === AgentState.EN_LLAMADA
+              || newState === AgentState.TIPIFICANDO
+              || newState === AgentState.EN_MANUAL
+              || newState === AgentState.SEGUIMIENTO) return;
             // Si ya está en el dashboard, no hacer nada
             if (this.router.url.startsWith('/agent-dashboard')) return;
             // Navegar al dashboard
-            console.log(`📡 [App] Estado cambiado a ${status.estadoActual} - navegando a /agent-dashboard`);
+            console.log(`📡 [App] Estado cambiado a ${newState} - navegando a /agent-dashboard`);
             this.router.navigate(['/agent-dashboard']);
           });
         }
