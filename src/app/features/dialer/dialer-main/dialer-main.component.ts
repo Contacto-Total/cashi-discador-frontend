@@ -384,6 +384,15 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     return this.webrtcService.isMicMuted();
   }
 
+  get displayCallState(): CallState {
+    // SIP ACTIVE = agent connected to FreeSWITCH, but client may not have answered
+    // Show RINGING until client actually answers (callTimer starts)
+    if (this.callState === CallState.ACTIVE && this.callTimer === null) {
+      return CallState.RINGING;
+    }
+    return this.callState;
+  }
+
   canMakeCall(): boolean {
     return this.callState === CallState.IDLE && this.currentContact !== null && !this.loading;
   }

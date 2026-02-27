@@ -14,7 +14,7 @@
   <div class="flex-1 flex items-center justify-center p-4">
     <div class="w-full max-w-md">
       <app-softphone
-        [callState]="callState"
+        [callState]="displayCallState"
         [duration]="callDuration"
         [isMuted]="isMuted()"
         [phoneNumber]="currentContact?.phoneNumber || ''"
