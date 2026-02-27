@@ -16,6 +16,10 @@ export class CallService {
     return this.http.post<Call>(`${this.apiUrl}/make`, request);
   }
 
+  registerCall(request: MakeCallRequest): Observable<Call> {
+    return this.http.post<Call>(`${this.apiUrl}/register`, request);
+  }
+
   hangupCall(callId: string): Observable<void> {
     return this.http.post<void>(`${this.apiUrl}/${callId}/hangup`, {});
   }

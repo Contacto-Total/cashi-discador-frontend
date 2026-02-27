@@ -3441,8 +3441,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.sipService.setRellamadaActive(true);
     this.showRellamadaDropdown.set(false);
 
-    // Llamada SIP directa desde WebRTC — sin pasar por backend/FreeSWITCH
-    console.log('📞 [Rellamada] Iniciando llamada SIP directa a:', phoneNumber);
+    const currentUser = this.authService.getCurrentUser();
+    const agentId = currentUser?.id;
+
+    // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
+    console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
+    if (agentId) {
+      this.callService.registerCall({ agentId, phoneNumber }).subscribe({
+        next: () => console.log('📞 [Rellamada] Registrada en BD'),
+        error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
+      });
+    }
     this.sipService.call(phoneNumber);
   }
 
