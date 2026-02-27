@@ -864,7 +864,17 @@ export class SipService {
     });
 
     session.on('ended', (data: any) => {
-      const cause = data?.cause || data?.message?.reason_phrase || '';
+      // Try to extract Q.850 reason from BYE Reason header
+      let cause = data?.cause || '';
+      try {
+        const reasonHeader = data?.message?.getHeader?.('Reason') || '';
+        if (reasonHeader) {
+          const textMatch = reasonHeader.match(/text="([^"]+)"/);
+          if (textMatch) {
+            cause = textMatch[1];
+          }
+        }
+      } catch (e) { /* ignore parse errors */ }
       this.lastHangupCause = cause;
       console.log('📴 Call ended, cause:', cause);
       // Stop ringtone when call ends

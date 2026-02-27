@@ -244,6 +244,16 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   }
 
   async makeCallWithNumber(phoneNumber: string): Promise<void> {
+    // Validar longitud: solo 7 (fijo) o 9 (celular) dígitos
+    const digits = phoneNumber.replace(/\D/g, '');
+    if (digits.length !== 7 && digits.length !== 9) {
+      this.errorModalService.showError(
+        'El número debe tener 7 dígitos (fijo) o 9 dígitos (celular)',
+        'Número Inválido'
+      );
+      return;
+    }
+
     this.loading = true;
 
     // Guardar el número de destino ANTES de iniciar la llamada
@@ -404,8 +414,12 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   }
 
   private translateSipError(error: string): string {
-    if (!error) return 'La llamada no pudo conectarse';
+    if (!error) return 'El cliente no contestó la llamada';
     const normalized = error.toLowerCase().replace(/_/g, ' ');
+    // JsSIP generic causes - in this context (callTimer null) means client didn't answer
+    if (normalized === 'terminated' || normalized === 'bye') return 'El cliente no contestó la llamada';
+    // FreeSWITCH Q.850 causes
+    if (normalized.includes('normal clearing')) return 'El cliente no contestó la llamada';
     if (normalized.includes('no answer')) return 'El cliente no contestó la llamada';
     if (normalized.includes('no user response')) return 'El cliente no contestó la llamada';
     if (normalized.includes('busy') || normalized.includes('user busy')) return 'La línea está ocupada';
@@ -413,8 +427,8 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     if (normalized.includes('not found') || normalized.includes('unallocated') || normalized.includes('invalid number')) return 'Número no válido o no existe';
     if (normalized.includes('unavailable') || normalized.includes('subscriber absent')) return 'El número no está disponible';
     if (normalized.includes('request timeout') || normalized.includes('recovery on timer')) return 'Tiempo de espera agotado';
-    if (normalized.includes('normal clearing') || normalized.includes('originator cancel')) return 'La llamada fue cancelada';
+    if (normalized.includes('originator cancel')) return 'La llamada fue cancelada';
     if (normalized.includes('network') || normalized.includes('congestion')) return 'Error de red, intente de nuevo';
-    return error;
+    return 'El cliente no contestó la llamada';
   }
 }
