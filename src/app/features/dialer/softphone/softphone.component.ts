@@ -101,6 +101,10 @@ export class SoftphoneComponent {
     return this.callState === CallState.ACTIVE || this.callState === CallState.HELD;
   }
 
+  isRinging(): boolean {
+    return this.callState === CallState.RINGING || this.callState === CallState.CONNECTING;
+  }
+
   getLetters(key: string): string {
     const letters: { [key: string]: string } = {
       '2': 'ABC',

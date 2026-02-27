@@ -36,7 +36,16 @@
     </div>
   </div>
 
-  <!-- Control Buttons Row -->
+  <!-- Hangup button during RINGING/CONNECTING (before call connects) -->
+  <div class="control-row" *ngIf="isRinging() && !isActive()">
+    <button
+      (click)="onHangup()"
+      class="retro-btn retro-btn-red">
+      <lucide-angular name="phone-off" [size]="16" class="text-white"></lucide-angular>
+    </button>
+  </div>
+
+  <!-- Control Buttons Row (active call) -->
   <div class="control-row" *ngIf="isActive()">
     <button
       *ngIf="canHangup"

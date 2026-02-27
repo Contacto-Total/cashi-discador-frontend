@@ -294,24 +294,28 @@ export class DialerMainComponent implements OnInit, OnDestroy {
   }
 
   hangupCall(): void {
-    if (!this.currentCall) {
-      return;
-    }
+    // Hangup via SIP (terminates FreeSWITCH leg)
+    this.sipService.hangup();
 
     // Hangup via WebRTC
     this.webrtcService.hangupCall();
 
     // Hangup via backend
-    this.callService.hangupCall(this.currentCall.callId).subscribe({
-      next: () => {
-        console.log('Call hung up successfully');
-      },
-      error: (error) => {
-        console.error('Error hanging up call:', error);
-      }
-    });
+    if (this.currentCall) {
+      this.callService.hangupCall(this.currentCall.callId).subscribe({
+        next: () => {
+          console.log('Call hung up successfully');
+        },
+        error: (error) => {
+          console.error('Error hanging up call:', error);
+        }
+      });
+    }
 
     this.stopCallTimer();
+    this.callState = CallState.IDLE;
+    this.loading = false;
+    this.currentCall = null;
   }
 
   onCallEnded(): void {
