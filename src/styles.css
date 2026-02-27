@@ -2928,6 +2928,16 @@ body.light-theme {
   animation: slideIn 0.3s ease-out;
 }
 
+.error-modal-panel .mat-mdc-dialog-container .mdc-dialog__surface {
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.error-modal-panel .mat-mdc-dialog-container .mdc-dialog__content {
+  padding: 0 !important;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

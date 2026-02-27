@@ -20,135 +20,131 @@ export interface ErrorModalData {
     LucideAngularModule
   ],
   template: `
-    <div class="error-modal">
-      <div class="error-header">
-        <div class="error-icon-container">
-          <lucide-angular name="alert-circle" [size]="48" class="error-icon"></lucide-angular>
+    <div class="modal-container">
+      <!-- Icon -->
+      <div class="icon-wrapper">
+        <div class="icon-bg">
+          <lucide-angular
+            [name]="isCallError ? 'phone-off' : 'alert-circle'"
+            [size]="32"
+            class="icon">
+          </lucide-angular>
         </div>
-        <h2 mat-dialog-title>{{ data.title || 'Error' }}</h2>
       </div>
 
-      <mat-dialog-content>
-        <p class="error-message">{{ data.message }}</p>
-        <p *ngIf="data.details" class="error-details">{{ data.details }}</p>
-      </mat-dialog-content>
+      <!-- Title -->
+      <h2 class="title">{{ data.title || 'Error' }}</h2>
 
-      <mat-dialog-actions align="end">
-        <button mat-raised-button color="primary" (click)="close()">
-          <lucide-angular name="x" [size]="18"></lucide-angular>
-          Cerrar
-        </button>
-      </mat-dialog-actions>
+      <!-- Message -->
+      <p class="message">{{ data.message }}</p>
+
+      <!-- Details -->
+      <div *ngIf="data.details" class="details">
+        <p>{{ data.details }}</p>
+      </div>
+
+      <!-- Button -->
+      <button class="btn" (click)="close()">
+        Entendido
+      </button>
     </div>
   `,
   styles: [`
-    .error-modal {
-      min-width: 400px;
-      max-width: 500px;
-      padding: 24px;
-      background: white;
-      border-radius: 12px;
+    :host {
+      display: block;
     }
 
-    .error-header {
+    .modal-container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
-      margin-bottom: 24px;
+      padding: 32px 28px 24px;
       text-align: center;
+      min-width: 320px;
     }
 
-    .error-icon-container {
+    .icon-wrapper {
+      margin-bottom: 20px;
+    }
+
+    .icon-bg {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fee2e2, #fecaca);
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-      }
-      50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
-      }
+    .icon {
+      color: #dc2626;
     }
 
-    .error-icon {
-      color: white;
-      width: 48px;
-      height: 48px;
-    }
-
-    h2 {
-      margin: 0;
-      color: #1f2937;
-      font-size: 1.5rem;
+    .title {
+      margin: 0 0 8px;
+      font-size: 1.25rem;
       font-weight: 600;
+      color: #111827;
+      letter-spacing: -0.025em;
     }
 
-    mat-dialog-content {
-      padding: 0 8px;
-      margin-bottom: 24px;
-    }
-
-    .error-message {
-      font-size: 1rem;
-      color: #4b5563;
-      line-height: 1.6;
-      margin: 0 0 12px 0;
-      text-align: center;
-    }
-
-    .error-details {
-      font-size: 0.875rem;
+    .message {
+      margin: 0 0 24px;
+      font-size: 0.938rem;
       color: #6b7280;
-      background: #f3f4f6;
-      padding: 12px;
+      line-height: 1.5;
+      max-width: 340px;
+    }
+
+    .details {
+      width: 100%;
+      margin-bottom: 24px;
+      padding: 10px 14px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
       border-radius: 8px;
+    }
+
+    .details p {
       margin: 0;
-      border-left: 3px solid #ef4444;
-      font-family: 'Courier New', monospace;
-      white-space: pre-wrap;
+      font-size: 0.813rem;
+      color: #9ca3af;
+      font-family: 'SF Mono', 'Fira Code', monospace;
       word-break: break-word;
     }
 
-    mat-dialog-actions {
-      padding: 0;
-      margin: 0;
-      display: flex;
-      justify-content: center;
-    }
-
-    button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 24px;
-      font-size: 0.875rem;
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      font-size: 0.938rem;
       font-weight: 500;
-      border-radius: 8px;
-      transition: all 0.3s ease;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
     }
 
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    .btn:hover {
+      background: #1f2937;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
     }
   `]
 })
 export class ErrorModalComponent {
+  isCallError = false;
+
   constructor(
     public dialogRef: MatDialogRef<ErrorModalComponent>,
     @Inject(MAT_DIALOG_DATA) public data: ErrorModalData
-  ) {}
+  ) {
+    this.isCallError = (data.title || '').toLowerCase().includes('llamada');
+  }
 
   close(): void {
     this.dialogRef.close();
