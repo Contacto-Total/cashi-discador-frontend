@@ -128,8 +128,19 @@ export class DialerMainComponent implements OnInit, OnDestroy {
 
     // Subscribe to SIP call status changes
     this.sipService.onCallStatus.subscribe((state: CallState) => {
-      this.callState = state;
       console.log('SIP call state changed:', state);
+
+      // If call ended and timer never started, client never answered
+      if (state === CallState.ENDED && this.currentCall !== null && this.callTimer === null) {
+        console.log('SIP call ended without client answering - showing error modal');
+        this.errorModalService.showError('La llamada no pudo conectarse con el cliente', 'Llamada No Conectada');
+        this.callState = CallState.IDLE;
+        this.loading = false;
+        this.currentCall = null;
+        return;
+      }
+
+      this.callState = state;
     });
 
     // Subscribe to SIP errors (call failed, rejected, etc.)
@@ -157,18 +168,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
         break;
 
       case CallEventType.CALL_ENDED:
-        // If call never connected (still CONNECTING/RINGING), show error modal
-        if (this.callState === CallState.CONNECTING || this.callState === CallState.RINGING) {
-          const cause = event.data?.hangupCause || event.data?.cause || '';
-          const message = this.translateSipError(cause);
-          this.errorModalService.showError(message, 'Llamada No Conectada');
-          this.callState = CallState.IDLE;
-          this.loading = false;
-          this.currentCall = null;
-          this.stopCallTimer();
-        } else {
-          this.onCallEnded();
-        }
+        this.onCallEnded();
         break;
 
       case CallEventType.NEW_CONTACT_ASSIGNED:
