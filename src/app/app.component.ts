@@ -11,6 +11,7 @@ import { SipService, CallState } from './core/services/sip.service';
 import { InactivityService } from './core/services/inactivity.service';
 import { SessionConfigService } from './core/services/session-config.service';
 import { AgentStatusService } from './core/services/agent-status.service';
+import { AgentState } from './core/models/agent-status.model';
 import { NotificacionesSistemaService, NotificacionSistema } from './core/services/notificaciones-sistema.service';
 import { MenuPermissionService, MenuItem } from './core/services/menu-permission.service';
 import { SessionWarningModalComponent } from './shared/components/session-warning-modal/session-warning-modal.component';
@@ -51,6 +52,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   private timeoutSubscription?: Subscription;
   private callStatusSubscription?: Subscription; // ✅ CRITICAL FIX: Guardar subscription para evitar duplicados
   private predictiveCallSubscription?: Subscription;
+  private agentStatusSubscription?: Subscription;
   private dialogRef: any;
   private hasNavigatedToTypification = false; // Prevenir múltiples navegaciones
   private sessionClosing = false; // Prevenir múltiples cierres de sesión
@@ -200,6 +202,20 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         const agentRoles = ['AGENT', 'ASESOR'];
         if (agentRoles.includes(user.role)) {
           this.peripheralHealthService.start();
+
+          // Suscribirse a cambios de estado del agente para navegar al dashboard
+          this.agentStatusSubscription?.unsubscribe();
+          this.agentStatusSubscription = this.agentStatusService.subscribeToStatusUpdates(user.id).subscribe();
+          this.agentStatusService.currentStatus$.subscribe(status => {
+            if (!status) return;
+            // No navegar para estados del sistema que tienen su propio flujo
+            if (status.estadoActual === AgentState.EN_LLAMADA || status.estadoActual === AgentState.TIPIFICANDO) return;
+            // Si ya está en el dashboard, no hacer nada
+            if (this.router.url.startsWith('/agent-dashboard')) return;
+            // Navegar al dashboard
+            console.log(`📡 [App] Estado cambiado a ${status.estadoActual} - navegando a /agent-dashboard`);
+            this.router.navigate(['/agent-dashboard']);
+          });
         }
 
         // Cargar contador de notificaciones (solo para admin)
@@ -230,6 +246,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.timeoutSubscription?.unsubscribe();
     this.callStatusSubscription?.unsubscribe();
     this.predictiveCallSubscription?.unsubscribe();
+    this.agentStatusSubscription?.unsubscribe();
     this.forceLogoutSubscription?.unsubscribe();
     this.inactivityService.detener();
 
