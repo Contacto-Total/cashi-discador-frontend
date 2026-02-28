@@ -475,7 +475,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             // Esto evita que el agente se quede "pegado" en TIPIFICANDO
             const currentUser = this.authService.getCurrentUser();
             const agentRoles = ['AGENT', 'ASESOR'];
-            if (currentUser && agentRoles.includes(currentUser.role)) {
+            if (currentUser && agentRoles.includes(currentUser.role) && !this.router.url.startsWith('/collection-management')) {
               console.log('🔄 [App] Restaurando estado del agente a DISPONIBLE...');
               this.agentStatusService.finalizarTipificacion(currentUser.id).subscribe({
                 next: () => console.log('✅ [App] Estado del agente restaurado a DISPONIBLE'),
