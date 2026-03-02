@@ -3,6 +3,9 @@ import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { CartaAcuerdoService } from '../../../../core/services/carta-acuerdo.service';
+import { AuthService } from '../../../../core/services/auth.service';
 
 export interface ConfirmCartaDialogData {
   idGestion: number;
@@ -15,7 +18,8 @@ export interface ConfirmCartaDialogData {
     CommonModule,
     MatDialogModule,
     MatButtonModule,
-    MatIconModule
+    MatIconModule,
+    MatProgressSpinnerModule
   ],
   encapsulation: ViewEncapsulation.None,
   template: `
@@ -42,12 +46,17 @@ export interface ConfirmCartaDialogData {
       </div>
 
       <div class="carta-actions">
-        <button mat-button class="carta-btn-secondary" (click)="onNoClick()">
+        <button mat-button class="carta-btn-secondary" (click)="onNoClick()" [disabled]="generando()">
           Más tarde
         </button>
-        <button mat-flat-button class="carta-btn-primary" (click)="onGenerateClick()">
-          <mat-icon>download</mat-icon>
-          <span>Generar y Descargar</span>
+        <button mat-flat-button class="carta-btn-primary" (click)="onGenerateClick()" [disabled]="generando()">
+          @if (generando()) {
+            <mat-spinner diameter="20" color="accent"></mat-spinner>
+            <span>Generando...</span>
+          } @else {
+            <mat-icon>download</mat-icon>
+            <span>Generar y Descargar</span>
+          }
         </button>
       </div>
     </div>
@@ -270,15 +279,25 @@ export interface ConfirmCartaDialogData {
     .carta-btn-primary span {
       flex-shrink: 0;
     }
+
+    .carta-btn-primary mat-spinner {
+      flex-shrink: 0;
+    }
+    .carta-btn-primary mat-spinner ::ng-deep circle {
+      stroke: white !important;
+    }
   `]
 })
 export class ConfirmCartaDialogComponent implements OnInit, OnDestroy {
   isDarkMode = signal<boolean>(false);
+  generando = signal<boolean>(false);
   private darkModeObserver?: MutationObserver;
 
   constructor(
     public dialogRef: MatDialogRef<ConfirmCartaDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: ConfirmCartaDialogData
+    @Inject(MAT_DIALOG_DATA) public data: ConfirmCartaDialogData,
+    private cartaAcuerdoService: CartaAcuerdoService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -304,6 +323,23 @@ export class ConfirmCartaDialogComponent implements OnInit, OnDestroy {
   }
 
   onGenerateClick(): void {
-    this.dialogRef.close('generate');
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      this.dialogRef.close('generate');
+      return;
+    }
+
+    this.generando.set(true);
+    this.cartaAcuerdoService.generarCarta(this.data.idGestion, user.id).subscribe({
+      next: (blob) => {
+        this.cartaAcuerdoService.descargarPdf(blob, `carta_acuerdo_${this.data.idGestion}.pdf`);
+        this.generando.set(false);
+        this.dialogRef.close('generated');
+      },
+      error: () => {
+        this.generando.set(false);
+        this.dialogRef.close('error');
+      }
+    });
   }
 }

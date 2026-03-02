@@ -653,12 +653,14 @@ export class CallNotesComponent implements OnInit {
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result === 'generate') {
-        this.idGestionPendiente = idGestion;
-        // Generar carta y luego finalizar tipificación
-        this.generarCartaYFinalizar(idGestion, userId);
+      if (result === 'generated') {
+        this.snackBar.open('Carta generada exitosamente', 'Cerrar', { duration: 3000 });
+        if (userId) this.finalizarTipificacionYSalir(userId);
+      } else if (result === 'error') {
+        this.snackBar.open('Error al generar la carta', 'Cerrar', { duration: 3000 });
+        if (userId) this.finalizarTipificacionYSalir(userId);
       } else {
-        // Usuario eligió "Ahora no", solo finalizar tipificación
+        // Usuario eligió "Más tarde", solo finalizar tipificación
         if (userId) {
           this.finalizarTipificacionYSalir(userId);
         }
