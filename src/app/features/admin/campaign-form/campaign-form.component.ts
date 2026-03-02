@@ -67,8 +67,8 @@ export class CampaignFormComponent implements OnInit {
   tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
   selectedTipoContacto: TipoContacto | null = null;
 
-  // Rango de antigüedad (filtro categórico)
-  rangosAntiguedad: string[] = [];
+  // Rango de antigüedad (filtro categórico) - rangos fijos basados en dias_mora
+  rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
 
   // Modal de preview/confirmación
@@ -141,25 +141,9 @@ export class CampaignFormComponent implements OnInit {
 
   onSubPortfolioChange(): void {
     this.filterableFields = [];
-    this.rangosAntiguedad = [];
     this.selectedRangosAntiguedad = [];
     if (this.selectedSubPortfolioId > 0) {
       this.loadFilterableFields(this.selectedSubPortfolioId);
-      this.loadRangosAntiguedad();
-    }
-  }
-
-  loadRangosAntiguedad(): void {
-    if (this.selectedTenantId > 0 && this.selectedPortfolioId > 0 && this.selectedSubPortfolioId > 0) {
-      this.campaignService.getRangoAntiguedadValues(
-        this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId
-      ).subscribe({
-        next: (valores) => {
-          this.rangosAntiguedad = valores;
-          console.log('Rangos de antigüedad cargados:', valores);
-        },
-        error: (err) => console.error('Error loading rangos de antigüedad:', err)
-      });
     }
   }
 
@@ -359,7 +343,6 @@ export class CampaignFormComponent implements OnInit {
               // Cargar campos filtrables y filtros existentes
               if (campaign.subPortfolioId) {
                 this.loadFilterableFields(campaign.subPortfolioId);
-                this.loadRangosAntiguedad();
               }
               if (campaign.id) {
                 this.loadCampaignFilters(campaign.id);
