@@ -38,6 +38,11 @@ export interface Campaign {
   // Particionado por bloques: intercala contactos de distintos rangos en rondas
   particionadoPorBloques?: boolean;
 
+  // Timestamps de activación/desactivación
+  primeraActivacion?: string;
+  ultimaActivacion?: string;
+  ultimaDesactivacion?: string;
+
   // Estadísticas (solo para lectura)
   totalContacts?: number;
   pendingContacts?: number;
