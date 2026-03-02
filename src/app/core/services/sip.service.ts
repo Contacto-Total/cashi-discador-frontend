@@ -25,11 +25,11 @@ export class SipService {
   private autoAnswerEnabled: boolean = false;  // For admin supervision mode
   private blockIncomingCalls: boolean = false;  // Block incoming calls during ACW/tipification
   private _isRellamadaActive: boolean = false;  // Flag: rellamada en progreso (ignore call events in app.component)
+  public lastHangupCause: string = '';  // Último motivo de cuelgue SIP
 
   public onCallStatus = new EventEmitter<CallState>();
   public onError = new EventEmitter<string>();
   public onRegistered = new EventEmitter<boolean>();
-  public lastHangupCause: string = '';
   public onIncomingCall = new EventEmitter<{ from: string }>();
   public onOutgoingCall = new EventEmitter<{ to: string }>();
 
@@ -864,19 +864,8 @@ export class SipService {
     });
 
     session.on('ended', (data: any) => {
-      // Try to extract Q.850 reason from BYE Reason header
-      let cause = data?.cause || '';
-      try {
-        const reasonHeader = data?.message?.getHeader?.('Reason') || '';
-        if (reasonHeader) {
-          const textMatch = reasonHeader.match(/text="([^"]+)"/);
-          if (textMatch) {
-            cause = textMatch[1];
-          }
-        }
-      } catch (e) { /* ignore parse errors */ }
-      this.lastHangupCause = cause;
-      console.log('📴 Call ended, cause:', cause);
+      this.lastHangupCause = data?.cause || 'BYE';
+      console.log('📴 Call ended, cause:', this.lastHangupCause);
       // Stop ringtone when call ends
       this.stopRingtone();
 
@@ -896,9 +885,8 @@ export class SipService {
     });
 
     session.on('failed', (data: any) => {
-      const cause = data?.cause || '';
-      this.lastHangupCause = cause;
-      console.error('❌ Call failed:', cause, data);
+      this.lastHangupCause = data?.cause || 'Unknown';
+      console.error('❌ Call failed:', data, 'cause:', this.lastHangupCause);
       // Stop ringtone when call fails
       this.stopRingtone();
 

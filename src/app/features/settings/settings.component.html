@@ -8,6 +8,7 @@
 
     <nav class="sidebar-nav">
       <button
+        *ngIf="isAdmin"
         class="nav-item"
         [class.active]="activeSection === 'appearance'"
         (click)="activeSection = 'appearance'"
@@ -45,7 +46,7 @@
   <!-- Content -->
   <main class="settings-content">
     <!-- Appearance Section -->
-    <div class="content-section" *ngIf="activeSection === 'appearance'">
+    <div class="content-section" *ngIf="activeSection === 'appearance' && isAdmin">
       <h2 class="section-title">Apariencia</h2>
       <p class="section-description">Personaliza el aspecto visual de la aplicaci&oacute;n</p>
 

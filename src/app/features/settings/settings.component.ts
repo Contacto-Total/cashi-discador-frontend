@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { FontSizeService } from '../../core/services/font-size.service';
 import { ThemeService, Theme } from '../../shared/services/theme.service';
 import { AudioDeviceService, AudioDevice, AudioLevelData } from '../../core/services/audio-device.service';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-settings',
@@ -16,7 +17,12 @@ import { AudioDeviceService, AudioDevice, AudioLevelData } from '../../core/serv
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   // Active section for sidebar navigation
-  activeSection: 'appearance' | 'font' | 'audio' = 'appearance';
+  activeSection: 'appearance' | 'font' | 'audio' = 'font';
+
+  // Solo ADMIN puede ver la pestaña de apariencia
+  get isAdmin(): boolean {
+    return this.authService.getCurrentUser()?.role === 'ADMIN';
+  }
 
   // Font size - applied (saved)
   appliedFontSize: number = 16;
@@ -60,10 +66,16 @@ export class SettingsComponent implements OnInit, OnDestroy {
   constructor(
     private fontSizeService: FontSizeService,
     private themeService: ThemeService,
-    private audioDeviceService: AudioDeviceService
+    private audioDeviceService: AudioDeviceService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    // Si es ADMIN, mostrar pestaña de apariencia por defecto
+    if (this.isAdmin) {
+      this.activeSection = 'appearance';
+    }
+
     // Load font size settings
     this.minFontSize = this.fontSizeService.getMinSize();
     this.maxFontSize = this.fontSizeService.getMaxSize();

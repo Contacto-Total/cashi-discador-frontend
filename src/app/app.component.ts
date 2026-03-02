@@ -206,6 +206,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         if (user.role === 'ADMIN') {
           this.refreshNotificacionesCount();
         }
+
+        // Forzar modo claro para usuarios no-ADMIN
+        if (user.role !== 'ADMIN') {
+          this.themeService.setTheme('light');
+        }
       } else {
         // Usuario no autenticado - detener servicios
         this.inactivityService.detener();
@@ -428,7 +433,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             const currentState = this.sipService.getCallState();
 
             if (callDuration >= 1000 && currentState === CallState.ACTIVE && !this.hasNavigatedToTypification) {
-              // ✅ CHECK: Si estamos en modo supervisión, NO navegar a collection-management
+              // ✅ CHECK 1: Si estamos en modo supervisión, NO navegar a collection-management
               // La supervisión usa SIP calls pero no deben redirigir al supervisor
               if (this.supervisionService.isSupervisionActive()) {
                 console.log('🔇 [App] Supervisión activa - NO navegando a tipificación');
@@ -475,7 +480,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
             // Esto evita que el agente se quede "pegado" en TIPIFICANDO
             const currentUser = this.authService.getCurrentUser();
             const agentRoles = ['AGENT', 'ASESOR'];
-            if (currentUser && agentRoles.includes(currentUser.role) && !this.router.url.startsWith('/collection-management')) {
+            if (currentUser && agentRoles.includes(currentUser.role)) {
               console.log('🔄 [App] Restaurando estado del agente a DISPONIBLE...');
               this.agentStatusService.finalizarTipificacion(currentUser.id).subscribe({
                 next: () => console.log('✅ [App] Estado del agente restaurado a DISPONIBLE'),
