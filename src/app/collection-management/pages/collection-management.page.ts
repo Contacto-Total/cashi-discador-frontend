@@ -4697,7 +4697,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idCartera: this.selectedPortfolioId || 1,
         idSubcartera: this.selectedSubPortfolioId,
         idTipificacion: finalTypificationId,
-        observaciones: this.managementForm.observaciones,
+        observaciones: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
         metodoContacto: isActiveCallSchedule ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
         canalContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
@@ -4800,7 +4800,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         level3Id: typificationLevel3Id,
         level3Name: level3?.label || null,
 
-        observations: this.managementForm.observaciones,
+        observations: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
 
         // Campos de contexto de gestión
         metodoContacto: isActiveCall ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
@@ -5137,6 +5137,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     return true;
+  }
+
+  /**
+   * Extrae observaciones de los campos dinámicos (tipo textarea)
+   */
+  private getObservacionesFromDynamicFields(): string {
+    const schema = this.dynamicFieldsSchema();
+    const values = this.dynamicFieldValues();
+    if (!schema?.fields || !values) return '';
+
+    // Buscar el primer campo tipo textarea que tenga valor
+    for (const field of schema.fields) {
+      if (field.type === 'textarea' && values[field.id]) {
+        return String(values[field.id]);
+      }
+    }
+    return '';
   }
 
   calculateRemaining(): string {
