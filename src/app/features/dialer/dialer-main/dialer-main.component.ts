@@ -130,6 +130,11 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     this.sipService.onCallStatus.subscribe((state: CallState) => {
       console.log('SIP call state changed:', state);
 
+      // SIP confirmed/accepted → start timer (client answered via SIP)
+      if (state === CallState.ACTIVE && this.callTimer === null) {
+        this.startCallTimer();
+      }
+
       // If call ended and timer never started, client never answered
       if (state === CallState.ENDED && this.currentCall !== null && this.callTimer === null) {
         const cause = this.sipService.lastHangupCause;
