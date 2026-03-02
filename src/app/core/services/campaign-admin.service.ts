@@ -35,6 +35,9 @@ export interface Campaign {
   // Filtro categórico de rango de antigüedad (comma-separated)
   filtroRangoAntiguedad?: string;
 
+  // Particionado por bloques: intercala contactos de distintos rangos en rondas
+  particionadoPorBloques?: boolean;
+
   // Estadísticas (solo para lectura)
   totalContacts?: number;
   pendingContacts?: number;

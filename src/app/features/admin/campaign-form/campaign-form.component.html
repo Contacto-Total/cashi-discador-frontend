@@ -441,6 +441,21 @@
         </div>
       </div>
 
+      <div class="form-group full-width"
+           *ngIf="campaign.ordenarPorCampo && selectedRangosAntiguedad.length > 1"
+           style="margin-top: 12px;">
+        <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input type="checkbox"
+                 [(ngModel)]="campaign.particionadoPorBloques"
+                 name="particionadoPorBloques">
+          <span>Particionado por bloques</span>
+        </label>
+        <small class="help-text">
+          Intercala contactos de los distintos rangos de antigüedad en rondas proporcionales,
+          para que los agentes no marquen un solo tipo de deuda por largo rato.
+        </small>
+      </div>
+
       <div class="ordenamiento-preview" *ngIf="campaign.ordenarPorCampo">
         <lucide-angular name="info" [size]="16"></lucide-angular>
         <span>
