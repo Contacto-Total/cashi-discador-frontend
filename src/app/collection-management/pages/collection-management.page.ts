@@ -415,19 +415,27 @@ import { CallService } from '../../core/services/call.service';
             @if (hasActivePromiseWithPending()) {
               <div class="animate-[slideInDown_0.3s_ease-out]">
                 @for (schedule of activePaymentSchedules(); track schedule.id) {
-                  <div class="bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-gray-900 dark:text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-amber-400 dark:border-amber-500">
+                  <div [class]="hasScheduleEnEvaluacion(schedule)
+                    ? 'bg-gradient-to-r from-purple-500 via-violet-500 to-purple-600 dark:from-purple-600 dark:via-violet-600 dark:to-purple-700 text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-purple-400 dark:border-purple-500'
+                    : 'bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-500 dark:from-amber-600 dark:via-yellow-600 dark:to-orange-600 text-gray-900 dark:text-white rounded-md shadow-md mb-1.5 overflow-hidden border border-amber-400 dark:border-amber-500'">
                     <!-- Header -->
                     <div class="px-3 py-2 bg-black/10 flex items-center justify-between">
                       <div class="flex items-center gap-2">
                         <div class="w-6 h-6 bg-black/20 dark:bg-white/20 rounded flex items-center justify-center">
-                          <lucide-angular name="alert-triangle" [size]="14" class="text-gray-900 dark:text-white"></lucide-angular>
+                          <lucide-angular [name]="hasScheduleEnEvaluacion(schedule) ? 'clock' : 'alert-triangle'" [size]="14" class="text-white"></lucide-angular>
                         </div>
                         <div>
-                          <div class="font-bold text-xs">PROMESA DE PAGO ACTIVA</div>
-                          <div class="text-xs text-gray-700 dark:text-white/80">No puede registrar otra promesa</div>
+                          @if (hasScheduleEnEvaluacion(schedule)) {
+                            <div class="font-bold text-xs">PROMESA EN EVALUACION</div>
+                            <div class="text-xs text-white/80">Pendiente de aprobacion por supervisor</div>
+                          } @else {
+                            <div class="font-bold text-xs">PROMESA DE PAGO ACTIVA</div>
+                            <div class="text-xs text-gray-700 dark:text-white/80">No puede registrar otra promesa</div>
+                          }
                         </div>
                       </div>
                       <div class="flex items-center gap-2">
+                        @if (!hasScheduleEnEvaluacion(schedule)) {
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
                           class="px-2.5 py-1 bg-black/20 dark:bg-white/20 hover:bg-black/30 dark:hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-black/30 dark:border-white/30"
@@ -435,9 +443,10 @@ import { CallService } from '../../core/services/call.service';
                           <lucide-angular name="scan-line" [size]="12"></lucide-angular>
                           Voucher
                         </button>
+                        }
                         <div class="text-right">
                           <div class="text-base font-bold">S/ {{ schedule.totalAmount?.toFixed(2) || '0.00' }}</div>
-                          <div class="text-xs text-gray-700 dark:text-white/80">Total</div>
+                          <div class="text-xs text-white/80">Total</div>
                         </div>
                       </div>
                     </div>
@@ -468,13 +477,19 @@ import { CallService } from '../../core/services/call.service';
                               <span class="bg-red-700 text-white text-xs dark:bg-red-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="alert-triangle" [size]="10"></lucide-angular></span>
                             } @else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
                               <span class="bg-gray-600 text-white text-xs px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="x" [size]="10"></lucide-angular></span>
+                            } @else if (cuota.status === 'EN_EVALUACION') {
+                              <span class="bg-purple-600 text-white text-xs dark:bg-purple-500 px-1 py-0.5 rounded font-semibold flex items-center gap-0.5"><lucide-angular name="clock" [size]="10"></lucide-angular> Evaluacion</span>
                             } @else {
                               <span class="bg-blue-700 text-white text-xs dark:bg-blue-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
                           </div>
                         }
                       </div>
-                      @if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
+                      @if (hasScheduleEnEvaluacion(schedule)) {
+                        <div class="mt-1.5 text-xs text-white/80">
+                          <span class="font-semibold text-white">{{ schedule.cuotasPendientes }}</span> cuota(s) en evaluacion · Esperando aprobacion de supervisor
+                        </div>
+                      } @else if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
                         <div class="mt-1.5 text-xs text-gray-700 dark:text-white/80">
                           <span class="font-semibold text-gray-900 dark:text-white">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold text-gray-900 dark:text-white">{{ formatDate(schedule.nextDueDate) }}</span>
                         </div>
@@ -636,8 +651,46 @@ import { CallService } from '../../core/services/call.service';
 
             <!-- BLOQUEO PROMESA DE PAGO ACTIVA - Mensaje cuando cliente tiene promesa activa -->
             @if (showPromesaActivaBlocking()) {
+              @if (hasEvaluacionPromise()) {
+              <!-- Versión EN_EVALUACION -->
+              <div class="bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 dark:from-purple-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
+                <div class="flex items-center gap-4">
+                  <div class="relative">
+                    <div class="p-3 bg-purple-500 dark:bg-purple-600 rounded-xl shadow-lg">
+                      <lucide-angular name="clock" [size]="28" class="text-white animate-pulse"></lucide-angular>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="text-base font-bold text-purple-800 dark:text-purple-200">
+                      No puede registrar una nueva Promesa de Pago
+                    </h3>
+                    <p class="text-sm text-purple-600 dark:text-purple-300 mt-1">
+                      Este cliente ya tiene una promesa
+                      <span class="font-bold text-purple-700 dark:text-purple-200 bg-purple-100 dark:bg-purple-900/50 px-2 py-0.5 rounded-full">
+                        en evaluacion
+                      </span>
+                      pendiente de aprobacion por supervisor
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-purple-200 dark:border-purple-700 p-3">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="info" [size]="18" class="text-purple-500 dark:text-purple-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div class="text-sm text-purple-700 dark:text-purple-300">
+                      <p class="font-medium">Debe esperar a que el supervisor apruebe o rechace la promesa actual antes de registrar una nueva.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 flex justify-center">
+                  <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-full text-xs font-semibold border border-purple-300 dark:border-purple-600">
+                    <lucide-angular name="lock" [size]="14"></lucide-angular>
+                    Seleccione otra tipificacion para continuar
+                  </span>
+                </div>
+              </div>
+              } @else {
+              <!-- Versión normal: promesa activa con cuotas pendientes -->
               <div class="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 dark:from-red-950/40 dark:via-orange-950/30 dark:to-red-950/40 border-2 border-red-400 dark:border-red-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
-                <!-- Header con icono animado -->
                 <div class="flex items-center gap-4">
                   <div class="relative">
                     <div class="p-3 bg-red-500 dark:bg-red-600 rounded-xl shadow-lg">
@@ -657,8 +710,6 @@ import { CallService } from '../../core/services/call.service';
                     </p>
                   </div>
                 </div>
-
-                <!-- Mensaje de instrucción -->
                 <div class="mt-4 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-red-200 dark:border-red-700 p-3">
                   <div class="flex items-start gap-3">
                     <lucide-angular name="info" [size]="18" class="text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0"></lucide-angular>
@@ -681,8 +732,6 @@ import { CallService } from '../../core/services/call.service';
                     </div>
                   </div>
                 </div>
-
-                <!-- Badge de estado -->
                 <div class="mt-3 flex justify-center">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-xs font-semibold border border-red-300 dark:border-red-600">
                     <lucide-angular name="lock" [size]="14"></lucide-angular>
@@ -690,6 +739,7 @@ import { CallService } from '../../core/services/call.service';
                   </span>
                 </div>
               </div>
+              }
             }
 
             <!-- Schedule Helper - Payment Schedule Information -->
@@ -2208,6 +2258,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   hasActivePromiseWithPending = computed(() => {
     const schedules = this.activePaymentSchedules();
     return schedules && schedules.some((s: any) => s.cuotasPendientes > 0);
+  });
+
+  // Computed: true si alguna promesa activa tiene cuotas EN_EVALUACION
+  hasEvaluacionPromise = computed(() => {
+    const schedules = this.activePaymentSchedules();
+    return schedules && schedules.some((s: any) =>
+      s.installments?.some((c: any) => c.status === 'EN_EVALUACION')
+    );
   });
 
   // ==================== BLOQUEO PROMESA DE PAGO ACTIVA ====================
@@ -3817,6 +3875,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   /**
+   * Verifica si un cronograma específico tiene cuotas EN_EVALUACION
+   */
+  hasScheduleEnEvaluacion(schedule: any): boolean {
+    return schedule.installments?.some((c: any) => c.status === 'EN_EVALUACION') || false;
+  }
+
+  /**
    * Llama al backend para verificar si el cliente puede crear promesa de continuidad
    */
   private verificarContinuidadCliente() {
@@ -4653,7 +4718,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       if (hasPendingInstallments) {
         this.saving.set(false);
-        alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa de pago activa con cuotas pendientes.\n\nDebe esperar a que se completen o cancelen las cuotas pendientes antes de registrar una nueva promesa.');
+        const hasEnEvaluacion = activeSchedules.some(s => s.installments?.some((c: any) => c.status === 'EN_EVALUACION'));
+        if (hasEnEvaluacion) {
+          alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa en evaluacion pendiente de aprobacion por supervisor.\n\nDebe esperar a que el supervisor apruebe o rechace la promesa actual.');
+        } else {
+          alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa de pago activa con cuotas pendientes.\n\nDebe esperar a que se completen o cancelen las cuotas pendientes antes de registrar una nueva promesa.');
+        }
         return;
       }
     }
