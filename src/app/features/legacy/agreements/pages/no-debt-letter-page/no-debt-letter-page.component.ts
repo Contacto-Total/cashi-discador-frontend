@@ -17,6 +17,7 @@ export class NoDebtLetterPageComponent {
   letterForm: FormGroup;
   isDarkMode = false;
 
+  activeTab: 'nuevo' | 'antiguo' = 'nuevo';
   isLoading = false;
   mostrarDocumento = false;
 
@@ -70,6 +71,13 @@ export class NoDebtLetterPageComponent {
     return formatted.replace('septiembre', 'setiembre');
   }
 
+  switchTab(tab: 'nuevo' | 'antiguo') {
+    if (this.activeTab === tab) return;
+    this.activeTab = tab;
+    this.limpiarCampos();
+    this.searchForm.reset();
+  }
+
   buscarPorDni() {
     if (this.searchForm.invalid) {
       this.searchForm.markAllAsTouched();
@@ -81,6 +89,43 @@ export class NoDebtLetterPageComponent {
     this.searchForm.reset();
     this.isLoading = true;
 
+    if (this.activeTab === 'nuevo') {
+      this.buscarNuevoSistema(dni);
+    } else {
+      this.buscarAntiguoSistema(dni);
+    }
+  }
+
+  private buscarNuevoSistema(dni: string) {
+    this.agreementsService.getAgreementDataNuevo(dni).subscribe({
+      next: (response: any) => {
+        this.letterForm.patchValue({
+          nombreCompleto: response.nombreCompleto,
+          dni: response.documento || dni,
+          numeroCuenta: response.numeroCuenta,
+          fechaActual: this.formatDate(new Date()),
+          fechaCancelacion: this.formatDate(new Date())
+        });
+
+        this.mostrarDocumento = true;
+        this.isLoading = false;
+        this.showToast('success', 'Datos cargados correctamente (sistema nuevo)');
+      },
+      error: (error: any) => {
+        this.isLoading = false;
+
+        if (error.status === 404) {
+          this.showToast('error', 'Cliente no encontrado en el sistema.');
+        } else if (error.status === 422) {
+          this.showToast('warning', error.message || 'El cliente no tiene promesa de pago registrada.');
+        } else {
+          this.showToast('error', 'Error al obtener datos del cliente.');
+        }
+      }
+    });
+  }
+
+  private buscarAntiguoSistema(dni: string) {
     this.agreementsService.getAgreementData(dni).subscribe({
       next: (response) => {
         this.letterForm.patchValue({
@@ -95,7 +140,7 @@ export class NoDebtLetterPageComponent {
         this.isLoading = false;
         this.showToast('success', 'Datos cargados correctamente');
       },
-      error: (error) => {
+      error: (error: any) => {
         this.isLoading = false;
 
         if (error.status === 404) {
@@ -129,7 +174,11 @@ export class NoDebtLetterPageComponent {
       rucNsoluciones: this.rucNsoluciones
     };
 
-    this.agreementsService.downloadNoDebtLetter(request).subscribe({
+    const download$ = this.activeTab === 'nuevo'
+      ? this.agreementsService.downloadNoDebtLetterNuevo(request)
+      : this.agreementsService.downloadNoDebtLetter(request);
+
+    download$.subscribe({
       next: (blob) => {
         this.downloadFile(blob, `CARTA_NO_ADEUDO_${formValue.dni}.pdf`);
         this.isLoading = false;

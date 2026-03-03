@@ -47,6 +47,18 @@
       </div>
     </div>
 
+    <!-- Tabs -->
+    <div class="tabs-container">
+      <button class="tab-btn" [class.active]="activeTab === 'nuevo'" (click)="switchTab('nuevo')">
+        <lucide-angular name="database" [size]="16"></lucide-angular>
+        Nuevo Sistema
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'antiguo'" (click)="switchTab('antiguo')">
+        <lucide-angular name="archive" [size]="16"></lucide-angular>
+        Sistema Antiguo
+      </button>
+    </div>
+
     <!-- Búsqueda -->
     <form [formGroup]="searchForm" class="flex items-center gap-3">
       <div class="flex-1 max-w-xs">

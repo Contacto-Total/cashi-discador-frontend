@@ -11,6 +11,7 @@ import { AgreementDataResponse } from '../models/agreement-data.response';
 export class AgreementsService {
 
   baseUrl = environment.webServiceUrl + '/cartas';
+  newBaseUrl = environment.apiUrl + '/cartas';
 
   constructor(private http: HttpClient) { }
 
@@ -54,5 +55,16 @@ export class AgreementsService {
 
   getAgreementData(dni: string) {
     return this.http.get<AgreementDataResponse>(this.baseUrl + `/datos-cliente/${dni}`, this.httpOptions);
+  }
+
+  getAgreementDataNuevo(dni: string) {
+    return this.http.get<any>(this.newBaseUrl + `/datos-cliente-nuevo/${dni}`, this.httpOptions)
+      .pipe(catchError(this.handleError));
+  }
+
+  downloadNoDebtLetterNuevo(request: any) {
+    return this.http.post(this.newBaseUrl + '/carta-no-adeudo', request, {
+      ...this.fileHttpOptions, responseType: 'blob'
+    }).pipe(retry(2), catchError(this.handleError));
   }
 }
