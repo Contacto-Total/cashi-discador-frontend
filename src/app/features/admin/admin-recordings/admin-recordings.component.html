@@ -151,12 +151,12 @@
             <th></th>
             <th></th>
             <th></th>
+            <th></th>
             <th>
-              <select [(ngModel)]="filterEstado" (change)="applyFilters()">
-                <option *ngFor="let estado of getUniqueEstados()" [value]="estado.value">{{ estado.label }}</option>
+              <select [(ngModel)]="filterTipificacion" (change)="applyFilters()">
+                <option *ngFor="let tip of getUniqueTipificaciones()" [value]="tip.value">{{ tip.label }}</option>
               </select>
             </th>
-            <th></th>
             <th class="col-action">
               <button class="btn-clear-filters" (click)="clearFilters()" title="Limpiar filtros">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
@@ -195,13 +195,13 @@
               Duración
               <span class="sort-icon" *ngIf="sortField === 'duracionSegundos'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
-            <th (click)="sort('estadoLlamada')" class="sortable">
-              Estado
-              <span class="sort-icon" *ngIf="sortField === 'estadoLlamada'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
-            </th>
             <th (click)="sort('resultado')" class="sortable">
               Resultado
               <span class="sort-icon" *ngIf="sortField === 'resultado'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+            </th>
+            <th (click)="sort('tipificacion')" class="sortable">
+              Tipificación
+              <span class="sort-icon" *ngIf="sortField === 'tipificacion'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
             </th>
             <th class="col-action">Audio</th>
           </tr>
@@ -217,12 +217,8 @@
             <td class="cell-mono">{{ formatDate(recording.fechaInicio) }}</td>
             <td class="cell-mono">{{ formatTime(recording.fechaInicio) }}</td>
             <td class="cell-mono">{{ formatDuration(recording.duracionSegundos) }}</td>
-            <td>
-              <span class="status-badge" [ngClass]="getEstadoClass(recording.estadoLlamada)">
-                {{ recording.estadoLlamada }}
-              </span>
-            </td>
             <td class="cell-truncate" [title]="recording.resultado">{{ recording.resultado || '-' }}</td>
+            <td class="cell-truncate" [title]="recording.tipificacion">{{ recording.tipificacion || '-' }}</td>
             <td class="col-action">
               <button class="btn-audio" (click)="downloadAudio(recording)"
                       [disabled]="downloadingUuid === recording.uuidLlamada"

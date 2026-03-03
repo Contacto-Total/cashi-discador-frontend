@@ -65,8 +65,8 @@ export class AdminRecordingsComponent implements OnInit {
   filterDocumento: string = '';
   filterTelefono: string = '';
   filterCampana: string = '';
-  filterEstado: string = '';
   filterAgente: string = '';
+  filterTipificacion: string = '';
 
   // Search type
   selectedTipoBusqueda: string = 'fechas';
@@ -264,11 +264,11 @@ export class AdminRecordingsComponent implements OnInit {
     if (this.filterCampana) {
       filtered = filtered.filter(r => r.campana?.toLowerCase().includes(this.filterCampana.toLowerCase()));
     }
-    if (this.filterEstado) {
-      filtered = filtered.filter(r => r.estadoLlamada === this.filterEstado);
-    }
     if (this.filterAgente) {
       filtered = filtered.filter(r => r.agente?.toLowerCase().includes(this.filterAgente.toLowerCase()));
+    }
+    if (this.filterTipificacion) {
+      filtered = filtered.filter(r => r.tipificacion === this.filterTipificacion);
     }
 
     this.filteredRecordings = filtered;
@@ -280,8 +280,8 @@ export class AdminRecordingsComponent implements OnInit {
     this.filterDocumento = '';
     this.filterTelefono = '';
     this.filterCampana = '';
-    this.filterEstado = '';
     this.filterAgente = '';
+    this.filterTipificacion = '';
     this.applyFilters();
   }
 
@@ -424,21 +424,11 @@ export class AdminRecordingsComponent implements OnInit {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  getEstadoClass(estado: string): string {
-    switch (estado) {
-      case 'FINALIZADA': return 'status-success';
-      case 'EN_CURSO': case 'CONECTADA': return 'status-info';
-      case 'NO_CONTESTADA': case 'SIN_RESPUESTA': return 'status-warning';
-      case 'FALLIDA': case 'ABANDONADA': return 'status-danger';
-      default: return 'status-default';
-    }
-  }
-
-  getUniqueEstados(): SelectOption[] {
-    const estados = [...new Set(this.recordings.map(r => r.estadoLlamada).filter(e => e != null))];
+  getUniqueTipificaciones(): SelectOption[] {
+    const tips = [...new Set(this.recordings.map(r => r.tipificacion).filter(t => t != null && t !== ''))];
     return [
       { label: 'Todos', value: '' },
-      ...estados.map(e => ({ label: e, value: e }))
+      ...tips.sort().map(t => ({ label: t, value: t }))
     ];
   }
 }

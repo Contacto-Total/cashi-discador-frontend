@@ -16,6 +16,7 @@ export interface RecordingDTO {
   duracionSegundos: number;
   estadoLlamada: string;
   resultado: string;
+  tipificacion: string;
 }
 
 @Injectable({
