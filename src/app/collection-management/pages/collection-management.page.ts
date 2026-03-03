@@ -328,8 +328,8 @@ import { CallService } from '../../core/services/call.service';
                       </div>
                     }
                   </div>
-                  <!-- Botón Rellamar -->
-                  <div class="relative">
+                  <!-- Botón Rellamar (oculto temporalmente) -->
+                  <!-- <div class="relative">
                     @if (!rellamadaCallActive()) {
                       <button
                         (click)="canRellamar() && showRellamadaDropdown.set(!showRellamadaDropdown())"
@@ -377,7 +377,7 @@ import { CallService } from '../../core/services/call.service';
                         }
                       </div>
                     }
-                  </div>
+                  </div> -->
                 </div>
               </div>
             </div>
@@ -2612,14 +2612,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     subPortfolioId: number
   ) {
     console.log('🔍 [MANUAL] Buscando cliente por documento:', documento);
+    this.isLoadingCustomer.set(true);
 
     // Establecer el contexto de tenant/portfolio/subportfolio para las tipificaciones
     this.selectedTenantId = tenantId;
     this.selectedPortfolioId = portfolioId;
     this.selectedSubPortfolioId = subPortfolioId;
+
+    // Cargar configs en paralelo (no bloquean la búsqueda del cliente)
     this.reloadTypifications();
     this.loadCustomerOutputConfig();
-    this.loadFirstInstallmentConfig(); // Cargar config de primera cuota para esta subcartera
+    this.loadFirstInstallmentConfig();
 
     // Buscar cliente en la tabla dinámica
     this.http.get<any>(`${environment.apiUrl}/client-search/find`, {
@@ -2651,6 +2654,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.isTipifying.set(true);
         } else {
           console.warn('⚠️ [MANUAL] Cliente no encontrado');
+          this.isLoadingCustomer.set(false);
         }
       }
     });
