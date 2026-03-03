@@ -9,7 +9,9 @@ import {
   AgentProductivityResponse,
   ProductivitySummary,
   AgentMetrics,
-  ChartData
+  ChartData,
+  CorteHorarioResponse,
+  AgentCorte
 } from '../../../core/services/report.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
@@ -19,6 +21,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 Chart.register(...registerables);
 
 type PeriodType = 'today' | 'week' | 'month' | 'lastMonth' | 'year' | 'custom';
+type TabType = 'productividad' | 'corteHorario';
 
 @Component({
   selector: 'app-agent-productivity',
@@ -43,12 +46,17 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   customDateFrom: string = '';
   customDateTo: string = '';
 
+  // Tab activo
+  activeTab: TabType = 'productividad';
+
   // Estado
   loading = false;
+  loadingCorte = false;
   error: string | null = null;
 
   // Datos
   productivityData: AgentProductivityResponse | null = null;
+  corteHorarioData: CorteHorarioResponse | null = null;
 
   // Charts
   @ViewChild('barChart') barChartRef!: ElementRef<HTMLCanvasElement>;
@@ -202,6 +210,11 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
         this.loading = false;
       }
     });
+
+    // Recargar corte horario si está en ese tab o si ya se cargó antes
+    if (this.activeTab === 'corteHorario' || this.corteHorarioData) {
+      this.loadCorteHorario();
+    }
   }
 
   private destroyCharts(): void {
@@ -457,5 +470,63 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
       case 'custom': return 'Personalizado';
       default: return '';
     }
+  }
+
+  // Tab management
+  switchTab(tab: TabType): void {
+    this.activeTab = tab;
+    if (tab === 'corteHorario' && !this.corteHorarioData) {
+      this.loadCorteHorario();
+    }
+  }
+
+  loadCorteHorario(): void {
+    this.loadingCorte = true;
+
+    // Corte horario siempre usa la fecha de hoy
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const fecha = `${yyyy}-${mm}-${dd}`;
+
+    this.reportService.getCorteHorario(
+      fecha,
+      this.selectedTenantId || undefined,
+      this.selectedCarteraId || undefined,
+      this.selectedSubcarteraId || undefined
+    ).subscribe({
+      next: (data) => {
+        this.corteHorarioData = data;
+        this.loadingCorte = false;
+      },
+      error: (err) => {
+        console.error('Error loading corte horario:', err);
+        this.loadingCorte = false;
+      }
+    });
+  }
+
+  get corteAgents(): AgentCorte[] {
+    return this.corteHorarioData?.agents || [];
+  }
+
+  // Totales para corte horario
+  corteTotal(field: string): number {
+    return this.corteAgents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
+  }
+
+  corteTotalMoney(field: string): string {
+    const total = this.corteAgents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
+    return total.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  shortName(name: string): string {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return parts[0] + ' ' + parts[parts.length - 1].charAt(0) + '.';
+    }
+    return name;
   }
 }

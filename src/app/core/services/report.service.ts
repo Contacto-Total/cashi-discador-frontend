@@ -84,6 +84,32 @@ export interface AgentMetrics {
   promesasVencidas: number;
 }
 
+// Corte Horario interfaces
+export interface CorteHorarioResponse {
+  agents: AgentCorte[];
+}
+
+export interface AgentCorte {
+  idAgente: number;
+  nombreAgente: string;
+  gestiones12: number;
+  gestiones15: number;
+  gestiones17: number;
+  gestiones18: number;
+  cd12: number;
+  cd15: number;
+  cd17: number;
+  cd18: number;
+  pdpCant12: number;
+  pdpCant15: number;
+  pdpCant17: number;
+  pdpCant18: number;
+  pdpMonto12: number;
+  pdpMonto15: number;
+  pdpMonto17: number;
+  pdpMonto18: number;
+}
+
 export interface ChartData {
   promesasPorDia: TimeSeriesData[];
   tipificacionesDistribucion: { [key: string]: number };
@@ -163,5 +189,24 @@ export class ReportService {
     if (subcarteraId) params = params.set('subcarteraId', subcarteraId.toString());
 
     return this.http.get<AgentProductivityResponse>(`${this.apiUrl}/agent-productivity`, { params });
+  }
+
+  /**
+   * Obtiene métricas de corte horario por agente
+   */
+  getCorteHorario(
+    fecha: string,
+    tenantId?: number,
+    carteraId?: number,
+    subcarteraId?: number
+  ): Observable<CorteHorarioResponse> {
+    let params = new HttpParams()
+      .set('fecha', fecha);
+
+    if (tenantId) params = params.set('tenantId', tenantId.toString());
+    if (carteraId) params = params.set('carteraId', carteraId.toString());
+    if (subcarteraId) params = params.set('subcarteraId', subcarteraId.toString());
+
+    return this.http.get<CorteHorarioResponse>(`${this.apiUrl}/corte-horario`, { params });
   }
 }

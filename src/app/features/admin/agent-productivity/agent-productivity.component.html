@@ -15,7 +15,6 @@
   <!-- Filtros -->
   <div class="filters-section">
     <div class="filters-row">
-      <!-- Inquilino -->
       <div class="filter-group">
         <label>Inquilino</label>
         <select [(ngModel)]="selectedTenantId" (change)="onTenantChange()">
@@ -23,8 +22,6 @@
           <option *ngFor="let tenant of tenants" [ngValue]="tenant.id">{{ tenant.tenantName }}</option>
         </select>
       </div>
-
-      <!-- Cartera -->
       <div class="filter-group">
         <label>Cartera</label>
         <select [(ngModel)]="selectedCarteraId" (change)="onCarteraChange()" [disabled]="!selectedTenantId">
@@ -32,8 +29,6 @@
           <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id">{{ portfolio.portfolioName }}</option>
         </select>
       </div>
-
-      <!-- Subcartera -->
       <div class="filter-group">
         <label>Subcartera</label>
         <select [(ngModel)]="selectedSubcarteraId" [disabled]="!selectedCarteraId">
@@ -41,8 +36,6 @@
           <option *ngFor="let sub of subPortfolios" [ngValue]="sub.id">{{ sub.subPortfolioName }}</option>
         </select>
       </div>
-
-      <!-- Período -->
       <div class="filter-group">
         <label>Periodo</label>
         <select [(ngModel)]="selectedPeriod" (change)="onPeriodChange()">
@@ -54,8 +47,6 @@
           <option value="custom">Personalizado</option>
         </select>
       </div>
-
-      <!-- Fechas personalizadas -->
       <ng-container *ngIf="selectedPeriod === 'custom'">
         <div class="filter-group">
           <label>Desde</label>
@@ -66,8 +57,6 @@
           <input type="date" [(ngModel)]="customDateTo">
         </div>
       </ng-container>
-
-      <!-- Botón buscar -->
       <div class="filter-group filter-action">
         <button class="btn-primary" (click)="loadData()" [disabled]="loading">
           <lucide-angular name="search" [size]="16"></lucide-angular>
@@ -77,8 +66,20 @@
     </div>
   </div>
 
+  <!-- Tabs -->
+  <div class="tabs-container">
+    <button class="tab-btn" [class.active]="activeTab === 'productividad'" (click)="switchTab('productividad')">
+      <lucide-angular name="bar-chart-3" [size]="16"></lucide-angular>
+      Productividad
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'corteHorario'" (click)="switchTab('corteHorario')">
+      <lucide-angular name="clock" [size]="16"></lucide-angular>
+      Corte Horario
+    </button>
+  </div>
+
   <!-- Loading -->
-  <div class="loading-overlay" *ngIf="loading">
+  <div class="loading-overlay" *ngIf="loading && activeTab === 'productividad'">
     <div class="loading-spinner">
       <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
       <span>Cargando datos...</span>
@@ -91,8 +92,8 @@
     <span>{{ error }}</span>
   </div>
 
-  <!-- Contenido -->
-  <ng-container *ngIf="!loading && !error && productivityData">
+  <!-- ========== TAB 1: PRODUCTIVIDAD ========== -->
+  <ng-container *ngIf="activeTab === 'productividad' && !loading && !error && productivityData">
     <!-- KPIs -->
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -107,7 +108,6 @@
           </span>
         </div>
       </div>
-
       <div class="kpi-card">
         <div class="kpi-icon green">
           <lucide-angular name="handshake" [size]="24"></lucide-angular>
@@ -120,7 +120,6 @@
           </span>
         </div>
       </div>
-
       <div class="kpi-card">
         <div class="kpi-icon purple">
           <lucide-angular name="banknote" [size]="24"></lucide-angular>
@@ -133,14 +132,13 @@
           </span>
         </div>
       </div>
-
       <div class="kpi-card">
         <div class="kpi-icon orange">
           <lucide-angular name="percent" [size]="24"></lucide-angular>
         </div>
         <div class="kpi-content">
           <span class="kpi-value">{{ summary?.efectividadProyeccion | number:'1.1-1' }}%</span>
-          <span class="kpi-label">% Efectividad Proyección</span>
+          <span class="kpi-label">% Efectividad Proyeccion</span>
           <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividadProyeccion)">
             {{ formatPercent(summary?.cambioEfectividadProyeccion) }}
           </span>
@@ -160,49 +158,12 @@
       </div>
     </div>
 
-    <!-- Gráficos -->
-    <div class="charts-grid">
-      <!-- Gráfico de barras -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>Top Agentes por Promesas</h3>
-          <span class="chart-subtitle">{{ getPeriodLabel() }}</span>
-        </div>
-        <div class="chart-container">
-          <canvas #barChart></canvas>
-        </div>
-      </div>
-
-      <!-- Gráfico de líneas -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3>Tendencia de Promesas</h3>
-          <span class="chart-subtitle">Por dia</span>
-        </div>
-        <div class="chart-container">
-          <canvas #lineChart></canvas>
-        </div>
-      </div>
-
-      <!-- Gráfico de dona -->
-      <div class="chart-card chart-full">
-        <div class="chart-header">
-          <h3>Distribucion de Tipificaciones</h3>
-          <span class="chart-subtitle">Por categoria</span>
-        </div>
-        <div class="chart-container doughnut-container">
-          <canvas #doughnutChart></canvas>
-        </div>
-      </div>
-    </div>
-
     <!-- Tabla de agentes -->
     <div class="table-card">
       <div class="table-header">
         <h3>Detalle por Agente</h3>
         <span class="agent-count">{{ agents.length }} agentes</span>
       </div>
-
       <div class="table-wrapper">
         <table class="agents-table">
           <thead>
@@ -211,11 +172,11 @@
               <th class="col-agent">Asesor</th>
               <th class="col-num">Gestiones</th>
               <th class="col-num">Promesas</th>
-              <th class="col-money">Proyección Día</th>
+              <th class="col-money">Proyeccion Dia</th>
               <th class="col-money">Proyectado Total</th>
               <th class="col-money">Recaudo</th>
-              <th class="col-pct" title="(Recaudo / Proyección) × 100">% Efectividad Proyección</th>
-              <th class="col-pct" title="(Promesas / Gestiones) × 100">% Efectividad General</th>
+              <th class="col-pct" title="(Recaudo / Proyeccion) x 100">% Efectividad Proyeccion</th>
+              <th class="col-pct" title="(Promesas / Gestiones) x 100">% Efectividad General</th>
               <th class="col-trend">Tendencia</th>
             </tr>
           </thead>
@@ -260,12 +221,183 @@
           </tbody>
         </table>
       </div>
-
-      <!-- Empty state -->
       <div class="empty-state" *ngIf="agents.length === 0">
         <lucide-angular name="users" [size]="48"></lucide-angular>
         <p>No hay datos de agentes para el periodo seleccionado</p>
       </div>
     </div>
+  </ng-container>
+
+  <!-- ========== TAB 2: CORTE HORARIO ========== -->
+  <ng-container *ngIf="activeTab === 'corteHorario'">
+    <div class="loading-overlay" *ngIf="loadingCorte">
+      <div class="loading-spinner">
+        <lucide-angular name="loader" [size]="32" class="spin"></lucide-angular>
+        <span>Cargando corte horario...</span>
+      </div>
+    </div>
+
+    <ng-container *ngIf="!loadingCorte">
+      <div class="corte-grid">
+        <!-- GESTIONES -->
+        <div class="corte-card">
+          <div class="corte-title">GESTIONES</div>
+          <table class="corte-table">
+            <thead>
+              <tr>
+                <th>ASESOR</th>
+                <th>12</th>
+                <th>3</th>
+                <th>5</th>
+                <th>CIERRE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of corteAgents">
+                <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
+                <td>{{ a.gestiones12 }}</td>
+                <td>{{ a.gestiones15 }}</td>
+                <td>{{ a.gestiones17 }}</td>
+                <td class="corte-cierre">{{ a.gestiones18 }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corte-agent"><strong>TOTAL</strong></td>
+                <td><strong>{{ corteTotal('gestiones12') }}</strong></td>
+                <td><strong>{{ corteTotal('gestiones15') }}</strong></td>
+                <td><strong>{{ corteTotal('gestiones17') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('gestiones18') }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- CD -->
+        <div class="corte-card">
+          <div class="corte-title">CD</div>
+          <table class="corte-table">
+            <thead>
+              <tr>
+                <th>ASESOR</th>
+                <th>12</th>
+                <th>3</th>
+                <th>5</th>
+                <th>CIERRE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of corteAgents">
+                <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
+                <td>{{ a.cd12 }}</td>
+                <td>{{ a.cd15 }}</td>
+                <td>{{ a.cd17 }}</td>
+                <td class="corte-cierre">{{ a.cd18 }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corte-agent"><strong>TOTAL</strong></td>
+                <td><strong>{{ corteTotal('cd12') }}</strong></td>
+                <td><strong>{{ corteTotal('cd15') }}</strong></td>
+                <td><strong>{{ corteTotal('cd17') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('cd18') }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- PDP CANTIDAD -->
+        <div class="corte-card">
+          <div class="corte-title">PDP CANTIDAD</div>
+          <table class="corte-table">
+            <thead>
+              <tr>
+                <th>ASESOR</th>
+                <th>12</th>
+                <th>3</th>
+                <th>5</th>
+                <th>CIERRE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of corteAgents">
+                <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
+                <td>{{ a.pdpCant12 }}</td>
+                <td>{{ a.pdpCant15 }}</td>
+                <td>{{ a.pdpCant17 }}</td>
+                <td class="corte-cierre">{{ a.pdpCant18 }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corte-agent"><strong>TOTAL</strong></td>
+                <td><strong>{{ corteTotal('pdpCant12') }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant15') }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant17') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant18') }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- PDP MONTO -->
+        <div class="corte-card">
+          <div class="corte-title">PDP MONTO</div>
+          <table class="corte-table">
+            <thead>
+              <tr>
+                <th>ASESOR</th>
+                <th>12</th>
+                <th>3</th>
+                <th>5</th>
+                <th>CIERRE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of corteAgents">
+                <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
+                <td>{{ a.pdpMonto12 | number:'1.0-0' }}</td>
+                <td>{{ a.pdpMonto15 | number:'1.0-0' }}</td>
+                <td>{{ a.pdpMonto17 | number:'1.0-0' }}</td>
+                <td class="corte-cierre">{{ a.pdpMonto18 | number:'1.0-0' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corte-agent"><strong>TOTAL</strong></td>
+                <td><strong>{{ corteTotalMoney('pdpMonto12') }}</strong></td>
+                <td><strong>{{ corteTotalMoney('pdpMonto15') }}</strong></td>
+                <td><strong>{{ corteTotalMoney('pdpMonto17') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotalMoney('pdpMonto18') }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <!-- TICKET PROMEDIO (placeholder) -->
+        <div class="corte-card corte-placeholder">
+          <div class="corte-title">TICKET PROMEDIO</div>
+          <div class="corte-empty">
+            <lucide-angular name="construction" [size]="32"></lucide-angular>
+            <span>Proximamente</span>
+          </div>
+        </div>
+
+        <!-- TASA DE CIERRE (placeholder) -->
+        <div class="corte-card corte-placeholder">
+          <div class="corte-title">TASA DE CIERRE</div>
+          <div class="corte-empty">
+            <lucide-angular name="construction" [size]="32"></lucide-angular>
+            <span>Proximamente</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="corteAgents.length === 0 && !loadingCorte">
+        <lucide-angular name="clock" [size]="48"></lucide-angular>
+        <p>No hay datos de corte horario para hoy</p>
+      </div>
+    </ng-container>
   </ng-container>
 </div>
