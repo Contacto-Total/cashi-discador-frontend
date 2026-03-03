@@ -130,7 +130,7 @@ export class AuthService {
           email: response.email,
           firstName: firstName,
           lastName: lastName,
-          role: (response.roles?.[0] || 'AGENT') as UserRole,
+          role: this.mapRoleToBase(response.roles?.[0]) as UserRole,
           sipExtension: response.extensionSip,
           sipPassword: response.sipPassword,
           active: true,
@@ -160,6 +160,18 @@ export class AuthService {
 
     // Reiniciar verificación de token después de logout
     this.startTokenCheck();
+  }
+
+  /**
+   * Maps non-standard roles to base roles (ADMIN, SUPERVISOR, AGENT).
+   * Any role not matching ADMIN or SUPERVISOR is treated as AGENT.
+   */
+  private mapRoleToBase(role?: string): string {
+    if (!role) return 'AGENT';
+    const upper = role.toUpperCase();
+    if (upper === 'ADMIN') return 'ADMIN';
+    if (upper === 'SUPERVISOR' || upper === 'COORDINADOR') return 'SUPERVISOR';
+    return 'AGENT';
   }
 
   isAuthenticated(): boolean {
