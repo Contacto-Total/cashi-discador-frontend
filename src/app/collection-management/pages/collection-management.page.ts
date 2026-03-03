@@ -6030,11 +6030,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Muestra el modal de confirmación para generar Carta de Acuerdo después de guardar promesa
    */
   private mostrarModalGenerarCarta(idGestion: number, contactLabel: string, managementLabel: string): void {
+    const documentoCliente = this.customerData()?.numero_documento || '';
     const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
       width: 'auto',
       disableClose: true,
       panelClass: 'carta-dialog-panel',
-      data: { idGestion }
+      data: { idGestion, documentoCliente }
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -6063,7 +6064,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
       next: (blob) => {
-        this.cartaAcuerdoService.descargarPdf(blob, `carta_acuerdo_${idGestion}.pdf`);
+        const docCliente = this.customerData()?.numero_documento || idGestion;
+        this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${docCliente}.pdf`);
         console.log('✅ Carta de Acuerdo generada exitosamente');
         alert('✅ Carta de Acuerdo generada exitosamente');
         this.onSaveSuccess(contactLabel, managementLabel);

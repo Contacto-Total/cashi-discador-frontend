@@ -9,6 +9,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 
 export interface ConfirmCartaDialogData {
   idGestion: number;
+  documentoCliente?: string;
 }
 
 @Component({
@@ -332,7 +333,8 @@ export class ConfirmCartaDialogComponent implements OnInit, OnDestroy {
     this.generando.set(true);
     this.cartaAcuerdoService.generarCarta(this.data.idGestion, user.id).subscribe({
       next: (blob) => {
-        this.cartaAcuerdoService.descargarPdf(blob, `carta_acuerdo_${this.data.idGestion}.pdf`);
+        const suffix = this.data.documentoCliente || this.data.idGestion;
+        this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${suffix}.pdf`);
         this.generando.set(false);
         this.dialogRef.close('generated');
       },

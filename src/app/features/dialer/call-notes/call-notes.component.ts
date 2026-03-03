@@ -505,7 +505,7 @@ export class CallNotesComponent implements OnInit {
               console.log('Payment schedule created - ID:', record.id, '- Cuotas:', record.totalCuotas, '- Estado:', record.estadoPago);
               // Solo mostrar modal de carta de acuerdo si el estado es PENDIENTE (no EN_EVALUACION)
               if (record.estadoPago === 'PENDIENTE' && this.paymentScheduleConfig?.generaCartaAcuerdo) {
-                this.mostrarModalGenerarCarta(record.id, user.id);
+                this.mostrarModalGenerarCarta(record.id, user.id, record.documentoCliente);
               } else {
                 // Si está EN_EVALUACION o no genera carta, finalizar directamente
                 if (record.estadoPago === 'EN_EVALUACION') {
@@ -644,12 +644,12 @@ export class CallNotesComponent implements OnInit {
    * @param idGestion ID de la gestión recién creada
    * @param userId ID del usuario (opcional, si se pasa se finaliza tipificación después del modal)
    */
-  mostrarModalGenerarCarta(idGestion: number, userId?: number): void {
+  mostrarModalGenerarCarta(idGestion: number, userId?: number, documentoCliente?: string): void {
     const dialogRef = this.dialog.open(ConfirmCartaDialogComponent, {
       width: 'auto',
       disableClose: true,
       panelClass: 'carta-dialog-panel',
-      data: { idGestion }
+      data: { idGestion, documentoCliente }
     });
 
     dialogRef.afterClosed().subscribe(result => {
