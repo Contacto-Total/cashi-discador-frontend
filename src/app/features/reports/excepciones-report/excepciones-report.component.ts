@@ -219,8 +219,14 @@ export class ExcepcionesReportComponent implements OnInit {
     const hace30Dias = new Date();
     hace30Dias.setDate(hace30Dias.getDate() - 30);
 
-    this.filtroFechaDesde = hace30Dias.toISOString().split('T')[0];
-    this.filtroFechaHasta = hoy.toISOString().split('T')[0];
+    const formatDate = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    this.filtroFechaDesde = formatDate(hace30Dias);
+    this.filtroFechaHasta = formatDate(hoy);
 
     this.buscar();
   }

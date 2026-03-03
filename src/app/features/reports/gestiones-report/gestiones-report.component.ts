@@ -394,8 +394,12 @@ export class GestionesReportComponent implements OnInit {
 
   ngOnInit(): void {
     const today = new Date();
-    this.filtros.fechaDesde = today.toISOString().split('T')[0];
-    this.filtros.fechaHasta = today.toISOString().split('T')[0];
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    this.filtros.fechaDesde = todayStr;
+    this.filtros.fechaHasta = todayStr;
 
     this.comisionesService.obtenerInquilinos().subscribe({
       next: (data) => this.proveedores.set(data),

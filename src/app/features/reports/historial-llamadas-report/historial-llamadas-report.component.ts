@@ -465,9 +465,13 @@ export class HistorialLlamadasReportComponent implements OnInit {
 
   ngOnInit(): void {
     // Establecer fecha por defecto (hoy)
-    const hoy = new Date().toISOString().split('T')[0];
-    this.filtros.fechaDesde = hoy;
-    this.filtros.fechaHasta = hoy;
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    const hoyStr = `${yyyy}-${mm}-${dd}`;
+    this.filtros.fechaDesde = hoyStr;
+    this.filtros.fechaHasta = hoyStr;
     this.buscar();
   }
 
