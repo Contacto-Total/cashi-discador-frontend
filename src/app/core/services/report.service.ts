@@ -72,6 +72,7 @@ export interface AgentMetrics {
   totalPromesas: number;
   montoPromesas: number;
   proyeccion: number;
+  proyeccionTotal: number;
   recaudo: number;
   efectividadProyeccion: number;
   efectividadGeneral: number;
