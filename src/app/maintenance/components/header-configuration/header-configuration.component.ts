@@ -539,11 +539,11 @@ interface DetectedColumn {
                           (ngModelChange)="onFieldDefinitionSelect()"
                           [disabled]="!!formData.id"
                           class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <option [value]="0">Sin asociar - Campo personalizado</option>
+                    <option [ngValue]="0">Sin asociar - Campo personalizado</option>
                     @for (group of groupedFieldDefinitions(); track group.table) {
                       <optgroup [label]="group.label">
                         @for (field of group.fields; track field.id) {
-                          <option [value]="field.id">
+                          <option [ngValue]="field.id">
                             {{ field.fieldName }} ({{ field.fieldCode }})
                           </option>
                         }
