@@ -375,22 +375,72 @@
           </table>
         </div>
 
-        <!-- TICKET PROMEDIO (placeholder) -->
-        <div class="corte-card corte-placeholder">
+        <!-- TICKET PROMEDIO -->
+        <div class="corte-card">
           <div class="corte-title">TICKET PROMEDIO</div>
-          <div class="corte-empty">
-            <lucide-angular name="construction" [size]="32"></lucide-angular>
-            <span>Proximamente</span>
-          </div>
+          <table class="corte-table">
+            <thead>
+              <tr>
+                <th>ASESOR</th>
+                <th>12</th>
+                <th>3</th>
+                <th>5</th>
+                <th>CIERRE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of corteAgents">
+                <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
+                <td>{{ a.pdpCant12 ? (a.pdpMonto12 / a.pdpCant12 | number:'1.0-0') : '-' }}</td>
+                <td>{{ a.pdpCant15 ? (a.pdpMonto15 / a.pdpCant15 | number:'1.0-0') : '-' }}</td>
+                <td>{{ a.pdpCant17 ? (a.pdpMonto17 / a.pdpCant17 | number:'1.0-0') : '-' }}</td>
+                <td class="corte-cierre">{{ a.pdpCant18 ? (a.pdpMonto18 / a.pdpCant18 | number:'1.0-0') : '-' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corte-agent"><strong>TOTAL</strong></td>
+                <td><strong>{{ corteTotal('pdpCant12') ? (corteTotal('pdpMonto12') / corteTotal('pdpCant12') | number:'1.0-0') : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant15') ? (corteTotal('pdpMonto15') / corteTotal('pdpCant15') | number:'1.0-0') : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant17') ? (corteTotal('pdpMonto17') / corteTotal('pdpCant17') | number:'1.0-0') : '-' }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant18') ? (corteTotal('pdpMonto18') / corteTotal('pdpCant18') | number:'1.0-0') : '-' }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
 
-        <!-- TASA DE CIERRE (placeholder) -->
-        <div class="corte-card corte-placeholder">
+        <!-- TASA DE CIERRE -->
+        <div class="corte-card">
           <div class="corte-title">TASA DE CIERRE</div>
-          <div class="corte-empty">
-            <lucide-angular name="construction" [size]="32"></lucide-angular>
-            <span>Proximamente</span>
-          </div>
+          <table class="corte-table">
+            <thead>
+              <tr>
+                <th>ASESOR</th>
+                <th>12</th>
+                <th>3</th>
+                <th>5</th>
+                <th>CIERRE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a of corteAgents">
+                <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
+                <td>{{ a.cd12 ? (a.pdpCant12 / a.cd12 * 100 | number:'1.0-1') + '%' : '-' }}</td>
+                <td>{{ a.cd15 ? (a.pdpCant15 / a.cd15 * 100 | number:'1.0-1') + '%' : '-' }}</td>
+                <td>{{ a.cd17 ? (a.pdpCant17 / a.cd17 * 100 | number:'1.0-1') + '%' : '-' }}</td>
+                <td class="corte-cierre">{{ a.cd18 ? (a.pdpCant18 / a.cd18 * 100 | number:'1.0-1') + '%' : '-' }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corte-agent"><strong>TOTAL</strong></td>
+                <td><strong>{{ corteTotal('cd12') ? (corteTotal('pdpCant12') / corteTotal('cd12') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('cd15') ? (corteTotal('pdpCant15') / corteTotal('cd15') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('cd17') ? (corteTotal('pdpCant17') / corteTotal('cd17') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('cd18') ? (corteTotal('pdpCant18') / corteTotal('cd18') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
