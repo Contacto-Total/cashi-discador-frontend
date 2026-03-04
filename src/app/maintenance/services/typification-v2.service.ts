@@ -246,11 +246,15 @@ export class TypificationV2Service {
     tenantId: number,
     typificationId: number,
     portfolioId?: number,
-    clientId?: number
+    clientId?: number,
+    subPortfolioId?: number
   ): Observable<{ typificationId: number; isLeaf: boolean; fields: AdditionalFieldV2[] }> {
     let params = new HttpParams();
     if (portfolioId) {
       params = params.set('portfolioId', portfolioId.toString());
+    }
+    if (subPortfolioId) {
+      params = params.set('subPortfolioId', subPortfolioId.toString());
     }
     if (clientId) {
       params = params.set('clientId', clientId.toString());
@@ -330,20 +334,30 @@ export class TypificationV2Service {
   }
 
   /**
-   * Obtiene todas las opciones de un campo (para mostrar toggles al admin)
+   * Obtiene todas las opciones de un campo para una subcartera (para mostrar toggles al admin)
    */
-  getOpcionesCampo(campoId: number): Observable<CampoOpcionDTO[]> {
+  getOpcionesCampo(campoId: number, subPortfolioId?: number): Observable<CampoOpcionDTO[]> {
+    let params = new HttpParams();
+    if (subPortfolioId) {
+      params = params.set('subPortfolioId', subPortfolioId.toString());
+    }
     return this.http.get<CampoOpcionDTO[]>(
-      `${this.catalogUrl}/campo/${campoId}/opciones`
+      `${this.catalogUrl}/campo/${campoId}/opciones`,
+      { params }
     );
   }
 
   /**
-   * Obtiene solo las opciones habilitadas de un campo (para dropdown del agente)
+   * Obtiene solo las opciones habilitadas de un campo para una subcartera (para dropdown del agente)
    */
-  getOpcionesHabilitadas(campoId: number): Observable<CampoOpcionDTO[]> {
+  getOpcionesHabilitadas(campoId: number, subPortfolioId?: number): Observable<CampoOpcionDTO[]> {
+    let params = new HttpParams();
+    if (subPortfolioId) {
+      params = params.set('subPortfolioId', subPortfolioId.toString());
+    }
     return this.http.get<CampoOpcionDTO[]>(
-      `${this.catalogUrl}/campo/${campoId}/opciones/habilitadas`
+      `${this.catalogUrl}/campo/${campoId}/opciones/habilitadas`,
+      { params }
     );
   }
 

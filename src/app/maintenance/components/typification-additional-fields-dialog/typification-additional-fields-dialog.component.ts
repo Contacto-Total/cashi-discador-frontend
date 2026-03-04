@@ -509,8 +509,8 @@ export class TypificationAdditionalFieldsDialogComponent {
     this.loadingOpciones.set(true);
     this.errorMessage.set('');
 
-    // First try to get existing options
-    this.typificationService.getOpcionesCampo(campoId).subscribe({
+    // First try to get existing options for this subPortfolio
+    this.typificationService.getOpcionesCampo(campoId, subPortfolioId).subscribe({
       next: (opciones) => {
         if (opciones && opciones.length > 0) {
           this.opciones.set(opciones);
@@ -672,6 +672,7 @@ export class TypificationAdditionalFieldsDialogComponent {
 
     const request: ConfigurarOpcionesCampoRequest = {
       idCampo: campoId,
+      idSubcartera: this.selectedSubPortfolioId(),
       opciones: opcionesActuales.map(o => ({
         codigoOpcion: o.codigoOpcion,
         estaHabilitada: o.estaHabilitada,

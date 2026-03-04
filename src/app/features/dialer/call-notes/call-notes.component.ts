@@ -262,7 +262,8 @@ export class CallNotesComponent implements OnInit {
       user.tenantId,
       typificationId,
       user.portfolioId,
-      clientId
+      clientId,
+      user.subPortfolioId
     ).subscribe({
       next: (response) => {
         console.log('📋 loadAdditionalFields - backend response fields:', JSON.stringify(response.fields, null, 2));

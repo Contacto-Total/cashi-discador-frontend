@@ -159,6 +159,7 @@ export interface CampoOpcionDTO {
 
 export interface ConfigurarOpcionesCampoRequest {
   idCampo: number;
+  idSubcartera?: number;
   opciones: OpcionToggleDTO[];
 }
 
