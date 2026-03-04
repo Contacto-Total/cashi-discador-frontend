@@ -357,8 +357,8 @@ export class TypificationAdditionalFieldsDialogComponent {
   paymentScheduleFieldId = signal<number | null>(null);
   isVisible = signal<boolean>(false);
 
-  // Cuotas disponibles (1-12)
-  cuotasDisponibles = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  // Cuotas disponibles (1-48)
+  cuotasDisponibles = Array.from({ length: 48 }, (_, i) => i + 1);
 
   // Cabeceras para nombres visuales
   cabeceras = signal<ConfiguracionCabecera[]>([]);
