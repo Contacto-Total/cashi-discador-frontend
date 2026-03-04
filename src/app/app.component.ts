@@ -59,6 +59,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Sidebar state
   isSidebarCollapsed = false;
+  isMobileSidebarOpen = false;
 
   // Navbar dropdown state
   isMonitoreoDropdownOpen = false;
@@ -649,6 +650,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     setTimeout(() => {
       this.checkTextOverflow();
     }, 350); // Esperar a que termine la transición CSS (0.3s)
+  }
+
+  toggleMobileSidebar(): void {
+    this.isMobileSidebarOpen = !this.isMobileSidebarOpen;
+  }
+
+  closeMobileSidebar(): void {
+    this.isMobileSidebarOpen = false;
   }
 
   // Navbar methods

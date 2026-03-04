@@ -1,11 +1,19 @@
 <div class="app-container" *ngIf="!isLoginPage() && authService.isAuthenticated()">
+  <!-- Mobile hamburger button -->
+  <button type="button" class="mobile-menu-btn" (click)="toggleMobileSidebar()" title="Menú">
+    <lucide-angular name="menu" [size]="22"></lucide-angular>
+  </button>
+
+  <!-- Mobile backdrop -->
+  <div class="mobile-backdrop" [class.visible]="isMobileSidebarOpen" (click)="closeMobileSidebar()"></div>
+
   <!-- Toggle Button (fuera del sidebar para evitar overflow) -->
   <button type="button" class="sidebar-toggle" [class.collapsed]="isSidebarCollapsed" (click)="toggleSidebar()" [title]="isSidebarCollapsed ? 'Expandir' : 'Colapsar'">
     <lucide-angular [name]="isSidebarCollapsed ? 'chevron-right' : 'chevron-left'" [size]="16"></lucide-angular>
   </button>
 
   <!-- CASHI Sidebar -->
-  <aside class="cashi-sidebar" [class.collapsed]="isSidebarCollapsed">
+  <aside class="cashi-sidebar" [class.collapsed]="isSidebarCollapsed" [class.mobile-open]="isMobileSidebarOpen">
     <!-- Logo -->
     <div class="sidebar-logo">
       <div class="logo-icon">
@@ -23,6 +31,7 @@
           <a [routerLink]="item.ruta"
              routerLinkActive="active"
              class="sidebar-item"
+             (click)="closeMobileSidebar()"
              [title]="isSidebarCollapsed ? item.etiqueta : ''">
             <lucide-angular [name]="item.icono" [size]="20"></lucide-angular>
             <span class="item-text" *ngIf="!isSidebarCollapsed">{{ item.etiqueta }}</span>
@@ -51,7 +60,7 @@
                 <a [routerLink]="child.ruta"
                    routerLinkActive="active"
                    class="sidebar-subitem"
-                   (click)="closeAllDynamicDropdowns()">
+                   (click)="closeAllDynamicDropdowns(); closeMobileSidebar()">
                   <lucide-angular [name]="child.icono" [size]="18"></lucide-angular>
                   <span class="item-text" [title]="child.etiqueta">{{ child.etiqueta }}</span>
                 </a>
