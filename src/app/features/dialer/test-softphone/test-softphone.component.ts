@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import { SipService, CallState } from '../../../core/services/sip.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { ThemeService } from '../../../core/services/theme.service';
+import { ThemeService } from '../../../shared/services/theme.service';
 import { environment } from '../../../../environments/environment';
 import { Subscription, interval } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
@@ -854,10 +854,8 @@ export class TestSoftphoneComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     this.currentUser = await this.authService.getCurrentUser();
 
-    // Subscribe to theme changes
-    this.themeSubscription = this.themeService.theme$.subscribe(theme => {
-      this.isDarkTheme = theme === 'dark';
-    });
+    // Read current theme
+    this.isDarkTheme = this.themeService.isDarkMode();
 
     if (!this.currentUser || !this.currentUser.sipExtension) {
       alert('No tienes una extensión SIP asignada. Contacta al administrador.');

@@ -13,6 +13,9 @@ export class ThemeService {
     // Cargar preferencia guardada del localStorage
     const savedTheme = localStorage.getItem('theme');
 
+    // Limpiar key legacy que causaba conflicto con otro ThemeService
+    localStorage.removeItem('app-theme');
+
     if (savedTheme) {
       this.isDarkMode.set(savedTheme === 'dark');
     } else {

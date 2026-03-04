@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { CartaAcuerdoService, CartaPendiente } from '../../core/services/carta-acuerdo.service';
 import { AuthService } from '../../core/services/auth.service';
-import { ThemeService } from '../../core/services/theme.service';
+import { ThemeService } from '../../shared/services/theme.service';
 import { UserRole } from '../../core/models/user.model';
 
 @Component({

@@ -9,7 +9,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { ContactService } from '../../core/services/contact.service';
 import { Contact } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
-import { ThemeService } from '../../core/services/theme.service';
+import { ThemeService } from '../../shared/services/theme.service';
 import { Subscription, interval } from 'rxjs';
 
 @Component({
@@ -596,10 +596,8 @@ export class ContactListComponent implements OnInit, OnDestroy {
   async ngOnInit() {
     this.currentUser = await this.authService.getCurrentUser();
 
-    // Subscribe to theme changes
-    this.themeSubscription = this.themeService.theme$.subscribe(theme => {
-      this.isDarkTheme = theme === 'dark';
-    });
+    // Read current theme
+    this.isDarkTheme = this.themeService.isDarkMode();
 
     // Start elapsed timer
     this.timerSubscription = interval(1000).subscribe(() => {
