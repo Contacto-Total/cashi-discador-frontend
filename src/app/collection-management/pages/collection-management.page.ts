@@ -4016,7 +4016,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     console.log('[PAYMENT] Loading options for field ID:', fieldId);
 
     // Get ALL options (enabled and disabled) to know if config exists
-    this.typificationV2Service.getOpcionesCampo(fieldId).subscribe({
+    this.typificationV2Service.getOpcionesCampo(fieldId, this.selectedSubPortfolioId).subscribe({
       next: (allOpciones) => {
         // If there are any options in DB, config has been initialized
         const hasConfig = allOpciones && allOpciones.length > 0;
