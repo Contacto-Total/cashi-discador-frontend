@@ -163,6 +163,57 @@ import { CallService } from '../../core/services/call.service';
                   <!-- Información de Contacto -->
                   @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
+                    <!-- Header con botón agregar -->
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Teléfonos</span>
+                      @if (customerData()?.id) {
+                        <button
+                          (click)="showAddPhoneForm.set(!showAddPhoneForm())"
+                          class="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                          title="Agregar teléfono"
+                        >
+                          <lucide-angular [name]="showAddPhoneForm() ? 'x' : 'plus-circle'" [size]="13"></lucide-angular>
+                          {{ showAddPhoneForm() ? 'Cancelar' : 'Agregar' }}
+                        </button>
+                      }
+                    </div>
+
+                    <!-- Formulario agregar teléfono -->
+                    @if (showAddPhoneForm()) {
+                      <div class="p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800 space-y-1.5">
+                        <input
+                          type="text"
+                          [(ngModel)]="newPhoneNumber"
+                          placeholder="987654321"
+                          maxlength="9"
+                          class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                        <select
+                          [(ngModel)]="newPhoneSubtipo"
+                          class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        >
+                          <option value="telefono_referencia_1">Referencia 1</option>
+                          <option value="telefono_referencia_2">Referencia 2</option>
+                          <option value="telefono_secundario">Secundario</option>
+                        </select>
+                        <div class="flex gap-1.5">
+                          <button
+                            (click)="guardarNuevoTelefono()"
+                            [disabled]="!isValidCellphone(newPhoneNumber) || savingPhone()"
+                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded text-xs font-bold transition-colors"
+                          >
+                            {{ savingPhone() ? 'Guardando...' : 'Guardar' }}
+                          </button>
+                          <button
+                            (click)="showAddPhoneForm.set(false); newPhoneNumber = ''; newPhoneSubtipo = 'telefono_referencia_1'"
+                            class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-xs font-bold transition-colors"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    }
+
                     <!-- Teléfono Principal -->
                     <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
                       <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
@@ -1966,6 +2017,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
 
+  // Agregar teléfono
+  showAddPhoneForm = signal(false);
+  newPhoneNumber = '';
+  newPhoneSubtipo = 'telefono_referencia_1';
+  savingPhone = signal(false);
+
   // WhatsApp
   showWhatsappDropdown = signal(false);
   whatsappManualNumber = '';
@@ -2847,7 +2904,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.reloadTypifications();
       this.loadCustomerOutputConfig();
       this.loadFirstInstallmentConfig(); // Cargar config de primera cuota
-      this.loadFirstCustomer();
+
+      // Solo cargar cliente por defecto si NO viene desde gestión manual
+      // (gestión manual carga el cliente por documento en route.queryParams)
+      const params = this.route.snapshot.queryParams;
+      if (params['source'] !== 'manual') {
+        this.loadFirstCustomer();
+      }
     } else {
       console.error('[V2] Usuario no tiene asignación completa de tenant/portfolio/subportfolio');
       console.error('[V2] Valores recibidos:', {
@@ -6098,6 +6161,61 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         console.error('❌ Error generando carta:', error);
         alert('⚠️ Error al generar la Carta de Acuerdo. La gestión se guardó correctamente.');
         this.onSaveSuccess(contactLabel, managementLabel);
+      }
+    });
+  }
+
+  // --- Agregar Teléfono ---
+  guardarNuevoTelefono(): void {
+    const valor = (this.newPhoneNumber || '').trim();
+    if (!this.isValidCellphone(valor)) return;
+
+    const idCliente = this.customerData()?.id;
+    if (!idCliente) return;
+
+    this.savingPhone.set(true);
+    this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto`, {
+      idCliente,
+      valor,
+      subtipo: this.newPhoneSubtipo
+    }).subscribe({
+      next: () => {
+        // Actualizar customerData para reflejar el nuevo teléfono
+        const current = this.customerData();
+        const subtipoMap: Record<string, string> = {
+          'telefono_referencia_1': 'telefono_alternativo',
+          'telefono_referencia_2': 'telefono_alternativo',
+          'telefono_secundario': 'telefono_alternativo'
+        };
+        const campo = subtipoMap[this.newPhoneSubtipo] || 'telefono_alternativo';
+
+        if (current?.contacto) {
+          const contactoActualizado = { ...current.contacto };
+          // Si el campo destino está vacío, llenarlo; si no, poner en trabajo
+          if (!contactoActualizado[campo as keyof typeof contactoActualizado]) {
+            (contactoActualizado as any)[campo] = valor;
+          } else if (!contactoActualizado.telefono_trabajo) {
+            contactoActualizado.telefono_trabajo = valor;
+          }
+          this.customerData.set({ ...current, contacto: contactoActualizado });
+        }
+
+        // Reset form
+        this.newPhoneNumber = '';
+        this.newPhoneSubtipo = 'telefono_referencia_1';
+        this.showAddPhoneForm.set(false);
+        this.savingPhone.set(false);
+
+        // Toast de éxito
+        this.showSuccess.set(true);
+        setTimeout(() => this.showSuccess.set(false), 3000);
+        console.log('✅ Teléfono agregado exitosamente:', valor);
+      },
+      error: (err) => {
+        this.savingPhone.set(false);
+        const msg = err.error?.error || 'Error al agregar teléfono';
+        console.error('❌ Error agregando teléfono:', msg);
+        alert(msg);
       }
     });
   }
