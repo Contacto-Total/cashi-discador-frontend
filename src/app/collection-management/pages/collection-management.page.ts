@@ -1592,11 +1592,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const filter = this.historialFilter();
     const gestiones = this.historialGestiones();
 
+    // Excluir gestiones automáticas del sistema (discador progresivo/predictivo/automáticas)
+    const soloManuales = gestiones.filter(g => {
+      const metodo = (g.metodo || '').toUpperCase();
+      return metodo !== 'GESTION_PROGRESIVO' && metodo !== 'GESTION_PREDICTIVO' && metodo !== 'GESTION_AUTOMATICA';
+    });
+
     if (filter === 'TODOS') {
-      return gestiones;
+      return soloManuales;
     }
 
-    return gestiones.filter(g => {
+    return soloManuales.filter(g => {
       const tipif = g.tipificacionCompleta?.toUpperCase() || '';
       if (filter === 'CI') {
         return tipif.includes('[CI]') || tipif.includes('CONTACTO INDIRECTO');
