@@ -242,6 +242,11 @@ import { CallService } from '../../core/services/call.service';
                   <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
                   </div>
                   Control de Llamada
+                  @if (activeCallPhone()) {
+                    <span class="ml-2 px-2 py-0.5 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 rounded font-mono text-xs">
+                      {{ activeCallPhone() }}
+                    </span>
+                  }
                 </h3>
                 <div class="flex gap-2">
                   <button
@@ -1504,6 +1509,7 @@ import { CallService } from '../../core/services/call.service';
 })
 export class CollectionManagementPage implements OnInit, OnDestroy {
   protected callActive = signal(false);
+  protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected callDuration = signal(0);
   protected saving = signal(false);
   protected showScheduleDetail = signal(false);
@@ -2455,8 +2461,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       console.log('📲 [CollectionManagement] Llamada entrante de:', callInfo.from);
       this.incomingPhoneNumber = callInfo.from;
 
-      // Buscar y cargar automáticamente el cliente por su número de teléfono
+      // Guardar el número y buscar cliente
       if (callInfo.from) {
+        this.activeCallPhone.set(callInfo.from);
         this.autoLoadCustomerByPhone(callInfo.from);
       }
     });
@@ -2468,8 +2475,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       if (this.isRellamada()) return;
       this.outgoingPhoneNumber = callInfo.to;
 
-      // Buscar y cargar automáticamente el cliente por el número al que se llama
+      // Guardar el número marcado y buscar cliente
       if (callInfo.to) {
+        this.activeCallPhone.set(callInfo.to);
         this.autoLoadCustomerByPhone(callInfo.to);
       }
     });
@@ -2482,6 +2490,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (pendingOutgoingNumber && !this.customerData()?.id) {
       console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
       this.outgoingPhoneNumber = pendingOutgoingNumber;
+      this.activeCallPhone.set(pendingOutgoingNumber);
       this.autoLoadCustomerByPhone(pendingOutgoingNumber);
       // Limpiar para evitar cargar de nuevo si el usuario navega de vuelta
       this.sipService.clearCurrentOutgoingNumber();
@@ -2992,6 +3001,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           const predictiveData = JSON.parse(predictiveDataStr);
           if (predictiveData.phoneNumber) {
             console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
+            this.activeCallPhone.set(predictiveData.anexoDestino || predictiveData.phoneNumber);
             this.autoLoadCustomerByPhone(predictiveData.phoneNumber);
             return;
           }
@@ -3028,6 +3038,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
 
         console.log(`✅ [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
+
+        // Guardar el número real discado
+        if (fullData.anexoDestino) {
+          this.activeCallPhone.set(fullData.anexoDestino);
+        }
 
         // Si tiene datos dinámicos completos, usar loadCustomerFromDynamicTable
         if (fullData.dynamicData) {
@@ -3500,6 +3515,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   iniciarRellamada(phoneNumber: string) {
     if (this.rellamadaCallActive() || this.callActive()) return;
     this.isRellamada.set(true);
+    this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
     this.showRellamadaDropdown.set(false);
 
@@ -4858,8 +4874,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         portfolioId: this.selectedPortfolioId || 1,
         subPortfolioId: this.selectedSubPortfolioId || 1,
 
-        // Phone from customer data (buscar en orden de prioridad)
-        phone: (this.customerData() as any).telefono_celular ||
+        // Phone: usar número real discado si existe, sino buscar en datos del cliente
+        phone: this.activeCallPhone() ||
+               (this.customerData() as any).telefono_celular ||
                (this.customerData() as any).telefono_domicilio ||
                (this.customerData() as any).telefono_laboral ||
                (this.customerData() as any).telf_referencia_1 ||
@@ -4976,7 +4993,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!this.callStartTime) return;
 
     const startCallRequest: StartCallRequest = {
-      phoneNumber: this.customerData()?.contacto?.telefono_principal || '',
+      phoneNumber: this.activeCallPhone() || this.customerData()?.contacto?.telefono_principal || '',
       startTime: this.callStartTime
     };
 
@@ -5080,6 +5097,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.callDuration.set(0);
     this.callStartTime = undefined;
+    this.activeCallPhone.set('');
 
     this.activeTab.set('cliente');
 
