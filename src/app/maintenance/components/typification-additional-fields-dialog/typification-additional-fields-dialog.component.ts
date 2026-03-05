@@ -236,33 +236,31 @@ interface ConfiguracionCabecera {
                             </p>
                           </div>
 
-                          <!-- Porcentaje de Auto-aprobación - Solo para Personalizado -->
-                          @if (opcion.codigoOpcion === 'personalizado') {
-                            <div class="col-span-2 mt-2 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800">
-                              <label class="text-xs font-medium text-violet-700 dark:text-violet-300 mb-2 flex items-center gap-1.5">
-                                <lucide-angular name="percent" [size]="12"></lucide-angular>
-                                Descuento máximo para auto-aprobación
-                              </label>
-                              <div class="flex items-center gap-3 mt-2">
-                                <input
-                                  type="range"
-                                  [value]="opcion.porcentajeAutoAprobacion || 10"
-                                  (input)="onPorcentajeChange(opcion.codigoOpcion, $event)"
-                                  min="0"
-                                  max="100"
-                                  step="5"
-                                  class="flex-1 h-2 bg-violet-200 dark:bg-violet-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
-                                >
-                                <span class="text-sm font-bold text-violet-700 dark:text-violet-300 min-w-[50px] text-center">
-                                  {{ opcion.porcentajeAutoAprobacion || 10 }}%
-                                </span>
-                              </div>
-                              <p class="text-[10px] text-violet-600 dark:text-violet-400 mt-2">
-                                Descuentos hasta {{ opcion.porcentajeAutoAprobacion || 10 }}% se aprueban automáticamente.
-                                Descuentos mayores van a evaluación.
-                              </p>
+                          <!-- Porcentaje de Auto-aprobación -->
+                          <div class="col-span-2 mt-2 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg border border-violet-200 dark:border-violet-800">
+                            <label class="text-xs font-medium text-violet-700 dark:text-violet-300 mb-2 flex items-center gap-1.5">
+                              <lucide-angular name="percent" [size]="12"></lucide-angular>
+                              Descuento máximo para auto-aprobación
+                            </label>
+                            <div class="flex items-center gap-3 mt-2">
+                              <input
+                                type="range"
+                                [value]="opcion.porcentajeAutoAprobacion ?? 10"
+                                (input)="onPorcentajeChange(opcion.codigoOpcion, $event)"
+                                min="0"
+                                max="100"
+                                step="5"
+                                class="flex-1 h-2 bg-violet-200 dark:bg-violet-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                              >
+                              <span class="text-sm font-bold text-violet-700 dark:text-violet-300 min-w-[50px] text-center">
+                                {{ opcion.porcentajeAutoAprobacion ?? 10 }}%
+                              </span>
                             </div>
-                          }
+                            <p class="text-[10px] text-violet-600 dark:text-violet-400 mt-2">
+                              Descuentos hasta {{ opcion.porcentajeAutoAprobacion ?? 10 }}% se aprueban automáticamente.
+                              Descuentos mayores van a evaluación.
+                            </p>
+                          </div>
                         </div>
                       }
                     </div>
@@ -681,7 +679,7 @@ export class TypificationAdditionalFieldsDialogComponent {
         generaCartaAcuerdo: o.generaCartaAcuerdo || false,
         minCuotas: o.minCuotas || 1,
         maxCuotas: o.maxCuotas || 6,
-        porcentajeAutoAprobacion: o.porcentajeAutoAprobacion || 10
+        porcentajeAutoAprobacion: o.porcentajeAutoAprobacion ?? 10
       }))
     };
 
