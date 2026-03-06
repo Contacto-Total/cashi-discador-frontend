@@ -1169,7 +1169,7 @@ import { CallService } from '../../core/services/call.service';
                           [ngClass]="calcCampoSeleccionado() === field.field
                             ? 'text-blue-700 dark:text-blue-300'
                             : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">
-                      {{ formatCurrency(field.value) }}
+                      {{ formatByType(field) }}
                     </span>
                   </div>
                 }
@@ -2219,9 +2219,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   clientAmountFields = computed(() => {
     const rawData = this.rawClientData();
     const allCabeceras = this.montoCabeceras();
-    const amountFields: { label: string; value: number; field: string }[] = [];
+    const amountFields: { label: string; value: number; field: string; formato: string; rawValue: string }[] = [];
 
-    // Si tenemos cabeceras configuradas, usarlas para filtrar solo montos
+    // Si tenemos cabeceras configuradas, usarlas para filtrar
     if (allCabeceras.length > 0) {
       // Filtrar solo cabeceras visibles y ordenar por ordenMonto
       const cabeceras = allCabeceras
@@ -2231,15 +2231,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       for (const cabecera of cabeceras) {
         const lowerCodigo = cabecera.codigo.toLowerCase();
         const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
+        const formato = cabecera.formatoVisualizacion || 'MONEDA';
 
         if (value !== undefined && value !== null) {
-          const numValue = typeof value === 'number' ? value : parseFloat(value);
-          if (!isNaN(numValue)) {
+          if (formato === 'TEXTO') {
             amountFields.push({
-              label: cabecera.nombre,  // Usar nombre visual de la cabecera
-              value: numValue,
-              field: lowerCodigo
+              label: cabecera.nombre,
+              value: 0,
+              field: lowerCodigo,
+              formato,
+              rawValue: String(value)
             });
+          } else {
+            const numValue = typeof value === 'number' ? value : parseFloat(value);
+            if (!isNaN(numValue)) {
+              amountFields.push({
+                label: cabecera.nombre,
+                value: numValue,
+                field: lowerCodigo,
+                formato,
+                rawValue: String(value)
+              });
+            }
           }
         }
       }
@@ -2255,10 +2268,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       for (const [key, value] of Object.entries(rawData)) {
         const lowerKey = key.toLowerCase();
-        // Excluir campos que empiezan con fec_, fecha_, telefono_, telf_
         if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
         if (lowerKey.startsWith('telefono_') || lowerKey.startsWith('telf_')) continue;
-        // Excluir campos específicos
         if (excludeFields.includes(lowerKey)) continue;
 
         const numValue = typeof value === 'number' ? value : parseFloat(value);
@@ -2266,14 +2277,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           amountFields.push({
             label: this.formatFieldLabel(key),
             value: numValue,
-            field: key
+            field: key,
+            formato: 'MONEDA',
+            rawValue: String(value)
           });
         }
       }
     }
 
-    // Ordenar por valor descendente (mayores primero)
-    return amountFields.sort((a, b) => b.value - a.value);
+    // Ordenar por valor descendente (mayores primero) - solo para campos sin ordenMonto explícito
+    return allCabeceras.length > 0 ? amountFields : amountFields.sort((a, b) => b.value - a.value);
   });
 
   // Computed para obtener días de mora del cliente
@@ -2284,7 +2297,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Cabeceras de configuración para mostrar nombres visuales
-  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisibleMonto?: number; ordenMonto?: number }[]>([]);
+  montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisibleMonto?: number; ordenMonto?: number; formatoVisualizacion?: string }[]>([]);
 
   // Enabled payment amount options (configured in maintenance)
   enabledPaymentOptions = signal<CampoOpcionDTO[]>([]);
@@ -2879,7 +2892,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         tipoDato: c.tipoDato,
         tipoSql: c.tipoSql,
         esVisibleMonto: c.esVisibleMonto,
-        ordenMonto: c.ordenMonto
+        ordenMonto: c.ordenMonto,
+        formatoVisualizacion: c.formatoVisualizacion
       })));
     });
   }
@@ -4519,6 +4533,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       style: 'currency',
       currency: 'PEN'
     }).format(value);
+  }
+
+  /**
+   * Formatea un valor según el formato de visualización configurado
+   */
+  formatByType(field: { value: number; formato: string; rawValue: string }): string {
+    switch (field.formato) {
+      case 'PORCENTAJE':
+        return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(field.value) + '%';
+      case 'NUMERO':
+        return new Intl.NumberFormat('es-PE').format(field.value);
+      case 'TEXTO':
+        return field.rawValue;
+      case 'MONEDA':
+      default:
+        return this.formatCurrency(field.value);
+    }
   }
 
   /**

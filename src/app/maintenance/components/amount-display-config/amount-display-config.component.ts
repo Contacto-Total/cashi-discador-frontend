@@ -270,8 +270,18 @@ interface AmountFieldConfig extends ConfiguracionCabecera {
 
                       <!-- Data Type Badge -->
                       <div class="px-2 py-1 bg-slate-800 rounded text-xs text-gray-400">
-                        {{ field.tipoSql }}
+                        {{ field.tipoDato || field.tipoSql }}
                       </div>
+
+                      <!-- Formato Selector -->
+                      <select [(ngModel)]="field.formatoVisualizacion"
+                              (ngModelChange)="onFormatChange(field)"
+                              class="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer">
+                        <option value="MONEDA">S/. Moneda</option>
+                        <option value="PORCENTAJE">% Porcentaje</option>
+                        <option value="NUMERO"># Número</option>
+                        <option value="TEXTO">Abc Texto</option>
+                      </select>
                     </div>
 
                     <!-- Toggle -->
@@ -461,7 +471,8 @@ export class AmountDisplayConfigComponent implements OnInit {
 
         const fields: AmountFieldConfig[] = sorted.map(c => ({
           ...c,
-          isVisible: c.esVisibleMonto === 1 || c.esVisibleMonto === undefined || c.esVisibleMonto === null
+          isVisible: c.esVisibleMonto === 1 || c.esVisibleMonto === undefined || c.esVisibleMonto === null,
+          formatoVisualizacion: c.formatoVisualizacion || 'MONEDA'
         }));
 
         this.amountFields.set(fields);
@@ -482,7 +493,10 @@ export class AmountDisplayConfigComponent implements OnInit {
   }
 
   onNameChange(field: AmountFieldConfig) {
-    // Trigger change detection
+    this.amountFields.set([...this.amountFields()]);
+  }
+
+  onFormatChange(field: AmountFieldConfig) {
     this.amountFields.set([...this.amountFields()]);
   }
 
@@ -510,6 +524,7 @@ export class AmountDisplayConfigComponent implements OnInit {
       if (current[i].id !== original[i].id) return true;
       if (current[i].isVisible !== original[i].isVisible) return true;
       if (current[i].nombre !== original[i].nombre) return true;
+      if (current[i].formatoVisualizacion !== original[i].formatoVisualizacion) return true;
     }
 
     return false;
@@ -523,8 +538,9 @@ export class AmountDisplayConfigComponent implements OnInit {
     const updates = this.amountFields().map((field, index) => ({
       id: field.id,
       esVisibleMonto: field.isVisible ? 1 : 0,
-      ordenMonto: index * 10, // Espaciado de 10 para permitir inserciones futuras
-      nombre: field.nombre
+      ordenMonto: index * 10,
+      nombre: field.nombre,
+      formatoVisualizacion: field.formatoVisualizacion || 'MONEDA'
     }));
 
     this.managementService.updateAmountVisibility(this.selectedSubPortfolioId, updates).subscribe({
