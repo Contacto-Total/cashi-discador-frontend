@@ -1130,12 +1130,7 @@ import { CallService } from '../../core/services/call.service';
                   Guardar Gestión
                 }
               </button>
-              <button
-                (click)="cancelarTipificacion()"
-                class="px-6 bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white dark:text-white py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg"
-              >
-                Cancelar
-              </button>
+              <!-- Botón Cancelar oculto para forzar que el agente siempre guarde una tipificación -->
             </div>
           </div>
         </div>
