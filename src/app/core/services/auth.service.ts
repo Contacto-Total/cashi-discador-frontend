@@ -170,7 +170,7 @@ export class AuthService {
     if (!role) return 'AGENT';
     const upper = role.toUpperCase();
     if (upper === 'ADMIN') return 'ADMIN';
-    if (upper === 'SUPERVISOR' || upper === 'COORDINADOR') return 'SUPERVISOR';
+    if (upper.includes('SUPERVISOR') || upper === 'COORDINADOR') return 'SUPERVISOR';
     return 'AGENT';
   }
 
