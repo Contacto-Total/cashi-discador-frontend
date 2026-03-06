@@ -6196,12 +6196,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const valor = (this.newPhoneNumber || '').trim();
     if (!this.isValidCellphone(valor)) return;
 
-    const idCliente = this.customerData()?.id;
-    if (!idCliente) return;
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) return;
 
     this.savingPhone.set(true);
     this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto`, {
-      idCliente,
+      documento,
       valor,
       subtipo: this.newPhoneSubtipo
     }).subscribe({
