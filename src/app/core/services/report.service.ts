@@ -95,19 +95,19 @@ export interface AgentCorte {
   gestiones12: number;
   gestiones15: number;
   gestiones17: number;
-  gestiones18: number;
+  gestiones20: number;
   cd12: number;
   cd15: number;
   cd17: number;
-  cd18: number;
+  cd20: number;
   pdpCant12: number;
   pdpCant15: number;
   pdpCant17: number;
-  pdpCant18: number;
+  pdpCant20: number;
   pdpMonto12: number;
   pdpMonto15: number;
   pdpMonto17: number;
-  pdpMonto18: number;
+  pdpMonto20: number;
 }
 
 export interface ChartData {
