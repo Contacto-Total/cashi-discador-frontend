@@ -137,6 +137,7 @@ interface SubcarteraConPlantilla {
                                       class="w-full px-3 py-1.5 bg-slate-800 border border-cyan-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
                                 <option value="auto">Automatico (segun cuotas)</option>
                                 <option value="unico">Solo Pago Unico</option>
+                                <option value="basico">Basico con Cuotas (Pre Acuerdo)</option>
                                 <option value="fraccionado">Solo Fraccionado (Cuotas)</option>
                               </select>
                             }
@@ -150,9 +151,9 @@ interface SubcarteraConPlantilla {
                               </span>
                               @if (sub.tipoAcuerdo && sub.tipoAcuerdo !== 'auto') {
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs"
-                                      [class]="sub.tipoAcuerdo === 'fraccionado' ? 'bg-cyan-600/20 text-cyan-300' : 'bg-green-600/20 text-green-300'">
-                                  <lucide-angular [name]="sub.tipoAcuerdo === 'fraccionado' ? 'list-ordered' : 'banknote'" [size]="12"></lucide-angular>
-                                  {{ sub.tipoAcuerdo === 'fraccionado' ? 'Fraccionado' : 'Pago Unico' }}
+                                      [class]="sub.tipoAcuerdo === 'fraccionado' ? 'bg-cyan-600/20 text-cyan-300' : sub.tipoAcuerdo === 'basico' ? 'bg-blue-600/20 text-blue-300' : 'bg-green-600/20 text-green-300'">
+                                  <lucide-angular [name]="sub.tipoAcuerdo === 'fraccionado' ? 'list-ordered' : sub.tipoAcuerdo === 'basico' ? 'file-text' : 'banknote'" [size]="12"></lucide-angular>
+                                  {{ sub.tipoAcuerdo === 'fraccionado' ? 'Fraccionado' : sub.tipoAcuerdo === 'basico' ? 'Basico c/ Cuotas' : 'Pago Unico' }}
                                 </span>
                               }
                             </div>
