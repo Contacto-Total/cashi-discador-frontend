@@ -9,6 +9,7 @@ interface PlantillaDisponible {
   codigo: string;
   nombre: string;
   descripcion: string;
+  tieneFraccionado: boolean;
 }
 
 interface SubcarteraConPlantilla {
@@ -19,6 +20,7 @@ interface SubcarteraConPlantilla {
   nombre_inquilino: string;
   codigo_plantilla: string | null;
   nombrePlantilla: string | null;
+  tipoAcuerdo: string | null;
   tieneAsignacion: boolean;
 }
 
@@ -61,6 +63,12 @@ interface SubcarteraConPlantilla {
                   </div>
                 </div>
                 <p class="mt-2 text-sm text-gray-400">{{ plantilla.descripcion }}</p>
+                @if (plantilla.tieneFraccionado) {
+                  <div class="mt-2 flex gap-1.5">
+                    <span class="px-1.5 py-0.5 bg-green-600/20 text-green-300 rounded text-xs">Pago Unico</span>
+                    <span class="px-1.5 py-0.5 bg-cyan-600/20 text-cyan-300 rounded text-xs">Fraccionado</span>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -116,19 +124,38 @@ interface SubcarteraConPlantilla {
                       </td>
                       <td class="px-4 py-3">
                         @if (editingSubcarteraId() === sub.id) {
-                          <select [(ngModel)]="selectedPlantilla"
-                                  class="w-full px-3 py-1.5 bg-slate-800 border border-purple-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            <option value="">Sin asignar</option>
-                            @for (plantilla of plantillasDisponibles(); track plantilla.codigo) {
-                              <option [value]="plantilla.codigo">{{ plantilla.nombre }}</option>
+                          <div class="flex flex-col gap-2">
+                            <select [(ngModel)]="selectedPlantilla"
+                                    class="w-full px-3 py-1.5 bg-slate-800 border border-purple-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                              <option value="">Sin asignar</option>
+                              @for (plantilla of plantillasDisponibles(); track plantilla.codigo) {
+                                <option [value]="plantilla.codigo">{{ plantilla.nombre }}</option>
+                              }
+                            </select>
+                            @if (selectedPlantillaTieneFraccionado()) {
+                              <select [(ngModel)]="selectedTipoAcuerdo"
+                                      class="w-full px-3 py-1.5 bg-slate-800 border border-cyan-500 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                                <option value="auto">Automatico (segun cuotas)</option>
+                                <option value="unico">Solo Pago Unico</option>
+                                <option value="fraccionado">Solo Fraccionado (Cuotas)</option>
+                              </select>
                             }
-                          </select>
+                          </div>
                         } @else {
                           @if (sub.tieneAsignacion) {
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-600/20 text-purple-300 rounded-lg text-sm">
-                              <lucide-angular name="check-circle" [size]="14"></lucide-angular>
-                              {{ sub.nombrePlantilla }}
-                            </span>
+                            <div class="flex items-center gap-2 flex-wrap">
+                              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-600/20 text-purple-300 rounded-lg text-sm">
+                                <lucide-angular name="check-circle" [size]="14"></lucide-angular>
+                                {{ sub.nombrePlantilla }}
+                              </span>
+                              @if (sub.tipoAcuerdo && sub.tipoAcuerdo !== 'auto') {
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs"
+                                      [class]="sub.tipoAcuerdo === 'fraccionado' ? 'bg-cyan-600/20 text-cyan-300' : 'bg-green-600/20 text-green-300'">
+                                  <lucide-angular [name]="sub.tipoAcuerdo === 'fraccionado' ? 'list-ordered' : 'banknote'" [size]="12"></lucide-angular>
+                                  {{ sub.tipoAcuerdo === 'fraccionado' ? 'Fraccionado' : 'Pago Unico' }}
+                                </span>
+                              }
+                            </div>
                           } @else {
                             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-600/20 text-amber-300 rounded-lg text-sm">
                               <lucide-angular name="alert-circle" [size]="14"></lucide-angular>
@@ -217,6 +244,7 @@ export class PlantillaCartaMaintenanceComponent implements OnInit {
 
   editingSubcarteraId = signal<number | null>(null);
   selectedPlantilla = '';
+  selectedTipoAcuerdo = 'auto';
 
   toastMessage = signal('');
   toastType = signal<'success' | 'error'>('success');
@@ -256,12 +284,27 @@ export class PlantillaCartaMaintenanceComponent implements OnInit {
 
   iniciarEdicion(subcartera: SubcarteraConPlantilla): void {
     this.editingSubcarteraId.set(subcartera.id);
-    this.selectedPlantilla = subcartera.codigo_plantilla || '';
+    // Parsear código compuesto (ej: "castigo:fraccionado")
+    const codigo = subcartera.codigo_plantilla || '';
+    if (codigo.includes(':')) {
+      this.selectedPlantilla = codigo.split(':')[0];
+      this.selectedTipoAcuerdo = codigo.split(':')[1];
+    } else {
+      this.selectedPlantilla = codigo;
+      this.selectedTipoAcuerdo = 'auto';
+    }
   }
 
   cancelarEdicion(): void {
     this.editingSubcarteraId.set(null);
     this.selectedPlantilla = '';
+    this.selectedTipoAcuerdo = 'auto';
+  }
+
+  selectedPlantillaTieneFraccionado(): boolean {
+    return this.plantillasDisponibles().some(
+      p => p.codigo === this.selectedPlantilla && p.tieneFraccionado
+    );
   }
 
   guardarAsignacion(idSubcartera: number): void {
@@ -289,10 +332,15 @@ export class PlantillaCartaMaintenanceComponent implements OnInit {
         }
       });
     } else {
+      // Construir código compuesto si tiene tipo explícito
+      const codigoFinal = this.selectedTipoAcuerdo === 'auto'
+        ? this.selectedPlantilla
+        : `${this.selectedPlantilla}:${this.selectedTipoAcuerdo}`;
+
       // Asignar plantilla
       this.http.post<any>(`${this.apiUrl}/plantillas-carta/asignar`, {
         idSubcartera: idSubcartera,
-        codigoPlantilla: this.selectedPlantilla
+        codigoPlantilla: codigoFinal
       }).subscribe({
         next: () => {
           this.mostrarToast('Plantilla asignada correctamente', 'success');
