@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subscription, interval, Subject } from 'rxjs';
-import { throttleTime } from 'rxjs/operators';
+import { Subscription, interval, Subject, of } from 'rxjs';
+import { throttleTime, switchMap, catchError } from 'rxjs/operators';
 import { asyncScheduler } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
@@ -47,6 +47,8 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   private wsSubscription?: Subscription;
   private fallbackSubscription?: Subscription;
   private refreshTrigger$ = new Subject<void>();
+  private statsTrigger$ = new Subject<number | undefined>();
+  private statsSubscription?: Subscription;
 
   // Timer local para conteo fluido de segundos
   private localTimerSubscription?: Subscription;
@@ -105,6 +107,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.initAlarmAudio();
     this.initSpeechVoices(); // Pre-cargar voces de texto a voz
     this.loadCampaigns();
+    this.setupStatsPipeline();       // switchMap para cancelar peticiones anteriores
     this.setupWebSocketMonitoring(); // WebSocket push en tiempo real
     this.setupFallbackPolling();     // Poll de respaldo cada 30s
     this.refreshAllData();           // Fetch inicial
@@ -193,6 +196,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.wsSubscription?.unsubscribe();
     this.fallbackSubscription?.unsubscribe();
+    this.statsSubscription?.unsubscribe();
     this.localTimerSubscription?.unsubscribe();
     this.autoDialerSubscription?.unsubscribe();
     this.agentesSubscription?.unsubscribe();
@@ -276,15 +280,35 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Pipeline de estadísticas con switchMap: cancela la petición anterior
+   * automáticamente cuando se dispara una nueva (ej: cambio de campaña).
+   * Evita que respuestas de una campaña pisen datos de otra.
+   */
+  private setupStatsPipeline(): void {
+    this.statsSubscription = this.statsTrigger$.pipe(
+      switchMap((campaignId) =>
+        this.autoDialerService.getEstadisticas(campaignId).pipe(
+          catchError((err) => {
+            console.error('Error fetching stats:', err);
+            return of(null);
+          })
+        )
+      )
+    ).subscribe((stats) => {
+      if (stats) {
+        this.autoDialerStats = stats;
+      }
+    });
+  }
+
+  /**
    * Fetch de todos los datos (estadísticas, agentes, llamadas) en paralelo
    */
   refreshAllData(): void {
     const campaignId = this.selectedCampaignId || undefined;
 
-    this.autoDialerService.getEstadisticas(campaignId).subscribe({
-      next: (stats) => { this.autoDialerStats = stats; },
-      error: (err) => { console.error('Error fetching stats:', err); }
-    });
+    // Stats via switchMap (cancela petición anterior automáticamente)
+    this.statsTrigger$.next(campaignId);
 
     this.autoDialerService.getAgentesMonitoreo(campaignId).subscribe({
       next: (agentes) => {
