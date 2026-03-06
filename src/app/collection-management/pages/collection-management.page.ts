@@ -1643,10 +1643,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const filter = this.historialFilter();
     const gestiones = this.historialGestiones();
 
-    // Excluir gestiones automáticas del sistema (discador progresivo/predictivo/automáticas)
+    // Excluir gestiones automáticas del sistema (cuando el agente es el sistema, no una persona real)
     const soloManuales = gestiones.filter(g => {
-      const metodo = (g.metodo || '').toUpperCase();
-      return metodo !== 'GESTION_PROGRESIVO' && metodo !== 'GESTION_PREDICTIVO' && metodo !== 'GESTION_AUTOMATICA';
+      const nombre = (g.nombreAgente || '').toUpperCase().trim();
+      return nombre !== '' && nombre !== 'PROGRESIVO' && nombre !== 'PREDICTIVO' && nombre !== 'SISTEMA' && nombre !== 'AUTO-DIALER';
     });
 
     if (filter === 'TODOS') {
