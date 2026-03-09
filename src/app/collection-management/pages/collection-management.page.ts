@@ -2470,6 +2470,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.isRellamada.set(false);
           this.rellamadaCallActive.set(false);
           this.sipService.setRellamadaActive(false);
+          this.sipService.clearCurrentOutgoingNumber(); // Limpiar número stale de rellamada
           this.showRellamadaDropdown.set(false);
           this.isMuted.set(false);
           this.isOnHold.set(false);
@@ -2564,16 +2565,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Verificar si hay una llamada saliente en curso (navegación desde /dialer)
     // El evento onOutgoingCall ya se emitió antes de navegar aquí, así que leemos el número guardado
     const pendingOutgoingNumber = this.sipService.getCurrentOutgoingNumber();
-    // Verificar que no hay cliente REAL cargado (customerData tiene datos mock por defecto,
-    // pero sin 'id' numérico). Un cliente real tiene 'id' del backend.
-    if (pendingOutgoingNumber && !this.customerData()?.id) {
+    // Solo usar pendingOutgoingNumber si:
+    // 1. No hay cliente REAL cargado (customerData sin 'id' numérico)
+    // 2. La llamada NO viene del Predictivo (incoming) - si es incoming, FULL-DATA carga el cliente correcto
+    const isIncomingCall = this.sipService.isCurrentCallIncoming();
+    if (pendingOutgoingNumber && !this.customerData()?.id && !isIncomingCall) {
       console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
       this.outgoingPhoneNumber = pendingOutgoingNumber;
       this.activeCallPhone.set(pendingOutgoingNumber);
       this.autoLoadCustomerByPhone(pendingOutgoingNumber);
-      // Limpiar para evitar cargar de nuevo si el usuario navega de vuelta
-      this.sipService.clearCurrentOutgoingNumber();
     }
+    // Siempre limpiar para evitar que quede stale
+    this.sipService.clearCurrentOutgoingNumber();
 
 
     // Verificar si viene desde gestión manual con parámetros de cliente
@@ -3635,6 +3638,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.isRellamada.set(false);
       this.rellamadaCallActive.set(false);
       this.sipService.setRellamadaActive(false);
+      this.sipService.clearCurrentOutgoingNumber(); // Limpiar número stale de rellamada
       this.showRellamadaDropdown.set(false);
     }
 

@@ -36,6 +36,7 @@ export class SipService {
   // Guardar número de destino actual para llamadas salientes
   // Permite que collection-management lo lea al inicializarse
   private currentOutgoingNumber: string | null = null;
+  private currentCallIncoming: boolean = false; // Dirección de la llamada actual
 
 
   private websocketService = inject(WebsocketService);
@@ -110,6 +111,13 @@ export class SipService {
     this.currentOutgoingNumber = phoneNumber;
     console.log('📤 [SipService] Número de llamada saliente establecido:', phoneNumber);
     this.onOutgoingCall.emit({ to: phoneNumber });
+  }
+
+  /**
+   * Indica si la llamada actual es incoming (del Predictivo)
+   */
+  isCurrentCallIncoming(): boolean {
+    return this.currentCallIncoming;
   }
 
 
@@ -243,6 +251,7 @@ export class SipService {
           const session = data.session;
 
           if (session.direction === 'incoming') {
+            this.currentCallIncoming = true;
             console.log('📲 Incoming call from:', session.remote_identity.uri.user);
 
             // CHECK: If calls are blocked (agent is tipifying), reject the call immediately
@@ -402,6 +411,7 @@ export class SipService {
       this.setupSDPOptimization(session);
 
       // Guardar número de destino y emitir evento
+      this.currentCallIncoming = false;
       this.currentOutgoingNumber = destination;
       console.log('📤 Emitiendo onOutgoingCall con destino:', destination);
       this.onOutgoingCall.emit({ to: destination });
