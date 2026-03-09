@@ -46,7 +46,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
   private userId: number | null = null;
   private subPortfolioId: number | null = null;
   private previousState: AgentState | null = null;
-  private audioContext: AudioContext | null = null;
   private isPageRefreshing = false;
   private boundBeforeUnload = () => {
     this.isPageRefreshing = true;
@@ -239,13 +238,6 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     // Suscribirse a cambios del estado
     this.currentStatusSubscription = this.agentStatusService.currentStatus$.subscribe(status => {
       if (status) {
-        // Detectar cambio a EN_LLAMADA para reproducir beep
-        if (status.estadoActual === AgentState.EN_LLAMADA &&
-            this.previousState !== AgentState.EN_LLAMADA) {
-          console.log('[AgentDashboard] 📞 Llamada entrante - reproduciendo alerta');
-          this.playCallAlert();
-        }
-
         // SYNC: Si el estado del backend es DISPONIBLE, desbloquear llamadas entrantes
         // Esto soluciona la desincronización cuando blockIncomingCalls quedó en true
         if (status.estadoActual === AgentState.DISPONIBLE) {
@@ -270,46 +262,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Reproduce un beep de alerta cuando entra una llamada
-   * Usa Web Audio API para generar el sonido
-   */
-  private playCallAlert(): void {
-    try {
-      // Crear AudioContext si no existe
-      if (!this.audioContext) {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
 
-      const ctx = this.audioContext;
-
-      // Reproducir 2 beeps
-      this.playBeep(ctx, 0);      // Primer beep inmediato
-      this.playBeep(ctx, 0.2);    // Segundo beep a los 200ms
-    } catch (error) {
-      console.error('Error reproduciendo alerta de llamada:', error);
-    }
-  }
-
-  /**
-   * Genera y reproduce un beep individual
-   */
-  private playBeep(ctx: AudioContext, delay: number): void {
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.frequency.value = 800;  // Frecuencia en Hz
-    oscillator.type = 'sine';
-
-    gainNode.gain.setValueAtTime(0.3, ctx.currentTime + delay);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.15);
-
-    oscillator.start(ctx.currentTime + delay);
-    oscillator.stop(ctx.currentTime + delay + 0.15);
-  }
 
   /**
    * Verifica el estado de discado de campañas para la subcartera del agente

@@ -2452,6 +2452,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       console.log('⏱️ Llamada ya está activa, iniciando timer automáticamente...');
       this.callActive.set(true);
       this.startCall(); // Iniciar timer automáticamente
+      this.playCallAlertBeep(); // Beep de alerta al agente
     }
 
     // Suscribirse a cambios de estado de llamada
@@ -6260,5 +6261,35 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     window.open(url, 'whatsapp-chat');
     this.showWhatsappDropdown.set(false);
     this.whatsappManualNumber = '';
+  }
+
+  private playCallAlertBeep(): void {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const doPlay = () => {
+        this.playBeepTone(ctx, 0);
+        this.playBeepTone(ctx, 0.2);
+      };
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(() => doPlay());
+      } else {
+        doPlay();
+      }
+    } catch (e) {
+      console.warn('[CollectionManagement] Error reproduciendo beep:', e);
+    }
+  }
+
+  private playBeepTone(ctx: AudioContext, delay: number): void {
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.15);
+    oscillator.start(ctx.currentTime + delay);
+    oscillator.stop(ctx.currentTime + delay + 0.15);
   }
 }
