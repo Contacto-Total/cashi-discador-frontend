@@ -384,8 +384,8 @@ import { CallService } from '../../core/services/call.service';
                       </div>
                     }
                   </div>
-                  <!-- Botón Rellamar (oculto temporalmente) -->
-                  <!-- <div class="relative">
+                  <!-- Botón Rellamar -->
+                  <div class="relative">
                     @if (!rellamadaCallActive()) {
                       <button
                         (click)="canRellamar() && showRellamadaDropdown.set(!showRellamadaDropdown())"
@@ -433,7 +433,7 @@ import { CallService } from '../../core/services/call.service';
                         }
                       </div>
                     }
-                  </div> -->
+                  </div>
                 </div>
               </div>
             </div>
@@ -587,38 +587,6 @@ import { CallService } from '../../core/services/call.service';
                   <div class="text-red-500 text-xs mt-1">Seleccione una clasificación</div>
                 }
               </div>
-            }
-
-            <!-- Sección de Campos Dinámicos - NUEVA -->
-            <!-- No mostrar loading si es CONTINUIDAD (se muestra el loading de continuidad) -->
-            @if (isLoadingDynamicFields() && shouldShowDynamicForm()) {
-              <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
-                <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
-                  <span class="text-xs">Cargando campos adicionales...</span>
-                </div>
-              </div>
-            }
-            
-            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0 && shouldShowDynamicForm()) {
-              <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
-                <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
-                  <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
-                </div>
-              </div>
-            }
-
-            <!-- Componente de Campos Dinámicos -->
-            <!-- No mostrar si es CONTINUIDAD y no aplica (solo mostrar la alerta de error) -->
-            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFieldsSchema() && shouldShowDynamicForm()) {
-              <app-dynamic-field-renderer
-                #dynamicFieldRendererComponent
-                [schema]="dynamicFieldsSchema()"
-                [externalUpdates]="externalFieldUpdates()"
-                [selectedClassification]="selectedClassification()"
-                [customerAmounts]="finalPaymentAmounts()"
-                (dataChange)="onDynamicFieldsChange($event)"
-                (customAmountDetected)="onCustomAmountDetected($event)"
-              />
             }
 
             <!-- CONTINUIDAD DE PROMESA - Información cuando se selecciona CONTINUIDAD -->
@@ -1114,6 +1082,35 @@ import { CallService } from '../../core/services/call.service';
                   </div>
                 }
               </div>
+            }
+
+            <!-- Sección de Campos Dinámicos / Adicionales -->
+            @if (isLoadingDynamicFields() && shouldShowDynamicForm()) {
+              <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
+                  <span class="text-xs">Cargando campos adicionales...</span>
+                </div>
+              </div>
+            }
+
+            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0 && shouldShowDynamicForm()) {
+              <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
+                  <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
+                </div>
+              </div>
+            }
+
+            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFieldsSchema() && shouldShowDynamicForm()) {
+              <app-dynamic-field-renderer
+                #dynamicFieldRendererComponent
+                [schema]="dynamicFieldsSchema()"
+                [externalUpdates]="externalFieldUpdates()"
+                [selectedClassification]="selectedClassification()"
+                [customerAmounts]="finalPaymentAmounts()"
+                (dataChange)="onDynamicFieldsChange($event)"
+                (customAmountDetected)="onCustomAmountDetected($event)"
+              />
             }
 
             <!-- Botones de Acción - COMPACTOS -->
@@ -2533,6 +2530,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Suscribirse a llamadas entrantes para cargar automáticamente el cliente
     this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((callInfo: { from: string }) => {
       console.log('📲 [CollectionManagement] Llamada entrante de:', callInfo.from);
+
+      // Guard: no recargar datos si está tipificando o en rellamada
+      if (this.isTipifying() || this.isRellamada() || this.rellamadaCallActive()) {
+        console.warn('🚫 [CollectionManagement] Ignorando llamada entrante - tipificando/rellamada activa');
+        return;
+      }
+
       this.incomingPhoneNumber = callInfo.from;
 
       // Guardar el número y buscar cliente
