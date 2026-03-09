@@ -1024,6 +1024,7 @@ import { CallService } from '../../core/services/call.service';
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
+                          [max]="todayDate"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
@@ -2117,6 +2118,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Campos editables para el pago
   montoPagoEditable = signal<number>(0);
   fechaPagoEditable = signal<string>('');
+  todayDate = new Date().toISOString().split('T')[0];
 
   // Comprobante subido para la cancelación (opcional)
   uploadedComprobante = signal<ComprobanteUploadResponse | null>(null);
