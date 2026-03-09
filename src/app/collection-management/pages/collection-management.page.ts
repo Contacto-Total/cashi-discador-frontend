@@ -2481,6 +2481,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       if (state === CallState.ACTIVE && !this.callActive()) {
         this.callActive.set(true);
         this.startCall(); // Iniciar timer
+        this.playCallAlertBeep(); // Beep de alerta al agente
         // Cambiar estado del agente a EN_LLAMADA
         const currentUser = this.authService.getCurrentUser();
         if (currentUser?.id) {
