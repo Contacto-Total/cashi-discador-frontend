@@ -570,10 +570,13 @@ export class ManagementService {
    * Transforma la respuesta del backend al formato del frontend
    */
   private transformToFrontendFormat(record: RegistroGestionV2, originalRequest?: CreateManagementRequest): ManagementResource {
-    // Extraer fecha sin hora
+    // Extraer fecha y hora por separado
     let managementDate = record.fechaGestion;
+    let managementTime: string | undefined = undefined;
     if (managementDate && managementDate.includes('T')) {
-      managementDate = managementDate.split('T')[0];
+      const parts = managementDate.split('T');
+      managementDate = parts[0];
+      managementTime = parts[1] || undefined;
     }
 
     return {
@@ -597,7 +600,7 @@ export class ManagementService {
       level4Name: record.rutaNivel4 || '',
       observations: record.observaciones,
       managementDate: managementDate,
-      managementTime: undefined,
+      managementTime: managementTime,
       // Additional fields for history
       canalContacto: record.canalContacto || '',
       metodoContacto: record.metodoContacto || '',
