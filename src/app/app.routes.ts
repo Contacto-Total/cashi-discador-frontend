@@ -132,6 +132,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/reports/estado-agentes-report/estado-agentes-report.component').then(m => m.EstadoAgentesReportComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'reports/produccion',
+    loadComponent: () => import('./features/reports/produccion-report/produccion-report.component').then(m => m.ProduccionReportComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // SMS
