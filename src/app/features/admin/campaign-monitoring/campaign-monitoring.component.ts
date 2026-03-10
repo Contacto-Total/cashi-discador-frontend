@@ -248,9 +248,9 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
         this.loadingCampaigns = false;
 
         // Auto-select first active campaign and restart pollings with campaign filter
-        if (campaigns.length > 0 && !this.selectedCampaignId) {
-          const activeCampaign = campaigns.find(c => c.status === 'ACTIVE');
-          this.selectedCampaignId = activeCampaign?.id || campaigns[0].id || null;
+        if (this.campaigns.length > 0 && !this.selectedCampaignId) {
+          const activeCampaign = this.campaigns.find(c => c.status === 'ACTIVE');
+          this.selectedCampaignId = activeCampaign?.id || this.campaigns[0].id || null;
           // Reiniciar pollings con la campaña seleccionada
           this.onCampaignChange();
         }
