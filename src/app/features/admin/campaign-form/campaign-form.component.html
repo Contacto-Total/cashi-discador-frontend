@@ -416,7 +416,7 @@
                 </button>
               </div>
               <!-- NUMERICO filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'FECHA'">
+              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'BOOLEAN' && filter.dataType !== 'FECHA'">
                 <div class="range-display">
                   <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
                     <span class="range-label">Mínimo</span>
@@ -431,8 +431,8 @@
                   </div>
                 </div>
               </div>
-              <!-- TEXTO filter body -->
-              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType === 'TEXTO'">
+              <!-- TEXTO/BOOLEAN filter body -->
+              <div class="filter-card-body" *ngIf="filter.fieldCode && (filter.dataType === 'TEXTO' || filter.dataType === 'BOOLEAN')">
                 <div class="texto-filter-values">
                   <span class="texto-value-tag" *ngFor="let val of (filter.selectedValues || '').split(',')">{{ val }}</span>
                 </div>

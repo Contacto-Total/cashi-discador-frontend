@@ -182,7 +182,9 @@ export class CampaignFormComponent implements OnInit {
   getSelectedFieldDataType(): string {
     if (this.selectedFieldId === 0) return '';
     const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
-    return field?.dataType || 'NUMERICO';
+    const dt = field?.dataType || 'NUMERICO';
+    // BOOLEAN/BIT se maneja igual que TEXTO (selección de valores distintos)
+    return dt === 'BOOLEAN' ? 'TEXTO' : dt;
   }
 
   onFieldChange(): void {
