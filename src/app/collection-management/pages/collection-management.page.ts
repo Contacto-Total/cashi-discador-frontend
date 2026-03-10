@@ -2565,17 +2565,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Verificar si hay una llamada saliente en curso (navegación desde /dialer)
     // El evento onOutgoingCall ya se emitió antes de navegar aquí, así que leemos el número guardado
     const pendingOutgoingNumber = this.sipService.getCurrentOutgoingNumber();
-    // Solo usar pendingOutgoingNumber si:
-    // 1. No hay cliente REAL cargado (customerData sin 'id' numérico)
-    // 2. La llamada NO viene del Predictivo (incoming) - si es incoming, FULL-DATA carga el cliente correcto
-    const isIncomingCall = this.sipService.isCurrentCallIncoming();
-    if (pendingOutgoingNumber && !this.customerData()?.id && !isIncomingCall) {
+    if (pendingOutgoingNumber && !this.customerData()?.id) {
       console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
       this.outgoingPhoneNumber = pendingOutgoingNumber;
       this.activeCallPhone.set(pendingOutgoingNumber);
       this.autoLoadCustomerByPhone(pendingOutgoingNumber);
     }
-    // Siempre limpiar para evitar que quede stale
+    // Siempre limpiar para evitar que quede stale (rellamada anterior, etc.)
     this.sipService.clearCurrentOutgoingNumber();
 
 
