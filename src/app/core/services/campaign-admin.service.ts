@@ -163,8 +163,12 @@ export interface CampaignFilterRange {
   fieldDefinitionId: number;
   fieldCode: string;
   fieldName: string;
+  dataType?: string;            // NUMERICO, TEXTO, FECHA
   minValue?: number;
   maxValue?: number;
+  selectedValues?: string;      // Para TEXTO: valores separados por coma
+  minDate?: string;             // Para FECHA: fecha mínima (YYYY-MM-DD)
+  maxDate?: string;             // Para FECHA: fecha máxima (YYYY-MM-DD)
   tipoContacto?: TipoContacto; // CD, CI, PR, NC - null = aplica a todos
 }
 
@@ -367,6 +371,16 @@ export class CampaignAdminService {
   }
 
   /**
+   * Obtiene valores distintos de un campo TEXTO para multiselect
+   */
+  getDistinctValues(tenantId: number, portfolioId: number, subPortfolioId: number, fieldCode: string): Observable<string[]> {
+    return this.http.get<string[]>(
+      `${this.apiUrl}/filterable-fields/distinct-values?tenantId=${tenantId}&portfolioId=${portfolioId}&subPortfolioId=${subPortfolioId}&fieldCode=${encodeURIComponent(fieldCode)}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  /**
    * Obtiene los valores distintos de rango_antiguedad para una subcartera
    */
   getRangoAntiguedadValues(tenantId: number, portfolioId: number, subPortfolioId: number): Observable<string[]> {
@@ -397,8 +411,12 @@ export class CampaignAdminService {
         filtroRangoAntiguedad: filtroRangoAntiguedad || null,
         filtros: filtros.map(f => ({
           fieldCode: f.fieldCode,
+          dataType: f.dataType,
           minValue: f.minValue,
           maxValue: f.maxValue,
+          selectedValues: f.selectedValues,
+          minDate: f.minDate,
+          maxDate: f.maxDate,
           tipoContacto: f.tipoContacto
         }))
       },

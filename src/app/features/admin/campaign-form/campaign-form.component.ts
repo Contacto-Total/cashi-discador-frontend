@@ -62,6 +62,15 @@ export class CampaignFormComponent implements OnInit {
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
 
+  // Filtros TEXTO
+  newFilterSelectedValues: string[] = [];
+  distinctValuesForField: string[] = [];
+  loadingDistinctValues: boolean = false;
+
+  // Filtros FECHA
+  newFilterMinDate: string = '';
+  newFilterMaxDate: string = '';
+
   // Tipos de contacto y filtro de estado
   tiposContacto = TIPOS_CONTACTO;
   tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
@@ -170,6 +179,55 @@ export class CampaignFormComponent implements OnInit {
     });
   }
 
+  getSelectedFieldDataType(): string {
+    if (this.selectedFieldId === 0) return '';
+    const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+    return field?.dataType || 'NUMERICO';
+  }
+
+  onFieldChange(): void {
+    const dataType = this.getSelectedFieldDataType();
+    // Reset all type-specific inputs
+    this.newFilterMinValue = null;
+    this.newFilterMaxValue = null;
+    this.newFilterSelectedValues = [];
+    this.distinctValuesForField = [];
+    this.newFilterMinDate = '';
+    this.newFilterMaxDate = '';
+
+    if (dataType === 'TEXTO' && this.selectedTenantId && this.selectedPortfolioId && this.selectedSubPortfolioId) {
+      const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (field) {
+        this.loadingDistinctValues = true;
+        this.campaignService.getDistinctValues(
+          this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId, field.fieldCode
+        ).subscribe({
+          next: (values) => {
+            this.distinctValuesForField = values;
+            this.loadingDistinctValues = false;
+          },
+          error: (err) => {
+            console.error('Error loading distinct values:', err);
+            this.loadingDistinctValues = false;
+          }
+        });
+      }
+    }
+  }
+
+  toggleDistinctValue(value: string): void {
+    const idx = this.newFilterSelectedValues.indexOf(value);
+    if (idx >= 0) {
+      this.newFilterSelectedValues.splice(idx, 1);
+    } else {
+      this.newFilterSelectedValues.push(value);
+    }
+  }
+
+  isDistinctValueSelected(value: string): boolean {
+    return this.newFilterSelectedValues.includes(value);
+  }
+
   loadCampaignFilters(campaignId: number): void {
     this.campaignService.getCampaignFilters(campaignId).subscribe({
       next: (filters) => {
@@ -181,19 +239,29 @@ export class CampaignFormComponent implements OnInit {
   }
 
   addFilter(): void {
-    // Validar: debe tener tipo de contacto O un campo con rango
-    const tieneRango = this.newFilterMinValue !== null || this.newFilterMaxValue !== null;
     const tieneCampo = this.selectedFieldId !== 0;
     const tieneTipoContacto = this.selectedTipoContacto !== null;
+    const dataType = this.getSelectedFieldDataType();
 
     if (!tieneTipoContacto && !tieneCampo) {
       this.error = 'Seleccione un tipo de contacto o un campo para filtrar';
       return;
     }
 
-    if (tieneCampo && !tieneRango) {
-      this.error = 'Ingrese al menos un valor (mínimo o máximo) para el campo seleccionado';
-      return;
+    // Validar según tipo de dato
+    if (tieneCampo) {
+      if (dataType === 'NUMERICO' && this.newFilterMinValue === null && this.newFilterMaxValue === null) {
+        this.error = 'Ingrese al menos un valor (mínimo o máximo)';
+        return;
+      }
+      if (dataType === 'TEXTO' && this.newFilterSelectedValues.length === 0) {
+        this.error = 'Seleccione al menos un valor';
+        return;
+      }
+      if (dataType === 'FECHA' && !this.newFilterMinDate && !this.newFilterMaxDate) {
+        this.error = 'Ingrese al menos una fecha (desde o hasta)';
+        return;
+      }
     }
 
     // Si solo tiene tipo de contacto (sin campo), crear filtro solo con tipoContacto
@@ -202,14 +270,10 @@ export class CampaignFormComponent implements OnInit {
         fieldDefinitionId: 0,
         fieldCode: '',
         fieldName: 'Solo por Estado',
-        minValue: undefined,
-        maxValue: undefined,
         tipoContacto: this.selectedTipoContacto ?? undefined
       };
-
       this.campaignFilters.push(newFilter);
     } else {
-      // Filtro con campo y opcionalmente tipoContacto
       const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
       if (!selectedField) return;
 
@@ -217,10 +281,19 @@ export class CampaignFormComponent implements OnInit {
         fieldDefinitionId: selectedField.id,
         fieldCode: selectedField.fieldCode,
         fieldName: selectedField.fieldName,
-        minValue: this.newFilterMinValue ?? undefined,
-        maxValue: this.newFilterMaxValue ?? undefined,
+        dataType: selectedField.dataType,
         tipoContacto: this.selectedTipoContacto ?? undefined
       };
+
+      if (dataType === 'NUMERICO') {
+        newFilter.minValue = this.newFilterMinValue ?? undefined;
+        newFilter.maxValue = this.newFilterMaxValue ?? undefined;
+      } else if (dataType === 'TEXTO') {
+        newFilter.selectedValues = this.newFilterSelectedValues.join(',');
+      } else if (dataType === 'FECHA') {
+        newFilter.minDate = this.newFilterMinDate || undefined;
+        newFilter.maxDate = this.newFilterMaxDate || undefined;
+      }
 
       this.campaignFilters.push(newFilter);
     }
@@ -229,6 +302,10 @@ export class CampaignFormComponent implements OnInit {
     this.selectedFieldId = 0;
     this.newFilterMinValue = null;
     this.newFilterMaxValue = null;
+    this.newFilterSelectedValues = [];
+    this.distinctValuesForField = [];
+    this.newFilterMinDate = '';
+    this.newFilterMaxDate = '';
     this.selectedTipoContacto = null;
     this.error = null;
   }

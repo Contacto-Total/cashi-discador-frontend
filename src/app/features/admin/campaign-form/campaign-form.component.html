@@ -302,36 +302,86 @@
               <select
                 id="filterField"
                 [(ngModel)]="selectedFieldId"
+                (ngModelChange)="onFieldChange()"
                 name="filterField"
                 class="form-select form-select-lg">
                 <option [ngValue]="0">Sin filtro de campo</option>
                 <option *ngFor="let field of filterableFields" [ngValue]="field.id">
-                  {{ field.fieldName }}
+                  {{ field.fieldName }} ({{ field.dataType }})
                 </option>
               </select>
             </div>
 
-            <div class="form-group">
-              <label for="minValue">Valor Mínimo</label>
-              <input
-                type="number"
-                id="minValue"
-                [(ngModel)]="newFilterMinValue"
-                name="minValue"
-                class="form-input form-input-lg"
-                placeholder="Ej: 400">
-            </div>
+            <!-- NUMERICO: Valor Mínimo / Máximo -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'NUMERICO'">
+              <div class="form-group">
+                <label for="minValue">Valor Mínimo</label>
+                <input
+                  type="number"
+                  id="minValue"
+                  [(ngModel)]="newFilterMinValue"
+                  name="minValue"
+                  class="form-input form-input-lg"
+                  placeholder="Ej: 400">
+              </div>
+              <div class="form-group">
+                <label for="maxValue">Valor Máximo</label>
+                <input
+                  type="number"
+                  id="maxValue"
+                  [(ngModel)]="newFilterMaxValue"
+                  name="maxValue"
+                  class="form-input form-input-lg"
+                  placeholder="Ej: 1000">
+              </div>
+            </ng-container>
 
-            <div class="form-group">
-              <label for="maxValue">Valor Máximo</label>
-              <input
-                type="number"
-                id="maxValue"
-                [(ngModel)]="newFilterMaxValue"
-                name="maxValue"
-                class="form-input form-input-lg"
-                placeholder="Ej: 1000">
-            </div>
+            <!-- TEXTO: Multiselect de valores distintos -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'TEXTO'">
+              <div class="form-group texto-values-group" style="grid-column: span 2;">
+                <label>Valores Disponibles</label>
+                <div *ngIf="loadingDistinctValues" class="info-message">
+                  <span>Cargando valores...</span>
+                </div>
+                <div *ngIf="!loadingDistinctValues && distinctValuesForField.length > 0" class="distinct-values-list">
+                  <label class="distinct-value-item" *ngFor="let val of distinctValuesForField">
+                    <input
+                      type="checkbox"
+                      [checked]="isDistinctValueSelected(val)"
+                      (change)="toggleDistinctValue(val)">
+                    <span>{{ val }}</span>
+                  </label>
+                </div>
+                <div *ngIf="!loadingDistinctValues && distinctValuesForField.length === 0" class="info-message">
+                  <span>No se encontraron valores para este campo.</span>
+                </div>
+                <div *ngIf="newFilterSelectedValues.length > 0" class="selected-count">
+                  {{ newFilterSelectedValues.length }} valor(es) seleccionado(s)
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- FECHA: Rango de fechas -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'FECHA'">
+              <div class="form-group">
+                <label for="minDate">Fecha Desde</label>
+                <input
+                  type="date"
+                  id="minDate"
+                  [(ngModel)]="newFilterMinDate"
+                  name="minDate"
+                  class="form-input form-input-lg">
+              </div>
+              <div class="form-group">
+                <label for="maxDate">Fecha Hasta</label>
+                <input
+                  type="date"
+                  id="maxDate"
+                  [(ngModel)]="newFilterMaxDate"
+                  name="maxDate"
+                  class="form-input form-input-lg">
+              </div>
+            </ng-container>
 
             <div class="form-group filter-btn-container">
               <button type="button" class="btn-add-filter" (click)="addFilter()">
@@ -343,7 +393,7 @@
 
           <div *ngIf="filterableFields.length === 0" class="info-message">
             <lucide-angular name="info" [size]="16"></lucide-angular>
-            <span>No hay campos numéricos. Puede filtrar solo por Tipo de Contacto.</span>
+            <span>No hay campos disponibles. Puede filtrar solo por Tipo de Contacto.</span>
           </div>
         </div>
 
@@ -365,7 +415,8 @@
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                 </button>
               </div>
-              <div class="filter-card-body" *ngIf="filter.fieldCode">
+              <!-- NUMERICO filter body -->
+              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType !== 'TEXTO' && filter.dataType !== 'FECHA'">
                 <div class="range-display">
                   <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
                     <span class="range-label">Mínimo</span>
@@ -377,6 +428,28 @@
                   <div class="range-value" *ngIf="filter.maxValue !== undefined && filter.maxValue !== null">
                     <span class="range-label">Máximo</span>
                     <span class="range-number">{{ filter.maxValue | number }}</span>
+                  </div>
+                </div>
+              </div>
+              <!-- TEXTO filter body -->
+              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType === 'TEXTO'">
+                <div class="texto-filter-values">
+                  <span class="texto-value-tag" *ngFor="let val of (filter.selectedValues || '').split(',')">{{ val }}</span>
+                </div>
+              </div>
+              <!-- FECHA filter body -->
+              <div class="filter-card-body" *ngIf="filter.fieldCode && filter.dataType === 'FECHA'">
+                <div class="range-display">
+                  <div class="range-value" *ngIf="filter.minDate">
+                    <span class="range-label">Desde</span>
+                    <span class="range-number">{{ filter.minDate }}</span>
+                  </div>
+                  <div class="range-separator" *ngIf="filter.minDate && filter.maxDate">
+                    <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
+                  </div>
+                  <div class="range-value" *ngIf="filter.maxDate">
+                    <span class="range-label">Hasta</span>
+                    <span class="range-number">{{ filter.maxDate }}</span>
                   </div>
                 </div>
               </div>
