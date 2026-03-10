@@ -12,7 +12,7 @@ import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRe
 import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
-import { CustomerData } from '../models/customer.model';
+import { CustomerData, TelefonoMetodo } from '../models/customer.model';
 import { ManagementForm, ValidationErrors } from '../models/management.model';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio } from '../../maintenance/models/portfolio.model';
@@ -214,31 +214,31 @@ import { CallService } from '../../core/services/call.service';
                       </div>
                     }
 
-                    <!-- Teléfono Principal -->
-                    <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
-                      <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
-                      <div class="flex-1 min-w-0">
-                        <div class="text-xs text-green-600 dark:text-green-400">Principal</div>
-                        <div class="text-xs font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
-                      </div>
-                    </div>
-                    <!-- Teléfono Alternativo -->
-                    @if (customerData().contacto.telefono_alternativo) {
-                      <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-                        <lucide-angular name="phone" [size]="14" class="text-slate-500 dark:text-slate-400"></lucide-angular>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-xs text-slate-500 dark:text-slate-400">Alternativo</div>
-                          <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_alternativo }}</div>
+                    <!-- Teléfonos desde metodos_contacto -->
+                    @if (telefonosMetodo().length > 0) {
+                      @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
+                        <div class="flex items-center gap-2 p-1.5 rounded border"
+                             [class]="i === 0 ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'">
+                          <lucide-angular [name]="i === 0 ? 'smartphone' : 'phone'" [size]="14"
+                                         [class]="i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'"></lucide-angular>
+                          <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-1">
+                              <span class="text-xs" [class]="i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
+                              @if (tel.estadoContactabilidad && contactabilidadBadge(tel.estadoContactabilidad).text) {
+                                <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad).class">{{ contactabilidadBadge(tel.estadoContactabilidad).text }}</span>
+                              }
+                            </div>
+                            <div class="text-xs font-bold truncate" [class]="i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                          </div>
                         </div>
-                      </div>
-                    }
-                    <!-- Teléfono Trabajo -->
-                    @if (customerData().contacto.telefono_trabajo) {
-                      <div class="flex items-center gap-2 p-1.5 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-                        <lucide-angular name="building-2" [size]="14" class="text-slate-500 dark:text-slate-400"></lucide-angular>
+                      }
+                    } @else if (customerData().contacto.telefono_principal) {
+                      <!-- Fallback: mostrar teléfono de la tabla dinámica si metodos_contacto no tiene datos -->
+                      <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
+                        <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-xs text-slate-500 dark:text-slate-400">Trabajo</div>
-                          <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ customerData().contacto.telefono_trabajo }}</div>
+                          <div class="text-xs text-green-600 dark:text-green-400">Principal</div>
+                          <div class="text-xs font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
                         </div>
                       </div>
                     }
@@ -2010,6 +2010,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
 
+  // Teléfonos desde metodos_contacto
+  telefonosMetodo = signal<TelefonoMetodo[]>([]);
+
   // Agregar teléfono
   showAddPhoneForm = signal(false);
   newPhoneNumber = '';
@@ -2021,13 +2024,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   whatsappManualNumber = '';
 
   whatsappNumbers = computed(() => {
+    const telefonos = this.telefonosMetodo();
+    if (telefonos.length > 0) {
+      return telefonos
+        .filter(t => /^9\d{8}$/.test(t.numero.trim()))
+        .map(t => ({ number: t.numero.trim(), label: this.subtipoLabel(t.subtipo) }));
+    }
+    // Fallback: usar datos estáticos de la tabla dinámica
     const data = this.customerData();
     const nums: { number: string; label: string }[] = [];
     if (data?.contacto) {
       const check = (val: string | undefined, label: string) => {
-        if (val && /^9\d{8}$/.test(val.trim())) {
-          nums.push({ number: val.trim(), label });
-        }
+        if (val && /^9\d{8}$/.test(val.trim())) nums.push({ number: val.trim(), label });
       };
       check(data.contacto.telefono_principal, 'Principal');
       check(data.contacto.telefono_alternativo, 'Alternativo');
@@ -2037,13 +2045,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   rellamadaPhoneNumbers = computed(() => {
+    const telefonos = this.telefonosMetodo();
+    if (telefonos.length > 0) {
+      return telefonos
+        .filter(t => t.numero.trim().length >= 7)
+        .map(t => ({ number: t.numero.trim(), label: this.subtipoLabel(t.subtipo) }));
+    }
+    // Fallback: usar datos estáticos de la tabla dinámica
     const data = this.customerData();
     const nums: { number: string; label: string }[] = [];
     if (data?.contacto) {
       const check = (val: string | undefined, label: string) => {
-        if (val && val.trim().length >= 7) {
-          nums.push({ number: val.trim(), label });
-        }
+        if (val && val.trim().length >= 7) nums.push({ number: val.trim(), label });
       };
       check(data.contacto.telefono_principal, 'Principal');
       check(data.contacto.telefono_alternativo, 'Alternativo');
@@ -2866,6 +2879,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.loadActivePaymentSchedules(customerId);
     }
 
+    // Cargar teléfonos desde metodos_contacto
+    const doc = client.documento || '';
+    if (doc) {
+      this.loadTelefonosMetodo(doc);
+    }
+
     this.isLoadingCustomer.set(false);
     console.log('✅ Cliente cargado exitosamente, customerId:', customerId);
   }
@@ -3265,6 +3284,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+
+    // Cargar teléfonos desde metodos_contacto
+    const doc = clienteDetalle.documento || '';
+    if (doc) {
+      this.loadTelefonosMetodo(doc);
+    }
 
     this.isLoadingCustomer.set(false);
     console.warn('⚠️ Datos del cliente cargados en modo FALLBACK, customerId:', customerId);
@@ -6206,6 +6231,43 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   // --- Agregar Teléfono ---
+  subtipoLabel(subtipo: string): string {
+    const labels: Record<string, string> = {
+      'telefono_principal': 'Principal',
+      'telefono_celular': 'Celular',
+      'telefono_secundario': 'Secundario',
+      'telefono_trabajo': 'Trabajo',
+      'telefono_laboral': 'Laboral',
+      'telefono_domicilio': 'Domicilio',
+      'telefono_referencia_1': 'Referencia 1',
+      'telefono_referencia_2': 'Referencia 2'
+    };
+    return labels[subtipo] || subtipo || 'Teléfono';
+  }
+
+  contactabilidadBadge(estado: string | undefined): { text: string; class: string } {
+    switch (estado) {
+      case 'CONTACTO_TITULAR': return { text: 'Titular', class: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' };
+      case 'CONTACTO_EFECTIVO': return { text: 'Efectivo', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' };
+      case 'NUEVO': return { text: 'Nuevo', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
+      case 'NO_CONTACTADO': return { text: 'No contactado', class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      default: return { text: '', class: '' };
+    }
+  }
+
+  loadTelefonosMetodo(documento: string): void {
+    if (!documento) return;
+    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-activos/${documento}`).pipe(
+      catchError(err => {
+        console.error('❌ Error cargando teléfonos de metodos_contacto:', err);
+        return of([]);
+      })
+    ).subscribe(telefonos => {
+      console.log('📞 Teléfonos activos cargados:', telefonos.length);
+      this.telefonosMetodo.set(telefonos);
+    });
+  }
+
   guardarNuevoTelefono(): void {
     const valor = (this.newPhoneNumber || '').trim();
     if (!this.isValidCellphone(valor)) return;
@@ -6220,25 +6282,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       subtipo: this.newPhoneSubtipo
     }).subscribe({
       next: () => {
-        // Actualizar customerData para reflejar el nuevo teléfono
-        const current = this.customerData();
-        const subtipoMap: Record<string, string> = {
-          'telefono_referencia_1': 'telefono_alternativo',
-          'telefono_referencia_2': 'telefono_alternativo',
-          'telefono_secundario': 'telefono_alternativo'
-        };
-        const campo = subtipoMap[this.newPhoneSubtipo] || 'telefono_alternativo';
-
-        if (current?.contacto) {
-          const contactoActualizado = { ...current.contacto };
-          // Si el campo destino está vacío, llenarlo; si no, poner en trabajo
-          if (!contactoActualizado[campo as keyof typeof contactoActualizado]) {
-            (contactoActualizado as any)[campo] = valor;
-          } else if (!contactoActualizado.telefono_trabajo) {
-            contactoActualizado.telefono_trabajo = valor;
-          }
-          this.customerData.set({ ...current, contacto: contactoActualizado });
-        }
+        // Recargar la lista completa de teléfonos desde el backend
+        this.loadTelefonosMetodo(documento);
 
         // Reset form
         this.newPhoneNumber = '';

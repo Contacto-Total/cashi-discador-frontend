@@ -69,6 +69,8 @@ export interface AgenteMonitoreo {
   mensajeAlerta: string | null;
   sonidoAlerta: boolean;
   peripheralStatus: string;
+  promedioEsperaSegundos: number;
+  periodosDisponible: number;
 }
 
 export interface LlamadaTiempoReal {

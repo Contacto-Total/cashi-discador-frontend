@@ -40,6 +40,14 @@ export interface CustomerData {
   deuda: CustomerDebt;
 }
 
+export interface TelefonoMetodo {
+  tipo: string;
+  numero: string;
+  subtipo: string;
+  activo: boolean;
+  estadoContactabilidad?: string;
+}
+
 export interface CallHistory {
   fecha: string;
   hora: string;

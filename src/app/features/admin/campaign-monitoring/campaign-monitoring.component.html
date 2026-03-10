@@ -253,6 +253,7 @@
                 <th>Estado</th>
                 <th>Teléfono</th>
                 <th>Tiempo</th>
+                <th style="width: 80px; text-align: center;" title="Promedio de espera en DISPONIBLE">Prom. Espera</th>
                 <th style="width: 40px; text-align: center;" title="Periféricos">🎧</th>
                 <th style="width: 50px; text-align: center;">Alerta</th>
               </tr>
@@ -277,6 +278,9 @@
                 <td class="agente-tiempo">
                   {{ formatTiempo(agente.segundosEnEstado) }}
                 </td>
+                <td style="text-align: center; font-size: 0.8rem; color: #cbd5e1;" [title]="'Periodos: ' + (agente.periodosDisponible || 0)">
+                  {{ agente.promedioEsperaSegundos ? formatTiempo(agente.promedioEsperaSegundos) : '-' }}
+                </td>
                 <td style="text-align: center;" [title]="getPeripheralTooltip(agente.peripheralStatus)">
                   <lucide-angular name="headphones" [size]="16"
                     [style.color]="getPeripheralColor(agente.peripheralStatus)">
@@ -292,7 +296,7 @@
                 </td>
               </tr>
               <tr *ngIf="agentesMonitoreo.length === 0" class="empty-row">
-                <td colspan="6" style="text-align: center; color: #94a3b8;">
+                <td colspan="7" style="text-align: center; color: #94a3b8;">
                   No hay agentes registrados
                 </td>
               </tr>
