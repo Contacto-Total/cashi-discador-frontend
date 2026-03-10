@@ -9,6 +9,8 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, Campaign } from '../../../core/services/campaign-admin.service';
 import { AutoDialerService, AutoDialerEstadisticas, AgenteMonitoreo, LlamadaTiempoReal } from '../../../core/services/autodialer.service';
 import { WebsocketService } from '../../../core/services/websocket.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { UserRole } from '../../../core/models/user.model';
 import { StatusAlarmClockComponent } from '../../../shared/components/status-alarm-clock/status-alarm-clock.component';
 
 // Interfaz para alertas de agentes
@@ -98,6 +100,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     private campaignService: CampaignAdminService,
     private autoDialerService: AutoDialerService,
     private websocketService: WebsocketService,
+    private authService: AuthService,
     private router: Router
   ) {}
 
@@ -226,6 +229,14 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
   private speechVoices: SpeechSynthesisVoice[] = [];
   private spanishVoice: SpeechSynthesisVoice | null = null;
 
+  private filterByUserSubPortfolio(campaigns: Campaign[]): Campaign[] {
+    const user = this.authService.getCurrentUser();
+    if (user?.role === UserRole.SUPERVISOR && user.subPortfolioId) {
+      return campaigns.filter(c => c.subPortfolioId === user.subPortfolioId);
+    }
+    return campaigns;
+  }
+
   /**
    * Carga todas las campañas para el selector
    */
@@ -233,7 +244,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
     this.loadingCampaigns = true;
     this.campaignService.getAllCampaigns().subscribe({
       next: (campaigns) => {
-        this.campaigns = campaigns;
+        this.campaigns = this.filterByUserSubPortfolio(campaigns);
         this.loadingCampaigns = false;
 
         // Auto-select first active campaign and restart pollings with campaign filter
