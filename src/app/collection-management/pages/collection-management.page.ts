@@ -3064,6 +3064,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
   loadFirstCustomer(retryCount: number = 0) {
+    // Si autoLoadCustomerByPhone ya cargó un cliente (llamada manual/saliente), no duplicar
+    if (this.customerData()?.id && retryCount === 0) {
+      console.log('📋 [FULL-DATA] Cliente ya cargado por autoLoadCustomerByPhone, omitiendo loadFirstCustomer');
+      return;
+    }
+
     this.isLoadingCustomer.set(true);
     const currentUser = this.authService.getCurrentUser();
 
@@ -3112,7 +3118,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Reintentar si no hay datos - cubre dos escenarios:
           // 1. Llamada activa: transacción del backend aún no commiteada
           // 2. Llamada terminó rápido (<3s): agente ya está tipificando pero los datos no llegaron
-          if (retryCount < 2 && (this.callActive() || this.isTipifying())) {
+          if (retryCount < 2 && (this.callActive() || this.isTipifying()) && !this.customerData()?.id) {
             console.warn(`⚠️ [FULL-DATA] Sin datos pero en llamada/tipificando - reintentando en 2s (intento ${retryCount + 1}/3)`);
             setTimeout(() => this.loadFirstCustomer(retryCount + 1), 2000);
           } else {
