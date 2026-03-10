@@ -184,28 +184,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </div>
           </div>
         </div>
-
-        <!-- Row 2: Distribution metrics -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <!-- Meta Diaria Efectiva -->
-          <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-purple-100 uppercase">Meta Diaria Efectiva</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalMetaDiariaEfectiva | number:'1.2-2' }}</p>
-          </div>
-
-          <!-- Déficit -->
-          <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-red-100 uppercase">Déficit Acumulado</p>
-            <p class="text-xl font-bold">S/ {{ resumen()!.totalDeficit | number:'1.2-2' }}</p>
-          </div>
-
-          <!-- Cumplimiento Diario -->
-          <div class="rounded-xl shadow-md p-4 text-white"
-               [class]="getCumplimientoBgClass(resumen()!.cumplimientoDiarioGlobalPct)">
-            <p class="text-xs uppercase opacity-80">Cumplimiento Diario</p>
-            <p class="text-xl font-bold">{{ resumen()!.cumplimientoDiarioGlobalPct | number:'1.2-2' }}%</p>
-          </div>
-        </div>
       }
 
       <!-- Tabla -->
@@ -221,23 +199,19 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Proyectado Hoy</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagos Hoy</th>
                 <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Puntos Hoy %</th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Punto Efect. %</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Meta Diaria</th>
-                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Déficit</th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cumpl. Diario %</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
               @if (loading()) {
                 <tr>
-                  <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="loader-2" [size]="32" class="animate-spin mx-auto mb-2"></lucide-angular>
                     <p>Cargando datos...</p>
                   </td>
                 </tr>
               } @else if (data().length === 0) {
                 <tr>
-                  <td colspan="11" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                  <td colspan="7" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <lucide-angular name="inbox" [size]="48" class="mx-auto mb-2 text-gray-400"></lucide-angular>
                     <p>No hay datos de producción para mostrar</p>
                     <p class="text-xs mt-1">Selecciona los filtros y presiona "Buscar"</p>
@@ -274,23 +248,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                         </span>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-center">
-                      <span class="text-sm font-medium text-purple-600 dark:text-purple-400">
-                        {{ item.puntoEfectivoPct | number:'1.2-2' }}%
-                      </span>
-                    </td>
-                    <td class="px-4 py-3 text-right text-purple-600 dark:text-purple-400 font-semibold">
-                      S/ {{ item.metaDiariaEfectiva | number:'1.2-2' }}
-                    </td>
-                    <td class="px-4 py-3 text-right font-semibold"
-                        [class]="item.deficitAcumulado > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'">
-                      S/ {{ item.deficitAcumulado | number:'1.2-2' }}
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                      <span class="text-sm font-bold" [class]="getCumplimientoTextClass(item.cumplimientoDiarioPct)">
-                        {{ item.cumplimientoDiarioPct | number:'1.2-2' }}%
-                      </span>
-                    </td>
                   </tr>
                 }
 
@@ -312,16 +269,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     </td>
                     <td class="px-4 py-3 text-center text-teal-700 dark:text-teal-300">
                       {{ resumen()!.puntosGlobalPct | number:'1.2-2' }}%
-                    </td>
-                    <td class="px-4 py-3 text-center text-gray-500">-</td>
-                    <td class="px-4 py-3 text-right text-purple-700 dark:text-purple-300">
-                      S/ {{ resumen()!.totalMetaDiariaEfectiva | number:'1.2-2' }}
-                    </td>
-                    <td class="px-4 py-3 text-right text-red-700 dark:text-red-300">
-                      S/ {{ resumen()!.totalDeficit | number:'1.2-2' }}
-                    </td>
-                    <td class="px-4 py-3 text-center font-bold" [class]="getCumplimientoTextClass(resumen()!.cumplimientoDiarioGlobalPct)">
-                      {{ resumen()!.cumplimientoDiarioGlobalPct | number:'1.2-2' }}%
                     </td>
                   </tr>
                 }
@@ -482,17 +429,5 @@ export class ProduccionReportComponent implements OnInit {
     if (puntaje >= 50) return 'text-amber-600 dark:text-amber-400';
     if (puntaje >= 25) return 'text-orange-600 dark:text-orange-400';
     return 'text-red-600 dark:text-red-400';
-  }
-
-  getCumplimientoTextClass(pct: number): string {
-    if (pct >= 100) return 'text-green-600 dark:text-green-400';
-    if (pct >= 80) return 'text-amber-600 dark:text-amber-400';
-    return 'text-red-600 dark:text-red-400';
-  }
-
-  getCumplimientoBgClass(pct: number): string {
-    if (pct >= 100) return 'bg-gradient-to-r from-green-500 to-green-600';
-    if (pct >= 80) return 'bg-gradient-to-r from-amber-500 to-amber-600';
-    return 'bg-gradient-to-r from-red-500 to-red-600';
   }
 }

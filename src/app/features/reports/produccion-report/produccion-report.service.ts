@@ -13,11 +13,6 @@ export interface ReporteProduccionDTO {
   proyectadoHoy: number;
   pagosHoy: number;
   puntosHoyPct: number;
-  puntoOriginalPct: number;
-  puntoEfectivoPct: number;
-  metaDiariaEfectiva: number;
-  deficitAcumulado: number;
-  cumplimientoDiarioPct: number;
 }
 
 export interface ResumenProduccion {
@@ -27,9 +22,6 @@ export interface ResumenProduccion {
   totalPagos: number;
   puntosGlobalPct: number;
   totalCarteras: number;
-  totalMetaDiariaEfectiva: number;
-  totalDeficit: number;
-  cumplimientoDiarioGlobalPct: number;
 }
 
 export interface ReporteProduccionResponse {
