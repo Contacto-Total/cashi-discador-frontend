@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -202,7 +202,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               </div>
               <div>
                 <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ totalBreakTime() }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Tiempo Break Total</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Tiempo Ocioso Total</p>
               </div>
             </div>
           </div>
@@ -239,12 +239,12 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                   <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Conectado</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Productivo</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Break</th>
+                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Ocioso</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">% Ocupacion</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Disponible</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">En Llamada</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tipificando</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Reunion</th>
+                  <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Gestion Manual</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Refrigerio</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">SSHH</th>
                 </tr>
@@ -263,7 +263,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                       {{ agente.tiempoProductivoFormateado }}
                     </td>
                     <td class="px-3 py-2 text-center text-amber-600 dark:text-amber-400 font-medium">
-                      {{ agente.tiempoBreakFormateado }}
+                      {{ formatMin(agente.totalMinutosBreak) }}
                     </td>
                     <td class="px-3 py-2 text-center">
                       <div class="flex items-center justify-center gap-2">
@@ -289,7 +289,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                       {{ formatMin(agente.minutoPorEstado['TIPIFICANDO']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['EN_REUNION']) }}
+                      {{ formatMin(agente.minutoPorEstado['GESTION_MANUAL']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
                       {{ formatMin(agente.minutoPorEstado['REFRIGERIO']) }}
@@ -315,6 +315,23 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
       <!-- Tab: Detalle de Cambios -->
       @if (activeTab() === 'detalle') {
+        <!-- Filtro visual -->
+        <div class="mb-3">
+          <div class="relative">
+            <lucide-angular name="search" [size]="16"
+              class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></lucide-angular>
+            <input
+              type="text"
+              [ngModel]="detalleFilter()"
+              (ngModelChange)="detalleFilter.set($event)"
+              placeholder="Filtrar por agente, estado o notas..."
+              class="w-full md:w-80 pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm
+                     focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+                     placeholder:text-gray-400"
+            />
+          </div>
+        </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -346,7 +363,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     </td>
                   </tr>
                 } @else {
-                  @for (reg of registros(); track reg.idHistory) {
+                  @for (reg of filteredRegistros(); track reg.idHistory) {
                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td class="px-3 py-2">
                         <div class="text-gray-900 dark:text-white font-medium text-xs">{{ reg.nombreAgente }}</div>
@@ -446,6 +463,19 @@ export class EstadoAgentesReportComponent implements OnInit {
   currentPage = signal(0);
   totalPages = signal(0);
   activeTab = signal<'resumen' | 'detalle'>('resumen');
+  detalleFilter = signal('');
+
+  filteredRegistros = computed(() => {
+    const filter = this.detalleFilter().toLowerCase().trim();
+    const regs = this.registros();
+    if (!filter) return regs;
+    return regs.filter(r =>
+      r.nombreAgente?.toLowerCase().includes(filter) ||
+      r.estadoAnterior?.toLowerCase().includes(filter) ||
+      r.estadoNuevo?.toLowerCase().includes(filter) ||
+      r.notas?.toLowerCase().includes(filter)
+    );
+  });
 
   proveedores = signal<Inquilino[]>([]);
   carteras = signal<Cartera[]>([]);
@@ -526,13 +556,13 @@ export class EstadoAgentesReportComponent implements OnInit {
       this.filtros.idCartera || undefined,
       this.filtros.idSubcartera || undefined,
       this.currentPage(),
-      50
+      15
     ).subscribe({
       next: (response) => {
         this.registros.set(response.registros);
         this.resumen.set(response.resumen);
         this.totalRecords.set(response.total);
-        this.totalPages.set(Math.ceil(response.total / 50));
+        this.totalPages.set(Math.ceil(response.total / 15));
         this.loading.set(false);
       },
       error: (err) => {
