@@ -391,6 +391,24 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // DISTRIBUCIÓN DE PUNTOS
+  // ========================================
+  {
+    path: 'admin/distribucion-puntos',
+    loadComponent: () => import('./features/admin/distribucion-puntos/distribucion-puntos.component').then(m => m.DistribucionPuntosComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
+  // ========================================
+  // FERIADOS
+  // ========================================
+  {
+    path: 'admin/maintenance/feriados',
+    loadComponent: () => import('./features/admin/feriados/feriados.component').then(m => m.FeriadosComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+
+  // ========================================
   // CONVENIOS
   // ========================================
   {
