@@ -6,7 +6,7 @@
     </div>
     <div>
       <h1 class="text-lg font-bold text-slate-800 dark:text-white transition-colors duration-300">Gestión Manual</h1>
-      <p class="text-xs text-slate-500 dark:text-gray-400 transition-colors duration-300">Busca un cliente por documento para tipificar</p>
+      <p class="text-xs text-slate-500 dark:text-gray-400 transition-colors duration-300">Busca un cliente por documento o teléfono para tipificar</p>
     </div>
   </div>
 
@@ -18,18 +18,42 @@
         <span class="text-sm font-semibold text-slate-800 dark:text-white transition-colors duration-300">Buscar Cliente</span>
       </div>
 
+      <!-- Toggle: Documento / Teléfono -->
+      <div class="flex gap-1 mb-3 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 w-fit">
+        <button
+          (click)="setSearchType('documento')"
+          [class]="searchType() === 'documento'
+            ? 'px-3 py-1.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-700 text-green-700 dark:text-green-400 shadow-sm transition-all duration-200'
+            : 'px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200'">
+          <span class="flex items-center gap-1">
+            <lucide-angular name="file-text" [size]="13"></lucide-angular>
+            Documento
+          </span>
+        </button>
+        <button
+          (click)="setSearchType('telefono')"
+          [class]="searchType() === 'telefono'
+            ? 'px-3 py-1.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-700 text-green-700 dark:text-green-400 shadow-sm transition-all duration-200'
+            : 'px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200'">
+          <span class="flex items-center gap-1">
+            <lucide-angular name="phone" [size]="13"></lucide-angular>
+            Teléfono
+          </span>
+        </button>
+      </div>
+
       <div class="flex gap-3">
         <div class="flex-1 relative group">
           <input
             type="text"
-            [value]="searchDocument()"
+            [value]="searchValue()"
             (input)="onSearchInput($event)"
-            (keyup.enter)="searchByDocument()"
-            placeholder="Ingresa el documento del cliente (DNI/Cédula)"
+            (keyup.enter)="search()"
+            [placeholder]="searchType() === 'documento' ? 'Ingresa el documento del cliente (DNI/Cédula)' : 'Ingresa el número de teléfono'"
             class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400 group-hover:shadow-sm">
         </div>
         <button
-          (click)="searchByDocument()"
+          (click)="search()"
           [disabled]="searching()"
           class="px-5 py-2.5 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 disabled:from-gray-400 disabled:to-gray-500 dark:disabled:from-gray-600 dark:disabled:to-gray-700 text-white text-sm font-semibold rounded-lg transition-all duration-300 flex items-center gap-2 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-green-500/30 hover:scale-105 active:scale-95">
           @if (searching()) {

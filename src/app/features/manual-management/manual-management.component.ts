@@ -17,7 +17,8 @@ import { ClientSearchService, DynamicClient, GlobalSearchResult } from '../../co
 })
 export class ManualManagementComponent implements OnInit {
   // Búsqueda
-  searchDocument = signal('');
+  searchValue = signal('');
+  searchType = signal<'documento' | 'telefono'>('documento');
   searching = signal(false);
   searchError = signal('');
 
@@ -37,21 +38,34 @@ export class ManualManagementComponent implements OnInit {
 
   onSearchInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
-    this.searchDocument.set(value);
-    // Clear previous result when typing
+    this.searchValue.set(value);
     this.foundResult.set(null);
     this.searchError.set('');
   }
 
-  searchByDocument(): void {
-    const documento = this.searchDocument().trim();
-    if (!documento) {
-      this.searchError.set('Ingresa un documento para buscar');
+  setSearchType(type: 'documento' | 'telefono'): void {
+    this.searchType.set(type);
+    this.searchValue.set('');
+    this.foundResult.set(null);
+    this.searchError.set('');
+  }
+
+  search(): void {
+    const value = this.searchValue().trim();
+    if (!value) {
+      this.searchError.set(this.searchType() === 'documento'
+        ? 'Ingresa un documento para buscar'
+        : 'Ingresa un número de teléfono para buscar');
       return;
     }
 
-    if (documento.length < 6) {
+    if (this.searchType() === 'documento' && value.length < 6) {
       this.searchError.set('El documento debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (this.searchType() === 'telefono' && value.length < 7) {
+      this.searchError.set('El teléfono debe tener al menos 7 dígitos');
       return;
     }
 
@@ -59,7 +73,11 @@ export class ManualManagementComponent implements OnInit {
     this.searchError.set('');
     this.foundResult.set(null);
 
-    this.clientSearchService.findClientGlobal(documento).subscribe({
+    const obs = this.searchType() === 'documento'
+      ? this.clientSearchService.findClientGlobal(value)
+      : this.clientSearchService.findClientGlobalByPhone(value);
+
+    obs.subscribe({
       next: (result) => {
         this.searching.set(false);
         this.foundResult.set(result);
@@ -67,7 +85,9 @@ export class ManualManagementComponent implements OnInit {
       error: (err) => {
         this.searching.set(false);
         if (err.status === 404) {
-          this.searchError.set('Cliente no encontrado con ese documento');
+          this.searchError.set(this.searchType() === 'documento'
+            ? 'Cliente no encontrado con ese documento'
+            : 'Cliente no encontrado con ese número de teléfono');
         } else {
           this.searchError.set('Error al buscar el cliente');
         }
@@ -92,7 +112,7 @@ export class ManualManagementComponent implements OnInit {
   }
 
   clearSearch(): void {
-    this.searchDocument.set('');
+    this.searchValue.set('');
     this.foundResult.set(null);
     this.searchError.set('');
   }

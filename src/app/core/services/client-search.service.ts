@@ -54,6 +54,15 @@ export class ClientSearchService {
   }
 
   /**
+   * Busca un cliente globalmente por número de teléfono.
+   * Busca en metodos_contacto y encuentra automáticamente el contexto.
+   */
+  findClientGlobalByPhone(telefono: string): Observable<GlobalSearchResult> {
+    const params = new HttpParams().set('telefono', telefono);
+    return this.http.get<GlobalSearchResult>(`${this.apiUrl}/global-phone`, { params });
+  }
+
+  /**
    * Busca un cliente por documento exacto
    */
   findClientByDocumento(
