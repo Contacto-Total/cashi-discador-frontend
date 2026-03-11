@@ -2474,19 +2474,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       // Guard: si es rellamada, manejar aislado sin tocar estado principal
       if (this.isRellamada()) {
-        if (state === CallState.ACTIVE) {
+        if (state === CallState.CONNECTING || state === CallState.RINGING || state === CallState.ACTIVE) {
           this.rellamadaCallActive.set(true);
-          console.log('📞 [Rellamada] Conectada');
+          console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
         }
         if ((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
           console.log('📞 [Rellamada] Terminada');
           this.isRellamada.set(false);
           this.rellamadaCallActive.set(false);
           this.sipService.setRellamadaActive(false);
-          this.sipService.clearCurrentOutgoingNumber(); // Limpiar número stale de rellamada
+          this.sipService.clearCurrentOutgoingNumber();
           this.showRellamadaDropdown.set(false);
           this.isMuted.set(false);
           this.isOnHold.set(false);
+        }
+        // Si la llamada falla sin haber conectado, limpiar flags
+        if ((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
+          console.log('📞 [Rellamada] Falló antes de conectar, limpiando flags');
+          this.isRellamada.set(false);
+          this.sipService.setRellamadaActive(false);
+          this.showRellamadaDropdown.set(false);
         }
         return; // No ejecutar lógica normal
       }
@@ -3628,7 +3635,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
-  iniciarRellamada(phoneNumber: string) {
+  async iniciarRellamada(phoneNumber: string) {
     if (this.rellamadaCallActive() || this.callActive()) return;
     this.isRellamada.set(true);
     this.activeCallPhone.set(phoneNumber);
@@ -3646,7 +3653,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
       });
     }
-    this.sipService.call(phoneNumber);
+    try {
+      await this.sipService.call(phoneNumber);
+    } catch (err: any) {
+      console.error('❌ [Rellamada] Error al iniciar llamada SIP:', err?.message || err);
+      this.isRellamada.set(false);
+      this.rellamadaCallActive.set(false);
+      this.sipService.setRellamadaActive(false);
+      this.sipService.clearCurrentOutgoingNumber();
+      this.showRellamadaDropdown.set(false);
+    }
   }
 
   colgarRellamada() {
