@@ -889,8 +889,14 @@ export class SipService {
       this.currentSession = null;
 
       setTimeout(() => {
-        this.currentCallState = CallState.IDLE;
-        this.onCallStatus.emit(this.currentCallState);
+        // Solo emitir IDLE si no hay una nueva llamada activa
+        // Evita que el IDLE de una llamada anterior mate la navegación de la siguiente
+        if (this.currentCallState === CallState.ENDED) {
+          this.currentCallState = CallState.IDLE;
+          this.onCallStatus.emit(this.currentCallState);
+        } else {
+          console.log('⚠️ Suppressed stale IDLE - new call already in state:', this.currentCallState);
+        }
       }, 1000);
     });
 
@@ -910,8 +916,13 @@ export class SipService {
       this.onError.emit(`Call failed: ${data.cause}`);
 
       setTimeout(() => {
-        this.currentCallState = CallState.IDLE;
-        this.onCallStatus.emit(this.currentCallState);
+        // Solo emitir IDLE si no hay una nueva llamada activa
+        if (this.currentCallState === CallState.ENDED) {
+          this.currentCallState = CallState.IDLE;
+          this.onCallStatus.emit(this.currentCallState);
+        } else {
+          console.log('⚠️ Suppressed stale IDLE - new call already in state:', this.currentCallState);
+        }
       }, 1000);
     });
   }
