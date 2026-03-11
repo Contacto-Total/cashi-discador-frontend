@@ -35,6 +35,9 @@ export interface Campaign {
   // Filtro categórico de rango de antigüedad (comma-separated)
   filtroRangoAntiguedad?: string;
 
+  // Filtro tipo de teléfono: CELULAR, FIJO, o ambos separados por coma
+  filtroTipoTelefono?: string;
+
   // Particionado por bloques: intercala contactos de distintos rangos en rondas
   particionadoPorBloques?: boolean;
 
@@ -399,7 +402,8 @@ export class CampaignAdminService {
     subPortfolioId: number,
     tipoFiltroEstado: string,
     filtros: CampaignFilterRange[],
-    filtroRangoAntiguedad?: string
+    filtroRangoAntiguedad?: string,
+    filtroTipoTelefono?: string
   ): Observable<ImportPreview> {
     return this.http.post<ImportPreview>(
       `${environment.gatewayUrl}/admin/campaigns/preview-import`,
@@ -409,6 +413,7 @@ export class CampaignAdminService {
         subPortfolioId,
         tipoFiltroEstado,
         filtroRangoAntiguedad: filtroRangoAntiguedad || null,
+        filtroTipoTelefono: filtroTipoTelefono || null,
         filtros: filtros.map(f => ({
           fieldCode: f.fieldCode,
           dataType: f.dataType,

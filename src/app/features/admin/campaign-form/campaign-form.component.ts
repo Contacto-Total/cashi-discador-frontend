@@ -76,6 +76,13 @@ export class CampaignFormComponent implements OnInit {
   tiposFiltroEstado = TIPOS_FILTRO_ESTADO;
   selectedTipoContacto: TipoContacto | null = null;
 
+  // Filtro tipo de teléfono
+  tiposTelefono = [
+    { codigo: 'CELULAR', nombre: 'Num. Celulares', descripcion: '9 dígitos, empieza con 9' },
+    { codigo: 'FIJO', nombre: 'Tlf. Fijos', descripcion: '7 dígitos' }
+  ];
+  selectedTiposTelefono: string[] = [];
+
   // Rango de antigüedad (filtro categórico) - rangos fijos basados en dias_mora
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
@@ -167,6 +174,19 @@ export class CampaignFormComponent implements OnInit {
 
   isRangoSelected(valor: string): boolean {
     return this.selectedRangosAntiguedad.includes(valor);
+  }
+
+  toggleTipoTelefono(codigo: string): void {
+    const index = this.selectedTiposTelefono.indexOf(codigo);
+    if (index >= 0) {
+      this.selectedTiposTelefono.splice(index, 1);
+    } else {
+      this.selectedTiposTelefono.push(codigo);
+    }
+  }
+
+  isTipoTelefonoSelected(codigo: string): boolean {
+    return this.selectedTiposTelefono.includes(codigo);
   }
 
   loadFilterableFields(subcarteraId: number): void {
@@ -432,6 +452,11 @@ export class CampaignFormComponent implements OnInit {
                 this.selectedRangosAntiguedad = campaign.filtroRangoAntiguedad.split(',').map(s => s.trim());
               }
 
+              // Restaurar selección de tipo de teléfono
+              if (campaign.filtroTipoTelefono) {
+                this.selectedTiposTelefono = campaign.filtroTipoTelefono.split(',').map(s => s.trim());
+              }
+
               this.loading = false;
             },
             error: (err) => {
@@ -482,6 +507,11 @@ export class CampaignFormComponent implements OnInit {
       ? this.selectedRangosAntiguedad.join(',')
       : undefined;
 
+    // Filtro tipo teléfono
+    this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
+      ? this.selectedTiposTelefono.join(',')
+      : undefined;
+
     this.error = null;
 
     if (this.isEditMode && this.campaignId) {
@@ -513,6 +543,8 @@ export class CampaignFormComponent implements OnInit {
 
     const filtroRangoAnt = this.selectedRangosAntiguedad.length > 0
       ? this.selectedRangosAntiguedad.join(',') : undefined;
+    const filtroTipoTel = this.selectedTiposTelefono.length > 0
+      ? this.selectedTiposTelefono.join(',') : undefined;
 
     this.campaignService.previewImportacion(
       this.selectedTenantId,
@@ -520,7 +552,8 @@ export class CampaignFormComponent implements OnInit {
       this.selectedSubPortfolioId,
       this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
       this.campaignFilters,
-      filtroRangoAnt
+      filtroRangoAnt,
+      filtroTipoTel
     ).subscribe({
       next: (preview) => {
         this.previewData = preview;

@@ -271,6 +271,37 @@
       </div>
     </div>
 
+    <!-- SECCIÓN: Filtro por Tipo de Teléfono -->
+    <div class="form-section full-width">
+      <h2>
+        <lucide-angular name="phone" [size]="20"></lucide-angular>
+        Filtro por Tipo de Teléfono
+      </h2>
+      <p class="section-description">
+        Seleccione los tipos de teléfono que desea incluir. Si no selecciona ninguno, se incluirán todos los números.
+      </p>
+
+      <div class="rango-antiguedad-grid">
+        <label
+          *ngFor="let tipo of tiposTelefono"
+          class="rango-checkbox-label"
+          [class.selected]="isTipoTelefonoSelected(tipo.codigo)">
+          <input
+            type="checkbox"
+            [checked]="isTipoTelefonoSelected(tipo.codigo)"
+            (change)="toggleTipoTelefono(tipo.codigo)">
+          <span class="rango-checkbox-text">{{ tipo.nombre }}
+            <small style="display:block; opacity:0.7; font-weight:normal;">{{ tipo.descripcion }}</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="rango-selected-count" *ngIf="selectedTiposTelefono.length > 0">
+        <lucide-angular name="check-circle" [size]="16"></lucide-angular>
+        <span>{{ selectedTiposTelefono.length }} tipo(s) seleccionado(s)</span>
+      </div>
+    </div>
+
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section">
       <h2>
