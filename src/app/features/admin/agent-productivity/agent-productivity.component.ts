@@ -97,7 +97,10 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   private getDateRange(): { fechaInicio: string; fechaFin: string } {
