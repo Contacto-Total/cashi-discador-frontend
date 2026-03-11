@@ -263,7 +263,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                       {{ agente.tiempoProductivoFormateado }}
                     </td>
                     <td class="px-3 py-2 text-center text-amber-600 dark:text-amber-400 font-medium">
-                      {{ formatMin(agente.totalMinutosBreak) }}
+                      {{ formatSeg(agente.totalSegundosBreak) }}
                     </td>
                     <td class="px-3 py-2 text-center">
                       <div class="flex items-center justify-center gap-2">
@@ -280,22 +280,22 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                       </div>
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['DISPONIBLE']) }}
+                      {{ formatSeg(agente.segundosPorEstado['DISPONIBLE']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['EN_LLAMADA']) }}
+                      {{ formatSeg(agente.segundosPorEstado['EN_LLAMADA']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['TIPIFICANDO']) }}
+                      {{ formatSeg(agente.segundosPorEstado['TIPIFICANDO']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['GESTION_MANUAL']) }}
+                      {{ formatSeg(agente.segundosPorEstado['GESTION_MANUAL']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['REFRIGERIO']) }}
+                      {{ formatSeg(agente.segundosPorEstado['REFRIGERIO']) }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ formatMin(agente.minutoPorEstado['SSHH']) }}
+                      {{ formatSeg(agente.segundosPorEstado['SSHH']) }}
                     </td>
                   </tr>
                 }
@@ -615,17 +615,18 @@ export class EstadoAgentesReportComponent implements OnInit {
   totalBreakTime(): string {
     const r = this.resumen();
     if (!r || !r.agentes) return '0m';
-    const totalMin = r.agentes.reduce((sum, a) => sum + a.totalMinutosBreak, 0);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    const totalSeg = r.agentes.reduce((sum, a) => sum + (a.totalSegundosBreak || 0), 0);
+    return this.formatSeg(totalSeg);
   }
 
-  formatMin(min: number | undefined): string {
-    if (!min) return '0m';
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  formatSeg(seg: number | undefined): string {
+    if (!seg) return '0m';
+    const h = Math.floor(seg / 3600);
+    const m = Math.floor((seg % 3600) / 60);
+    const s = seg % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   }
 
   formatEstado(estado: string): string {

@@ -22,10 +22,10 @@ export interface ResumenPorAgente {
   idUsuario: number;
   nombreAgente: string;
   username: string;
-  minutoPorEstado: { [estado: string]: number };
-  totalMinutosConectado: number;
-  totalMinutosProductivo: number;
-  totalMinutosBreak: number;
+  segundosPorEstado: { [estado: string]: number };
+  totalSegundosConectado: number;
+  totalSegundosProductivo: number;
+  totalSegundosBreak: number;
   porcentajeOcupacion: number;
   tiempoConectadoFormateado: string;
   tiempoProductivoFormateado: string;
