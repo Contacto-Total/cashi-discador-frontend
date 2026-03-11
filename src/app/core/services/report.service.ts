@@ -95,19 +95,19 @@ export interface AgentCorte {
   gestiones12: number;
   gestiones15: number;
   gestiones17: number;
-  gestiones20: number;
+  gestiones23: number;
   cd12: number;
   cd15: number;
   cd17: number;
-  cd20: number;
+  cd23: number;
   pdpCant12: number;
   pdpCant15: number;
   pdpCant17: number;
-  pdpCant20: number;
+  pdpCant23: number;
   pdpMonto12: number;
   pdpMonto15: number;
   pdpMonto17: number;
-  pdpMonto20: number;
+  pdpMonto23: number;
 }
 
 export interface ChartData {
@@ -195,13 +195,15 @@ export class ReportService {
    * Obtiene métricas de corte horario por agente
    */
   getCorteHorario(
-    fecha: string,
+    fechaInicio: string,
+    fechaFin: string,
     tenantId?: number,
     carteraId?: number,
     subcarteraId?: number
   ): Observable<CorteHorarioResponse> {
     let params = new HttpParams()
-      .set('fecha', fecha);
+      .set('fechaInicio', fechaInicio)
+      .set('fechaFin', fechaFin);
 
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());

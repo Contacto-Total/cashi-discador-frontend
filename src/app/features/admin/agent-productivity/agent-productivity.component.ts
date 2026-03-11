@@ -486,15 +486,12 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   loadCorteHorario(): void {
     this.loadingCorte = true;
 
-    // Corte horario siempre usa la fecha de hoy
-    const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
-    const fecha = `${yyyy}-${mm}-${dd}`;
+    // Usa el mismo rango de fechas del filtro de productividad
+    const { fechaInicio, fechaFin } = this.getDateRange();
 
     this.reportService.getCorteHorario(
-      fecha,
+      fechaInicio,
+      fechaFin,
       this.selectedTenantId || undefined,
       this.selectedCarteraId || undefined,
       this.selectedSubcarteraId || undefined

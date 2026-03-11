@@ -258,7 +258,7 @@
                 <td>{{ a.gestiones12 }}</td>
                 <td>{{ a.gestiones15 }}</td>
                 <td>{{ a.gestiones17 }}</td>
-                <td class="corte-cierre">{{ a.gestiones20 }}</td>
+                <td class="corte-cierre">{{ a.gestiones23 }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -267,7 +267,7 @@
                 <td><strong>{{ corteTotal('gestiones12') }}</strong></td>
                 <td><strong>{{ corteTotal('gestiones15') }}</strong></td>
                 <td><strong>{{ corteTotal('gestiones17') }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('gestiones20') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('gestiones23') }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -292,7 +292,7 @@
                 <td>{{ a.cd12 }}</td>
                 <td>{{ a.cd15 }}</td>
                 <td>{{ a.cd17 }}</td>
-                <td class="corte-cierre">{{ a.cd20 }}</td>
+                <td class="corte-cierre">{{ a.cd23 }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -301,7 +301,7 @@
                 <td><strong>{{ corteTotal('cd12') }}</strong></td>
                 <td><strong>{{ corteTotal('cd15') }}</strong></td>
                 <td><strong>{{ corteTotal('cd17') }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('cd20') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('cd23') }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -326,7 +326,7 @@
                 <td>{{ a.pdpCant12 }}</td>
                 <td>{{ a.pdpCant15 }}</td>
                 <td>{{ a.pdpCant17 }}</td>
-                <td class="corte-cierre">{{ a.pdpCant20 }}</td>
+                <td class="corte-cierre">{{ a.pdpCant23 }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -335,7 +335,7 @@
                 <td><strong>{{ corteTotal('pdpCant12') }}</strong></td>
                 <td><strong>{{ corteTotal('pdpCant15') }}</strong></td>
                 <td><strong>{{ corteTotal('pdpCant17') }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant20') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant23') }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -360,7 +360,7 @@
                 <td>{{ a.pdpMonto12 | number:'1.0-0' }}</td>
                 <td>{{ a.pdpMonto15 | number:'1.0-0' }}</td>
                 <td>{{ a.pdpMonto17 | number:'1.0-0' }}</td>
-                <td class="corte-cierre">{{ a.pdpMonto20 | number:'1.0-0' }}</td>
+                <td class="corte-cierre">{{ a.pdpMonto23 | number:'1.0-0' }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -369,7 +369,7 @@
                 <td><strong>{{ corteTotalMoney('pdpMonto12') }}</strong></td>
                 <td><strong>{{ corteTotalMoney('pdpMonto15') }}</strong></td>
                 <td><strong>{{ corteTotalMoney('pdpMonto17') }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotalMoney('pdpMonto20') }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotalMoney('pdpMonto23') }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -394,7 +394,7 @@
                 <td>{{ a.pdpCant12 ? (a.pdpMonto12 / a.pdpCant12 | number:'1.0-0') : '-' }}</td>
                 <td>{{ a.pdpCant15 ? (a.pdpMonto15 / a.pdpCant15 | number:'1.0-0') : '-' }}</td>
                 <td>{{ a.pdpCant17 ? (a.pdpMonto17 / a.pdpCant17 | number:'1.0-0') : '-' }}</td>
-                <td class="corte-cierre">{{ a.pdpCant20 ? (a.pdpMonto20 / a.pdpCant20 | number:'1.0-0') : '-' }}</td>
+                <td class="corte-cierre">{{ a.pdpCant23 ? (a.pdpMonto23 / a.pdpCant23 | number:'1.0-0') : '-' }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -403,7 +403,7 @@
                 <td><strong>{{ corteTotal('pdpCant12') ? (corteTotal('pdpMonto12') / corteTotal('pdpCant12') | number:'1.0-0') : '-' }}</strong></td>
                 <td><strong>{{ corteTotal('pdpCant15') ? (corteTotal('pdpMonto15') / corteTotal('pdpCant15') | number:'1.0-0') : '-' }}</strong></td>
                 <td><strong>{{ corteTotal('pdpCant17') ? (corteTotal('pdpMonto17') / corteTotal('pdpCant17') | number:'1.0-0') : '-' }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant20') ? (corteTotal('pdpMonto20') / corteTotal('pdpCant20') | number:'1.0-0') : '-' }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant23') ? (corteTotal('pdpMonto23') / corteTotal('pdpCant23') | number:'1.0-0') : '-' }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -428,7 +428,7 @@
                 <td>{{ a.cd12 ? (a.pdpCant12 / a.cd12 * 100 | number:'1.0-1') + '%' : '-' }}</td>
                 <td>{{ a.cd15 ? (a.pdpCant15 / a.cd15 * 100 | number:'1.0-1') + '%' : '-' }}</td>
                 <td>{{ a.cd17 ? (a.pdpCant17 / a.cd17 * 100 | number:'1.0-1') + '%' : '-' }}</td>
-                <td class="corte-cierre">{{ a.cd20 ? (a.pdpCant20 / a.cd20 * 100 | number:'1.0-1') + '%' : '-' }}</td>
+                <td class="corte-cierre">{{ a.cd23 ? (a.pdpCant23 / a.cd23 * 100 | number:'1.0-1') + '%' : '-' }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -437,7 +437,7 @@
                 <td><strong>{{ corteTotal('cd12') ? (corteTotal('pdpCant12') / corteTotal('cd12') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
                 <td><strong>{{ corteTotal('cd15') ? (corteTotal('pdpCant15') / corteTotal('cd15') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
                 <td><strong>{{ corteTotal('cd17') ? (corteTotal('pdpCant17') / corteTotal('cd17') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('cd20') ? (corteTotal('pdpCant20') / corteTotal('cd20') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('cd23') ? (corteTotal('pdpCant23') / corteTotal('cd23') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
               </tr>
             </tfoot>
           </table>
