@@ -5031,9 +5031,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Obtener información del usuario actual
       const currentUser = this.authService.getCurrentUser();
 
-      // Phone: solo guardar teléfono si hubo llamada (discador o manual)
-      // Si no hubo llamada (gestión pura desde /manual-management), no guardar teléfono
-      const phoneNumber = hasActiveCallOrTimer
+      // Phone: solo guardar teléfono si la llamada activa es de ESTE cliente
+      // Si es otro cliente o no hubo llamada, no guardar teléfono
+      const phoneNumber = isActiveCall
         ? (this.activeCallPhone() ||
            (this.customerData() as any).telefono_celular ||
            (this.customerData() as any).telefono_domicilio || '')
