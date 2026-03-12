@@ -438,6 +438,50 @@ import { CallService } from '../../core/services/call.service';
               </div>
             </div>
 
+            <!-- Selector de Teléfono para Gestión Manual -->
+            @if (!callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
+              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-amber-300 dark:border-amber-700 p-2.5 transition-colors duration-300">
+                <div class="flex items-center gap-2 mb-2">
+                  <div class="p-1 rounded bg-amber-100 dark:bg-amber-900/30">
+                    <lucide-angular name="phone" [size]="14" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+                  </div>
+                  <span class="font-bold text-xs text-gray-800 dark:text-white">Teléfono Contactado</span>
+                  @if (selectedManualPhone()) {
+                    <span class="ml-auto text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{{ selectedManualPhone() }}</span>
+                  }
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                  @for (tel of telefonosMetodo(); track tel.numero) {
+                    <button
+                      (click)="tel.activo && selectedManualPhone.set(tel.numero)"
+                      [disabled]="!tel.activo"
+                      [class]="'flex items-center gap-2 p-2 rounded-lg border-2 text-left transition-all duration-200 ' +
+                        (!tel.activo
+                          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-50 cursor-not-allowed'
+                          : selectedManualPhone() === tel.numero
+                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-md ring-1 ring-amber-300'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50 cursor-pointer')"
+                    >
+                      <lucide-angular
+                        [name]="!tel.activo ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
+                        [size]="14"
+                        [class]="!tel.activo ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
+                      </lucide-angular>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1">
+                          <span class="text-[10px] font-medium" [class]="!tel.activo ? 'text-red-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
+                          @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
+                            <span class="text-[9px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                          }
+                        </div>
+                        <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                      </div>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
             @if (!usesHierarchicalClassifications()) {
             <!-- Resultado de Contacto - COMPACTO -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-2 hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-300">
@@ -1111,24 +1155,6 @@ import { CallService } from '../../core/services/call.service';
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
-            }
-
-            <!-- Selector de teléfono para gestión manual (sin llamada activa) -->
-            @if (!callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
-              <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
-                <label class="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1 block">Teléfono contactado</label>
-                <select
-                  class="w-full text-xs border border-amber-300 dark:border-amber-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-                  [ngModel]="selectedManualPhone()"
-                  (ngModelChange)="selectedManualPhone.set($event)">
-                  <option value="">-- Seleccionar teléfono --</option>
-                  @for (tel of telefonosMetodo(); track tel.numero) {
-                    @if (tel.activo) {
-                      <option [value]="tel.numero">{{ tel.numero }} ({{ subtipoLabel(tel.subtipo) }}{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text ? ' - ' + contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text : '' }})</option>
-                    }
-                  }
-                </select>
-              </div>
             }
 
             <!-- Botones de Acción - COMPACTOS -->
