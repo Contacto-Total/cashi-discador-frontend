@@ -99,11 +99,11 @@ import {
                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Todos</option>
-              <option value="CONNECTED">Conectada</option>
-              <option value="NO_ANSWER">No Contestó</option>
-              <option value="FAILED">Fallida</option>
-              <option value="ABANDONED">Abandonada</option>
-              <option value="BUSY">Ocupado</option>
+              <option value="FINALIZADA">Conectada</option>
+              <option value="NO_CONTESTADA">No Contestó</option>
+              <option value="SIN_RESPUESTA">Sin Respuesta (AMD)</option>
+              <option value="FALLIDA">Fallida</option>
+              <option value="ABANDONADA">Abandonada</option>
             </select>
           </div>
 
