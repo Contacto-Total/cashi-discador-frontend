@@ -215,17 +215,19 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Activa una campaña
+   * Toggle unificado: activa+disca o pausa según estado actual
    */
-  activarCampaign(campaign: Campaign): void {
+  toggleCampaign(campaign: Campaign): void {
     if (!campaign.id) return;
 
     this.error = null;
 
-    this.campaignService.activarCampaign(campaign.id).subscribe({
-      next: () => {
-        campaign.status = 'ACTIVE';
-        this.successMessage = `Campaña "${campaign.name}" activada`;
+    this.campaignService.toggleCampaign(campaign.id).subscribe({
+      next: (updated) => {
+        campaign.status = updated.status;
+        campaign.estaDiscando = updated.estaDiscando;
+        const action = updated.estaDiscando ? 'iniciada' : 'pausada';
+        this.successMessage = `Campaña "${campaign.name}" ${action}`;
         this.refreshCampaignsSilently();
 
         setTimeout(() => {
@@ -233,34 +235,8 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
         }, 3000);
       },
       error: (err) => {
-        console.error('Error activating campaign:', err);
-        this.error = err.error?.error || 'Error al activar la campaña';
-      }
-    });
-  }
-
-  /**
-   * Pausa una campaña
-   */
-  pausarCampaign(campaign: Campaign): void {
-    if (!campaign.id) return;
-
-    this.error = null;
-
-    this.campaignService.pausarCampaign(campaign.id).subscribe({
-      next: () => {
-        campaign.status = 'PAUSED';
-        campaign.estaDiscando = false;
-        this.successMessage = `Campaña "${campaign.name}" pausada`;
-        this.refreshCampaignsSilently();
-
-        setTimeout(() => {
-          this.successMessage = null;
-        }, 3000);
-      },
-      error: (err) => {
-        console.error('Error pausing campaign:', err);
-        this.error = 'Error al pausar la campaña';
+        console.error('Error toggling campaign:', err);
+        this.error = err.error?.message || err.error?.error || 'Error al cambiar estado de la campaña';
       }
     });
   }
@@ -357,96 +333,37 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Verifica si puede activar la campaña
+   * Verifica si se puede hacer toggle (siempre visible, campañas DELETED no llegan al frontend)
    */
-  canActivate(campaign: Campaign): boolean {
-    return campaign.status === 'DRAFT' || campaign.status === 'PAUSED';
+  canToggle(campaign: Campaign): boolean {
+    return true;
   }
 
   /**
-   * Verifica si puede pausar la campaña
+   * Retorna la clase CSS del botón toggle según estado
    */
-  canPause(campaign: Campaign): boolean {
-    return campaign.status === 'ACTIVE';
-  }
-
-  // ========================================
-  // PER-CAMPAIGN DIALING METHODS
-  // ========================================
-
-  /**
-   * Alterna el estado de discado de una campaña
-   */
-  toggleDialing(campaign: Campaign): void {
-    if (campaign.estaDiscando) {
-      this.stopDialing(campaign);
-    } else {
-      this.startDialing(campaign);
-    }
+  getToggleButtonClass(campaign: Campaign): string {
+    if (campaign.estaDiscando) return 'btn-action-small btn-pause';
+    return 'btn-action-small btn-activate';
   }
 
   /**
-   * Inicia el discado automático para una campaña específica
+   * Retorna el tooltip del botón toggle según estado
    */
-  startDialing(campaign: Campaign): void {
-    if (!campaign.id) return;
-
-    this.error = null;
-
-    this.campaignService.startDialing(campaign.id).subscribe({
-      next: () => {
-        campaign.estaDiscando = true;
-        this.successMessage = `Discado iniciado para "${campaign.name}"`;
-        this.refreshCampaignsSilently();
-
-        setTimeout(() => {
-          this.successMessage = null;
-        }, 3000);
-      },
-      error: (err) => {
-        console.error('Error starting dialing:', err);
-        this.error = err.error?.message || 'Error al iniciar el discado';
-      }
-    });
+  getToggleButtonTitle(campaign: Campaign): string {
+    if (campaign.estaDiscando) return 'Pausar campaña';
+    if (campaign.status === 'DRAFT') return 'Iniciar campaña';
+    if (campaign.status === 'PAUSED') return 'Reanudar campaña';
+    if (campaign.status === 'COMPLETED') return 'Reactivar campaña';
+    return 'Iniciar discado';
   }
 
   /**
-   * Detiene el discado automático para una campaña específica
+   * Retorna el ícono del botón toggle según estado
    */
-  stopDialing(campaign: Campaign): void {
-    if (!campaign.id) return;
-
-    this.error = null;
-
-    this.campaignService.stopDialing(campaign.id).subscribe({
-      next: () => {
-        campaign.estaDiscando = false;
-        this.successMessage = `Discado detenido para "${campaign.name}"`;
-        this.refreshCampaignsSilently();
-
-        setTimeout(() => {
-          this.successMessage = null;
-        }, 3000);
-      },
-      error: (err) => {
-        console.error('Error stopping dialing:', err);
-        this.error = 'Error al detener el discado';
-      }
-    });
-  }
-
-  /**
-   * Verifica si puede iniciar el discado
-   */
-  canStartDialing(campaign: Campaign): boolean {
-    return campaign.status === 'ACTIVE' && !campaign.estaDiscando;
-  }
-
-  /**
-   * Verifica si puede detener el discado
-   */
-  canStopDialing(campaign: Campaign): boolean {
-    return campaign.estaDiscando === true;
+  getToggleButtonIcon(campaign: Campaign): string {
+    if (campaign.estaDiscando) return 'pause';
+    return 'play';
   }
 
   /**

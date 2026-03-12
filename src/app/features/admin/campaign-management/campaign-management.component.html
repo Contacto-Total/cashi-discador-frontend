@@ -62,21 +62,11 @@
               <button class="btn-action-small btn-edit" [routerLink]="['/admin/campaigns', campaign.id, 'edit']" title="Editar">
                 <lucide-angular name="pencil" [size]="15"></lucide-angular>
               </button>
-              <button *ngIf="canActivate(campaign)" class="btn-action-small btn-activate" (click)="activarCampaign(campaign)" title="Activar">
-                <lucide-angular name="play" [size]="15"></lucide-angular>
-              </button>
-              <button *ngIf="canPause(campaign)" class="btn-action-small btn-pause" (click)="pausarCampaign(campaign)" title="Pausar">
-                <lucide-angular name="pause" [size]="15"></lucide-angular>
-              </button>
-              <!-- <button class="btn-action-small btn-import" (click)="openImportModal(campaign)" title="Importar contactos">
-                <lucide-angular name="download" [size]="15"></lucide-angular>
-              </button> -->
-              <button *ngIf="campaign.status === 'ACTIVE'"
-                [class]="campaign.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
-                (click)="toggleDialing(campaign)"
-                [title]="campaign.estaDiscando ? 'Detener Discado' : 'Iniciar Discado'">
-                <lucide-angular *ngIf="campaign.estaDiscando" name="square" [size]="15"></lucide-angular>
-                <lucide-angular *ngIf="!campaign.estaDiscando" name="phone-call" [size]="15"></lucide-angular>
+              <button *ngIf="canToggle(campaign)"
+                [class]="getToggleButtonClass(campaign)"
+                (click)="toggleCampaign(campaign)"
+                [title]="getToggleButtonTitle(campaign)">
+                <lucide-angular [name]="getToggleButtonIcon(campaign)" [size]="15"></lucide-angular>
               </button>
               <button *ngIf="campaign.status !== 'ACTIVE'" class="btn-action-small btn-delete" (click)="deleteCampaign(campaign)" title="Eliminar">
                 <lucide-angular name="trash-2" [size]="15"></lucide-angular>

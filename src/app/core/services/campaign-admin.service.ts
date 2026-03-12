@@ -248,6 +248,13 @@ export class CampaignAdminService {
   }
 
   /**
+   * Toggle unificado: activa+disca o pausa según estado actual
+   */
+  toggleCampaign(id: number): Observable<Campaign> {
+    return this.http.post<Campaign>(`${this.apiUrl}/${id}/toggle`, {}, { headers: this.getHeaders() });
+  }
+
+  /**
    * Inicia el discado automático para una campaña específica
    */
   startDialing(id: number): Observable<Campaign> {
