@@ -218,17 +218,17 @@ import { CallService } from '../../core/services/call.service';
                     @if (telefonosMetodo().length > 0) {
                       @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
                         <div class="flex items-center gap-2 p-1.5 rounded border"
-                             [class]="i === 0 ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'">
-                          <lucide-angular [name]="i === 0 ? 'smartphone' : 'phone'" [size]="14"
-                                         [class]="i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'"></lucide-angular>
+                             [class]="!tel.activo ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-60' : i === 0 ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'">
+                          <lucide-angular [name]="!tel.activo ? 'phone-off' : i === 0 ? 'smartphone' : 'phone'" [size]="14"
+                                         [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'"></lucide-angular>
                           <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1">
-                              <span class="text-xs" [class]="i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
-                              @if (tel.estadoContactabilidad && contactabilidadBadge(tel.estadoContactabilidad).text) {
-                                <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad).class">{{ contactabilidadBadge(tel.estadoContactabilidad).text }}</span>
+                              <span class="text-xs" [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
+                              @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
+                                <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
                               }
                             </div>
-                            <div class="text-xs font-bold truncate" [class]="i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                            <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
                           </div>
                         </div>
                       }
@@ -1111,6 +1111,24 @@ import { CallService } from '../../core/services/call.service';
                 (dataChange)="onDynamicFieldsChange($event)"
                 (customAmountDetected)="onCustomAmountDetected($event)"
               />
+            }
+
+            <!-- Selector de teléfono para gestión manual (sin llamada activa) -->
+            @if (!callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
+              <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2">
+                <label class="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1 block">Teléfono contactado</label>
+                <select
+                  class="w-full text-xs border border-amber-300 dark:border-amber-700 rounded px-2 py-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"
+                  [ngModel]="selectedManualPhone()"
+                  (ngModelChange)="selectedManualPhone.set($event)">
+                  <option value="">-- Seleccionar teléfono --</option>
+                  @for (tel of telefonosMetodo(); track tel.numero) {
+                    @if (tel.activo) {
+                      <option [value]="tel.numero">{{ tel.numero }} ({{ subtipoLabel(tel.subtipo) }}{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text ? ' - ' + contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text : '' }})</option>
+                    }
+                  }
+                </select>
+              </div>
             }
 
             <!-- Botones de Acción - COMPACTOS -->
@@ -2013,6 +2031,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Teléfonos desde metodos_contacto
   telefonosMetodo = signal<TelefonoMetodo[]>([]);
+
+  // Teléfono seleccionado para gestión manual (sin llamada)
+  selectedManualPhone = signal<string>('');
 
   // Agregar teléfono
   showAddPhoneForm = signal(false);
@@ -5031,13 +5052,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Obtener información del usuario actual
       const currentUser = this.authService.getCurrentUser();
 
-      // Phone: solo guardar teléfono si la llamada activa es de ESTE cliente
-      // Si es otro cliente o no hubo llamada, no guardar teléfono
+      // Phone: si hay llamada activa del mismo cliente, usar el teléfono de la llamada
+      // Si es gestión manual, usar el teléfono seleccionado por el agente
       const phoneNumber = isActiveCall
         ? (this.activeCallPhone() ||
            (this.customerData() as any).telefono_celular ||
            (this.customerData() as any).telefono_domicilio || '')
-        : '';
+        : (this.selectedManualPhone() || '');
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
@@ -5270,6 +5291,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.callStartTime = undefined;
     this.activeCallPhone.set('');
     this.activeCallClientId.set(null);
+    this.selectedManualPhone.set('');
 
     this.activeTab.set('cliente');
 
@@ -6289,7 +6311,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return labels[subtipo] || subtipo || 'Teléfono';
   }
 
-  contactabilidadBadge(estado: string | undefined): { text: string; class: string } {
+  contactabilidadBadge(estado: string | undefined, activo?: boolean): { text: string; class: string } {
+    if (activo === false) {
+      return { text: 'Equivocado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
+    }
     switch (estado) {
       case 'CONTACTO_TITULAR': return { text: 'Titular', class: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' };
       case 'CONTACTO_EFECTIVO': return { text: 'Efectivo', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' };
@@ -6301,13 +6326,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   loadTelefonosMetodo(documento: string): void {
     if (!documento) return;
-    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-activos/${documento}`).pipe(
+    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`).pipe(
       catchError(err => {
         console.error('❌ Error cargando teléfonos de metodos_contacto:', err);
         return of([]);
       })
     ).subscribe(telefonos => {
-      console.log('📞 Teléfonos activos cargados:', telefonos.length);
+      console.log('📞 Teléfonos cargados (todos):', telefonos.length);
       this.telefonosMetodo.set(telefonos);
     });
   }
