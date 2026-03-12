@@ -1554,6 +1554,7 @@ import { CallService } from '../../core/services/call.service';
 export class CollectionManagementPage implements OnInit, OnDestroy {
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
+  protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
   protected callDuration = signal(0);
   protected saving = signal(false);
   protected showScheduleDetail = signal(false);
@@ -2501,6 +2502,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Cuando la llamada se activa, cambiar estado a EN_LLAMADA
       if (state === CallState.ACTIVE && !this.callActive()) {
         this.callActive.set(true);
+        // Guardar el ID del cliente asociado a esta llamada del discador
+        if (this.customerData()?.id) {
+          this.activeCallClientId.set(this.customerData().id ?? null);
+        }
         this.startCall(); // Iniciar timer
         this.playCallAlertBeep(); // Beep de alerta al agente
         // Cambiar estado del agente a EN_LLAMADA
@@ -2890,6 +2895,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const doc = client.documento || '';
     if (doc) {
       this.loadTelefonosMetodo(doc);
+    }
+
+    // Si hay llamada activa y no se ha asignado cliente a la llamada, asignar este
+    if ((this.callActive() || this.rellamadaCallActive()) && this.activeCallClientId() === null && customerId) {
+      this.activeCallClientId.set(customerId);
+      console.log('📞 [CALL-CLIENT] Cliente asignado a llamada activa:', customerId);
     }
 
     this.isLoadingCustomer.set(false);
@@ -4899,7 +4910,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       const finalTypificationId = typificationLevel3Id || typificationLevel2Id || typificationLevel1Id;
 
       // Determinar si es una llamada activa o gestión manual
-      const isActiveCallSchedule = this.callActive() || !!this.callStartTime;
+      // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
+      const hasActiveCallOrTimerSched = this.callActive() || !!this.callStartTime;
+      const isSameClientAsCallSched = this.activeCallClientId() !== null &&
+                                       this.activeCallClientId() === this.customerData()?.id;
+      const isActiveCallSchedule = hasActiveCallOrTimerSched && isSameClientAsCallSched;
 
       // Obtener el ID del agente actual
       const currentUserSchedule = this.authService.getCurrentUser();
@@ -4939,7 +4954,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
         metodoContacto: isActiveCallSchedule ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
-        canalContacto: isActiveCallSchedule ? 'LLAMADA_SALIENTE' : undefined,
+        canalContacto: hasActiveCallOrTimerSched ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
         // Datos de continuidad (si aplica)
@@ -5007,10 +5022,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     } else {
       // Gestión normal sin cronograma de pago
       // Determinar si es una llamada activa o gestión manual
-      const isActiveCall = this.callActive() || !!this.callStartTime;
+      // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
+      const hasActiveCallOrTimer = this.callActive() || !!this.callStartTime;
+      const isSameClientAsCall = this.activeCallClientId() !== null &&
+                                  this.activeCallClientId() === this.customerData()?.id;
+      const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
       // Obtener información del usuario actual
       const currentUser = this.authService.getCurrentUser();
+
+      // Phone: solo guardar teléfono si hubo llamada (discador o manual)
+      // Si no hubo llamada (gestión pura desde /manual-management), no guardar teléfono
+      const phoneNumber = hasActiveCallOrTimer
+        ? (this.activeCallPhone() ||
+           (this.customerData() as any).telefono_celular ||
+           (this.customerData() as any).telefono_domicilio || '')
+        : '';
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
@@ -5024,14 +5051,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         portfolioId: this.selectedPortfolioId || 1,
         subPortfolioId: this.selectedSubPortfolioId || 1,
 
-        // Phone: usar número real discado si existe, sino buscar en datos del cliente
-        phone: this.activeCallPhone() ||
-               (this.customerData() as any).telefono_celular ||
-               (this.customerData() as any).telefono_domicilio ||
-               (this.customerData() as any).telefono_laboral ||
-               (this.customerData() as any).telf_referencia_1 ||
-               (this.customerData() as any).telf_referencia_2 ||
-               this.customerData().contacto?.telefono_principal || '',
+        // Phone
+        phone: phoneNumber,
 
         // Hierarchy levels with IDs and names
         level1Id: typificationLevel1Id,
@@ -5045,10 +5066,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         // Campos de contexto de gestión
         metodoContacto: isActiveCall ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
-        canalContacto: isActiveCall ? 'LLAMADA_SALIENTE' : undefined,
+        canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
         idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
-        duracionSegundos: isActiveCall && this.callStartTime ? this.calculateCallDurationSeconds() : null,
+        duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
         // Información del agente y dispositivo
         nombreAgente: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username : 'Sistema',
@@ -5248,6 +5269,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.callDuration.set(0);
     this.callStartTime = undefined;
     this.activeCallPhone.set('');
+    this.activeCallClientId.set(null);
 
     this.activeTab.set('cliente');
 
@@ -5755,6 +5777,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           console.warn('⚠️ [RESOURCE] Error obteniendo datos dinámicos, manteniendo datos básicos:', error);
         }
       });
+    }
+
+    // Si hay llamada activa y no se ha asignado cliente a la llamada, asignar este
+    if ((this.callActive() || this.rellamadaCallActive()) && this.activeCallClientId() === null && customer.id) {
+      this.activeCallClientId.set(customer.id);
+      console.log('📞 [CALL-CLIENT] Cliente asignado a llamada activa:', customer.id);
     }
 
     console.log('[TEST] Cliente cargado exitosamente');
