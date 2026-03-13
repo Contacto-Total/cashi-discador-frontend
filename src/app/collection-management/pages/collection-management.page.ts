@@ -3851,7 +3851,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       'PAGADA': 'Pagada',
       'VENCIDA': 'Vencida',
       'PARCIAL': 'Parcial',
-      'CANCELADA': 'Cancelada'
+      'CANCELADA': 'Anulada'
     };
     return estadoMap[estado] || this.formatSnakeCase(estado);
   }
