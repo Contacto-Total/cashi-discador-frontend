@@ -388,7 +388,7 @@ import { CallService } from '../../core/services/call.service';
                   <div class="relative">
                     @if (!rellamadaCallActive()) {
                       <button
-                        (click)="canRellamar() && showRellamadaDropdown.set(!showRellamadaDropdown())"
+                        (click)="canRellamar() && (activeCallPhone() ? iniciarRellamada(activeCallPhone()) : showRellamadaDropdown.set(!showRellamadaDropdown()))"
                         [disabled]="!canRellamar()"
                         [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
                           (canRellamar()
@@ -396,7 +396,7 @@ import { CallService } from '../../core/services/call.service';
                             : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
                       >
                         <lucide-angular name="phone-outgoing" [size]="14"></lucide-angular>
-                        Rellamar
+                        {{ activeCallPhone() ? 'Rellamar ' + activeCallPhone() : 'Rellamar' }}
                       </button>
                     } @else {
                       <div class="flex items-center gap-2">
@@ -5095,12 +5095,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       const currentUser = this.authService.getCurrentUser();
 
       // Phone: si hay llamada activa del mismo cliente, usar el teléfono de la llamada
-      // Si es gestión manual, usar el teléfono seleccionado por el agente
+      // Si hay activeCallPhone (número del discador/rellamada), usarlo como fallback
+      // Si es gestión manual pura, usar el teléfono seleccionado por el agente
       const phoneNumber = isActiveCall
         ? (this.activeCallPhone() ||
            (this.customerData() as any).telefono_celular ||
            (this.customerData() as any).telefono_domicilio || '')
-        : (this.selectedManualPhone() || '');
+        : (this.selectedManualPhone() || this.activeCallPhone() || '');
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
