@@ -5101,7 +5101,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         ? (this.activeCallPhone() ||
            (this.customerData() as any).telefono_celular ||
            (this.customerData() as any).telefono_domicilio || '')
-        : (this.selectedManualPhone() || this.activeCallPhone() || '');
+        : (this.selectedManualPhone() || '');
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
@@ -5433,9 +5433,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    // 2. Validar campos de pago si son requeridos
-    // NOTA: Los campos de pago ahora son campos dinámicos (monto_pagado, metodo_pago, etc.)
-    // Se validan automáticamente en el paso 3 como parte de los campos dinámicos requeridos
+    // 2. Validar teléfono en gestión manual (sin llamada activa)
+    const hasActiveCallOrTimer = this.callActive() || this.rellamadaCallActive() || this.callDuration() > 0;
+    const isSameClientAsCall = this.activeCallClientId() !== null &&
+                                this.activeCallClientId() === this.customerData()?.id;
+    const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
+
+    if (!isActiveCall && !this.selectedManualPhone()) {
+      newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
+    }
 
     // 3. Validar campos dinámicos requeridos
     const schema = this.dynamicFieldsSchema();
