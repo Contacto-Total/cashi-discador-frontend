@@ -174,7 +174,7 @@ export interface CreateManagementRequest {
 
   // Campos adicionales para registro completo
   // metodoContacto: QUIÉN/QUÉ originó la gestión
-  metodoContacto?: 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | 'GESTION_AUTOMATICA';
+  metodoContacto?: 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | 'GESTION_AUTOMATICA' | 'GESTION_RELLAMADA';
   // canalContacto: POR QUÉ MEDIO se contactó
   canalContacto?: 'LLAMADA_SALIENTE' | 'LLAMADA_ENTRANTE' | 'SMS' | 'WHATSAPP' | 'EMAIL';
   idCampana?: number | null;
