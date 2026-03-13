@@ -1364,9 +1364,9 @@ import { CallService } from '../../core/services/call.service';
                 <table class="text-xs table-fixed" style="min-width: max-content;">
                   <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Observación','Canal','Método','Monto Promesa','Estado Pago']; track col; let i = $index) {
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Vía','Promesa','Estado','Observación']; track col; let i = $index) {
                         <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
-                            [class.text-right]="col === 'Monto Promesa'" [class.text-center]="col === 'Estado Pago'">
+                            [class.text-center]="col === 'Estado'">
                           {{ col }}
                           <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/50"
                                (mousedown)="onResizeStart($event, i)"></div>
@@ -1385,36 +1385,19 @@ import { CallService } from '../../core/services/call.service';
                           </span>
                         </td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.observacion">
-                          {{ gestion.observacion || '-' }}
-                        </td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[5]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                            (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                             gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                             gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
-                             gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                            {{ gestion.canalDisplay }}
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[4]">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
+                            {{ gestion.via }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[6]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                            (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
-                             gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                             gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                            {{ gestion.metodoDisplay }}
-                          </span>
-                        </td>
-                        <td class="px-2 py-1.5 text-right font-mono overflow-hidden" [style.width.px]="historialColWidths()[7]">
-                          @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
-                            <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.promesaCompacta">
+                          @if (gestion.promesaCompacta) {
+                            <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
                         </td>
-                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[8]">
+                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
                           @if (gestion.estadoPago) {
                             <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                               (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
@@ -1427,6 +1410,9 @@ import { CallService } from '../../core/services/call.service';
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[7]" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
                         </td>
                       </tr>
                     }
@@ -1447,9 +1433,9 @@ import { CallService } from '../../core/services/call.service';
                 <table class="text-xs table-fixed" style="min-width: max-content;">
                   <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Observación','Canal','Método','Monto Promesa','Estado Pago']; track col; let i = $index) {
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Vía','Promesa','Estado','Observación']; track col; let i = $index) {
                         <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
-                            [class.text-right]="col === 'Monto Promesa'" [class.text-center]="col === 'Estado Pago'">
+                            [class.text-center]="col === 'Estado'">
                           {{ col }}
                           <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-purple-400/50"
                                (mousedown)="onResizeStart($event, i)"></div>
@@ -1468,36 +1454,19 @@ import { CallService } from '../../core/services/call.service';
                           </span>
                         </td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.observacion">
-                          {{ gestion.observacion || '-' }}
-                        </td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[5]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                            (gestion.canal?.includes('SALIENTE') ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                             gestion.canal?.includes('ENTRANTE') ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                             gestion.canal === 'WHATSAPP' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300' :
-                             gestion.canal === 'SMS' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                            {{ gestion.canalDisplay }}
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[4]">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
+                            {{ gestion.via }}
                           </span>
                         </td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[6]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                            (gestion.metodo === 'GESTION_MANUAL' ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' :
-                             gestion.metodo === 'GESTION_PROGRESIVO' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                             gestion.metodo === 'GESTION_PREDICTIVO' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                             'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                            {{ gestion.metodoDisplay }}
-                          </span>
-                        </td>
-                        <td class="px-2 py-1.5 text-right font-mono overflow-hidden" [style.width.px]="historialColWidths()[7]">
-                          @if (gestion.montoPromesa && gestion.montoPromesa > 0) {
-                            <span class="text-green-600 dark:text-green-400 font-semibold">S/ {{ gestion.montoPromesa | number:'1.2-2' }}</span>
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.promesaCompacta">
+                          @if (gestion.promesaCompacta) {
+                            <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
                         </td>
-                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[8]">
+                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
                           @if (gestion.estadoPago) {
                             <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
                               (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
@@ -1510,6 +1479,9 @@ import { CallService } from '../../core/services/call.service';
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[7]" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
                         </td>
                       </tr>
                     }
@@ -1614,6 +1586,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected isRellamada = signal(false);          // Flag: rellamada en progreso
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
+  protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !!this.customerData()?.id);
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
@@ -1635,11 +1608,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     tipificacionCompleta: string;
     telefono: string;
     observacion: string;
+    via: string;
+    viaClass: string;
     canal: string;
-    canalDisplay: string;
     metodo: string;
-    metodoDisplay: string;
-    montoPromesa?: number;
+    promesaCompacta: string;
     estadoPago?: string;
     estadoPagoDisplay: string;
     hasSchedule: boolean;
@@ -1663,11 +1636,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     tipificacionCompleta: string;
     telefono: string;
     observacion: string;
+    via: string;
+    viaClass: string;
     canal: string;
-    canalDisplay: string;
     metodo: string;
-    metodoDisplay: string;
-    montoPromesa?: number;
+    promesaCompacta: string;
     estadoPago?: string;
     estadoPagoDisplay: string;
   }>>([]);
@@ -1681,17 +1654,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const filter = this.historialFilter();
     const gestiones = this.historialGestiones();
 
-    // Excluir gestiones automáticas del sistema (cuando el agente es el sistema, no una persona real)
-    const soloManuales = gestiones.filter(g => {
-      const nombre = (g.nombreAgente || '').toUpperCase().trim();
-      return nombre !== '' && nombre !== 'PROGRESIVO' && nombre !== 'PREDICTIVO' && nombre !== 'SISTEMA' && nombre !== 'AUTO-DIALER';
-    });
+    // Las gestiones automáticas (PROGRESIVO, PREDICTIVO, etc.) ya se excluyen en el backend
 
     if (filter === 'TODOS') {
-      return soloManuales;
+      return gestiones;
     }
 
-    return soloManuales.filter(g => {
+    return gestiones.filter(g => {
       const tipif = g.tipificacionCompleta?.toUpperCase() || '';
       if (filter === 'CI') {
         return tipif.includes('[CI]') || tipif.includes('CONTACTO INDIRECTO');
@@ -2132,7 +2101,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Column widths para historial de gestiones (resizable)
-  historialColWidths = signal<number[]>([110, 90, 180, 90, 130, 80, 80, 100, 90]);
+  historialColWidths = signal<number[]>([110, 90, 180, 90, 110, 160, 80, 150]);
   private resizingColIndex = -1;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
@@ -3214,6 +3183,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         console.log(`✅ [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
 
+        // Guardar contactId del discador para posible rellamada
+        if (fullData.contactId) {
+          this.dialerContactId.set(fullData.contactId);
+        }
+
         // Guardar el número real discado
         if (fullData.anexoDestino) {
           this.activeCallPhone.set(fullData.anexoDestino);
@@ -3460,85 +3434,54 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   loadManagementHistory() {
     // Usar documento en lugar de ID para buscar el historial
-    // El documento es el identificador único real del cliente
     const documento = this.customerData()?.numero_documento;
     if (!documento) {
       console.log('[HISTORIAL] No hay documento del cliente, omitiendo carga de historial');
       return;
     }
-    console.log('[HISTORIAL] Cargando historial para documento:', documento);
+    console.log('[HISTORIAL] Cargando historial ligero para documento:', documento);
 
-    this.managementService.getManagementsByDocumento(documento).subscribe({
+    this.managementService.getHistorialLigero(documento, 50).subscribe({
       next: (managements) => {
-        console.log('[HISTORIAL] Gestiones recibidas del backend:', managements);
-        console.log('[HISTORIAL] Total de gestiones:', managements.length);
+        console.log('[HISTORIAL] Gestiones recibidas:', managements.length);
 
-        // Mapear gestiones
         const historial = managements.map(m => {
-          // Formatear fecha con hora
           const fechaOnly = m.managementDate ? this.formatDateOnly(m.managementDate) : '-';
           const hora = m.managementTime ? m.managementTime.substring(0, 5) : '';
           const fecha = hora ? `${fechaOnly} ${hora}` : fechaOnly;
 
-          // Construir ruta completa de tipificación
           const tipificacionParts = [m.level1Name, m.level2Name, m.level3Name, m.level4Name].filter(Boolean);
           const tipificacionCompleta = tipificacionParts.join(' > ') || '-';
 
-          // Formatear canal para display
-          const canalDisplay = this.formatCanalDisplay(m.canalContacto);
+          // VÍA unificada: Canal + Método
+          const via = this.formatViaDisplay(m.canalContacto, m.metodoContacto);
 
-          // Formatear método para display
-          const metodoDisplay = this.formatMetodoDisplay(m.metodoContacto);
+          // PROMESA compacta: monto · cuotas · fecha
+          const promesaCompacta = this.formatPromesaCompacta(m.montoPromesa, m.totalCuotas, m.fechaPrimeraCuota);
 
-          // Formatear estado de pago para display
-          const estadoPagoDisplay = this.formatEstadoPagoDisplay(m.estadoPago);
-
-          const historyItem = {
+          return {
             id: m.id,
             fecha: fecha,
-            nombreAgente: m.nombreAgente || `Agente ${m.advisorId}`,
+            nombreAgente: m.nombreAgente || '-',
             tipificacionCompleta: tipificacionCompleta,
             telefono: m.telefonoContacto || '',
             observacion: m.observations || '',
+            via: via.text,
+            viaClass: via.cssClass,
             canal: m.canalContacto || '',
-            canalDisplay: canalDisplay,
             metodo: m.metodoContacto || '',
-            metodoDisplay: metodoDisplay,
-            montoPromesa: m.montoPromesa || undefined,
+            promesaCompacta: promesaCompacta,
             estadoPago: m.estadoPago || undefined,
-            estadoPagoDisplay: estadoPagoDisplay,
+            estadoPagoDisplay: this.formatEstadoPagoDisplay(m.estadoPago),
             hasSchedule: m.typificationRequiresSchedule || false,
             schedule: null as any
           };
-
-          // Cargar cronograma si existe
-          if (historyItem.hasSchedule) {
-            this.paymentScheduleService.getPaymentScheduleByManagementId(m.id).subscribe({
-              next: (schedule) => {
-                if (schedule) {
-                  historyItem.schedule = schedule;
-                }
-              },
-              error: () => {
-                // Silenciar error si no hay cronograma
-              }
-            });
-          }
-
-          return historyItem;
         });
 
         this.historialGestiones.set(historial);
-        console.log('[HISTORIAL] Historial establecido en signal:', this.historialGestiones());
       },
       error: (error) => {
-        console.error('[HISTORIAL] Error al cargar historial de gestiones:', error);
-        console.error('[HISTORIAL] Detalles del error:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          url: error.url
-        });
+        console.error('[HISTORIAL] Error al cargar historial:', error);
       }
     });
   }
@@ -3570,11 +3513,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // Construir tipificación: buscar en catálogo por nombre de resultado
           const tipificacionCompleta = [g.resultado, g.solucion].filter(Boolean).join(' > ') || '-';
 
-          // Formatear canal
-          const canalDisplay = this.formatCanalDisplay(g.canal);
+          // VÍA unificada
+          const via = this.formatViaDisplay(g.canal, g.metodo);
 
-          // Formatear método
-          const metodoDisplay = this.formatMetodoDisplay(g.metodo);
+          // Promesa compacta (histórico no tiene cuotas ni fecha)
+          const promesaCompacta = this.formatPromesaCompacta(g.montoPromesa ?? undefined, undefined, undefined);
 
           // Formatear estado de pago
           const estadoPagoDisplay = this.formatEstadoPagoDisplay(g.estadoPromesa);
@@ -3586,11 +3529,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             tipificacionCompleta: tipificacionCompleta,
             telefono: g.telefono || '',
             observacion: g.observacion || '',
+            via: via.text,
+            viaClass: via.cssClass,
             canal: g.canal || '',
-            canalDisplay: canalDisplay,
             metodo: g.metodo || '',
-            metodoDisplay: metodoDisplay,
-            montoPromesa: g.montoPromesa || undefined,
+            promesaCompacta: promesaCompacta,
             estadoPago: g.estadoPromesa || undefined,
             estadoPagoDisplay: estadoPagoDisplay
           };
@@ -3706,7 +3649,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
     if (agentId) {
-      this.callService.registerCall({ agentId, phoneNumber }).subscribe({
+      const idCliente = this.customerData()?.id || undefined;
+      const contactId = this.dialerContactId() || undefined;
+      this.callService.registerCall({ agentId, phoneNumber, idCliente, contactId }).subscribe({
         next: () => console.log('📞 [Rellamada] Registrada en BD'),
         error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
       });
@@ -3909,6 +3854,77 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       'CANCELADA': 'Cancelada'
     };
     return estadoMap[estado] || this.formatSnakeCase(estado);
+  }
+
+  /**
+   * Unifica Canal + Método en una sola columna "VÍA"
+   * Ej: "Llamada Sal. / Manual", "WhatsApp", "Manual"
+   */
+  private formatViaDisplay(canal: string | undefined, metodo: string | undefined): { text: string; cssClass: string } {
+    const canalCorto: { [key: string]: string } = {
+      'LLAMADA_SALIENTE': 'Llam. Sal.',
+      'LLAMADA_ENTRANTE': 'Llam. Ent.',
+      'SMS': 'SMS',
+      'WHATSAPP': 'WhatsApp',
+      'EMAIL': 'Email'
+    };
+    const metodoCorto: { [key: string]: string } = {
+      'GESTION_MANUAL': 'Manual',
+      'GESTION_PROGRESIVO': 'Progresivo',
+      'GESTION_PREDICTIVO': 'Predictivo',
+      'GESTION_AUTOMATICA': 'Automática'
+    };
+
+    const canalText = canal ? (canalCorto[canal] || this.formatSnakeCase(canal)) : '';
+    const metodoText = metodo ? (metodoCorto[metodo] || this.formatSnakeCase(metodo)) : '';
+
+    let text = '';
+    if (canalText && metodoText) {
+      text = `${canalText} / ${metodoText}`;
+    } else {
+      text = canalText || metodoText || '-';
+    }
+
+    // CSS class basado en el canal (más visual) o método
+    let cssClass = 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+    if (canal?.includes('SALIENTE')) {
+      cssClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+    } else if (canal?.includes('ENTRANTE')) {
+      cssClass = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
+    } else if (canal === 'WHATSAPP') {
+      cssClass = 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300';
+    } else if (metodo === 'GESTION_PROGRESIVO') {
+      cssClass = 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
+    } else if (metodo === 'GESTION_PREDICTIVO') {
+      cssClass = 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
+    }
+
+    return { text, cssClass };
+  }
+
+  /**
+   * Formatea la promesa de pago de forma compacta
+   * Ej: "S/1,200 · 3 cuotas · 15/03"
+   */
+  private formatPromesaCompacta(monto: number | undefined, totalCuotas: number | undefined, fechaPrimeraCuota: string | undefined): string {
+    if (!monto || monto <= 0) return '';
+
+    const parts: string[] = [];
+    parts.push(`S/${monto.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+
+    if (totalCuotas && totalCuotas > 0) {
+      parts.push(`${totalCuotas} cuota${totalCuotas > 1 ? 's' : ''}`);
+    }
+
+    if (fechaPrimeraCuota) {
+      // fecha viene como "YYYY-MM-DD", mostrar como "DD/MM"
+      const dateParts = fechaPrimeraCuota.split('-');
+      if (dateParts.length >= 3) {
+        parts.push(`${dateParts[2]}/${dateParts[1]}`);
+      }
+    }
+
+    return parts.join(' · ');
   }
 
   /**
@@ -5318,6 +5334,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.activeCallPhone.set('');
     this.activeCallClientId.set(null);
     this.selectedManualPhone.set('');
+    this.dialerContactId.set(null);
 
     this.activeTab.set('cliente');
 

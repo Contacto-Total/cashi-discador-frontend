@@ -2,7 +2,7 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { SessionConfigService } from '../services/session-config.service';
-import { catchError, switchMap, throwError } from 'rxjs';
+import { catchError, switchMap, throwError, timer, retry } from 'rxjs';
 
 let isRefreshing = false;
 
@@ -25,6 +25,13 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (req, next) => {
     isRefreshing = true;
 
     return authService.refreshToken().pipe(
+      retry({
+        count: 2,
+        delay: (error, retryCount) => {
+          console.warn(`[TOKEN-REFRESH] Intento ${retryCount}/2 falló, reintentando en ${retryCount * 2}s...`);
+          return timer(retryCount * 2000);
+        }
+      }),
       switchMap(() => {
         isRefreshing = false;
         // Reintentar la solicitud original con el nuevo token
@@ -40,7 +47,7 @@ export const tokenRefreshInterceptor: HttpInterceptorFn = (req, next) => {
       }),
       catchError((error) => {
         isRefreshing = false;
-        // Si falla el refresh, cerrar sesión
+        // Si falla después de reintentos, cerrar sesión
         authService.logout();
         return throwError(() => error);
       })

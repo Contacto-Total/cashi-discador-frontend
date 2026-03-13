@@ -81,6 +81,8 @@ export interface ManagementResource {
   // Promesa de pago
   montoPromesa?: number;      // Monto prometido
   estadoPago?: string;        // Estado del pago (PENDIENTE, PAGADA, VENCIDA, etc.)
+  totalCuotas?: number;       // Número total de cuotas
+  fechaPrimeraCuota?: string; // Fecha de la primera cuota (YYYY-MM-DD)
 }
 
 export interface CallDetailResource {
@@ -312,6 +314,56 @@ export class ManagementService {
     console.log('[MANAGEMENT] Fetching managements by documento:', documento);
     return this.http.get<RegistroGestionV2[]>(`${this.baseUrl}/documento/${documento}`).pipe(
       map(records => records.map(r => this.transformToFrontendFormat(r)))
+    );
+  }
+
+  /**
+   * Historial ligero: una sola query optimizada, sin lazy loading ni N+1.
+   * Retorna solo los campos necesarios para mostrar el historial en la UI.
+   */
+  getHistorialLigero(documento: string, limit: number = 50): Observable<ManagementResource[]> {
+    console.log('[MANAGEMENT] Fetching historial ligero for documento:', documento);
+    return this.http.get<any[]>(`${this.baseUrl}/documento/${documento}/historial?limit=${limit}`).pipe(
+      map(records => records.map(r => {
+        let managementDate = r.fechaGestion;
+        let managementTime: string | undefined = undefined;
+        if (managementDate && managementDate.includes('T')) {
+          const parts = managementDate.split('T');
+          managementDate = parts[0];
+          managementTime = parts[1] || undefined;
+        }
+
+        return {
+          id: r.id || 0,
+          customerId: '',
+          advisorId: '',
+          tenantId: 0,
+          tenantName: '',
+          portfolioId: 0,
+          portfolioName: '',
+          subPortfolioId: 0,
+          subPortfolioName: '',
+          phone: r.telefonoContacto || '',
+          telefonoContacto: r.telefonoContacto || '',
+          level1Id: r.idTipificacion || 0,
+          level1Name: r.rutaNivel1 || '',
+          level2Name: r.rutaNivel2 || '',
+          level3Name: r.rutaNivel3 || '',
+          level4Name: r.rutaNivel4 || '',
+          observations: r.observaciones,
+          managementDate: managementDate,
+          managementTime: managementTime,
+          canalContacto: r.canalContacto || '',
+          metodoContacto: r.metodoContacto || '',
+          nombreAgente: r.nombreAgente || '',
+          duracionSegundos: 0,
+          montoPromesa: r.montoPromesa || undefined,
+          estadoPago: r.estadoPago || undefined,
+          typificationRequiresSchedule: !!r.grupoPromesaUuid,
+          totalCuotas: r.totalCuotas || undefined,
+          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined
+        } as ManagementResource;
+      }))
     );
   }
 

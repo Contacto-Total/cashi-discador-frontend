@@ -46,6 +46,7 @@ export interface MakeCallRequest {
   agentId: number;
   phoneNumber: string;
   contactId?: number;
+  idCliente?: number;
   campaignId?: number;
 }
 

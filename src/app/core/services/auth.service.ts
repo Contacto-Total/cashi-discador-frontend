@@ -21,7 +21,9 @@ export class AuthService {
   private currentUserSubject: BehaviorSubject<User | null>;
   public currentUser$: Observable<User | null>;
   private tokenCheckInterval: any;
+  private proactiveRefreshTimer: any;
   private isLoggingOut = false;
+  private isRefreshing = false;
 
   constructor(
     private http: HttpClient,
@@ -52,6 +54,9 @@ export class AuthService {
 
     // Verificar periódicamente el estado del token (cada 5 segundos)
     this.startTokenCheck();
+
+    // Programar renovación proactiva si ya hay token
+    this.scheduleProactiveRefresh();
   }
 
   private startTokenCheck(): void {
@@ -67,7 +72,7 @@ export class AuthService {
           });
         }
 
-        // Si el token expiró, redirigir
+        // Si el token expiró, intentar refresh antes de hacer logout
         if (token && !this.isAuthenticated()) {
           this.ngZone.run(() => {
             this.handleTokenExpired();
@@ -97,13 +102,138 @@ export class AuthService {
   }
 
   private handleTokenExpired(): void {
-    if (this.isLoggingOut) return;
-    this.isLoggingOut = true;
+    if (this.isLoggingOut || this.isRefreshing) return;
 
-    console.log('[AUTH] Token expirado');
-    alert('Tu sesión ha expirado');
-    this.logout();
-    this.isLoggingOut = false;
+    console.log('[AUTH] Token expirado, intentando refresh...');
+
+    // Intentar refresh antes de hacer logout
+    const refreshToken = this.getRefreshToken();
+    if (refreshToken) {
+      this.refreshWithRetry(3).subscribe({
+        next: () => {
+          console.log('[AUTH] Token renovado exitosamente después de expiración');
+          this.scheduleProactiveRefresh();
+        },
+        error: () => {
+          console.log('[AUTH] No se pudo renovar token, cerrando sesión');
+          this.isLoggingOut = true;
+          alert('Tu sesión ha expirado');
+          this.logout();
+          this.isLoggingOut = false;
+        }
+      });
+    } else {
+      this.isLoggingOut = true;
+      alert('Tu sesión ha expirado');
+      this.logout();
+      this.isLoggingOut = false;
+    }
+  }
+
+  /**
+   * Programa renovación proactiva del token.
+   * Se ejecuta 10 minutos antes de que expire, sin necesidad de actividad HTTP.
+   */
+  private scheduleProactiveRefresh(): void {
+    // Limpiar timer anterior
+    if (this.proactiveRefreshTimer) {
+      clearTimeout(this.proactiveRefreshTimer);
+      this.proactiveRefreshTimer = null;
+    }
+
+    const token = this.getToken();
+    if (!token) return;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiry = payload.exp * 1000;
+      const now = Date.now();
+      // Renovar 10 minutos antes de que expire
+      const refreshAt = expiry - (10 * 60 * 1000);
+      const delay = refreshAt - now;
+
+      if (delay <= 0) {
+        // Ya debería haberse renovado, hacerlo ahora
+        console.log('[AUTH] Token próximo a expirar, renovando ahora...');
+        this.doProactiveRefresh();
+        return;
+      }
+
+      console.log(`[AUTH] Renovación proactiva programada en ${Math.round(delay / 60000)} minutos`);
+
+      this.ngZone.runOutsideAngular(() => {
+        this.proactiveRefreshTimer = setTimeout(() => {
+          this.ngZone.run(() => {
+            this.doProactiveRefresh();
+          });
+        }, delay);
+      });
+    } catch (e) {
+      console.error('[AUTH] Error programando renovación proactiva:', e);
+    }
+  }
+
+  /**
+   * Ejecuta la renovación proactiva con reintentos
+   */
+  private doProactiveRefresh(): void {
+    if (this.isRefreshing || this.isLoggingOut) return;
+    if (!this.isAuthenticated() && !this.getRefreshToken()) return;
+
+    console.log('[AUTH] Ejecutando renovación proactiva del token...');
+
+    this.refreshWithRetry(3).subscribe({
+      next: () => {
+        console.log('[AUTH] Renovación proactiva exitosa');
+        // Programar la siguiente renovación
+        this.scheduleProactiveRefresh();
+      },
+      error: (err) => {
+        console.error('[AUTH] Renovación proactiva falló después de 3 intentos:', err);
+        // Reprogramar un reintento en 1 minuto
+        this.ngZone.runOutsideAngular(() => {
+          this.proactiveRefreshTimer = setTimeout(() => {
+            this.ngZone.run(() => {
+              this.doProactiveRefresh();
+            });
+          }, 60000);
+        });
+      }
+    });
+  }
+
+  /**
+   * Intenta renovar el token con reintentos y backoff exponencial.
+   * Intento 1: inmediato, Intento 2: 2s, Intento 3: 4s
+   */
+  private refreshWithRetry(maxRetries: number, attempt: number = 1): Observable<LoginResponse> {
+    this.isRefreshing = true;
+
+    return new Observable<LoginResponse>(subscriber => {
+      this.refreshToken().subscribe({
+        next: (response) => {
+          this.isRefreshing = false;
+          subscriber.next(response);
+          subscriber.complete();
+        },
+        error: (error) => {
+          if (attempt < maxRetries) {
+            const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s
+            console.warn(`[AUTH] Refresh intento ${attempt}/${maxRetries} falló, reintentando en ${backoffMs}ms...`);
+            setTimeout(() => {
+              this.refreshWithRetry(maxRetries, attempt + 1).subscribe({
+                next: (res) => { subscriber.next(res); subscriber.complete(); },
+                error: (err) => { subscriber.error(err); }
+              });
+            }, backoffMs);
+          } else {
+            console.error(`[AUTH] Refresh falló después de ${maxRetries} intentos`);
+            this.isRefreshing = false;
+            subscriber.error(error);
+          }
+        }
+      });
+    });
   }
 
   login(username: string, password: string): Observable<LoginResponse> {
@@ -141,6 +271,9 @@ export class AuthService {
 
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
         this.currentUserSubject.next(user);
+
+        // Programar renovación proactiva del nuevo token
+        this.scheduleProactiveRefresh();
       })
     );
   }
@@ -150,6 +283,12 @@ export class AuthService {
     if (this.tokenCheckInterval) {
       clearInterval(this.tokenCheckInterval);
       this.tokenCheckInterval = null;
+    }
+
+    // Limpiar timer de renovación proactiva
+    if (this.proactiveRefreshTimer) {
+      clearTimeout(this.proactiveRefreshTimer);
+      this.proactiveRefreshTimer = null;
     }
 
     localStorage.removeItem(this.TOKEN_KEY);
