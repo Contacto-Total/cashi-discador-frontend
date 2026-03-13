@@ -1364,7 +1364,7 @@ import { CallService } from '../../core/services/call.service';
                 <table class="text-xs table-fixed" style="min-width: max-content;">
                   <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Vía','Promesa','Estado','Observación']; track col; let i = $index) {
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
                         <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
                             [class.text-center]="col === 'Estado'">
                           {{ col }}
@@ -1385,17 +1385,15 @@ import { CallService } from '../../core/services/call.service';
                           </span>
                         </td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[4]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
-                            {{ gestion.via }}
-                          </span>
-                        </td>
-                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.promesaCompacta">
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
                           @if (gestion.promesaCompacta) {
                             <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
                         </td>
                         <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
                           @if (gestion.estadoPago) {
@@ -1411,8 +1409,10 @@ import { CallService } from '../../core/services/call.service';
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
                         </td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[7]" [title]="gestion.observacion">
-                          {{ gestion.observacion || '-' }}
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[7]">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
+                            {{ gestion.via }}
+                          </span>
                         </td>
                       </tr>
                     }
@@ -1433,7 +1433,7 @@ import { CallService } from '../../core/services/call.service';
                 <table class="text-xs table-fixed" style="min-width: max-content;">
                   <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Vía','Promesa','Estado','Observación']; track col; let i = $index) {
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
                         <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
                             [class.text-center]="col === 'Estado'">
                           {{ col }}
@@ -1454,17 +1454,15 @@ import { CallService } from '../../core/services/call.service';
                           </span>
                         </td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[4]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
-                            {{ gestion.via }}
-                          </span>
-                        </td>
-                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.promesaCompacta">
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
                           @if (gestion.promesaCompacta) {
                             <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
                         </td>
                         <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
                           @if (gestion.estadoPago) {
@@ -1480,8 +1478,10 @@ import { CallService } from '../../core/services/call.service';
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
                         </td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[7]" [title]="gestion.observacion">
-                          {{ gestion.observacion || '-' }}
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[7]">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
+                            {{ gestion.via }}
+                          </span>
                         </td>
                       </tr>
                     }
@@ -2101,7 +2101,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Column widths para historial de gestiones (resizable)
-  historialColWidths = signal<number[]>([110, 90, 180, 90, 110, 160, 80, 150]);
+  historialColWidths = signal<number[]>([110, 90, 180, 90, 160, 150, 80, 110]);
   private resizingColIndex = -1;
   private resizeStartX = 0;
   private resizeStartWidth = 0;
@@ -4974,7 +4974,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       // Determinar si es una llamada activa o gestión manual
       // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
-      const hasActiveCallOrTimerSched = this.callActive() || !!this.callStartTime;
+      const hasActiveCallOrTimerSched = this.callActive() || this.rellamadaCallActive() || !!this.callStartTime;
       const isSameClientAsCallSched = this.activeCallClientId() !== null &&
                                        this.activeCallClientId() === this.customerData()?.id;
       const isActiveCallSchedule = hasActiveCallOrTimerSched && isSameClientAsCallSched;
@@ -5016,7 +5016,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         idSubcartera: this.selectedSubPortfolioId,
         idTipificacion: finalTypificationId,
         observaciones: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
-        metodoContacto: isActiveCallSchedule ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
+        metodoContacto: isActiveCallSchedule ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimerSched ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
         montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
@@ -5086,7 +5086,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Gestión normal sin cronograma de pago
       // Determinar si es una llamada activa o gestión manual
       // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
-      const hasActiveCallOrTimer = this.callActive() || !!this.callStartTime;
+      const hasActiveCallOrTimer = this.callActive() || this.rellamadaCallActive() || !!this.callStartTime;
       const isSameClientAsCall = this.activeCallClientId() !== null &&
                                   this.activeCallClientId() === this.customerData()?.id;
       const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
@@ -5128,7 +5128,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         observations: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
 
         // Campos de contexto de gestión
-        metodoContacto: isActiveCall ? 'GESTION_PROGRESIVO' : 'GESTION_MANUAL',
+        metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
         idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
@@ -5758,6 +5758,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private loadCustomerFromResource(customer: any) {
     console.log('[TEST] Cargando cliente:', customer);
+
+    // Limpiar teléfono seleccionado del cliente anterior para evitar guardar teléfonos incorrectos
+    this.selectedManualPhone.set('');
 
     // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
     this.rawClientData.set(customer);

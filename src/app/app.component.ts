@@ -643,6 +643,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.router.url === '/login';
   }
 
+  isCollectionManagementPage(): boolean {
+    return this.router.url.startsWith('/collection-management');
+  }
+
   // Sidebar methods
   toggleSidebar(): void {
     this.isSidebarCollapsed = !this.isSidebarCollapsed;
