@@ -30,6 +30,11 @@ export interface ResumenPorAgente {
   tiempoConectadoFormateado: string;
   tiempoProductivoFormateado: string;
   tiempoBreakFormateado: string;
+  horaEntrada: string | null;
+  horaSalida: string | null;
+  cantidadSesiones: number;
+  jornadaTotalFormateada: string | null;
+  jornadaTotalSegundos: number;
 }
 
 export interface ResumenEstadoAgentes {

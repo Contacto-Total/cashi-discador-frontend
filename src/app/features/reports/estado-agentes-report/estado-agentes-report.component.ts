@@ -237,6 +237,10 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               <thead class="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Agente</th>
+                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Entrada</th>
+                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Salida</th>
+                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Jornada</th>
+                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Sesiones</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Conectado</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Productivo</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Ocioso</th>
@@ -255,6 +259,18 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     <td class="px-3 py-2">
                       <div class="text-gray-900 dark:text-white font-medium">{{ agente.nombreAgente }}</div>
                       <div class="text-xs text-gray-500 dark:text-gray-400">{{ agente.username }}</div>
+                    </td>
+                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400 text-xs font-medium">
+                      {{ agente.horaEntrada || '-' }}
+                    </td>
+                    <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400 text-xs font-medium">
+                      {{ agente.horaSalida || '-' }}
+                    </td>
+                    <td class="px-3 py-2 text-center text-indigo-700 dark:text-indigo-300 font-semibold text-xs">
+                      {{ agente.jornadaTotalFormateada || '-' }}
+                    </td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
+                      {{ agente.cantidadSesiones || 1 }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-900 dark:text-white font-medium">
                       {{ agente.tiempoConectadoFormateado }}
