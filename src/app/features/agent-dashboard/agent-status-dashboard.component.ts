@@ -134,8 +134,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       if (this.isPageRefreshing) return;
 
       const targetUrl = event.url;
-      // Si NO va a collection-management (tipificación) ni a seguimiento, desconectar
-      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/seguimiento')) {
+      // Si NO va a collection-management (tipificación), seguimiento ni gestión manual, desconectar
+      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/seguimiento') && !targetUrl.startsWith('/manual-management')) {
         this.setDesconectado();
       }
     });
