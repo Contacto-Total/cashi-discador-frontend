@@ -440,12 +440,17 @@ import { CallService } from '../../core/services/call.service';
 
             <!-- Selector de Teléfono para Gestión Manual -->
             @if (!callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
-              <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-amber-300 dark:border-amber-700 p-2.5 transition-colors duration-300">
+              <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2.5 transition-colors duration-300 ' +
+                (errors()['phone'] && !selectedManualPhone()
+                  ? 'border-red-500 dark:border-red-600 ring-2 ring-red-300 dark:ring-red-800 animate-pulse'
+                  : 'border-amber-300 dark:border-amber-700')">
                 <div class="flex items-center gap-2 mb-2">
-                  <div class="p-1 rounded bg-amber-100 dark:bg-amber-900/30">
-                    <lucide-angular name="phone" [size]="14" class="text-amber-600 dark:text-amber-400"></lucide-angular>
+                  <div [class]="'p-1 rounded ' + (errors()['phone'] && !selectedManualPhone() ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30')">
+                    <lucide-angular name="phone" [size]="14" [class]="errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"></lucide-angular>
                   </div>
-                  <span class="font-bold text-xs text-gray-800 dark:text-white">Teléfono Contactado</span>
+                  <span [class]="'font-bold text-xs ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white')">
+                    {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfono Contactado' }}
+                  </span>
                   @if (selectedManualPhone()) {
                     <span class="ml-auto text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{{ selectedManualPhone() }}</span>
                   }
@@ -5468,7 +5473,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.errors.set(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      alert('Por favor complete todos los campos requeridos');
+      // Solo mostrar alert si hay errores que no sean solo el teléfono (ese se muestra visualmente)
+      const nonPhoneErrors = Object.keys(newErrors).filter(k => k !== 'phone');
+      if (nonPhoneErrors.length > 0) {
+        alert('Por favor complete todos los campos requeridos');
+      }
       return false;
     }
 
