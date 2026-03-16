@@ -32,28 +32,14 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
       <!-- Filtros -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <!-- Fecha Desde -->
+          <!-- Fecha -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Fecha Desde *
+              Fecha *
             </label>
             <input
               type="date"
-              [(ngModel)]="filtros.fechaDesde"
-              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-
-          <!-- Fecha Hasta -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Fecha Hasta *
-            </label>
-            <input
-              type="date"
-              [(ngModel)]="filtros.fechaHasta"
+              [(ngModel)]="filtros.fecha"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -124,7 +110,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           <div class="flex items-end gap-2">
             <button
               (click)="buscar()"
-              [disabled]="loading() || !filtros.fechaDesde || !filtros.fechaHasta"
+              [disabled]="loading() || !filtros.fecha"
               class="flex-1 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold
                      rounded-lg transition-colors flex items-center justify-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -149,9 +135,9 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           </div>
         </div>
 
-        @if (!filtros.fechaDesde || !filtros.fechaHasta) {
+        @if (!filtros.fecha) {
           <p class="mt-2 text-sm text-amber-600 dark:text-amber-400">
-            * Las fechas son obligatorias
+            * La fecha es obligatoria
           </p>
         }
       </div>
@@ -240,7 +226,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                   <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Entrada</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Salida</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Jornada</th>
-                  <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase">Sesiones</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Conectado</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Productivo</th>
                   <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Ocioso</th>
@@ -268,9 +253,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     </td>
                     <td class="px-3 py-2 text-center text-indigo-700 dark:text-indigo-300 font-semibold text-xs">
                       {{ agente.jornadaTotalFormateada || '-' }}
-                    </td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">
-                      {{ agente.cantidadSesiones || 1 }}
                     </td>
                     <td class="px-3 py-2 text-center text-gray-900 dark:text-white font-medium">
                       {{ agente.tiempoConectadoFormateado }}
@@ -498,8 +480,7 @@ export class EstadoAgentesReportComponent implements OnInit {
   subcarteras = signal<Subcartera[]>([]);
 
   filtros = {
-    fechaDesde: '',
-    fechaHasta: '',
+    fecha: '',
     idProveedor: null as number | null,
     idCartera: null as number | null,
     idSubcartera: null as number | null
@@ -516,8 +497,7 @@ export class EstadoAgentesReportComponent implements OnInit {
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
     const todayStr = `${yyyy}-${mm}-${dd}`;
-    this.filtros.fechaDesde = todayStr;
-    this.filtros.fechaHasta = todayStr;
+    this.filtros.fecha = todayStr;
 
     this.comisionesService.obtenerInquilinos().subscribe({
       next: (data) => this.proveedores.set(data),
@@ -552,7 +532,7 @@ export class EstadoAgentesReportComponent implements OnInit {
   }
 
   buscar(): void {
-    if (!this.filtros.fechaDesde || !this.filtros.fechaHasta) return;
+    if (!this.filtros.fecha) return;
     this.currentPage.set(0);
     this.loadData();
   }
@@ -566,8 +546,8 @@ export class EstadoAgentesReportComponent implements OnInit {
     this.loading.set(true);
 
     this.reporteService.getReporte(
-      this.filtros.fechaDesde,
-      this.filtros.fechaHasta,
+      this.filtros.fecha,
+      this.filtros.fecha,
       this.filtros.idProveedor || undefined,
       this.filtros.idCartera || undefined,
       this.filtros.idSubcartera || undefined,
@@ -590,13 +570,13 @@ export class EstadoAgentesReportComponent implements OnInit {
   }
 
   exportarExcel(): void {
-    if (!this.filtros.fechaDesde || !this.filtros.fechaHasta) return;
+    if (!this.filtros.fecha || !this.filtros.fecha) return;
 
     this.loading.set(true);
 
     this.reporteService.exportarExcel(
-      this.filtros.fechaDesde,
-      this.filtros.fechaHasta,
+      this.filtros.fecha,
+      this.filtros.fecha,
       this.filtros.idProveedor || undefined,
       this.filtros.idCartera || undefined,
       this.filtros.idSubcartera || undefined
@@ -605,7 +585,7 @@ export class EstadoAgentesReportComponent implements OnInit {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Reporte_Estados_Agentes_${this.filtros.fechaDesde}_${this.filtros.fechaHasta}.xlsx`;
+        a.download = `Reporte_Estados_Agentes_${this.filtros.fecha}_${this.filtros.fecha}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
