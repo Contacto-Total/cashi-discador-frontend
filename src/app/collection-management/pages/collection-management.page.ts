@@ -440,7 +440,7 @@ import { CallService } from '../../core/services/call.service';
 
             <!-- Selector de Teléfono para Gestión Manual -->
             @if (!callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
-              <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2.5 transition-colors duration-300 ' +
+              <div id="phone-selector-panel" [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2.5 transition-colors duration-300 ' +
                 (errors()['phone'] && !selectedManualPhone()
                   ? 'border-red-500 dark:border-red-600 ring-2 ring-red-300 dark:ring-red-800 animate-pulse'
                   : 'border-amber-300 dark:border-amber-700')">
@@ -5477,6 +5477,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       const nonPhoneErrors = Object.keys(newErrors).filter(k => k !== 'phone');
       if (nonPhoneErrors.length > 0) {
         alert('Por favor complete todos los campos requeridos');
+      }
+      // Auto-scroll al selector de teléfono si falta
+      if (newErrors['phone']) {
+        setTimeout(() => {
+          document.getElementById('phone-selector-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
       }
       return false;
     }
