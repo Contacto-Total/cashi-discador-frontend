@@ -327,10 +327,14 @@ export class ManagementService {
       map(records => records.map(r => {
         let managementDate = r.fechaGestion;
         let managementTime: string | undefined = undefined;
-        if (managementDate && managementDate.includes('T')) {
-          const parts = managementDate.split('T');
-          managementDate = parts[0];
-          managementTime = parts[1] || undefined;
+        if (managementDate) {
+          // Handle both ISO format (T separator) and database format (space separator)
+          const separator = managementDate.includes('T') ? 'T' : managementDate.includes(' ') ? ' ' : null;
+          if (separator) {
+            const parts = managementDate.split(separator);
+            managementDate = parts[0];
+            managementTime = parts[1] || undefined;
+          }
         }
 
         return {
@@ -625,10 +629,14 @@ export class ManagementService {
     // Extraer fecha y hora por separado
     let managementDate = record.fechaGestion;
     let managementTime: string | undefined = undefined;
-    if (managementDate && managementDate.includes('T')) {
-      const parts = managementDate.split('T');
-      managementDate = parts[0];
-      managementTime = parts[1] || undefined;
+    if (managementDate) {
+      // Handle both ISO format (T separator) and database format (space separator)
+      const separator = managementDate.includes('T') ? 'T' : managementDate.includes(' ') ? ' ' : null;
+      if (separator) {
+        const parts = managementDate.split(separator);
+        managementDate = parts[0];
+        managementTime = parts[1] || undefined;
+      }
     }
 
     return {

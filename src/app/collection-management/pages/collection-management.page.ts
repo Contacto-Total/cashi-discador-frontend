@@ -3805,7 +3805,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-    const parts = dateStr.split('-');
+    // Extract only the date part in case a full timestamp is received (space or T separator)
+    const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+    const parts = dateOnly.split('-');
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
