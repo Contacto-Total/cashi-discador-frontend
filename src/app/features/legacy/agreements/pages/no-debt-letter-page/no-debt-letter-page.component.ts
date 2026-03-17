@@ -102,7 +102,7 @@ export class NoDebtLetterPageComponent {
         this.letterForm.patchValue({
           nombreCompleto: response.nombreCompleto,
           dni: response.documento || dni,
-          numeroCuenta: response.numeroCuenta,
+          numeroCuenta: String(response.numeroCuenta || '').replace(/\.0+$/, ''),
           fechaActual: this.formatDate(new Date()),
           fechaCancelacion: this.formatDate(new Date())
         });
@@ -131,7 +131,7 @@ export class NoDebtLetterPageComponent {
         this.letterForm.patchValue({
           nombreCompleto: response.nombreDelTitular,
           dni: dni,
-          numeroCuenta: response.cuentaTarjeta,
+          numeroCuenta: String(response.cuentaTarjeta || '').replace(/\.0+$/, ''),
           fechaActual: this.formatDate(new Date()),
           fechaCancelacion: this.formatDate(new Date())
         });
