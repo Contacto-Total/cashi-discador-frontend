@@ -27,6 +27,7 @@ import { AdditionalFieldV2 } from '../../models/typification-v2.model';
 export class TypificationMaintenanceComponent implements OnInit {
   selectedTenantId?: number;
   selectedPortfolioId?: number;
+  selectedSubPortfolioId?: number;
   selectedType?: ClassificationTypeV2;
 
   loading = signal(false);
@@ -47,6 +48,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   expandedNodes = new Set<number>();
   tenants: Tenant[] = [];
   portfolios: Portfolio[] = [];
+  subPortfolios: any[] = [];
 
   // Inline editing state
   editingNodeId = signal<number | null>(null);
@@ -129,6 +131,42 @@ export class TypificationMaintenanceComponent implements OnInit {
     if (!this.selectedTenantId) return;
 
     this.loading.set(true);
+
+    // Si hay subcartera seleccionada, usar effective para obtener jerarquía personalizada
+    if (this.selectedSubPortfolioId && this.selectedPortfolioId) {
+      this.classificationService.getEffectiveTypifications(
+        this.selectedTenantId,
+        this.selectedPortfolioId,
+        this.selectedSubPortfolioId
+      ).subscribe({
+        next: (typifications) => {
+          // También cargar configs para saber habilitadas/deshabilitadas
+          this.classificationService.getTenantClassifications(
+            this.selectedTenantId!,
+            this.selectedPortfolioId,
+            true
+          ).subscribe({
+            next: (configs) => {
+              this.tenantConfigs = configs;
+              this.typifications = typifications;
+              this.buildTree();
+              this.loading.set(false);
+            },
+            error: () => {
+              this.tenantConfigs = [];
+              this.typifications = typifications;
+              this.buildTree();
+              this.loading.set(false);
+            }
+          });
+        },
+        error: (error) => {
+          this.loading.set(false);
+          console.error('Error loading effective typifications:', error);
+        }
+      });
+      return;
+    }
 
     // Load ALL tenant configurations (including disabled) for maintenance view
     const request$ = this.selectedType
@@ -268,6 +306,22 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   onPortfolioChange() {
+    this.selectedSubPortfolioId = undefined;
+    this.subPortfolios = [];
+    if (this.selectedPortfolioId) {
+      this.classificationService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
+        next: (data) => {
+          this.subPortfolios = data;
+        },
+        error: (error) => {
+          console.error('Error loading subportfolios:', error);
+        }
+      });
+    }
+    this.loadTypifications();
+  }
+
+  onSubPortfolioChange() {
     this.loadTypifications();
   }
 
@@ -281,12 +335,14 @@ export class TypificationMaintenanceComponent implements OnInit {
       ? this.classificationService.enableClassification(
           this.selectedTenantId,
           node.typification.id,
-          this.selectedPortfolioId
+          this.selectedPortfolioId,
+          this.selectedSubPortfolioId
         )
       : this.classificationService.disableClassification(
           this.selectedTenantId,
           node.typification.id,
-          this.selectedPortfolioId
+          this.selectedPortfolioId,
+          this.selectedSubPortfolioId
         );
 
     action$.subscribe({
