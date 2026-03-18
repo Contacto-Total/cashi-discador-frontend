@@ -238,21 +238,6 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
           </div>
         </div>
 
-        <!-- Montos Totales -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-blue-100 uppercase">Monto Total Promesas</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPromesas | number:'1.2-2' }}</p>
-          </div>
-          <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-green-100 uppercase">Monto Pagado</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagado | number:'1.2-2' }}</p>
-          </div>
-          <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-red-100 uppercase">Monto Pendiente</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPendiente | number:'1.2-2' }}</p>
-          </div>
-        </div>
       }
 
       <!-- Tabla Preview -->
