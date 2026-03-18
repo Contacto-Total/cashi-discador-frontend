@@ -132,42 +132,6 @@ export class TypificationMaintenanceComponent implements OnInit {
 
     this.loading.set(true);
 
-    // Si hay subcartera seleccionada, usar effective para obtener jerarquía personalizada
-    if (this.selectedSubPortfolioId && this.selectedPortfolioId) {
-      this.classificationService.getEffectiveTypifications(
-        this.selectedTenantId,
-        this.selectedPortfolioId,
-        this.selectedSubPortfolioId
-      ).subscribe({
-        next: (typifications) => {
-          // También cargar configs para saber habilitadas/deshabilitadas
-          this.classificationService.getTenantClassifications(
-            this.selectedTenantId!,
-            this.selectedPortfolioId,
-            true
-          ).subscribe({
-            next: (configs) => {
-              this.tenantConfigs = configs;
-              this.typifications = typifications;
-              this.buildTree();
-              this.loading.set(false);
-            },
-            error: () => {
-              this.tenantConfigs = [];
-              this.typifications = typifications;
-              this.buildTree();
-              this.loading.set(false);
-            }
-          });
-        },
-        error: (error) => {
-          this.loading.set(false);
-          console.error('Error loading effective typifications:', error);
-        }
-      });
-      return;
-    }
-
     // Load ALL tenant configurations (including disabled) for maintenance view
     const request$ = this.selectedType
       ? this.classificationService.getTenantClassificationsByType(
@@ -186,8 +150,38 @@ export class TypificationMaintenanceComponent implements OnInit {
         this.tenantConfigs = configs;
         // Extract typifications from tenant configs
         this.typifications = configs.map(config => config.tipificacion);
-        this.buildTree();
-        this.loading.set(false);
+
+        // Si hay subcartera, aplicar padres personalizados del endpoint effective
+        if (this.selectedSubPortfolioId && this.selectedPortfolioId) {
+          this.classificationService.getEffectiveTypifications(
+            this.selectedTenantId!,
+            this.selectedPortfolioId,
+            this.selectedSubPortfolioId
+          ).subscribe({
+            next: (effectiveTyps) => {
+              // Crear mapa de padres personalizados
+              const parentOverrides = new Map<number, number | null>();
+              effectiveTyps.forEach(t => {
+                parentOverrides.set(t.id, t.parentTypificationId);
+              });
+              // Aplicar padres personalizados a las tipificaciones
+              this.typifications.forEach(t => {
+                if (parentOverrides.has(t.id)) {
+                  t.parentTypificationId = parentOverrides.get(t.id)!;
+                }
+              });
+              this.buildTree();
+              this.loading.set(false);
+            },
+            error: () => {
+              this.buildTree();
+              this.loading.set(false);
+            }
+          });
+        } else {
+          this.buildTree();
+          this.loading.set(false);
+        }
       },
       error: (error) => {
         this.loading.set(false);
