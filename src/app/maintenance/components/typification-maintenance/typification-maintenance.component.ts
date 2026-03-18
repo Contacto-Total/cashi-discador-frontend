@@ -104,13 +104,14 @@ export class TypificationMaintenanceComponent implements OnInit {
 
   onTenantChange() {
     this.selectedPortfolioId = undefined;
+    this.selectedSubPortfolioId = undefined;
     this.portfolios = [];
+    this.subPortfolios = [];
     this.typifications = [];
     this.treeNodes = [];
 
     if (this.selectedTenantId) {
       this.loadPortfolios();
-      this.loadTypifications();
     }
   }
 
@@ -128,7 +129,7 @@ export class TypificationMaintenanceComponent implements OnInit {
   }
 
   loadTypifications() {
-    if (!this.selectedTenantId) return;
+    if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) return;
 
     this.loading.set(true);
 
@@ -302,6 +303,9 @@ export class TypificationMaintenanceComponent implements OnInit {
   onPortfolioChange() {
     this.selectedSubPortfolioId = undefined;
     this.subPortfolios = [];
+    this.typifications = [];
+    this.treeNodes = [];
+
     if (this.selectedPortfolioId) {
       this.classificationService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
         next: (data) => {
@@ -312,11 +316,15 @@ export class TypificationMaintenanceComponent implements OnInit {
         }
       });
     }
-    this.loadTypifications();
   }
 
   onSubPortfolioChange() {
-    this.loadTypifications();
+    this.typifications = [];
+    this.treeNodes = [];
+
+    if (this.selectedSubPortfolioId) {
+      this.loadTypifications();
+    }
   }
 
   toggleTypification(node: TypificationTreeNodeV2, event: Event) {

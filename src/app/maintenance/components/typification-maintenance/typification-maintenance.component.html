@@ -55,7 +55,7 @@
                 [(ngModel)]="selectedPortfolioId"
                 (change)="onPortfolioChange()"
                 class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
-                <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todas las Carteras</option>
+                <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Seleccionar Cartera</option>
                 <option *ngFor="let portfolio of portfolios" [ngValue]="portfolio.id" class="bg-white dark:bg-slate-800">
                   {{ portfolio.portfolioName }}
                 </option>
@@ -73,7 +73,7 @@
                 [(ngModel)]="selectedSubPortfolioId"
                 (change)="onSubPortfolioChange()"
                 class="font-semibold text-gray-800 dark:text-white text-[10px] bg-transparent border-none focus:outline-none cursor-pointer">
-                <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Todas las Subcarteras</option>
+                <option [ngValue]="undefined" class="bg-white dark:bg-slate-800">Seleccionar Subcartera</option>
                 <option *ngFor="let sub of subPortfolios" [ngValue]="sub.id" class="bg-white dark:bg-slate-800">
                   {{ sub.subPortfolioName || sub.nombre }}
                 </option>
