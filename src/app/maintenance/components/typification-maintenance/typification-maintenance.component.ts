@@ -143,7 +143,8 @@ export class TypificationMaintenanceComponent implements OnInit {
       : this.classificationService.getTenantClassifications(
           this.selectedTenantId,
           this.selectedPortfolioId,
-          true // includeDisabled = true for maintenance view
+          true, // includeDisabled = true for maintenance view
+          this.selectedSubPortfolioId
         );
 
     request$.subscribe({

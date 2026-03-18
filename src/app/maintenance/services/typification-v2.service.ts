@@ -82,13 +82,18 @@ export class TypificationV2Service {
   // Tenant Configuration Management (V2)
   // ========================================
 
-  getTenantClassifications(tenantId: number, portfolioId?: number, includeDisabled?: boolean): Observable<TenantTypificationConfigV2[]> {
+  getTenantClassifications(tenantId: number, portfolioId?: number, includeDisabled?: boolean, subPortfolioId?: number): Observable<TenantTypificationConfigV2[]> {
     let params = new HttpParams();
     if (includeDisabled) {
       params = params.set('includeDisabled', 'true');
     }
 
-    if (portfolioId) {
+    if (portfolioId && subPortfolioId) {
+      return this.http.get<TenantTypificationConfigV2[]>(
+        `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}/subportfolio/${subPortfolioId}`,
+        { params }
+      );
+    } else if (portfolioId) {
       return this.http.get<TenantTypificationConfigV2[]>(
         `${this.configUrl}/tenant/${tenantId}/portfolio/${portfolioId}`,
         { params }
