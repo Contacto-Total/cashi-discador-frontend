@@ -163,7 +163,7 @@ export class TypificationMaintenanceComponent implements OnInit {
               // Crear mapa de padres personalizados
               const parentOverrides = new Map<number, number | null>();
               effectiveTyps.forEach(t => {
-                parentOverrides.set(t.id, t.parentTypificationId);
+                parentOverrides.set(t.id, t.parentTypificationId ?? null);
               });
               // Aplicar padres personalizados a las tipificaciones
               this.typifications.forEach(t => {
