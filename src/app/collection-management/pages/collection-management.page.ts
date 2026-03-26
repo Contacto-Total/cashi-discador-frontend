@@ -439,7 +439,7 @@ import { CallService } from '../../core/services/call.service';
             </div>
 
             <!-- Selector de Teléfono para Gestión Manual -->
-            @if (!callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
+            @if (isManualSource() && !callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
               <div id="phone-selector-panel" [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2.5 transition-colors duration-300 ' +
                 (errors()['phone'] && !selectedManualPhone()
                   ? 'border-red-500 dark:border-red-600 ring-2 ring-red-300 dark:ring-red-800 animate-pulse'
@@ -1571,6 +1571,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
+  protected isManualSource = signal(false); // true solo cuando viene desde /manual-management con source=manual
   protected callDuration = signal(0);
   protected saving = signal(false);
   protected showScheduleDetail = signal(false);
@@ -2619,6 +2620,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Verificar si viene desde gestión manual con parámetros de cliente
     this.route.queryParams.subscribe(params => {
       if (params['source'] === 'manual' && params['documento']) {
+        this.isManualSource.set(true);
         console.log('📋 [MANUAL] Cargando cliente desde gestión manual:', params);
         this.loadCustomerByDocumentoFromManual(
           params['documento'],
@@ -3805,9 +3807,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-    // Extract only the date part in case a full timestamp is received (space or T separator)
-    const dateOnly = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
-    const parts = dateOnly.split('-');
+    const parts = dateStr.split('-');
     if (parts.length === 3) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
@@ -5103,7 +5103,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         ? (this.activeCallPhone() ||
            (this.customerData() as any).telefono_celular ||
            (this.customerData() as any).telefono_domicilio || '')
-        : (this.selectedManualPhone() || '');
+        : (this.isManualSource() ? this.selectedManualPhone() : (this.activeCallPhone() || ''));
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
@@ -5441,7 +5441,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                                 this.activeCallClientId() === this.customerData()?.id;
     const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
-    if (!isActiveCall && !this.selectedManualPhone()) {
+    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone()) {
       newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
     }
 
