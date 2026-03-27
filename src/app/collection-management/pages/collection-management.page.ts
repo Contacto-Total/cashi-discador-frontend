@@ -3652,8 +3652,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
     if (agentId) {
       const idCliente = this.customerData()?.id || undefined;
+      const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
-      this.callService.registerCall({ agentId, phoneNumber, idCliente, contactId }).subscribe({
+      this.callService.registerCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
         next: () => console.log('📞 [Rellamada] Registrada en BD'),
         error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
       });
