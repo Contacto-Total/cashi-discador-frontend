@@ -5012,9 +5012,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         ? (this.activeCallPhone() ||
           (this.customerData() as any)?.telefono_celular ||
           (this.customerData() as any)?.telefono_domicilio || '')
-        : (this.isManualSource()
-            ? this.selectedManualPhone()
-            : (this.activeCallPhone() || ''));  
+        : (this.selectedManualPhone() || this.activeCallPhone() || 
+          (this.customerData() as any)?.telefono_celular ||
+          (this.customerData() as any)?.telefono_domicilio || '');
 
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
@@ -5112,7 +5112,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         ? (this.activeCallPhone() ||
            (this.customerData() as any).telefono_celular ||
            (this.customerData() as any).telefono_domicilio || '')
-        : (this.isManualSource() ? this.selectedManualPhone() : (this.activeCallPhone() || ''));
+        : (this.selectedManualPhone() || this.activeCallPhone() || 
+          (this.customerData() as any)?.telefono_celular ||
+          (this.customerData() as any)?.telefono_domicilio || '');
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
