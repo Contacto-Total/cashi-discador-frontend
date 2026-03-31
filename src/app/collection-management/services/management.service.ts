@@ -231,6 +231,7 @@ export interface PaymentScheduleRequest {
   esExcepcionPrimeraCuota?: boolean; // true si la fecha de primera cuota excede el límite configurado
   diasPrimeraCuota?: number;         // Días desde hoy hasta la fecha de la primera cuota
   maxDiasPermitidos?: number;        // Máximo de días permitidos según configuración
+  telefonoContacto?: string;
   // Porcentaje de auto-aprobación para excepciones
   porcentajeAutoAprobacion?: number;
   schedule: {
@@ -327,14 +328,10 @@ export class ManagementService {
       map(records => records.map(r => {
         let managementDate = r.fechaGestion;
         let managementTime: string | undefined = undefined;
-        if (managementDate) {
-          // Handle both ISO format (T separator) and database format (space separator)
-          const separator = managementDate.includes('T') ? 'T' : managementDate.includes(' ') ? ' ' : null;
-          if (separator) {
-            const parts = managementDate.split(separator);
-            managementDate = parts[0];
-            managementTime = parts[1] || undefined;
-          }
+        if (managementDate && managementDate.includes('T')) {
+          const parts = managementDate.split('T');
+          managementDate = parts[0];
+          managementTime = parts[1] || undefined;
         }
 
         return {
@@ -629,14 +626,10 @@ export class ManagementService {
     // Extraer fecha y hora por separado
     let managementDate = record.fechaGestion;
     let managementTime: string | undefined = undefined;
-    if (managementDate) {
-      // Handle both ISO format (T separator) and database format (space separator)
-      const separator = managementDate.includes('T') ? 'T' : managementDate.includes(' ') ? ' ' : null;
-      if (separator) {
-        const parts = managementDate.split(separator);
-        managementDate = parts[0];
-        managementTime = parts[1] || undefined;
-      }
+    if (managementDate && managementDate.includes('T')) {
+      const parts = managementDate.split('T');
+      managementDate = parts[0];
+      managementTime = parts[1] || undefined;
     }
 
     return {

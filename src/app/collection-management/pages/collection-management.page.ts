@@ -5008,6 +5008,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       }
       // ========== FIN VALIDACIÓN DE PRIMERA CUOTA ==========
+      const phoneNumber = isActiveCallSchedule
+        ? (this.activeCallPhone() ||
+          (this.customerData() as any)?.telefono_celular ||
+          (this.customerData() as any)?.telefono_domicilio || '')
+        : (this.isManualSource()
+            ? this.selectedManualPhone()
+            : (this.activeCallPhone() || ''));  
 
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
@@ -5028,6 +5035,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         promesaOrigenUuid: this.continuidadData()?.promesaOrigenUuid,
         montoOriginalPromesa: this.continuidadData()?.montoOriginal,
         montoPagadoPrevio: this.continuidadData()?.montoPagado,
+        telefonoContacto: phoneNumber,
         // Excepción de primera cuota
         esExcepcionPrimeraCuota: esExcepcionPrimeraCuota,
         diasPrimeraCuota: diasPrimeraCuota,

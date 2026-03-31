@@ -368,8 +368,6 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
         existing.mensajeAlerta = newAgent.mensajeAlerta;
         existing.sonidoAlerta = newAgent.sonidoAlerta;
         existing.peripheralStatus = newAgent.peripheralStatus;
-        existing.promedioEsperaSegundos = newAgent.promedioEsperaSegundos;
-        existing.periodosDisponible = newAgent.periodosDisponible;
       } else {
         // Agente nuevo: agregar al array
         this.agentesMonitoreo.push(newAgent);
