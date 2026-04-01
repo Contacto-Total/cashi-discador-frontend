@@ -4882,6 +4882,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.showScheduleDetail.update(show => !show);
   }
 
+  private getCustomerPhone(): string {
+  return this.customerData()?.contacto?.telefono_principal ||
+         this.customerData()?.contacto?.telefono_alternativo ||
+         '';
+  }
+
   saveManagement() {
     if (!this.validateForm()) {
       return;
@@ -5009,12 +5015,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
       // ========== FIN VALIDACIÓN DE PRIMERA CUOTA ==========
       const phoneNumber = isActiveCallSchedule
-        ? (this.activeCallPhone() ||
-          (this.customerData() as any)?.telefono_celular ||
-          (this.customerData() as any)?.telefono_domicilio || '')
-        : (this.selectedManualPhone() || this.activeCallPhone() || 
-          (this.customerData() as any)?.telefono_celular ||
-          (this.customerData() as any)?.telefono_domicilio || '');
+        ? (this.activeCallPhone() || this.getCustomerPhone())
+        : (this.selectedManualPhone() || this.activeCallPhone() || this.getCustomerPhone());
 
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
@@ -5109,12 +5111,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Si hay activeCallPhone (número del discador/rellamada), usarlo como fallback
       // Si es gestión manual pura, usar el teléfono seleccionado por el agente
       const phoneNumber = isActiveCall
-        ? (this.activeCallPhone() ||
-           (this.customerData() as any).telefono_celular ||
-           (this.customerData() as any).telefono_domicilio || '')
-        : (this.selectedManualPhone() || this.activeCallPhone() || 
-          (this.customerData() as any)?.telefono_celular ||
-          (this.customerData() as any)?.telefono_domicilio || '');
+        ? (this.activeCallPhone() || this.getCustomerPhone())
+        : (this.selectedManualPhone() || this.activeCallPhone() || this.getCustomerPhone());
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
@@ -5241,7 +5239,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!this.callStartTime) return;
 
     const startCallRequest: StartCallRequest = {
-      phoneNumber: this.activeCallPhone() || this.customerData()?.contacto?.telefono_principal || '',
+      phoneNumber: this.activeCallPhone() || this.getCustomerPhone(),
       startTime: this.callStartTime
     };
 
