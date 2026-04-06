@@ -13,8 +13,9 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import { environment } from '../../../../environments/environment';
 import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
-import * as flatpickr from 'flatpickr';
+import flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es';
+import 'flatpickr/dist/flatpickr.min.css'; // Esto es clave
 
 @Component({
   selector: 'app-campaign-form',
@@ -107,17 +108,17 @@ export class CampaignFormComponent implements OnInit {
   ngOnInit(): void {
   this.loadTenants();
 
-  (flatpickr as any).default("#startDate", {
-    enableTime: true,
-    dateFormat: "d/m/Y H:i",
-    locale: Spanish
-  });
+      flatpickr("#startDate", {
+      enableTime: true,
+      dateFormat: "d/m/Y H:i",
+      locale: Spanish
+    });
 
-  (flatpickr as any).default("#endDate", {
-    enableTime: true,
-    dateFormat: "d/m/Y H:i",
-    locale: Spanish
-  });
+    flatpickr("#endDate", {
+      enableTime: true,
+      dateFormat: "d/m/Y H:i",
+      locale: Spanish
+    });
 
   this.route.params.subscribe(params => {
     if (params['id']) {
