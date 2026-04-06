@@ -46,7 +46,7 @@ export interface ReporteResponse {
   data: ReporteContinuidadDTO[];
   metricas: ResumenMetricas;
   total: number;
-}
+} 
 
 @Injectable({
   providedIn: 'root'
@@ -90,4 +90,5 @@ export class ContinuidadReportService {
       responseType: 'blob'
     });
   }
+
 }

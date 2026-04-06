@@ -8,6 +8,8 @@ import {
   ResumenMetricas,
   ReporteResponse
 } from './continuidad-report.service';
+import { Cartera, Inquilino, Subcartera } from '@/comisiones/models/comision.model';
+import { ComisionesService } from '@/comisiones/services/comisiones.service';
 
 @Component({
   selector: 'app-continuidad-report',
@@ -57,19 +59,45 @@ import {
             />
           </div>
 
+
+          <!-- Proveedor -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Proveedor
+            </label>
+            <select
+              [(ngModel)]="filtros.idProveedor"
+              (ngModelChange)="onProveedorChange($event)"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option [ngValue]="null">Todos</option>
+              @for (prov of proveedores(); track prov.id) {
+                <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
+              }
+            </select>
+          </div>
+
           <!-- Cartera -->
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Cartera
             </label>
-            <input
-              type="number"
+            <select
               [(ngModel)]="filtros.idCartera"
-              placeholder="ID Cartera"
+              (ngModelChange)="onCarteraChange($event)"
+              [disabled]="!filtros.idProveedor"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-            />
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option [ngValue]="null">Todas</option>
+              @for (cart of carteras(); track cart.id) {
+                <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
+              }
+            </select>
           </div>
 
           <!-- Subcartera -->
@@ -77,14 +105,19 @@ import {
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Subcartera
             </label>
-            <input
-              type="number"
+            <select
               [(ngModel)]="filtros.idSubcartera"
-              placeholder="ID Subcartera"
+              [disabled]="!filtros.idCartera"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-            />
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option [ngValue]="null">Todas</option>
+              @for (sub of subcarteras(); track sub.id) {
+                <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
+              }
+            </select>
           </div>
 
           <!-- Botones -->
@@ -307,19 +340,69 @@ export class ContinuidadReportComponent implements OnInit {
   data = signal<ReporteContinuidadDTO[]>([]);
   metricas = signal<ResumenMetricas | null>(null);
 
+  // Dropdown data
+  proveedores = signal<Inquilino[]>([]);
+  carteras = signal<Cartera[]>([]);
+  subcarteras = signal<Subcartera[]>([]);
+
   // Filtros
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
+    idProveedor: null as number | null, // ✅ debe coincidir con ngModel
     idCartera: null as number | null,
     idSubcartera: null as number | null
   };
 
-  constructor(private reporteService: ContinuidadReportService) {}
+  constructor(private reporteService: ContinuidadReportService,
+    private comisionesService: ComisionesService
+  ) {}
 
   ngOnInit(): void {
-    // Cargar datos iniciales sin filtros
-    this.buscar();
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+  this.filtros.fechaDesde = todayStr;
+  this.filtros.fechaHasta = todayStr;
+
+  // Cargar proveedores
+  this.comisionesService.obtenerInquilinos().subscribe({
+    next: (data) => this.proveedores.set(data),
+    error: (err) => console.error('Error cargando proveedores:', err)
+  });
+
+  this.comisionesService.obtenerInquilinos().subscribe(data => this.proveedores.set(data));
+
+  // Opcional: cargar el reporte inicial
+  this.buscar();
+}
+
+    onProveedorChange(idProveedor: number | null): void {
+      this.filtros.idCartera = null;
+      this.filtros.idSubcartera = null;
+      this.carteras.set([]);
+      this.subcarteras.set([]);
+
+      if (idProveedor) {
+        this.comisionesService.obtenerCarteras(idProveedor).subscribe({
+          next: (data) => this.carteras.set(data),
+          error: (err) => console.error('Error cargando carteras:', err)
+        });
+      }
+  }
+
+  onCarteraChange(idCartera: number | null): void {
+    this.filtros.idSubcartera = null;
+    this.subcarteras.set([]);
+
+    if (idCartera) {
+      this.comisionesService.obtenerSubcarteras(idCartera).subscribe({
+        next: (data) => this.subcarteras.set(data),
+        error: (err) => console.error('Error cargando subcarteras:', err)
+      });
+    }
   }
 
   buscar(): void {
