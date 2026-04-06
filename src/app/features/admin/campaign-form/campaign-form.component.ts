@@ -107,13 +107,13 @@ export class CampaignFormComponent implements OnInit {
   ngOnInit(): void {
   this.loadTenants();
 
-  flatpickr("#startDate", {
+  (flatpickr as any).default("#startDate", {
     enableTime: true,
     dateFormat: "d/m/Y H:i",
     locale: Spanish
   });
 
-  flatpickr("#endDate", {
+  (flatpickr as any).default("#endDate", {
     enableTime: true,
     dateFormat: "d/m/Y H:i",
     locale: Spanish
