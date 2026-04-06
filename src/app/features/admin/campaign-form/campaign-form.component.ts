@@ -13,6 +13,8 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import { environment } from '../../../../environments/environment';
 import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
+import flatpickr from 'flatpickr';
+import { Spanish } from 'flatpickr/dist/l10n/es';
 
 @Component({
   selector: 'app-campaign-form',
@@ -104,6 +106,12 @@ export class CampaignFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTenants();
+
+    flatpickr("#startDate", {
+    enableTime: true,
+    dateFormat: "d/m/Y H:i",
+    locale: Spanish
+    });
 
     // Verificar si estamos en modo edición
     this.route.params.subscribe(params => {
