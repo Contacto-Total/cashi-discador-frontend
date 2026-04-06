@@ -64,30 +64,24 @@
         </div>
 
         <div class="form-row">
-          <div class="form-group">
-            <label for="startDate">Fecha Inicio</label>
-            <input
-              matInput
-              [matDatepicker]="startPicker"
-              placeholder="dd/MM/yyyy"
-              [(ngModel)]="startDate"
-              class="form-input">
+        <div class="form-group">
+          <label>Fecha Inicio</label>
+          <mat-form-field appearance="fill" class="form-input">
+            <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate">
             <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
             <mat-datepicker #startPicker></mat-datepicker>
-          </div>
+          </mat-form-field>
+        </div>
 
-          <div class="form-group">
-            <label for="endDate">Fecha Fin</label>
-            <input
-              matInput
-              [matDatepicker]="endPicker"
-              placeholder="dd/MM/yyyy"
-              [(ngModel)]="endDate"
-              class="form-input">
+        <div class="form-group">
+          <label>Fecha Fin</label>
+          <mat-form-field appearance="fill" class="form-input">
+            <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate">
             <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
             <mat-datepicker #endPicker></mat-datepicker>
-          </div>
+          </mat-form-field>
         </div>
+      </div>
       </div>
 
       <!-- Asignación -->
