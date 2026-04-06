@@ -13,19 +13,11 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import { environment } from '../../../../environments/environment';
 import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatInputModule } from '@angular/material/input';
-import { MatNativeDateModule, MAT_DATE_LOCALE } from '@angular/material/core';
 
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule,
-    MatDatepickerModule, MatInputModule, MatNativeDateModule
-  ],
-  providers: [
-  { provide: MAT_DATE_LOCALE, useValue: 'es-PE' }
-  ],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.css']
 })
@@ -923,6 +915,4 @@ export class CampaignFormComponent implements OnInit {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
-
-  
 }
