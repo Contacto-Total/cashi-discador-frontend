@@ -5602,3 +5602,15 @@ body.light-theme app-agent-time-alert-overlay .toggle-switch.active {
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%) !important;
 }
 
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+
+input[type="datetime-local"] {
+  font-family: monospace;
+}
+
+input[type="datetime-local"]:lang(es) {
+  text-align: left;
+}
