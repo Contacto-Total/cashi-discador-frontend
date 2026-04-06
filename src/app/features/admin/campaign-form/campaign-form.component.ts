@@ -21,6 +21,19 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MAT_DATE_FORMATS } from '@angular/material/core';
+
+export const MY_DATE_FORMATS = {
+  parse: {
+    dateInput: 'DD/MM/YYYY',  // cómo se interpreta al escribir
+  },
+  display: {
+    dateInput: 'DD/MM/YYYY',  // cómo se muestra en el input
+    monthYearLabel: 'MMM YYYY',
+    dateA11yLabel: 'DD/MM/YYYY',
+    monthYearA11yLabel: 'MMMM YYYY',
+  },
+};
 
 @Component({
   selector: 'app-campaign-form',
@@ -32,8 +45,14 @@ import { MatNativeDateModule } from '@angular/material/core';
     MatNativeDateModule
   ],
   templateUrl: './campaign-form.component.html',
-  styleUrls: ['./campaign-form.component.css']
+  styleUrls: ['./campaign-form.component.css'],
+  providers: [
+    { provide: MAT_DATE_FORMATS, useValue: MY_DATE_FORMATS }  // <-- aquí se aplica
+  ]
 })
+
+
+
 export class CampaignFormComponent implements OnInit {
   startDate: Date | null = null;
   endDate: Date | null = null;
