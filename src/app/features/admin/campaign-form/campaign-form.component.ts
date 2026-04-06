@@ -13,7 +13,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import { environment } from '../../../../environments/environment';
 import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
-import flatpickr from 'flatpickr';
+import * as flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es';
 
 @Component({
