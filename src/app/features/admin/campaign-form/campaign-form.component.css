@@ -1440,3 +1440,20 @@
   border-color: rgba(99, 102, 241, 0.2);
   color: #4f46e5;
 }
+
+
+/* Asegura que el calendario se vea encima y con fondo legible */
+.flatpickr-calendar {
+  z-index: 9999 !important;
+  background: #1e293b; /* opcional, que contraste con tu input */
+  color: #f8fafc;
+}
+
+.flatpickr-input {
+  background: #0f172a; /* mantiene tu estilo */
+  color: #f8fafc;
+}
+
+.flatpickr-input {
+  padding-right: 2.5rem; /* deja espacio para el icono */
+}

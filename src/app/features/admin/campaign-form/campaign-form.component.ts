@@ -15,7 +15,7 @@ import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
 import flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es';
-import 'flatpickr/dist/flatpickr.min.css'; // Esto es clave
+import 'flatpickr/dist/flatpickr.min.css'; 
 
 @Component({
   selector: 'app-campaign-form',
@@ -108,7 +108,8 @@ export class CampaignFormComponent implements OnInit {
   ngOnInit(): void {
   this.loadTenants();
 
-      flatpickr("#startDate", {
+    setTimeout(() => {
+    flatpickr("#startDate", {
       enableTime: true,
       dateFormat: "d/m/Y H:i",
       locale: Spanish
@@ -119,6 +120,7 @@ export class CampaignFormComponent implements OnInit {
       dateFormat: "d/m/Y H:i",
       locale: Spanish
     });
+  });
 
   this.route.params.subscribe(params => {
     if (params['id']) {
