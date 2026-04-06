@@ -105,22 +105,27 @@ export class CampaignFormComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadTenants();
+  this.loadTenants();
 
-    flatpickr("#startDate", {
+  flatpickr("#startDate", {
     enableTime: true,
     dateFormat: "d/m/Y H:i",
     locale: Spanish
-    });
+  });
 
-    // Verificar si estamos en modo edición
-    this.route.params.subscribe(params => {
-      if (params['id']) {
-        this.isEditMode = true;
-        this.campaignId = +params['id'];
-        this.loadCampaign(this.campaignId);
-      }
-    });
+  flatpickr("#endDate", {
+    enableTime: true,
+    dateFormat: "d/m/Y H:i",
+    locale: Spanish
+  });
+
+  this.route.params.subscribe(params => {
+    if (params['id']) {
+      this.isEditMode = true;
+      this.campaignId = +params['id'];
+      this.loadCampaign(this.campaignId);
+    }
+  });
   }
 
   loadTenants(): void {
