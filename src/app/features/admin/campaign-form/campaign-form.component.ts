@@ -15,7 +15,8 @@ import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
 import flatpickr from 'flatpickr';
 import { Spanish } from 'flatpickr/dist/l10n/es';
-import 'flatpickr/dist/flatpickr.min.css'; 
+import 'flatpickr/dist/flatpickr.min.css';
+import { FormControl } from '@angular/forms';
 
 @Component({
   selector: 'app-campaign-form',
@@ -25,6 +26,9 @@ import 'flatpickr/dist/flatpickr.min.css';
   styleUrls: ['./campaign-form.component.css']
 })
 export class CampaignFormComponent implements OnInit {
+  startDate: Date | null = null;
+  endDate: Date | null = null;
+
   campaign: Campaign = {
     name: '',
     description: '',
@@ -108,19 +112,8 @@ export class CampaignFormComponent implements OnInit {
   ngOnInit(): void {
   this.loadTenants();
 
-    setTimeout(() => {
-    flatpickr("#startDate", {
-      enableTime: true,
-      dateFormat: "d/m/Y H:i",
-      locale: Spanish
-    });
-
-    flatpickr("#endDate", {
-      enableTime: true,
-      dateFormat: "d/m/Y H:i",
-      locale: Spanish
-    });
-  });
+    this.startDate = new Date();
+    this.endDate = new Date();
 
   this.route.params.subscribe(params => {
     if (params['id']) {
