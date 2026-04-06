@@ -13,13 +13,17 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
 import { environment } from '../../../../environments/environment';
 import { Workbook, Worksheet } from 'exceljs';
 import { saveAs } from 'file-saver';
+import { MAT_DATE_LOCALE } from '@angular/material/core';
 
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule],
   templateUrl: './campaign-form.component.html',
-  styleUrls: ['./campaign-form.component.css']
+  styleUrls: ['./campaign-form.component.css'],
+  providers: [
+  { provide: MAT_DATE_LOCALE, useValue: 'es-PE' }
+]
 })
 export class CampaignFormComponent implements OnInit {
   campaign: Campaign = {
