@@ -3808,11 +3808,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      
+      // 1. Separamos la cadena en fecha y hora (usando espacio o 'T' como separador)
+      const partes = dateStr.split(/[ T]/);
+      const soloFecha = partes[0]; // Ej: "2026-04-07"
+      
+      // Extraemos la hora y le quitamos los microsegundos (lo que está después del punto)
+      const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
+      
+      // 2. Formateamos la fecha de AAAA-MM-DD a DD/MM/AAAA
+    const dateParts = soloFecha.split('-');
+      let fechaFormateada = soloFecha;
+    if (dateParts.length === 3) {
+      fechaFormateada = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
     }
-    return dateStr;
+
+      // 3. Juntamos la fecha formateada con la hora al final (si existe)
+    return soloHora ? `${fechaFormateada} ${soloHora}` : fechaFormateada;
   }
 
   /**
