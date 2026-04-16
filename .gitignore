@@ -40,3 +40,7 @@ tmpclaude-*
 user_manual_images/
 user_manual_images.rar
 *.pdf
+
+# Angular environments
+src/environments/environment.ts
+src/environments/environment.*.ts
