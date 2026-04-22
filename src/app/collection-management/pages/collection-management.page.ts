@@ -1361,7 +1361,7 @@ import { CallService } from '../../core/services/call.service';
                   No hay gestiones con el filtro seleccionado
                 </div>
               } @else {
-                <table class="text-xs table-fixed" style="min-width: max-content;">
+                <table class="text-xs table-auto" style="min-width: max-content;">
                   <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
                       @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
@@ -1430,7 +1430,7 @@ import { CallService } from '../../core/services/call.service';
                   Sin gestiones históricas para este cliente
                 </div>
               } @else {
-                <table class="text-xs table-fixed" style="min-width: max-content;">
+                <table class="text-xs table-auto" style="min-width: max-content;">
                   <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
                       @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
