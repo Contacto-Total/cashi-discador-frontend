@@ -168,7 +168,6 @@
                 </button>
               </div>
               <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="mt-2 flex flex-wrap items-center gap-2">
-                <span class="text-xs text-gray-300">Reprogramando cuota {{ cuota.numeroCuota }}:</span>
                 <input
                   type="date"
                   [ngModel]="reprogramDateDraft()"
@@ -178,8 +177,8 @@
                   class="search-input"
                   style="max-width: 180px; padding: 0.35rem 0.5rem;"
                 />
-                <button type="button" class="btn-search" (click)="confirmReprogramacion(promesa, cuota)">Guardar</button>
-                <button type="button" class="btn-action-small" (click)="cancelReprogrammingCuota()">Cancelar</button>
+                <button type="button" class="btn-search" style="padding: 0.3rem 0.55rem; font-size: 0.75rem;" (click)="confirmReprogramacion(promesa, cuota)">Guardar</button>
+                <button type="button" class="btn-action-small" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" (click)="cancelReprogrammingCuota()">Cancelar</button>
               </div>
             </div>
           </div>

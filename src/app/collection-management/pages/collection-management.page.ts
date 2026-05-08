@@ -582,42 +582,7 @@ import { CallService } from '../../core/services/call.service';
                             } @else {
                               <span class="bg-blue-700 text-white text-xs dark:bg-blue-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
-                            @if (canReprogramInstallment(cuota)) {
-                              <button
-                                type="button"
-                                (click)="startReprogrammingCuota(schedule, cuota)"
-                                class="ml-1 px-1.5 py-0.5 rounded border border-slate-500 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-semibold"
-                                title="Reprogramar fecha"
-                              >
-                                Editar fecha
-                              </button>
-                            }
                           </div>
-                          @if (isReprogrammingCuota(cuota)) {
-                            <div class="w-full mt-1 flex flex-wrap items-center gap-1.5 text-[10px] bg-black/10 dark:bg-white/15 rounded px-2 py-1.5">
-                              <span class="text-[10px] font-semibold text-gray-800 dark:text-gray-100">
-                                Reprogramando cuota {{ cuota.numeroCuota || cuota.installmentNumber }}:
-                              </span>
-                              <input
-                                type="date"
-                                [ngModel]="reprogramDateDraft()"
-                                (ngModelChange)="reprogramDateDraft.set($event || '')"
-                                [min]="getMinReprogramDate(cuota, schedule)"
-                                [max]="getMaxReprogramDate(cuota, schedule)"
-                                class="px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 [color-scheme:light] dark:[color-scheme:dark]"
-                              />
-                              <button
-                                type="button"
-                                (click)="confirmReprogramacion(schedule, cuota)"
-                                class="px-1.5 py-0.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
-                              >Guardar</button>
-                              <button
-                                type="button"
-                                (click)="cancelReprogrammingCuota()"
-                                class="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-700 text-white"
-                              >Cancelar</button>
-                            </div>
-                          }
                         }
                       </div>
                       @if (hasScheduleEnEvaluacion(schedule)) {
