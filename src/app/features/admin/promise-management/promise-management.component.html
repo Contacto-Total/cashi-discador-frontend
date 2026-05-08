@@ -167,7 +167,7 @@
                   Editar fecha
                 </button>
               </div>
-              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="mt-2 flex flex-wrap items-center gap-2">
+              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="mt-2 flex flex-wrap items-center gap-2" style="margin-left: 0;">
                 <input
                   type="date"
                   [ngModel]="reprogramDateDraft()"
@@ -179,7 +179,6 @@
                 />
                 <button type="button" class="btn-search" style="padding: 0.3rem 0.55rem; font-size: 0.75rem;" (click)="confirmReprogramacion(promesa, cuota)">Guardar</button>
                 <button type="button" class="btn-action-small" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" (click)="cancelReprogrammingCuota()">Cancelar</button>
-                <div style="width: 100%; border-bottom: 1px solid rgba(148, 163, 184, 0.5); margin-top: 0.35rem;"></div>
               </div>
             </div>
           </div>
