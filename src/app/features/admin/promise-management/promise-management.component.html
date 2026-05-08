@@ -167,7 +167,7 @@
                   Editar fecha
                 </button>
               </div>
-              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="mt-2 flex flex-wrap items-center gap-2" style="margin-left: 0;">
+              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="mt-2 flex flex-wrap items-center gap-2" style="margin-left: 0; align-items: center;">
                 <input
                   type="date"
                   [ngModel]="reprogramDateDraft()"
@@ -177,7 +177,7 @@
                   class="search-input"
                   style="max-width: 180px; padding: 0.35rem 0.5rem;"
                 />
-                <button type="button" class="btn-search" style="padding: 0.3rem 0.55rem; font-size: 0.75rem;" (click)="confirmReprogramacion(promesa, cuota)">Guardar</button>
+                <button type="button" class="btn-search" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; color: #fff;" (click)="confirmReprogramacion(promesa, cuota)">Guardar</button>
                 <button type="button" class="btn-action-small" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" (click)="cancelReprogrammingCuota()">Cancelar</button>
               </div>
             </div>
@@ -225,6 +225,27 @@
       <span class="page-info">
         Pagina {{ currentPage() + 1 }} de {{ totalPages() }} ({{ totalElements() }} promesas)
       </span>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Resultado Reprogramacion -->
+<div *ngIf="reprogramResult()" class="modal-overlay" (click)="closeReprogramResultPopup()">
+  <div class="modal-content reprogram-result-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header" [class.error-header]="reprogramResult()?.type === 'error'">
+      <h2>
+        <lucide-angular [name]="reprogramResult()?.type === 'success' ? 'check-circle' : 'alert-triangle'" [size]="20"></lucide-angular>
+        {{ reprogramResult()?.type === 'success' ? 'Operacion Exitosa' : 'No se pudo reprogramar' }}
+      </h2>
+      <button class="btn-close" (click)="closeReprogramResultPopup()">
+        <lucide-angular name="x" [size]="18"></lucide-angular>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-slate-700">{{ reprogramResult()?.message }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-search" style="color: #fff;" (click)="closeReprogramResultPopup()">Cerrar</button>
     </div>
   </div>
 </div>

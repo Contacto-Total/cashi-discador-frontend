@@ -41,6 +41,7 @@ export class PromiseManagementComponent implements OnInit {
   reprogrammingCuotaId = signal<number | null>(null);
   reprogramDateDraft = signal<string>('');
   reprogrammingPromesaId = signal<number | null>(null);
+  reprogramResult = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
   constructor(
     private promiseService: PromiseManagementService,
@@ -192,6 +193,10 @@ export class PromiseManagementComponent implements OnInit {
     this.reprogramDateDraft.set('');
   }
 
+  closeReprogramResultPopup(): void {
+    this.reprogramResult.set(null);
+  }
+
   getMinReprogramDate(cuota: any, promesa: PromesaGestion): string {
     const today = new Date();
     const minDate = new Date(today);
@@ -288,19 +293,20 @@ export class PromiseManagementComponent implements OnInit {
       forzarSupervision: false
     }).subscribe({
       next: () => {
-        this.successMessage.set(`Cuota ${cuota.numeroCuota} reprogramada correctamente`);
+        this.reprogramResult.set({ type: 'success', message: `Cuota ${cuota.numeroCuota} reprogramada correctamente` });
         this.cancelReprogrammingCuota();
         this.loadPromesas();
-        setTimeout(() => this.successMessage.set(null), 5000);
       },
       error: (err) => {
         console.error('Error reprogramando promesa:', err);
-        this.error.set(
-          err?.error?.message ||
-          err?.error?.mensaje ||
-          err?.error?.error ||
-          'No se pudo reprogramar la fecha de pago'
-        );
+        this.reprogramResult.set({
+          type: 'error',
+          message:
+            err?.error?.message ||
+            err?.error?.mensaje ||
+            err?.error?.error ||
+            'No se pudo reprogramar la fecha de pago'
+        });
       }
     });
   }
