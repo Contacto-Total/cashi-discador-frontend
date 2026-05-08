@@ -6116,24 +6116,30 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   getMaxReprogramDate(cuota: any, schedule: any): string {
     const today = new Date();
-    const maxBy30 = new Date(today);
-    maxBy30.setDate(maxBy30.getDate() + 30);
-
-    const maxDate = new Date(maxBy30);
     const installments = schedule?.installments || [];
     const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
     const nextInstallment = currentIndex >= 0 ? installments[currentIndex + 1] : null;
     const nextDateStr = nextInstallment?.dueDate || nextInstallment?.fechaPromesa;
+    const currentDateStr = cuota?.dueDate || cuota?.fechaPromesa;
+
+    const maxDate = new Date(today);
 
     if (nextDateStr) {
       const nextDate = new Date(nextDateStr);
       if (!isNaN(nextDate.getTime())) {
         const maxBeforeNext = new Date(nextDate);
         maxBeforeNext.setDate(maxBeforeNext.getDate() - 4);
-        if (maxBeforeNext < maxDate) {
-          maxDate.setTime(maxBeforeNext.getTime());
-        }
+        maxDate.setTime(maxBeforeNext.getTime());
       }
+    } else if (currentDateStr) {
+      const currentDate = new Date(currentDateStr);
+      if (!isNaN(currentDate.getTime())) {
+        const maxByCurrentInstallment = new Date(currentDate);
+        maxByCurrentInstallment.setDate(maxByCurrentInstallment.getDate() + 30);
+        maxDate.setTime(maxByCurrentInstallment.getTime());
+      }
+    } else {
+      maxDate.setDate(maxDate.getDate() + 30);
     }
 
     return maxDate.toISOString().split('T')[0];
