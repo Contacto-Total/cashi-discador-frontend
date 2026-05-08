@@ -246,12 +246,12 @@
     [class.is-error]="reprogramResult()?.type === 'error'"
     (click)="$event.stopPropagation()">
     <div class="modal-header" [class.error-header]="reprogramResult()?.type === 'error'">
-      <h2>
-        <lucide-angular [name]="reprogramResult()?.type === 'success' ? 'check-circle' : 'alert-triangle'" [size]="20"></lucide-angular>
+      <h2 class="!text-white">
+        <lucide-angular class="!text-white" [name]="reprogramResult()?.type === 'success' ? 'check-circle' : 'alert-triangle'" [size]="20"></lucide-angular>
         {{ reprogramResult()?.type === 'success' ? 'Operacion Exitosa' : 'No se pudo reprogramar' }}
       </h2>
-      <button class="btn-close" (click)="closeReprogramResultPopup()">
-        <lucide-angular name="x" [size]="18"></lucide-angular>
+      <button class="btn-close !text-white" (click)="closeReprogramResultPopup()">
+        <lucide-angular class="!text-white" name="x" [size]="18"></lucide-angular>
       </button>
     </div>
     <div class="modal-body">
