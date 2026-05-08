@@ -171,7 +171,7 @@ export class PromiseManagementComponent implements OnInit {
   }
 
   canReprogramInstallment(cuota: any): boolean {
-    return cuota?.estado === 'PENDIENTE';
+    return cuota?.estado === 'PENDIENTE' || cuota?.estado === 'PARCIAL';
   }
 
   isReprogrammingCuota(idGestion: number, cuotaId: number): boolean {
