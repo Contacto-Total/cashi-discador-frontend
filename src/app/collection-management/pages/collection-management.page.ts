@@ -586,7 +586,7 @@ import { CallService } from '../../core/services/call.service';
                               <button
                                 type="button"
                                 (click)="startReprogrammingCuota(schedule, cuota)"
-                                class="ml-1 px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-semibold"
+                                class="ml-1 px-1.5 py-0.5 rounded border border-slate-500 bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-semibold"
                                 title="Reprogramar fecha"
                               >
                                 Editar fecha
@@ -601,7 +601,7 @@ import { CallService } from '../../core/services/call.service';
                                 (ngModelChange)="reprogramDateDraft.set($event || '')"
                                 [min]="getMinReprogramDate()"
                                 [max]="getMaxReprogramDate(cuota, schedule)"
-                                class="px-1.5 py-0.5 rounded border border-gray-300 text-gray-800"
+                                class="px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
                               />
                               <button
                                 type="button"
@@ -3418,7 +3418,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           const nextCuota = pendingCuotas[0] || installments[0];
 
           return {
-            id: schedule.scheduleId?.scheduleId || schedule.id,
+            id: schedule.id,
+            managementId: schedule.id,
             grupoPromesaUuid: schedule.scheduleId?.scheduleId,
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
@@ -6137,7 +6138,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     const currentUser = this.authService.getCurrentUser();
-    const recordId = Number(schedule?.id);
+    const recordId = Number(schedule?.managementId || schedule?.id);
     if (!recordId || !cuota?.id) {
       alert('No se pudo identificar el registro o la cuota a reprogramar.');
       return;
