@@ -215,6 +215,7 @@ export class PromiseManagementComponent implements OnInit {
     const cuotas = promesa?.cuotas || [];
     const currentIndex = cuotas.findIndex((c: any) => c?.id === cuota?.id);
     const nextInstallment = currentIndex >= 0 ? cuotas[currentIndex + 1] : null;
+    const previousInstallment = currentIndex > 0 ? cuotas[currentIndex - 1] : null;
     const nextDateStr = nextInstallment?.fechaPromesa;
     const currentDateStr = cuota?.fechaPromesa;
     const maxDate = new Date(today);
@@ -227,11 +228,22 @@ export class PromiseManagementComponent implements OnInit {
         maxDate.setTime(maxBeforeNext.getTime());
       }
     } else if (currentDateStr) {
-      const currentDate = new Date(currentDateStr);
-      if (!isNaN(currentDate.getTime())) {
-        const maxByCurrentInstallment = new Date(currentDate);
-        maxByCurrentInstallment.setDate(maxByCurrentInstallment.getDate() + 30);
-        maxDate.setTime(maxByCurrentInstallment.getTime());
+      const isLastInstallment = currentIndex >= 0 && currentIndex === cuotas.length - 1;
+      const hasMultipleInstallments = cuotas.length > 1;
+
+      if (isLastInstallment && hasMultipleInstallments && previousInstallment?.fechaPromesa) {
+        const previousDate = new Date(previousInstallment.fechaPromesa);
+        if (!isNaN(previousDate.getTime())) {
+          const endOfNextMonth = new Date(previousDate.getFullYear(), previousDate.getMonth() + 2, 0);
+          maxDate.setTime(endOfNextMonth.getTime());
+        }
+      } else {
+        const currentDate = new Date(currentDateStr);
+        if (!isNaN(currentDate.getTime())) {
+          const maxByCurrentInstallment = new Date(currentDate);
+          maxByCurrentInstallment.setDate(maxByCurrentInstallment.getDate() + 30);
+          maxDate.setTime(maxByCurrentInstallment.getTime());
+        }
       }
     } else {
       maxDate.setDate(maxDate.getDate() + 30);
@@ -283,7 +295,12 @@ export class PromiseManagementComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error reprogramando promesa:', err);
-        this.error.set(err?.error?.mensaje || err?.error?.error || 'No se pudo reprogramar la fecha de pago');
+        this.error.set(
+          err?.error?.message ||
+          err?.error?.mensaje ||
+          err?.error?.error ||
+          'No se pudo reprogramar la fecha de pago'
+        );
       }
     });
   }
