@@ -586,7 +586,7 @@ import { CallService } from '../../core/services/call.service';
                               <button
                                 type="button"
                                 (click)="startReprogrammingCuota(schedule, cuota)"
-                                class="ml-1 px-1.5 py-0.5 rounded border border-slate-500 bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-semibold"
+                                class="ml-1 px-1.5 py-0.5 rounded border border-slate-500 bg-slate-100 hover:bg-slate-200 text-slate-800 text-[10px] font-semibold"
                                 title="Reprogramar fecha"
                               >
                                 Editar fecha
@@ -595,13 +595,16 @@ import { CallService } from '../../core/services/call.service';
                           </div>
                           @if (isReprogrammingCuota(cuota)) {
                             <div class="w-full mt-1 flex flex-wrap items-center gap-1.5 text-[10px] bg-black/10 dark:bg-white/15 rounded px-2 py-1.5">
+                              <span class="text-[10px] font-semibold text-gray-800 dark:text-gray-100">
+                                Reprogramando cuota {{ cuota.numeroCuota || cuota.installmentNumber }}:
+                              </span>
                               <input
                                 type="date"
                                 [ngModel]="reprogramDateDraft()"
                                 (ngModelChange)="reprogramDateDraft.set($event || '')"
-                                [min]="getMinReprogramDate()"
+                                [min]="getMinReprogramDate(cuota, schedule)"
                                 [max]="getMaxReprogramDate(cuota, schedule)"
-                                class="px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100"
+                                class="px-1.5 py-0.5 rounded border border-gray-300 bg-white text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100 [color-scheme:light] dark:[color-scheme:dark]"
                               />
                               <button
                                 type="button"
@@ -6092,8 +6095,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.reprogramDateDraft.set('');
   }
 
-  getMinReprogramDate(): string {
-    return new Date().toISOString().split('T')[0];
+  getMinReprogramDate(cuota?: any, schedule?: any): string {
+    const today = new Date();
+    const minDate = new Date(today);
+
+    const installments = schedule?.installments || [];
+    const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
+    const previousInstallment = currentIndex > 0 ? installments[currentIndex - 1] : null;
+    const previousDateStr = previousInstallment?.dueDate || previousInstallment?.fechaPromesa;
+
+    if (previousDateStr) {
+      const previousDate = new Date(previousDateStr);
+      if (!isNaN(previousDate.getTime()) && previousDate > minDate) {
+        minDate.setTime(previousDate.getTime());
+      }
+    }
+
+    return minDate.toISOString().split('T')[0];
   }
 
   getMaxReprogramDate(cuota: any, schedule: any): string {
@@ -6109,8 +6127,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     if (nextDateStr) {
       const nextDate = new Date(nextDateStr);
-      if (!isNaN(nextDate.getTime()) && nextDate < maxDate) {
-        maxDate.setTime(nextDate.getTime());
+      if (!isNaN(nextDate.getTime())) {
+        const maxBeforeNext = new Date(nextDate);
+        maxBeforeNext.setDate(maxBeforeNext.getDate() - 4);
+        if (maxBeforeNext < maxDate) {
+          maxDate.setTime(maxBeforeNext.getTime());
+        }
       }
     }
 
@@ -6124,7 +6146,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
-    const minDate = this.getMinReprogramDate();
+    const minDate = this.getMinReprogramDate(cuota, schedule);
     const maxDate = this.getMaxReprogramDate(cuota, schedule);
     if (selectedDate < minDate || selectedDate > maxDate) {
       alert(`Fecha no válida. Debe estar entre ${minDate} y ${maxDate}.`);
