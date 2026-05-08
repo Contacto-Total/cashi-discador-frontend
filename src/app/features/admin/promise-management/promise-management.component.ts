@@ -271,12 +271,6 @@ export class PromiseManagementComponent implements OnInit {
       return;
     }
 
-    const motivo = (window.prompt('Motivo de reprogramacion (obligatorio):', 'Reprogramacion solicitada por supervisor') || '').trim();
-    if (!motivo) {
-      this.error.set('El motivo es obligatorio');
-      return;
-    }
-
     const currentUser = this.authService.getCurrentUser();
     if (!currentUser?.id || !promesa?.idGestion || !cuota?.id) {
       this.error.set('No se pudo identificar el registro o la cuota a reprogramar');
@@ -286,7 +280,7 @@ export class PromiseManagementComponent implements OnInit {
     this.promiseService.reprogramarPromesa(promesa.idGestion, {
       cuotaId: Number(cuota.id),
       nuevaFechaPromesa: selectedDate,
-      motivo,
+      motivo: '',
       observaciones: promesa.observaciones || null,
       solicitadoPorUsuarioId: Number(currentUser.id),
       solicitadoPorNombre: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username,

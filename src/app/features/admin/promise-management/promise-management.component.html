@@ -152,22 +152,24 @@
           <!-- Cuotas Detail -->
           <div class="cuotas-container" *ngIf="isExpanded(promesa.idGestion) && promesa.cuotas">
             <div *ngFor="let cuota of promesa.cuotas" class="cuota-item">
-              <div class="cuota-numero">Cuota {{ cuota.numeroCuota }}</div>
-              <div class="cuota-info">
-                <span class="cuota-monto">{{ formatMonto(cuota.montoPromesa) }}</span>
-                <span class="cuota-fecha">{{ formatDate(cuota.fechaPromesa) }}</span>
-                <span class="cuota-estado" [style.background-color]="getEstadoCuotaColor(cuota.estado)">
-                  {{ cuota.estado }}
-                </span>
-                <button
-                  *ngIf="canReprogramInstallment(cuota)"
-                  type="button"
-                  class="btn-action-small"
-                  (click)="startReprogrammingCuota(promesa, cuota)">
-                  Editar fecha
-                </button>
+              <div class="cuota-left">
+                <div class="cuota-numero">Cuota {{ cuota.numeroCuota }}</div>
+                <div class="cuota-info">
+                  <span class="cuota-monto">{{ formatMonto(cuota.montoPromesa) }}</span>
+                  <span class="cuota-fecha">{{ formatDate(cuota.fechaPromesa) }}</span>
+                  <span class="cuota-estado" [style.background-color]="getEstadoCuotaColor(cuota.estado)">
+                    {{ cuota.estado }}
+                  </span>
+                  <button
+                    *ngIf="canReprogramInstallment(cuota)"
+                    type="button"
+                    class="btn-action-small"
+                    (click)="startReprogrammingCuota(promesa, cuota)">
+                    Editar fecha
+                  </button>
+                </div>
               </div>
-              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="reprogram-editor">
+              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="reprogram-editor reprogram-editor-side">
                 <div class="reprogram-editor-row">
                   <input
                     type="date"
