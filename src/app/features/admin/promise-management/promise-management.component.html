@@ -241,7 +241,10 @@
 
 <!-- Popup Resultado Reprogramacion -->
 <div *ngIf="reprogramResult()" class="modal-overlay" (click)="closeReprogramResultPopup()">
-  <div class="modal-content reprogram-result-modal" (click)="$event.stopPropagation()">
+  <div
+    class="modal-content reprogram-result-modal"
+    [class.is-error]="reprogramResult()?.type === 'error'"
+    (click)="$event.stopPropagation()">
     <div class="modal-header" [class.error-header]="reprogramResult()?.type === 'error'">
       <h2>
         <lucide-angular [name]="reprogramResult()?.type === 'success' ? 'check-circle' : 'alert-triangle'" [size]="20"></lucide-angular>
