@@ -582,7 +582,39 @@ import { CallService } from '../../core/services/call.service';
                             } @else {
                               <span class="bg-blue-700 text-white text-xs dark:bg-blue-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
+                            @if (canReprogramInstallment(cuota)) {
+                              <button
+                                type="button"
+                                (click)="startReprogrammingCuota(schedule, cuota)"
+                                class="ml-1 px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-semibold"
+                                title="Reprogramar fecha"
+                              >
+                                Editar fecha
+                              </button>
+                            }
                           </div>
+                          @if (isReprogrammingCuota(cuota)) {
+                            <div class="w-full mt-1 flex flex-wrap items-center gap-1.5 text-[10px] bg-black/10 dark:bg-white/15 rounded px-2 py-1.5">
+                              <input
+                                type="date"
+                                [ngModel]="reprogramDateDraft()"
+                                (ngModelChange)="reprogramDateDraft.set($event || '')"
+                                [min]="getMinReprogramDate()"
+                                [max]="getMaxReprogramDate(cuota, schedule)"
+                                class="px-1.5 py-0.5 rounded border border-gray-300 text-gray-800"
+                              />
+                              <button
+                                type="button"
+                                (click)="confirmReprogramacion(schedule, cuota)"
+                                class="px-1.5 py-0.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
+                              >Guardar</button>
+                              <button
+                                type="button"
+                                (click)="cancelReprogrammingCuota()"
+                                class="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-700 text-white"
+                              >Cancelar</button>
+                            </div>
+                          }
                         }
                       </div>
                       @if (hasScheduleEnEvaluacion(schedule)) {
@@ -2139,6 +2171,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
+  reprogrammingCuotaId = signal<number | null>(null);
+  reprogramDateDraft = signal<string>('');
 
   // Cuota seleccionada para cancelación/pago
   selectedInstallmentForCancellation = signal<any | null>(null);
@@ -6033,6 +6067,101 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.isUploadingComprobante.set(false);
         alert('Error al subir el comprobante: ' + (err.error?.error || 'Error de conexión'));
         input.value = '';
+      }
+    });
+  }
+
+  canReprogramInstallment(cuota: any): boolean {
+    if (!cuota) return false;
+    return cuota.status === 'PENDIENTE' || cuota.status === 'PARCIAL';
+  }
+
+  isReprogrammingCuota(cuota: any): boolean {
+    return !!cuota?.id && this.reprogrammingCuotaId() === cuota.id;
+  }
+
+  startReprogrammingCuota(schedule: any, cuota: any): void {
+    if (!this.canReprogramInstallment(cuota)) return;
+    this.reprogrammingCuotaId.set(cuota.id);
+    this.reprogramDateDraft.set((cuota?.dueDate || '').split('T')[0] || '');
+  }
+
+  cancelReprogrammingCuota(): void {
+    this.reprogrammingCuotaId.set(null);
+    this.reprogramDateDraft.set('');
+  }
+
+  getMinReprogramDate(): string {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  getMaxReprogramDate(cuota: any, schedule: any): string {
+    const today = new Date();
+    const maxBy30 = new Date(today);
+    maxBy30.setDate(maxBy30.getDate() + 30);
+
+    const maxDate = new Date(maxBy30);
+    const installments = schedule?.installments || [];
+    const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
+    const nextInstallment = currentIndex >= 0 ? installments[currentIndex + 1] : null;
+    const nextDateStr = nextInstallment?.dueDate || nextInstallment?.fechaPromesa;
+
+    if (nextDateStr) {
+      const nextDate = new Date(nextDateStr);
+      if (!isNaN(nextDate.getTime()) && nextDate < maxDate) {
+        maxDate.setTime(nextDate.getTime());
+      }
+    }
+
+    return maxDate.toISOString().split('T')[0];
+  }
+
+  confirmReprogramacion(schedule: any, cuota: any): void {
+    const selectedDate = this.reprogramDateDraft();
+    if (!selectedDate) {
+      alert('Selecciona una fecha para reprogramar la cuota.');
+      return;
+    }
+
+    const minDate = this.getMinReprogramDate();
+    const maxDate = this.getMaxReprogramDate(cuota, schedule);
+    if (selectedDate < minDate || selectedDate > maxDate) {
+      alert(`Fecha no válida. Debe estar entre ${minDate} y ${maxDate}.`);
+      return;
+    }
+
+    const motivo = (window.prompt('Motivo de reprogramación (obligatorio):', 'Reprogramación solicitada por cliente') || '').trim();
+    if (!motivo) {
+      alert('El motivo es obligatorio.');
+      return;
+    }
+
+    const currentUser = this.authService.getCurrentUser();
+    const recordId = Number(schedule?.id);
+    if (!recordId || !cuota?.id) {
+      alert('No se pudo identificar el registro o la cuota a reprogramar.');
+      return;
+    }
+
+    this.managementService.reprogramarPromesa(recordId, {
+      cuotaId: Number(cuota.id),
+      nuevaFechaPromesa: selectedDate,
+      motivo,
+      observaciones: this.managementForm.observaciones || null,
+      solicitadoPorUsuarioId: Number(currentUser?.id || 1),
+      solicitadoPorNombre: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username : 'Sistema',
+      forzarSupervision: false
+    }).subscribe({
+      next: () => {
+        this.cancelReprogrammingCuota();
+        const customerId = this.customerData()?.id;
+        if (customerId) {
+          this.loadActivePaymentSchedules(customerId);
+        }
+      },
+      error: (err) => {
+        console.error('Error reprogramando promesa:', err);
+        alert(err?.error?.mensaje || err?.error?.error || 'No se pudo reprogramar la fecha de pago.');
       }
     });
   }
