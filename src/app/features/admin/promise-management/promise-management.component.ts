@@ -337,7 +337,13 @@ export class PromiseManagementComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
+    let date: Date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      date = new Date(year, month - 1, day);
+    } else {
+      date = new Date(dateStr);
+    }
     return date.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
