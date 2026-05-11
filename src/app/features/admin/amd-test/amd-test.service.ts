@@ -17,13 +17,15 @@ export interface AmdEvent {
 /**
  * Service para el módulo de AMD test.
  *
- * El disparador corre en el mismo servidor que el frontend, puerto 9000.
- * Usamos window.location.hostname para resolverlo dinámicamente.
+ * El disparador corre en localhost:9000 dentro del servidor, pero el browser
+ * no puede acceder directo por mixed content (frontend en HTTPS).
+ * Nginx hace reverse proxy de /amd-disparador/ -> http://localhost:9000/
+ * por eso usamos ruta relativa, mismo origen que el frontend.
  */
 @Injectable({ providedIn: 'root' })
 export class AmdTestService {
-  private readonly httpBase = `http://${window.location.hostname}:9000`;
-  private readonly wsBase = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.hostname}:9000`;
+  private readonly httpBase = `/amd-disparador`;
+  private readonly wsBase = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/amd-disparador`;
 
   constructor(private http: HttpClient) {}
 
