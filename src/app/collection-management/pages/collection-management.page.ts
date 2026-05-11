@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, of, Subscription } from 'rxjs';
+import { catchError, firstValueFrom, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
@@ -3654,6 +3654,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
     if (agentId) {
+      await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
@@ -3671,6 +3672,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.sipService.setRellamadaActive(false);
       this.sipService.clearCurrentOutgoingNumber();
       this.showRellamadaDropdown.set(false);
+    }
+  }
+
+  private async ensureCustomerLoadedForRellamada(phoneNumber: string): Promise<void> {
+    const currentCustomer = this.customerData();
+    if (currentCustomer?.id) {
+      return;
+    }
+
+    try {
+      console.log('🔍 [Rellamada] Resolviendo cliente antes de registrar llamada:', phoneNumber);
+      const customers = await firstValueFrom(
+        this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber)
+      );
+
+      if (customers && customers.length > 0) {
+        this.loadCustomerFromResource(customers[0]);
+        console.log(' [Rellamada] Cliente cargado antes del registro:', customers[0].id);
+      } else {
+        console.warn(' [Rellamada] No se encontró cliente por teléfono; se registrará sin idCliente/documento');
+      }
+    } catch (error) {
+      console.error(' [Rellamada] Error cargando cliente antes del registro:', error);
     }
   }
 
