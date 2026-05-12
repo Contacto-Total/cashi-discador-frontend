@@ -44,13 +44,13 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                        class="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 @if (searchPerformed() || showMultipleResults()) {
                   <button (click)="clearSearch()"
-                          class="px-5 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all font-semibold cursor-pointer flex items-center gap-2">
+                          class="px-5 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 !text-white rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all font-semibold cursor-pointer flex items-center gap-2">
                     <span>Limpiar</span>
                   </button>
                 }
                 <button (click)="searchCustomer()"
                         [disabled]="loading()"
-                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 !text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   @if (loading()) {
                   } @else {
                   }
@@ -106,7 +106,7 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                       <span class="text-emerald-700 dark:text-emerald-300">Capital: {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}</span>
                                     </p>
                                   </div>
-                                  <button (click)="selectCustomerFromResults(result)" class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded text-xs font-semibold transition-all shadow-sm hover:shadow-blue-500/30 whitespace-nowrap">
+                                  <button (click)="selectCustomerFromResults(result)" class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 !text-white rounded text-xs font-semibold transition-all shadow-sm hover:shadow-blue-500/30 whitespace-nowrap">
                                     Gestionar
                                   </button>
                                 </div>
