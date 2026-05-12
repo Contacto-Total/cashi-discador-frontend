@@ -71,77 +71,81 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
               @if (showMultipleResults() && searchResults().length > 0) {
                 <div>
                   <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700/50 rounded-lg flex items-center gap-2">
-                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} cuentas para este cliente. Seleccione una:</p>
+                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} coincidencias. Seleccione una cuenta:</p>
                   </div>
 
-                  <!-- Tabla de Datos del Cliente (Encabezado) -->
-                  <div class="mb-3">
-                    <table class="w-full text-xs border-collapse">
-                      <thead>
-                        <tr class="bg-blue-100 dark:bg-blue-900/30">
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Nombre Completo</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Documento</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Edad</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Email</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Dirección</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr class="bg-white dark:bg-slate-700">
-                          <td class="px-2 py-2 text-gray-900 dark:text-white font-semibold border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.fullName || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.documentNumber || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.age || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ getFirstEmail(searchResults()[0]) || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.address || 'N/A' }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <div class="space-y-4 max-h-[520px] overflow-y-auto pr-1">
+                    @for (group of groupedSearchResults(); track group.documentNumber) {
+                      <div class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg p-3">
+                        <div class="mb-3">
+                          <table class="w-full text-xs border-collapse">
+                            <thead>
+                              <tr class="bg-blue-100 dark:bg-blue-900/30">
+                                <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Nombre Completo</th>
+                                <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Documento</th>
+                                <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Edad</th>
+                                <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Email</th>
+                                <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Dirección</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr class="bg-white dark:bg-slate-700">
+                                <td class="px-2 py-2 text-gray-900 dark:text-white font-semibold border border-gray-300 dark:border-slate-600">{{ group.customer.fullName || 'N/A' }}</td>
+                                <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ group.customer.documentNumber || 'N/A' }}</td>
+                                <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ group.customer.age || 'N/A' }}</td>
+                                <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ getFirstEmail(group.customer) || 'N/A' }}</td>
+                                <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ group.customer.address || 'N/A' }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
 
-                  <!-- Tabla de Cuentas -->
-                  <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-xs border-collapse">
-                      <thead>
-                        <tr class="bg-gray-200 dark:bg-slate-700">
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">ID</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Proveedor</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cartera</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Subcartera</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cuenta</th>
-                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Días Mora</th>
-                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Monto Mora</th>
-                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Capital</th>
-                          <th class="px-2 py-2 text-center text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Acción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (result of searchResults(); track result.id) {
-                          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                            <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.id }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.tenantName || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.portfolioName || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.subPortfolioName || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.accountNumber || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-right border border-gray-300 dark:border-slate-600">
-                              <span [class]="result.overdueDays && result.overdueDays > 0 ? 'px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded font-semibold' : 'text-gray-900 dark:text-white'">
-                                {{ result.overdueDays ?? 0 }}
-                              </span>
-                            </td>
-                            <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
-                              {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}
-                            </td>
-                            <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
-                              {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}
-                            </td>
-                            <td class="px-2 py-2 text-center border border-gray-300 dark:border-slate-600">
-                              <button (click)="selectCustomerFromResults(result)" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
-                                Gestionar
-                              </button>
-                            </td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
+                        <div class="overflow-x-auto">
+                          <table class="w-full text-xs border-collapse">
+                            <thead>
+                              <tr class="bg-gray-200 dark:bg-slate-700">
+                                <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">ID</th>
+                                <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Proveedor</th>
+                                <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cartera</th>
+                                <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Subcartera</th>
+                                <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cuenta</th>
+                                <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Días Mora</th>
+                                <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Monto Mora</th>
+                                <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Capital</th>
+                                <th class="px-2 py-2 text-center text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Acción</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @for (result of group.accounts; track result.id + '-' + (result.accountNumber || '')) {
+                                <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                                  <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.id }}</td>
+                                  <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.tenantName || 'N/A' }}</td>
+                                  <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.portfolioName || 'N/A' }}</td>
+                                  <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.subPortfolioName || 'N/A' }}</td>
+                                  <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.accountNumber || 'N/A' }}</td>
+                                  <td class="px-2 py-2 text-right border border-gray-300 dark:border-slate-600">
+                                    <span [class]="result.overdueDays && result.overdueDays > 0 ? 'px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded font-semibold' : 'text-gray-900 dark:text-white'">
+                                      {{ result.overdueDays ?? 0 }}
+                                    </span>
+                                  </td>
+                                  <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
+                                    {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}
+                                  </td>
+                                  <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
+                                    {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}
+                                  </td>
+                                  <td class="px-2 py-2 text-center border border-gray-300 dark:border-slate-600">
+                                    <button (click)="selectCustomerFromResults(result)" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
+                                      Gestionar
+                                    </button>
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    }
                   </div>
                 </div>
               }
@@ -1049,6 +1053,25 @@ export class CustomerViewComponent implements OnInit {
   recentCustomers = signal<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]>([]);
   searchResults = signal<CustomerResource[]>([]);
   showMultipleResults = signal(false);
+  groupedSearchResults = computed(() => {
+    const groups = new Map<string, { documentNumber: string; customer: CustomerResource; accounts: CustomerResource[] }>();
+
+    for (const item of this.searchResults()) {
+      const doc = item.documentNumber || 'SIN_DOCUMENTO';
+      const existing = groups.get(doc);
+      if (!existing) {
+        groups.set(doc, {
+          documentNumber: doc,
+          customer: item,
+          accounts: [item]
+        });
+      } else {
+        existing.accounts.push(item);
+      }
+    }
+
+    return Array.from(groups.values());
+  });
 
   // Pagos del cliente
   pagosCliente = signal<PagosClienteResponse | null>(null);
@@ -1165,18 +1188,6 @@ export class CustomerViewComponent implements OnInit {
     this.customerService.searchCustomersAcrossAllTenants(this.searchCriteria, this.searchDocument).subscribe({
       next: (data) => {
         console.log('Resultados encontrados:', data);
-        console.table(
-          (data || []).map(item => ({
-            id: item.id,
-            documentNumber: item.documentNumber,
-            fullName: item.fullName,
-            accountNumber: item.accountNumber,
-            tenantName: item.tenantName,
-            portfolioName: item.portfolioName,
-            subPortfolioName: item.subPortfolioName
-          }))
-        );
-        console.log('Documentos únicos en resultados:', [...new Set((data || []).map(item => item.documentNumber))]);
         if (data.length === 0) {
           // No se encontró ningún resultado
           this.customer.set(null);
