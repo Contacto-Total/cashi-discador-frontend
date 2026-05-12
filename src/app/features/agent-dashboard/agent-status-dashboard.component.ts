@@ -332,8 +332,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.agentStatusService.enterManualMode(this.currentStatus.idUsuario).subscribe({
       next: () => {
         this.loading = false;
-        // Navegar al softphone
-        this.router.navigate(['/dialer']);
+        // NAVEGAR A GESTION MANUAL
+        this.router.navigate(['/manual-management']);
       },
       error: (err) => {
         console.error('Error entering manual mode:', err);
