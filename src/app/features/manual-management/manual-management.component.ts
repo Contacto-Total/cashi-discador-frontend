@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
+import { map } from 'rxjs/operators';
 
 import { ClientSearchService, DynamicClient, GlobalSearchResult } from '../../core/services/client-search.service';
 import { AgentStatusService } from '../../core/services/agent-status.service';
@@ -116,13 +117,12 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     this.foundResults.set([]);
 
     const obs = this.searchType() === 'documento'
-      ? this.clientSearchService.findClientGlobal(value)
+      ? this.clientSearchService.findClientGlobal(value).pipe(map(result => [result]))
       : this.clientSearchService.findClientGlobalByPhone(value);
 
     obs.subscribe({
-      next: (result: GlobalSearchResult | GlobalSearchResult[]) => {
+      next: (results: GlobalSearchResult[]) => {
         this.searching.set(false);
-        const results = Array.isArray(result) ? result : [result];
         this.foundResults.set(results.filter(r => r && r.clientData && r.clientData.documento));
       },
       error: (err) => {
