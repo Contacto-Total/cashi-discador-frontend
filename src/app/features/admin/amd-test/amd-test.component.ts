@@ -155,6 +155,11 @@ export class AmdTestComponent implements OnDestroy {
         return 'event-error';
       case 'chunk':
         return 'event-chunk';
+      case 'analysis':
+        return 'event-analysis';
+      case 'whisper_running':
+      case 'whisper_pending':
+        return 'event-whisper';
       case 'wav_info':
       case 'converted':
       case 'connecting':

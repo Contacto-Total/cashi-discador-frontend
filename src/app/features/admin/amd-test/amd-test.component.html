@@ -82,12 +82,33 @@
       <div class="decision-details">
         <div><strong>Confianza:</strong> {{ decision['decision']?.confidence | number:'1.2-2' }}</div>
         <div><strong>Razón:</strong> {{ decision['decision']?.reason || '—' }}</div>
+        <div><strong>Gatillado por:</strong> {{ decision['decision']?.triggered_by || '—' }}</div>
+        <div><strong>Último delta:</strong> {{ decision['decision']?.last_delta_from || '—' }}</div>
         @if (decision['decision']?.transcription) {
           <div><strong>Transcripción:</strong> "{{ decision['decision']?.transcription }}"</div>
         }
-        <div><strong>Decisión en:</strong> chunk {{ decision['decided_at_chunk'] }} / {{ decision['decided_at_ms'] }} ms</div>
-        <div><strong>Audio acumulado:</strong> {{ formatBytes(decision['decided_bytes']) }}</div>
+        <div><strong>Decisión en:</strong> chunk {{ decision['decision']?.decided_at_chunk ?? decision['decided_at_chunk'] }} / {{ decision['decision']?.decided_at_ms ?? decision['decided_at_ms'] }} ms</div>
+        <div><strong>Audio acumulado:</strong> {{ formatBytes(decision['decision']?.decided_bytes ?? decision['decided_bytes']) }}</div>
+        <div><strong>Scores:</strong> H={{ decision['decision']?.scores?.human | number:'1.2-2' }} / B={{ decision['decision']?.scores?.buzon | number:'1.2-2' }}</div>
       </div>
+      @if (decision['decision']?.contrib_human || decision['decision']?.contrib_buzon) {
+        <div class="contrib-grid">
+          <div class="contrib-col">
+            <div class="contrib-title">Contribución HUMAN</div>
+            <div>rms: {{ decision['decision']?.contrib_human?.rms | number:'1.2-2' }}</div>
+            <div>goertzel: {{ decision['decision']?.contrib_human?.goertzel | number:'1.2-2' }}</div>
+            <div>vad: {{ decision['decision']?.contrib_human?.vad | number:'1.2-2' }}</div>
+            <div>f0: {{ decision['decision']?.contrib_human?.f0 | number:'1.2-2' }}</div>
+          </div>
+          <div class="contrib-col">
+            <div class="contrib-title">Contribución BUZON</div>
+            <div>rms: {{ decision['decision']?.contrib_buzon?.rms | number:'1.2-2' }}</div>
+            <div>goertzel: {{ decision['decision']?.contrib_buzon?.goertzel | number:'1.2-2' }}</div>
+            <div>vad: {{ decision['decision']?.contrib_buzon?.vad | number:'1.2-2' }}</div>
+            <div>f0: {{ decision['decision']?.contrib_buzon?.f0 | number:'1.2-2' }}</div>
+          </div>
+        </div>
+      }
     </div>
   }
 
@@ -127,6 +148,18 @@
                 <td class="event-detail">
                   @if (event['type'] === 'decision') {
                     <strong>{{ event['decision']?.result }}</strong> — {{ event['decision']?.reason }}
+                    @if (event['decision']?.triggered_by) {
+                      <span class="muted"> · by {{ event['decision']?.triggered_by }}</span>
+                    }
+                  } @else if (event['type'] === 'analysis') {
+                    <span class="mono">
+                      rms={{ event['models']?.rms?.value }}
+                      goe={{ event['models']?.goertzel?.value }}
+                      vad={{ event['models']?.vad?.value }}
+                      f0={{ event['models']?.f0?.value }}Hz
+                      · H={{ event['scores']?.human | number:'1.2-2' }}
+                      B={{ event['scores']?.buzon | number:'1.2-2' }}
+                    </span>
                   } @else if (event['msg']) {
                     {{ event['msg'] }}
                   } @else if (event['note']) {
@@ -135,6 +168,8 @@
                     <span class="mono">{{ event['url'] }}</span>
                   } @else if (event['type'] === 'wav_info') {
                     {{ event['sr'] }} Hz, {{ event['ch'] }} ch
+                  } @else if (event['type'] === 'whisper_running') {
+                    transcribiendo con Whisper...
                   }
                 </td>
               </tr>

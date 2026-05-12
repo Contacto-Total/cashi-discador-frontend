@@ -322,3 +322,43 @@
   background: #d1d5db;
   color: #374151;
 }
+
+.event-analysis .type-badge {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.event-whisper .type-badge {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.event-detail .muted {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+/* Decision card - grilla de contribuciones por modelo */
+.contrib-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  font-size: 0.8rem;
+}
+
+.contrib-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.contrib-title {
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
