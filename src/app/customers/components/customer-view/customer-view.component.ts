@@ -76,20 +76,20 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
 
                   <div class="space-y-3 max-h-[520px] overflow-y-auto pr-1">
                     @for (group of groupedSearchResults(); track group.documentNumber) {
-                      <div class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl p-3 shadow-sm">
+                      <div class="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl p-3 shadow-sm">
                         <div class="flex items-start justify-between gap-3 mb-2">
                           <div class="min-w-0">
                             <div class="flex items-center gap-2 min-w-0">
-                              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
-                              <p class="text-xs text-gray-600 dark:text-gray-400 shrink-0">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
+                              <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
+                              <p class="text-xs text-slate-600 dark:text-slate-300 shrink-0">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
                             </div>
-                            <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ getFirstEmail(group.customer) || 'Sin email' }} · {{ group.customer.address || 'Sin dirección' }}</p>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 truncate">{{ getFirstEmail(group.customer) || 'Sin email' }} · {{ group.customer.address || 'Sin dirección' }}</p>
                           </div>
                           <div class="flex items-center gap-2 shrink-0">
-                            <span class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md text-xs font-semibold">{{ group.accounts.length }} cuenta{{ group.accounts.length > 1 ? 's' : '' }}</span>
+                            <span class="px-2 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-200 rounded-md text-xs font-semibold border border-cyan-200 dark:border-cyan-700/50">{{ group.accounts.length }} cuenta{{ group.accounts.length > 1 ? 's' : '' }}</span>
                             <button
                               (click)="toggleCustomerGroup(group.documentNumber)"
-                              class="px-2 py-1 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-xs rounded-md text-gray-700 dark:text-gray-200 font-semibold transition-colors">
+                              class="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs rounded-md text-slate-700 dark:text-slate-200 font-semibold transition-colors border border-slate-200 dark:border-slate-600">
                               {{ isCustomerExpanded(group.documentNumber) ? 'Ocultar' : 'Ver' }}
                             </button>
                           </div>
@@ -98,19 +98,19 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                         @if (isCustomerExpanded(group.documentNumber)) {
                           <div class="space-y-2 mt-3">
                             @for (result of group.accounts; track result.id + '-' + (result.accountNumber || '')) {
-                              <div class="border border-gray-200 dark:border-slate-600 rounded-lg p-2.5 bg-gray-50 dark:bg-slate-900/40">
+                              <div class="border border-slate-200 dark:border-slate-600 rounded-lg p-2.5 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-900/30">
                                 <div class="flex items-start justify-between gap-3">
                                   <div class="min-w-0 flex-1">
-                                    <p class="text-xs text-gray-700 dark:text-gray-300 font-semibold truncate">{{ result.tenantName || 'N/A' }} / {{ result.portfolioName || 'N/A' }} / {{ result.subPortfolioName || 'N/A' }}</p>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
+                                    <p class="text-xs text-slate-800 dark:text-slate-200 font-semibold truncate">{{ result.tenantName || 'N/A' }} / {{ result.portfolioName || 'N/A' }} / {{ result.subPortfolioName || 'N/A' }}</p>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5 truncate">
                                       ID: <span class="font-mono">{{ result.id }}</span> ·
                                       Cuenta: <span class="font-mono">{{ result.accountNumber || 'N/A' }}</span> ·
-                                      <span [class]="result.overdueDays && result.overdueDays > 0 ? 'text-red-700 dark:text-red-300 font-semibold' : ''">Días mora: {{ result.overdueDays ?? 0 }}</span> ·
-                                      Mora: {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }} ·
-                                      Capital: {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}
+                                      <span [class]="result.overdueDays && result.overdueDays > 0 ? 'text-rose-700 dark:text-rose-300 font-semibold' : ''">Días mora: {{ result.overdueDays ?? 0 }}</span> ·
+                                      <span class="text-amber-700 dark:text-amber-300">Mora: {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}</span> ·
+                                      <span class="text-emerald-700 dark:text-emerald-300">Capital: {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}</span>
                                     </p>
                                   </div>
-                                  <button (click)="selectCustomerFromResults(result)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors whitespace-nowrap">
+                                  <button (click)="selectCustomerFromResults(result)" class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded text-xs font-semibold transition-all shadow-sm hover:shadow-blue-500/30 whitespace-nowrap">
                                     Gestionar
                                   </button>
                                 </div>
