@@ -1165,6 +1165,18 @@ export class CustomerViewComponent implements OnInit {
     this.customerService.searchCustomersAcrossAllTenants(this.searchCriteria, this.searchDocument).subscribe({
       next: (data) => {
         console.log('Resultados encontrados:', data);
+        console.table(
+          (data || []).map(item => ({
+            id: item.id,
+            documentNumber: item.documentNumber,
+            fullName: item.fullName,
+            accountNumber: item.accountNumber,
+            tenantName: item.tenantName,
+            portfolioName: item.portfolioName,
+            subPortfolioName: item.subPortfolioName
+          }))
+        );
+        console.log('Documentos únicos en resultados:', [...new Set((data || []).map(item => item.documentNumber))]);
         if (data.length === 0) {
           // No se encontró ningún resultado
           this.customer.set(null);
