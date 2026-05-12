@@ -79,8 +79,10 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-xl p-3 shadow-sm">
                         <div class="flex items-start justify-between gap-3 mb-2">
                           <div class="min-w-0">
-                            <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
-                            <p class="text-xs text-gray-600 dark:text-gray-400">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
+                            <div class="flex items-center gap-2 min-w-0">
+                              <p class="text-sm font-bold text-gray-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
+                              <p class="text-xs text-gray-600 dark:text-gray-400 shrink-0">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
+                            </div>
                             <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ getFirstEmail(group.customer) || 'Sin email' }} · {{ group.customer.address || 'Sin dirección' }}</p>
                           </div>
                           <div class="flex items-center gap-2 shrink-0">
@@ -100,12 +102,13 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                 <div class="flex items-start justify-between gap-3">
                                   <div class="min-w-0 flex-1">
                                     <p class="text-xs text-gray-700 dark:text-gray-300 font-semibold truncate">{{ result.tenantName || 'N/A' }} / {{ result.portfolioName || 'N/A' }} / {{ result.subPortfolioName || 'N/A' }}</p>
-                                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5">ID: <span class="font-mono">{{ result.id }}</span> · Cuenta: <span class="font-mono">{{ result.accountNumber || 'N/A' }}</span></p>
-                                    <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs">
-                                      <span [class]="result.overdueDays && result.overdueDays > 0 ? 'px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded font-semibold' : 'px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded'">Días mora: {{ result.overdueDays ?? 0 }}</span>
-                                      <span class="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded">Mora: {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}</span>
-                                      <span class="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 rounded">Capital: {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}</span>
-                                    </div>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-0.5 truncate">
+                                      ID: <span class="font-mono">{{ result.id }}</span> ·
+                                      Cuenta: <span class="font-mono">{{ result.accountNumber || 'N/A' }}</span> ·
+                                      <span [class]="result.overdueDays && result.overdueDays > 0 ? 'text-red-700 dark:text-red-300 font-semibold' : ''">Días mora: {{ result.overdueDays ?? 0 }}</span> ·
+                                      Mora: {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }} ·
+                                      Capital: {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}
+                                    </p>
                                   </div>
                                   <button (click)="selectCustomerFromResults(result)" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors whitespace-nowrap">
                                     Gestionar
@@ -1193,8 +1196,11 @@ export class CustomerViewComponent implements OnInit {
           this.customer.set(null);
           this.searchResults.set(data);
           this.showMultipleResults.set(true);
-          const firstDoc = data[0]?.documentNumber || 'SIN_DOCUMENTO';
-          this.expandedCustomerGroups.set(new Set([firstDoc]));
+          const firstThreeDocs = data
+            .map(item => item.documentNumber || 'SIN_DOCUMENTO')
+            .filter((doc, index, arr) => arr.indexOf(doc) === index)
+            .slice(0, 3);
+          this.expandedCustomerGroups.set(new Set(firstThreeDocs));
         }
         this.loading.set(false);
       },
