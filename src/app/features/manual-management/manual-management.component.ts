@@ -25,8 +25,8 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   searching = signal(false);
   searchError = signal('');
 
-  // Resultado encontrado (para mostrar contexto antes de navegar)
-  foundResult = signal<GlobalSearchResult | null>(null);
+  // Resultados encontrados (para mostrar contexto antes de navegar)
+  foundResults = signal<GlobalSearchResult[]>([]);
 
   private previousState: string | null = null;
 
@@ -81,14 +81,14 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   onSearchInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchValue.set(value);
-    this.foundResult.set(null);
+    this.foundResults.set([]);
     this.searchError.set('');
   }
 
   setSearchType(type: 'documento' | 'telefono'): void {
     this.searchType.set(type);
     this.searchValue.set('');
-    this.foundResult.set(null);
+    this.foundResults.set([]);
     this.searchError.set('');
   }
 
@@ -113,16 +113,17 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
 
     this.searching.set(true);
     this.searchError.set('');
-    this.foundResult.set(null);
+    this.foundResults.set([]);
 
     const obs = this.searchType() === 'documento'
       ? this.clientSearchService.findClientGlobal(value)
       : this.clientSearchService.findClientGlobalByPhone(value);
 
     obs.subscribe({
-      next: (result) => {
+      next: (result: GlobalSearchResult | GlobalSearchResult[]) => {
         this.searching.set(false);
-        this.foundResult.set(result);
+        const results = Array.isArray(result) ? result : [result];
+        this.foundResults.set(results.filter(r => r && r.clientData && r.clientData.documento));
       },
       error: (err) => {
         this.searching.set(false);
@@ -138,9 +139,8 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  goToManagement(): void {
-    const result = this.foundResult();
-    if (!result) return;
+  goToManagement(result: GlobalSearchResult): void {
+    if (!result?.clientData?.documento) return;
 
     this.router.navigate(['/collection-management'], {
       queryParams: {
@@ -155,7 +155,7 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
 
   clearSearch(): void {
     this.searchValue.set('');
-    this.foundResult.set(null);
+    this.foundResults.set([]);
     this.searchError.set('');
   }
 

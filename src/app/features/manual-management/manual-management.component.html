@@ -75,53 +75,62 @@
       }
     </div>
 
-    <!-- Resultado encontrado -->
-    @if (foundResult()) {
+    <!-- Resultados encontrados -->
+    @if (foundResults().length > 0) {
       <div class="mt-4 bg-white dark:bg-slate-900 rounded-xl border border-green-300 dark:border-green-700 p-4 shadow-md transition-all duration-300 animate-scale-in">
         <div class="flex items-center gap-2 mb-4">
           <lucide-angular name="check-circle" [size]="18" class="text-green-500 dark:text-green-400"></lucide-angular>
-          <span class="text-sm font-semibold text-green-700 dark:text-green-400">Cliente Encontrado</span>
+          <span class="text-sm font-semibold text-green-700 dark:text-green-400">
+            {{ foundResults().length === 1 ? 'Cliente Encontrado' : 'Clientes Encontrados (' + foundResults().length + ')' }}
+          </span>
         </div>
 
-        <!-- Info del cliente -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div class="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
-            <div class="text-xs text-slate-500 dark:text-gray-400 mb-1">Documento</div>
-            <div class="text-sm font-semibold text-slate-800 dark:text-white">{{ foundResult()!.clientData.documento }}</div>
-          </div>
-          <div class="bg-slate-50 dark:bg-slate-800 rounded-lg p-3">
-            <div class="text-xs text-slate-500 dark:text-gray-400 mb-1">Nombre</div>
-            <div class="text-sm font-semibold text-slate-800 dark:text-white">{{ getClientName(foundResult()!.clientData) }}</div>
-          </div>
+        <div class="space-y-4 max-h-[480px] overflow-y-auto pr-1">
+          @for (result of foundResults(); track result.tenantId + '-' + result.portfolioId + '-' + result.subPortfolioId + '-' + result.clientData.documento) {
+            <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3 bg-slate-50 dark:bg-slate-800/40">
+              <!-- Info del cliente -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-3">
+                  <div class="text-xs text-slate-500 dark:text-gray-400 mb-1">Documento</div>
+                  <div class="text-sm font-semibold text-slate-800 dark:text-white">{{ result.clientData.documento }}</div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 rounded-lg p-3">
+                  <div class="text-xs text-slate-500 dark:text-gray-400 mb-1">Nombre</div>
+                  <div class="text-sm font-semibold text-slate-800 dark:text-white">{{ getClientName(result.clientData) }}</div>
+                </div>
+              </div>
+
+              <!-- Contexto (Inquilino/Cartera/Subcartera) -->
+              <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-4 border border-blue-200 dark:border-blue-800">
+                <div class="text-xs text-blue-600 dark:text-blue-400 mb-2 font-medium">Ubicación del Cliente</div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <lucide-angular name="building-2" [size]="12" class="text-purple-500"></lucide-angular>
+                    {{ result.nombreInquilino }}
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <lucide-angular name="folder" [size]="12" class="text-orange-500"></lucide-angular>
+                    {{ result.nombreCartera }}
+                  </span>
+                  <span class="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    <lucide-angular name="folder-open" [size]="12" class="text-blue-500"></lucide-angular>
+                    {{ result.nombreSubcartera }}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                (click)="goToManagement(result)"
+                class="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-sm font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/30 hover:scale-[1.01] active:scale-95">
+                <lucide-angular name="clipboard-edit" [size]="16"></lucide-angular>
+                Ir a Gestionar
+              </button>
+            </div>
+          }
         </div>
 
-        <!-- Contexto (Inquilino/Cartera/Subcartera) -->
-        <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-4 border border-blue-200 dark:border-blue-800">
-          <div class="text-xs text-blue-600 dark:text-blue-400 mb-2 font-medium">Ubicación del Cliente</div>
-          <div class="flex flex-wrap gap-2">
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              <lucide-angular name="building-2" [size]="12" class="text-purple-500"></lucide-angular>
-              {{ foundResult()!.nombreInquilino }}
-            </span>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              <lucide-angular name="folder" [size]="12" class="text-orange-500"></lucide-angular>
-              {{ foundResult()!.nombreCartera }}
-            </span>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              <lucide-angular name="folder-open" [size]="12" class="text-blue-500"></lucide-angular>
-              {{ foundResult()!.nombreSubcartera }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Botones de acción -->
-        <div class="flex gap-3">
-          <button
-            (click)="goToManagement()"
-            class="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white text-sm font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-blue-500/30 hover:scale-[1.02] active:scale-95">
-            <lucide-angular name="clipboard-edit" [size]="16"></lucide-angular>
-            Ir a Gestionar
-          </button>
+        <!-- Acción global -->
+        <div class="flex justify-end mt-4">
           <button
             (click)="clearSearch()"
             class="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
