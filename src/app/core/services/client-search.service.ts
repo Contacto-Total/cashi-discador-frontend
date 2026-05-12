@@ -23,6 +23,8 @@ export interface DynamicClient {
   [key: string]: any; // Permitir campos dinámicos adicionales
 }
 
+
+//ESTE RESULT SER UNA LISTA
 /**
  * Resultado de búsqueda global con contexto
  */
@@ -61,6 +63,7 @@ export class ClientSearchService {
     const params = new HttpParams().set('telefono', telefono);
     return this.http.get<GlobalSearchResult>(`${this.apiUrl}/global-phone`, { params });
   }
+
 
   /**
    * Busca un cliente por documento exacto
