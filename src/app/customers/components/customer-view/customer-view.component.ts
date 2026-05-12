@@ -79,11 +79,8 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                       <div class="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl p-3 shadow-sm">
                         <div class="flex items-start justify-between gap-3 mb-2">
                           <div class="min-w-0">
-                            <div class="flex items-center gap-2 min-w-0">
-                              <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
-                              <p class="text-xs text-slate-600 dark:text-slate-300 shrink-0">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
-                            </div>
-                            <p class="text-xs text-slate-600 dark:text-slate-300 truncate">{{ getFirstEmail(group.customer) || 'Sin email' }} · {{ group.customer.address || 'Sin dirección' }}</p>
+                            <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
+                            <p class="text-xs text-slate-600 dark:text-slate-300">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
                           </div>
                           <div class="flex items-center gap-2 shrink-0">
                             <span class="px-2 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-200 rounded-md text-xs font-semibold border border-cyan-200 dark:border-cyan-700/50">{{ group.accounts.length }} cuenta{{ group.accounts.length > 1 ? 's' : '' }}</span>
@@ -103,7 +100,6 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                                   <div class="min-w-0 flex-1">
                                     <p class="text-xs text-slate-800 dark:text-slate-200 font-semibold truncate">{{ result.tenantName || 'N/A' }} / {{ result.portfolioName || 'N/A' }} / {{ result.subPortfolioName || 'N/A' }}</p>
                                     <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5 truncate">
-                                      ID: <span class="font-mono">{{ result.id }}</span> ·
                                       Cuenta: <span class="font-mono">{{ result.accountNumber || 'N/A' }}</span> ·
                                       <span [class]="result.overdueDays && result.overdueDays > 0 ? 'text-rose-700 dark:text-rose-300 font-semibold' : ''">Días mora: {{ result.overdueDays ?? 0 }}</span> ·
                                       <span class="text-amber-700 dark:text-amber-300">Mora: {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}</span> ·
