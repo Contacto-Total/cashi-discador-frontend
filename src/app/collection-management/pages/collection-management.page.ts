@@ -1407,54 +1407,54 @@ import { CallService } from '../../core/services/call.service';
                         </td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
                         <td
-                          class="px-2 py-1.5 overflow-visible text-ellipsis relative"
+                          class="px-2 py-1.5 overflow-hidden text-ellipsis"
                           [style.width.px]="historialColWidths()[4]"
                           [title]="gestion.promesaCompacta"
-                          (mouseenter)="onPromesaHoverStart($event, gestion.grupoPromesaUuid, gestion.hasSchedule)"
+                          (mouseenter)="onPromesaHoverStart(gestion.grupoPromesaUuid, gestion.hasSchedule)"
                           (mouseleave)="onPromesaHoverEnd()"
                         >
-                          @if (gestion.promesaCompacta) {
-                            <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
-                          } @else {
-                            <span class="text-slate-400 dark:text-slate-600">-</span>
-                          }
+                          <div class="relative inline-block max-w-full">
+                            @if (gestion.promesaCompacta) {
+                              <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
+                            } @else {
+                              <span class="text-slate-400 dark:text-slate-600">-</span>
+                            }
 
-                          @if (hoveredPromesaGroupUuid() === gestion.grupoPromesaUuid && gestion.hasSchedule) {
-                            <div
-                              class="fixed z-[1200] w-[360px] max-w-[75vw] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-                              [attr.data-promesa-hover-card]="gestion.grupoPromesaUuid"
-                              [style.width.px]="getPromesaHoverCardWidth(gestion.grupoPromesaUuid)"
-                              [style.left.px]="promesaHoverCardPosition().left"
-                              [style.top.px]="promesaHoverCardPosition().top"
-                            >
-                              <div class="px-2.5 py-1.5 border-b border-green-300 dark:border-green-700 text-[11px] font-bold text-white bg-green-600 dark:bg-green-700">
-                                Detalle de cuotas
-                              </div>
-
-                              @if (isPromesaHoverLoading(gestion.grupoPromesaUuid)) {
-                                <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">Cargando cuotas...</div>
-                              } @else if (getPromesaHoverInstallments(gestion.grupoPromesaUuid).length > 0) {
-                                <div class="max-h-64 overflow-y-auto p-1.5">
-                                  <div class="grid gap-1" [style.gridTemplateColumns]="getPromesaHoverGridTemplate(gestion.grupoPromesaUuid)">
-                                    @for (cuota of getPromesaHoverInstallments(gestion.grupoPromesaUuid); track cuota.id) {
-                                      <div class="px-2 py-1 rounded border border-slate-100 dark:border-slate-800 text-[11px]">
-                                        <div class="flex items-center justify-between gap-1">
-                                          <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
-                                          <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
-                                        </div>
-                                        <div class="mt-0.5 flex items-center justify-between gap-1 text-slate-500 dark:text-slate-400">
-                                          <span>{{ formatDate(cuota.dueDate) }}</span>
-                                          <span>{{ cuota.statusDescription || cuota.status }}</span>
-                                        </div>
-                                      </div>
-                                    }
-                                  </div>
+                            @if (hoveredPromesaGroupUuid() === gestion.grupoPromesaUuid && gestion.hasSchedule) {
+                              <div
+                                class="absolute bottom-full left-0 mb-1 z-[1200] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                                [attr.data-promesa-hover-card]="gestion.grupoPromesaUuid"
+                                [style.width.px]="getPromesaHoverCardWidth(gestion.grupoPromesaUuid)"
+                              >
+                                <div class="px-2.5 py-1.5 border-b border-green-300 dark:border-green-700 text-[11px] font-bold text-white bg-green-600 dark:bg-green-700">
+                                  Detalle de cuotas
                                 </div>
-                              } @else {
-                                <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">No hay cuotas disponibles para esta promesa.</div>
-                              }
-                            </div>
-                          }
+
+                                @if (isPromesaHoverLoading(gestion.grupoPromesaUuid)) {
+                                  <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">Cargando cuotas...</div>
+                                } @else if (getPromesaHoverInstallments(gestion.grupoPromesaUuid).length > 0) {
+                                  <div class="max-h-64 overflow-y-auto p-1.5">
+                                    <div class="grid gap-1" [style.gridTemplateColumns]="getPromesaHoverGridTemplate(gestion.grupoPromesaUuid)">
+                                      @for (cuota of getPromesaHoverInstallments(gestion.grupoPromesaUuid); track cuota.id) {
+                                        <div class="px-2 py-1 rounded border border-slate-100 dark:border-slate-800 text-[11px]">
+                                          <div class="flex items-center justify-between gap-1">
+                                            <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
+                                            <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
+                                          </div>
+                                          <div class="mt-0.5 flex items-center justify-between gap-1 text-slate-500 dark:text-slate-400">
+                                            <span>{{ formatDate(cuota.dueDate) }}</span>
+                                            <span>{{ cuota.statusDescription || cuota.status }}</span>
+                                          </div>
+                                        </div>
+                                      }
+                                    </div>
+                                  </div>
+                                } @else {
+                                  <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">No hay cuotas disponibles para esta promesa.</div>
+                                }
+                              </div>
+                            }
+                          </div>
                         </td>
                         <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
                           {{ gestion.observacion || '-' }}
@@ -1717,8 +1717,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialHistoricoTotalElements = signal<number>(0);
   protected historialHistoricoLoading = signal<boolean>(false);
   protected hoveredPromesaGroupUuid = signal<string | null>(null);
-  protected promesaHoverCardPosition = signal<{ left: number; top: number }>({ left: 0, top: 0 });
-  protected promesaHoverAnchorRect = signal<{ left: number; top: number; bottom: number } | null>(null);
   protected promesaHoverLoadingByGroupUuid = signal<Record<string, boolean>>({});
   protected promesaHoverInstallmentsByGroupUuid = signal<Record<string, InstallmentResource[]>>({});
 
@@ -6643,10 +6641,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
-  protected onPromesaHoverStart(event: MouseEvent, groupUuid: string | undefined, hasSchedule: boolean): void {
+  protected onPromesaHoverStart(groupUuid: string | undefined, hasSchedule: boolean): void {
     if (!hasSchedule || !groupUuid) return;
     this.hoveredPromesaGroupUuid.set(groupUuid);
-    this.updatePromesaHoverPosition(event, groupUuid);
 
     const cache = this.promesaHoverInstallmentsByGroupUuid();
     if (cache[groupUuid]) return;
@@ -6673,13 +6670,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const current = this.promesaHoverInstallmentsByGroupUuid();
         this.promesaHoverInstallmentsByGroupUuid.set({ ...current, [groupUuid]: mappedInstallments });
 
-        setTimeout(() => {
-          const anchorRect = this.promesaHoverAnchorRect();
-          if (anchorRect) {
-            this.updatePromesaHoverPositionFromRect(anchorRect, groupUuid);
-          }
-        }, 0);
-
         const nextLoading = this.promesaHoverLoadingByGroupUuid();
         this.promesaHoverLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
       },
@@ -6693,41 +6683,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   protected onPromesaHoverEnd(): void {
     this.hoveredPromesaGroupUuid.set(null);
-    this.promesaHoverAnchorRect.set(null);
-  }
-
-  private updatePromesaHoverPosition(event: MouseEvent, groupUuid: string): void {
-    const target = event.currentTarget as HTMLElement | null;
-    const rect = target?.getBoundingClientRect();
-    if (!rect) return;
-
-    const anchorRect = { left: rect.left, top: rect.top, bottom: rect.bottom };
-    this.promesaHoverAnchorRect.set(anchorRect);
-    this.updatePromesaHoverPositionFromRect(anchorRect, groupUuid);
-  }
-
-  private updatePromesaHoverPositionFromRect(rect: { left: number; top: number; bottom: number }, groupUuid: string): void {
-    const cardWidth = this.getPromesaHoverCardWidth(groupUuid);
-    const cardHeight = this.getPromesaHoverCardHeight(groupUuid);
-    const margin = 12;
-    const offset = 6;
-
-    const viewportW = window.innerWidth;
-    const top = Math.max(margin, rect.top - cardHeight - offset);
-
-    const left = Math.min(
-      Math.max(margin, rect.left),
-      Math.max(margin, viewportW - cardWidth - margin)
-    );
-
-    this.promesaHoverCardPosition.set({ left, top });
-  }
-
-  private getPromesaHoverCardHeight(groupUuid: string): number {
-    const selector = `[data-promesa-hover-card="${groupUuid}"]`;
-    const cardEl = document.querySelector(selector) as HTMLElement | null;
-    if (cardEl && cardEl.offsetHeight > 0) return cardEl.offsetHeight;
-    return 300;
   }
 
   protected getPromesaHoverColumnCount(groupUuid: string | undefined): number {
