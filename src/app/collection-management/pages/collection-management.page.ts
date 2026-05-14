@@ -1452,11 +1452,11 @@ import { CallService } from '../../core/services/call.service';
                   </div>
 
                   @if (selectedHistorialPromesaGestion(); as promesaSeleccionada) {
-                    <aside class="w-[340px] shrink-0 border-l border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/40 flex flex-col">
-                      <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-2">
+                    <aside class="w-[280px] shrink-0 border-l border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/40 flex flex-col">
+                      <div class="px-2.5 py-2 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-2">
                         <div class="min-w-0">
-                          <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle de cuotas</div>
-                          <div class="mt-1 truncate text-sm font-semibold text-green-700 dark:text-green-400">{{ promesaSeleccionada.promesaCompacta || 'Promesa seleccionada' }}</div>
+                          <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle de cuotas</div>
+                          <div class="mt-0.5 truncate text-[13px] font-semibold text-green-700 dark:text-green-400">{{ promesaSeleccionada.promesaCompacta || 'Promesa seleccionada' }}</div>
                           <div class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{{ promesaSeleccionada.fecha }} · {{ promesaSeleccionada.nombreAgente }}</div>
                         </div>
                         <button
@@ -1474,15 +1474,15 @@ import { CallService } from '../../core/services/call.service';
                           Cargando cuotas...
                         </div>
                       } @else if (getSelectedHistorialPromesaInstallments().length > 0) {
-                        <div class="historial-promesa-scroll flex-1 overflow-y-auto px-2 py-2">
+                        <div class="historial-promesa-scroll flex-1 overflow-y-auto px-1.5 py-1.5">
                           <div class="grid gap-1" [style.gridTemplateColumns]="getSelectedHistorialPromesaGridTemplate()">
                             @for (cuota of getSelectedHistorialPromesaInstallments(); track cuota.id) {
-                              <div class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 dark:border-slate-800 dark:bg-slate-900">
-                                <div class="flex items-center justify-between gap-2">
+                              <div class="rounded-md border border-slate-200 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
+                                <div class="flex items-center justify-between gap-1">
                                   <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
                                   <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
                                 </div>
-                                <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                                <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                                   <span>{{ formatDate(cuota.dueDate) }}</span>
                                   <span>{{ cuota.statusDescription || cuota.status }}</span>
                                 </div>
