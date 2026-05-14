@@ -1422,11 +1422,12 @@ import { CallService } from '../../core/services/call.service';
                           @if (hoveredPromesaGroupUuid() === gestion.grupoPromesaUuid && gestion.hasSchedule) {
                             <div
                               class="fixed z-[1200] w-[360px] max-w-[75vw] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                              [attr.data-promesa-hover-card]="gestion.grupoPromesaUuid"
                               [style.width.px]="getPromesaHoverCardWidth(gestion.grupoPromesaUuid)"
                               [style.left.px]="promesaHoverCardPosition().left"
                               [style.top.px]="promesaHoverCardPosition().top"
                             >
-                              <div class="px-2.5 py-1.5 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900">
+                              <div class="px-2.5 py-1.5 border-b border-green-300 dark:border-green-700 text-[11px] font-bold text-white bg-green-600 dark:bg-green-700">
                                 Detalle de cuotas
                               </div>
 
@@ -6672,10 +6673,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const current = this.promesaHoverInstallmentsByGroupUuid();
         this.promesaHoverInstallmentsByGroupUuid.set({ ...current, [groupUuid]: mappedInstallments });
 
-        const anchorRect = this.promesaHoverAnchorRect();
-        if (anchorRect) {
-          this.updatePromesaHoverPositionFromRect(anchorRect, groupUuid);
-        }
+        setTimeout(() => {
+          const anchorRect = this.promesaHoverAnchorRect();
+          if (anchorRect) {
+            this.updatePromesaHoverPositionFromRect(anchorRect, groupUuid);
+          }
+        }, 0);
 
         const nextLoading = this.promesaHoverLoadingByGroupUuid();
         this.promesaHoverLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
@@ -6705,18 +6708,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   private updatePromesaHoverPositionFromRect(rect: { left: number; top: number; bottom: number }, groupUuid: string): void {
     const cardWidth = this.getPromesaHoverCardWidth(groupUuid);
-
-    const cardHeightEstimate = 300;
+    const cardHeight = this.getPromesaHoverCardHeight(groupUuid);
     const margin = 12;
-    const offset = 2;
+    const offset = 3;
 
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
 
-    const hasSpaceBelow = (viewportH - rect.bottom) > (cardHeightEstimate + margin);
+    const hasSpaceBelow = (viewportH - rect.bottom) > (cardHeight + margin);
     const top = hasSpaceBelow
-      ? Math.min(rect.bottom + offset, viewportH - cardHeightEstimate - margin)
-      : Math.max(margin, rect.top - cardHeightEstimate - offset);
+      ? Math.min(rect.bottom + offset, viewportH - cardHeight - margin)
+      : Math.max(margin, rect.top - cardHeight - offset);
 
     const left = Math.min(
       Math.max(margin, rect.left),
@@ -6724,6 +6726,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     );
 
     this.promesaHoverCardPosition.set({ left, top });
+  }
+
+  private getPromesaHoverCardHeight(groupUuid: string): number {
+    const selector = `[data-promesa-hover-card="${groupUuid}"]`;
+    const cardEl = document.querySelector(selector) as HTMLElement | null;
+    if (cardEl && cardEl.offsetHeight > 0) return cardEl.offsetHeight;
+    return 300;
   }
 
   protected getPromesaHoverColumnCount(groupUuid: string | undefined): number {
