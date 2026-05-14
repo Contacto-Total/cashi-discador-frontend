@@ -70,6 +70,27 @@ import { CallService } from '../../core/services/call.service';
         </div>
       }
 
+      @if (showPhoneDuplicateCard()) {
+        <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 px-4">
+          <div class="w-full max-w-md rounded-xl border border-amber-300 bg-white shadow-2xl dark:border-amber-800 dark:bg-slate-900 animate-[slideInUp_0.25s_ease-out]">
+            <div class="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/40">
+              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">Teléfono duplicado</h3>
+            </div>
+            <div class="px-4 py-3">
+              <p class="text-sm text-slate-700 dark:text-slate-200">{{ phoneDuplicateMessage() }}</p>
+            </div>
+            <div class="flex justify-end border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+              <button
+                (click)="closePhoneDuplicateCard()"
+                class="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-700"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
 
       <!-- Header Principal -->
       <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
@@ -1579,6 +1600,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected showOutputSelector = false; // Para el dropdown de campos del cliente
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
+  protected showPhoneDuplicateCard = signal(false);
+  protected phoneDuplicateMessage = signal('El teléfono ya existe para este cliente.');
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
@@ -6570,6 +6593,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
+  closePhoneDuplicateCard(): void {
+    this.showPhoneDuplicateCard.set(false);
+  }
+
   guardarNuevoTelefono(): void {
     const valor = (this.newPhoneNumber || '').trim();
     if (!this.isValidCellphone(valor)) return;
@@ -6602,6 +6629,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.savingPhone.set(false);
         const msg = err.error?.error || 'Error al agregar teléfono';
         console.error('❌ Error agregando teléfono:', msg);
+        if ((msg || '').toLowerCase().includes('ya existe para este cliente')) {
+          this.phoneDuplicateMessage.set(msg);
+          this.showPhoneDuplicateCard.set(true);
+          return;
+        }
         alert(msg);
       }
     });
