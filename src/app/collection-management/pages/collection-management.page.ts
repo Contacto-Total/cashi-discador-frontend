@@ -9,7 +9,7 @@ import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
 import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse } from '../services/management.service';
-import { PaymentScheduleService } from '../services/payment-schedule.service';
+import { PaymentScheduleService, InstallmentResource } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
 import { CustomerData, TelefonoMetodo } from '../models/customer.model';
@@ -1406,11 +1406,46 @@ import { CallService } from '../../core/services/call.service';
                           </span>
                         </td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
+                        <td
+                          class="px-2 py-1.5 overflow-visible text-ellipsis relative"
+                          [style.width.px]="historialColWidths()[4]"
+                          [title]="gestion.promesaCompacta"
+                          (mouseenter)="onPromesaHoverStart(gestion.id, gestion.hasSchedule)"
+                          (mouseleave)="onPromesaHoverEnd()"
+                        >
                           @if (gestion.promesaCompacta) {
                             <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
                           } @else {
                             <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+
+                          @if (hoveredPromesaManagementId() === gestion.id && gestion.hasSchedule) {
+                            <div class="absolute left-0 top-full mt-1 z-[950] w-[360px] max-w-[75vw] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                              <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                Detalle de cuotas
+                              </div>
+
+                              @if (isPromesaHoverLoading(gestion.id)) {
+                                <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">Cargando cuotas...</div>
+                              } @else if (getPromesaHoverInstallments(gestion.id).length > 0) {
+                                <div class="max-h-64 overflow-y-auto">
+                                  @for (cuota of getPromesaHoverInstallments(gestion.id); track cuota.id) {
+                                    <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-b-0 text-[11px]">
+                                      <div class="flex items-center justify-between gap-2">
+                                        <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
+                                        <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
+                                      </div>
+                                      <div class="mt-0.5 flex items-center justify-between gap-2 text-slate-500 dark:text-slate-400">
+                                        <span>{{ formatDate(cuota.dueDate) }}</span>
+                                        <span>{{ cuota.statusDescription || cuota.status }}</span>
+                                      </div>
+                                    </div>
+                                  }
+                                </div>
+                              } @else {
+                                <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">No hay cuotas disponibles para esta promesa.</div>
+                              }
+                            </div>
                           }
                         </td>
                         <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
@@ -1672,6 +1707,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialHistoricoTotalPages = signal<number>(0);
   protected historialHistoricoTotalElements = signal<number>(0);
   protected historialHistoricoLoading = signal<boolean>(false);
+  protected hoveredPromesaManagementId = signal<number | null>(null);
+  protected promesaHoverLoadingByManagementId = signal<Record<number, boolean>>({});
+  protected promesaHoverInstallmentsByManagementId = signal<Record<number, InstallmentResource[]>>({});
 
   // Computed signal para filtrar el historial según el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
@@ -6591,6 +6629,47 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       console.log('📞 Teléfonos cargados (todos):', telefonos.length);
       this.telefonosMetodo.set(telefonos);
     });
+  }
+
+  protected onPromesaHoverStart(managementId: number, hasSchedule: boolean): void {
+    if (!hasSchedule) return;
+    this.hoveredPromesaManagementId.set(managementId);
+
+    const cache = this.promesaHoverInstallmentsByManagementId();
+    if (cache[managementId]) return;
+
+    const loading = this.promesaHoverLoadingByManagementId();
+    this.promesaHoverLoadingByManagementId.set({ ...loading, [managementId]: true });
+
+    this.paymentScheduleService.getPaymentScheduleByManagementId(managementId).subscribe({
+      next: (schedule) => {
+        const current = this.promesaHoverInstallmentsByManagementId();
+        this.promesaHoverInstallmentsByManagementId.set({
+          ...current,
+          [managementId]: (schedule?.installments || []).slice().sort((a, b) => a.installmentNumber - b.installmentNumber)
+        });
+
+        const nextLoading = this.promesaHoverLoadingByManagementId();
+        this.promesaHoverLoadingByManagementId.set({ ...nextLoading, [managementId]: false });
+      },
+      error: (err) => {
+        console.error('[HISTORIAL] Error cargando detalle de cuotas para hover:', err);
+        const nextLoading = this.promesaHoverLoadingByManagementId();
+        this.promesaHoverLoadingByManagementId.set({ ...nextLoading, [managementId]: false });
+      }
+    });
+  }
+
+  protected onPromesaHoverEnd(): void {
+    this.hoveredPromesaManagementId.set(null);
+  }
+
+  protected isPromesaHoverLoading(managementId: number): boolean {
+    return !!this.promesaHoverLoadingByManagementId()[managementId];
+  }
+
+  protected getPromesaHoverInstallments(managementId: number): InstallmentResource[] {
+    return this.promesaHoverInstallmentsByManagementId()[managementId] || [];
   }
 
   closePhoneDuplicateCard(): void {
