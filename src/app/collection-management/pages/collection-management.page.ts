@@ -1410,7 +1410,7 @@ import { CallService } from '../../core/services/call.service';
                           class="px-2 py-1.5 overflow-visible text-ellipsis relative"
                           [style.width.px]="historialColWidths()[4]"
                           [title]="gestion.promesaCompacta"
-                          (mouseenter)="onPromesaHoverStart(gestion.id, gestion.hasSchedule)"
+                          (mouseenter)="onPromesaHoverStart(gestion.grupoPromesaUuid, gestion.hasSchedule)"
                           (mouseleave)="onPromesaHoverEnd()"
                         >
                           @if (gestion.promesaCompacta) {
@@ -1419,17 +1419,17 @@ import { CallService } from '../../core/services/call.service';
                             <span class="text-slate-400 dark:text-slate-600">-</span>
                           }
 
-                          @if (hoveredPromesaManagementId() === gestion.id && gestion.hasSchedule) {
+                          @if (hoveredPromesaGroupUuid() === gestion.grupoPromesaUuid && gestion.hasSchedule) {
                             <div class="absolute left-0 top-full mt-1 z-[950] w-[360px] max-w-[75vw] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
                               <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300">
                                 Detalle de cuotas
                               </div>
 
-                              @if (isPromesaHoverLoading(gestion.id)) {
+                              @if (isPromesaHoverLoading(gestion.grupoPromesaUuid)) {
                                 <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">Cargando cuotas...</div>
-                              } @else if (getPromesaHoverInstallments(gestion.id).length > 0) {
+                              } @else if (getPromesaHoverInstallments(gestion.grupoPromesaUuid).length > 0) {
                                 <div class="max-h-64 overflow-y-auto">
-                                  @for (cuota of getPromesaHoverInstallments(gestion.id); track cuota.id) {
+                                  @for (cuota of getPromesaHoverInstallments(gestion.grupoPromesaUuid); track cuota.id) {
                                     <div class="px-3 py-2 border-b border-slate-100 dark:border-slate-800 last:border-b-0 text-[11px]">
                                       <div class="flex items-center justify-between gap-2">
                                         <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
@@ -1675,6 +1675,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     estadoPago?: string;
     estadoPagoDisplay: string;
     hasSchedule: boolean;
+    grupoPromesaUuid?: string;
     schedule: any;
   }>>([]);
 
@@ -1707,9 +1708,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialHistoricoTotalPages = signal<number>(0);
   protected historialHistoricoTotalElements = signal<number>(0);
   protected historialHistoricoLoading = signal<boolean>(false);
-  protected hoveredPromesaManagementId = signal<number | null>(null);
-  protected promesaHoverLoadingByManagementId = signal<Record<number, boolean>>({});
-  protected promesaHoverInstallmentsByManagementId = signal<Record<number, InstallmentResource[]>>({});
+  protected hoveredPromesaGroupUuid = signal<string | null>(null);
+  protected promesaHoverLoadingByGroupUuid = signal<Record<string, boolean>>({});
+  protected promesaHoverInstallmentsByGroupUuid = signal<Record<string, InstallmentResource[]>>({});
 
   // Computed signal para filtrar el historial según el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
@@ -3540,6 +3541,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             estadoPago: m.estadoPago || undefined,
             estadoPagoDisplay: this.formatEstadoPagoDisplay(m.estadoPago),
             hasSchedule: m.typificationRequiresSchedule || false,
+            grupoPromesaUuid: m.grupoPromesaUuid,
             schedule: null as any
           };
         });
@@ -6631,45 +6633,56 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
-  protected onPromesaHoverStart(managementId: number, hasSchedule: boolean): void {
-    if (!hasSchedule) return;
-    this.hoveredPromesaManagementId.set(managementId);
+  protected onPromesaHoverStart(groupUuid: string | undefined, hasSchedule: boolean): void {
+    if (!hasSchedule || !groupUuid) return;
+    this.hoveredPromesaGroupUuid.set(groupUuid);
 
-    const cache = this.promesaHoverInstallmentsByManagementId();
-    if (cache[managementId]) return;
+    const cache = this.promesaHoverInstallmentsByGroupUuid();
+    if (cache[groupUuid]) return;
 
-    const loading = this.promesaHoverLoadingByManagementId();
-    this.promesaHoverLoadingByManagementId.set({ ...loading, [managementId]: true });
+    const loading = this.promesaHoverLoadingByGroupUuid();
+    this.promesaHoverLoadingByGroupUuid.set({ ...loading, [groupUuid]: true });
 
-    this.paymentScheduleService.getPaymentScheduleByManagementId(managementId).subscribe({
-      next: (schedule) => {
-        const current = this.promesaHoverInstallmentsByManagementId();
-        this.promesaHoverInstallmentsByManagementId.set({
-          ...current,
-          [managementId]: (schedule?.installments || []).slice().sort((a, b) => a.installmentNumber - b.installmentNumber)
-        });
+    this.typificationV2Service.getPaymentScheduleByGroup(groupUuid).subscribe({
+      next: (rows) => {
+        const mappedInstallments: InstallmentResource[] = (rows || [])
+          .map((cuota: any) => ({
+            id: cuota.id,
+            installmentNumber: cuota.numeroCuota || cuota.installmentNumber || 0,
+            amount: cuota.montoPromesa || cuota.monto || cuota.amount || 0,
+            dueDate: cuota.fechaPromesa || cuota.fechaPago || cuota.dueDate || '',
+            paidDate: cuota.fechaPagoReal || cuota.paidDate,
+            status: cuota.estado || cuota.status || 'PENDIENTE',
+            statusDescription: this.formatEstadoPagoDisplay(cuota.estado || cuota.status || 'PENDIENTE')
+          }))
+          .sort((a, b) => a.installmentNumber - b.installmentNumber);
 
-        const nextLoading = this.promesaHoverLoadingByManagementId();
-        this.promesaHoverLoadingByManagementId.set({ ...nextLoading, [managementId]: false });
+        const current = this.promesaHoverInstallmentsByGroupUuid();
+        this.promesaHoverInstallmentsByGroupUuid.set({ ...current, [groupUuid]: mappedInstallments });
+
+        const nextLoading = this.promesaHoverLoadingByGroupUuid();
+        this.promesaHoverLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
       },
       error: (err) => {
-        console.error('[HISTORIAL] Error cargando detalle de cuotas para hover:', err);
-        const nextLoading = this.promesaHoverLoadingByManagementId();
-        this.promesaHoverLoadingByManagementId.set({ ...nextLoading, [managementId]: false });
+        console.error('[HISTORIAL] Error cargando detalle de cuotas por grupo para hover:', err);
+        const nextLoading = this.promesaHoverLoadingByGroupUuid();
+        this.promesaHoverLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
       }
     });
   }
 
   protected onPromesaHoverEnd(): void {
-    this.hoveredPromesaManagementId.set(null);
+    this.hoveredPromesaGroupUuid.set(null);
   }
 
-  protected isPromesaHoverLoading(managementId: number): boolean {
-    return !!this.promesaHoverLoadingByManagementId()[managementId];
+  protected isPromesaHoverLoading(groupUuid: string | undefined): boolean {
+    if (!groupUuid) return false;
+    return !!this.promesaHoverLoadingByGroupUuid()[groupUuid];
   }
 
-  protected getPromesaHoverInstallments(managementId: number): InstallmentResource[] {
-    return this.promesaHoverInstallmentsByManagementId()[managementId] || [];
+  protected getPromesaHoverInstallments(groupUuid: string | undefined): InstallmentResource[] {
+    if (!groupUuid) return [];
+    return this.promesaHoverInstallmentsByGroupUuid()[groupUuid] || [];
   }
 
   closePhoneDuplicateCard(): void {

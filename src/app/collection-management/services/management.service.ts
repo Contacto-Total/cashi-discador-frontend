@@ -83,6 +83,7 @@ export interface ManagementResource {
   estadoPago?: string;        // Estado del pago (PENDIENTE, PAGADA, VENCIDA, etc.)
   totalCuotas?: number;       // Número total de cuotas
   fechaPrimeraCuota?: string; // Fecha de la primera cuota (YYYY-MM-DD)
+  grupoPromesaUuid?: string;  // UUID del grupo de promesa
 }
 
 export interface CallDetailResource {
@@ -375,7 +376,8 @@ export class ManagementService {
           estadoPago: r.estadoPago || undefined,
           typificationRequiresSchedule: !!r.grupoPromesaUuid,
           totalCuotas: r.totalCuotas || undefined,
-          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined
+          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined,
+          grupoPromesaUuid: r.grupoPromesaUuid || undefined
         } as ManagementResource;
       }))
     );
