@@ -1422,7 +1422,7 @@ import { CallService } from '../../core/services/call.service';
 
                             @if (hoveredPromesaGroupUuid() === gestion.grupoPromesaUuid && gestion.hasSchedule) {
                               <div
-                                class="absolute bottom-full left-0 mb-1 z-[1200] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                                class="absolute top-full left-0 mt-1 z-[1200] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
                                 [attr.data-promesa-hover-card]="gestion.grupoPromesaUuid"
                                 [style.width.px]="getPromesaHoverCardWidth(gestion.grupoPromesaUuid)"
                               >
