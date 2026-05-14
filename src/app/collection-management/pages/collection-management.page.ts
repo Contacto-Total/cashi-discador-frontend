@@ -1410,7 +1410,8 @@ import { CallService } from '../../core/services/call.service';
                           class="px-2 py-1.5 overflow-visible text-ellipsis relative"
                           [style.width.px]="historialColWidths()[4]"
                           [title]="gestion.promesaCompacta"
-                          (mouseenter)="onPromesaHoverStart(gestion.grupoPromesaUuid, gestion.hasSchedule)"
+                          (mouseenter)="onPromesaHoverStart($event, gestion.grupoPromesaUuid, gestion.hasSchedule)"
+                          (mousemove)="onPromesaHoverMove($event, gestion.grupoPromesaUuid)"
                           (mouseleave)="onPromesaHoverEnd()"
                         >
                           @if (gestion.promesaCompacta) {
@@ -1420,8 +1421,12 @@ import { CallService } from '../../core/services/call.service';
                           }
 
                           @if (hoveredPromesaGroupUuid() === gestion.grupoPromesaUuid && gestion.hasSchedule) {
-                            <div class="absolute left-0 top-full mt-1 z-[950] w-[360px] max-w-[75vw] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
-                              <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                            <div
+                              class="fixed z-[1200] w-[360px] max-w-[75vw] rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+                              [style.left.px]="promesaHoverCardPosition().left"
+                              [style.top.px]="promesaHoverCardPosition().top"
+                            >
+                              <div class="px-3 py-2 border-b border-cyan-300 bg-gradient-to-r from-cyan-500 to-blue-600 dark:border-cyan-700 text-[11px] font-bold text-white">
                                 Detalle de cuotas
                               </div>
 
@@ -1709,6 +1714,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialHistoricoTotalElements = signal<number>(0);
   protected historialHistoricoLoading = signal<boolean>(false);
   protected hoveredPromesaGroupUuid = signal<string | null>(null);
+  protected promesaHoverCardPosition = signal<{ left: number; top: number }>({ left: 0, top: 0 });
   protected promesaHoverLoadingByGroupUuid = signal<Record<string, boolean>>({});
   protected promesaHoverInstallmentsByGroupUuid = signal<Record<string, InstallmentResource[]>>({});
 
@@ -6633,9 +6639,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
-  protected onPromesaHoverStart(groupUuid: string | undefined, hasSchedule: boolean): void {
+  protected onPromesaHoverStart(event: MouseEvent, groupUuid: string | undefined, hasSchedule: boolean): void {
     if (!hasSchedule || !groupUuid) return;
     this.hoveredPromesaGroupUuid.set(groupUuid);
+    this.updatePromesaHoverPosition(event);
 
     const cache = this.promesaHoverInstallmentsByGroupUuid();
     if (cache[groupUuid]) return;
@@ -6645,8 +6652,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.typificationV2Service.getPaymentScheduleByGroup(groupUuid).subscribe({
       next: (rows) => {
-        console.log('[HISTORIAL][HOVER] Respuesta cruda payment-schedule/group:', rows);
-        const mappedInstallments: InstallmentResource[] = (rows || [])
+        const cuotasPromesa = (rows || []).flatMap((registro: any) => registro?.cuotasPromesa || []);
+
+        const mappedInstallments: InstallmentResource[] = cuotasPromesa
           .map((cuota: any) => ({
             id: cuota.id,
             installmentNumber: cuota.numeroCuota || cuota.installmentNumber || 0,
@@ -6674,6 +6682,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   protected onPromesaHoverEnd(): void {
     this.hoveredPromesaGroupUuid.set(null);
+  }
+
+  protected onPromesaHoverMove(event: MouseEvent, groupUuid: string | undefined): void {
+    if (!groupUuid || this.hoveredPromesaGroupUuid() !== groupUuid) return;
+    this.updatePromesaHoverPosition(event);
+  }
+
+  private updatePromesaHoverPosition(event: MouseEvent): void {
+    const cardWidth = 360;
+    const cardHeightEstimate = 280;
+    const margin = 12;
+    const offset = 14;
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    const hasSpaceBelow = (viewportH - event.clientY) > (cardHeightEstimate + margin);
+    const top = hasSpaceBelow
+      ? Math.min(event.clientY + offset, viewportH - margin - 120)
+      : Math.max(margin, event.clientY - cardHeightEstimate - offset);
+
+    const left = Math.min(
+      Math.max(margin, event.clientX + 10),
+      Math.max(margin, viewportW - cardWidth - margin)
+    );
+
+    this.promesaHoverCardPosition.set({ left, top });
   }
 
   protected isPromesaHoverLoading(groupUuid: string | undefined): boolean {
