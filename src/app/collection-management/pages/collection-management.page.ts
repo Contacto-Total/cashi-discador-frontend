@@ -1452,12 +1452,12 @@ import { CallService } from '../../core/services/call.service';
                   </div>
 
                   @if (selectedHistorialPromesaGestion(); as promesaSeleccionada) {
-                    <aside class="w-[280px] shrink-0 border-l border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/40 flex flex-col">
+                    <aside class="w-[248px] shrink-0 border-l border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/40 flex flex-col">
                       <div class="px-2.5 py-2 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-2">
                         <div class="min-w-0">
                           <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle de cuotas</div>
-                          <div class="mt-0.5 truncate text-[13px] font-semibold text-green-700 dark:text-green-400">{{ promesaSeleccionada.promesaCompacta || 'Promesa seleccionada' }}</div>
-                          <div class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{{ promesaSeleccionada.fecha }} · {{ promesaSeleccionada.nombreAgente }}</div>
+                          <div class="mt-0.5 truncate text-[13px] font-semibold text-green-700 dark:text-green-400">{{ getSelectedHistorialPromesaResumen(promesaSeleccionada.promesaCompacta) || 'Promesa seleccionada' }}</div>
+                          <div class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{{ getSelectedHistorialPromesaFecha(promesaSeleccionada.fecha) }} · {{ promesaSeleccionada.nombreAgente }}</div>
                         </div>
                         <button
                           type="button"
@@ -1484,7 +1484,7 @@ import { CallService } from '../../core/services/call.service';
                                 </div>
                                 <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                                   <span>{{ formatDate(cuota.dueDate) }}</span>
-                                  <span>{{ cuota.statusDescription || cuota.status }}</span>
+                                  <span [class]="getHistorialPromesaStatusClass(cuota.status)">{{ cuota.statusDescription || cuota.status }}</span>
                                 </div>
                               </div>
                             }
@@ -3999,7 +3999,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       'PAGADA': 'Pagada',
       'VENCIDA': 'Vencida',
       'PARCIAL': 'Parcial',
-      'CANCELADA': 'Anulada'
+      'CANCELADA': 'Cancelada',
+      'EN_EVALUACION': 'En evaluacion'
     };
     return estadoMap[estado] || this.formatSnakeCase(estado);
   }
@@ -6746,6 +6747,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return `repeat(${cols}, minmax(0, 1fr))`;
   }
 
+  protected getSelectedHistorialPromesaResumen(promesaCompacta: string | undefined): string {
+    if (!promesaCompacta) return '';
+    const parts = promesaCompacta.split(' · ').filter(Boolean);
+    return parts.slice(0, 2).join(' · ');
+  }
+
+  protected getSelectedHistorialPromesaFecha(fecha: string | undefined): string {
+    if (!fecha) return '-';
+    return fecha.split(' ')[0] || fecha;
+  }
+
   protected isSelectedHistorialPromesaLoading(): boolean {
     const groupUuid = this.selectedHistorialPromesaGroupUuid();
     if (!groupUuid) return false;
@@ -6756,6 +6768,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const groupUuid = this.selectedHistorialPromesaGroupUuid();
     if (!groupUuid) return [];
     return this.historialPromesaInstallmentsByGroupUuid()[groupUuid] || [];
+  }
+
+  protected getHistorialPromesaStatusClass(status: string | undefined): string {
+    switch (status) {
+      case 'PAGADA':
+        return 'font-semibold text-green-600 dark:text-green-400';
+      case 'VENCIDA':
+        return 'font-semibold text-red-600 dark:text-red-400';
+      case 'PARCIAL':
+        return 'font-semibold text-orange-600 dark:text-orange-400';
+      case 'CANCELADA':
+      case 'EN_EVALUACION':
+        return 'font-semibold text-blue-600 dark:text-blue-400';
+      case 'PENDIENTE':
+      default:
+        return 'font-semibold text-slate-500 dark:text-slate-400';
+    }
   }
 
   closePhoneDuplicateCard(): void {
