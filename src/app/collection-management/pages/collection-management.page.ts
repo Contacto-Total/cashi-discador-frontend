@@ -6710,15 +6710,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const cardWidth = this.getPromesaHoverCardWidth(groupUuid);
     const cardHeight = this.getPromesaHoverCardHeight(groupUuid);
     const margin = 12;
-    const offset = 3;
+    const offset = 6;
 
     const viewportW = window.innerWidth;
-    const viewportH = window.innerHeight;
-
-    const hasSpaceBelow = (viewportH - rect.bottom) > (cardHeight + margin);
-    const top = hasSpaceBelow
-      ? Math.min(rect.bottom + offset, viewportH - cardHeight - margin)
-      : Math.max(margin, rect.top - cardHeight - offset);
+    const top = Math.max(margin, rect.top - cardHeight - offset);
 
     const left = Math.min(
       Math.max(margin, rect.left),
