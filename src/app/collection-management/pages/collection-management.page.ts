@@ -1426,22 +1426,22 @@ import { CallService } from '../../core/services/call.service';
                               [style.left.px]="promesaHoverCardPosition().left"
                               [style.top.px]="promesaHoverCardPosition().top"
                             >
-                              <div class="px-3 py-2 border-b border-cyan-300 bg-gradient-to-r from-cyan-500 to-blue-600 dark:border-cyan-700 text-[11px] font-bold text-white">
+                              <div class="px-2.5 py-1.5 border-b border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900">
                                 Detalle de cuotas
                               </div>
 
                               @if (isPromesaHoverLoading(gestion.grupoPromesaUuid)) {
                                 <div class="px-3 py-2 text-[11px] text-slate-500 dark:text-slate-400">Cargando cuotas...</div>
                               } @else if (getPromesaHoverInstallments(gestion.grupoPromesaUuid).length > 0) {
-                                <div class="max-h-64 overflow-y-auto p-2">
+                                <div class="max-h-64 overflow-y-auto p-1.5">
                                   <div class="grid gap-1" [style.gridTemplateColumns]="getPromesaHoverGridTemplate(gestion.grupoPromesaUuid)">
                                     @for (cuota of getPromesaHoverInstallments(gestion.grupoPromesaUuid); track cuota.id) {
-                                      <div class="px-2 py-1.5 rounded border border-slate-100 dark:border-slate-800 text-[11px]">
-                                        <div class="flex items-center justify-between gap-2">
-                                          <span class="font-semibold text-slate-700 dark:text-slate-200">C{{ cuota.installmentNumber }}</span>
+                                      <div class="px-2 py-1 rounded border border-slate-100 dark:border-slate-800 text-[11px]">
+                                        <div class="flex items-center justify-between gap-1">
+                                          <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
                                           <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
                                         </div>
-                                        <div class="mt-0.5 flex items-center justify-between gap-2 text-slate-500 dark:text-slate-400">
+                                        <div class="mt-0.5 flex items-center justify-between gap-1 text-slate-500 dark:text-slate-400">
                                           <span>{{ formatDate(cuota.dueDate) }}</span>
                                           <span>{{ cuota.statusDescription || cuota.status }}</span>
                                         </div>
@@ -6708,7 +6708,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     const cardHeightEstimate = 300;
     const margin = 12;
-    const offset = 8;
+    const offset = 2;
 
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
@@ -6740,9 +6740,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   protected getPromesaHoverCardWidth(groupUuid: string | undefined): number {
     const cols = this.getPromesaHoverColumnCount(groupUuid);
-    if (cols === 3) return 760;
-    if (cols === 2) return 520;
-    return 320;
+    if (cols === 3) return 690;
+    if (cols === 2) return 470;
+    return 280;
   }
 
   protected isPromesaHoverLoading(groupUuid: string | undefined): boolean {
