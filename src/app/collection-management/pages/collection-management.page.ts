@@ -6772,22 +6772,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   protected getHistorialPromesaItemClass(status: string | undefined, index: number): string {
     if (status === 'PENDIENTE' && index === this.getSelectedHistorialPromesaFirstPendingIndex()) {
-      return 'border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/30';
+      return 'border-blue-300 bg-blue-100 dark:border-blue-800/70 dark:bg-blue-900/35';
     }
 
     switch (status) {
       case 'PAGADA':
-        return 'border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/30';
+        return 'border-green-300 bg-green-100 dark:border-green-800/70 dark:bg-green-900/35';
       case 'VENCIDA':
-        return 'border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30';
+        return 'border-red-300 bg-red-100 dark:border-red-800/70 dark:bg-red-900/35';
       case 'PARCIAL':
-        return 'border-orange-200 bg-orange-50 dark:border-orange-900/60 dark:bg-orange-950/30';
+        return 'border-orange-300 bg-orange-100 dark:border-orange-800/70 dark:bg-orange-900/35';
       case 'CANCELADA':
       case 'EN_EVALUACION':
-        return 'border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30';
+        return 'border-sky-300 bg-sky-100 dark:border-sky-800/70 dark:bg-sky-900/35';
       case 'PENDIENTE':
       default:
-        return 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900';
+        return 'border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80';
     }
   }
 
