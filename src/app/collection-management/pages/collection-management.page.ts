@@ -1477,14 +1477,14 @@ import { CallService } from '../../core/services/call.service';
                         <div class="historial-promesa-scroll flex-1 overflow-y-auto px-1.5 py-1.5">
                           <div class="grid gap-1" [style.gridTemplateColumns]="getSelectedHistorialPromesaGridTemplate()">
                             @for (cuota of getSelectedHistorialPromesaInstallments(); track cuota.id) {
-                              <div class="rounded-md border border-slate-200 bg-white px-2 py-1.5 dark:border-slate-800 dark:bg-slate-900">
+                              <div [class]="'rounded-md border px-2 py-1.5 ' + getHistorialPromesaItemClass(cuota.status, $index)">
                                 <div class="flex items-center justify-between gap-1">
                                   <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
                                   <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
                                 </div>
                                 <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                                   <span>{{ formatDate(cuota.dueDate) }}</span>
-                                  <span [class]="getHistorialPromesaStatusClass(cuota.status)">{{ cuota.statusDescription || cuota.status }}</span>
+                                  <span class="font-medium">{{ cuota.statusDescription || cuota.status }}</span>
                                 </div>
                               </div>
                             }
@@ -6770,21 +6770,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return this.historialPromesaInstallmentsByGroupUuid()[groupUuid] || [];
   }
 
-  protected getHistorialPromesaStatusClass(status: string | undefined): string {
+  protected getHistorialPromesaItemClass(status: string | undefined, index: number): string {
+    if (status === 'PENDIENTE' && index === this.getSelectedHistorialPromesaFirstPendingIndex()) {
+      return 'border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/30';
+    }
+
     switch (status) {
       case 'PAGADA':
-        return 'font-semibold text-green-600 dark:text-green-400';
+        return 'border-green-200 bg-green-50 dark:border-green-900/60 dark:bg-green-950/30';
       case 'VENCIDA':
-        return 'font-semibold text-red-600 dark:text-red-400';
+        return 'border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30';
       case 'PARCIAL':
-        return 'font-semibold text-orange-600 dark:text-orange-400';
+        return 'border-orange-200 bg-orange-50 dark:border-orange-900/60 dark:bg-orange-950/30';
       case 'CANCELADA':
       case 'EN_EVALUACION':
-        return 'font-semibold text-blue-600 dark:text-blue-400';
+        return 'border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/30';
       case 'PENDIENTE':
       default:
-        return 'font-semibold text-slate-500 dark:text-slate-400';
+        return 'border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900';
     }
+  }
+
+  private getSelectedHistorialPromesaFirstPendingIndex(): number {
+    return this.getSelectedHistorialPromesaInstallments().findIndex(cuota => cuota.status === 'PENDIENTE');
   }
 
   closePhoneDuplicateCard(): void {
