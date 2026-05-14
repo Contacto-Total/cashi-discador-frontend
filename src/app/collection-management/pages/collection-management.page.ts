@@ -6645,6 +6645,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     this.typificationV2Service.getPaymentScheduleByGroup(groupUuid).subscribe({
       next: (rows) => {
+        console.log('[HISTORIAL][HOVER] Respuesta cruda payment-schedule/group:', rows);
         const mappedInstallments: InstallmentResource[] = (rows || [])
           .map((cuota: any) => ({
             id: cuota.id,
