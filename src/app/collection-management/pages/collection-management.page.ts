@@ -3508,10 +3508,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        // Filtrar cronogramas que tienen cuotas pendientes o vencidas (pago retroactivo)
+        // Filtrar cronogramas que tienen cuotas pendientes
         const activeSchedules = schedules.filter((s: any) =>
-          s.cuotasPendientes > 0 ||
-          s.installments?.some((c: any) => c.status === 'VENCIDA' || c.status === 'VENCIDO')
+          s.cuotasPendientes > 0
         );
 
         console.log('📅 Cronogramas transformados:', schedules);
