@@ -1457,7 +1457,7 @@ import { CallService } from '../../core/services/call.service';
                         <div class="min-w-0">
                           <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle de cuotas</div>
                           <div class="mt-0.5 truncate text-[13px] font-semibold text-green-700 dark:text-green-400">{{ getSelectedHistorialPromesaResumen(promesaSeleccionada.promesaCompacta) || 'Promesa seleccionada' }}</div>
-                          <div class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{{ getSelectedHistorialPromesaFecha(promesaSeleccionada.fecha) }} · {{ promesaSeleccionada.nombreAgente }}</div>
+                          <div class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400" [title]="promesaSeleccionada.nombreAgente">{{ truncateText(promesaSeleccionada.nombreAgente, 50) }}</div>
                         </div>
                         <button
                           type="button"
@@ -6750,12 +6750,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected getSelectedHistorialPromesaResumen(promesaCompacta: string | undefined): string {
     if (!promesaCompacta) return '';
     const parts = promesaCompacta.split(' · ').filter(Boolean);
-    return parts.slice(0, 2).join(' · ');
+    return parts[0] || '';
   }
 
-  protected getSelectedHistorialPromesaFecha(fecha: string | undefined): string {
-    if (!fecha) return '-';
-    return fecha.split(' ')[0] || fecha;
+  protected truncateText(value: string | undefined, maxLength: number): string {
+    if (!value) return '-';
+    if (value.length <= maxLength) return value;
+    return `${value.slice(0, maxLength).trimEnd()}...`;
   }
 
   protected isSelectedHistorialPromesaLoading(): boolean {
