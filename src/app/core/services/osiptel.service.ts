@@ -1,67 +1,50 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, of, shareReplay } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
 
 /**
- * DTO devuelto por web-service-cashi:
- *   GET /api/v1/osiptel/validations/{phone}
- *
- * Estado especial 'NOT_CHECKED' = aún no se validó el número en Osiptel.
+ * Modelo NO-ortogonal V17+:
+ * el estado Osiptel vive en metodos_contacto.estado_osiptel y viaja en el
+ * JSON del cliente como `contactMethod.estadoOsiptel`. Este service ya NO
+ * hace HTTP — es un helper puro de presentacion que clasifica el string
+ * en CSS classes y labels para los badges.
  */
-export interface OsiptelValidation {
-  phone: string;
-  status:
-    | 'NOT_CHECKED'
-    | 'PENDING'
-    | 'IN_PROGRESS'
-    | 'OK'
-    | 'NOT_FOUND'
-    | 'FAILED'
-    | 'EXPIRED';
-  dniMatch: boolean | null;
-  operator: 'CLARO' | 'MOVISTAR' | 'ENTEL' | 'BITEL' | 'OTRO' | null;
-  checkedAt: string | null;
-  cooldownUntil: string | null;
-  attempts: number;
+export type EstadoOsiptel = 'SIN_VALIDAR' | 'VALIDADO' | 'NO_VALIDADO';
+
+export interface OsiptelBadge {
+  label: string;
+  /** Clases Tailwind para el span del badge. */
+  classes: string;
+  tooltip: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class OsiptelService {
-  private readonly apiUrl = `${environment.webServiceUrl}/api/v1/osiptel`;
-  private readonly cache = new Map<string, Observable<OsiptelValidation | null>>();
-
-  constructor(private http: HttpClient) {}
-
   /**
-   * Devuelve la última validación conocida para un teléfono.
-   * Si el backend está bloqueado por Legal (HTTP 423) o el endpoint no existe (404),
-   * retorna null silenciosamente para no romper la pantalla.
-   *
-   * Cachea el observable por número durante la vida del componente (shareReplay).
+   * Mapea el estado_osiptel del backend a la presentacion visual.
+   * Si el estado es SIN_VALIDAR o undefined, devuelve null (no se muestra badge).
    */
-  getValidation(phone: string): Observable<OsiptelValidation | null> {
-    if (!phone || !/^9\d{8}$/.test(phone)) {
-      return of(null);
+  badgeFor(estado: EstadoOsiptel | string | undefined | null): OsiptelBadge | null {
+    switch (estado) {
+      case 'VALIDADO':
+        return {
+          label: 'Titular ✓',
+          tooltip: 'Validado en Osiptel: el cliente es titular de esta linea',
+          classes:
+            'inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded ' +
+            'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 ' +
+            'border border-emerald-300 dark:border-emerald-600/50',
+        };
+      case 'NO_VALIDADO':
+        return {
+          label: 'No titular',
+          tooltip: 'Validado en Osiptel: la linea NO esta registrada al cliente',
+          classes:
+            'inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded ' +
+            'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ' +
+            'border border-amber-300 dark:border-amber-600/50',
+        };
+      default:
+        // SIN_VALIDAR o desconocido -> sin badge
+        return null;
     }
-    const cached = this.cache.get(phone);
-    if (cached) return cached;
-
-    const obs = this.http
-      .get<OsiptelValidation>(`${this.apiUrl}/validations/${encodeURIComponent(phone)}`)
-      .pipe(
-        catchError(() => of(null)),
-        shareReplay({ bufferSize: 1, refCount: false })
-      );
-    this.cache.set(phone, obs);
-    return obs;
-  }
-
-  /**
-   * Invalida el cache del frontend para un número (útil tras un re-encolado manual).
-   */
-  invalidate(phone: string): void {
-    this.cache.delete(phone);
   }
 }

@@ -1,11 +1,10 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CustomerService, CustomerResource, PagosClienteResponse, GrupoPagos } from '../../services/customer.service';
+import { CustomerService, CustomerResource, ContactMethodResource, PagosClienteResponse, GrupoPagos } from '../../services/customer.service';
 import { ApiSystemConfigService } from '../../../collection-management/services/api-system-config.service';
 import { ManagementService, CreateManagementRequest } from '../../../collection-management/services/management.service';
-import { OsiptelService, OsiptelValidation } from '../../../core/services/osiptel.service';
-import { Observable } from 'rxjs';
+import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.service';
 
 @Component({
   selector: 'app-customer-view',
@@ -379,16 +378,8 @@ import { Observable } from 'rxjs';
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
                               <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
-                              @if (getOsiptelStatus(contact.value) | async; as osiptel) {
-                                @if (osiptel.status === 'OK' && osiptel.dniMatch === true) {
-                                  <span class="inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600/50" [title]="'Osiptel ' + (osiptel.operator || '') + ' · ' + (osiptel.checkedAt || '')">Titular ✓</span>
-                                } @else if (osiptel.status === 'OK' && osiptel.dniMatch === false) {
-                                  <span class="inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600/50" [title]="'Línea registrada a nombre distinto · ' + (osiptel.operator || '')">No titular</span>
-                                } @else if (osiptel.status === 'NOT_FOUND') {
-                                  <span class="inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded bg-slate-100 dark:bg-slate-700/40 text-slate-600 dark:text-slate-300" title="Osiptel no encontró este número">Sin registro</span>
-                                } @else if (osiptel.status === 'PENDING' || osiptel.status === 'IN_PROGRESS') {
-                                  <span class="inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" title="Validación en curso">Validando…</span>
-                                }
+                              @if (osiptelBadge(contact); as badge) {
+                                <span [class]="badge.classes" [title]="badge.tooltip">{{ badge.label }}</span>
                               }
                             </div>
                           }
@@ -497,12 +488,8 @@ import { Observable } from 'rxjs';
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
                               <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
-                              @if (getOsiptelStatus(contact.value) | async; as osiptel) {
-                                @if (osiptel.status === 'OK' && osiptel.dniMatch === true) {
-                                  <span class="inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600/50" [title]="'Osiptel ' + (osiptel.operator || '') + ' · ' + (osiptel.checkedAt || '')">Titular ✓</span>
-                                } @else if (osiptel.status === 'OK' && osiptel.dniMatch === false) {
-                                  <span class="inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600/50" title="Línea registrada a nombre distinto">Otra persona</span>
-                                }
+                              @if (osiptelBadge(contact); as badge) {
+                                <span [class]="badge.classes" [title]="badge.tooltip">{{ badge.label }}</span>
                               }
                             </div>
                           }
@@ -1649,22 +1636,16 @@ export class CustomerViewComponent implements OnInit {
   }
 
   // ============================
-  // Osiptel: validación de titularidad por teléfono
+  // Osiptel V17+: estado viene en el mismo metodo_contacto (sincrono, sin HTTP).
   // ============================
   private readonly osiptelService = inject(OsiptelService);
-  private readonly osiptelCache = new Map<string, Observable<OsiptelValidation | null>>();
 
   /**
-   * Devuelve un observable cacheado con la última validación Osiptel del número.
-   * Se llama una vez por número durante la vida del componente (no se re-suscribe en cada CD).
-   * Si el endpoint no está disponible o no hay validación, devuelve null silenciosamente.
+   * Devuelve el badge a renderizar para el estado_osiptel del contacto.
+   * null = no se muestra badge (estado SIN_VALIDAR o undefined).
    */
-  getOsiptelStatus(phone: string): Observable<OsiptelValidation | null> {
-    const cached = this.osiptelCache.get(phone);
-    if (cached) return cached;
-    const obs = this.osiptelService.getValidation(phone);
-    this.osiptelCache.set(phone, obs);
-    return obs;
+  osiptelBadge(contact: ContactMethodResource): OsiptelBadge | null {
+    return this.osiptelService.badgeFor(contact.estadoOsiptel);
   }
 
   /**
