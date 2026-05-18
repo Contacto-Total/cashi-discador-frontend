@@ -1,0 +1,182 @@
+<div class="amd-test-container">
+
+  <!-- Header -->
+  <div class="amd-header">
+    <div class="header-left">
+      <lucide-angular name="activity" [size]="28" class="header-icon"></lucide-angular>
+      <h1>AMD Test</h1>
+      <span class="badge-dev">DEV</span>
+    </div>
+    <div class="header-right">
+      @if (jobId) {
+        <button class="btn-reset" (click)="reset()">
+          <lucide-angular name="refresh-cw" [size]="16"></lucide-angular>
+          Nueva prueba
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Drag and drop zone (solo si no hay test en curso) -->
+  @if (!jobId) {
+    <div
+      class="drop-zone"
+      [class.dragging]="isDragging"
+      [class.has-file]="selectedFile"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+    >
+      <input
+        type="file"
+        id="file-input"
+        accept=".wav,audio/wav"
+        (change)="onFileInput($event)"
+        style="display: none"
+      />
+      <label for="file-input" class="drop-label">
+        <lucide-angular name="upload-cloud" [size]="48"></lucide-angular>
+        @if (!uploading) {
+          <p class="drop-title">Arrastra un archivo .wav aquí</p>
+          <p class="drop-subtitle">o haz click para seleccionar</p>
+        } @else {
+          <p class="drop-title">Subiendo...</p>
+        }
+      </label>
+
+      @if (uploadError) {
+        <div class="upload-error">
+          <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+          {{ uploadError }}
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Info del job + WAV -->
+  @if (jobId) {
+    <div class="job-info">
+      <div class="job-info-row">
+        <span class="label">Job ID:</span>
+        <span class="value mono">{{ jobId }}</span>
+      </div>
+      @if (wavInfo) {
+        <div class="job-info-row">
+          <span class="label">Audio:</span>
+          <span class="value">
+            {{ wavInfo['sr'] }} Hz, {{ wavInfo['ch'] }} canal{{ wavInfo['ch'] > 1 ? 'es' : '' }},
+            {{ formatBytes(wavInfo['bytes']) }}
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Decisión final destacada -->
+  @if (decision) {
+    <div class="decision-card" [class.machine]="decision['decision']?.result === 'MACHINE'" [class.human]="decision['decision']?.result === 'HUMAN'">
+      <div class="decision-header">
+        <lucide-angular [name]="decision['decision']?.result === 'HUMAN' ? 'user-check' : 'voicemail'" [size]="32"></lucide-angular>
+        <span class="decision-result">{{ decision['decision']?.result || 'UNKNOWN' }}</span>
+      </div>
+      <div class="decision-details">
+        <div><strong>Confianza:</strong> {{ decision['decision']?.confidence | number:'1.2-2' }}</div>
+        <div><strong>Razón:</strong> {{ decision['decision']?.reason || '—' }}</div>
+        <div><strong>Gatillado por:</strong> {{ decision['decision']?.triggered_by || '—' }}</div>
+        <div><strong>Último delta:</strong> {{ decision['decision']?.last_delta_from || '—' }}</div>
+        @if (decision['decision']?.transcription) {
+          <div><strong>Transcripción:</strong> "{{ decision['decision']?.transcription }}"</div>
+        }
+        <div><strong>Decisión en:</strong> chunk {{ decision['decision']?.decided_at_chunk ?? decision['decided_at_chunk'] }} / {{ decision['decision']?.decided_at_ms ?? decision['decided_at_ms'] }} ms</div>
+        <div><strong>Audio acumulado:</strong> {{ formatBytes(decision['decision']?.decided_bytes ?? decision['decided_bytes']) }}</div>
+        <div><strong>Scores:</strong> H={{ decision['decision']?.scores?.human | number:'1.2-2' }} / B={{ decision['decision']?.scores?.buzon | number:'1.2-2' }}</div>
+      </div>
+      @if (decision['decision']?.contrib_human || decision['decision']?.contrib_buzon) {
+        <div class="contrib-grid">
+          <div class="contrib-col">
+            <div class="contrib-title">Contribución HUMAN</div>
+            <div>rms: {{ decision['decision']?.contrib_human?.rms | number:'1.2-2' }}</div>
+            <div>goertzel: {{ decision['decision']?.contrib_human?.goertzel | number:'1.2-2' }}</div>
+            <div>vad: {{ decision['decision']?.contrib_human?.vad | number:'1.2-2' }}</div>
+            <div>f0: {{ decision['decision']?.contrib_human?.f0 | number:'1.2-2' }}</div>
+          </div>
+          <div class="contrib-col">
+            <div class="contrib-title">Contribución BUZON</div>
+            <div>rms: {{ decision['decision']?.contrib_buzon?.rms | number:'1.2-2' }}</div>
+            <div>goertzel: {{ decision['decision']?.contrib_buzon?.goertzel | number:'1.2-2' }}</div>
+            <div>vad: {{ decision['decision']?.contrib_buzon?.vad | number:'1.2-2' }}</div>
+            <div>f0: {{ decision['decision']?.contrib_buzon?.f0 | number:'1.2-2' }}</div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Tabla de eventos en vivo -->
+  @if (events.length > 0) {
+    <div class="events-section">
+      <h3 class="section-title">
+        <lucide-angular name="list" [size]="18"></lucide-angular>
+        Eventos en tiempo real ({{ events.length }})
+        @if (!finished) {
+          <span class="pulse-dot"></span>
+          <span class="live-label">LIVE</span>
+        }
+      </h3>
+      <div class="events-table-wrapper">
+        <table class="events-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Timestamp</th>
+              <th>Tipo</th>
+              <th>Chunk</th>
+              <th>Size</th>
+              <th>Elapsed</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (event of events; track $index) {
+              <tr [class]="eventClass(event['type'])">
+                <td>{{ $index + 1 }}</td>
+                <td class="mono">{{ event['ts']?.substring(11, 23) }}</td>
+                <td><span class="type-badge">{{ event['type'] }}</span></td>
+                <td>{{ event['n'] || '—' }}</td>
+                <td>{{ event['size'] ? formatBytes(event['size']) : '—' }}</td>
+                <td>{{ event['elapsed_ms'] !== undefined ? event['elapsed_ms'] + ' ms' : '—' }}</td>
+                <td class="event-detail">
+                  @if (event['type'] === 'decision') {
+                    <strong>{{ event['decision']?.result }}</strong> — {{ event['decision']?.reason }}
+                    @if (event['decision']?.triggered_by) {
+                      <span class="muted"> · by {{ event['decision']?.triggered_by }}</span>
+                    }
+                  } @else if (event['type'] === 'analysis') {
+                    <span class="mono">
+                      rms={{ event['models']?.rms?.value }}
+                      goe={{ event['models']?.goertzel?.value }}
+                      vad={{ event['models']?.vad?.value }}
+                      f0={{ event['models']?.f0?.value }}Hz
+                      · H={{ event['scores']?.human | number:'1.2-2' }}
+                      B={{ event['scores']?.buzon | number:'1.2-2' }}
+                    </span>
+                  } @else if (event['msg']) {
+                    {{ event['msg'] }}
+                  } @else if (event['note']) {
+                    {{ event['note'] }}
+                  } @else if (event['url']) {
+                    <span class="mono">{{ event['url'] }}</span>
+                  } @else if (event['type'] === 'wav_info') {
+                    {{ event['sr'] }} Hz, {{ event['ch'] }} ch
+                  } @else if (event['type'] === 'whisper_running') {
+                    transcribiendo con Whisper...
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>

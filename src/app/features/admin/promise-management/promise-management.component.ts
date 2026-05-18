@@ -38,6 +38,10 @@ export class PromiseManagementComponent implements OnInit {
 
   // Cuotas expandidas
   expandedPromesas = signal<Set<number>>(new Set());
+  reprogrammingCuotaId = signal<number | null>(null);
+  reprogramDateDraft = signal<string>('');
+  reprogrammingPromesaId = signal<number | null>(null);
+  reprogramResult = signal<{ type: 'success' | 'error'; message: string } | null>(null);
 
   constructor(
     private promiseService: PromiseManagementService,
@@ -167,6 +171,140 @@ export class PromiseManagementComponent implements OnInit {
     return this.expandedPromesas().has(idGestion);
   }
 
+  canReprogramInstallment(cuota: any): boolean {
+    return cuota?.estado === 'PENDIENTE' || cuota?.estado === 'PARCIAL';
+  }
+
+  isReprogrammingCuota(idGestion: number, cuotaId: number): boolean {
+    return this.reprogrammingPromesaId() === idGestion && this.reprogrammingCuotaId() === cuotaId;
+  }
+
+  startReprogrammingCuota(promesa: PromesaGestion, cuota: any): void {
+    this.reprogrammingPromesaId.set(promesa.idGestion);
+    this.reprogrammingCuotaId.set(cuota.id);
+    this.reprogramDateDraft.set((cuota?.fechaPromesa || '').split('T')[0] || '');
+    this.error.set(null);
+    this.successMessage.set(null);
+  }
+
+  cancelReprogrammingCuota(): void {
+    this.reprogrammingPromesaId.set(null);
+    this.reprogrammingCuotaId.set(null);
+    this.reprogramDateDraft.set('');
+  }
+
+  closeReprogramResultPopup(): void {
+    this.reprogramResult.set(null);
+  }
+
+  getMinReprogramDate(cuota: any, promesa: PromesaGestion): string {
+    const today = new Date();
+    const minDate = new Date(today);
+    const cuotas = promesa?.cuotas || [];
+    const currentIndex = cuotas.findIndex((c: any) => c?.id === cuota?.id);
+    const previous = currentIndex > 0 ? cuotas[currentIndex - 1] : null;
+    const prevDateStr = previous?.fechaPromesa;
+
+    if (prevDateStr) {
+      const prevDate = new Date(prevDateStr);
+      if (!isNaN(prevDate.getTime()) && prevDate > minDate) {
+        minDate.setTime(prevDate.getTime());
+      }
+    }
+
+    return minDate.toISOString().split('T')[0];
+  }
+
+  getMaxReprogramDate(cuota: any, promesa: PromesaGestion): string {
+    const today = new Date();
+    const cuotas = promesa?.cuotas || [];
+    const currentIndex = cuotas.findIndex((c: any) => c?.id === cuota?.id);
+    const nextInstallment = currentIndex >= 0 ? cuotas[currentIndex + 1] : null;
+    const previousInstallment = currentIndex > 0 ? cuotas[currentIndex - 1] : null;
+    const nextDateStr = nextInstallment?.fechaPromesa;
+    const currentDateStr = cuota?.fechaPromesa;
+    const maxDate = new Date(today);
+
+    if (nextDateStr) {
+      const nextDate = new Date(nextDateStr);
+      if (!isNaN(nextDate.getTime())) {
+        const maxBeforeNext = new Date(nextDate);
+        maxBeforeNext.setDate(maxBeforeNext.getDate() - 4);
+        maxDate.setTime(maxBeforeNext.getTime());
+      }
+    } else if (currentDateStr) {
+      const isLastInstallment = currentIndex >= 0 && currentIndex === cuotas.length - 1;
+      const hasMultipleInstallments = cuotas.length > 1;
+
+      if (isLastInstallment && hasMultipleInstallments && previousInstallment?.fechaPromesa) {
+        const previousDate = new Date(previousInstallment.fechaPromesa);
+        if (!isNaN(previousDate.getTime())) {
+          const endOfNextMonth = new Date(previousDate.getFullYear(), previousDate.getMonth() + 2, 0);
+          maxDate.setTime(endOfNextMonth.getTime());
+        }
+      } else {
+        const currentDate = new Date(currentDateStr);
+        if (!isNaN(currentDate.getTime())) {
+          const maxByCurrentInstallment = new Date(currentDate);
+          maxByCurrentInstallment.setDate(maxByCurrentInstallment.getDate() + 30);
+          maxDate.setTime(maxByCurrentInstallment.getTime());
+        }
+      }
+    } else {
+      maxDate.setDate(maxDate.getDate() + 30);
+    }
+
+    return maxDate.toISOString().split('T')[0];
+  }
+
+  confirmReprogramacion(promesa: PromesaGestion, cuota: any): void {
+    const selectedDate = this.reprogramDateDraft();
+    if (!selectedDate) {
+      this.error.set('Selecciona una fecha para reprogramar la cuota');
+      return;
+    }
+
+    const minDate = this.getMinReprogramDate(cuota, promesa);
+    const maxDate = this.getMaxReprogramDate(cuota, promesa);
+    if (selectedDate < minDate || selectedDate > maxDate) {
+      this.error.set(`Fecha no valida. Debe estar entre ${minDate} y ${maxDate}`);
+      return;
+    }
+
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser?.id || !promesa?.idGestion || !cuota?.id) {
+      this.error.set('No se pudo identificar el registro o la cuota a reprogramar');
+      return;
+    }
+
+    this.promiseService.reprogramarPromesa(promesa.idGestion, {
+      cuotaId: Number(cuota.id),
+      nuevaFechaPromesa: selectedDate,
+      motivo: '',
+      observaciones: promesa.observaciones || null,
+      solicitadoPorUsuarioId: Number(currentUser.id),
+      solicitadoPorNombre: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username,
+      forzarSupervision: false
+    }).subscribe({
+      next: () => {
+        this.reprogramResult.set({ type: 'success', message: `Cuota ${cuota.numeroCuota} reprogramada correctamente` });
+        this.cancelReprogrammingCuota();
+        this.loadPromesas();
+      },
+      error: (err) => {
+        console.error('Error reprogramando promesa:', err);
+        this.reprogramResult.set({
+          type: 'error',
+          message:
+            err?.error?.message ||
+            err?.error?.mensaje ||
+            err?.error?.error ||
+            'No se pudo reprogramar la fecha de pago'
+        });
+      }
+    });
+  }
+
   // Helpers
   getEstadoPagoColor(estado: string): string {
     switch (estado) {
@@ -199,7 +337,13 @@ export class PromiseManagementComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
+    let date: Date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      date = new Date(year, month - 1, day);
+    } else {
+      date = new Date(dateStr);
+    }
     return date.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
