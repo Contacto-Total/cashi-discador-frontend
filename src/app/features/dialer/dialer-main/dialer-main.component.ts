@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { LucideAngularModule } from 'lucide-angular';
 import { MatChipsModule } from '@angular/material/chips';
-import { firstValueFrom, Subscription, interval } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { CallService } from '../../../core/services/call.service';
 import { ContactService } from '../../../core/services/contact.service';
@@ -13,7 +13,6 @@ import { WebrtcService, CallState } from '../../../core/services/webrtc.service'
 import { AgentService } from '../../../core/services/agent.service';
 import { SipService } from '../../../core/services/sip.service';
 import { ErrorModalService } from '../../../shared/services/error-modal.service';
-import { CustomerService } from '../../../customers/services/customer.service';
 import { Contact } from '../../../core/models/contact.model';
 import { Call, CallEvent, CallEventType, CallStatus, MakeCallRequest } from '../../../core/models/call.model';
 import { AgentState } from '../../../core/models/agent-status.model';
@@ -59,8 +58,7 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     private webrtcService: WebrtcService,
     private agentService: AgentService,
     private sipService: SipService,
-    private errorModalService: ErrorModalService,
-    private customerService: CustomerService
+    private errorModalService: ErrorModalService
   ) {}
 
   ngOnInit(): void {
@@ -267,13 +265,9 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     // para que collection-management pueda cargar datos del cliente
     this.sipService.setCurrentOutgoingNumber(phoneNumber);
 
-    const customerContext = await this.resolveCustomerForManualCall(phoneNumber);
-
     const request: MakeCallRequest = {
       agentId: this.agentId,
       phoneNumber: phoneNumber,
-      idCliente: customerContext.idCliente,
-      documento: customerContext.documento,
       contactId: undefined,
       campaignId: this.campaignId || undefined
     };
@@ -314,26 +308,6 @@ export class DialerMainComponent implements OnInit, OnDestroy {
       console.error('Error in makeCall:', error);
       this.loading = false;
     }
-  }
-
-  private async resolveCustomerForManualCall(phoneNumber: string): Promise<{ idCliente?: number; documento?: string }> {
-    try {
-      const customers = await firstValueFrom(
-        this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber)
-      );
-
-      if (customers && customers.length > 0) {
-        const customer = customers[0];
-        return {
-          idCliente: customer.id || undefined,
-          documento: customer.documentNumber || undefined
-        };
-      }
-    } catch (error) {
-      console.error('[Dialer] Error resolviendo cliente para llamada manual:', error);
-    }
-
-    return {};
   }
 
   hangupCall(): void {

@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
-import { map } from 'rxjs/operators';
 
 import { ClientSearchService, DynamicClient, GlobalSearchResult } from '../../core/services/client-search.service';
 import { AgentStatusService } from '../../core/services/agent-status.service';
@@ -26,8 +25,8 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   searching = signal(false);
   searchError = signal('');
 
-  // Resultados encontrados (para mostrar contexto antes de navegar)
-  foundResults = signal<GlobalSearchResult[]>([]);
+  // Resultado encontrado (para mostrar contexto antes de navegar)
+  foundResult = signal<GlobalSearchResult | null>(null);
 
   private previousState: string | null = null;
 
@@ -82,14 +81,14 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
   onSearchInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchValue.set(value);
-    this.foundResults.set([]);
+    this.foundResult.set(null);
     this.searchError.set('');
   }
 
   setSearchType(type: 'documento' | 'telefono'): void {
     this.searchType.set(type);
     this.searchValue.set('');
-    this.foundResults.set([]);
+    this.foundResult.set(null);
     this.searchError.set('');
   }
 
@@ -114,16 +113,16 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
 
     this.searching.set(true);
     this.searchError.set('');
-    this.foundResults.set([]);
+    this.foundResult.set(null);
 
     const obs = this.searchType() === 'documento'
-      ? this.clientSearchService.findClientGlobal(value).pipe(map(result => [result]))
+      ? this.clientSearchService.findClientGlobal(value)
       : this.clientSearchService.findClientGlobalByPhone(value);
 
     obs.subscribe({
-      next: (results: GlobalSearchResult[]) => {
+      next: (result) => {
         this.searching.set(false);
-        this.foundResults.set(results.filter(r => r && r.clientData && r.clientData.documento));
+        this.foundResult.set(result);
       },
       error: (err) => {
         this.searching.set(false);
@@ -139,8 +138,9 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     });
   }
 
-  goToManagement(result: GlobalSearchResult): void {
-    if (!result?.clientData?.documento) return;
+  goToManagement(): void {
+    const result = this.foundResult();
+    if (!result) return;
 
     this.router.navigate(['/collection-management'], {
       queryParams: {
@@ -155,7 +155,7 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
 
   clearSearch(): void {
     this.searchValue.set('');
-    this.foundResults.set([]);
+    this.foundResult.set(null);
     this.searchError.set('');
   }
 

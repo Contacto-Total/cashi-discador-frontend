@@ -8,11 +8,11 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
   },
-//  {
-//    path: 'dialer',
-//    loadComponent: () => import('./features/dialer/dialer-main/dialer-main.component').then(m => m.DialerMainComponent),
-//    canActivate: [authGuard]
-//  },
+  {
+    path: 'dialer',
+    loadComponent: () => import('./features/dialer/dialer-main/dialer-main.component').then(m => m.DialerMainComponent),
+    canActivate: [authGuard]
+  },
   {
     path: 'admin/monitoring',
     loadComponent: () => import('./features/admin/admin-monitoring/admin-monitoring.component').then(m => m.AdminMonitoringComponent),
@@ -351,11 +351,6 @@ export const routes: Routes = [
   {
     path: 'admin/recordings',
     loadComponent: () => import('./features/admin/admin-recordings/admin-recordings.component').then(m => m.AdminRecordingsComponent),
-    canActivate: [authGuard, adminOrSupervisorGuard]
-  },
-  {
-    path: 'admin/amd-test',
-    loadComponent: () => import('./features/admin/amd-test/amd-test.component').then(m => m.AmdTestComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
 

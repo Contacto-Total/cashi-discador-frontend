@@ -4,12 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, firstValueFrom, of, Subscription } from 'rxjs';
+import { catchError, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
 import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse } from '../services/management.service';
-import { PaymentScheduleService, InstallmentResource } from '../services/payment-schedule.service';
+import { PaymentScheduleService } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
 import { CustomerData, TelefonoMetodo } from '../models/customer.model';
@@ -65,27 +65,6 @@ import { CallService } from '../../core/services/call.service';
             <div>
               <div class="font-bold">¡Gestión Guardada!</div>
               <div class="text-sm opacity-90">Los datos se registraron correctamente</div>
-            </div>
-          </div>
-        </div>
-      }
-
-      @if (showPhoneDuplicateCard()) {
-        <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 px-4">
-          <div class="w-full max-w-md rounded-xl border border-amber-300 bg-white shadow-2xl dark:border-amber-800 dark:bg-slate-900 animate-[slideInUp_0.25s_ease-out]">
-            <div class="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/40">
-              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">Teléfono duplicado</h3>
-            </div>
-            <div class="px-4 py-3">
-              <p class="text-sm text-slate-700 dark:text-slate-200">{{ phoneDuplicateMessage() }}</p>
-            </div>
-            <div class="flex justify-end border-t border-slate-200 px-4 py-3 dark:border-slate-800">
-              <button
-                (click)="closePhoneDuplicateCard()"
-                class="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-700"
-              >
-                Entendido
-              </button>
             </div>
           </div>
         </div>
@@ -1370,7 +1349,7 @@ import { CallService } from '../../core/services/call.service';
               </div>
             }
           </div>
-          <div class="flex-1 overflow-hidden">
+          <div class="flex-1 overflow-auto">
             <!-- TAB ACTUAL -->
             @if (historialTabActivo() === 'actual') {
               @if (historialGestiones().length === 0) {
@@ -1382,122 +1361,63 @@ import { CallService } from '../../core/services/call.service';
                   No hay gestiones con el filtro seleccionado
                 </div>
               } @else {
-                <div class="flex h-full overflow-hidden">
-                  <div class="min-w-0 flex-1 overflow-auto">
-                    <table class="text-xs table-auto" style="min-width: max-content;">
-                      <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
-                        <tr class="text-left text-slate-600 dark:text-slate-300">
-                          @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
-                            <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
-                                [class.text-center]="col === 'Estado'">
-                              {{ col }}
-                              <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/50"
-                                   (mousedown)="onResizeStart($event, i)"></div>
-                            </th>
-                          }
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (gestion of historialGestionesFiltrado(); track gestion.id) {
-                          <tr
-                            (click)="toggleHistorialPromesaDetalle(gestion)"
-                            [class]="'border-b border-slate-100 dark:border-slate-700/50 transition-colors ' +
-                              (isHistorialPromesaSelected(gestion)
-                                ? 'bg-blue-100 dark:bg-blue-950/40'
-                                : gestion.hasSchedule
-                                  ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20')"
-                          >
-                            <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
-                            <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
-                            <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
-                              <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
-                                {{ gestion.tipificacionCompleta }}
-                              </span>
-                            </td>
-                            <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                            <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
-                              @if (gestion.promesaCompacta) {
-                                <span class="block truncate text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
-                              } @else {
-                                <span class="text-slate-400 dark:text-slate-600">-</span>
-                              }
-                            </td>
-                            <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
-                              {{ gestion.observacion || '-' }}
-                            </td>
-                            <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
-                              @if (gestion.estadoPago) {
-                                <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                                  (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                                   gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                                   gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                                   gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                                   'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                                  {{ gestion.estadoPagoDisplay }}
-                                </span>
-                              } @else {
-                                <span class="text-slate-400 dark:text-slate-600">-</span>
-                              }
-                            </td>
-                            <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[7]">
-                              <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
-                                {{ gestion.via }}
-                              </span>
-                            </td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-
-                  @if (selectedHistorialPromesaGestion(); as promesaSeleccionada) {
-                    <aside class="w-[248px] shrink-0 border-l border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/40 flex flex-col">
-                      <div class="px-2.5 py-2 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                          <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle de cuotas</div>
-                          <div class="mt-0.5 truncate text-[13px] font-semibold text-green-700 dark:text-green-400">{{ getSelectedHistorialPromesaResumen(promesaSeleccionada.promesaCompacta) || 'Promesa seleccionada' }}</div>
-                          <div class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400" [title]="promesaSeleccionada.nombreAgente">{{ truncateText(promesaSeleccionada.nombreAgente, 50) }}</div>
-                        </div>
-                        <button
-                          type="button"
-                          (click)="cerrarHistorialPromesaDetalle()"
-                          class="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-                          title="Cerrar detalle"
-                        >
-                          <lucide-angular name="x" [size]="14"></lucide-angular>
-                        </button>
-                      </div>
-
-                      @if (isSelectedHistorialPromesaLoading()) {
-                        <div class="flex-1 flex items-center justify-center px-4 text-xs text-slate-500 dark:text-slate-400">
-                          Cargando cuotas...
-                        </div>
-                      } @else if (getSelectedHistorialPromesaInstallments().length > 0) {
-                        <div class="historial-promesa-scroll flex-1 overflow-y-auto px-1.5 py-1.5">
-                          <div class="grid gap-1" [style.gridTemplateColumns]="getSelectedHistorialPromesaGridTemplate()">
-                            @for (cuota of getSelectedHistorialPromesaInstallments(); track cuota.id) {
-                              <div [class]="'rounded-md border px-2 py-1.5 ' + getHistorialPromesaItemClass(cuota.status, $index)">
-                                <div class="flex items-center justify-between gap-1">
-                                  <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
-                                  <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
-                                </div>
-                                <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                  <span>{{ formatDate(cuota.dueDate) }}</span>
-                                  <span class="font-medium">{{ cuota.statusDescription || cuota.status }}</span>
-                                </div>
-                              </div>
-                            }
-                          </div>
-                        </div>
-                      } @else {
-                        <div class="flex-1 flex items-center justify-center px-4 text-center text-xs text-slate-500 dark:text-slate-400">
-                          No hay cuotas disponibles para esta promesa.
-                        </div>
+                <table class="text-xs table-auto" style="min-width: max-content;">
+                  <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                    <tr class="text-left text-slate-600 dark:text-slate-300">
+                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
+                        <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
+                            [class.text-center]="col === 'Estado'">
+                          {{ col }}
+                          <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/50"
+                               (mousedown)="onResizeStart($event, i)"></div>
+                        </th>
                       }
-                    </aside>
-                  }
-                </div>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (gestion of historialGestionesFiltrado(); track gestion.id) {
+                      <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
+                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
+                          <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                            {{ gestion.tipificacionCompleta }}
+                          </span>
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
+                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
+                          @if (gestion.promesaCompacta) {
+                            <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
+                          } @else {
+                            <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+                        </td>
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
+                          {{ gestion.observacion || '-' }}
+                        </td>
+                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
+                          @if (gestion.estadoPago) {
+                            <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                              (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                               gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                               gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                               gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                               'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                              {{ gestion.estadoPagoDisplay }}
+                            </span>
+                          } @else {
+                            <span class="text-slate-400 dark:text-slate-600">-</span>
+                          }
+                        </td>
+                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[7]">
+                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
+                            {{ gestion.via }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
               }
             } @else {
               <!-- TAB HISTÓRICO -->
@@ -1645,15 +1565,6 @@ import { CallService } from '../../core/services/call.service';
         transform: translateY(0);
       }
     }
-
-    .historial-promesa-scroll {
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .historial-promesa-scroll::-webkit-scrollbar {
-      display: none;
-    }
   `]
 })
 export class CollectionManagementPage implements OnInit, OnDestroy {
@@ -1668,8 +1579,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected showOutputSelector = false; // Para el dropdown de campos del cliente
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
-  protected showPhoneDuplicateCard = signal(false);
-  protected phoneDuplicateMessage = signal('El teléfono ya existe para este cliente.');
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
@@ -1708,7 +1617,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     estadoPago?: string;
     estadoPagoDisplay: string;
     hasSchedule: boolean;
-    grupoPromesaUuid?: string;
     schedule: any;
   }>>([]);
 
@@ -1741,9 +1649,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialHistoricoTotalPages = signal<number>(0);
   protected historialHistoricoTotalElements = signal<number>(0);
   protected historialHistoricoLoading = signal<boolean>(false);
-  protected selectedHistorialPromesaGroupUuid = signal<string | null>(null);
-  protected historialPromesaLoadingByGroupUuid = signal<Record<string, boolean>>({});
-  protected historialPromesaInstallmentsByGroupUuid = signal<Record<string, InstallmentResource[]>>({});
 
   // Computed signal para filtrar el historial según el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
@@ -1766,12 +1671,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
       return true;
     });
-  });
-
-  protected selectedHistorialPromesaGestion = computed(() => {
-    const groupUuid = this.selectedHistorialPromesaGroupUuid();
-    if (!groupUuid) return null;
-    return this.historialGestionesFiltrado().find(g => g.grupoPromesaUuid === groupUuid) || null;
   });
 
   selectedTenantId?: number;
@@ -2240,8 +2139,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Cronogramas de pago activos
   activePaymentSchedules = signal<any[]>([]);
-  reprogrammingCuotaId = signal<number | null>(null);
-  reprogramDateDraft = signal<string>('');
 
   // Cuota seleccionada para cancelación/pago
   selectedInstallmentForCancellation = signal<any | null>(null);
@@ -3487,8 +3384,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           const nextCuota = pendingCuotas[0] || installments[0];
 
           return {
-            id: schedule.id,
-            managementId: schedule.id,
+            id: schedule.scheduleId?.scheduleId || schedule.id,
             grupoPromesaUuid: schedule.scheduleId?.scheduleId,
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
@@ -3508,9 +3404,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        // Filtrar cronogramas que tienen cuotas pendientes
+        // Filtrar cronogramas que tienen cuotas pendientes o vencidas (pago retroactivo)
         const activeSchedules = schedules.filter((s: any) =>
-          s.cuotasPendientes > 0
+          s.cuotasPendientes > 0 ||
+          s.installments?.some((c: any) => c.status === 'VENCIDA' || c.status === 'VENCIDO')
         );
 
         console.log('📅 Cronogramas transformados:', schedules);
@@ -3579,12 +3476,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             estadoPago: m.estadoPago || undefined,
             estadoPagoDisplay: this.formatEstadoPagoDisplay(m.estadoPago),
             hasSchedule: m.typificationRequiresSchedule || false,
-            grupoPromesaUuid: m.grupoPromesaUuid,
             schedule: null as any
           };
         });
 
-        this.selectedHistorialPromesaGroupUuid.set(null);
         this.historialGestiones.set(historial);
       },
       error: (error) => {
@@ -3681,9 +3576,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   cambiarTabHistorial(tab: 'actual' | 'historico') {
     this.historialTabActivo.set(tab);
-    if (tab !== 'actual') {
-      this.selectedHistorialPromesaGroupUuid.set(null);
-    }
 
     // Si cambia a histórico y no hay datos cargados, cargarlos
     if (tab === 'historico' && this.historialHistorico().length === 0) {
@@ -3759,7 +3651,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
     if (agentId) {
-      await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
@@ -3777,29 +3668,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       this.sipService.setRellamadaActive(false);
       this.sipService.clearCurrentOutgoingNumber();
       this.showRellamadaDropdown.set(false);
-    }
-  }
-
-  private async ensureCustomerLoadedForRellamada(phoneNumber: string): Promise<void> {
-    const currentCustomer = this.customerData();
-    if (currentCustomer?.id) {
-      return;
-    }
-
-    try {
-      console.log('🔍 [Rellamada] Resolviendo cliente antes de registrar llamada:', phoneNumber);
-      const customers = await firstValueFrom(
-        this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber)
-      );
-
-      if (customers && customers.length > 0) {
-        this.loadCustomerFromResource(customers[0]);
-        console.log(' [Rellamada] Cliente cargado antes del registro:', customers[0].id);
-      } else {
-        console.warn(' [Rellamada] No se encontró cliente por teléfono; se registrará sin idCliente/documento');
-      }
-    } catch (error) {
-      console.error(' [Rellamada] Error cargando cliente antes del registro:', error);
     }
   }
 
@@ -3998,8 +3866,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       'PAGADA': 'Pagada',
       'VENCIDA': 'Vencida',
       'PARCIAL': 'Parcial',
-      'CANCELADA': 'Cancelada',
-      'EN_EVALUACION': 'En evaluacion'
+      'CANCELADA': 'Anulada'
     };
     return estadoMap[estado] || this.formatSnakeCase(estado);
   }
@@ -6170,126 +6037,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
-  canReprogramInstallment(cuota: any): boolean {
-    if (!cuota) return false;
-    return cuota.status === 'PENDIENTE' || cuota.status === 'PARCIAL';
-  }
-
-  isReprogrammingCuota(cuota: any): boolean {
-    return !!cuota?.id && this.reprogrammingCuotaId() === cuota.id;
-  }
-
-  startReprogrammingCuota(schedule: any, cuota: any): void {
-    if (!this.canReprogramInstallment(cuota)) return;
-    this.reprogrammingCuotaId.set(cuota.id);
-    this.reprogramDateDraft.set((cuota?.dueDate || '').split('T')[0] || '');
-  }
-
-  cancelReprogrammingCuota(): void {
-    this.reprogrammingCuotaId.set(null);
-    this.reprogramDateDraft.set('');
-  }
-
-  getMinReprogramDate(cuota?: any, schedule?: any): string {
-    const today = new Date();
-    const minDate = new Date(today);
-
-    const installments = schedule?.installments || [];
-    const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
-    const previousInstallment = currentIndex > 0 ? installments[currentIndex - 1] : null;
-    const previousDateStr = previousInstallment?.dueDate || previousInstallment?.fechaPromesa;
-
-    if (previousDateStr) {
-      const previousDate = new Date(previousDateStr);
-      if (!isNaN(previousDate.getTime()) && previousDate > minDate) {
-        minDate.setTime(previousDate.getTime());
-      }
-    }
-
-    return minDate.toISOString().split('T')[0];
-  }
-
-  getMaxReprogramDate(cuota: any, schedule: any): string {
-    const today = new Date();
-    const installments = schedule?.installments || [];
-    const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
-    const nextInstallment = currentIndex >= 0 ? installments[currentIndex + 1] : null;
-    const nextDateStr = nextInstallment?.dueDate || nextInstallment?.fechaPromesa;
-    const currentDateStr = cuota?.dueDate || cuota?.fechaPromesa;
-
-    const maxDate = new Date(today);
-
-    if (nextDateStr) {
-      const nextDate = new Date(nextDateStr);
-      if (!isNaN(nextDate.getTime())) {
-        const maxBeforeNext = new Date(nextDate);
-        maxBeforeNext.setDate(maxBeforeNext.getDate() - 4);
-        maxDate.setTime(maxBeforeNext.getTime());
-      }
-    } else if (currentDateStr) {
-      const currentDate = new Date(currentDateStr);
-      if (!isNaN(currentDate.getTime())) {
-        const maxByCurrentInstallment = new Date(currentDate);
-        maxByCurrentInstallment.setDate(maxByCurrentInstallment.getDate() + 30);
-        maxDate.setTime(maxByCurrentInstallment.getTime());
-      }
-    } else {
-      maxDate.setDate(maxDate.getDate() + 30);
-    }
-
-    return maxDate.toISOString().split('T')[0];
-  }
-
-  confirmReprogramacion(schedule: any, cuota: any): void {
-    const selectedDate = this.reprogramDateDraft();
-    if (!selectedDate) {
-      alert('Selecciona una fecha para reprogramar la cuota.');
-      return;
-    }
-
-    const minDate = this.getMinReprogramDate(cuota, schedule);
-    const maxDate = this.getMaxReprogramDate(cuota, schedule);
-    if (selectedDate < minDate || selectedDate > maxDate) {
-      alert(`Fecha no válida. Debe estar entre ${minDate} y ${maxDate}.`);
-      return;
-    }
-
-    const motivo = (window.prompt('Motivo de reprogramación (obligatorio):', 'Reprogramación solicitada por cliente') || '').trim();
-    if (!motivo) {
-      alert('El motivo es obligatorio.');
-      return;
-    }
-
-    const currentUser = this.authService.getCurrentUser();
-    const recordId = Number(schedule?.managementId || schedule?.id);
-    if (!recordId || !cuota?.id) {
-      alert('No se pudo identificar el registro o la cuota a reprogramar.');
-      return;
-    }
-
-    this.managementService.reprogramarPromesa(recordId, {
-      cuotaId: Number(cuota.id),
-      nuevaFechaPromesa: selectedDate,
-      motivo,
-      observaciones: this.managementForm.observaciones || null,
-      solicitadoPorUsuarioId: Number(currentUser?.id || 1),
-      solicitadoPorNombre: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username : 'Sistema',
-      forzarSupervision: false
-    }).subscribe({
-      next: () => {
-        this.cancelReprogrammingCuota();
-        const customerId = this.customerData()?.id;
-        if (customerId) {
-          this.loadActivePaymentSchedules(customerId);
-        }
-      },
-      error: (err) => {
-        console.error('Error reprogramando promesa:', err);
-        alert(err?.error?.mensaje || err?.error?.error || 'No se pudo reprogramar la fecha de pago.');
-      }
-    });
-  }
-
   /**
    * Abre el modal para subir comprobante de pago (con OCR - legacy)
    */
@@ -6676,129 +6423,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
-  protected toggleHistorialPromesaDetalle(gestion: { hasSchedule: boolean; grupoPromesaUuid?: string }): void {
-    if (!gestion.hasSchedule || !gestion.grupoPromesaUuid) return;
-
-    const groupUuid = gestion.grupoPromesaUuid;
-    if (this.selectedHistorialPromesaGroupUuid() === groupUuid) {
-      this.selectedHistorialPromesaGroupUuid.set(null);
-      return;
-    }
-
-    this.selectedHistorialPromesaGroupUuid.set(groupUuid);
-    this.loadHistorialPromesaDetalle(groupUuid);
-  }
-
-  protected cerrarHistorialPromesaDetalle(): void {
-    this.selectedHistorialPromesaGroupUuid.set(null);
-  }
-
-  protected isHistorialPromesaSelected(gestion: { grupoPromesaUuid?: string }): boolean {
-    return !!gestion.grupoPromesaUuid && this.selectedHistorialPromesaGroupUuid() === gestion.grupoPromesaUuid;
-  }
-
-  private loadHistorialPromesaDetalle(groupUuid: string): void {
-    const cache = this.historialPromesaInstallmentsByGroupUuid();
-    if (cache[groupUuid]) return;
-
-    const loading = this.historialPromesaLoadingByGroupUuid();
-    this.historialPromesaLoadingByGroupUuid.set({ ...loading, [groupUuid]: true });
-
-    this.typificationV2Service.getPaymentScheduleByGroup(groupUuid).subscribe({
-      next: (rows) => {
-        const cuotasPromesa = (rows || []).flatMap((registro: any) => registro?.cuotasPromesa || []);
-
-        const mappedInstallments: InstallmentResource[] = cuotasPromesa
-          .map((cuota: any) => ({
-            id: cuota.id,
-            installmentNumber: cuota.numeroCuota || cuota.installmentNumber || 0,
-            amount: cuota.montoPromesa || cuota.monto || cuota.amount || 0,
-            dueDate: cuota.fechaPromesa || cuota.fechaPago || cuota.dueDate || '',
-            paidDate: cuota.fechaPagoReal || cuota.paidDate,
-            status: cuota.estado || cuota.status || 'PENDIENTE',
-            statusDescription: this.formatEstadoPagoDisplay(cuota.estado || cuota.status || 'PENDIENTE')
-          }))
-          .sort((a, b) => a.installmentNumber - b.installmentNumber);
-
-        const current = this.historialPromesaInstallmentsByGroupUuid();
-        this.historialPromesaInstallmentsByGroupUuid.set({ ...current, [groupUuid]: mappedInstallments });
-
-        const nextLoading = this.historialPromesaLoadingByGroupUuid();
-        this.historialPromesaLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
-      },
-      error: (err) => {
-        console.error('[HISTORIAL] Error cargando detalle de cuotas por grupo:', err);
-        const nextLoading = this.historialPromesaLoadingByGroupUuid();
-        this.historialPromesaLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
-      }
-    });
-  }
-
-  protected getSelectedHistorialPromesaColumnCount(): number {
-    const count = this.getSelectedHistorialPromesaInstallments().length;
-    if (count > 24) return 3;
-    if (count > 12) return 2;
-    return 1;
-  }
-
-  protected getSelectedHistorialPromesaGridTemplate(): string {
-    const cols = this.getSelectedHistorialPromesaColumnCount();
-    return `repeat(${cols}, minmax(0, 1fr))`;
-  }
-
-  protected getSelectedHistorialPromesaResumen(promesaCompacta: string | undefined): string {
-    if (!promesaCompacta) return '';
-    const parts = promesaCompacta.split(' · ').filter(Boolean);
-    return parts[0] || '';
-  }
-
-  protected truncateText(value: string | undefined, maxLength: number): string {
-    if (!value) return '-';
-    if (value.length <= maxLength) return value;
-    return `${value.slice(0, maxLength).trimEnd()}...`;
-  }
-
-  protected isSelectedHistorialPromesaLoading(): boolean {
-    const groupUuid = this.selectedHistorialPromesaGroupUuid();
-    if (!groupUuid) return false;
-    return !!this.historialPromesaLoadingByGroupUuid()[groupUuid];
-  }
-
-  protected getSelectedHistorialPromesaInstallments(): InstallmentResource[] {
-    const groupUuid = this.selectedHistorialPromesaGroupUuid();
-    if (!groupUuid) return [];
-    return this.historialPromesaInstallmentsByGroupUuid()[groupUuid] || [];
-  }
-
-  protected getHistorialPromesaItemClass(status: string | undefined, index: number): string {
-    if (status === 'PENDIENTE' && index === this.getSelectedHistorialPromesaFirstPendingIndex()) {
-      return 'border-blue-300 bg-blue-100 dark:border-blue-800/70 dark:bg-blue-900/35';
-    }
-
-    switch (status) {
-      case 'PAGADA':
-        return 'border-green-300 bg-green-100 dark:border-green-800/70 dark:bg-green-900/35';
-      case 'VENCIDA':
-        return 'border-red-300 bg-red-100 dark:border-red-800/70 dark:bg-red-900/35';
-      case 'PARCIAL':
-        return 'border-orange-300 bg-orange-100 dark:border-orange-800/70 dark:bg-orange-900/35';
-      case 'CANCELADA':
-      case 'EN_EVALUACION':
-        return 'border-sky-300 bg-sky-100 dark:border-sky-800/70 dark:bg-sky-900/35';
-      case 'PENDIENTE':
-      default:
-        return 'border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80';
-    }
-  }
-
-  private getSelectedHistorialPromesaFirstPendingIndex(): number {
-    return this.getSelectedHistorialPromesaInstallments().findIndex(cuota => cuota.status === 'PENDIENTE');
-  }
-
-  closePhoneDuplicateCard(): void {
-    this.showPhoneDuplicateCard.set(false);
-  }
-
   guardarNuevoTelefono(): void {
     const valor = (this.newPhoneNumber || '').trim();
     if (!this.isValidCellphone(valor)) return;
@@ -6831,11 +6455,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.savingPhone.set(false);
         const msg = err.error?.error || 'Error al agregar teléfono';
         console.error('❌ Error agregando teléfono:', msg);
-        if ((msg || '').toLowerCase().includes('ya existe para este cliente')) {
-          this.phoneDuplicateMessage.set(msg);
-          this.showPhoneDuplicateCard.set(true);
-          return;
-        }
         alert(msg);
       }
     });

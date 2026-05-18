@@ -4,16 +4,6 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { AnularPromesaRequest, PageResponse, PromesaGestion } from '../models/promise.model';
 
-export interface ReprogramarPromesaRequest {
-  cuotaId: number;
-  nuevaFechaPromesa: string;
-  motivo: string;
-  observaciones?: string | null;
-  solicitadoPorUsuarioId: number;
-  solicitadoPorNombre: string;
-  forzarSupervision?: boolean;
-}
-
 @Injectable({
   providedIn: 'root'
 })
@@ -68,9 +58,5 @@ export class PromiseManagementService {
       .set('nombreUsuario', nombreUsuario);
 
     return this.http.post<PromesaGestion>(`${this.apiUrl}/anular`, request, { params });
-  }
-
-  reprogramarPromesa(recordId: number, request: ReprogramarPromesaRequest): Observable<PromesaGestion> {
-    return this.http.put<PromesaGestion>(`${environment.gatewayUrl}/v2/management-records/${recordId}/reprogramar-promesa`, request);
   }
 }
