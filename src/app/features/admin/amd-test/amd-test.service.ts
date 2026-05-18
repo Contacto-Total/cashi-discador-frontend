@@ -14,59 +14,37 @@ export interface AmdEvent {
   [key: string]: any;
 }
 
-/**
- * Service para el módulo de AMD test.
- *
- * El disparador corre en localhost:9000 dentro del servidor, pero el browser
- * no puede acceder directo por mixed content (frontend en HTTPS).
- * Nginx hace reverse proxy de /amd-disparador/ -> http://localhost:9000/
- * por eso usamos ruta relativa, mismo origen que el frontend.
- */
 @Injectable({ providedIn: 'root' })
 export class AmdTestService {
+  // El disparador corre en localhost:9000
+  // de /amd-disparador/ -> http://localhost:9000/ (mismo origen).
   private readonly httpBase = `/amd-disparador`;
   private readonly wsBase = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/amd-disparador`;
 
   constructor(private http: HttpClient) {}
 
-  /**
-   * Sube el WAV al disparador. Devuelve job_id.
-   */
+  // Funcion paracargar los archivos y pasarlo al disparador
   upload(file: File): Observable<UploadResponse> {
-    const formData = new FormData();
-    formData.append('audio', file);
-    return this.http.post<UploadResponse>(`${this.httpBase}/upload`, formData);
+    const formatoData = new FormData();
+    formatoData.append('audio', file);
+    return this.http.post<UploadResponse>(`${this.httpBase}/upload`, formatoData);
   }
-
-  /**
-   * Abre WebSocket de progreso. Devuelve un Subject que emite cada evento JSON.
-   * El consumidor se subscribe y recibe eventos hasta el final.
-   */
-  openProgress(jobId: string): { events$: Subject<AmdEvent>; close: () => void } {
-    const events$ = new Subject<AmdEvent>();
+    
+  // Abre la conexion websocket contra el disparador para poder recibir los eventos del stream del audio que se envia. 
+  openProgress(jobId: string): { event$: Subject<AmdEvent>; close: () => void } {
+    const event$ = new Subject<AmdEvent>();
     const ws = new WebSocket(`${this.wsBase}/progress/${jobId}`);
 
     ws.onmessage = (msg) => {
       try {
-        const event = JSON.parse(msg.data);
-        events$.next(event);
-      } catch (e) {
-        events$.next({ type: 'parse_error', raw: msg.data });
+        event$.next(JSON.parse(msg.data));
+      } catch {
+        event$.next({ type: 'parse_error', raw: msg.data });
       }
     };
+    ws.onerror = () => event$.next({ type: 'ws_error' });
+    ws.onclose = () => { event$.next({ type: 'ws_closed' }); event$.complete(); };
 
-    ws.onerror = (e) => {
-      events$.next({ type: 'ws_error', error: 'WebSocket error' });
-    };
-
-    ws.onclose = () => {
-      events$.next({ type: 'ws_closed' });
-      events$.complete();
-    };
-
-    return {
-      events$,
-      close: () => ws.close(),
-    };
+    return { event$, close: () => ws.close() };
   }
 }
