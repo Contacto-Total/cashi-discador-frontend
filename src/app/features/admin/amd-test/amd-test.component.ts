@@ -22,6 +22,9 @@ export interface Results_Audios {
   buzon_score: number | null;
   chunks: number;
   primerVad: number | null;
+  primerNumpy: number | null;
+  primerGoertzel: number | null;
+  primerF0: number | null;
   decisison_en_Chunk: number | null;
   f0_promedio: number | null;
 }
@@ -131,6 +134,9 @@ export class AmdTestComponent {
         buzon_score: null,
         chunks: 0,
         primerVad: null,
+        primerNumpy: null,
+        primerGoertzel: null,
+        primerF0: null,
         decisison_en_Chunk: null,
         f0_promedio: null,
       }));
@@ -223,11 +229,31 @@ export class AmdTestComponent {
           audio.human_score = evt['scores']?.human ?? audio.human_score;
           audio.buzon_score = evt['scores']?.buzon ?? audio.buzon_score;
 
+          // capturamos donde se ejecuto el primer var o nos devolvio respuesta mejor dicho
           const vad = evt['models']?.vad?.value;
           if (audio.primerVad === null && typeof vad === 'number' && vad > 0) {
             audio.primerVad = evt['chunk'];
           }
+          
+          // capturamos donde se ejecuto el primer var o nos devolvio respuesta mejor dicho (variable del python: rms)
+          const numpy = evt['models']?.rms?.value;
+          if (audio.primerNumpy === null && typeof numpy === 'number' && numpy > 0) {
+            audio.primerNumpy = evt['chunk'];
+          }
 
+          // capturamos donde se ejecuto el primer var o nos devolvio respuesta mejor dicho (variable del python: goertzel)
+          const goertzel = evt['models']?.goertzel?.value;
+          if (audio.primerGoertzel === null && typeof goertzel === 'number' && goertzel > 0) {
+            audio.primerGoertzel = evt['chunk'];
+          }
+
+          // capturamos donde se ejecuto el primer var o nos devolvio respuesta mejor dicho (variable del python: goertzel)
+          const fo_ = evt['models']?.f0?.value;
+          if (audio.primerF0 === null && typeof fo_  === 'number' && fo_ > 0) {
+            audio.primerF0 = evt['chunk'];
+          }
+
+          // Promedio del acumulado de todas las respuesta del f0/pitch
           const f0 = evt['models']?.f0?.value;
           if (typeof f0 === 'number' && f0 > 0) {
             const acc = this.f0Acc.get(audio.indice) ?? { suma: 0, n: 0 };

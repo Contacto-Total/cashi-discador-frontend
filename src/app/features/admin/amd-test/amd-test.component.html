@@ -208,9 +208,14 @@
               </div>
             </div>
             <div class="card-stats mono">
-              chunks {{ audio.chunks }}
-              · primer vad {{ audio.primerVad !== null ? 'c' + audio.primerVad : 'none' }}
-              · decisión {{ audio.decisison_en_Chunk !== null ? 'c' + audio.decisison_en_Chunk : 'none' }}
+              chunks {{ audio.chunks }} · decisión {{ chunkLabel(audio.decisison_en_Chunk) }}
+            </div>
+            <div class="card-detections mono">
+              <span class="det-label">primer detección ›</span>
+              rms {{ chunkLabel(audio.primerNumpy) }} ·
+              goe {{ chunkLabel(audio.primerGoertzel) }} ·
+              vad {{ chunkLabel(audio.primerVad) }} ·
+              f0 {{ chunkLabel(audio.primerF0) }}
             </div>
             <div class="card-f0 mono">
               f0 promedio {{ audio.f0_promedio !== null ? (audio.f0_promedio | number:'1.2-2') + ' Hz' : 'none' }}

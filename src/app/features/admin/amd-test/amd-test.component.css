@@ -463,9 +463,20 @@
 .score-divider { width: 1px; background: var(--line); }
 
 .card-stats,
+.card-detections,
 .card-f0 {
   font-size: .76rem;
   color: var(--ink-soft);
+}
+
+.card-detections {
+  background: var(--bg);
+  border-radius: 7px;
+  padding: 6px 9px;
+}
+.det-label {
+  color: var(--ink-faint);
+  font-weight: 600;
 }
 
 /* ── Spinner ─────────────────────────────────────────────────── */
