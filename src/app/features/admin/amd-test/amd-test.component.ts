@@ -375,4 +375,9 @@ export class AmdTestComponent {
       };
       return map[estado];
     }
+
+    // formatea un número de chunk: 5 -> "c5", null -> "none"
+    chunkLabel(n: number | null): string {
+      return n !== null ? 'c' + n : 'none';
+    }
 }
