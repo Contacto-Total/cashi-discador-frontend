@@ -199,8 +199,8 @@ import { CallService } from '../../core/services/call.service';
                     </div>
 
                     @if (showAddContactForm()) {
-                      <div class="p-2.5 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-2 shadow-sm">
-                        <div class="text-[11px] font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Nuevo contacto</div>
+                      <div class="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
+                        <div class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Nuevo contacto</div>
 
                         <div class="grid grid-cols-2 gap-1">
                           <button
@@ -220,35 +220,35 @@ import { CallService } from '../../core/services/call.service';
                         </div>
 
                         @if (newContactType === 'telefono') {
-                          <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Número</div>
+                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Número</div>
                           <input
                             type="text"
                             [(ngModel)]="newPhoneNumber"
                             placeholder="Agregar numero aqui"
                             maxlength="9"
-                            class="w-full px-2.5 py-1.5 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           />
-                          <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Tipo de número</div>
+                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Tipo</div>
                           <select
                             [(ngModel)]="newPhoneSubtipo"
-                            class="w-full px-2.5 py-1.5 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           >
                             <option value="telefono_referencia_1">Referencia 1</option>
                             <option value="telefono_referencia_2">Referencia 2</option>
                             <option value="telefono_secundario">Secundario</option>
                           </select>
                         } @else {
-                          <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Correo</div>
+                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Correo</div>
                           <input
                             type="email"
                             [(ngModel)]="newEmail"
                             placeholder="Agregar correo aqui"
-                            class="w-full px-2.5 py-1.5 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           />
-                          <div class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Tipo de correo</div>
+                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Tipo</div>
                           <select
                             [(ngModel)]="newEmailSubtipo"
-                            class="w-full px-2.5 py-1.5 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           >
                             <option value="email_principal">Principal</option>
                             <option value="email_secundario">Secundario</option>
@@ -260,13 +260,13 @@ import { CallService } from '../../core/services/call.service';
                           <button
                             (click)="guardarNuevoContacto()"
                             [disabled]="newContactType === 'telefono' ? (!isValidCellphone(newPhoneNumber) || savingPhone()) : (!isValidEmail(newEmail) || savingEmail())"
-                            class="flex-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-md text-xs font-bold transition-colors shadow-sm"
                           >
                             {{ (newContactType === 'telefono' ? savingPhone() : savingEmail()) ? 'Guardando...' : 'Guardar' }}
                           </button>
                           <button
                             (click)="cancelAddContactForm()"
-                            class="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md text-xs font-bold transition-colors"
+                            class="px-2 py-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md text-xs font-bold transition-colors"
                           >
                             Cancelar
                           </button>
