@@ -200,27 +200,18 @@ import { CallService } from '../../core/services/call.service';
 
                     @if (showAddContactForm()) {
                       <div class="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
-                        <div class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Nuevo contacto</div>
-
-                        <div class="grid grid-cols-2 gap-1">
-                          <button
-                            type="button"
-                            (click)="newContactType = 'telefono'"
-                            [class]="'px-2 py-1 rounded-md text-xs font-semibold border transition-colors ' + (newContactType === 'telefono' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white dark:bg-gray-900 text-slate-700 dark:text-slate-200 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20')"
+                        <div class="flex items-center gap-2">
+                          <div class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Nuevo contacto</div>
+                          <select
+                            [(ngModel)]="newContactType"
+                            class="flex-1 min-w-0 px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           >
-                            Teléfono
-                          </button>
-                          <button
-                            type="button"
-                            (click)="newContactType = 'email'"
-                            [class]="'px-2 py-1 rounded-md text-xs font-semibold border transition-colors ' + (newContactType === 'email' ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white dark:bg-gray-900 text-slate-700 dark:text-slate-200 border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20')"
-                          >
-                            Correo
-                          </button>
+                            <option value="telefono">Teléfono</option>
+                            <option value="email">Correo</option>
+                          </select>
                         </div>
 
                         @if (newContactType === 'telefono') {
-                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Número</div>
                           <input
                             type="text"
                             [(ngModel)]="newPhoneNumber"
@@ -228,7 +219,6 @@ import { CallService } from '../../core/services/call.service';
                             maxlength="9"
                             class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           />
-                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Tipo</div>
                           <select
                             [(ngModel)]="newPhoneSubtipo"
                             class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -238,14 +228,12 @@ import { CallService } from '../../core/services/call.service';
                             <option value="telefono_secundario">Secundario</option>
                           </select>
                         } @else {
-                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Correo</div>
                           <input
                             type="email"
                             [(ngModel)]="newEmail"
                             placeholder="Agregar correo aqui"
                             class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           />
-                          <div class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Tipo</div>
                           <select
                             [(ngModel)]="newEmailSubtipo"
                             class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -260,7 +248,8 @@ import { CallService } from '../../core/services/call.service';
                           <button
                             (click)="guardarNuevoContacto()"
                             [disabled]="newContactType === 'telefono' ? (!isValidCellphone(newPhoneNumber) || savingPhone()) : (!isValidEmail(newEmail) || savingEmail())"
-                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed !text-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                            style="color: #ffffff;"
                           >
                             {{ (newContactType === 'telefono' ? savingPhone() : savingEmail()) ? 'Guardando...' : 'Guardar' }}
                           </button>
