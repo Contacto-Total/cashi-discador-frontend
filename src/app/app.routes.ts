@@ -363,11 +363,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/amd-test/amd-test.component').then(m => m.AmdTestComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
-  {
-    path: 'admin/auditoria',
-    loadComponent: () => import('./features/admin/auditoria/auditoria.component').then(m => m.AuditoriaComponent),
-    canActivate: [authGuard, adminGuard]
-  },
 
   // ========================================
   // GESTIÓN MANUAL (Tipificación sin llamada)
