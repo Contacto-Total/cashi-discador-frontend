@@ -219,8 +219,8 @@ export class AmdTestComponent {
     private aplicarEvento(audio: Results_Audios, evt: AmdEvent): void {
 
       // Jalamos el timestamp del evento para mostrarlo
-      if (!audio.ts){
-        audio.ts = evt.ts ?? '';
+      if (!audio.ts_inicio){
+        audio.ts_inicio = evt.ts ?? '';
       }
       
       // Jalamos el timestamp de fin del audio para mostrarlo
