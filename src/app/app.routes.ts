@@ -230,6 +230,11 @@ export const routes: Routes = [
     loadComponent: () => import('./data-load/components/daily-load/daily-load.component').then(m => m.DailyLoadComponent),
     canActivate: [authGuard, adminGuard]
   },
+  {
+    path: 'admin/data-load/phones',
+    loadComponent: () => import('./data-load/components/phone-load/phone-load.component').then(m => m.PhoneLoadComponent),
+    canActivate: [authGuard, adminGuard]
+  },
 
   // ========================================
   // MANTENIMIENTO (Solo Admin)
@@ -357,6 +362,11 @@ export const routes: Routes = [
     path: 'admin/amd-test',
     loadComponent: () => import('./features/admin/amd-test/amd-test.component').then(m => m.AmdTestComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
+    path: 'admin/auditoria',
+    loadComponent: () => import('./features/admin/auditoria/auditoria.component').then(m => m.AuditoriaComponent),
+    canActivate: [authGuard, adminGuard]
   },
 
   // ========================================
