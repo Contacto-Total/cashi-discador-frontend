@@ -6743,10 +6743,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   private syncEmailsMetodoFromCurrentData(): void {
     const rawData = this.rawClientData();
-    const sourceMethods = Array.isArray(rawData?.contactMethods)
-      ? rawData.contactMethods
-      : Array.isArray(rawData?.metodos_contacto)
-      ? rawData.metodos_contacto
+    const sourceMethods = Array.isArray(rawData?.['contactMethods'])
+      ? rawData['contactMethods']
+      : Array.isArray(rawData?.['metodos_contacto'])
+      ? rawData['metodos_contacto']
       : [];
 
     const normalized = sourceMethods
