@@ -74,7 +74,7 @@ import { CallService } from '../../core/services/call.service';
         <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 px-4">
           <div class="w-full max-w-md rounded-xl border border-amber-300 bg-white shadow-2xl dark:border-amber-800 dark:bg-slate-900 animate-[slideInUp_0.25s_ease-out]">
             <div class="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/40">
-              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">Teléfono duplicado</h3>
+              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">Contacto duplicado</h3>
             </div>
             <div class="px-4 py-3">
               <p class="text-sm text-slate-700 dark:text-slate-200">{{ phoneDuplicateMessage() }}</p>
@@ -263,16 +263,74 @@ import { CallService } from '../../core/services/call.service';
                         </div>
                       </div>
                     }
-                    <!-- Email -->
-                    @if (customerData().contacto.email) {
-                      <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
-                        <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-xs text-blue-500 dark:text-blue-400">Email</div>
-                          <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
-                        </div>
+                    <!-- Emails -->
+                    <div class="mt-2 space-y-1.5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Correos</span>
+                        @if (customerData()?.id) {
+                          <button
+                            (click)="showAddEmailForm.set(!showAddEmailForm())"
+                            class="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                            title="Agregar correo"
+                          >
+                            <lucide-angular [name]="showAddEmailForm() ? 'x' : 'plus-circle'" [size]="13"></lucide-angular>
+                            {{ showAddEmailForm() ? 'Cancelar' : 'Agregar' }}
+                          </button>
+                        }
                       </div>
-                    }
+                      @if (showAddEmailForm()) {
+                        <div class="p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800 space-y-1.5">
+                          <input
+                            type="email"
+                            [(ngModel)]="newEmail"
+                            placeholder="cliente@correo.com"
+                            class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          <select
+                            [(ngModel)]="newEmailSubtipo"
+                            class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="email_principal">Principal</option>
+                            <option value="email_secundario">Secundario</option>
+                            <option value="email_trabajo">Trabajo</option>
+                          </select>
+                          <div class="flex gap-1.5">
+                            <button
+                              (click)="guardarNuevoCorreo()"
+                              [disabled]="!isValidEmail(newEmail) || savingEmail()"
+                              class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded text-xs font-bold transition-colors"
+                            >
+                              {{ savingEmail() ? 'Guardando...' : 'Guardar' }}
+                            </button>
+                            <button
+                              (click)="showAddEmailForm.set(false); newEmail = ''; newEmailSubtipo = 'email_principal'"
+                              class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-xs font-bold transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      }
+                      @if (emailsMetodo().length > 0) {
+                        @for (email of emailsMetodo(); track email.valor) {
+                          <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                            <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="text-xs text-blue-500 dark:text-blue-400">{{ emailSubtipoLabel(email.subtipo) }}</div>
+                              <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ email.valor }}</div>
+                            </div>
+                          </div>
+                        }
+                      } @else if (customerData().contacto.email) {
+                        <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                          <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-xs text-blue-500 dark:text-blue-400">Principal</div>
+                            <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                          </div>
+                        </div>
+                      }
+                    </div>
                     <!-- Dirección -->
                     @if (customerData().contacto.direccion) {
                       <div class="flex items-center gap-2 p-1.5 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
@@ -1669,7 +1727,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
   protected showPhoneDuplicateCard = signal(false);
-  protected phoneDuplicateMessage = signal('El teléfono ya existe para este cliente.');
+  protected phoneDuplicateMessage = signal('El contacto ya existe para este cliente.');
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
@@ -2137,6 +2195,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   newPhoneNumber = '';
   newPhoneSubtipo = 'telefono_referencia_1';
   savingPhone = signal(false);
+
+  // Agregar correo
+  showAddEmailForm = signal(false);
+  newEmail = '';
+  newEmailSubtipo = 'email_principal';
+  savingEmail = signal(false);
+  emailsMetodo = signal<Array<{ valor: string; subtipo: string }>>([]);
 
   // WhatsApp
   showWhatsappDropdown = signal(false);
@@ -2890,6 +2955,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
   }
 
   /**
@@ -3003,6 +3069,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar historial de gestiones
     this.loadManagementHistory();
@@ -3428,6 +3495,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar teléfonos desde metodos_contacto
     const doc = clienteDetalle.documento || '';
@@ -5988,6 +6056,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar historial de gestiones del cliente
     this.loadManagementHistory();
@@ -6663,6 +6732,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
+  emailSubtipoLabel(subtipo: string): string {
+    const labels: Record<string, string> = {
+      'email_principal': 'Principal',
+      'email_secundario': 'Secundario',
+      'email_trabajo': 'Trabajo'
+    };
+    return labels[subtipo] || subtipo || 'Email';
+  }
+
+  private syncEmailsMetodoFromCurrentData(): void {
+    const rawData = this.rawClientData();
+    const sourceMethods = Array.isArray(rawData?.contactMethods)
+      ? rawData.contactMethods
+      : Array.isArray(rawData?.metodos_contacto)
+      ? rawData.metodos_contacto
+      : [];
+
+    const normalized = sourceMethods
+      .filter((cm: any) => (cm?.contactType || cm?.tipo) === 'email')
+      .map((cm: any) => ({
+        valor: (cm?.value || cm?.valor || '').toString().trim(),
+        subtipo: (cm?.subtype || cm?.subtipo || 'email_principal').toString()
+      }))
+      .filter((item: any) => item.valor.length > 0);
+
+    const unique = normalized.filter((item: any, index: number, arr: any[]) =>
+      arr.findIndex((x: any) => x.valor.toLowerCase() === item.valor.toLowerCase()) === index
+    );
+
+    const fallback = (this.customerData()?.contacto?.email || '').trim();
+    if (unique.length === 0 && fallback) {
+      this.emailsMetodo.set([{ valor: fallback, subtipo: 'email_principal' }]);
+      return;
+    }
+
+    this.emailsMetodo.set(unique);
+  }
+
   loadTelefonosMetodo(documento: string): void {
     if (!documento) return;
     this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`).pipe(
@@ -6841,9 +6948,56 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
+  guardarNuevoCorreo(): void {
+    const valor = (this.newEmail || '').trim();
+    if (!this.isValidEmail(valor)) return;
+
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) return;
+
+    this.savingEmail.set(true);
+    this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto-email`, {
+      documento,
+      valor,
+      subtipo: this.newEmailSubtipo
+    }).subscribe({
+      next: () => {
+        const current = this.emailsMetodo();
+        const alreadyExists = current.some(e => e.valor.toLowerCase() === valor.toLowerCase());
+        if (!alreadyExists) {
+          this.emailsMetodo.set([...current, { valor, subtipo: this.newEmailSubtipo }]);
+        }
+
+        this.newEmail = '';
+        this.newEmailSubtipo = 'email_principal';
+        this.showAddEmailForm.set(false);
+        this.savingEmail.set(false);
+
+        this.showSuccess.set(true);
+        setTimeout(() => this.showSuccess.set(false), 3000);
+        console.log('✅ Correo agregado exitosamente:', valor);
+      },
+      error: (err) => {
+        this.savingEmail.set(false);
+        const msg = err.error?.error || 'Error al agregar correo';
+        console.error('❌ Error agregando correo:', msg);
+        if ((msg || '').toLowerCase().includes('ya existe')) {
+          this.phoneDuplicateMessage.set(msg);
+          this.showPhoneDuplicateCard.set(true);
+          return;
+        }
+        alert(msg);
+      }
+    });
+  }
+
   // --- WhatsApp ---
   isValidCellphone(num: string): boolean {
     return /^9\d{8}$/.test((num || '').trim());
+  }
+
+  isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
   }
 
   sendWhatsapp(phone: string): void {
