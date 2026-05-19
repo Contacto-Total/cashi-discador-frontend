@@ -1,28 +1,68 @@
-<div class="amd-test-container">
+<!--
+  AMD Batch Test — stress test del modelo AMD por lotes de audio.
 
-  <!-- Header -->
-  <div class="amd-header">
-    <div class="header-left">
-      <lucide-angular name="activity" [size]="28" class="header-icon"></lucide-angular>
-      <h1>AMD Test</h1>
+  CONTRATO: esto es lo que el template espera del componente (.ts).
+  Lo armamos juntos despues; aqui queda documentado que se le pasa.
+
+  ── Setup / carga ─────────────────────────────────────────────────
+    isDragging     : boolean        feedback visual del drag & drop
+    uploadError    : string | null  mensaje de error de carga
+    pendingCount   : number         audios seleccionados, aun sin iniciar
+    concurrency    : number         tamaño de ola (conexiones simultaneas)
+
+  ── Estado del lote ───────────────────────────────────────────────
+    started        : boolean        ¿ya arranco el lote?
+    finished       : boolean        ¿termino todo el lote?
+    batchTotal     : number         total de audios del lote
+    processedCount : number         audios terminados
+    processingCount: number         audios en vuelo AHORA (en paralelo)
+    progressPct    : number         0..100
+    counts         : { humano, buzon, sinDecision }
+    startedAt      : string         hora de inicio (texto formateado)
+    finishedAt     : string         hora de fin (texto formateado)
+    durationLabel  : string         duracion total (texto, ej. "14m 28s")
+    filter         : 'todos' | 'humano' | 'buzon' | 'sindec'
+    audios         : AudioResult[]  resultados (uno por audio)
+    filteredAudios : AudioResult[]  audios visibles segun el filtro activo
+
+  ── AudioResult (un objeto por audio) ─────────────────────────────
+    index, fileName, ts
+    status         : 'cola' | 'procesando' | 'humano' | 'buzon' | 'sindec'
+    currentChunk   : number          (mientras status = 'procesando')
+    humanScore, buzonScore, f0Avg : number | null
+    chunks         : number
+    firstVad, decidedAtChunk      : number | null
+
+  ── Metodos ───────────────────────────────────────────────────────
+    onFileInput(e), onDrop(e), onDragOver(e), onDragLeave(e)
+    setConcurrency(e), startBatch()
+    setFilter(f), newBatch(), exportCsv()
+    iconFor(status) -> string   (nombre de icono lucide)
+    labelFor(status) -> string  (texto, ej. "HUMANO")
+-->
+
+<div class="amd-batch">
+
+  <!-- ── Header ────────────────────────────────────────────────── -->
+  <header class="amd-header">
+    <div class="header-title">
+      <lucide-angular name="activity" [size]="26" class="header-icon"></lucide-angular>
+      <h1>AMD Batch Test</h1>
       <span class="badge-dev">DEV</span>
     </div>
-    <div class="header-right">
-      @if (jobId) {
-        <button class="btn-reset" (click)="reset()">
-          <lucide-angular name="refresh-cw" [size]="16"></lucide-angular>
-          Nueva prueba
-        </button>
-      }
-    </div>
-  </div>
+    @if (started) {
+      <button class="btn-ghost" (click)="newBatch()">
+        <lucide-angular name="refresh-cw" [size]="15"></lucide-angular>
+        Nuevo lote
+      </button>
+    }
+  </header>
 
-  <!-- Drag and drop zone (solo si no hay test en curso) -->
-  @if (!jobId) {
+  <!-- ── Setup: drop zone + configuracion de ola ───────────────── -->
+  @if (!started) {
     <div
       class="drop-zone"
       [class.dragging]="isDragging"
-      [class.has-file]="selectedFile"
       (dragover)="onDragOver($event)"
       (dragleave)="onDragLeave($event)"
       (drop)="onDrop($event)"
@@ -31,152 +71,184 @@
         type="file"
         id="file-input"
         accept=".wav,audio/wav"
+        multiple
         (change)="onFileInput($event)"
-        style="display: none"
+        hidden
       />
       <label for="file-input" class="drop-label">
-        <lucide-angular name="upload-cloud" [size]="48"></lucide-angular>
-        @if (!uploading) {
-          <p class="drop-title">Arrastra un archivo .wav aquí</p>
-          <p class="drop-subtitle">o haz click para seleccionar</p>
-        } @else {
-          <p class="drop-title">Subiendo...</p>
-        }
+        <div class="drop-icon-ring">
+          <lucide-angular name="upload-cloud" [size]="40"></lucide-angular>
+        </div>
+        <p class="drop-title">
+          {{ pendingCount > 0 ? pendingCount + ' audios cargados' : 'Arrastra varios archivos .wav aquí' }}
+        </p>
+        <p class="drop-subtitle">
+          {{ pendingCount > 0 ? 'click para cambiar la selección' : 'o haz click para seleccionar el lote' }}
+        </p>
       </label>
 
       @if (uploadError) {
         <div class="upload-error">
-          <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+          <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
           {{ uploadError }}
         </div>
       }
     </div>
+
+    @if (pendingCount > 0) {
+      <div class="batch-config">
+        <div class="config-row">
+          <lucide-angular name="layers" [size]="18" class="config-icon"></lucide-angular>
+          <span class="config-label">Lanzar en olas de</span>
+          <input
+            type="number"
+            class="conc-input"
+            min="1"
+            [max]="pendingCount"
+            [value]="concurrency"
+            (input)="setConcurrency($event)"
+          />
+          <span class="config-hint">conexiones WebSocket simultáneas</span>
+        </div>
+        <button class="btn-primary btn-start" (click)="startBatch()">
+          <lucide-angular name="play" [size]="16"></lucide-angular>
+          Iniciar stress test · {{ pendingCount }} audios
+        </button>
+      </div>
+    }
   }
 
-  <!-- Info del job + WAV -->
-  @if (jobId) {
-    <div class="job-info">
-      <div class="job-info-row">
-        <span class="label">Job ID:</span>
-        <span class="value mono">{{ jobId }}</span>
-      </div>
-      @if (wavInfo) {
-        <div class="job-info-row">
-          <span class="label">Audio:</span>
-          <span class="value">
-            {{ wavInfo['sr'] }} Hz, {{ wavInfo['ch'] }} canal{{ wavInfo['ch'] > 1 ? 'es' : '' }},
-            {{ formatBytes(wavInfo['bytes']) }}
+  <!-- ── Barra de resumen (sticky) ─────────────────────────────── -->
+  @if (started) {
+    <div class="summary-bar" [class.is-done]="finished">
+
+      <div class="summary-progress">
+        <div class="progress-head">
+          <span class="progress-label">
+            {{ finished ? 'Lote completo' : 'Procesando lote' }}
           </span>
+          <span class="progress-count mono">{{ processedCount }} / {{ batchTotal }}</span>
+          <span class="progress-pct">{{ progressPct }}%</span>
         </div>
-      }
-    </div>
-  }
-
-  <!-- Decisión final destacada -->
-  @if (decision) {
-    <div class="decision-card" [class.machine]="decision['decision']?.result === 'MACHINE'" [class.human]="decision['decision']?.result === 'HUMAN'">
-      <div class="decision-header">
-        <lucide-angular [name]="decision['decision']?.result === 'HUMAN' ? 'user-check' : 'voicemail'" [size]="32"></lucide-angular>
-        <span class="decision-result">{{ decision['decision']?.result || 'UNKNOWN' }}</span>
-      </div>
-      <div class="decision-details">
-        <div><strong>Confianza:</strong> {{ decision['decision']?.confidence | number:'1.2-2' }}</div>
-        <div><strong>Razón:</strong> {{ decision['decision']?.reason || '—' }}</div>
-        <div><strong>Gatillado por:</strong> {{ decision['decision']?.triggered_by || '—' }}</div>
-        <div><strong>Último delta:</strong> {{ decision['decision']?.last_delta_from || '—' }}</div>
-        @if (decision['decision']?.transcription) {
-          <div><strong>Transcripción:</strong> "{{ decision['decision']?.transcription }}"</div>
-        }
-        <div><strong>Decisión en:</strong> chunk {{ decision['decision']?.decided_at_chunk ?? decision['decided_at_chunk'] }} / {{ decision['decision']?.decided_at_ms ?? decision['decided_at_ms'] }} ms</div>
-        <div><strong>Audio acumulado:</strong> {{ formatBytes(decision['decision']?.decided_bytes ?? decision['decided_bytes']) }}</div>
-        <div><strong>Scores:</strong> H={{ decision['decision']?.scores?.human | number:'1.2-2' }} / B={{ decision['decision']?.scores?.buzon | number:'1.2-2' }}</div>
-      </div>
-      @if (decision['decision']?.contrib_human || decision['decision']?.contrib_buzon) {
-        <div class="contrib-grid">
-          <div class="contrib-col">
-            <div class="contrib-title">Contribución HUMAN</div>
-            <div>rms: {{ decision['decision']?.contrib_human?.rms | number:'1.2-2' }}</div>
-            <div>goertzel: {{ decision['decision']?.contrib_human?.goertzel | number:'1.2-2' }}</div>
-            <div>vad: {{ decision['decision']?.contrib_human?.vad | number:'1.2-2' }}</div>
-            <div>f0: {{ decision['decision']?.contrib_human?.f0 | number:'1.2-2' }}</div>
-          </div>
-          <div class="contrib-col">
-            <div class="contrib-title">Contribución BUZON</div>
-            <div>rms: {{ decision['decision']?.contrib_buzon?.rms | number:'1.2-2' }}</div>
-            <div>goertzel: {{ decision['decision']?.contrib_buzon?.goertzel | number:'1.2-2' }}</div>
-            <div>vad: {{ decision['decision']?.contrib_buzon?.vad | number:'1.2-2' }}</div>
-            <div>f0: {{ decision['decision']?.contrib_buzon?.f0 | number:'1.2-2' }}</div>
-          </div>
+        <div class="progress-track">
+          <div class="progress-fill" [style.width.%]="progressPct"></div>
         </div>
-      }
-    </div>
-  }
+      </div>
 
-  <!-- Tabla de eventos en vivo -->
-  @if (events.length > 0) {
-    <div class="events-section">
-      <h3 class="section-title">
-        <lucide-angular name="list" [size]="18"></lucide-angular>
-        Eventos en tiempo real ({{ events.length }})
-        @if (!finished) {
+      <div class="summary-counts">
+        <span class="count count-humano">
+          <lucide-angular name="user-check" [size]="15"></lucide-angular>
+          humano <strong>{{ counts.humano }}</strong>
+        </span>
+        <span class="count count-buzon">
+          <lucide-angular name="voicemail" [size]="15"></lucide-angular>
+          buzón <strong>{{ counts.buzon }}</strong>
+        </span>
+        <span class="count count-sindec">
+          <lucide-angular name="circle-off" [size]="15"></lucide-angular>
+          sin decisión <strong>{{ counts.sindetectar }}</strong>
+        </span>
+      </div>
+
+      <div class="summary-filters">
+        <button class="chip" [class.active]="filter === 'todos'"  (click)="setFilter('todos')">todos</button>
+        <button class="chip chip-humano" [class.active]="filter === 'humano'" (click)="setFilter('humano')">humano</button>
+        <button class="chip chip-buzon"  [class.active]="filter === 'buzon'"  (click)="setFilter('buzon')">buzón</button>
+        <button class="chip chip-sindetectar" [class.active]="filter === 'sindetectar'" (click)="setFilter('sindetectar')">s/dec</button>
+      </div>
+
+      @if (!finished && processingCount > 0) {
+        <div class="summary-current">
           <span class="pulse-dot"></span>
-          <span class="live-label">LIVE</span>
-        }
-      </h3>
-      <div class="events-table-wrapper">
-        <table class="events-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Timestamp</th>
-              <th>Tipo</th>
-              <th>Chunk</th>
-              <th>Size</th>
-              <th>Elapsed</th>
-              <th>Detalle</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (event of events; track $index) {
-              <tr [class]="eventClass(event['type'])">
-                <td>{{ $index + 1 }}</td>
-                <td class="mono">{{ event['ts']?.substring(11, 23) }}</td>
-                <td><span class="type-badge">{{ event['type'] }}</span></td>
-                <td>{{ event['n'] || '—' }}</td>
-                <td>{{ event['size'] ? formatBytes(event['size']) : '—' }}</td>
-                <td>{{ event['elapsed_ms'] !== undefined ? event['elapsed_ms'] + ' ms' : '—' }}</td>
-                <td class="event-detail">
-                  @if (event['type'] === 'decision') {
-                    <strong>{{ event['decision']?.result }}</strong> — {{ event['decision']?.reason }}
-                    @if (event['decision']?.triggered_by) {
-                      <span class="muted"> · by {{ event['decision']?.triggered_by }}</span>
-                    }
-                  } @else if (event['type'] === 'analysis') {
-                    <span class="mono">
-                      rms={{ event['models']?.rms?.value }}
-                      goe={{ event['models']?.goertzel?.value }}
-                      vad={{ event['models']?.vad?.value }}
-                      f0={{ event['models']?.f0?.value }}Hz
-                      · H={{ event['scores']?.human | number:'1.2-2' }}
-                      B={{ event['scores']?.buzon | number:'1.2-2' }}
-                    </span>
-                  } @else if (event['msg']) {
-                    {{ event['msg'] }}
-                  } @else if (event['note']) {
-                    {{ event['note'] }}
-                  } @else if (event['url']) {
-                    <span class="mono">{{ event['url'] }}</span>
-                  } @else if (event['type'] === 'wav_info') {
-                    {{ event['sr'] }} Hz, {{ event['ch'] }} ch
-                  } @else if (event['type'] === 'whisper_running') {
-                    transcribiendo con Whisper...
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+          procesando <span class="mono">{{ processingCount }}</span> audios en paralelo
+        </div>
+      }
     </div>
   }
+
+  <!-- ── Log del lote ──────────────────────────────────────────── -->
+  @if (started) {
+    <div class="batch-log">
+
+      <div class="log-line log-marker">
+        <span class="marker-tag">[INICIO]</span>
+        stress test · {{ batchTotal }} audios · olas de {{ concurrency }} · {{ startedAt }}
+      </div>
+
+      @for (audio of filteredAudios; track audio.indice) {
+        <article class="audio-card" [class]="'card-' + audio.estado">
+
+          <div class="card-head">
+            <span class="card-result">
+              <lucide-angular [name]="iconFor(audio.estado)" [size]="17"></lucide-angular>
+              {{ labelFor(audio.estado) }}
+            </span>
+            <span class="card-meta mono">AUDIO {{ audio.indice }} · {{ audio.ts_inicio }} → {{ audio.ts_fin }}</span>
+          </div>
+
+          <div class="card-file">{{ audio.nombre_archivo }}</div>
+
+          @if (audio.estado === 'cola') {
+            <div class="card-state-line">en cola…</div>
+          } @else if (audio.estado === 'procesando') {
+            <div class="card-state-line">
+              <span class="spinner"></span>
+              analizando · chunk {{ audio.chunkActual }}
+            </div>
+          } @else {
+            <div class="card-scores">
+              <div class="score score-h">
+                <span class="score-tag">human</span>
+                <strong>{{ audio.human_score | number:'1.2-2' }}</strong>
+              </div>
+              <div class="score-divider"></div>
+              <div class="score score-b">
+                <span class="score-tag">buzón</span>
+                <strong>{{ audio.buzon_score | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+            <div class="card-stats mono">
+              chunks {{ audio.chunks }} · decisión {{ chunkLabel(audio.decisison_en_Chunk) }}
+            </div>
+            <div class="card-detections mono">
+              <span class="det-label">primer detección ›</span>
+              rms {{ chunkLabel(audio.primerNumpy) }} ·
+              goe {{ chunkLabel(audio.primerGoertzel) }} ·
+              vad {{ chunkLabel(audio.primerVad) }} ·
+              f0 {{ chunkLabel(audio.primerF0) }}
+            </div>
+            <div class="card-f0 mono">
+              f0 promedio {{ audio.f0_promedio !== null ? (audio.f0_promedio | number:'1.2-2') + ' Hz' : 'none' }}
+            </div>
+          }
+        </article>
+      }
+
+      @if (filteredAudios.length === 0) {
+        <div class="log-empty">Ningún audio coincide con el filtro «{{ filter }}».</div>
+      }
+
+      @if (finished) {
+        <div class="log-line log-marker log-marker-fin">
+          <span class="marker-tag">[FIN]</span>
+          lote procesado · {{ endedAt }} · duración {{ durationLabel }}
+        </div>
+        <div class="log-line log-tally mono">
+          humano={{ counts.humano }} | buzón={{ counts.buzon }} | sin_decisión={{ counts.sindetectar }}
+        </div>
+
+        <div class="batch-actions">
+          <button class="btn-primary" (click)="exportCsv()">
+            <lucide-angular name="download" [size]="15"></lucide-angular>
+            Exportar CSV
+          </button>
+          <button class="btn-ghost" (click)="newBatch()">
+            <lucide-angular name="refresh-cw" [size]="15"></lucide-angular>
+            Nuevo lote
+          </button>
+        </div>
+      }
+    </div>
+  }
+
 </div>
