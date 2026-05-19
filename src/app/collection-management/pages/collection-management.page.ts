@@ -6031,10 +6031,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       fecha_nacimiento: customer.birthDate || '',
       edad: customer.age || null,
       contacto: {
-        telefono_principal: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_principal')?.value || '',
-        telefono_alternativo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_secundario')?.value || '',
-        telefono_trabajo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_trabajo')?.value || '',
-        email: customer.contactMethods?.find((cm: any) => cm.contactType === 'email')?.value || '',
+        telefono_principal: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_principal')?.value || '',
+        telefono_alternativo: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_secundario')?.value || '',
+        telefono_trabajo: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_trabajo')?.value || '',
+        email: customer.contactMethods?.find((cm: any) => (cm.contactType || '').toLowerCase() === 'email')?.value || '',
         direccion: customer.address || ''
       },
       cuenta: {
@@ -6750,10 +6750,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       : [];
 
     const normalized = sourceMethods
-      .filter((cm: any) => (cm?.contactType || cm?.tipo) === 'email')
+      .filter((cm: any) => ((cm?.contactType || cm?.tipo || '').toString().toLowerCase() === 'email'))
       .map((cm: any) => ({
         valor: (cm?.value || cm?.valor || '').toString().trim(),
-        subtipo: (cm?.subtype || cm?.subtipo || 'email_principal').toString()
+        subtipo: (cm?.subType || cm?.subtype || cm?.subtipo || 'email_principal').toString()
       }))
       .filter((item: any) => item.valor.length > 0);
 
