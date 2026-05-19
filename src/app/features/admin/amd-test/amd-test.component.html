@@ -183,7 +183,7 @@
               <lucide-angular [name]="iconFor(audio.estado)" [size]="17"></lucide-angular>
               {{ labelFor(audio.estado) }}
             </span>
-            <span class="card-meta mono">AUDIO {{ audio.indice }} · {{ audio.ts }}</span>
+            <span class="card-meta mono">AUDIO {{ audio.indice }} · {{ audio.ts_inicio }} → {{ audio.ts_fin }}</span>
           </div>
 
           <div class="card-file">{{ audio.nombre_archivo }}</div>

@@ -27,6 +27,8 @@ export interface Results_Audios {
   primerF0: number | null;
   decisison_en_Chunk: number | null;
   f0_promedio: number | null;
+  ts_inicio: string;
+  ts_fin: string;
 }
 
 @Component({
@@ -139,6 +141,8 @@ export class AmdTestComponent {
         primerF0: null,
         decisison_en_Chunk: null,
         f0_promedio: null,
+        ts_inicio: '',
+        ts_fin: '',
       }));
 
       // procesar en lotes
@@ -170,7 +174,6 @@ export class AmdTestComponent {
       const file = this.files[audio.indice - 1];
 
       audio.estado = 'procesando';
-      audio.ts = this.horaActual();
       this.processingCount++;
 
       return new Promise<void>((resolve) => { let terminado = false;
@@ -214,6 +217,17 @@ export class AmdTestComponent {
 
     // Traducimos eventos que nos llegan del detector
     private aplicarEvento(audio: Results_Audios, evt: AmdEvent): void {
+
+      // Jalamos el timestamp del evento para mostrarlo
+      if (!audio.ts){
+        audio.ts = evt.ts ?? '';
+      }
+      
+      // Jalamos el timestamp de fin del audio para mostrarlo
+      if (evt.type === 'end' || evt.type === 'decision') {
+        audio.ts_fin = evt.ts ?? audio.ts_fin;
+      }
+
       switch (evt.type) {
 
         case 'chunk':
