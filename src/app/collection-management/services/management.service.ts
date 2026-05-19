@@ -83,6 +83,7 @@ export interface ManagementResource {
   estadoPago?: string;        // Estado del pago (PENDIENTE, PAGADA, VENCIDA, etc.)
   totalCuotas?: number;       // Número total de cuotas
   fechaPrimeraCuota?: string; // Fecha de la primera cuota (YYYY-MM-DD)
+  grupoPromesaUuid?: string;  // UUID del grupo de promesa
 }
 
 export interface CallDetailResource {
@@ -263,6 +264,19 @@ export interface ConfiguracionCabecera {
   formatoVisualizacion?: string; // MONEDA, PORCENTAJE, NUMERO, TEXTO
 }
 
+/**
+ * Interface para reprogramacion de promesas de pago
+ */
+export interface ReprogramarPromesaRequest {
+  cuotaId: number;
+  nuevaFechaPromesa: string; // formato ISO: 'YYYY-MM-DD'
+  motivo: string;
+  observaciones?: string | null;
+  solicitadoPorUsuarioId: number;
+  solicitadoPorNombre?: string | null;
+  forzarSupervision?: boolean; // default backend: false
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -362,7 +376,8 @@ export class ManagementService {
           estadoPago: r.estadoPago || undefined,
           typificationRequiresSchedule: !!r.grupoPromesaUuid,
           totalCuotas: r.totalCuotas || undefined,
-          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined
+          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined,
+          grupoPromesaUuid: r.grupoPromesaUuid || undefined
         } as ManagementResource;
       }))
     );
@@ -549,6 +564,16 @@ export class ManagementService {
     }
 
     return this.http.put<any>(`${this.baseUrl}/cuota/${cuotaId}/cancelar${params}`, {});
+  }
+
+  /**
+   * Reprograma la fecha de una cuota de promesa de pago.
+   * @param recordId ID del registro de gestion (registros_gestion_v2)
+   * @param request Payload con cuota, nueva fecha y datos de auditoria
+   */
+  reprogramarPromesa(recordId: number, request: ReprogramarPromesaRequest): Observable<RegistroGestionV2> {
+    console.log('[PROMESA] Reprogramming payment promise:', { recordId, request });
+    return this.http.put<RegistroGestionV2>(`${this.baseUrl}/${recordId}/reprogramar-promesa`, request);
   }
 
   /**

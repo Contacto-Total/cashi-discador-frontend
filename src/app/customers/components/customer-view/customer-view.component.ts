@@ -1,9 +1,10 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CustomerService, CustomerResource, PagosClienteResponse, GrupoPagos } from '../../services/customer.service';
+import { CustomerService, CustomerResource, ContactMethodResource, PagosClienteResponse, GrupoPagos } from '../../services/customer.service';
 import { ApiSystemConfigService } from '../../../collection-management/services/api-system-config.service';
 import { ManagementService, CreateManagementRequest } from '../../../collection-management/services/management.service';
+import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.service';
 
 @Component({
   selector: 'app-customer-view',
@@ -44,13 +45,13 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                        class="flex-1 px-3 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 @if (searchPerformed() || showMultipleResults()) {
                   <button (click)="clearSearch()"
-                          class="px-5 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all font-semibold cursor-pointer flex items-center gap-2">
+                          class="px-5 py-2.5 bg-gradient-to-r from-gray-500 to-gray-600 !text-white rounded-lg hover:shadow-lg hover:shadow-gray-500/50 transition-all font-semibold cursor-pointer flex items-center gap-2">
                     <span>Limpiar</span>
                   </button>
                 }
                 <button (click)="searchCustomer()"
                         [disabled]="loading()"
-                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 !text-white rounded-lg hover:shadow-lg hover:shadow-blue-600/50 transition-all font-semibold cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                   @if (loading()) {
                   } @else {
                   }
@@ -71,77 +72,51 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
               @if (showMultipleResults() && searchResults().length > 0) {
                 <div>
                   <div class="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-700/50 rounded-lg flex items-center gap-2">
-                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} cuentas para este cliente. Seleccione una:</p>
+                    <p class="text-blue-600 dark:text-blue-400 text-sm font-semibold">Se encontraron {{ searchResults().length }} coincidencias. Seleccione una cuenta:</p>
                   </div>
 
-                  <!-- Tabla de Datos del Cliente (Encabezado) -->
-                  <div class="mb-3">
-                    <table class="w-full text-xs border-collapse">
-                      <thead>
-                        <tr class="bg-blue-100 dark:bg-blue-900/30">
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Nombre Completo</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Documento</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Edad</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Email</th>
-                          <th class="px-2 py-2 text-left text-blue-900 dark:text-blue-200 font-bold border border-blue-200 dark:border-blue-700">Dirección</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr class="bg-white dark:bg-slate-700">
-                          <td class="px-2 py-2 text-gray-900 dark:text-white font-semibold border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.fullName || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.documentNumber || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.age || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ getFirstEmail(searchResults()[0]) || 'N/A' }}</td>
-                          <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ searchResults()[0]?.address || 'N/A' }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  <div class="space-y-3 max-h-[520px] overflow-y-auto pr-1">
+                    @for (group of groupedSearchResults(); track group.documentNumber) {
+                      <div class="bg-gradient-to-r from-white to-slate-50 dark:from-slate-800 dark:to-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-xl p-3 shadow-sm">
+                        <div class="flex items-start justify-between gap-3 mb-2">
+                          <div class="min-w-0">
+                            <p class="text-sm font-bold text-slate-900 dark:text-white truncate">{{ group.customer.fullName || 'N/A' }}</p>
+                            <p class="text-xs text-slate-600 dark:text-slate-300">Doc: {{ group.customer.documentNumber || 'N/A' }} · Edad: {{ group.customer.age || 'N/A' }}</p>
+                          </div>
+                          <div class="flex items-center gap-2 shrink-0">
+                            <span class="px-2 py-1 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-800 dark:text-cyan-200 rounded-md text-xs font-semibold border border-cyan-200 dark:border-cyan-700/50">{{ group.accounts.length }} cuenta{{ group.accounts.length > 1 ? 's' : '' }}</span>
+                            <button
+                              (click)="toggleCustomerGroup(group.documentNumber)"
+                              class="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-xs rounded-md text-slate-700 dark:text-slate-200 font-semibold transition-colors border border-slate-200 dark:border-slate-600">
+                              {{ isCustomerExpanded(group.documentNumber) ? 'Ocultar' : 'Ver' }}
+                            </button>
+                          </div>
+                        </div>
 
-                  <!-- Tabla de Cuentas -->
-                  <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-xs border-collapse">
-                      <thead>
-                        <tr class="bg-gray-200 dark:bg-slate-700">
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">ID</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Proveedor</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cartera</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Subcartera</th>
-                          <th class="px-2 py-2 text-left text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Cuenta</th>
-                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Días Mora</th>
-                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Monto Mora</th>
-                          <th class="px-2 py-2 text-right text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Capital</th>
-                          <th class="px-2 py-2 text-center text-gray-800 dark:text-gray-200 font-bold border border-gray-300 dark:border-slate-600">Acción</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (result of searchResults(); track result.id) {
-                          <tr class="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                            <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.id }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.tenantName || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.portfolioName || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white border border-gray-300 dark:border-slate-600">{{ result.subPortfolioName || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">{{ result.accountNumber || 'N/A' }}</td>
-                            <td class="px-2 py-2 text-right border border-gray-300 dark:border-slate-600">
-                              <span [class]="result.overdueDays && result.overdueDays > 0 ? 'px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded font-semibold' : 'text-gray-900 dark:text-white'">
-                                {{ result.overdueDays ?? 0 }}
-                              </span>
-                            </td>
-                            <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
-                              {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}
-                            </td>
-                            <td class="px-2 py-2 text-right text-gray-900 dark:text-white font-mono border border-gray-300 dark:border-slate-600">
-                              {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}
-                            </td>
-                            <td class="px-2 py-2 text-center border border-gray-300 dark:border-slate-600">
-                              <button (click)="selectCustomerFromResults(result)" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold transition-colors">
-                                Gestionar
-                              </button>
-                            </td>
-                          </tr>
+                        @if (isCustomerExpanded(group.documentNumber)) {
+                          <div class="space-y-2 mt-3">
+                            @for (result of group.accounts; track result.id + '-' + (result.accountNumber || '')) {
+                              <div class="border border-slate-200 dark:border-slate-600 rounded-lg p-2.5 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-900/30">
+                                <div class="flex items-start justify-between gap-3">
+                                  <div class="min-w-0 flex-1">
+                                    <p class="text-xs text-slate-800 dark:text-slate-200 font-semibold truncate">{{ result.tenantName || 'N/A' }} / {{ result.portfolioName || 'N/A' }} / {{ result.subPortfolioName || 'N/A' }}</p>
+                                    <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5 truncate">
+                                      Cuenta: <span class="font-mono">{{ result.accountNumber || 'N/A' }}</span> ·
+                                      <span [class]="result.overdueDays && result.overdueDays > 0 ? 'text-rose-700 dark:text-rose-300 font-semibold' : ''">Días mora: {{ result.overdueDays ?? 0 }}</span> ·
+                                      <span class="text-amber-700 dark:text-amber-300">Mora: {{ result.overdueAmount ? (result.overdueAmount | number:'1.2-2') : '0.00' }}</span> ·
+                                      <span class="text-emerald-700 dark:text-emerald-300">Capital: {{ result.principalAmount ? (result.principalAmount | number:'1.2-2') : '0.00' }}</span>
+                                    </p>
+                                  </div>
+                                  <button (click)="selectCustomerFromResults(result)" class="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 !text-white rounded text-xs font-semibold transition-all shadow-sm hover:shadow-blue-500/30 whitespace-nowrap">
+                                    Gestionar
+                                  </button>
+                                </div>
+                              </div>
+                            }
+                          </div>
                         }
-                      </tbody>
-                    </table>
+                      </div>
+                    }
                   </div>
                 </div>
               }
@@ -403,6 +378,9 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
                               <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
+                              @if (osiptelBadge(contact); as badge) {
+                                <span [class]="badge.classes" [title]="badge.tooltip">{{ badge.label }}</span>
+                              }
                             </div>
                           }
                         </div>
@@ -510,6 +488,9 @@ import { ManagementService, CreateManagementRequest } from '../../../collection-
                             <div class="bg-gray-50 dark:bg-slate-900/50 rounded p-1.5 border border-gray-200 dark:border-slate-700/50">
                               <p class="text-[0.5625rem] text-gray-600 dark:text-gray-400 font-semibold uppercase mb-0.5 leading-none">{{ getContactLabel(contact.subtype) }}</p>
                               <p class="text-xs text-gray-900 dark:text-white font-medium">{{ contact.value }}</p>
+                              @if (osiptelBadge(contact); as badge) {
+                                <span [class]="badge.classes" [title]="badge.tooltip">{{ badge.label }}</span>
+                              }
                             </div>
                           }
                         </div>
@@ -1049,6 +1030,41 @@ export class CustomerViewComponent implements OnInit {
   recentCustomers = signal<{document: string, fullName: string, tenantName: string, portfolioName: string, subPortfolioName: string}[]>([]);
   searchResults = signal<CustomerResource[]>([]);
   showMultipleResults = signal(false);
+  expandedCustomerGroups = signal<Set<string>>(new Set());
+  groupedSearchResults = computed(() => {
+    const groups = new Map<string, { documentNumber: string; customer: CustomerResource; accounts: CustomerResource[] }>();
+
+    for (const item of this.searchResults()) {
+      const doc = item.documentNumber || 'SIN_DOCUMENTO';
+      const existing = groups.get(doc);
+      if (!existing) {
+        groups.set(doc, {
+          documentNumber: doc,
+          customer: item,
+          accounts: [item]
+        });
+      } else {
+        existing.accounts.push(item);
+      }
+    }
+
+    return Array.from(groups.values());
+  });
+
+  isCustomerExpanded(documentNumber: string): boolean {
+    return this.expandedCustomerGroups().has(documentNumber || 'SIN_DOCUMENTO');
+  }
+
+  toggleCustomerGroup(documentNumber: string): void {
+    const key = documentNumber || 'SIN_DOCUMENTO';
+    const current = new Set(this.expandedCustomerGroups());
+    if (current.has(key)) {
+      current.delete(key);
+    } else {
+      current.add(key);
+    }
+    this.expandedCustomerGroups.set(current);
+  }
 
   // Pagos del cliente
   pagosCliente = signal<PagosClienteResponse | null>(null);
@@ -1156,6 +1172,7 @@ export class CustomerViewComponent implements OnInit {
     this.searchPerformed.set(true);
     this.showMultipleResults.set(false);
     this.searchResults.set([]);
+    this.expandedCustomerGroups.set(new Set());
 
     // Limpiar pagos del cliente anterior
     this.pagosCliente.set(null);
@@ -1170,16 +1187,23 @@ export class CustomerViewComponent implements OnInit {
           this.customer.set(null);
           this.searchResults.set([]);
           this.showMultipleResults.set(false);
+          this.expandedCustomerGroups.set(new Set());
         } else if (data.length === 1) {
           // Un solo resultado, mostrarlo directamente
           this.customer.set(data[0]);
           this.searchResults.set([]);
           this.showMultipleResults.set(false);
+          this.expandedCustomerGroups.set(new Set());
         } else {
           // Múltiples resultados, mostrar lista de selección (incluye duplicados entre tenants)
           this.customer.set(null);
           this.searchResults.set(data);
           this.showMultipleResults.set(true);
+          const firstThreeDocs = data
+            .map(item => item.documentNumber || 'SIN_DOCUMENTO')
+            .filter((doc, index, arr) => arr.indexOf(doc) === index)
+            .slice(0, 3);
+          this.expandedCustomerGroups.set(new Set(firstThreeDocs));
         }
         this.loading.set(false);
       },
@@ -1609,6 +1633,19 @@ export class CustomerViewComponent implements OnInit {
     };
 
     return labels[subtype] || subtype;
+  }
+
+  // ============================
+  // Osiptel V17+: estado viene en el mismo metodo_contacto (sincrono, sin HTTP).
+  // ============================
+  private readonly osiptelService = inject(OsiptelService);
+
+  /**
+   * Devuelve el badge a renderizar para el estado_osiptel del contacto.
+   * null = no se muestra badge (estado SIN_VALIDAR o undefined).
+   */
+  osiptelBadge(contact: ContactMethodResource): OsiptelBadge | null {
+    return this.osiptelService.badgeFor(contact.estadoOsiptel);
   }
 
   /**
