@@ -459,12 +459,14 @@ export class CampaignAdminService {
         { headers: this.getHeaders() }
         ).pipe(
           map((response: any) => ({
-            totalClientesSubcartera: response.total_clientes_subcartera || 0,
+            // totalClientesSubcartera: response.total_clientes_subcartera || 0,
+            totalClientesSubcartera: response.total_subcartera || 0,
             totalDespuesBlacklist: (response.total_despues_blacklist || 0) - (response.excluidos_por_pago_cumplido || 0),
             excluidosPorBlacklist: 0,
             excluidosPorPagoCumplido: response.excluidos_por_pago_cumplido || 0,
             excluidosPorFiltros: response.excluidos_por_filtros || 0,
-            totalConFiltros: response.total_con_filtros || 0,
+            // totalConFiltros: response.total_con_filtros || 0,
+            totalConFiltros: response.total_disponible || 0,
             totalConEstadoCalculado: response.total_con_estado_calculado || 0,
             porTipoContacto: {
               CD: response.count_cd || 0,
