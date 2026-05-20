@@ -74,7 +74,7 @@ import { CallService } from '../../core/services/call.service';
         <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 px-4">
           <div class="w-full max-w-md rounded-xl border border-amber-300 bg-white shadow-2xl dark:border-amber-800 dark:bg-slate-900 animate-[slideInUp_0.25s_ease-out]">
             <div class="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/40">
-              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">Teléfono duplicado</h3>
+              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">{{ phoneDuplicateTitle() }}</h3>
             </div>
             <div class="px-4 py-3">
               <p class="text-sm text-slate-700 dark:text-slate-200">{{ phoneDuplicateMessage() }}</p>
@@ -184,56 +184,86 @@ import { CallService } from '../../core/services/call.service';
                   <!-- Información de Contacto -->
                   @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
-                    <!-- Header con botón agregar -->
                     <div class="flex items-center justify-between">
-                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Teléfonos</span>
+                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Métodos de contacto</span>
                       @if (customerData()?.id) {
                         <button
-                          (click)="showAddPhoneForm.set(!showAddPhoneForm())"
+                          (click)="toggleAddContactForm()"
                           class="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                          title="Agregar teléfono"
+                          title="Agregar contacto"
                         >
-                          <lucide-angular [name]="showAddPhoneForm() ? 'x' : 'plus-circle'" [size]="13"></lucide-angular>
-                          {{ showAddPhoneForm() ? 'Cancelar' : 'Agregar' }}
+                          <lucide-angular [name]="showAddContactForm() ? 'x' : 'plus-circle'" [size]="13"></lucide-angular>
+                          {{ showAddContactForm() ? 'Cancelar' : 'Agregar' }}
                         </button>
                       }
                     </div>
 
-                    <!-- Formulario agregar teléfono -->
-                    @if (showAddPhoneForm()) {
-                      <div class="p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800 space-y-1.5">
-                        <input
-                          type="text"
-                          [(ngModel)]="newPhoneNumber"
-                          placeholder="987654321"
-                          maxlength="9"
-                          class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
-                        <select
-                          [(ngModel)]="newPhoneSubtipo"
-                          class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        >
-                          <option value="telefono_referencia_1">Referencia 1</option>
-                          <option value="telefono_referencia_2">Referencia 2</option>
-                          <option value="telefono_secundario">Secundario</option>
-                        </select>
+                    @if (showAddContactForm()) {
+                      <div class="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
+                        <div class="flex items-center gap-2">
+                          <div class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Nuevo contacto</div>
+                          <select
+                            [(ngModel)]="newContactType"
+                            class="flex-1 min-w-0 px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="telefono">Teléfono</option>
+                            <option value="email">Correo</option>
+                          </select>
+                        </div>
+
+                        @if (newContactType === 'telefono') {
+                          <input
+                            type="text"
+                            [(ngModel)]="newPhoneNumber"
+                            placeholder="Agregar numero aqui"
+                            maxlength="9"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          <select
+                            [(ngModel)]="newPhoneSubtipo"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="telefono_referencia_1">Referencia 1</option>
+                            <option value="telefono_referencia_2">Referencia 2</option>
+                            <option value="telefono_secundario">Secundario</option>
+                          </select>
+                        } @else {
+                          <input
+                            type="email"
+                            [(ngModel)]="newEmail"
+                            placeholder="Agregar correo aqui"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          <select
+                            [(ngModel)]="newEmailSubtipo"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="email_principal">Principal</option>
+                            <option value="email_secundario">Secundario</option>
+                            <option value="email_trabajo">Trabajo</option>
+                          </select>
+                        }
+
                         <div class="flex gap-1.5">
                           <button
-                            (click)="guardarNuevoTelefono()"
-                            [disabled]="!isValidCellphone(newPhoneNumber) || savingPhone()"
-                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded text-xs font-bold transition-colors"
+                            (click)="guardarNuevoContacto()"
+                            [disabled]="newContactType === 'telefono' ? (!isValidCellphone(newPhoneNumber) || savingPhone()) : (!isValidEmail(newEmail) || savingEmail())"
+                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed !text-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                            style="color: #ffffff;"
                           >
-                            {{ savingPhone() ? 'Guardando...' : 'Guardar' }}
+                            {{ (newContactType === 'telefono' ? savingPhone() : savingEmail()) ? 'Guardando...' : 'Guardar' }}
                           </button>
                           <button
-                            (click)="showAddPhoneForm.set(false); newPhoneNumber = ''; newPhoneSubtipo = 'telefono_referencia_1'"
-                            class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-xs font-bold transition-colors"
+                            (click)="cancelAddContactForm()"
+                            class="px-2 py-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md text-xs font-bold transition-colors"
                           >
                             Cancelar
                           </button>
                         </div>
                       </div>
                     }
+
+                    <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">Teléfonos</div>
 
                     <!-- Teléfonos desde metodos_contacto -->
                     @if (telefonosMetodo().length > 0) {
@@ -247,6 +277,12 @@ import { CallService } from '../../core/services/call.service';
                               <span class="text-xs" [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
                               @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                                 <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                              }
+                              @if (tel.estadoOsiptel === 'VALIDADO') {
+                                <span title="Número validado en OSIPTEL (es titular)" class="text-[10px] px-1 py-0 rounded-full font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 flex items-center gap-0.5">
+                                  <lucide-angular name="shield-check" [size]="9" class="inline-block"></lucide-angular>
+                                  OSIPTEL
+                                </span>
                               }
                             </div>
                             <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
@@ -263,16 +299,29 @@ import { CallService } from '../../core/services/call.service';
                         </div>
                       </div>
                     }
-                    <!-- Email -->
-                    @if (customerData().contacto.email) {
-                      <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
-                        <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-xs text-blue-500 dark:text-blue-400">Email</div>
-                          <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                    <!-- Emails -->
+                    <div class="mt-2 space-y-1.5">
+                      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Correos</div>
+                      @if (emailsMetodo().length > 0) {
+                        @for (email of emailsMetodo(); track email.valor) {
+                          <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                            <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="text-xs text-blue-500 dark:text-blue-400">{{ emailSubtipoLabel(email.subtipo) }}</div>
+                              <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ email.valor }}</div>
+                            </div>
+                          </div>
+                        }
+                      } @else if (customerData().contacto.email) {
+                        <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                          <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-xs text-blue-500 dark:text-blue-400">Principal</div>
+                            <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                          </div>
                         </div>
-                      </div>
-                    }
+                      }
+                    </div>
                     <!-- Dirección -->
                     @if (customerData().contacto.direccion) {
                       <div class="flex items-center gap-2 p-1.5 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
@@ -496,6 +545,12 @@ import { CallService } from '../../core/services/call.service';
                       <span class="font-bold" [class]="!tel.activo ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
                       @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                         <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                      }
+                      @if (tel.estadoOsiptel === 'VALIDADO') {
+                        <span title="Validado OSIPTEL" class="text-[8px] px-1 rounded-full font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 flex items-center gap-0.5">
+                          <lucide-angular name="shield-check" [size]="8" class="inline-block"></lucide-angular>
+                          OSIPTEL
+                        </span>
                       }
                     </button>
                   }
@@ -1669,7 +1724,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
   protected showPhoneDuplicateCard = signal(false);
-  protected phoneDuplicateMessage = signal('El teléfono ya existe para este cliente.');
+  protected phoneDuplicateTitle = signal('Contacto duplicado');
+  protected phoneDuplicateMessage = signal('El contacto ya existe para este cliente.');
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
@@ -2133,10 +2189,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   selectedManualPhone = signal<string>('');
 
   // Agregar teléfono
-  showAddPhoneForm = signal(false);
+  showAddContactForm = signal(false);
+  newContactType: 'telefono' | 'email' = 'telefono';
   newPhoneNumber = '';
   newPhoneSubtipo = 'telefono_referencia_1';
   savingPhone = signal(false);
+
+  // Agregar correo
+  newEmail = '';
+  newEmailSubtipo = 'email_principal';
+  savingEmail = signal(false);
+  emailsMetodo = signal<Array<{ valor: string; subtipo: string }>>([]);
 
   // WhatsApp
   showWhatsappDropdown = signal(false);
@@ -2890,6 +2953,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
   }
 
   /**
@@ -3003,6 +3067,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar historial de gestiones
     this.loadManagementHistory();
@@ -3428,6 +3493,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar teléfonos desde metodos_contacto
     const doc = clienteDetalle.documento || '';
@@ -5963,10 +6029,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       fecha_nacimiento: customer.birthDate || '',
       edad: customer.age || null,
       contacto: {
-        telefono_principal: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_principal')?.value || '',
-        telefono_alternativo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_secundario')?.value || '',
-        telefono_trabajo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_trabajo')?.value || '',
-        email: customer.contactMethods?.find((cm: any) => cm.contactType === 'email')?.value || '',
+        telefono_principal: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_principal')?.value || '',
+        telefono_alternativo: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_secundario')?.value || '',
+        telefono_trabajo: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_trabajo')?.value || '',
+        email: customer.contactMethods?.find((cm: any) => (cm.contactType || '').toLowerCase() === 'email')?.value || '',
         direccion: customer.address || ''
       },
       cuenta: {
@@ -5988,6 +6054,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar historial de gestiones del cliente
     this.loadManagementHistory();
@@ -6663,6 +6730,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
   }
 
+  emailSubtipoLabel(subtipo: string): string {
+    const labels: Record<string, string> = {
+      'email_principal': 'Principal',
+      'email_secundario': 'Secundario',
+      'email_trabajo': 'Trabajo'
+    };
+    return labels[subtipo] || subtipo || 'Email';
+  }
+
+  private syncEmailsMetodoFromCurrentData(): void {
+    const rawData = this.rawClientData();
+    const sourceMethods = Array.isArray(rawData?.['contactMethods'])
+      ? rawData['contactMethods']
+      : Array.isArray(rawData?.['metodos_contacto'])
+      ? rawData['metodos_contacto']
+      : [];
+
+    const normalized = sourceMethods
+      .filter((cm: any) => ((cm?.contactType || cm?.tipo || '').toString().toLowerCase() === 'email'))
+      .map((cm: any) => ({
+        valor: (cm?.value || cm?.valor || '').toString().trim(),
+        subtipo: (cm?.subType || cm?.subtype || cm?.subtipo || 'email_principal').toString()
+      }))
+      .filter((item: any) => item.valor.length > 0);
+
+    const unique = normalized.filter((item: any, index: number, arr: any[]) =>
+      arr.findIndex((x: any) => x.valor.toLowerCase() === item.valor.toLowerCase()) === index
+    );
+
+    const fallback = (this.customerData()?.contacto?.email || '').trim();
+    if (unique.length === 0 && fallback) {
+      this.emailsMetodo.set([{ valor: fallback, subtipo: 'email_principal' }]);
+      return;
+    }
+
+    this.emailsMetodo.set(unique);
+  }
+
   loadTelefonosMetodo(documento: string): void {
     if (!documento) return;
     this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`).pipe(
@@ -6797,6 +6902,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   closePhoneDuplicateCard(): void {
     this.showPhoneDuplicateCard.set(false);
+    this.phoneDuplicateTitle.set('Contacto duplicado');
+  }
+
+  toggleAddContactForm(): void {
+    if (this.showAddContactForm()) {
+      this.cancelAddContactForm();
+      return;
+    }
+    this.showAddContactForm.set(true);
+    this.newContactType = 'telefono';
+  }
+
+  cancelAddContactForm(): void {
+    this.showAddContactForm.set(false);
+    this.newContactType = 'telefono';
+    this.newPhoneNumber = '';
+    this.newPhoneSubtipo = 'telefono_referencia_1';
+    this.newEmail = '';
+    this.newEmailSubtipo = 'email_principal';
+  }
+
+  guardarNuevoContacto(): void {
+    if (this.newContactType === 'telefono') {
+      this.guardarNuevoTelefono();
+      return;
+    }
+    this.guardarNuevoCorreo();
   }
 
   guardarNuevoTelefono(): void {
@@ -6819,7 +6951,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Reset form
         this.newPhoneNumber = '';
         this.newPhoneSubtipo = 'telefono_referencia_1';
-        this.showAddPhoneForm.set(false);
+        this.cancelAddContactForm();
         this.savingPhone.set(false);
 
         // Toast de éxito
@@ -6832,6 +6964,51 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const msg = err.error?.error || 'Error al agregar teléfono';
         console.error('❌ Error agregando teléfono:', msg);
         if ((msg || '').toLowerCase().includes('ya existe para este cliente')) {
+          this.phoneDuplicateTitle.set('Teléfono duplicado');
+          this.phoneDuplicateMessage.set(msg);
+          this.showPhoneDuplicateCard.set(true);
+          return;
+        }
+        alert(msg);
+      }
+    });
+  }
+
+  guardarNuevoCorreo(): void {
+    const valor = (this.newEmail || '').trim();
+    if (!this.isValidEmail(valor)) return;
+
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) return;
+
+    this.savingEmail.set(true);
+    this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto-email`, {
+      documento,
+      valor,
+      subtipo: this.newEmailSubtipo
+    }).subscribe({
+      next: () => {
+        const current = this.emailsMetodo();
+        const alreadyExists = current.some(e => e.valor.toLowerCase() === valor.toLowerCase());
+        if (!alreadyExists) {
+          this.emailsMetodo.set([...current, { valor, subtipo: this.newEmailSubtipo }]);
+        }
+
+        this.newEmail = '';
+        this.newEmailSubtipo = 'email_principal';
+        this.cancelAddContactForm();
+        this.savingEmail.set(false);
+
+        this.showSuccess.set(true);
+        setTimeout(() => this.showSuccess.set(false), 3000);
+        console.log('✅ Correo agregado exitosamente:', valor);
+      },
+      error: (err) => {
+        this.savingEmail.set(false);
+        const msg = err.error?.error || 'Error al agregar correo';
+        console.error('❌ Error agregando correo:', msg);
+        if ((msg || '').toLowerCase().includes('ya existe')) {
+          this.phoneDuplicateTitle.set('Correo duplicado');
           this.phoneDuplicateMessage.set(msg);
           this.showPhoneDuplicateCard.set(true);
           return;
@@ -6844,6 +7021,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // --- WhatsApp ---
   isValidCellphone(num: string): boolean {
     return /^9\d{8}$/.test((num || '').trim());
+  }
+
+  isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
   }
 
   sendWhatsapp(phone: string): void {

@@ -64,13 +64,6 @@ export interface ContactMethodResource {
   // V17+: campos del modelo NO-ortogonal (vienen siempre del backend)
   estadoOsiptel?: 'SIN_VALIDAR' | 'VALIDADO' | 'NO_VALIDADO';
   estadoWhatsapp?: 'SIN_VALIDAR' | 'VALIDADO' | 'NO_VALIDADO';
-  estadoContacto?:
-    | 'NUEVO'
-    | 'CONTACTO_TITULAR'
-    | 'NO_CONTACTADO'
-    | 'CONTACTO_TERCERO'
-    | 'INVALIDO'
-    | 'INVALIDO_CONFIRMADO';
 }
 
 export interface CustomerResource {
