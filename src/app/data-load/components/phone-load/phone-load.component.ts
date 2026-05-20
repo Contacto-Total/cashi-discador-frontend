@@ -222,6 +222,19 @@ import {
               </div>
             </div>
 
+            <!-- Banner: archivo con errores, nada insertado -->
+            @if (result()!.errorCount > 0) {
+              <div class="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                <lucide-angular name="circle-alert" [size]="18" class="text-red-500 shrink-0 mt-0.5"></lucide-angular>
+                <div>
+                  <p class="text-sm font-semibold text-red-700 dark:text-red-300">No se insertó ningún teléfono</p>
+                  <p class="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                    El archivo contiene {{ result()!.errorCount }} error(es). Corrija los datos indicados y vuelva a subir el archivo.
+                  </p>
+                </div>
+              </div>
+            }
+
             <!-- Tabla de errores -->
             @if (result()!.rowErrors.length > 0) {
               <div class="bg-white dark:bg-slate-800 rounded-xl border border-red-200 dark:border-red-800 shadow-sm overflow-hidden">
@@ -484,7 +497,7 @@ export class PhoneLoadComponent implements OnInit {
         );
       } else {
         this.notificationService.error(
-          `No se insertaron teléfonos. ${result.errorCount} error(es), ${result.skippedCount} omitido(s)`
+          `El archivo tiene ${result.errorCount} error(es). Corrija los datos y vuelva a subir el archivo.`
         );
       }
     } catch {
