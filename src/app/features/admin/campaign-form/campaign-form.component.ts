@@ -57,6 +57,9 @@ export class CampaignFormComponent implements OnInit {
   startDate: Date | null = null;
   endDate: Date | null = null;
 
+  // FLAG PARA LA CAMPAÑA EN MODO DRAFT (guardada pero sin importar contactos ni exportar Excel)
+  draftCampaignId: number | null = null;
+
   campaign: Campaign = {
     name: '',
     description: '',
@@ -572,7 +575,8 @@ export class CampaignFormComponent implements OnInit {
 
   /**
    * Muestra el modal de preview con el resumen de la campaña
-   */
+   * FUNCION PARA FLUJO ANTIGUO (sin guardar campaña en modo draft)
+  
   showPreview(): void {
     this.previewLoading = true;
     this.previewError = null;
@@ -603,19 +607,110 @@ export class CampaignFormComponent implements OnInit {
       }
     });
   }
+  */
+
+  /**
+   * ------------------------------------------------------------
+   * Muestra el modal de preview con el resumen de la campaña
+   * ------------------------------------------------------------
+  */
+
+  showPreview(): void {
+    this.previewLoading = true;
+    this.previewError = null;
+    this.showPreviewModal = true;
+
+    const filtroRangoAnt = this.selectedRangosAntiguedad.length > 0
+      ? this.selectedRangosAntiguedad.join(',') : undefined;
+    const filtroTipoTel = this.selectedTiposTelefono.length > 0
+      ? this.selectedTiposTelefono.join(',') : undefined;
+
+    // 1) Crear la campaña primero
+    this.campaignService.createCampaign(this.campaign).subscribe({
+      next: (response: any) => {
+        const newCampaignId = response.campaignId || response.campaign?.id || response.id;
+        if (!newCampaignId) {
+          this.previewError = 'No se pudo crear la campaña para el preview';
+          this.previewLoading = false;
+          return;
+        }
+        this.draftCampaignId = newCampaignId;
+
+        // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
+        this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
+          next: () => {
+            // 3) Llamar al preview SP
+            this.campaignService.previewImportacionSP(
+              newCampaignId,
+              this.selectedTenantId,
+              this.selectedPortfolioId,
+              this.selectedSubPortfolioId,
+              this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+              filtroRangoAnt,
+              filtroTipoTel
+            ).subscribe({
+              next: (preview) => {
+                this.previewData = preview;
+                this.previewLoading = false;
+              },
+              error: (err) => {
+                console.error('Error preview V2:', err);
+                this.previewError = 'Error al obtener el preview';
+                this.previewLoading = false;
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Error guardando filtros:', err);
+            this.previewError = 'Error al guardar los filtros';
+            this.previewLoading = false;
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Error creando campaña draft:', err);
+        this.previewError = 'Error al crear la campaña draft';
+        this.previewLoading = false;
+      }
+    });
+  }
+
+
 
   /**
    * Cierra el modal de preview
-   */
+   * FUNCION PARA FLUJO ANTIGUO (sin guardar campaña en modo draft)
+   
   closePreviewModal(): void {
     this.showPreviewModal = false;
     this.previewData = null;
     this.previewError = null;
   }
+  */
 
   /**
-   * Confirma la creación de la campaña desde el modal de preview
-   */
+   * ------------------------------------------------------------
+   * Cerrar el modal de preview con el resumen de la campaña
+   * ------------------------------------------------------------
+  */
+
+  closePreviewModal(): void {
+    if (this.draftCampaignId) {
+      this.campaignService.deleteCampaign(this.draftCampaignId).subscribe({
+        next: () => console.log('Draft campaña borrada'),
+        error: (err) => console.error('Error borrando draft:', err)
+      });
+      this.draftCampaignId = null;
+    }
+    this.showPreviewModal = false;
+    this.previewData = null;
+    this.previewError = null;
+  }
+
+
+  /**
+   * Cierra el modal de preview
+   * FUNCION PARA FLUJO ANTIGUO (sin guardar campaña en modo draft)
   confirmCreateCampaign(): void {
     this.showPreviewModal = false;
     this.loading = true;
@@ -641,6 +736,40 @@ export class CampaignFormComponent implements OnInit {
       }
     });
   }
+    */
+
+  /**
+   * ------------------------------------------------------------
+   * Confirma la creación de la campaña desde el modal de preview
+   * ------------------------------------------------------------
+  */
+
+  confirmCreateCampaign(): void {
+    if (!this.draftCampaignId) {
+      this.error = 'No hay campaña draft para confirmar';
+      return;
+    }
+
+    this.showPreviewModal = false;
+    this.loading = true;
+    const campaignIdToImport = this.draftCampaignId;
+    this.draftCampaignId = null;
+
+    // Importar contactos usando el SP
+    this.campaignService.importarContactosSP(campaignIdToImport).subscribe({
+      next: (response) => {
+        console.log('Import V2 exitoso:', response);
+        // Pasar true para exportar Excel (campaña nueva)
+        this.saveFiltersAndNavigate(campaignIdToImport, true);
+      },
+      error: (err) => {
+        console.error('Error en import V2:', err);
+        this.error = 'Error al importar contactos: ' + (err.error?.message || err.message);
+        this.loading = false;
+      }
+    });
+  }
+
 
   /**
    * Calcula el total de contactos del preview
