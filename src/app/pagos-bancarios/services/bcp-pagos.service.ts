@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
@@ -142,33 +142,45 @@ export class BcpPagosService {
    * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
    * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
    */
-  descargarReporteConciliacionPorFecha(fechaInicio: string, fechaFin?: string): void {
+  descargarReporteConciliacionPorFecha(fechaInicio: string, fechaFin?: string): Observable<HttpResponse<Blob>> {
+    console.log('[BCP] Descargando reporte de conciliación por fecha:', { fechaInicio, fechaFin });
+    return this.descargarArchivoExcel('reporte-conciliacion/excel', fechaInicio, fechaFin);
+  }
+
+  /**
+   * Descarga el reporte resumido de conciliación en formato Excel por fecha o rango de fechas
+   * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
+   * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
+   */
+  descargarReporteConciliacionResumenPorFecha(fechaInicio: string, fechaFin?: string): Observable<HttpResponse<Blob>> {
+    console.log('[BCP] Descargando reporte resumido de conciliación por fecha:', { fechaInicio, fechaFin });
+    return this.descargarArchivoExcel('reporte-conciliacion-resumen/excel', fechaInicio, fechaFin);
+  }
+
+  /**
+   * Expone el helper de descarga para reutilizar el mismo patrón en la UI
+   */
+  procesarDescargaArchivo(response: HttpResponse<Blob>, nombrePorDefecto: string): void {
+    this.procesarDescargaBlob(response, nombrePorDefecto);
+  }
+
+  private descargarArchivoExcel(endpoint: string, fechaInicio: string, fechaFin?: string): Observable<HttpResponse<Blob>> {
     let params = new HttpParams().set('fechaInicio', fechaInicio);
     if (fechaFin) {
       params = params.set('fechaFin', fechaFin);
     }
 
-    console.log('[BCP] Descargando reporte de conciliación por fecha:', { fechaInicio, fechaFin });
-
-    this.http.get(`${this.baseUrl}/reporte-conciliacion/excel`, {
+    return this.http.get(`${this.baseUrl}/${endpoint}`, {
       params,
       responseType: 'blob',
       observe: 'response'
-    }).subscribe({
-      next: (response) => {
-        const nombreArchivo = fechaFin
-          ? `reporte-conciliacion-${fechaInicio}-a-${fechaFin}.xlsx`
-          : `reporte-conciliacion-${fechaInicio}.xlsx`;
-        this.procesarDescargaBlob(response, nombreArchivo);
-      },
-      error: (error) => console.error('[BCP] Error descargando reporte:', error)
     });
   }
 
   /**
    * Procesa la descarga de un archivo blob
    */
-  private procesarDescargaBlob(response: any, nombrePorDefecto: string): void {
+  private procesarDescargaBlob(response: HttpResponse<Blob>, nombrePorDefecto: string): void {
     const blob = response.body;
     if (!blob) {
       console.error('[BCP] No se recibió el archivo');
