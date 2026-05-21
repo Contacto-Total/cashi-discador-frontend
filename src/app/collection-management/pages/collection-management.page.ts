@@ -278,6 +278,12 @@ import { CallService } from '../../core/services/call.service';
                               @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                                 <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
                               }
+                              @if (tel.estadoOsiptel === 'VALIDADO') {
+                                <span title="Número validado en OSIPTEL (es titular)" class="text-[10px] px-1 py-0 rounded-full font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 flex items-center gap-0.5">
+                                  <lucide-angular name="shield-check" [size]="9" class="inline-block"></lucide-angular>
+                                  OSIPTEL
+                                </span>
+                              }
                             </div>
                             <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
                           </div>
@@ -539,6 +545,12 @@ import { CallService } from '../../core/services/call.service';
                       <span class="font-bold" [class]="!tel.activo ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
                       @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                         <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                      }
+                      @if (tel.estadoOsiptel === 'VALIDADO') {
+                        <span title="Validado OSIPTEL" class="text-[8px] px-1 rounded-full font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 flex items-center gap-0.5">
+                          <lucide-angular name="shield-check" [size]="8" class="inline-block"></lucide-angular>
+                          OSIPTEL
+                        </span>
                       }
                     </button>
                   }

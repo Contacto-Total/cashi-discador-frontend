@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface Campaign {
@@ -73,8 +73,8 @@ export const TIPOS_CONTACTO: TipoContactoInfo[] = [
 ];
 
 export const TIPOS_FILTRO_ESTADO = [
-  { codigo: 'ULTIMO_ESTADO', nombre: 'Último Estado', descripcion: 'Usa la última gestión del cliente' },
   { codigo: 'MEJOR_ESTADO_MES', nombre: 'Mejor Estado del Mes', descripcion: 'Usa el mejor estado conseguido en el mes actual' },
+  { codigo: 'ULTIMO_ESTADO', nombre: 'Último Estado', descripcion: 'Usa la última gestión del cliente' },
   { codigo: 'MEJOR_ESTADO_HISTORICO', nombre: 'Mejor Estado Histórico', descripcion: 'Usa el mejor estado histórico del cliente' }
 ];
 
@@ -435,4 +435,70 @@ export class CampaignAdminService {
       { headers: this.getHeaders() }
     );
   }
+
+
+
+  // -------------------------------------------------------
+  // Métodos nuevos para el uso del SP de Preview e Importacion de camapañas
+  // -------------------------------------------------------
+
+  // metodo para el preview
+  previewImportacionSP(campaignId: number, tenantId: number, portfolioId: number, subPortfolioId: number,
+    tipoFiltroEstado: string, filtroRangoAntiguedad?: string, filtroTipoTelefono?: string): Observable<ImportPreview> {
+      return this.http.post<any>(
+        `${environment.gatewayUrl}/admin/campaigns/preview-import-sp`,
+        {
+          campaignId,
+          tenantId,
+          portfolioId,
+          subPortfolioId,
+          tipoFiltroEstado,
+          filtroRangoAntiguedad: filtroRangoAntiguedad || null,
+          filtroTipoTelefono: filtroTipoTelefono || null
+        },
+        { headers: this.getHeaders() }
+        ).pipe(
+          map((response: any) => ({
+            // totalClientesSubcartera: response.total_clientes_subcartera || 0,
+            totalClientesSubcartera: response.total_subcartera || 0,
+            totalDespuesBlacklist: (response.total_despues_blacklist || 0) - (response.excluidos_por_pago_cumplido || 0),
+            excluidosPorBlacklist: 0,
+            excluidosPorPagoCumplido: response.excluidos_por_pago_cumplido || 0,
+            excluidosPorFiltros: response.excluidos_por_filtros || 0,
+            // totalConFiltros: response.total_con_filtros || 0,
+            totalConFiltros: response.total_disponible || 0,
+            totalConEstadoCalculado: response.total_con_estado_calculado || 0,
+            porTipoContacto: {
+              CD: response.count_cd || 0,
+              CI: response.count_ci || 0,
+              PR: response.count_pr || 0,
+              NC: response.count_nc || 0
+            },
+            porTipoContactoFiltrado: {
+              CD: response.count_cd || 0,
+              CI: response.count_ci || 0,
+              PR: response.count_pr || 0,
+              NC: response.count_nc || 0
+            }
+      } as ImportPreview))
+    );
+  }
+
+
+  // metodo para el import
+  importarContactosSP(campaignId: number): Observable<any> {
+    return this.http.post(`${environment.gatewayUrl}/admin/campaigns/${campaignId}/importar-contactos-sp`,
+      {}, { headers: this.getHeaders() });
+  }
+
+
+  // Borrar campaña y datos asociados usando SP
+  deleteCampaignSP(campaignId: number): Observable<any> {
+    return this.http.delete<any>(
+      `${environment.gatewayUrl}/admin/campaigns/${campaignId}`,
+      { headers: this.getHeaders() }
+    );
+  }
+
+  
 }
