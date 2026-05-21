@@ -635,7 +635,7 @@ export class CampaignFormComponent implements OnInit {
           return;
         }
         this.draftCampaignId = newCampaignId;
-
+                
         // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
         this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
           next: () => {
@@ -759,8 +759,11 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.importarContactosSP(campaignIdToImport).subscribe({
       next: (response) => {
         console.log('Import V2 exitoso:', response);
-        // Pasar true para exportar Excel (campaña nueva)
-        this.saveFiltersAndNavigate(campaignIdToImport, true);
+        // guardar filtros SIN ejecutar V1
+        this.saveFiltersAndNavigate(campaignIdToImport, false);
+
+        // exportar excel manualmente
+        this.exportCampaignToExcel(campaignIdToImport);
       },
       error: (err) => {
         console.error('Error en import V2:', err);
