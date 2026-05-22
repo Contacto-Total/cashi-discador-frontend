@@ -266,7 +266,7 @@ import {
                         </tr>
                       </thead>
                       <tbody>
-                        @for (err of result()!.rowErrors; track err.rowNumber) {
+                        @for (err of pagedErrors(); track err.rowNumber) {
                           <tr class="border-t border-red-100 dark:border-red-900/30 hover:bg-red-50/50 dark:hover:bg-red-900/10">
                             <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ err.rowNumber }}</td>
                             <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ err.documento || '—' }}</td>
@@ -277,6 +277,34 @@ import {
                       </tbody>
                     </table>
                   </div>
+
+                  <!-- Paginación -->
+                  @if (errorTotalPages() > 1) {
+                    <div class="flex items-center justify-between gap-2 px-4 py-3 border-t border-red-100 dark:border-red-900/30 text-xs">
+                      <span class="text-gray-500 dark:text-gray-400">
+                        Mostrando {{ errorRangeStart() }}–{{ errorRangeEnd() }} de {{ result()!.rowErrors.length }}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <button (click)="errorPage.set(0)" [disabled]="errorPage() === 0"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          «
+                        </button>
+                        <button (click)="errorPage.set(errorPage() - 1)" [disabled]="errorPage() === 0"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          ‹
+                        </button>
+                        <span class="px-2 text-gray-600 dark:text-gray-300">{{ errorPage() + 1 }} / {{ errorTotalPages() }}</span>
+                        <button (click)="errorPage.set(errorPage() + 1)" [disabled]="errorPage() >= errorTotalPages() - 1"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          ›
+                        </button>
+                        <button (click)="errorPage.set(errorTotalPages() - 1)" [disabled]="errorPage() >= errorTotalPages() - 1"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          »
+                        </button>
+                      </div>
+                    </div>
+                  }
                 }
               </div>
             }
@@ -310,6 +338,24 @@ export class PhoneLoadComponent implements OnInit {
   result = signal<PhoneBulkImportResult | null>(null);
 
   showErrors = signal(true);
+
+  // Paginación de la tabla de errores
+  errorPage = signal(0);
+  readonly errorPageSize = 50;
+  errorTotalPages = computed(() =>
+    Math.ceil((this.result()?.rowErrors.length ?? 0) / this.errorPageSize)
+  );
+  pagedErrors = computed(() => {
+    const errs = this.result()?.rowErrors ?? [];
+    const start = this.errorPage() * this.errorPageSize;
+    return errs.slice(start, start + this.errorPageSize);
+  });
+  errorRangeStart = computed(() =>
+    (this.result()?.rowErrors.length ?? 0) === 0 ? 0 : this.errorPage() * this.errorPageSize + 1
+  );
+  errorRangeEnd = computed(() =>
+    Math.min((this.errorPage() + 1) * this.errorPageSize, this.result()?.rowErrors.length ?? 0)
+  );
 
   canSubmit = computed(() =>
     this.selectedSubPortfolioId > 0 &&
@@ -448,6 +494,7 @@ export class PhoneLoadComponent implements OnInit {
     this.isLoading.set(true);
     this.result.set(null);
     this.showErrors.set(true);
+    this.errorPage.set(0);
 
     try {
       const result = await firstValueFrom(
