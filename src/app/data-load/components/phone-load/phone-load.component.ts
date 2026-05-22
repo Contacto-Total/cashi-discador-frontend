@@ -134,6 +134,8 @@ import {
             <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-xs text-blue-700 dark:text-blue-300">
               <lucide-angular name="info" [size]="13" class="inline mr-1"></lucide-angular>
               El archivo debe contener las columnas <strong>DOCUMENTO</strong> y <strong>TELEFONO</strong> (formato: solo dígitos, entre 7 y 15 caracteres).
+              Opcionalmente: <strong>FECHA_ACTIVACION</strong> (formato YYYY-MM-DD o DD/MM/YYYY) y <strong>OPERADOR</strong>.
+              Para teléfonos con cero inicial, formatee la columna TELEFONO como <strong>texto</strong> en Excel (de lo contrario el cero se pierde).
               Se aceptan archivos <strong>.xlsx</strong>, <strong>.xls</strong> y <strong>.csv</strong>.
             </div>
 
@@ -203,7 +205,7 @@ import {
         @if (result()) {
           <div class="space-y-4">
             <!-- Tarjetas resumen -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700 shadow-sm">
                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Total filas</p>
                 <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ result()!.totalRows }}</p>
@@ -212,8 +214,12 @@ import {
                 <p class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Insertados</p>
                 <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ result()!.insertedCount }}</p>
               </div>
+              <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-blue-200 dark:border-blue-700 shadow-sm">
+                <p class="text-xs text-blue-600 dark:text-blue-400 mb-1">Actualizados</p>
+                <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ result()!.updatedCount }}</p>
+              </div>
               <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-amber-200 dark:border-amber-700 shadow-sm">
-                <p class="text-xs text-amber-600 dark:text-amber-400 mb-1">Omitidos (ya existen)</p>
+                <p class="text-xs text-amber-600 dark:text-amber-400 mb-1">Omitidos (duplicados)</p>
                 <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ result()!.skippedCount }}</p>
               </div>
               <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-red-200 dark:border-red-700 shadow-sm">
@@ -260,7 +266,7 @@ import {
                         </tr>
                       </thead>
                       <tbody>
-                        @for (err of result()!.rowErrors; track err.rowNumber) {
+                        @for (err of pagedErrors(); track err.rowNumber) {
                           <tr class="border-t border-red-100 dark:border-red-900/30 hover:bg-red-50/50 dark:hover:bg-red-900/10">
                             <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ err.rowNumber }}</td>
                             <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ err.documento || '—' }}</td>
@@ -271,49 +277,40 @@ import {
                       </tbody>
                     </table>
                   </div>
+
+                  <!-- Paginación -->
+                  @if (errorTotalPages() > 1) {
+                    <div class="flex items-center justify-between gap-2 px-4 py-3 border-t border-red-100 dark:border-red-900/30 text-xs">
+                      <span class="text-gray-500 dark:text-gray-400">
+                        Mostrando {{ errorRangeStart() }}–{{ errorRangeEnd() }} de {{ result()!.rowErrors.length }}
+                      </span>
+                      <div class="flex items-center gap-1">
+                        <button (click)="errorPage.set(0)" [disabled]="errorPage() === 0"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          «
+                        </button>
+                        <button (click)="errorPage.set(errorPage() - 1)" [disabled]="errorPage() === 0"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          ‹
+                        </button>
+                        <span class="px-2 text-gray-600 dark:text-gray-300">{{ errorPage() + 1 }} / {{ errorTotalPages() }}</span>
+                        <button (click)="errorPage.set(errorPage() + 1)" [disabled]="errorPage() >= errorTotalPages() - 1"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          ›
+                        </button>
+                        <button (click)="errorPage.set(errorTotalPages() - 1)" [disabled]="errorPage() >= errorTotalPages() - 1"
+                                class="px-2 py-1 rounded border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100 dark:hover:bg-slate-700">
+                          »
+                        </button>
+                      </div>
+                    </div>
+                  }
                 }
               </div>
             }
 
-            <!-- Tabla de omitidos -->
-            @if (result()!.rowSkipped.length > 0) {
-              <div class="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-800 shadow-sm overflow-hidden">
-                <button (click)="showSkipped.set(!showSkipped())"
-                        class="w-full flex items-center justify-between p-4 text-left hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
-                  <div class="flex items-center gap-2">
-                    <lucide-angular name="circle-minus" [size]="16" class="text-amber-500"></lucide-angular>
-                    <span class="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                      Filas omitidas — teléfono ya asignado al cliente ({{ result()!.rowSkipped.length }})
-                    </span>
-                  </div>
-                  <lucide-angular [name]="showSkipped() ? 'chevron-up' : 'chevron-down'" [size]="16" class="text-gray-400"></lucide-angular>
-                </button>
-                @if (showSkipped()) {
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-xs">
-                      <thead class="bg-amber-50 dark:bg-amber-900/20">
-                        <tr>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Fila</th>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Documento</th>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Teléfono</th>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Motivo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (sk of result()!.rowSkipped; track sk.rowNumber) {
-                          <tr class="border-t border-amber-100 dark:border-amber-900/30 hover:bg-amber-50/50 dark:hover:bg-amber-900/10">
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ sk.rowNumber }}</td>
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ sk.documento }}</td>
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ sk.telefono }}</td>
-                            <td class="px-3 py-2 text-amber-600 dark:text-amber-400">Ya existe para este cliente</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                }
-              </div>
-            }
+            <!-- Nota: el detalle por fila de actualizados/omitidos no se lista
+                 (el upsert masivo en BD solo devuelve conteos). -->
 
           </div>
         }
@@ -341,7 +338,24 @@ export class PhoneLoadComponent implements OnInit {
   result = signal<PhoneBulkImportResult | null>(null);
 
   showErrors = signal(true);
-  showSkipped = signal(false);
+
+  // Paginación de la tabla de errores
+  errorPage = signal(0);
+  readonly errorPageSize = 50;
+  errorTotalPages = computed(() =>
+    Math.ceil((this.result()?.rowErrors.length ?? 0) / this.errorPageSize)
+  );
+  pagedErrors = computed(() => {
+    const errs = this.result()?.rowErrors ?? [];
+    const start = this.errorPage() * this.errorPageSize;
+    return errs.slice(start, start + this.errorPageSize);
+  });
+  errorRangeStart = computed(() =>
+    (this.result()?.rowErrors.length ?? 0) === 0 ? 0 : this.errorPage() * this.errorPageSize + 1
+  );
+  errorRangeEnd = computed(() =>
+    Math.min((this.errorPage() + 1) * this.errorPageSize, this.result()?.rowErrors.length ?? 0)
+  );
 
   canSubmit = computed(() =>
     this.selectedSubPortfolioId > 0 &&
@@ -422,7 +436,7 @@ export class PhoneLoadComponent implements OnInit {
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target!.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rawRows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
 
@@ -432,8 +446,11 @@ export class PhoneLoadComponent implements OnInit {
         }
 
         const keys = Object.keys(rawRows[0]);
-        const docKey = keys.find(k => k.trim().toUpperCase() === 'DOCUMENTO');
-        const telKey = keys.find(k => k.trim().toUpperCase() === 'TELEFONO');
+        const normalize = (k: string) => k.trim().toUpperCase();
+        const docKey = keys.find(k => normalize(k) === 'DOCUMENTO');
+        const telKey = keys.find(k => normalize(k) === 'TELEFONO');
+        const fechaKey = keys.find(k => normalize(k) === 'FECHA_ACTIVACION');
+        const operadorKey = keys.find(k => normalize(k) === 'OPERADOR');
 
         if (!docKey || !telKey) {
           const missing = [];
@@ -450,7 +467,9 @@ export class PhoneLoadComponent implements OnInit {
           .map((row, index) => ({
             rowNumber: index + 2,
             documento: String(row[docKey] ?? '').trim(),
-            telefono: String(row[telKey] ?? '').trim()
+            telefono: String(row[telKey] ?? '').trim(),
+            fechaActivacion: fechaKey ? this.normalizarFecha(row[fechaKey]) : '',
+            operador: operadorKey ? String(row[operadorKey] ?? '').trim() : ''
           }))
           .filter(r => r.documento !== '' || r.telefono !== '');
 
@@ -475,7 +494,7 @@ export class PhoneLoadComponent implements OnInit {
     this.isLoading.set(true);
     this.result.set(null);
     this.showErrors.set(true);
-    this.showSkipped.set(false);
+    this.errorPage.set(0);
 
     try {
       const result = await firstValueFrom(
@@ -488,17 +507,18 @@ export class PhoneLoadComponent implements OnInit {
       );
       this.result.set(result);
 
-      if (result.errorCount === 0 && result.skippedCount === 0) {
-        this.notificationService.success(`${result.insertedCount} teléfono(s) insertado(s) correctamente`);
-      } else if (result.insertedCount > 0) {
-        this.notificationService.warning(
-          `Proceso completado: ${result.insertedCount} insertado(s), ` +
-          `${result.skippedCount} omitido(s), ${result.errorCount} error(es)`
-        );
-      } else {
+      if (result.errorCount > 0) {
         this.notificationService.error(
           `El archivo tiene ${result.errorCount} error(es). Corrija los datos y vuelva a subir el archivo.`
         );
+      } else if (result.updatedCount === 0 && result.skippedCount === 0) {
+        this.notificationService.success(`${result.insertedCount} teléfono(s) insertado(s) correctamente`);
+      } else {
+        const parts: string[] = [];
+        if (result.insertedCount > 0) parts.push(`${result.insertedCount} insertado(s)`);
+        if (result.updatedCount > 0) parts.push(`${result.updatedCount} actualizado(s)`);
+        if (result.skippedCount > 0) parts.push(`${result.skippedCount} omitido(s)`);
+        this.notificationService.warning(`Proceso completado: ${parts.join(', ')}`);
       }
     } catch {
       this.notificationService.error('Error al procesar la carga de teléfonos. Intente nuevamente.');
@@ -509,12 +529,33 @@ export class PhoneLoadComponent implements OnInit {
 
   downloadExample() {
     const ws = XLSX.utils.aoa_to_sheet([
-      ['DOCUMENTO', 'TELEFONO'],
-      ['12345678', '987654321'],
-      ['87654321', '912345678']
+      ['DOCUMENTO', 'TELEFONO', 'FECHA_ACTIVACION', 'OPERADOR'],
+      ['12345678', '987654321', '2026-01-15', 'Claro'],
+      ['87654321', '912345678', '2026-03-20', 'Movistar']
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Telefonos');
     XLSX.writeFile(wb, 'ejemplo_carga_telefonos.xlsx');
+  }
+
+  private normalizarFecha(val: unknown): string {
+    if (val === null || val === undefined || val === '') return '';
+    if (val instanceof Date) {
+      // Usar componentes locales: toISOString() convierte a UTC y en zonas
+      // negativas (Perú UTC-5) retrocede la fecha un día.
+      const y = val.getFullYear();
+      const m = String(val.getMonth() + 1).padStart(2, '0');
+      const d = String(val.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    if (typeof val === 'number') {
+      // Excel serial date (días desde 1899-12-30); cálculo en UTC consistente
+      const date = new Date(Date.UTC(1899, 11, 30) + val * 86400000);
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return String(val).trim();
   }
 }

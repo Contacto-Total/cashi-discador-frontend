@@ -2,6 +2,10 @@ import { Component, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BcpPagosService } from '../../services/bcp-pagos.service';
+import { TenantService } from '../../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../../maintenance/services/portfolio.service';
+import { Tenant } from '../../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 
 @Component({
   selector: 'app-conciliacion-report',
@@ -45,6 +49,60 @@ import { BcpPagosService } from '../../services/bcp-pagos.service';
               </div>
 
               <div class="p-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Proveedor
+                      <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      [(ngModel)]="selectedTenantId"
+                      (ngModelChange)="onTenantChange($event)"
+                      class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200"
+                    >
+                      <option [ngValue]="0">Seleccione un proveedor...</option>
+                      @for (tenant of tenants(); track tenant.id) {
+                        <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Cartera
+                      <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      [(ngModel)]="selectedPortfolioId"
+                      (ngModelChange)="onPortfolioChange($event)"
+                      [disabled]="selectedTenantId === 0"
+                      class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+                    >
+                      <option [ngValue]="0">Seleccione una cartera...</option>
+                      @for (portfolio of portfolios(); track portfolio.id) {
+                        <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="space-y-2">
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Subcartera
+                      <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <select
+                      [(ngModel)]="selectedSubPortfolioId"
+                      [disabled]="selectedPortfolioId === 0"
+                      class="w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all duration-200 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+                    >
+                      <option [ngValue]="0">Seleccione una subcartera...</option>
+                      @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                        <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+
                 <!-- Tipo de consulta con tabs estilizados -->
                 <div>
                   <label class="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-3">
@@ -142,9 +200,9 @@ import { BcpPagosService } from '../../services/bcp-pagos.service';
                 </div>
               </div>
 
-              <!-- Footer con botón de descarga -->
+              <!-- Footer con acciones de descarga -->
               <div class="px-6 py-4 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/30 dark:bg-slate-800/30">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div class="text-sm text-slate-500 dark:text-slate-400">
                     @if (fechaInicio) {
                       <span class="flex items-center gap-2">
@@ -159,24 +217,44 @@ import { BcpPagosService } from '../../services/bcp-pagos.service';
                       </span>
                     }
                   </div>
-                  <button
-                    (click)="descargarReporte()"
-                    [disabled]="!puedeDescargar() || isLoading()"
-                    class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2"
-                  >
-                    @if (isLoading()) {
-                      <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                      </svg>
-                      <span>Generando...</span>
-                    } @else {
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                      </svg>
-                      <span>Descargar Excel</span>
-                    }
-                  </button>
+                  <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+                    <button
+                      (click)="descargarReporte()"
+                      [disabled]="!puedeDescargar() || isLoading() || isLoadingResumen()"
+                      class="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      @if (isLoading()) {
+                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <span>Generando...</span>
+                      } @else {
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Descargar Excel</span>
+                      }
+                    </button>
+                    <button
+                      (click)="descargarReporteResumen()"
+                      [disabled]="!puedeDescargarResumen() || isLoading() || isLoadingResumen()"
+                      class="px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-600 text-white rounded-xl font-medium shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 hover:from-sky-600 hover:to-cyan-700 disabled:from-slate-400 disabled:to-slate-500 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      @if (isLoadingResumen()) {
+                        <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <span>Generando resumido...</span>
+                      } @else {
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Descargar reporte conciliación resumido</span>
+                      }
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -291,8 +369,15 @@ export class ConciliacionReportComponent {
   fechaFin = '';
   fechaMaxima = this.formatDate(new Date());
   isLoading = signal(false);
+  isLoadingResumen = signal(false);
   mensaje = signal<{ tipo: 'success' | 'error'; texto: string } | null>(null);
   accesoSeleccionado = signal<string | null>('Hoy');
+  tenants = signal<Tenant[]>([]);
+  portfolios = signal<Portfolio[]>([]);
+  subPortfolios = signal<SubPortfolio[]>([]);
+  selectedTenantId = 0;
+  selectedPortfolioId = 0;
+  selectedSubPortfolioId = 0;
 
   accesosRapidos = [
     { label: 'Hoy', action: () => this.setHoy() },
@@ -302,8 +387,13 @@ export class ConciliacionReportComponent {
     { label: 'Mes actual', action: () => this.setMesActual() }
   ];
 
-  constructor(private bcpService: BcpPagosService) {
+  constructor(
+    private bcpService: BcpPagosService,
+    private tenantService: TenantService,
+    private portfolioService: PortfolioService
+  ) {
     this.setHoy();
+    this.cargarTenants();
   }
 
   isAccesoActivo(label: string): boolean {
@@ -316,6 +406,13 @@ export class ConciliacionReportComponent {
     return true;
   }
 
+  puedeDescargarResumen(): boolean {
+    return !!this.fechaInicio
+      && this.selectedTenantId > 0
+      && this.selectedPortfolioId > 0
+      && this.selectedSubPortfolioId > 0;
+  }
+
   descargarReporte(): void {
     if (!this.puedeDescargar()) return;
 
@@ -324,21 +421,99 @@ export class ConciliacionReportComponent {
 
     // Simular pequeño delay para mostrar el estado de carga
     setTimeout(() => {
-      try {
-        if (this.tipoConsulta === 'unica') {
-          this.bcpService.descargarReporteConciliacionPorFecha(this.fechaInicio);
-        } else {
-          this.bcpService.descargarReporteConciliacionPorFecha(this.fechaInicio, this.fechaFin);
+      const fechaFin = this.tipoConsulta === 'rango' ? this.fechaFin : undefined;
+
+      this.bcpService.descargarReporteConciliacionPorFecha(this.fechaInicio, fechaFin).subscribe({
+        next: (response) => {
+          const nombreArchivo = fechaFin
+            ? `reporte-conciliacion-${this.fechaInicio}-a-${fechaFin}.xlsx`
+            : `reporte-conciliacion-${this.fechaInicio}.xlsx`;
+          this.bcpService.procesarDescargaArchivo(response, nombreArchivo);
+          this.mensaje.set({ tipo: 'success', texto: 'Reporte generado correctamente. La descarga iniciará en breve.' });
+          this.isLoading.set(false);
+          setTimeout(() => this.mensaje.set(null), 5000);
+        },
+        error: () => {
+          this.mensaje.set({ tipo: 'error', texto: 'No se pudo descargar el reporte. Verifique sus permisos o intente nuevamente.' });
+          this.isLoading.set(false);
+          setTimeout(() => this.mensaje.set(null), 5000);
         }
-        this.mensaje.set({ tipo: 'success', texto: 'Reporte generado correctamente. La descarga iniciará en breve.' });
-      } catch (error) {
-        this.mensaje.set({ tipo: 'error', texto: 'Error al generar el reporte. Intente nuevamente.' });
-      } finally {
-        this.isLoading.set(false);
-        // Limpiar mensaje después de 5 segundos
-        setTimeout(() => this.mensaje.set(null), 5000);
-      }
+      });
     }, 500);
+  }
+
+  descargarReporteResumen(): void {
+    if (!this.puedeDescargarResumen()) return;
+
+    this.isLoadingResumen.set(true);
+    this.mensaje.set(null);
+
+    setTimeout(() => {
+      const fechaFin = this.tipoConsulta === 'rango' && this.fechaFin ? this.fechaFin : undefined;
+
+      this.bcpService.descargarReporteConciliacionResumenPorFecha(
+        this.fechaInicio,
+        this.selectedTenantId,
+        this.selectedPortfolioId,
+        this.selectedSubPortfolioId,
+        fechaFin
+      ).subscribe({
+        next: (response) => {
+          const nombreArchivo = fechaFin
+            ? `reporte-conciliacion-resumen-${this.fechaInicio}-a-${fechaFin}.xlsx`
+            : `reporte-conciliacion-resumen-${this.fechaInicio}.xlsx`;
+          this.bcpService.procesarDescargaArchivo(response, nombreArchivo);
+          this.mensaje.set({ tipo: 'success', texto: 'Reporte resumido generado correctamente. La descarga iniciará en breve.' });
+          this.isLoadingResumen.set(false);
+          setTimeout(() => this.mensaje.set(null), 5000);
+        },
+        error: (error) => {
+          const esErrorFiltros = error?.status === 400;
+          this.mensaje.set({
+            tipo: 'error',
+            texto: esErrorFiltros
+              ? 'Debe seleccionar proveedor, cartera y subcartera para generar el reporte resumido.'
+              : 'No se pudo descargar el reporte resumido. Verifique sus permisos o intente nuevamente.'
+          });
+          this.isLoadingResumen.set(false);
+          setTimeout(() => this.mensaje.set(null), 5000);
+        }
+      });
+    }, 500);
+  }
+
+  onTenantChange(tenantId: number): void {
+    this.selectedTenantId = Number(tenantId) || 0;
+    this.selectedPortfolioId = 0;
+    this.selectedSubPortfolioId = 0;
+    this.portfolios.set([]);
+    this.subPortfolios.set([]);
+
+    if (this.selectedTenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
+        next: (portfolios) => this.portfolios.set(portfolios),
+        error: () => {
+          this.mensaje.set({ tipo: 'error', texto: 'No se pudieron cargar las carteras del proveedor seleccionado.' });
+          setTimeout(() => this.mensaje.set(null), 5000);
+        }
+      });
+    }
+  }
+
+  onPortfolioChange(portfolioId: number): void {
+    this.selectedPortfolioId = Number(portfolioId) || 0;
+    this.selectedSubPortfolioId = 0;
+    this.subPortfolios.set([]);
+
+    if (this.selectedPortfolioId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
+        next: (subPortfolios) => this.subPortfolios.set(subPortfolios),
+        error: () => {
+          this.mensaje.set({ tipo: 'error', texto: 'No se pudieron cargar las subcarteras de la cartera seleccionada.' });
+          setTimeout(() => this.mensaje.set(null), 5000);
+        }
+      });
+    }
   }
 
   formatFechaDisplay(fecha: string): string {
@@ -395,5 +570,15 @@ export class ConciliacionReportComponent {
 
   private formatDate(date: Date): string {
     return date.toISOString().split('T')[0];
+  }
+
+  private cargarTenants(): void {
+    this.tenantService.getAllTenants().subscribe({
+      next: (tenants) => this.tenants.set(tenants),
+      error: () => {
+        this.mensaje.set({ tipo: 'error', texto: 'No se pudieron cargar los proveedores. Recargue la página e intente nuevamente.' });
+        setTimeout(() => this.mensaje.set(null), 5000);
+      }
+    });
   }
 }
