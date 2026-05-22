@@ -7,6 +7,8 @@ export interface PhoneRow {
   rowNumber: number;
   documento: string;
   telefono: string;
+  fechaActivacion?: string; // "YYYY-MM-DD" o vacío
+  operador?: string;
 }
 
 export interface PhoneBulkImportRequest {
@@ -29,13 +31,21 @@ export interface RowSkipped {
   telefono: string;
 }
 
+export interface RowUpdated {
+  rowNumber: number;
+  documento: string;
+  telefono: string;
+}
+
 export interface PhoneBulkImportResult {
   totalRows: number;
   insertedCount: number;
+  updatedCount: number;
   skippedCount: number;
   errorCount: number;
   rowErrors: RowError[];
   rowSkipped: RowSkipped[];
+  rowUpdated: RowUpdated[];
 }
 
 @Injectable({ providedIn: 'root' })
