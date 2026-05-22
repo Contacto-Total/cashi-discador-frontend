@@ -134,7 +134,7 @@ import {
             <div class="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg text-xs text-blue-700 dark:text-blue-300">
               <lucide-angular name="info" [size]="13" class="inline mr-1"></lucide-angular>
               El archivo debe contener las columnas <strong>DOCUMENTO</strong> y <strong>TELEFONO</strong> (formato: solo dígitos, entre 7 y 15 caracteres).
-              Opcionalmente: <strong>FECHA_ACTIVACION</strong> (formato YYYY-MM-DD) y <strong>OPERADOR</strong>.
+              Opcionalmente: <strong>FECHA_ACTIVACION</strong> (formato YYYY-MM-DD o DD/MM/YYYY) y <strong>OPERADOR</strong>.
               Se aceptan archivos <strong>.xlsx</strong>, <strong>.xls</strong> y <strong>.csv</strong>.
             </div>
 
