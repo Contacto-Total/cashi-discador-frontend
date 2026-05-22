@@ -135,6 +135,7 @@ import {
               <lucide-angular name="info" [size]="13" class="inline mr-1"></lucide-angular>
               El archivo debe contener las columnas <strong>DOCUMENTO</strong> y <strong>TELEFONO</strong> (formato: solo dígitos, entre 7 y 15 caracteres).
               Opcionalmente: <strong>FECHA_ACTIVACION</strong> (formato YYYY-MM-DD o DD/MM/YYYY) y <strong>OPERADOR</strong>.
+              Para teléfonos con cero inicial, formatee la columna TELEFONO como <strong>texto</strong> en Excel (de lo contrario el cero se pierde).
               Se aceptan archivos <strong>.xlsx</strong>, <strong>.xls</strong> y <strong>.csv</strong>.
             </div>
 
@@ -280,83 +281,8 @@ import {
               </div>
             }
 
-            <!-- Tabla de actualizados -->
-            @if (result()!.rowUpdated.length > 0) {
-              <div class="bg-white dark:bg-slate-800 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm overflow-hidden">
-                <button (click)="showUpdated.set(!showUpdated())"
-                        class="w-full flex items-center justify-between p-4 text-left hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors">
-                  <div class="flex items-center gap-2">
-                    <lucide-angular name="pencil" [size]="16" class="text-blue-500"></lucide-angular>
-                    <span class="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                      Filas actualizadas — fecha_activacion y operador ({{ result()!.rowUpdated.length }})
-                    </span>
-                  </div>
-                  <lucide-angular [name]="showUpdated() ? 'chevron-up' : 'chevron-down'" [size]="16" class="text-gray-400"></lucide-angular>
-                </button>
-                @if (showUpdated()) {
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-xs">
-                      <thead class="bg-blue-50 dark:bg-blue-900/20">
-                        <tr>
-                          <th class="px-3 py-2 text-left font-semibold text-blue-700 dark:text-blue-300">Fila</th>
-                          <th class="px-3 py-2 text-left font-semibold text-blue-700 dark:text-blue-300">Documento</th>
-                          <th class="px-3 py-2 text-left font-semibold text-blue-700 dark:text-blue-300">Teléfono</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (upd of result()!.rowUpdated; track upd.rowNumber) {
-                          <tr class="border-t border-blue-100 dark:border-blue-900/30 hover:bg-blue-50/50 dark:hover:bg-blue-900/10">
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ upd.rowNumber }}</td>
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ upd.documento }}</td>
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ upd.telefono }}</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Tabla de omitidos -->
-            @if (result()!.rowSkipped.length > 0) {
-              <div class="bg-white dark:bg-slate-800 rounded-xl border border-amber-200 dark:border-amber-800 shadow-sm overflow-hidden">
-                <button (click)="showSkipped.set(!showSkipped())"
-                        class="w-full flex items-center justify-between p-4 text-left hover:bg-amber-50 dark:hover:bg-amber-900/10 transition-colors">
-                  <div class="flex items-center gap-2">
-                    <lucide-angular name="circle-minus" [size]="16" class="text-amber-500"></lucide-angular>
-                    <span class="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                      Filas omitidas — teléfono duplicado en el mismo archivo ({{ result()!.rowSkipped.length }})
-                    </span>
-                  </div>
-                  <lucide-angular [name]="showSkipped() ? 'chevron-up' : 'chevron-down'" [size]="16" class="text-gray-400"></lucide-angular>
-                </button>
-                @if (showSkipped()) {
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-xs">
-                      <thead class="bg-amber-50 dark:bg-amber-900/20">
-                        <tr>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Fila</th>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Documento</th>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Teléfono</th>
-                          <th class="px-3 py-2 text-left font-semibold text-amber-700 dark:text-amber-300">Motivo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (sk of result()!.rowSkipped; track sk.rowNumber) {
-                          <tr class="border-t border-amber-100 dark:border-amber-900/30 hover:bg-amber-50/50 dark:hover:bg-amber-900/10">
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ sk.rowNumber }}</td>
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ sk.documento }}</td>
-                            <td class="px-3 py-2 text-gray-700 dark:text-gray-300 font-mono">{{ sk.telefono }}</td>
-                            <td class="px-3 py-2 text-amber-600 dark:text-amber-400">Duplicado en el mismo archivo</td>
-                          </tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                }
-              </div>
-            }
+            <!-- Nota: el detalle por fila de actualizados/omitidos no se lista
+                 (el upsert masivo en BD solo devuelve conteos). -->
 
           </div>
         }
@@ -384,8 +310,6 @@ export class PhoneLoadComponent implements OnInit {
   result = signal<PhoneBulkImportResult | null>(null);
 
   showErrors = signal(true);
-  showSkipped = signal(false);
-  showUpdated = signal(false);
 
   canSubmit = computed(() =>
     this.selectedSubPortfolioId > 0 &&
@@ -524,8 +448,6 @@ export class PhoneLoadComponent implements OnInit {
     this.isLoading.set(true);
     this.result.set(null);
     this.showErrors.set(true);
-    this.showSkipped.set(false);
-    this.showUpdated.set(false);
 
     try {
       const result = await firstValueFrom(
@@ -572,12 +494,20 @@ export class PhoneLoadComponent implements OnInit {
   private normalizarFecha(val: unknown): string {
     if (val === null || val === undefined || val === '') return '';
     if (val instanceof Date) {
-      return val.toISOString().split('T')[0];
+      // Usar componentes locales: toISOString() convierte a UTC y en zonas
+      // negativas (Perú UTC-5) retrocede la fecha un día.
+      const y = val.getFullYear();
+      const m = String(val.getMonth() + 1).padStart(2, '0');
+      const d = String(val.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     }
     if (typeof val === 'number') {
-      // Excel serial date (days desde 1899-12-30)
+      // Excel serial date (días desde 1899-12-30); cálculo en UTC consistente
       const date = new Date(Date.UTC(1899, 11, 30) + val * 86400000);
-      return date.toISOString().split('T')[0];
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
     }
     return String(val).trim();
   }
