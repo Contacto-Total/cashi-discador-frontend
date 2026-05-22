@@ -152,9 +152,21 @@ export class BcpPagosService {
    * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
    * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
    */
-  descargarReporteConciliacionResumenPorFecha(fechaInicio: string, fechaFin?: string): Observable<HttpResponse<Blob>> {
-    console.log('[BCP] Descargando reporte resumido de conciliación por fecha:', { fechaInicio, fechaFin });
-    return this.descargarArchivoExcel('reporte-conciliacion-resumen/excel', fechaInicio, fechaFin);
+  descargarReporteConciliacionResumenPorFecha(
+    fechaInicio: string,
+    tenantId: number,
+    carteraId: number,
+    subcarteraId: number,
+    fechaFin?: string
+  ): Observable<HttpResponse<Blob>> {
+    console.log('[BCP] Descargando reporte resumido de conciliación por fecha:', {
+      fechaInicio,
+      fechaFin,
+      tenantId,
+      carteraId,
+      subcarteraId
+    });
+    return this.descargarArchivoExcelResumen(fechaInicio, tenantId, carteraId, subcarteraId, fechaFin);
   }
 
   /**
@@ -171,6 +183,30 @@ export class BcpPagosService {
     }
 
     return this.http.get(`${this.baseUrl}/${endpoint}`, {
+      params,
+      responseType: 'blob',
+      observe: 'response'
+    });
+  }
+
+  private descargarArchivoExcelResumen(
+    fechaInicio: string,
+    tenantId: number,
+    carteraId: number,
+    subcarteraId: number,
+    fechaFin?: string
+  ): Observable<HttpResponse<Blob>> {
+    let params = new HttpParams()
+      .set('fechaInicio', fechaInicio)
+      .set('tenantId', tenantId.toString())
+      .set('carteraId', carteraId.toString())
+      .set('subcarteraId', subcarteraId.toString());
+
+    if (fechaFin) {
+      params = params.set('fechaFin', fechaFin);
+    }
+
+    return this.http.get(`${this.baseUrl}/reporte-conciliacion-resumen/excel`, {
       params,
       responseType: 'blob',
       observe: 'response'
