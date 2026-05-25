@@ -6758,7 +6758,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   whatsappBadge(estado: string | undefined): { icon: string; class: string; title: string } {
     switch (estado) {
-      case 'VALIDADO': return { icon: 'message-circle', class: 'text-green-600 dark:text-green-400', title: 'WhatsApp: el número tiene WhatsApp' };
+      case 'TIENE': return { icon: 'message-circle', class: 'text-green-600 dark:text-green-400', title: 'WhatsApp: el número tiene WhatsApp' };
       default: return { icon: '', class: '', title: '' };
     }
   }
