@@ -1972,3 +1972,147 @@ body.light-theme {
     color: #64748b !important;
   }
 }
+
+// ===== Presencia, reacciones, edición y eliminación =====
+
+.chat-info {
+  display: flex;
+  flex-direction: column;
+
+  .chat-status {
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.2;
+
+    &.online { color: #10b981; }
+    &.typing { color: #10b981; font-style: italic; }
+  }
+}
+
+.message-bubble {
+  // Fila de acciones (hover)
+  .message-actions {
+    position: absolute;
+    top: -14px;
+    right: 6px;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    background: #1e293b;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 16px;
+    padding: 2px 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 5;
+
+    .msg-action-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+
+      &:hover { color: #10b981; }
+    }
+  }
+
+  &:hover .message-actions { opacity: 1; }
+
+  // Selector rápido de reacciones
+  .reaction-picker {
+    position: absolute;
+    top: -46px;
+    right: 0;
+    display: flex;
+    gap: 4px;
+    background: #1e293b;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 22px;
+    padding: 4px 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    z-index: 10;
+
+    .reaction-option {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 50%;
+      transition: transform 0.1s ease;
+
+      &:hover { transform: scale(1.3); }
+    }
+  }
+
+  // Reacciones mostradas bajo el mensaje
+  .message-reactions {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+
+    .reaction-chip {
+      background: #1e293b;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 1px 6px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+  }
+
+  .message-footer .edited-tag {
+    font-size: 11px;
+    color: #94a3b8;
+    font-style: italic;
+    margin-right: 4px;
+  }
+
+  // Mensaje eliminado
+  &.deleted .deleted-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-style: italic;
+    color: #94a3b8;
+  }
+}
+
+// Barra de edición de mensaje (en el input-container)
+.edit-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid #10b981;
+
+  .edit-preview-content {
+    flex: 1;
+    min-width: 0;
+
+    .edit-preview-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+
+      .reply-icon { color: #10b981; }
+      .reply-preview-title { color: #10b981; font-size: 13px; font-weight: 600; }
+    }
+
+    .edit-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: inherit;
+      font-size: 14px;
+      padding: 2px 0;
+    }
+  }
+
+  .edit-save-button { color: #10b981; }
+}

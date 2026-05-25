@@ -1,3 +1,8 @@
+export interface Reaction {
+  emoji: string;
+  fromMe: boolean;
+}
+
 export interface Message {
   msgId: string;
   chat: string;
@@ -17,6 +22,11 @@ export interface Message {
   quotedText?: string;
   quotedSender?: string;
   quotedFromMe?: boolean;
+
+  // Reacciones, edición y eliminación
+  reactions?: Reaction[];
+  isEdited?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface MediaInfo {
@@ -39,6 +49,12 @@ export interface Chat {
   unreadCount?: number;
   lastMsgFromMe?: boolean;
   profilePictureUrl?: string;
+
+  // Presencia (online / última vez / escribiendo)
+  isOnline?: boolean;
+  lastSeen?: number;
+  isTyping?: boolean;
+  typingMedia?: 'text' | 'audio';
 }
 
 export interface Contact {

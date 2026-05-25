@@ -6,6 +6,12 @@
       <lucide-angular *ngIf="!currentChat.profilePictureUrl" name="user" [size]="40" class="avatar-icon"></lucide-angular>
       <div class="chat-info">
         <span class="chat-name">{{ getChatDisplayName() }}</span>
+        <span class="chat-status"
+              *ngIf="getContactStatus()"
+              [class.typing]="isContactTyping"
+              [class.online]="isContactOnline && !isContactTyping">
+          {{ getContactStatus() }}
+        </span>
       </div>
     </div>
     <div class="header-right">
@@ -72,11 +78,35 @@
         [class.from-them]="!message.fromMe"
         [class.search-highlighted]="isMessageHighlighted(message.msgId)">
 
-      <div class="message-bubble">
-        <!-- Botón de reply (aparece al hover) -->
-        <button mat-icon-button class="reply-button" (click)="replyToMessage(message)" title="Responder">
-          <lucide-angular name="corner-up-left" [size]="20"></lucide-angular>
-        </button>
+      <div class="message-bubble" [class.deleted]="message.isDeleted">
+        <!-- Acciones del mensaje (aparecen al hover) -->
+        <div class="message-actions" *ngIf="!message.isDeleted">
+          <button mat-icon-button class="msg-action-btn" (click)="replyToMessage(message)" title="Responder">
+            <lucide-angular name="corner-up-left" [size]="18"></lucide-angular>
+          </button>
+          <button mat-icon-button class="msg-action-btn" (click)="toggleReactionMenu($event, message.msgId)" title="Reaccionar">
+            <lucide-angular name="smile-plus" [size]="18"></lucide-angular>
+          </button>
+          <button mat-icon-button class="msg-action-btn" *ngIf="message.fromMe" (click)="startEdit(message)" title="Editar">
+            <lucide-angular name="pencil" [size]="18"></lucide-angular>
+          </button>
+          <button mat-icon-button class="msg-action-btn" *ngIf="message.fromMe" (click)="deleteMessage(message)" title="Eliminar">
+            <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+          </button>
+        </div>
+
+        <!-- Selector rápido de reacciones -->
+        <div class="reaction-picker" *ngIf="reactionMenuMsgId === message.msgId" (click)="$event.stopPropagation()">
+          <button class="reaction-option" *ngFor="let emoji of quickReactions" (click)="react($event, message, emoji)">
+            {{ emoji }}
+          </button>
+        </div>
+
+        <!-- Mensaje eliminado -->
+        <div *ngIf="message.isDeleted" class="message-text deleted-text">
+          <lucide-angular name="ban" [size]="14"></lucide-angular>
+          Se eliminó este mensaje
+        </div>
 
         <!-- Mensaje citado -->
         <div *ngIf="message.quotedMessageId" class="quoted-message">
@@ -89,7 +119,7 @@
           </div>
         </div>
 
-        <div *ngIf="message.hasMedia && message.media" class="message-media">
+        <div *ngIf="!message.isDeleted && message.hasMedia && message.media" class="message-media">
           <img *ngIf="isImageMedia(message.media.mime)"
                [src]="getMediaSrc(message.media)"
                alt="Imagen"
@@ -144,22 +174,28 @@
             </audio>
           </div>
         </div>
-        <div class="message-text" *ngIf="message.text">{{ message.text }}</div>
+        <div class="message-text" *ngIf="!message.isDeleted && message.text">{{ message.text }}</div>
         <div class="message-footer">
+          <span class="edited-tag" *ngIf="message.isEdited && !message.isDeleted">editado</span>
           <span class="message-time">{{ formatTime(message.timestamp) }}</span>
           <lucide-angular
-            *ngIf="message.fromMe && (message.status === 'delivered' || message.status === 'read')"
+            *ngIf="message.fromMe && !message.isDeleted && (message.status === 'delivered' || message.status === 'read')"
             name="check-check"
             [size]="16"
             class="message-status"
             [class.status-read]="message.status === 'read'">
           </lucide-angular>
           <lucide-angular
-            *ngIf="message.fromMe && (message.status === 'sent' || !message.status)"
+            *ngIf="message.fromMe && !message.isDeleted && (message.status === 'sent' || !message.status)"
             name="check"
             [size]="16"
             class="message-status">
           </lucide-angular>
+        </div>
+
+        <!-- Reacciones sobre el mensaje -->
+        <div class="message-reactions" *ngIf="message.reactions && message.reactions.length > 0">
+          <span class="reaction-chip" *ngFor="let r of message.reactions">{{ r.emoji }}</span>
         </div>
       </div>
     </div>
@@ -168,6 +204,30 @@
 
   <!-- Input container -->
   <div class="input-container" *ngIf="currentChat">
+    <!-- Editar mensaje -->
+    <div *ngIf="editingMessage" class="edit-preview">
+      <div class="edit-preview-content">
+        <div class="edit-preview-header">
+          <lucide-angular name="pencil" [size]="18" class="reply-icon"></lucide-angular>
+          <span class="reply-preview-title">Editar mensaje</span>
+        </div>
+        <input
+          type="text"
+          class="edit-input"
+          [(ngModel)]="editText"
+          (keyup.enter)="saveEdit()"
+          (keyup.escape)="cancelEdit()"
+          autocomplete="off"
+          autofocus>
+      </div>
+      <button mat-icon-button class="edit-save-button" (click)="saveEdit()" title="Guardar">
+        <lucide-angular name="check" [size]="20"></lucide-angular>
+      </button>
+      <button mat-icon-button class="reply-close-button" (click)="cancelEdit()" title="Cancelar">
+        <lucide-angular name="x" [size]="20"></lucide-angular>
+      </button>
+    </div>
+
     <!-- Reply preview -->
     <div *ngIf="replyingTo" class="reply-preview">
       <div class="reply-preview-content">
@@ -215,6 +275,7 @@
         [placeholder]="getInputPlaceholder()"
         [(ngModel)]="messageText"
         (keypress)="onKeyPress($event)"
+        (input)="onMessageInput()"
         (click)="closeEmojiPicker()"
         [disabled]="isChatBlocked || isNewChat"
         autocomplete="off">
