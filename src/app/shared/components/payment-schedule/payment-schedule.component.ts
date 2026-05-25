@@ -69,6 +69,7 @@ export interface AmountOption {
                   [(ngModel)]="customAmountValue"
                   (ngModelChange)="onCustomAmountChange($event)"
                   (click)="$event.stopPropagation()"
+                  (wheel)="$event.preventDefault()"
                   placeholder="0.00"
                   min="0"
                   step="0.01"
