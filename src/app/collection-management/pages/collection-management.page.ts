@@ -284,6 +284,12 @@ import { CallService } from '../../core/services/call.service';
                                                   [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
                                 </span>
                               }
+                              @if (whatsappBadge(tel.estadoWhatsapp).icon) {
+                                <span [title]="whatsappBadge(tel.estadoWhatsapp).title" class="inline-flex items-center">
+                                  <lucide-angular [name]="whatsappBadge(tel.estadoWhatsapp).icon" [size]="13"
+                                                  [class]="whatsappBadge(tel.estadoWhatsapp).class"></lucide-angular>
+                                </span>
+                              }
                             </div>
                             <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
                           </div>
@@ -550,6 +556,12 @@ import { CallService } from '../../core/services/call.service';
                         <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
                           <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="12"
                                           [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
+                        </span>
+                      }
+                        @if (whatsappBadge(tel.estadoWhatsapp).icon) {
+                        <span [title]="whatsappBadge(tel.estadoWhatsapp).title" class="inline-flex items-center">
+                          <lucide-angular [name]="whatsappBadge(tel.estadoWhatsapp).icon" [size]="13"
+                                          [class]="whatsappBadge(tel.estadoWhatsapp).class"></lucide-angular>
                         </span>
                       }
                     </button>
@@ -6741,6 +6753,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     case 'PERTENECE': return { icon: 'id-card', class: 'text-green-600 dark:text-green-400', title: 'OSIPTEL: la línea pertenece al titular' };
       default: 
       return { icon: '', class: '', title: '' };
+    }
+  }
+
+  whatsappBadge(estado: string | undefined): { icon: string; class: string; title: string } {
+    switch (estado) {
+      case 'VALIDADO': return { icon: 'message-circle', class: 'text-green-600 dark:text-green-400', title: 'WhatsApp: el número tiene WhatsApp' };
+      default: return { icon: '', class: '', title: '' };
     }
   }
 
