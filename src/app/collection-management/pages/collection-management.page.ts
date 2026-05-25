@@ -278,10 +278,10 @@ import { CallService } from '../../core/services/call.service';
                               @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                                 <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
                               }
-                              @if (tel.estadoOsiptel === 'PERTENECE') {
-                                <span title="Número validado en OSIPTEL (es titular)" class="text-[10px] px-1 py-0 rounded-full font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 flex items-center gap-0.5">
-                                  <lucide-angular name="shield-check" [size]="9" class="inline-block"></lucide-angular>
-                                  OSIPTEL
+                              @if (osiptelBadge(tel.estadoOsiptel).icon) {
+                                <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
+                                  <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="13"
+                                                  [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
                                 </span>
                               }
                             </div>
@@ -6732,6 +6732,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       case 'NUEVO': return { text: 'Nuevo',               class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40dark:text-amber-300' };
       case 'INVALIDO_CONFIRMADO': return { text: 'Inválido confirmado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'};
       default: return { text: '', class: '' };
+    }
+  }
+
+  /* MOSTRAR ESTADOS DE OSIPTEL */
+  osiptelBadge(estado: string | undefined ): { icon: string; class: string; title: string } {
+    switch (estado) {
+    case 'PERTENECE': return { icon: 'id-card', class: 'text-green-600 dark:text-green-400', title: 'OSIPTEL: la línea pertenece al titular' };
+      case 'NO_PERTENECE': return { icon: 'id-card', class: 'text-red-500 dark:text-red-400', title: 'OSIPTEL: la línea NO pertenece al titular' };
+      default: 
+      return { icon: '', class: '', title: '' };
     }
   }
 
