@@ -546,10 +546,10 @@ import { CallService } from '../../core/services/call.service';
                       @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                         <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
                       }
-                      @if (tel.estadoOsiptel === 'PERTENECE') {
-                        <span title="Validado OSIPTEL" class="text-[8px] px-1 rounded-full font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 flex items-center gap-0.5">
-                          <lucide-angular name="shield-check" [size]="8" class="inline-block"></lucide-angular>
-                          OSIPTEL
+                      @if (osiptelBadge(tel.estadoOsiptel).icon) {
+                        <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
+                          <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="12"
+                                          [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
                         </span>
                       }
                     </button>
