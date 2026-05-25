@@ -6739,7 +6739,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   osiptelBadge(estado: string | undefined ): { icon: string; class: string; title: string } {
     switch (estado) {
     case 'PERTENECE': return { icon: 'id-card', class: 'text-green-600 dark:text-green-400', title: 'OSIPTEL: la línea pertenece al titular' };
-      case 'NO_PERTENECE': return { icon: 'id-card', class: 'text-red-500 dark:text-red-400', title: 'OSIPTEL: la línea NO pertenece al titular' };
       default: 
       return { icon: '', class: '', title: '' };
     }
