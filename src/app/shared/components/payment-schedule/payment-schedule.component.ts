@@ -69,6 +69,7 @@ export interface AmountOption {
                   [(ngModel)]="customAmountValue"
                   (ngModelChange)="onCustomAmountChange($event)"
                   (click)="$event.stopPropagation()"
+                  (wheel)="$event.preventDefault()"
                   placeholder="0.00"
                   min="0"
                   step="0.01"
@@ -223,6 +224,7 @@ export interface AmountOption {
                     type="number"
                     [(ngModel)]="installment.monto"
                     (ngModelChange)="onInstallmentAmountChange(installment.numeroCuota)"
+                    (wheel)="$event.preventDefault()"
                     [min]="1"
                     step="0.01"
                     class="flex-1 min-w-0 px-2 py-1.5 border border-slate-200 dark:border-slate-500 rounded-lg text-xs bg-slate-50 dark:bg-slate-600 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
@@ -291,7 +293,13 @@ export interface AmountOption {
     /* Number input arrows */
     input[type="number"]::-webkit-inner-spin-button,
     input[type="number"]::-webkit-outer-spin-button {
-      opacity: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      margin: 0;
+    }
+      input[type="number"] {
+      -moz-appearance: textfield;
+      appearance: textfield;
     }
   `]
 })

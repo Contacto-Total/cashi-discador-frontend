@@ -47,6 +47,7 @@ export interface TelefonoMetodo {
   activo: boolean;
   estadoContactabilidad?: string;
   estadoOsiptel?: string;
+  estadoWhatsapp?: string;
 }
 
 export interface CallHistory {

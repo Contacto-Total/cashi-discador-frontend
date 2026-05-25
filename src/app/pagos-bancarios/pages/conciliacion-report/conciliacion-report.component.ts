@@ -403,6 +403,9 @@ export class ConciliacionReportComponent {
   puedeDescargar(): boolean {
     if (!this.fechaInicio) return false;
     if (this.tipoConsulta === 'rango' && !this.fechaFin) return false;
+    if (this.selectedTenantId <= 0) return false;
+    if (this.selectedPortfolioId <= 0) return false;
+    if (this.selectedSubPortfolioId <= 0) return false;
     return true;
   }
 
@@ -423,7 +426,13 @@ export class ConciliacionReportComponent {
     setTimeout(() => {
       const fechaFin = this.tipoConsulta === 'rango' ? this.fechaFin : undefined;
 
-      this.bcpService.descargarReporteConciliacionPorFecha(this.fechaInicio, fechaFin).subscribe({
+      this.bcpService.descargarReporteConciliacionPorFecha(
+        this.fechaInicio,
+        this.selectedTenantId,
+        this.selectedPortfolioId,
+        this.selectedSubPortfolioId,
+        fechaFin
+      ).subscribe({
         next: (response) => {
           const nombreArchivo = fechaFin
             ? `reporte-conciliacion-${this.fechaInicio}-a-${fechaFin}.xlsx`
@@ -433,8 +442,14 @@ export class ConciliacionReportComponent {
           this.isLoading.set(false);
           setTimeout(() => this.mensaje.set(null), 5000);
         },
-        error: () => {
-          this.mensaje.set({ tipo: 'error', texto: 'No se pudo descargar el reporte. Verifique sus permisos o intente nuevamente.' });
+        error: (error) => {
+          const esErrorFiltros = error?.status === 400;
+          this.mensaje.set({
+            tipo: 'error',
+            texto: esErrorFiltros
+              ? 'Debe seleccionar proveedor, cartera y subcartera para generar el reporte.'
+              : 'No se pudo descargar el reporte. Verifique sus permisos o intente nuevamente.'
+          });
           this.isLoading.set(false);
           setTimeout(() => this.mensaje.set(null), 5000);
         }
