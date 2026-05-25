@@ -7,7 +7,7 @@ import { Injectable } from '@angular/core';
  * hace HTTP — es un helper puro de presentacion que clasifica el string
  * en CSS classes y labels para los badges.
  */
-export type EstadoOsiptel = 'SIN_VALIDAR' | 'VALIDADO' | 'NO_VALIDADO';
+export type EstadoOsiptel = 'SIN_VALIDAR' | 'PERTENECE' | 'NO_PERTENECE';
 
 export interface OsiptelBadge {
   label: string;
@@ -24,19 +24,19 @@ export class OsiptelService {
    */
   badgeFor(estado: EstadoOsiptel | string | undefined | null): OsiptelBadge | null {
     switch (estado) {
-      case 'VALIDADO':
+      case 'PERTENECE':
         return {
           label: 'Titular ✓',
-          tooltip: 'Validado en Osiptel: el cliente es titular de esta linea',
+          tooltip: 'Verificado en Osiptel: la linea pertenece al cliente',
           classes:
             'inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded ' +
             'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 ' +
             'border border-emerald-300 dark:border-emerald-600/50',
         };
-      case 'NO_VALIDADO':
+      case 'NO_PERTENECE':
         return {
-          label: 'No titular',
-          tooltip: 'Validado en Osiptel: la linea NO esta registrada al cliente',
+          label: 'No pertenece',
+          tooltip: 'Verificado en Osiptel: la linea NO pertenece al cliente',
           classes:
             'inline-block mt-0.5 px-1 py-0 text-[0.5rem] font-bold rounded ' +
             'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 ' +
