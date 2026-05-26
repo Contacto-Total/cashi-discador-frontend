@@ -1749,7 +1749,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
-  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !!this.customerData()?.id);
+  // Evita hacer muchos clicks en rellamada y saturar el SIP
+  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
@@ -3827,7 +3828,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   async iniciarRellamada(phoneNumber: string) {
-    if (this.rellamadaCallActive() || this.callActive()) return;
+    // Validamos que es una rellamada
+    if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
@@ -6739,7 +6741,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }*/
     switch (estado) {
       case 'CONTACTO_TITULAR': return { text: 'Titular',             class: 'bg-green-100 text-green-700 dark:bg-green-900/40dark:text-green-300' };
-      case 'CONTACTO_TERCERO': return { text: 'Contacto Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
+      case 'CONTACTO_TERCERO': return { text: 'Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
       case 'CONTACTADO': return { text: 'Contactado',          class: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40dark:text-teal-300' };
       case 'NO_CONTACTADO': return { text: 'No contactado',       class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'};
       case 'INVALIDO': return { text: 'Inválido',            class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40dark:text-orange-300' };
