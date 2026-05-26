@@ -2677,22 +2677,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.rellamadaCallActive.set(true);
           console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
         }
-        if ((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
-          console.log('📞 [Rellamada] Terminada');
-          this.isRellamada.set(false);
+        
+        // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
+        if((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
+          console.log('🚫 [Rellamada] Llamada de rellamada terminó, reseteando estado');
           this.rellamadaCallActive.set(false);
-          this.sipService.setRellamadaActive(false);
-          this.sipService.clearCurrentOutgoingNumber();
-          this.showRellamadaDropdown.set(false);
-          this.isMuted.set(false);
-          this.isOnHold.set(false);
         }
-        // Si la llamada falla sin haber conectado, limpiar flags
-        if ((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
-          console.log('📞 [Rellamada] Falló antes de conectar, limpiando flags');
-          this.isRellamada.set(false);
-          this.sipService.setRellamadaActive(false);
-          this.showRellamadaDropdown.set(false);
+        if((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
+          console.log('🚫 [Rellamada] Llamada de rellamada falló, reseteando estado');
+          this.resetRellamadaState();
         }
         return; // No ejecutar lógica normal
       }
@@ -3831,34 +3824,58 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Validamos que es una rellamada
     if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
+    
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
+    this.sipService.setCurrentOutgoingNumber(phoneNumber);
     this.showRellamadaDropdown.set(false);
+
+    // Desbloquear 
+    this.sipService.blockIncomingCallsMode(false);
 
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id;
 
+    if (!agentId) {
+      console.error('❌ No se pudo obtener el ID del agente para la rellamada');
+      this.resetRellamadaState();
+      return;
+    }
+
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
-    if (agentId) {
       await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
-      this.callService.registerCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
-        next: () => console.log('📞 [Rellamada] Registrada en BD'),
-        error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
+      this.callService.makeCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
+        next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
+        error: (err: any) => {
+          console.error('❌ [Rellamada] Error registrando llamada en BD:', err?.message || err);
+           this.resetRellamadaState();
+        }
       });
-    }
-    try {
-      await this.sipService.call(phoneNumber);
-    } catch (err: any) {
-      console.error('❌ [Rellamada] Error al iniciar llamada SIP:', err?.message || err);
-      this.isRellamada.set(false);
-      this.rellamadaCallActive.set(false);
-      this.sipService.setRellamadaActive(false);
-      this.sipService.clearCurrentOutgoingNumber();
-      this.showRellamadaDropdown.set(false);
+  }
+
+  // Nuevo Helper para la rellamada
+  private resetRellamadaState(): void {
+    this.isRellamada.set(false);
+    this.rellamadaCallActive.set(false);
+    this.sipService.setRellamadaActive(false);
+    this.sipService.clearCurrentOutgoingNumber();
+    this.showRellamadaDropdown.set(false);
+    this.isMuted.set(false);
+    this.isOnHold.set(false);
+
+    if (this.isTipifying()) {
+      this.sipService.blockIncomingCallsMode(true);
+      const currentUser = this.authService.getCurrentUser();
+      if(currentUser?.id) {
+        this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+          next: () => console.log('[Rellamada] Estado cambiado a TIPIFICANDO'),
+          error: (err: any) => console.error('[Rellamada] Error cambiando estado:', err)
+        });
+      }
     }
   }
 
