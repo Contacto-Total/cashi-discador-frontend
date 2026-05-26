@@ -535,21 +535,20 @@ import { CallService } from '../../core/services/call.service';
                 <div class="flex flex-wrap gap-1">
                   @for (tel of telefonosMetodo(); track tel.numero) {
                     <button
-                      (click)="tel.activo && selectedManualPhone.set(tel.numero)"
-                      [disabled]="!tel.activo"
-                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] ' +
-                        (!tel.activo
-                          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-50 cursor-not-allowed'
-                          : selectedManualPhone() === tel.numero
-                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50 cursor-pointer')"
+                      (click)="selectedManualPhone.set(tel.numero)"
+                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] cursor-pointer ' +
+                        (selectedManualPhone() === tel.numero
+                          ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
+                          : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
+                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50')"
                     >
                       <lucide-angular
-                        [name]="!tel.activo ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
+                        [name]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
                         [size]="12"
-                        [class]="!tel.activo ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
+                        [class]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
                       </lucide-angular>
-                      <span class="font-bold" [class]="!tel.activo ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
+                      <span class="font-bold" [class]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
                       @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                         <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
                       }
@@ -1074,9 +1073,19 @@ import { CallService } from '../../core/services/call.service';
                               <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
+                              @if (tienePagoParcial(cuota)) {
+                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                              }
                             </div>
                           </div>
-                          <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                          <div class="text-right">
+                            @if (tienePagoParcial(cuota)) {
+                              <span class="text-xs opacity-70 mr-1">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                            } @else {
+                              <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            }
+                          </div>
                         </label>
                       }
                     </div>
@@ -1749,7 +1758,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
-  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !!this.customerData()?.id);
+  // Evita hacer muchos clicks en rellamada y saturar el SIP
+  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
@@ -2676,22 +2686,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.rellamadaCallActive.set(true);
           console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
         }
-        if ((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
-          console.log('📞 [Rellamada] Terminada');
-          this.isRellamada.set(false);
-          this.rellamadaCallActive.set(false);
-          this.sipService.setRellamadaActive(false);
-          this.sipService.clearCurrentOutgoingNumber();
-          this.showRellamadaDropdown.set(false);
-          this.isMuted.set(false);
-          this.isOnHold.set(false);
+        
+        // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
+        if((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
+          console.log('🚫 [Rellamada] Llamada de rellamada terminó, reseteando estado');
+          this.resetRellamadaState();
         }
-        // Si la llamada falla sin haber conectado, limpiar flags
-        if ((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
-          console.log('📞 [Rellamada] Falló antes de conectar, limpiando flags');
-          this.isRellamada.set(false);
-          this.sipService.setRellamadaActive(false);
-          this.showRellamadaDropdown.set(false);
+        else if((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
+          console.log('🚫 [Rellamada] Llamada de rellamada falló, reseteando estado');
+          this.resetRellamadaState();
         }
         return; // No ejecutar lógica normal
       }
@@ -3588,10 +3591,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        // Filtrar cronogramas que tienen cuotas pendientes
-        const activeSchedules = schedules.filter((s: any) =>
-          s.cuotasPendientes > 0
-        );
+        // Incluir cronogramas con cuotas pendientes o vencidas para permitir
+        // cancelación/pago retroactivo sobre la última promesa aunque esté vencida.
+        const activeSchedules = schedules.filter((s: any) => {
+          if (s.cuotasPendientes > 0) return true;
+          const installments = s.installments || [];
+          return installments.some((c: any) => {
+            const estado = (c.status || '').toUpperCase();
+            return estado === 'VENCIDA' || estado === 'VENCIDO';
+          });
+        });
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
@@ -3827,36 +3836,61 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   async iniciarRellamada(phoneNumber: string) {
-    if (this.rellamadaCallActive() || this.callActive()) return;
+    // Validamos que es una rellamada
+    if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
+    
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
+    this.sipService.setCurrentOutgoingNumber(phoneNumber);
     this.showRellamadaDropdown.set(false);
+
+    // Desbloquear 
+    this.sipService.blockIncomingCallsMode(false);
 
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id;
 
+    if (!agentId) {
+      console.error('❌ No se pudo obtener el ID del agente para la rellamada');
+      this.resetRellamadaState();
+      return;
+    }
+
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
-    if (agentId) {
       await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
-      this.callService.registerCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
-        next: () => console.log('📞 [Rellamada] Registrada en BD'),
-        error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
+      this.callService.makeCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
+        next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
+        error: (err: any) => {
+          console.error('❌ [Rellamada] Error registrando llamada en BD:', err?.message || err);
+           this.resetRellamadaState();
+        }
       });
-    }
-    try {
-      await this.sipService.call(phoneNumber);
-    } catch (err: any) {
-      console.error('❌ [Rellamada] Error al iniciar llamada SIP:', err?.message || err);
-      this.isRellamada.set(false);
-      this.rellamadaCallActive.set(false);
-      this.sipService.setRellamadaActive(false);
-      this.sipService.clearCurrentOutgoingNumber();
-      this.showRellamadaDropdown.set(false);
+  }
+
+  // Nuevo Helper para la rellamada
+  private resetRellamadaState(): void {
+    this.isRellamada.set(false);
+    this.rellamadaCallActive.set(false);
+    this.sipService.setRellamadaActive(false);
+    this.sipService.clearCurrentOutgoingNumber();
+    this.showRellamadaDropdown.set(false);
+    this.isMuted.set(false);
+    this.isOnHold.set(false);
+
+    if (this.isTipifying()) {
+      this.sipService.blockIncomingCallsMode(true);
+      const currentUser = this.authService.getCurrentUser();
+      if(currentUser?.id) {
+        this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+          next: () => console.log('[Rellamada] Estado cambiado a TIPIFICANDO'),
+          error: (err: any) => console.error('[Rellamada] Error cambiando estado:', err)
+        });
+      }
     }
   }
 
@@ -5841,8 +5875,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * saldoPendiente = monto - montoPagadoReal
    */
   getSaldoPendienteCuota(cuota: any): number {
-    const pagado = cuota?.montoPagadoReal || 0;
-    return Math.max(0, (cuota?.monto || 0) - pagado);
+    const monto = Number(cuota?.monto || 0);
+    const pagado = Number(cuota?.montoPagadoReal || 0);
+    const pendiente = Math.max(0, monto - pagado);
+    return this.roundToTwoDecimals(pendiente);
+  }
+
+  private roundToTwoDecimals(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   /**
@@ -6602,8 +6642,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   onSelectCuotaForCancellation(cuota: any): void {
     this.selectedInstallmentForCancellation.set(cuota);
-    // Inicializar monto con el valor de la cuota
-    this.montoPagoEditable.set(cuota.monto || 0);
+    // Inicializar monto con saldo pendiente (si tiene pago parcial), sino monto total
+    const montoInicial = this.tienePagoParcial(cuota)
+      ? this.getSaldoPendienteCuota(cuota)
+      : (cuota.monto || 0);
+    this.montoPagoEditable.set(montoInicial);
     // Inicializar fecha con hoy
     this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
   }
@@ -6739,7 +6782,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }*/
     switch (estado) {
       case 'CONTACTO_TITULAR': return { text: 'Titular',             class: 'bg-green-100 text-green-700 dark:bg-green-900/40dark:text-green-300' };
-      case 'CONTACTO_TERCERO': return { text: 'Contacto Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
+      case 'CONTACTO_TERCERO': return { text: 'Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
       case 'CONTACTADO': return { text: 'Contactado',          class: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40dark:text-teal-300' };
       case 'NO_CONTACTADO': return { text: 'No contactado',       class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'};
       case 'INVALIDO': return { text: 'Inválido',            class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40dark:text-orange-300' };

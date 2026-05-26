@@ -47,6 +47,7 @@
       <div class="chat-avatar">
         <img *ngIf="chat.profilePictureUrl" [src]="chat.profilePictureUrl" class="profile-pic" alt="Profile">
         <lucide-angular *ngIf="!chat.profilePictureUrl" name="user" [size]="40"></lucide-angular>
+        <span class="online-dot" *ngIf="chat.isOnline" title="En línea"></span>
       </div>
 
       <div class="chat-content">
@@ -56,7 +57,9 @@
         </div>
 
         <div class="chat-bottom">
-          <span class="chat-last-message">{{ truncateMessage(chat.lastMsgText) }}</span>
+          <span class="chat-last-message" [class.typing-preview]="chat.isTyping">
+            {{ chat.isTyping ? 'escribiendo…' : truncateMessage(chat.lastMsgText) }}
+          </span>
           <span class="chat-unread" *ngIf="chat.unreadCount && chat.unreadCount > 0">
             {{ chat.unreadCount }}
           </span>

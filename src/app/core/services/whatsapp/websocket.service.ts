@@ -9,7 +9,7 @@ import { environment } from '../../../../environments/environment';
 export class WebsocketService {
   private socket?: WebSocket;
   private messagesSubject = new Subject<WSMessage>();
-  private readonly WS_URL = environment.whatsappWsUrl || environment.wsUrl;
+  private readonly WS_URL = (environment as any).wspWsUrl || environment.whatsappWsUrl;
   private reconnectInterval = 3000;
   private reconnectTimer?: any;
 

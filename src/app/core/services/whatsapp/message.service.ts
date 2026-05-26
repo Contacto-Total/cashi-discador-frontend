@@ -15,6 +15,8 @@ export class MessageService {
   private currentChatSubject = new BehaviorSubject<Chat | null>(null);
   private currentMessagesSubject = new BehaviorSubject<Message[]>([]);
   private windowStatusUpdateSubject = new BehaviorSubject<any>(null);
+  private presenceSubject = new BehaviorSubject<Map<string, { online: boolean; lastSeen?: number }>>(new Map());
+  private typingSubject = new BehaviorSubject<Map<string, { typing: boolean; media: 'text' | 'audio' }>>(new Map());
 
   chats$ = this.chatsSubject.asObservable();
   contacts$ = this.contactsSubject.asObservable();
@@ -22,6 +24,13 @@ export class MessageService {
   currentChat$ = this.currentChatSubject.asObservable();
   currentMessages$ = this.currentMessagesSubject.asObservable();
   windowStatusUpdate$ = this.windowStatusUpdateSubject.asObservable();
+  presence$ = this.presenceSubject.asObservable();
+  typing$ = this.typingSubject.asObservable();
+
+  // Mapas internos de presencia/escritura y timers para auto-expirar "escribiendo…"
+  private presenceMap = new Map<string, { online: boolean; lastSeen?: number }>();
+  private typingMap = new Map<string, { typing: boolean; media: 'text' | 'audio' }>();
+  private typingTimers = new Map<string, any>();
 
   constructor(
     private apiService: ApiService,
@@ -47,6 +56,21 @@ export class MessageService {
             break;
           case 'RECEIPT':
             this.handleReceipt(wsMsg);
+            break;
+          case 'PRESENCE':
+            this.handlePresence(wsMsg);
+            break;
+          case 'TYPING':
+            this.handleTyping(wsMsg);
+            break;
+          case 'REACTION':
+            this.handleReaction(wsMsg);
+            break;
+          case 'EDIT':
+            this.handleEdit(wsMsg);
+            break;
+          case 'DELETE':
+            this.handleDelete(wsMsg);
             break;
           case 'CHAT_UPDATE':
             this.loadChats();
@@ -190,6 +214,148 @@ export class MessageService {
     this.windowStatusUpdateSubject.next(payload);
   }
 
+  // ---- Presencia (en línea / última vez) ----
+  private handlePresence(payload: any): void {
+    if (!payload?.chat) return;
+    this.presenceMap.set(payload.chat, {
+      online: !!payload.online,
+      lastSeen: payload.lastSeen
+    });
+    this.presenceSubject.next(new Map(this.presenceMap));
+    this.patchChat(payload.chat, { isOnline: !!payload.online, lastSeen: payload.lastSeen });
+  }
+
+  // ---- Indicador "escribiendo…/grabando…" ----
+  private handleTyping(payload: any): void {
+    if (!payload?.chat) return;
+    const typing = payload.state === 'composing';
+    const media: 'text' | 'audio' = payload.media === 'audio' ? 'audio' : 'text';
+    this.typingMap.set(payload.chat, { typing, media });
+    this.typingSubject.next(new Map(this.typingMap));
+    this.patchChat(payload.chat, { isTyping: typing, typingMedia: media });
+
+    // Auto-expirar el "escribiendo…" tras 8s sin nuevas señales (WhatsApp no
+    // siempre manda el "paused"), para no dejarlo pegado.
+    const prev = this.typingTimers.get(payload.chat);
+    if (prev) clearTimeout(prev);
+    if (typing) {
+      this.typingTimers.set(payload.chat, setTimeout(() => {
+        this.typingMap.set(payload.chat, { typing: false, media });
+        this.typingSubject.next(new Map(this.typingMap));
+        this.patchChat(payload.chat, { isTyping: false });
+      }, 8000));
+    }
+  }
+
+  // ---- Reacción emoji a un mensaje ----
+  private handleReaction(payload: any): void {
+    if (!payload?.chat || !payload.msgId) return;
+    const messages = this.messagesMap.get(payload.chat);
+    if (!messages) return;
+    const msg = messages.find(m => m.msgId === payload.msgId);
+    if (!msg) return;
+
+    const fromMe = !!payload.fromMe;
+    const reactions = (msg.reactions || []).filter(r => r.fromMe !== fromMe);
+    if (payload.reaction) {
+      reactions.push({ emoji: payload.reaction, fromMe });
+    }
+    msg.reactions = reactions;
+    this.emitIfCurrent(payload.chat, messages);
+  }
+
+  // ---- Edición de mensaje ----
+  private handleEdit(payload: any): void {
+    if (!payload?.chat || !payload.msgId) return;
+    const messages = this.messagesMap.get(payload.chat);
+    if (!messages) return;
+    const msg = messages.find(m => m.msgId === payload.msgId);
+    if (!msg) return;
+    msg.text = payload.text ?? msg.text;
+    msg.isEdited = true;
+    this.emitIfCurrent(payload.chat, messages);
+  }
+
+  // ---- Eliminación de mensaje (revoke) ----
+  private handleDelete(payload: any): void {
+    if (!payload?.chat || !payload.msgId) return;
+    const messages = this.messagesMap.get(payload.chat);
+    if (!messages) return;
+    const msg = messages.find(m => m.msgId === payload.msgId);
+    if (!msg) return;
+    msg.isDeleted = true;
+    msg.text = '';
+    msg.hasMedia = false;
+    msg.media = undefined;
+    this.emitIfCurrent(payload.chat, messages);
+  }
+
+  // Emite la lista de mensajes si el chat afectado es el que se está viendo.
+  private emitIfCurrent(chatId: string, messages: Message[]): void {
+    const currentChat = this.currentChatSubject.value;
+    if (currentChat && currentChat.jid === chatId) {
+      this.currentMessagesSubject.next([...messages]);
+    }
+  }
+
+  // Aplica cambios de presencia a un chat en la lista (para el punto verde).
+  // No tocamos currentChatSubject aquí: chat-window consume presence$/typing$
+  // directamente para evitar re-disparar la lógica de ventana en cada update.
+  private patchChat(chatId: string, patch: Partial<Chat>): void {
+    const allItems = [...this.allItemsSubject.value];
+    const i = allItems.findIndex(c => c.jid === chatId);
+    if (i !== -1) {
+      allItems[i] = { ...allItems[i], ...patch };
+      this.allItemsSubject.next(allItems);
+    }
+  }
+
+  // ---- Acciones salientes: reaccionar / editar / eliminar ----
+  reactToMessage(chatId: string, msgId: string, emoji: string): void {
+    const messages = this.messagesMap.get(chatId);
+    if (messages) {
+      const msg = messages.find(m => m.msgId === msgId);
+      if (msg) {
+        const mine = (msg.reactions || []).find(r => r.fromMe);
+        const same = mine?.emoji === emoji;
+        const reactions = (msg.reactions || []).filter(r => !r.fromMe);
+        if (!same && emoji) reactions.push({ emoji, fromMe: true });
+        msg.reactions = reactions;
+        this.emitIfCurrent(chatId, messages);
+        // Si tocó el mismo emoji, lo quitamos (toggle)
+        emoji = same ? '' : emoji;
+      }
+    }
+    this.apiService.reactToMessage(chatId, msgId, emoji).subscribe({
+      error: (err) => console.error('❌ Error al reaccionar:', err)
+    });
+  }
+
+  editMessage(chatId: string, msgId: string, newText: string): void {
+    this.apiService.editMessage(chatId, msgId, newText).subscribe({
+      next: () => {
+        const messages = this.messagesMap.get(chatId);
+        if (messages) {
+          const msg = messages.find(m => m.msgId === msgId);
+          if (msg) { msg.text = newText; msg.isEdited = true; this.emitIfCurrent(chatId, messages); }
+        }
+      },
+      error: (err) => console.error('❌ Error al editar:', err)
+    });
+  }
+
+  deleteMessage(chatId: string, msgId: string): void {
+    this.apiService.deleteMessage(chatId, msgId).subscribe({
+      next: () => this.handleDelete({ chat: chatId, msgId }),
+      error: (err) => console.error('❌ Error al eliminar:', err)
+    });
+  }
+
+  // Reenvía el indicador de "escribiendo…" propio al contacto.
+  sendTypingState(chatId: string, state: 'composing' | 'paused'): void {
+    this.apiService.sendChatPresence(chatId, state).subscribe({ error: () => {} });
+  }
+
   loadChats(): void {
     this.loadChatsAndContacts();
   }
@@ -232,6 +398,9 @@ export class MessageService {
     console.log('💬 Chat seleccionado:', chat.name);
     this.currentChatSubject.next(chat);
     this.loadMessages(chat.jid);
+
+    // Suscribirse a la presencia del contacto (en línea / última vez)
+    this.apiService.subscribePresence(chat.jid).subscribe({ error: () => {} });
 
     // Marcar como leído
     setTimeout(() => {
