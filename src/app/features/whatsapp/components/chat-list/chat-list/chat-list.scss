@@ -235,6 +235,7 @@
       flex-shrink: 0;
       margin-right: 15px;
       transition: transform 0.3s ease;
+      position: relative;
 
       lucide-angular {
         color: #ffffff;
@@ -249,6 +250,17 @@
         border-radius: 50%;
         object-fit: cover;
         border: 2px solid #334155;
+      }
+
+      .online-dot {
+        position: absolute;
+        bottom: 1px;
+        right: 1px;
+        width: 13px;
+        height: 13px;
+        background: #10b981;
+        border: 2px solid #1e293b;
+        border-radius: 50%;
       }
     }
 
@@ -304,6 +316,11 @@
           white-space: nowrap;
           line-height: 20px;
           font-weight: 400;
+
+          &.typing-preview {
+            color: #10b981;
+            font-style: italic;
+          }
         }
 
         .chat-unread {

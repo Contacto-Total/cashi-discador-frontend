@@ -236,6 +236,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
                         <span>Descargar Excel</span>
                       }
                     </button>
+                    <!--
                     <button
                       (click)="descargarReporteResumen()"
                       [disabled]="!puedeDescargarResumen() || isLoading() || isLoadingResumen()"
@@ -254,6 +255,7 @@ import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.m
                         <span>Descargar reporte conciliación resumido</span>
                       }
                     </button>
+                    -->
                   </div>
                 </div>
               </div>
@@ -409,12 +411,12 @@ export class ConciliacionReportComponent {
     return true;
   }
 
-  puedeDescargarResumen(): boolean {
-    return !!this.fechaInicio
-      && this.selectedTenantId > 0
-      && this.selectedPortfolioId > 0
-      && this.selectedSubPortfolioId > 0;
-  }
+  // puedeDescargarResumen(): boolean {
+  //   return !!this.fechaInicio
+  //     && this.selectedTenantId > 0
+  //     && this.selectedPortfolioId > 0
+  //     && this.selectedSubPortfolioId > 0;
+  // }
 
   descargarReporte(): void {
     if (!this.puedeDescargar()) return;
@@ -457,45 +459,45 @@ export class ConciliacionReportComponent {
     }, 500);
   }
 
-  descargarReporteResumen(): void {
-    if (!this.puedeDescargarResumen()) return;
-
-    this.isLoadingResumen.set(true);
-    this.mensaje.set(null);
-
-    setTimeout(() => {
-      const fechaFin = this.tipoConsulta === 'rango' && this.fechaFin ? this.fechaFin : undefined;
-
-      this.bcpService.descargarReporteConciliacionResumenPorFecha(
-        this.fechaInicio,
-        this.selectedTenantId,
-        this.selectedPortfolioId,
-        this.selectedSubPortfolioId,
-        fechaFin
-      ).subscribe({
-        next: (response) => {
-          const nombreArchivo = fechaFin
-            ? `reporte-conciliacion-resumen-${this.fechaInicio}-a-${fechaFin}.xlsx`
-            : `reporte-conciliacion-resumen-${this.fechaInicio}.xlsx`;
-          this.bcpService.procesarDescargaArchivo(response, nombreArchivo);
-          this.mensaje.set({ tipo: 'success', texto: 'Reporte resumido generado correctamente. La descarga iniciará en breve.' });
-          this.isLoadingResumen.set(false);
-          setTimeout(() => this.mensaje.set(null), 5000);
-        },
-        error: (error) => {
-          const esErrorFiltros = error?.status === 400;
-          this.mensaje.set({
-            tipo: 'error',
-            texto: esErrorFiltros
-              ? 'Debe seleccionar proveedor, cartera y subcartera para generar el reporte resumido.'
-              : 'No se pudo descargar el reporte resumido. Verifique sus permisos o intente nuevamente.'
-          });
-          this.isLoadingResumen.set(false);
-          setTimeout(() => this.mensaje.set(null), 5000);
-        }
-      });
-    }, 500);
-  }
+  // descargarReporteResumen(): void {
+  //   if (!this.puedeDescargarResumen()) return;
+  //
+  //   this.isLoadingResumen.set(true);
+  //   this.mensaje.set(null);
+  //
+  //   setTimeout(() => {
+  //     const fechaFin = this.tipoConsulta === 'rango' && this.fechaFin ? this.fechaFin : undefined;
+  //
+  //     this.bcpService.descargarReporteConciliacionResumenPorFecha(
+  //       this.fechaInicio,
+  //       this.selectedTenantId,
+  //       this.selectedPortfolioId,
+  //       this.selectedSubPortfolioId,
+  //       fechaFin
+  //     ).subscribe({
+  //       next: (response) => {
+  //         const nombreArchivo = fechaFin
+  //           ? `reporte-conciliacion-resumen-${this.fechaInicio}-a-${fechaFin}.xlsx`
+  //           : `reporte-conciliacion-resumen-${this.fechaInicio}.xlsx`;
+  //         this.bcpService.procesarDescargaArchivo(response, nombreArchivo);
+  //         this.mensaje.set({ tipo: 'success', texto: 'Reporte resumido generado correctamente. La descarga iniciará en breve.' });
+  //         this.isLoadingResumen.set(false);
+  //         setTimeout(() => this.mensaje.set(null), 5000);
+  //       },
+  //       error: (error) => {
+  //         const esErrorFiltros = error?.status === 400;
+  //         this.mensaje.set({
+  //           tipo: 'error',
+  //           texto: esErrorFiltros
+  //             ? 'Debe seleccionar proveedor, cartera y subcartera para generar el reporte resumido.'
+  //             : 'No se pudo descargar el reporte resumido. Verifique sus permisos o intente nuevamente.'
+  //         });
+  //         this.isLoadingResumen.set(false);
+  //         setTimeout(() => this.mensaje.set(null), 5000);
+  //       }
+  //     });
+  //   }, 500);
+  // }
 
   onTenantChange(tenantId: number): void {
     this.selectedTenantId = Number(tenantId) || 0;
