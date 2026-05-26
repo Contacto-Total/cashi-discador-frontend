@@ -539,16 +539,16 @@ import { CallService } from '../../core/services/call.service';
                       [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] cursor-pointer ' +
                         (selectedManualPhone() === tel.numero
                           ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
-                          : !tel.activo
-                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-60 hover:opacity-100 hover:border-amber-300'
+                          : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
+                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
                             : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50')"
                     >
                       <lucide-angular
-                        [name]="!tel.activo ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
+                        [name]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
                         [size]="12"
-                        [class]="!tel.activo ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
+                        [class]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
                       </lucide-angular>
-                      <span class="font-bold" [class]="!tel.activo ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
+                      <span class="font-bold" [class]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
                       @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
                         <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
                       }
