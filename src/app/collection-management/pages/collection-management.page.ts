@@ -5875,8 +5875,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * saldoPendiente = monto - montoPagadoReal
    */
   getSaldoPendienteCuota(cuota: any): number {
-    const pagado = cuota?.montoPagadoReal || 0;
-    return Math.max(0, (cuota?.monto || 0) - pagado);
+    const monto = Number(cuota?.monto || 0);
+    const pagado = Number(cuota?.montoPagadoReal || 0);
+    const pendiente = Math.max(0, monto - pagado);
+    return this.roundToTwoDecimals(pendiente);
+  }
+
+  private roundToTwoDecimals(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   /**
