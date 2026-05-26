@@ -3582,10 +3582,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        // Filtrar cronogramas que tienen cuotas pendientes
-        const activeSchedules = schedules.filter((s: any) =>
-          s.cuotasPendientes > 0
-        );
+        // Incluir cronogramas con cuotas pendientes o vencidas para permitir
+        // cancelación/pago retroactivo sobre la última promesa aunque esté vencida.
+        const activeSchedules = schedules.filter((s: any) => {
+          if (s.cuotasPendientes > 0) return true;
+          const installments = s.installments || [];
+          return installments.some((c: any) => {
+            const estado = (c.status || '').toUpperCase();
+            return estado === 'VENCIDA' || estado === 'VENCIDO';
+          });
+        });
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
