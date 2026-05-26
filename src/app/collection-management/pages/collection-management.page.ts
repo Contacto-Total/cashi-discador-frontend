@@ -2681,9 +2681,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
         if((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
           console.log('🚫 [Rellamada] Llamada de rellamada terminó, reseteando estado');
-          this.rellamadaCallActive.set(false);
+          this.resetRellamadaState();
         }
-        if((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
+        else if((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
           console.log('🚫 [Rellamada] Llamada de rellamada falló, reseteando estado');
           this.resetRellamadaState();
         }
