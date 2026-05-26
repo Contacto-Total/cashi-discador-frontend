@@ -535,11 +535,10 @@ import { CallService } from '../../core/services/call.service';
                 <div class="flex flex-wrap gap-1">
                   @for (tel of telefonosMetodo(); track tel.numero) {
                     <button
-                      (click)="tel.activo && selectedManualPhone.set(tel.numero)"
-                      [disabled]="!tel.activo"
+                      (click)="selectedManualPhone.set(tel.numero)"
                       [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] ' +
                         (!tel.activo
-                          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-50 cursor-not-allowed'
+                          ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
                           : selectedManualPhone() === tel.numero
                             ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
                             : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50 cursor-pointer')"
