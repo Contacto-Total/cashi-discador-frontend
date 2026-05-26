@@ -1073,9 +1073,19 @@ import { CallService } from '../../core/services/call.service';
                               <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
+                              @if (tienePagoParcial(cuota)) {
+                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                              }
                             </div>
                           </div>
-                          <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                          <div class="text-right">
+                            @if (tienePagoParcial(cuota)) {
+                              <span class="text-xs opacity-70 mr-1">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                            } @else {
+                              <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            }
+                          </div>
                         </label>
                       }
                     </div>
@@ -6626,8 +6636,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   onSelectCuotaForCancellation(cuota: any): void {
     this.selectedInstallmentForCancellation.set(cuota);
-    // Inicializar monto con el valor de la cuota
-    this.montoPagoEditable.set(cuota.monto || 0);
+    // Inicializar monto con saldo pendiente (si tiene pago parcial), sino monto total
+    const montoInicial = this.tienePagoParcial(cuota)
+      ? this.getSaldoPendienteCuota(cuota)
+      : (cuota.monto || 0);
+    this.montoPagoEditable.set(montoInicial);
     // Inicializar fecha con hoy
     this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
   }
