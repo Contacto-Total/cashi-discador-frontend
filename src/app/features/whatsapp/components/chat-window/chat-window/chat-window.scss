@@ -311,6 +311,50 @@
   }
 }
 
+// Botón "Cargar mensajes anteriores" — fuera del scroll, siempre visible en la parte superior
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
+  flex-shrink: 0;
+  background: transparent;
+
+  .load-more-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(30, 41, 59, 0.95);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 5px 16px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, transform 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+
+    &:hover:not(:disabled) {
+      background: rgba(51, 65, 85, 0.98);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .load-more-spinner {
+      width: 13px;
+      height: 13px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+  }
+}
+
 // Messages container
 .messages-container {
   display: flex;
@@ -373,46 +417,6 @@
 
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-
-  // Botón "Cargar mensajes anteriores" — aparece arriba con column-reverse
-  .load-more-container {
-    display: flex;
-    justify-content: center;
-    padding: 12px 0 4px;
-
-    .load-more-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(30, 41, 59, 0.9);
-      color: rgba(255, 255, 255, 0.75);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 20px;
-      padding: 6px 18px;
-      font-size: 0.8125rem;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s;
-
-      &:hover:not(:disabled) {
-        background: rgba(51, 65, 85, 0.95);
-        color: #fff;
-      }
-
-      &:disabled {
-        opacity: 0.6;
-        cursor: default;
-      }
-
-      .load-more-spinner {
-        width: 14px;
-        height: 14px;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-top-color: #fff;
-        border-radius: 50%;
-        animation: spin 0.7s linear infinite;
-      }
-    }
   }
 
   // Separador de fecha entre grupos de mensajes
