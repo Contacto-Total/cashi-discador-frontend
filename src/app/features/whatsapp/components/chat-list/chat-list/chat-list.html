@@ -46,8 +46,9 @@
 
       <div class="chat-avatar">
         <img *ngIf="chat.profilePictureUrl" [src]="chat.profilePictureUrl" class="profile-pic" alt="Profile">
-        <lucide-angular *ngIf="!chat.profilePictureUrl" name="user" [size]="40"></lucide-angular>
-        <span class="online-dot" *ngIf="chat.isOnline" title="En línea"></span>
+        <lucide-angular *ngIf="!chat.profilePictureUrl && !chat.isGroup" name="user" [size]="26"></lucide-angular>
+        <lucide-angular *ngIf="!chat.profilePictureUrl && chat.isGroup" name="users" [size]="24"></lucide-angular>
+        <span class="online-dot" *ngIf="chat.isOnline && !chat.isGroup" title="En línea"></span>
       </div>
 
       <div class="chat-content">

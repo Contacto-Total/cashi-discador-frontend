@@ -388,6 +388,25 @@ export class MessageService {
 
         console.log('📋 Chats con mensajes:', chatsWithMessages.length);
         this.allItemsSubject.next(chatsWithMessages);
+
+        // El Go service carga fotos de perfil en background tras /chats.
+        // Re-fetch a los 4s para capturar las URLs que ya llegaron.
+        setTimeout(() => {
+          this.apiService.getChats().subscribe({
+            next: (refreshedChats) => {
+              const current = this.allItemsSubject.value;
+              const updated = current.map(chat => {
+                const fresh = refreshedChats.find(c => c.jid === chat.jid);
+                if (fresh?.profilePictureUrl && !chat.profilePictureUrl) {
+                  return { ...chat, profilePictureUrl: fresh.profilePictureUrl };
+                }
+                return chat;
+              });
+              this.allItemsSubject.next(updated);
+            },
+            error: () => {}
+          });
+        }, 4000);
       },
       error: (err) => {
         console.error('❌ Error cargando chats/contactos:', err);

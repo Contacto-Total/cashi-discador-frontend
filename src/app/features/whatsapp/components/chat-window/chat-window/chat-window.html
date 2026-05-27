@@ -2,9 +2,12 @@
   <!-- Chat header -->
   <div *ngIf="currentChat" class="chat-header">
     <div class="header-left">
-      <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
-      <lucide-angular *ngIf="!currentChat.profilePictureUrl && !isGroupChat" name="user" [size]="40" class="avatar-icon"></lucide-angular>
-      <lucide-angular *ngIf="!currentChat.profilePictureUrl && isGroupChat" name="users" [size]="36" class="avatar-icon group-avatar-icon"></lucide-angular>
+      <div class="header-avatar-wrapper">
+        <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
+        <lucide-angular *ngIf="!currentChat.profilePictureUrl && !isGroupChat" name="user" [size]="22" class="avatar-icon"></lucide-angular>
+        <lucide-angular *ngIf="!currentChat.profilePictureUrl && isGroupChat" name="users" [size]="20" class="avatar-icon group-avatar-icon"></lucide-angular>
+        <span class="header-online-dot" *ngIf="isContactOnline && !isGroupChat" title="En línea"></span>
+      </div>
       <div class="chat-info">
         <span class="chat-name">{{ getChatDisplayName() }}</span>
         <span class="chat-status"

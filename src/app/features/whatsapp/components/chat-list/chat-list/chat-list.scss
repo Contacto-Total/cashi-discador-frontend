@@ -236,20 +236,35 @@
       margin-right: 15px;
       transition: transform 0.3s ease;
       position: relative;
+      width: 48px;
+      height: 48px;
 
       lucide-angular {
         color: #ffffff;
-        background: linear-gradient(135deg, #10B981, #059669);
         border-radius: 50%;
-        padding: 4px;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      // Avatar individual (user icon)
+      lucide-angular[name="user"] {
+        background: linear-gradient(135deg, #10B981, #059669);
+      }
+
+      // Avatar de grupo (users icon)
+      lucide-angular[name="users"] {
+        background: linear-gradient(135deg, #6c5ce7, #4834d4);
       }
 
       .profile-pic {
-        width: 49px;
-        height: 49px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid #334155;
+        border: 2px solid rgba(255,255,255,0.1);
       }
 
       .online-dot {
@@ -259,8 +274,10 @@
         width: 13px;
         height: 13px;
         background: #10b981;
-        border: 2px solid #1e293b;
+        border: 2.5px solid #1e293b;
         border-radius: 50%;
+        box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+        transition: opacity 0.3s ease;
       }
     }
 
