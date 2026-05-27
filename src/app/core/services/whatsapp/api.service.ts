@@ -12,6 +12,8 @@ interface GoMessage {
   hasMedia: boolean;
   media?: any;
   ts: number;
+  sender?: string;
+  senderName?: string;
   quotedMessageId?: string;
   quotedText?: string;
   quotedSender?: string;
@@ -58,6 +60,8 @@ export class ApiService {
           hasMedia:        m.hasMedia || false,
           media:           m.media,
           status:          m.fromMe ? 'sent' as const : undefined,
+          sender:          m.sender,
+          senderName:      m.senderName,
           quotedMessageId: m.quotedMessageId,
           quotedText:      m.quotedText,
           quotedSender:    m.quotedSender,

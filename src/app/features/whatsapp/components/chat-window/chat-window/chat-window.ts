@@ -897,6 +897,35 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     return date.toLocaleDateString('es-PE', opts);
   }
 
+  get isGroupChat(): boolean {
+    return this.currentChat?.isGroup ?? false;
+  }
+
+  // Paleta de colores WhatsApp para participantes de grupo
+  private readonly GROUP_COLORS = [
+    '#e17055', '#00b894', '#0984e3', '#6c5ce7',
+    '#fdcb6e', '#e84393', '#00cec9', '#55efc4',
+    '#a29bfe', '#fd79a8'
+  ];
+
+  getSenderColor(sender?: string): string {
+    if (!sender) return this.GROUP_COLORS[0];
+    let hash = 0;
+    for (let i = 0; i < sender.length; i++) {
+      hash = (hash * 31 + sender.charCodeAt(i)) & 0xffffffff;
+    }
+    return this.GROUP_COLORS[Math.abs(hash) % this.GROUP_COLORS.length];
+  }
+
+  getSenderDisplayName(message: Message): string {
+    if (message.senderName) return message.senderName;
+    if (message.sender) {
+      const num = message.sender.replace('@s.whatsapp.net', '').replace('@lid', '');
+      return '+' + num;
+    }
+    return 'Desconocido';
+  }
+
   getMessageStatusIcon(status?: string): string {
     switch (status) {
       case 'pending': return 'schedule';

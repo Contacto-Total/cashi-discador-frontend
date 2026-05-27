@@ -17,6 +17,10 @@ export interface Message {
   buttonReplyId?: string;
   listRowId?: string;
 
+  // Sender (grupos: participante que envió el mensaje)
+  sender?: string;
+  senderName?: string;
+
   // Reply/Quote fields
   quotedMessageId?: string;
   quotedText?: string;
@@ -49,6 +53,7 @@ export interface Chat {
   unreadCount?: number;
   lastMsgFromMe?: boolean;
   profilePictureUrl?: string;
+  isGroup?: boolean;
 
   // Presencia (online / última vez / escribiendo)
   isOnline?: boolean;

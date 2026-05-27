@@ -3,7 +3,8 @@
   <div *ngIf="currentChat" class="chat-header">
     <div class="header-left">
       <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
-      <lucide-angular *ngIf="!currentChat.profilePictureUrl" name="user" [size]="40" class="avatar-icon"></lucide-angular>
+      <lucide-angular *ngIf="!currentChat.profilePictureUrl && !isGroupChat" name="user" [size]="40" class="avatar-icon"></lucide-angular>
+      <lucide-angular *ngIf="!currentChat.profilePictureUrl && isGroupChat" name="users" [size]="36" class="avatar-icon group-avatar-icon"></lucide-angular>
       <div class="chat-info">
         <span class="chat-name">{{ getChatDisplayName() }}</span>
         <span class="chat-status"
@@ -88,6 +89,13 @@
         [class.search-highlighted]="isMessageHighlighted(message.msgId)">
 
       <div class="message-bubble" [class.deleted]="message.isDeleted">
+        <!-- Nombre del remitente en grupos (solo mensajes recibidos) -->
+        <div *ngIf="isGroupChat && !message.fromMe && !message.isDeleted"
+             class="group-sender-name"
+             [style.color]="getSenderColor(message.sender)">
+          {{ getSenderDisplayName(message) }}
+        </div>
+
         <!-- Acciones del mensaje (aparecen al hover) -->
         <div class="message-actions" *ngIf="!message.isDeleted">
           <button mat-icon-button class="msg-action-btn" (click)="replyToMessage(message)" title="Responder">

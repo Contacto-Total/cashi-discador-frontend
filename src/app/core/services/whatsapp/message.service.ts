@@ -375,11 +375,14 @@ export class MessageService {
       next: ({ chats, contacts }) => {
         console.log('✅ Datos cargados - Chats:', chats.length, '| Contactos:', contacts.length);
 
-        this.chatsSubject.next(chats);
+        // Marcar grupos por JID
+        const enrichedChats = chats.map(c => ({ ...c, isGroup: c.jid.endsWith('@g.us') }));
+
+        this.chatsSubject.next(enrichedChats);
         this.contactsSubject.next(contacts);
 
         // Filtrar y ordenar chats con mensajes
-        const chatsWithMessages = chats
+        const chatsWithMessages = enrichedChats
           .filter(chat => chat.lastMsgTs && chat.lastMsgTs > 0)
           .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));
 
