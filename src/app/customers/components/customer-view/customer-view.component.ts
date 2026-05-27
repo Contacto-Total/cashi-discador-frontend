@@ -1,7 +1,7 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CustomerService, CustomerResource, ContactMethodResource, PagosClienteResponse, GrupoPagos } from '../../services/customer.service';
+import { CustomerService, CustomerResource, ContactMethodResource, PagosClienteResponse } from '../../services/customer.service';
 import { ApiSystemConfigService } from '../../../collection-management/services/api-system-config.service';
 import { ManagementService, CreateManagementRequest } from '../../../collection-management/services/management.service';
 import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.service';
@@ -568,7 +568,7 @@ import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.ser
                       </div>
                     } @else if (!pagosCliente() || pagosCliente()!.cantidadPagos === 0) {
                       <div class="bg-white dark:bg-slate-800/50 rounded-lg p-4 border border-gray-200 dark:border-slate-700 text-center">
-                        <p class="text-gray-500 dark:text-gray-400 text-sm">No se encontraron pagos registrados para este cliente</p>
+                        <p class="text-gray-500 dark:text-gray-400 text-sm">No se encontraron pagos bancarios para este cliente</p>
                       </div>
                     } @else {
                       <!-- Resumen General -->
@@ -579,94 +579,49 @@ import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.ser
                             <p class="text-xl font-bold text-amber-800 dark:text-amber-200">S/ {{ pagosCliente()!.totalPagado | number:'1.2-2' }}</p>
                           </div>
                           <div class="text-right">
-                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">Pagos Registrados</p>
+                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">N° Pagos</p>
                             <p class="text-xl font-bold text-amber-800 dark:text-amber-200">{{ pagosCliente()!.cantidadPagos }}</p>
                           </div>
                           <div class="text-right">
-                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">Promesas</p>
-                            <p class="text-xl font-bold text-amber-800 dark:text-amber-200">{{ pagosCliente()!.grupos.length }}</p>
+                            <p class="text-[0.625rem] text-amber-700 dark:text-amber-300 font-semibold uppercase">Último Pago</p>
+                            <p class="text-xl font-bold text-amber-800 dark:text-amber-200">{{ pagosCliente()!.pagos[0]?.fechaBanco || '-' }}</p>
                           </div>
                         </div>
                       </div>
 
-                      <!-- Grupos de Promesa -->
-                      @for (grupo of pagosCliente()!.grupos; track grupo.grupoPromesaUuid) {
-                        <div class="bg-white dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
-                          <!-- Header del Grupo (clickeable) -->
-                          <button (click)="toggleGrupo(grupo.grupoPromesaUuid)"
-                                  class="w-full px-3 py-2 flex items-center justify-between bg-gray-50 dark:bg-slate-700/50 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-                            <div class="flex items-center gap-2">
-                              <span class="text-lg transform transition-transform" [class.rotate-90]="isGrupoExpanded(grupo.grupoPromesaUuid)">▶</span>
-                              <div class="text-left">
-                                <p class="text-sm font-semibold text-gray-800 dark:text-white">
-                                  @if (grupo.esContinuidad) {
-                                    <span class="text-blue-600 dark:text-blue-400">Continuidad:</span>
+                      <!-- Tabla plana de pagos bancarios -->
+                      <div class="bg-white dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-slate-700 overflow-hidden">
+                        <table class="w-full text-xs">
+                          <thead>
+                            <tr class="bg-gray-100 dark:bg-slate-700">
+                              <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Fecha</th>
+                              <th class="px-2 py-1.5 text-right text-gray-600 dark:text-gray-300 font-semibold">Monto</th>
+                              <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Banco</th>
+                              <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Canal/Medio</th>
+                              <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">N° Operación</th>
+                              <th class="px-2 py-1.5 text-center text-gray-600 dark:text-gray-300 font-semibold">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (pago of pagosCliente()!.pagos; track pago.id) {
+                              <tr class="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30">
+                                <td class="px-2 py-1.5 text-gray-800 dark:text-white">{{ pago.fechaBanco }}</td>
+                                <td class="px-2 py-1.5 text-right font-mono font-semibold text-gray-800 dark:text-white">S/ {{ pago.monto | number:'1.2-2' }}</td>
+                                <td class="px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ pago.banco || '-' }}</td>
+                                <td class="px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ medioAtencionLabel(pago.medioAtencion) }}</td>
+                                <td class="px-2 py-1.5 font-mono text-gray-600 dark:text-gray-300">{{ pago.numeroOperacion || '-' }}</td>
+                                <td class="px-2 py-1.5 text-center">
+                                  @if (pago.procesado) {
+                                    <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-[0.625rem] font-semibold">Conciliado</span>
                                   } @else {
-                                    <span class="text-amber-600 dark:text-amber-400">Promesa:</span>
+                                    <span class="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-[0.625rem] font-semibold">Pendiente</span>
                                   }
-                                  {{ grupo.fechaPrimerPago }} - {{ grupo.fechaUltimoPago }}
-                                </p>
-                              </div>
-                            </div>
-                            <div class="flex items-center gap-4">
-                              <div class="text-right">
-                                <p class="text-[0.625rem] text-gray-500 dark:text-gray-400">Pagos</p>
-                                <p class="text-sm font-bold text-gray-800 dark:text-white">{{ grupo.cantidadPagos }}</p>
-                              </div>
-                              <div class="text-right">
-                                <p class="text-[0.625rem] text-gray-500 dark:text-gray-400">Total</p>
-                                <p class="text-sm font-bold text-green-600 dark:text-green-400">S/ {{ grupo.totalPagado | number:'1.2-2' }}</p>
-                              </div>
-                            </div>
-                          </button>
-
-                          <!-- Detalle de Pagos (expandible) -->
-                          @if (isGrupoExpanded(grupo.grupoPromesaUuid)) {
-                            <div class="border-t border-gray-200 dark:border-slate-600">
-                              <table class="w-full text-xs">
-                                <thead>
-                                  <tr class="bg-gray-100 dark:bg-slate-700">
-                                    <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Fecha</th>
-                                    <th class="px-2 py-1.5 text-right text-gray-600 dark:text-gray-300 font-semibold">Monto</th>
-                                    <th class="px-2 py-1.5 text-left text-gray-600 dark:text-gray-300 font-semibold">Banco</th>
-                                    <th class="px-2 py-1.5 text-center text-gray-600 dark:text-gray-300 font-semibold">Cuota</th>
-                                    <th class="px-2 py-1.5 text-center text-gray-600 dark:text-gray-300 font-semibold">Estado</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  @for (pago of grupo.pagos; track pago.id) {
-                                    <tr class="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/30">
-                                      <td class="px-2 py-1.5 text-gray-800 dark:text-white">{{ pago.fechaPago }}</td>
-                                      <td class="px-2 py-1.5 text-right font-mono font-semibold text-gray-800 dark:text-white">S/ {{ pago.monto | number:'1.2-2' }}</td>
-                                      <td class="px-2 py-1.5 text-gray-600 dark:text-gray-300">{{ pago.banco || '-' }}</td>
-                                      <td class="px-2 py-1.5 text-center">
-                                        @if (pago.numeroCuota) {
-                                          <span class="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-[0.625rem] font-semibold">
-                                            #{{ pago.numeroCuota }}
-                                          </span>
-                                        } @else {
-                                          <span class="text-gray-400">-</span>
-                                        }
-                                      </td>
-                                      <td class="px-2 py-1.5 text-center">
-                                        @if (pago.verificado) {
-                                          <span class="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-[0.625rem] font-semibold">
-                                            Verificado
-                                          </span>
-                                        } @else {
-                                          <span class="px-1.5 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded text-[0.625rem] font-semibold">
-                                            Pendiente
-                                          </span>
-                                        }
-                                      </td>
-                                    </tr>
-                                  }
-                                </tbody>
-                              </table>
-                            </div>
-                          }
-                        </div>
-                      }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
                     }
                   </div>
                 }
@@ -1263,6 +1218,22 @@ export class CustomerViewComponent implements OnInit {
     }
   }
 
+  medioAtencionLabel(codigo: string | null): string {
+    if (!codigo) return '-';
+    const map: Record<string, string> = {
+      'BM': 'Banca Móvil',
+      'VEN': 'Ventanilla',
+      'VENTANILLA': 'Ventanilla',
+      'ABC': 'Agente BCP',
+      'APP': 'App',
+      'IB': 'Banca por Internet',
+      'WEB': 'Banca por Internet',
+      'ATM': 'Cajero (ATM)',
+      'TEL': 'Telecrédito'
+    };
+    return map[codigo.toUpperCase().trim()] || codigo;
+  }
+
   loadPagosCliente(documento: string) {
     this.loadingPagos.set(true);
     this.customerService.getPagosCliente(documento).subscribe({
@@ -1271,11 +1242,6 @@ export class CustomerViewComponent implements OnInit {
         this.pagosCliente.set(response);
         this.loadingPagos.set(false);
         // Expandir el primer grupo por defecto si existe
-        if (response.grupos.length > 0) {
-          const newSet = new Set<string>();
-          newSet.add(response.grupos[0].grupoPromesaUuid);
-          this.expandedGrupos.set(newSet);
-        }
       },
       error: (error) => {
         console.error('Error cargando pagos del cliente:', error);

@@ -5,111 +5,130 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
 export interface CustomerStaticData {
-  id: number;
-  documentType: string;
-  documentNumber: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  birthDate: string;
-  age: number;
-  gender: string;
-  civilStatus: string;
-  occupation: string;
-  monthlyIncome: number;
-  address: string;
-  district: string;
-  city: string;
-  department: string;
-  phone: string;
-  alternativePhone?: string;
-  workPhone?: string;
-  email: string;
-  alternativeEmail?: string;
-  employmentStatus: string;
-  companyName?: string;
-  companyPhone?: string;
-  companyAddress?: string;
-  referenceContact1?: string;
-  referencePhone1?: string;
-  referenceContact2?: string;
-  referencePhone2?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+    id: number;
+    documentType: string;
+    documentNumber: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    birthDate: string;
+    age: number;
+    gender: string;
+    civilStatus: string;
+    occupation: string;
+    monthlyIncome: number;
+    address: string;
+    district: string;
+    city: string;
+    department: string;
+    phone: string;
+    alternativePhone?: string;
+    workPhone?: string;
+    email: string;
+    alternativeEmail?: string;
+    employmentStatus: string;
+    companyName?: string;
+    companyPhone?: string;
+    companyAddress?: string;
+    referenceContact1?: string;
+    referencePhone1?: string;
+    referenceContact2?: string;
+    referencePhone2?: string;
+    createdAt: string;
+    updatedAt: string;
+  }
 
-export interface CustomerField {
-  fieldCode: string;
-  fieldName: string;
-  value: string | number | null;
-  dataType: string;
-  category: string;
-  icon?: string;
-  color?: string;
-}
+  export interface CustomerField {
+    fieldCode: string;
+    fieldName: string;
+    value: string | number | null;
+    dataType: string;
+    category: string;
+    icon?: string;
+    color?: string;
+  }
 
-export interface CustomerDetail {
-  documento: string;
-  campos: CustomerField[];
-}
+  export interface CustomerDetail {
+    documento: string;
+    campos: CustomerField[];
+  }
 
-export interface ContactMethodResource {
-  id: number;
-  contactType: string;
-  subtype: string;
-  value: string;
-  label: string;
-  importDate: string | null;
-  status: string;
-  // V17+: campos del modelo NO-ortogonal (vienen siempre del backend)
-  estadoOsiptel?: 'SIN_VALIDAR' | 'PERTENECE' | 'NO_PERTENECE';
-  estadoWhatsapp?: 'SIN_VALIDAR' | 'TIENE' | 'NO_TIENE';
-}
+  export interface ContactMethodResource {
+    id: number;
+    contactType: string;
+    subtype: string;
+    value: string;
+    label: string;
+    importDate: string | null;
+    status: string;
+    // V17+: campos del modelo NO-ortogonal (vienen siempre del backend)
+    estadoOsiptel?: 'SIN_VALIDAR' | 'PERTENECE' | 'NO_PERTENECE';
+    estadoWhatsapp?: 'SIN_VALIDAR' | 'TIENE' | 'NO_TIENE';
+  }
 
-export interface CustomerResource {
-  id: number;
-  customerId: string;
-  identificationCode: string;
-  accountNumber?: string;
-  // Información financiera/deuda
-  overdueDays?: number | null;
-  overdueAmount?: number | null;
-  principalAmount?: number | null;
-  documentNumber: string;
-  fullName: string;
-  documentType: string;
-  birthDate: string | null;
-  age: number | null;
-  // Nombres
-  firstName?: string;
-  secondName?: string;
-  firstLastName?: string;
-  secondLastName?: string;
-  // Datos personales
-  maritalStatus?: string;
-  occupation?: string;
-  customerType?: string;
-  // Ubicación
-  address?: string;
-  district?: string;
-  province?: string;
-  department?: string;
-  // Referencias
-  personalReference?: string;
-  // Estado
-  status?: string;
-  importDate?: string;
-  // Métodos de contacto
-  contactMethods?: ContactMethodResource[];
-  // Información de subcartera
-  tenantId?: number;
-  tenantName?: string;
-  portfolioId?: number;
-  portfolioName?: string;
-  subPortfolioId?: number;
-  subPortfolioName?: string;
-  subPortfolioCode?: string;
-}
+  export interface CustomerResource {
+    id: number;
+    customerId: string;
+    identificationCode: string;
+    accountNumber?: string;
+    // Información financiera/deuda
+    overdueDays?: number | null;
+    overdueAmount?: number | null;
+    principalAmount?: number | null;
+    documentNumber: string;
+    fullName: string;
+    documentType: string;
+    birthDate: string | null;
+    age: number | null;
+    // Nombres
+    firstName?: string;
+    secondName?: string;
+    firstLastName?: string;
+    secondLastName?: string;
+    // Datos personales
+    maritalStatus?: string;
+    occupation?: string;
+    customerType?: string;
+    // Ubicación
+    address?: string;
+    district?: string;
+    province?: string;
+    department?: string;
+    // Referencias
+    personalReference?: string;
+    // Estado
+    status?: string;
+    importDate?: string;
+    // Métodos de contacto
+    contactMethods?: ContactMethodResource[];
+    // Información de subcartera
+    tenantId?: number;
+    tenantName?: string;
+    portfolioId?: number;
+    portfolioName?: string;
+    subPortfolioId?: number;
+    subPortfolioName?: string;
+    subPortfolioCode?: string;
+  }
+
+// Interfaces para pagos bancarios
+export interface PagoBancario {
+    id: number;
+    fechaBanco: string | null;
+    horaAtencion: string | null;
+    monto: number;
+    banco: string | null;
+    medioAtencion: string | null;
+    numeroOperacion: string | null;
+    procesado: boolean;
+  }
+
+export interface PagosClienteResponse {
+    documento: string;
+    pagos: PagoBancario[];
+    totalPagado: number;
+    cantidadPagos: number;
+  }
 
 @Injectable({
   providedIn: 'root'
@@ -234,32 +253,3 @@ export class CustomerService {
   }
 }
 
-// Interfaces para pagos
-export interface PagoDetalle {
-  id: number;
-  monto: number;
-  fechaPago: string;
-  banco: string | null;
-  numeroOperacion: string | null;
-  verificado: boolean;
-  comprobanteUrl: string | null;
-  numeroCuota: number | null;
-  metodoRegistro: string;
-}
-
-export interface GrupoPagos {
-  grupoPromesaUuid: string;
-  totalPagado: number;
-  cantidadPagos: number;
-  fechaPrimerPago: string | null;
-  fechaUltimoPago: string | null;
-  esContinuidad: boolean;
-  pagos: PagoDetalle[];
-}
-
-export interface PagosClienteResponse {
-  documento: string;
-  grupos: GrupoPagos[];
-  totalPagado: number;
-  cantidadPagos: number;
-}
