@@ -70,6 +70,15 @@
 
     <!-- Messages - ocultos completamente mientras cargan -->
     <ng-container *ngIf="!messagesLoading">
+
+      <!-- Botón "Cargar más" — aparece encima con column-reverse -->
+      <div class="load-more-container" *ngIf="hasMoreMessages || loadingMore">
+        <button class="load-more-btn" (click)="loadMoreMessages()" [disabled]="loadingMore">
+          <span *ngIf="loadingMore" class="load-more-spinner"></span>
+          <span>{{ loadingMore ? 'Cargando...' : 'Cargar mensajes anteriores' }}</span>
+        </button>
+      </div>
+
       <ng-container *ngFor="let message of reversedMessages; let i = index; trackBy: trackByMessageId">
       <div
         [id]="'msg-' + message.msgId"

@@ -5,7 +5,6 @@ import { map } from 'rxjs/operators';
 import { Message, Chat, Contact } from '../../models/message.model';
 import { environment } from '../../../../environments/environment';
 
-// Shape que devuelve el Go service en GET /messages/{chat}
 interface GoMessage {
   id: string;
   fromMe: boolean;
@@ -13,11 +12,15 @@ interface GoMessage {
   hasMedia: boolean;
   media?: any;
   ts: number;
-  // campos opcionales de reply
   quotedMessageId?: string;
   quotedText?: string;
   quotedSender?: string;
   quotedFromMe?: boolean;
+}
+
+interface PagedMessages {
+  messages: GoMessage[];
+  hasMore: boolean;
 }
 
 @Injectable({
@@ -38,24 +41,29 @@ export class ApiService {
     return this.http.get<Chat[]>(`${this.GO_BASE}/chats`);
   }
 
-  getMessages(chat: string): Observable<Message[]> {
+  getMessages(chat: string, before?: number): Observable<{ messages: Message[]; hasMore: boolean }> {
     const encoded = encodeURIComponent(chat);
-    return this.http.get<GoMessage[]>(`${this.GO_BASE}/messages/${encoded}`).pipe(
-      map(msgs => msgs.map(m => ({
-        msgId:           m.id,
-        chat:            chat,
-        chatTitle:       chat,
-        text:            m.text || '',
-        fromMe:          m.fromMe,
-        timestamp:       m.ts,
-        hasMedia:        m.hasMedia || false,
-        media:           m.media,
-        status:          m.fromMe ? 'sent' as const : undefined,
-        quotedMessageId: m.quotedMessageId,
-        quotedText:      m.quotedText,
-        quotedSender:    m.quotedSender,
-        quotedFromMe:    m.quotedFromMe
-      })))
+    let url = `${this.GO_BASE}/messages/${encoded}?limit=60`;
+    if (before) url += `&before=${before}`;
+    return this.http.get<PagedMessages>(url).pipe(
+      map(resp => ({
+        hasMore: resp.hasMore,
+        messages: resp.messages.map(m => ({
+          msgId:           m.id,
+          chat:            chat,
+          chatTitle:       chat,
+          text:            m.text || '',
+          fromMe:          m.fromMe,
+          timestamp:       m.ts,
+          hasMedia:        m.hasMedia || false,
+          media:           m.media,
+          status:          m.fromMe ? 'sent' as const : undefined,
+          quotedMessageId: m.quotedMessageId,
+          quotedText:      m.quotedText,
+          quotedSender:    m.quotedSender,
+          quotedFromMe:    m.quotedFromMe
+        }))
+      }))
     );
   }
 

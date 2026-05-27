@@ -9,11 +9,14 @@ import { WebsocketService } from './websocket.service';
 })
 export class MessageService {
   private messagesMap = new Map<string, Message[]>();
+  private hasMoreMap  = new Map<string, boolean>();   // si hay mensajes anteriores
   private chatsSubject = new BehaviorSubject<Chat[]>([]);
   private contactsSubject = new BehaviorSubject<Contact[]>([]);
   private allItemsSubject = new BehaviorSubject<Chat[]>([]);
   private currentChatSubject = new BehaviorSubject<Chat | null>(null);
   private currentMessagesSubject = new BehaviorSubject<Message[]>([]);
+  private hasMoreSubject = new BehaviorSubject<boolean>(false);
+  private loadingMoreSubject = new BehaviorSubject<boolean>(false);
   private windowStatusUpdateSubject = new BehaviorSubject<any>(null);
   private presenceSubject = new BehaviorSubject<Map<string, { online: boolean; lastSeen?: number }>>(new Map());
   private typingSubject = new BehaviorSubject<Map<string, { typing: boolean; media: 'text' | 'audio' }>>(new Map());
@@ -23,6 +26,8 @@ export class MessageService {
   allItems$ = this.allItemsSubject.asObservable();
   currentChat$ = this.currentChatSubject.asObservable();
   currentMessages$ = this.currentMessagesSubject.asObservable();
+  hasMore$ = this.hasMoreSubject.asObservable();
+  loadingMore$ = this.loadingMoreSubject.asObservable();
   windowStatusUpdate$ = this.windowStatusUpdateSubject.asObservable();
   presence$ = this.presenceSubject.asObservable();
   typing$ = this.typingSubject.asObservable();
@@ -392,6 +397,7 @@ export class MessageService {
       console.log('💬 Chat deseleccionado');
       this.currentChatSubject.next(null);
       this.currentMessagesSubject.next([]);
+      this.hasMoreSubject.next(false);
       return;
     }
 
@@ -399,60 +405,89 @@ export class MessageService {
     this.currentChatSubject.next(chat);
     this.loadMessages(chat.jid);
 
-    // Suscribirse a la presencia del contacto (en línea / última vez)
     this.apiService.subscribePresence(chat.jid).subscribe({ error: () => {} });
 
-    // Marcar como leído
     setTimeout(() => {
       this.updateChatUnreadCount(chat.jid, 0);
     }, 300);
   }
 
   private loadMessages(chatId: string): void {
-    console.log('📨 Cargando mensajes desde BD para:', chatId);
-
-    // Limpiar mensajes del chat anterior para que el chat-window resetee su
-    // estado de carga y la condición isNewChatLoad sea verdadera al recibir los nuevos.
     this.currentMessagesSubject.next([]);
+    this.hasMoreSubject.next(false);
 
     this.apiService.getMessages(chatId).subscribe({
-      next: (messages) => {
-        console.log('✅ Mensajes cargados desde BD:', messages.length);
+      next: ({ messages, hasMore }) => {
+        console.log(`✅ Mensajes cargados: ${messages.length} (hasMore=${hasMore})`);
 
-        const messagesWithStatus: Message[] = messages.map(msg => ({
-          msgId: msg.msgId,
-          chat: msg.chat,
-          chatTitle: msg.chatTitle,
-          text: msg.text || '',
-          fromMe: msg.fromMe,
-          timestamp: msg.timestamp,
-          hasMedia: msg.hasMedia || false,
-          media: msg.media,
-          status: msg.status || (msg.fromMe ? 'sent' : undefined),
-          quotedMessageId: msg.quotedMessageId,
-          quotedText: msg.quotedText,
-          quotedSender: msg.quotedSender,
-          quotedFromMe: msg.quotedFromMe
-        }));
+        const mapped = this.mapMessages(messages);
+        mapped.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-        // Ordenar por timestamp ascendente (más viejo primero)
-        messagesWithStatus.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        this.messagesMap.set(chatId, mapped);
+        this.hasMoreMap.set(chatId, hasMore);
+        this.hasMoreSubject.next(hasMore);
+        this.currentMessagesSubject.next([...mapped]);
 
-        // Reemplazar completamente los mensajes en memoria con los de BD
-        this.messagesMap.set(chatId, messagesWithStatus);
-        this.currentMessagesSubject.next([...messagesWithStatus]);
-
-        // Auto-marcar como leído si hay mensajes no leídos
-        const hasUnreadMessages = messagesWithStatus.some(m => !m.fromMe);
-        if (hasUnreadMessages && messagesWithStatus.length > 0) {
+        if (mapped.length > 0) {
           setTimeout(() => {
-            const lastMsg = messagesWithStatus[messagesWithStatus.length - 1];
-            this.apiService.markAsRead(chatId, lastMsg.msgId).subscribe();
+            this.apiService.markAsRead(chatId, mapped[mapped.length - 1].msgId).subscribe();
           }, 500);
         }
       },
       error: (err) => console.error('❌ Error loading messages:', err)
     });
+  }
+
+  /** Carga el bloque anterior de mensajes (paginación hacia atrás). */
+  loadMoreMessages(): void {
+    const chatId = this.currentChatSubject.value?.jid;
+    if (!chatId || !this.hasMoreMap.get(chatId) || this.loadingMoreSubject.value) return;
+
+    const existing = this.messagesMap.get(chatId) || [];
+    const oldest = existing.length > 0 ? existing[0].timestamp : undefined;
+
+    this.loadingMoreSubject.next(true);
+
+    this.apiService.getMessages(chatId, oldest).subscribe({
+      next: ({ messages, hasMore }) => {
+        const mapped = this.mapMessages(messages);
+        mapped.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        // Prepend, deduplicando por msgId
+        const existingIds = new Set(existing.map(m => m.msgId));
+        const newOnes = mapped.filter(m => !existingIds.has(m.msgId));
+        const combined = [...newOnes, ...existing];
+
+        this.messagesMap.set(chatId, combined);
+        this.hasMoreMap.set(chatId, hasMore);
+        this.hasMoreSubject.next(hasMore);
+        this.currentMessagesSubject.next([...combined]);
+        this.loadingMoreSubject.next(false);
+        console.log(`📜 +${newOnes.length} msgs anteriores cargados (hasMore=${hasMore})`);
+      },
+      error: (err) => {
+        this.loadingMoreSubject.next(false);
+        console.error('❌ Error loading more:', err);
+      }
+    });
+  }
+
+  private mapMessages(messages: Message[]): Message[] {
+    return messages.map(msg => ({
+      msgId:           msg.msgId,
+      chat:            msg.chat,
+      chatTitle:       msg.chatTitle,
+      text:            msg.text || '',
+      fromMe:          msg.fromMe,
+      timestamp:       msg.timestamp,
+      hasMedia:        msg.hasMedia || false,
+      media:           msg.media,
+      status:          msg.status || (msg.fromMe ? 'sent' : undefined),
+      quotedMessageId: msg.quotedMessageId,
+      quotedText:      msg.quotedText,
+      quotedSender:    msg.quotedSender,
+      quotedFromMe:    msg.quotedFromMe
+    }));
   }
 
   sendMessage(to: string, text: string, quotedMessageId?: string): void {

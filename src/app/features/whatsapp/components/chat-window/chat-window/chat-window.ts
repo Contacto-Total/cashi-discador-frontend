@@ -47,6 +47,10 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   // Reply state
   replyingTo: Message | null = null;
 
+  // Paginación
+  hasMoreMessages = false;
+  loadingMore = false;
+
   // Presencia del contacto
   isContactOnline = false;
   contactLastSeen?: number;
@@ -156,7 +160,14 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  loadMoreMessages(): void {
+    this.messageService.loadMoreMessages();
+  }
+
   ngOnInit(): void {
+    this.messageService.hasMore$.subscribe(v => { this.hasMoreMessages = v; this.cdr.markForCheck(); });
+    this.messageService.loadingMore$.subscribe(v => { this.loadingMore = v; this.cdr.markForCheck(); });
+
     this.messageService.currentChat$.subscribe(chat => {
       this.currentChat = chat;
 

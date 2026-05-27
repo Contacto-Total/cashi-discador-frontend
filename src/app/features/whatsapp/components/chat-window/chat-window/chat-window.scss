@@ -340,6 +340,46 @@
     to { transform: rotate(360deg); }
   }
 
+  // Botón "Cargar mensajes anteriores" — aparece arriba con column-reverse
+  .load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0 4px;
+
+    .load-more-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(30, 41, 59, 0.9);
+      color: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 0.8125rem;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+
+      &:hover:not(:disabled) {
+        background: rgba(51, 65, 85, 0.95);
+        color: #fff;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+
+      .load-more-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+      }
+    }
+  }
+
   // Separador de fecha entre grupos de mensajes
   .date-separator {
     display: flex;
