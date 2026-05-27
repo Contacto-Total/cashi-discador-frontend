@@ -1,7 +1,7 @@
 <div class="chat-window-container">
   <!-- Chat header -->
   <div *ngIf="currentChat" class="chat-header">
-    <div class="header-left">
+    <div class="header-left" (click)="toggleContactInfo()" style="cursor:pointer">
       <div class="header-avatar-wrapper">
         <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
         <lucide-angular *ngIf="!currentChat.profilePictureUrl && !isGroupChat" name="user" [size]="22" class="avatar-icon"></lucide-angular>
@@ -140,7 +140,13 @@
         </div>
 
         <div *ngIf="!message.isDeleted && message.hasMedia && message.media" class="message-media">
-          <img *ngIf="isImageMedia(message.media.mime)"
+          <!-- Sticker (WebP sin fondo) -->
+          <img *ngIf="isStickerMedia(message.media.mime)"
+               [src]="getMediaSrc(message.media)"
+               alt="Sticker"
+               class="media-sticker">
+          <!-- Imagen normal -->
+          <img *ngIf="isImageMedia(message.media.mime) && !isStickerMedia(message.media.mime)"
                [src]="getMediaSrc(message.media)"
                alt="Imagen"
                class="media-image">
@@ -149,6 +155,23 @@
                  controls
                  class="media-video">
           </video>
+          <!-- Documento -->
+          <div *ngIf="isDocumentMedia(message.media.mime) && !isAudioMedia(message.media.mime)" class="media-document">
+            <div class="doc-icon-wrap">
+              <lucide-angular [name]="getDocumentIcon(message.media.mime)" [size]="28" class="doc-icon"></lucide-angular>
+            </div>
+            <div class="doc-info">
+              <span class="doc-name">{{ message.media.fileName || 'Documento' }}</span>
+              <span class="doc-size" *ngIf="message.media.fileLength">{{ formatBytes(message.media.fileLength) }}</span>
+            </div>
+            <a *ngIf="getMediaSrc(message.media)"
+               [href]="getMediaSrc(message.media)"
+               [download]="message.media.fileName || 'archivo'"
+               class="doc-download"
+               (click)="$event.stopPropagation()">
+              <lucide-angular name="download" [size]="18"></lucide-angular>
+            </a>
+          </div>
           <div *ngIf="isAudioMedia(message.media.mime)" class="media-audio-whatsapp">
             <button mat-icon-button class="audio-play-btn" (click)="toggleAudio($event, message.msgId)">
               <lucide-angular [name]="isAudioPlaying(message.msgId) ? 'pause' : 'play'" [size]="18"></lucide-angular>
@@ -194,7 +217,17 @@
             </audio>
           </div>
         </div>
-        <div class="message-text" *ngIf="!message.isDeleted && message.text">{{ message.text }}</div>
+        <!-- Indicador reenviado -->
+        <div *ngIf="message.isForwarded && !message.isDeleted" class="forwarded-indicator">
+          <lucide-angular name="forward" [size]="13"></lucide-angular>
+          <span>Reenviado</span>
+        </div>
+        <!-- Texto: emoji-only grande, con formato, o plano -->
+        <div class="message-text"
+             *ngIf="!message.isDeleted && message.text"
+             [class.emoji-only]="isEmojiOnly(message.text)"
+             [innerHTML]="getFormattedText(message.text)">
+        </div>
         <div class="message-footer">
           <span class="edited-tag" *ngIf="message.isEdited && !message.isDeleted">editado</span>
           <span class="message-time">{{ formatTime(message.timestamp) }}</span>
@@ -369,6 +402,38 @@
       <button mat-icon-button class="recording-send-button" (click)="stopRecording()">
         <lucide-angular name="send" [size]="20"></lucide-angular>
       </button>
+    </div>
+  </div>
+
+  <!-- Panel de información del contacto/grupo -->
+  <div class="contact-info-panel" *ngIf="showContactInfo && currentChat" [class.visible]="showContactInfo">
+    <div class="cip-header">
+      <button mat-icon-button class="cip-close" (click)="toggleContactInfo()">
+        <lucide-angular name="x" [size]="20"></lucide-angular>
+      </button>
+      <span class="cip-title">{{ isGroupChat ? 'Info. del grupo' : 'Info. del contacto' }}</span>
+    </div>
+    <div class="cip-body">
+      <!-- Avatar grande -->
+      <div class="cip-avatar">
+        <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="cip-avatar-img" alt="Avatar">
+        <div *ngIf="!currentChat.profilePictureUrl" class="cip-avatar-placeholder">
+          <lucide-angular [name]="isGroupChat ? 'users' : 'user'" [size]="60"></lucide-angular>
+        </div>
+      </div>
+      <!-- Nombre -->
+      <h2 class="cip-name">{{ getChatDisplayName() }}</h2>
+      <!-- JID / número -->
+      <p class="cip-jid">
+        {{ isGroupChat ? currentChat.jid.replace('@g.us','') : '+' + currentChat.jid.replace('@s.whatsapp.net','').replace('@lid','') }}
+      </p>
+      <!-- Subject/descripción para grupos -->
+      <p *ngIf="isGroupChat && currentChat.subject" class="cip-subject">{{ currentChat.subject }}</p>
+      <!-- Estado online -->
+      <div *ngIf="!isGroupChat" class="cip-status">
+        <span class="cip-online-dot" [class.online]="isContactOnline"></span>
+        <span>{{ isContactOnline ? 'En línea' : (getContactStatus() || 'Desconectado') }}</span>
+      </div>
     </div>
   </div>
 </div>

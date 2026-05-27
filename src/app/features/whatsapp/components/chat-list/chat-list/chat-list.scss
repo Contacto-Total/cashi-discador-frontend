@@ -72,6 +72,66 @@
   }
 }
 
+// Nueva conversación
+.new-chat-panel {
+  padding: 10px 12px 8px;
+  background: #0d1b2e;
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+  animation: slideDown 0.2s ease;
+
+  .new-chat-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1E293B;
+    border: 1px solid #10B981;
+    border-radius: 8px;
+    padding: 6px 10px;
+
+    .new-chat-icon { color: #10B981; flex-shrink: 0; }
+
+    .new-chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 14px;
+      font-family: inherit;
+      &::placeholder { color: #64748b; }
+    }
+
+    .new-chat-btn {
+      background: #10B981;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #fff;
+      flex-shrink: 0;
+      transition: background 0.2s;
+      &:hover:not(:disabled) { background: #059669; }
+      &:disabled { background: #334155; cursor: default; }
+    }
+  }
+
+  .new-chat-hint {
+    font-size: 11px;
+    color: #64748b;
+    margin: 4px 0 0 4px;
+  }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 // Search
 .search-container {
   padding: 10px 12px;
@@ -434,5 +494,69 @@
     &::placeholder {
       color: #94a3b8 !important;
     }
+  }
+}
+
+// Botón limpiar búsqueda
+.search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  &:hover { color: #94a3b8; background: rgba(255,255,255,0.05); }
+}
+
+// Hora en rojo cuando hay no leídos
+.unread-time { color: #10B981 !important; }
+
+// Prefijo "✓ " en mensajes enviados por mí
+.sent-by-me { color: #64748b; font-size: 0.8em; }
+
+// Chat badges row
+.chat-badges { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+// Empty search state
+.empty-search {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  gap: 12px;
+  color: #475569;
+  lucide-angular { opacity: 0.4; }
+  p { font-size: 0.875rem; text-align: center; margin: 0; }
+}
+
+// Context menu
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  min-width: 200px;
+  overflow: hidden;
+
+  .context-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 16px;
+    background: none;
+    border: none;
+    color: #e2e8f0;
+    font-size: 0.875rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+    &:hover { background: rgba(16, 185, 129, 0.1); color: #10B981; }
   }
 }

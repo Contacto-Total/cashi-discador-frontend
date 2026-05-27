@@ -1,10 +1,13 @@
-<div class="chat-list-container">
+<div class="chat-list-container" (click)="closeContextMenu()">
   <!-- Header -->
   <div class="sidebar-header">
     <div class="header-left">
       <span class="username-display">{{ getCurrentUsername() }}</span>
     </div>
     <div class="header-right">
+      <button mat-icon-button class="header-icon" (click)="toggleNewChat()" title="Nueva conversación">
+        <lucide-angular name="message-square-plus" [size]="20"></lucide-angular>
+      </button>
       <button mat-icon-button class="header-icon" [matMenuTriggerFor]="menu">
         <lucide-angular name="more-vertical" [size]="20"></lucide-angular>
       </button>
@@ -17,6 +20,25 @@
     </div>
   </div>
 
+  <!-- Nueva conversación -->
+  <div *ngIf="showNewChatInput" class="new-chat-panel">
+    <div class="new-chat-input-row">
+      <lucide-angular name="phone" [size]="18" class="new-chat-icon"></lucide-angular>
+      <input
+        type="tel"
+        class="new-chat-input"
+        placeholder="Número (ej: 987654321)"
+        [(ngModel)]="newChatNumber"
+        (keyup.enter)="startNewChat()"
+        autocomplete="off"
+        autofocus>
+      <button class="new-chat-btn" (click)="startNewChat()" [disabled]="!newChatNumber.trim()">
+        <lucide-angular name="arrow-right" [size]="18"></lucide-angular>
+      </button>
+    </div>
+    <p class="new-chat-hint">Código de país incluido. Ej: 51987654321</p>
+  </div>
+
   <!-- Search -->
   <div class="search-container">
     <div class="search-wrapper">
@@ -27,6 +49,9 @@
         [(ngModel)]="searchText"
         (ngModelChange)="filterChats()"
         class="search-input">
+      <button *ngIf="searchText" class="search-clear" (click)="searchText=''; filterChats()">
+        <lucide-angular name="x" [size]="16"></lucide-angular>
+      </button>
     </div>
   </div>
 
@@ -41,6 +66,7 @@
     <div
       *ngFor="let chat of filteredChats; trackBy: trackByChatJid"
       (click)="selectChat(chat)"
+      (contextmenu)="openContextMenu($event, chat)"
       [class.selected]="selectedChatJid === chat.jid"
       class="chat-item">
 
@@ -54,18 +80,45 @@
       <div class="chat-content">
         <div class="chat-top">
           <span class="chat-name">{{ formatChatName(chat) }}</span>
-          <span class="chat-time">{{ formatTime(chat.lastMsgTs) }}</span>
+          <span class="chat-time" [class.unread-time]="chat.unreadCount && chat.unreadCount > 0">
+            {{ formatTime(chat.lastMsgTs) }}
+          </span>
         </div>
 
         <div class="chat-bottom">
           <span class="chat-last-message" [class.typing-preview]="chat.isTyping">
-            {{ chat.isTyping ? 'escribiendo…' : truncateMessage(chat.lastMsgText) }}
+            <span *ngIf="chat.lastMsgFromMe && !chat.isTyping && !chat.lastMsgHasMedia" class="sent-by-me">✓ </span>
+            {{ getLastMsgPreview(chat) }}
           </span>
-          <span class="chat-unread" *ngIf="chat.unreadCount && chat.unreadCount > 0">
-            {{ chat.unreadCount }}
-          </span>
+          <div class="chat-badges">
+            <span class="chat-unread" *ngIf="chat.unreadCount && chat.unreadCount > 0">
+              {{ chat.unreadCount > 99 ? '99+' : chat.unreadCount }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
+
+    <!-- Empty state -->
+    <div *ngIf="filteredChats.length === 0 && searchText" class="empty-search">
+      <lucide-angular name="search" [size]="40"></lucide-angular>
+      <p>Sin resultados para "{{ searchText }}"</p>
+    </div>
+    <div *ngIf="filteredChats.length === 0 && filterMode === 'unread' && !searchText" class="empty-search">
+      <lucide-angular name="check-check" [size]="40"></lucide-angular>
+      <p>No hay mensajes sin leer</p>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div *ngIf="showContextMenu && contextMenuChat"
+       class="context-menu"
+       [style.left.px]="contextMenuX"
+       [style.top.px]="contextMenuY"
+       (click)="$event.stopPropagation()">
+    <button class="context-item" (click)="markAsUnread(contextMenuChat!)">
+      <lucide-angular name="message-circle" [size]="16"></lucide-angular>
+      Marcar como no leído
+    </button>
   </div>
 </div>

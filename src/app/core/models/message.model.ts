@@ -31,6 +31,7 @@ export interface Message {
   reactions?: Reaction[];
   isEdited?: boolean;
   isDeleted?: boolean;
+  isForwarded?: boolean;
 }
 
 export interface MediaInfo {
@@ -54,6 +55,8 @@ export interface Chat {
   lastMsgFromMe?: boolean;
   profilePictureUrl?: string;
   isGroup?: boolean;
+  lastMsgHasMedia?: boolean;
+  lastMsgMediaKind?: string;
 
   // Presencia (online / última vez / escribiendo)
   isOnline?: boolean;

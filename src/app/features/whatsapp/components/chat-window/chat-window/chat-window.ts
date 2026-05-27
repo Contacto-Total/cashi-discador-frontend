@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, SecurityContext } from '@angular/core';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -119,12 +120,15 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   private recordingTimer: any = null;
   private audioStream: MediaStream | null = null;
 
+  showContactInfo = false;
+
   constructor(
     private messageService: MessageService,
     private apiService: ApiService,
     private snackBar: MatSnackBar,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer
   ) {}
 
   // Formatear nombre del chat
@@ -924,6 +928,71 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
       return '+' + num;
     }
     return 'Desconocido';
+  }
+
+  toggleContactInfo(): void {
+    this.showContactInfo = !this.showContactInfo;
+  }
+
+  // ---- Emoji-only detection ----
+  isEmojiOnly(text: string): boolean {
+    if (!text || text.length > 24) return false;
+    // Stripa todo lo que no sea emoji+whitespace; si queda algo, no es solo emojis
+    const stripped = text.replace(/[\p{Emoji}\p{Emoji_Modifier}\p{Emoji_Modifier_Base}\p{Emoji_Component}\s]/gu, '');
+    const hasEmoji = /\p{Emoji}/u.test(text.trim());
+    return hasEmoji && stripped.length === 0;
+  }
+
+  // ---- WhatsApp text formatting ----
+  getFormattedText(text: string): SafeHtml {
+    if (!text) return '';
+    // Escape HTML entities first
+    let t = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    // ```code```
+    t = t.replace(/```([\s\S]*?)```/g, '<code>$1</code>');
+    // *bold*
+    t = t.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+    // _italic_
+    t = t.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+    // ~strikethrough~
+    t = t.replace(/~([^~\n]+)~/g, '<del>$1</del>');
+    // Line breaks
+    t = t.replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(t);
+  }
+
+  hasFormatting(text: string): boolean {
+    return /\*[^*]+\*|_[^_]+_|~[^~]+~|```[\s\S]*?```/.test(text);
+  }
+
+  // ---- Document helpers ----
+  isDocumentMedia(mime?: string): boolean {
+    if (!mime) return false;
+    return !mime.startsWith('image/') && !mime.startsWith('video/') && !mime.startsWith('audio/');
+  }
+
+  isStickerMedia(mime?: string): boolean {
+    return mime === 'image/webp';
+  }
+
+  getDocumentIcon(mime?: string): string {
+    if (!mime) return 'file';
+    if (mime.includes('pdf')) return 'file-text';
+    if (mime.includes('word') || mime.includes('document')) return 'file-text';
+    if (mime.includes('excel') || mime.includes('sheet') || mime.includes('csv')) return 'file-spreadsheet';
+    if (mime.includes('zip') || mime.includes('rar') || mime.includes('compressed')) return 'archive';
+    if (mime.includes('image')) return 'image';
+    return 'file';
+  }
+
+  formatBytes(bytes?: number): string {
+    if (!bytes || bytes === 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   getMessageStatusIcon(status?: string): string {
