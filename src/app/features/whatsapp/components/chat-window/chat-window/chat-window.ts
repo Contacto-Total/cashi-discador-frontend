@@ -198,8 +198,10 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     });
 
     this.messageService.currentMessages$.subscribe(messages => {
-      console.log('📬 Mensajes recibidos:', messages);
+      console.log('📬 Mensajes recibidos:', messages.length);
       const previousLength = this.messages.length;
+      // Con la emisión previa de [] en loadMessages, previousLength siempre
+      // será 0 al recibir la primera carga de un chat.
       const isNewChatLoad = previousLength === 0 && messages.length > 0;
 
       this.messages = messages;
@@ -208,18 +210,21 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
       this.checkIfNewChat();
 
-      // Mostrar loading solo al cambiar de chat
       if (isNewChatLoad) {
+        // Primera carga con mensajes: mostrar spinner brevemente y luego revelar
         this.messagesLoading = true;
         this.shouldScroll = true;
 
-        // Esperar a que el DOM esté listo
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             this.messagesLoading = false;
-            this.cdr.markForCheck(); // Marcar para detección de cambios con OnPush
+            this.cdr.markForCheck();
           });
         });
+      } else if (messages.length === 0) {
+        // API devolvió vacío (chat sin mensajes o aún cargando HistorySync)
+        this.messagesLoading = false;
+        this.cdr.markForCheck();
       }
 
       // Si llegó un mensaje nuevo del cliente, verificar estado de ventana

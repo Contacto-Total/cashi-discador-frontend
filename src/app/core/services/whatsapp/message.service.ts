@@ -411,6 +411,10 @@ export class MessageService {
   private loadMessages(chatId: string): void {
     console.log('📨 Cargando mensajes desde BD para:', chatId);
 
+    // Limpiar mensajes del chat anterior para que el chat-window resetee su
+    // estado de carga y la condición isNewChatLoad sea verdadera al recibir los nuevos.
+    this.currentMessagesSubject.next([]);
+
     this.apiService.getMessages(chatId).subscribe({
       next: (messages) => {
         console.log('✅ Mensajes cargados desde BD:', messages.length);
