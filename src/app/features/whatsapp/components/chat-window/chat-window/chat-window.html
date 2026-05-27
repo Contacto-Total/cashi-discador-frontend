@@ -70,8 +70,8 @@
 
     <!-- Messages - ocultos completamente mientras cargan -->
     <ng-container *ngIf="!messagesLoading">
+      <ng-container *ngFor="let message of reversedMessages; let i = index; trackBy: trackByMessageId">
       <div
-        *ngFor="let message of reversedMessages; trackBy: trackByMessageId"
         [id]="'msg-' + message.msgId"
         class="message-wrapper"
         [class.from-me]="message.fromMe"
@@ -199,6 +199,12 @@
         </div>
       </div>
     </div>
+
+    <!-- Separador de fecha: aparece ENCIMA del grupo con column-reverse -->
+    <div class="date-separator" *ngIf="isDayBoundary(i)">
+      <span class="date-separator-label">{{ getDayLabel(message.timestamp) }}</span>
+    </div>
+    </ng-container>
     </ng-container>
   </div>
 

@@ -340,6 +340,27 @@
     to { transform: rotate(360deg); }
   }
 
+  // Separador de fecha entre grupos de mensajes
+  .date-separator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 8px 0 4px;
+
+    .date-separator-label {
+      background: rgba(15, 23, 42, 0.85);
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+      padding: 4px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(4px);
+      white-space: nowrap;
+    }
+  }
+
   .message-wrapper {
     display: flex;
     margin-top: 12px; /* Con column-reverse, margin-top crea espacio entre mensajes */

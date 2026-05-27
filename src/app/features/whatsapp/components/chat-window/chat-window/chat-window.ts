@@ -843,10 +843,47 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   formatTime(timestamp: number): string {
+    if (!timestamp) return '';
     return new Date(timestamp).toLocaleTimeString('es-PE', {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  // Retorna true cuando hay que mostrar un separador de fecha DESPUÉS del
+  // mensaje en el DOM (= ENCIMA visualmente con flex-direction: column-reverse).
+  // Se muestra cuando el mensaje siguiente (más antiguo) es de otro día,
+  // o cuando es el mensaje más antiguo del chat.
+  isDayBoundary(index: number): boolean {
+    if (index >= this.reversedMessages.length - 1) return true;
+    const newer  = this.reversedMessages[index];
+    const older  = this.reversedMessages[index + 1];
+    return !this.isSameDay(newer.timestamp, older.timestamp);
+  }
+
+  private isSameDay(ts1: number, ts2: number): boolean {
+    if (!ts1 || !ts2) return false;
+    const d1 = new Date(ts1);
+    const d2 = new Date(ts2);
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth()    === d2.getMonth()    &&
+           d1.getDate()     === d2.getDate();
+  }
+
+  getDayLabel(timestamp: number): string {
+    if (!timestamp) return '';
+    const date   = new Date(timestamp);
+    const now    = new Date();
+    const today  = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86_400_000;
+    const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+    if (msgDay === today)     return 'Hoy';
+    if (msgDay === yesterday) return 'Ayer';
+
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
+    if (date.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+    return date.toLocaleDateString('es-PE', opts);
   }
 
   getMessageStatusIcon(status?: string): string {

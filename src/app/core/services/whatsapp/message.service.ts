@@ -435,6 +435,9 @@ export class MessageService {
           quotedFromMe: msg.quotedFromMe
         }));
 
+        // Ordenar por timestamp ascendente (más viejo primero)
+        messagesWithStatus.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
         // Reemplazar completamente los mensajes en memoria con los de BD
         this.messagesMap.set(chatId, messagesWithStatus);
         this.currentMessagesSubject.next([...messagesWithStatus]);
