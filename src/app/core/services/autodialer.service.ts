@@ -30,6 +30,12 @@ export interface AutoDialerEstadisticas {
   duracionPromedioFormato: string;
   duracionMaximaSegundos: number;
   duracionMaximaFormato: string;
+
+  // Nuevas metricas del SP
+  contactabilidadOperativa: number;
+  opGestionados: number;
+  opTasaGestion: number;
+
   // Métricas de vueltas (rondas de discado)
   vueltaActual?: number;
   llamadosEnVuelta?: number;
