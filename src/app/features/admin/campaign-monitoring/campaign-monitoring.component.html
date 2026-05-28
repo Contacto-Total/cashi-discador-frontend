@@ -130,90 +130,102 @@
     <div class="top-metrics-row" *ngIf="autoDialerStats">
 
       <!-- RESULTADOS -->
-      <div class="metrics-panel metrics-panel-compact">
+      <div class="metrics-panel metrics-panel-compact panel-resultados">
         <h3><lucide-angular name="bar-chart-2" [size]="16"></lucide-angular> Resultados</h3>
         <div class="metrics-grid metrics-grid-resumen">
-          <div class="metric-item metric-compact">
+
+          <div class="metric-item metric-compact card-neutral">
             <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.totalLlamadas }}</span>
               <span class="metric-label">Total</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
-            <span class="metric-icon icon-conectadas-asesor"><lucide-angular name="user-check" [size]="18"></lucide-angular></span>
+
+          <div class="metric-item metric-compact card-positive">
+            <span class="metric-icon"><lucide-angular name="user-check" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.llamadasConectadasConAsesor }}</span>
               <span class="metric-label">Con asesor</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
-            <span class="metric-icon icon-no-contestadas"><lucide-angular name="phone-missed" [size]="18"></lucide-angular></span>
+
+          <div class="metric-item metric-compact card-warning">
+            <span class="metric-icon"><lucide-angular name="phone-missed" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.llamadasNoContestadas }}</span>
               <span class="metric-label">No contestadas</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
-            <span class="metric-icon icon-abandonadas"><lucide-angular name="phone-off" [size]="18"></lucide-angular></span>
+
+          <div class="metric-item metric-compact card-danger">
+            <span class="metric-icon"><lucide-angular name="phone-off" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.llamadasAbandonadas }}</span>
               <span class="metric-label">Abandonadas</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
-            <span class="metric-icon icon-pendientes"><lucide-angular name="clipboard-list" [size]="18"></lucide-angular></span>
+
+          <div class="metric-item metric-compact card-warning">
+            <span class="metric-icon"><lucide-angular name="clipboard-list" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.contactosPendientes }}</span>
               <span class="metric-label">Pendientes</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
+
+          <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="percent" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.contactabilidadOperativa }}%</span>
               <span class="metric-label">Contactab. Op.</span>
             </div>
           </div>
+
         </div>
       </div>
 
       <!-- DETALLE OPERATIVO -->
-      <div class="metrics-panel metrics-panel-compact">
+      <div class="metrics-panel metrics-panel-compact panel-detalle-operativo">
         <h3><lucide-angular name="clipboard-check" [size]="16"></lucide-angular> Detalle Operativo</h3>
         <div class="metrics-grid metrics-grid-resumen">
-          <div class="metric-item metric-compact">
-            <span class="metric-icon icon-conectadas-asesor"><lucide-angular name="clipboard-edit" [size]="18"></lucide-angular></span>
+
+          <div class="metric-item metric-compact card-positive">
+            <span class="metric-icon"><lucide-angular name="clipboard-edit" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.opGestionados }}</span>
               <span class="metric-label">Gestionados</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
+
+          <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="percent" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.opTasaGestion }}%</span>
               <span class="metric-label">Tasa Gestión</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
+
+          <div class="metric-item metric-compact card-time">
             <span class="metric-icon"><lucide-angular name="clock" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.duracionPromedioFormato }}</span>
-              <span class="metric-label">Prom Conv.</span>
+              <span class="metric-label">Prom Conversación</span>
             </div>
           </div>
-          <div class="metric-item metric-compact">
+
+          <div class="metric-item metric-compact card-time">
             <span class="metric-icon"><lucide-angular name="timer" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.duracionMaximaFormato }}</span>
-              <span class="metric-label">Max Conv.</span>
+              <span class="metric-label">Max Conversación</span>
             </div>
           </div>
+
         </div>
       </div>
 
-  </div>
+    </div>
 
   <!-- Two Column Layout: Discado en Tiempo Real + Agentes -->
   <div class="two-column-layout">
