@@ -1629,10 +1629,10 @@ body.light-theme .agente-tiempo {
 
   /* Resultados: 3 columnas × 2 filas = 6 cards (cards más chicas) */
   .panel-resultados .metrics-grid-resumen {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, 1fr) !important;
   }
   .panel-resultados .card-total-wide {
-    grid-column: span 2;          /* Total más ancho, queda destacado */
+    grid-column: span 2 !important;          /* Total más ancho, queda destacado */
   }
   .panel-resultados .card-total-wide .metric-value {
     font-size: 1.6em;              /* opcional: número más grande para que resalte */
@@ -1640,7 +1640,7 @@ body.light-theme .agente-tiempo {
 
   /* Detalle Operativo: 2 columnas × 2 filas = 4 cards (más anchas) */
   .panel-detalle-operativo .metrics-grid-resumen {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr) !important;
   }
 
   /* ============================================
