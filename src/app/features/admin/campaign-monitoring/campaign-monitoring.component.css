@@ -1663,3 +1663,19 @@ body.light-theme .agente-tiempo {
   .metric-item.card-warning  { border-left: 3px solid #D97706; }
   .metric-item.card-danger   { border-left: 3px solid #DC2626; }
   .metric-item.card-time     { border-left: 3px solid #7C3AED; }
+
+  .panel-resultados h3 {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .panel-resultados h3 .panel-header-meta {
+    margin-left: auto;
+    font-size: 0.85em;
+    font-weight: 400;
+    color: #64748b;
+  }
+  .panel-resultados h3 .panel-header-meta strong {
+    color: #2563EB;
+    font-weight: 700;
+  }
