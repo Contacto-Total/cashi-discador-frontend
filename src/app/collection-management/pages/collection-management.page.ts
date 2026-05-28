@@ -2361,10 +2361,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
            selected.label?.toUpperCase().includes('CANCELACIÓN');
   });
 
-  // Computed para obtener las cuotas pendientes de la promesa inmediata más reciente
+  // Computed para obtener las cuotas pendientes de la ÚLTIMA promesa activa
   // IMPORTANTE: Solo incluye cuotas que pueden ser canceladas (fecha de pago >= hoy)
   pendingInstallmentsForCancellation = computed(() => {
-    const schedules = this.allPaymentSchedules();
+    const schedules = this.activePaymentSchedules();
     if (schedules.length === 0) return [];
 
     // Solo la última promesa (la más reciente, ya viene ordenada DESC del backend)
@@ -2396,6 +2396,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   });
 
   // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
+  // Flujo separado: no altera la lógica histórica de promesas activas
   overdueInstallments = computed(() => {
     const schedules = this.allPaymentSchedules();
     if (schedules.length === 0) return [];
@@ -3615,16 +3616,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Mantener TODAS para lógica de cancelación (solo usa la inmediata)
         this.allPaymentSchedules.set(sortedSchedules);
 
-        // Incluir cronogramas con cuotas pendientes o vencidas para permitir
-        // cancelación/pago retroactivo sobre la última promesa aunque esté vencida.
-        const activeSchedules = sortedSchedules.filter((s: any) => {
-          if (s.cuotasPendientes > 0) return true;
-          const installments = s.installments || [];
-          return installments.some((c: any) => {
-            const estado = (c.status || '').toUpperCase();
-            return estado === 'VENCIDA' || estado === 'VENCIDO';
-          });
-        });
+        // Mantener comportamiento histórico de promesas activas:
+        // solo cronogramas con cuotas pendientes.
+        const activeSchedules = sortedSchedules.filter((s: any) =>
+          s.cuotasPendientes > 0
+        );
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
