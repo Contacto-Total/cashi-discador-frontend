@@ -100,7 +100,7 @@
             <span class="vuelta-stat-lbl">Total</span>
           </div>
           <div class="vuelta-stat-mini">
-            <span class="vuelta-stat-val" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad }}%</span>
+            <span class="vuelta-stat-val" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad | number:'1.2-2' }}%</span>
             <span class="vuelta-stat-lbl">Tasa</span>
           </div>
         </div>
@@ -131,12 +131,16 @@
 
       <!-- RESULTADOS -->
       <div class="metrics-panel metrics-panel-compact panel-resultados">
-        <h3>
-          <lucide-angular name="bar-chart-2" [size]="16"></lucide-angular>
-          Resultados
-          <span class="panel-header-meta">- Total marcado: <strong>{{ autoDialerStats.totalLlamadas }}</strong></span>
-        </h3>
+        <h3><lucide-angular name="bar-chart-2" [size]="16"></lucide-angular> Resultados</h3>
         <div class="metrics-grid metrics-grid-resumen">
+
+          <div class="metric-item metric-compact card-neutral card-total-wide">
+            <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="18"></lucide-angular></span>
+            <div class="metric-info">
+              <span class="metric-value">{{ autoDialerStats.totalLlamadas }}</span>
+              <span class="metric-label">Total marcado</span>
+            </div>
+          </div>
 
           <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="user-check" [size]="18"></lucide-angular></span>
@@ -181,7 +185,7 @@
           <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="percent" [size]="18"></lucide-angular></span>
             <div class="metric-info">
-              <span class="metric-value">{{ autoDialerStats.contactabilidadOperativa }}%</span>
+              <span class="metric-value">{{ autoDialerStats.contactabilidadOperativa | number:'1.2-2' }}%</span>
               <span class="metric-label">Contactab. Op.</span>
             </div>
           </div>
@@ -205,7 +209,7 @@
           <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="percent" [size]="18"></lucide-angular></span>
             <div class="metric-info">
-              <span class="metric-value">{{ autoDialerStats.opTasaGestion }}%</span>
+              <span class="metric-value">{{ autoDialerStats.opTasaGestion | number:'1.2-2'}}%</span>
               <span class="metric-label">Tasa Gestión</span>
             </div>
           </div>
