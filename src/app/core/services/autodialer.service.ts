@@ -38,6 +38,7 @@ export interface AutoDialerEstadisticas {
   opTasaGestion: number;
 
   // Métricas de vueltas (rondas de discado)
+  baseTotal?: number;
   vueltaActual?: number;
   llamadosEnVuelta?: number;
   pendientesEnVuelta?: number;

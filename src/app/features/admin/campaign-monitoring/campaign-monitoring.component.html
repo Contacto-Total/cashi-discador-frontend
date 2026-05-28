@@ -84,6 +84,14 @@
       <div class="vueltas-summary-compact" *ngIf="autoDialerStats.vueltaStats">
         <div class="vueltas-stats-row">
           <div class="vuelta-stat-mini">
+              <span class="vuelta-stat-val" style="color: #6366F1;">{{ autoDialerStats.baseTotal }}</span>
+              <span class="vuelta-stat-lbl">Base Total</span>
+          </div>
+          <div class="vuelta-stat-mini">
+            <span class="vuelta-stat-val" style="color: #2c3e50;">{{ autoDialerStats.vueltaStats.total }}</span>
+            <span class="vuelta-stat-lbl">Total</span>
+          </div>
+          <div class="vuelta-stat-mini">
             <span class="vuelta-stat-val icon-conectadas">{{ autoDialerStats.vueltaStats.procesados }}</span>
             <span class="vuelta-stat-lbl">Procesados</span>
           </div>
@@ -94,10 +102,6 @@
           <div class="vuelta-stat-mini">
             <span class="vuelta-stat-val icon-pendientes">{{ autoDialerStats.vueltaStats.pendientes }}</span>
             <span class="vuelta-stat-lbl">Pendientes</span>
-          </div>
-          <div class="vuelta-stat-mini">
-            <span class="vuelta-stat-val" style="color: #2c3e50;">{{ autoDialerStats.vueltaStats.total }}</span>
-            <span class="vuelta-stat-lbl">Total</span>
           </div>
           <div class="vuelta-stat-mini">
             <span class="vuelta-stat-val" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad | number:'1.2-2' }}%</span>
