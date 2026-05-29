@@ -84,10 +84,6 @@
       <div class="vueltas-summary-compact" *ngIf="autoDialerStats.vueltaStats">
         <div class="vueltas-stats-row">
           <div class="vuelta-stat-mini">
-              <span class="vuelta-stat-val" style="color: #6366F1;">{{ autoDialerStats.baseTotal }}</span>
-              <span class="vuelta-stat-lbl">Base Total</span>
-          </div>
-          <div class="vuelta-stat-mini">
             <span class="vuelta-stat-val" style="color: #2c3e50;">{{ autoDialerStats.vueltaStats.total }}</span>
             <span class="vuelta-stat-lbl">Total</span>
           </div>
@@ -138,7 +134,14 @@
         <h3><lucide-angular name="bar-chart-2" [size]="16"></lucide-angular> Resultados</h3>
         <div class="metrics-grid metrics-grid-resumen">
 
-          <div class="metric-item metric-compact card-neutral card-total-wide">
+          <div class="metric-item metric-compact card-neutral">
+            <span class="metric-icon"><lucide-angular name="users" [size]="18"></lucide-angular></span>
+            <div class="metric-info">
+              <span class="metric-value">{{ autoDialerStats.baseTotal }}</span>
+              <span class="metric-label">Base Total</span>
+            </div>
+          </div>
+          <div class="metric-item metric-compact card-neutral">
             <span class="metric-icon"><lucide-angular name="bar-chart-2" [size]="18"></lucide-angular></span>
             <div class="metric-info">
               <span class="metric-value">{{ autoDialerStats.totalLlamadas }}</span>
