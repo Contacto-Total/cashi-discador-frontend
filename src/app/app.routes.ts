@@ -318,6 +318,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pagos-bancarios/pages/pagos-bancarios.page').then(m => m.PagosBancariosPage),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'conciliaciones-pagos-manage',
+    loadComponent: () => import('./pagos-bancarios/pages/conciliaciones-pagos/conciliaciones-pagos.page').then(m => m.ConciliacionesPagosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // COMISIONES
