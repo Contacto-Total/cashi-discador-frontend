@@ -240,7 +240,11 @@
         <div class="batch-actions">
           <button class="btn-primary" (click)="exportCsv()">
             <lucide-angular name="download" [size]="15"></lucide-angular>
-            Exportar CSV
+            Exportar resumen
+          </button>
+          <button class="btn-primary" (click)="exportCsvPorChunk()">
+            <lucide-angular name="download" [size]="15"></lucide-angular>
+            Exportar por chunk
           </button>
           <button class="btn-ghost" (click)="newBatch()">
             <lucide-angular name="refresh-cw" [size]="15"></lucide-angular>

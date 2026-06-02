@@ -11,6 +11,29 @@ export type Estado_Audio = 'cola' | 'procesando' | 'humano' | 'buzon' | 'sindete
 // Filtros para la barra de resumenes (netamente Frontend)
 export type Filters = 'todos' | 'humano' | 'buzon' | 'sindetectar'
 
+// Una fila cruda por cada chunk analizado (para el dump de tuning).
+// Todo esto ya viene en cada evento 'analysis' del detector.
+export interface ChunkRow {
+  chunk: number;
+  rms: number | null;
+  goertzel: number | null;
+  vad: number | null;
+  f0: number | null;
+  // aporte de cada detector a humano (contrib_human)
+  ch_rms: number;
+  ch_goertzel: number;
+  ch_vad: number;
+  ch_f0: number;
+  // aporte de cada detector a buzón (contrib_buzon)
+  cb_rms: number;
+  cb_goertzel: number;
+  cb_vad: number;
+  cb_f0: number;
+  // scores acumulados en ese chunk
+  human_acc: number | null;
+  buzon_acc: number | null;
+}
+
 // Para resultados acumulados de un audio -  Parar cada card que usamos
 export interface Results_Audios {
   indice: number;
@@ -29,6 +52,8 @@ export interface Results_Audios {
   f0_promedio: number | null;
   ts_inicio: string;
   ts_fin: string;
+  // stream crudo por chunk (para tuning de la gamificación)
+  chunksData: ChunkRow[];
 }
 
 @Component({
@@ -143,6 +168,7 @@ export class AmdTestComponent {
         f0_promedio: null,
         ts_inicio: '',
         ts_fin: '',
+        chunksData: [],
       }));
 
       // procesar en lotes
@@ -276,6 +302,26 @@ export class AmdTestComponent {
             this.f0Acc.set(audio.indice, acc);
             audio.f0_promedio = acc.suma / acc.n;
           }
+
+          // Guardamos la fila cruda de este chunk para el dump de tuning.
+          // Todos estos campos ya vienen en el evento 'analysis'.
+          audio.chunksData.push({
+            chunk: evt['chunk'] ?? audio.chunkActual,
+            rms: evt['models']?.rms?.value ?? null,
+            goertzel: evt['models']?.goertzel?.value ?? null,
+            vad: evt['models']?.vad?.value ?? null,
+            f0: evt['models']?.f0?.value ?? null,
+            ch_rms: evt['contrib_human']?.rms ?? 0,
+            ch_goertzel: evt['contrib_human']?.goertzel ?? 0,
+            ch_vad: evt['contrib_human']?.vad ?? 0,
+            ch_f0: evt['contrib_human']?.f0 ?? 0,
+            cb_rms: evt['contrib_buzon']?.rms ?? 0,
+            cb_goertzel: evt['contrib_buzon']?.goertzel ?? 0,
+            cb_vad: evt['contrib_buzon']?.vad ?? 0,
+            cb_f0: evt['contrib_buzon']?.f0 ?? 0,
+            human_acc: evt['scores']?.human ?? null,
+            buzon_acc: evt['scores']?.buzon ?? null,
+          });
           break;
         }
 
@@ -340,30 +386,133 @@ export class AmdTestComponent {
       this.f0Acc.clear();
     }
 
-    // exportar los resultados a un archivo CSV
-    exportCsv(): void {
-      const header = 'indice,archivo,resultado,chunks,human_score,buzon_score,primer_vad,decision_en_chunk,f0_promedio,hora';
-      const filas = this.results.map(a => [
-        a.indice,
-        `"${a.nombre_archivo}"`,
-        a.estado,
-        a.chunks,
-        a.human_score ?? '',
-        a.buzon_score ?? '',
-        a.primerVad ?? '',
-        a.decisison_en_Chunk ?? '',
-        a.f0_promedio ?? '',
-        a.ts,
-      ].join(','));
-      const csv = [header, ...filas].join('\n');
+    // ── Helpers de tuning / export ────────────────────────────────────
 
+    // Etiqueta esperada derivada del nombre del archivo.
+    // OJO: "nonhumano" contiene "humano", por eso se chequea primero.
+    private esperadoDe(nombre: string): string {
+      const n = (nombre || '').toLowerCase();
+      if (n.includes('nonhumano') || n.includes('buzon') || n.includes('maquina')) return 'buzon';
+      if (n.includes('humano')) return 'humano';
+      return '';
+    }
+
+    // Redondea a d decimales y devuelve string con COMA decimal (para Excel es-PE).
+    // Devuelve '' si no es número. Quita el ruido de float (2.0699999... -> 2,07).
+    private r(v: number | null | undefined, d = 4): string {
+      if (typeof v !== 'number' || !isFinite(v)) return '';
+      return String(Number(v.toFixed(d))).replace('.', ',');
+    }
+
+    // Estadísticos crudos por detector a partir del stream de chunks.
+    private resumenChunks(rows: ChunkRow[]) {
+      const nums = (sel: (c: ChunkRow) => number | null) =>
+        rows.map(sel).filter((v): v is number => typeof v === 'number' && isFinite(v));
+      const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
+      const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+
+      const goe = nums(c => c.goertzel);
+      const rms = nums(c => c.rms);
+      const vad = nums(c => c.vad);
+      const f0v = nums(c => c.f0).filter(v => v > 0); // f0 solo sobre frames con pitch
+
+      return {
+        rms_avg: avg(rms), rms_max: rms.length ? Math.max(...rms) : null,
+        goertzel_min: goe.length ? Math.min(...goe) : null,
+        goertzel_max: goe.length ? Math.max(...goe) : null,
+        goertzel_avg: avg(goe),
+        vad_avg: avg(vad),
+        f0_avg: avg(f0v),
+        // aporte acumulado de cada detector a cada score
+        ap_buzon_rms: sum(rows.map(c => c.cb_rms)),
+        ap_buzon_goertzel: sum(rows.map(c => c.cb_goertzel)),
+        ap_buzon_vad: sum(rows.map(c => c.cb_vad)),
+        ap_buzon_f0: sum(rows.map(c => c.cb_f0)),
+        ap_human_rms: sum(rows.map(c => c.ch_rms)),
+        ap_human_goertzel: sum(rows.map(c => c.ch_goertzel)),
+        ap_human_vad: sum(rows.map(c => c.ch_vad)),
+        ap_human_f0: sum(rows.map(c => c.ch_f0)),
+      };
+    }
+
+    // Descarga un texto como archivo CSV
+    private descargarCsv(nombre: string, csv: string): void {
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `amd-batch-${Date.now()}.csv`;
+      link.download = nombre;
       link.click();
       URL.revokeObjectURL(url);
+    }
+
+    // exportar el RESUMEN por audio (1 fila por audio) — accuracy + rangos + aportes
+    exportCsv(): void {
+      const header = [
+        'indice', 'archivo', 'esperado', 'resultado', 'acierto',
+        'chunks', 'decision_en_chunk', 'human_score', 'buzon_score',
+        'rms_avg', 'rms_max', 'goertzel_min', 'goertzel_max', 'goertzel_avg', 'vad_avg', 'f0_avg',
+        'ap_buzon_rms', 'ap_buzon_goertzel', 'ap_buzon_vad', 'ap_buzon_f0',
+        'ap_human_rms', 'ap_human_goertzel', 'ap_human_vad', 'ap_human_f0',
+        'primer_vad', 'primer_goertzel', 'primer_numpy', 'primer_f0',
+        'hora_inicio', 'hora_fin',
+      ].join(';');
+
+      const filas = this.results.map(a => {
+        const esperado = this.esperadoDe(a.nombre_archivo);
+        const acierto = esperado ? (esperado === a.estado ? 'TRUE' : 'FALSE') : '';
+        const s = this.resumenChunks(a.chunksData);
+        return [
+          a.indice,
+          `"${a.nombre_archivo}"`,
+          esperado,
+          a.estado,
+          acierto,
+          a.chunks,
+          a.decisison_en_Chunk ?? '',
+          this.r(a.human_score), this.r(a.buzon_score),
+          this.r(s.rms_avg, 6), this.r(s.rms_max, 6),
+          this.r(s.goertzel_min), this.r(s.goertzel_max), this.r(s.goertzel_avg),
+          this.r(s.vad_avg), this.r(s.f0_avg, 1),
+          this.r(s.ap_buzon_rms), this.r(s.ap_buzon_goertzel), this.r(s.ap_buzon_vad), this.r(s.ap_buzon_f0),
+          this.r(s.ap_human_rms), this.r(s.ap_human_goertzel), this.r(s.ap_human_vad), this.r(s.ap_human_f0),
+          a.primerVad ?? '', a.primerGoertzel ?? '', a.primerNumpy ?? '', a.primerF0 ?? '',
+          a.ts_inicio ?? '', a.ts_fin ?? '',
+        ].join(';');
+      });
+
+      this.descargarCsv(`amd-resumen-${Date.now()}.csv`, [header, ...filas].join('\n'));
+    }
+
+    // exportar el DUMP por chunk (1 fila por chunk de cada audio) — para calibrar las fórmulas
+    exportCsvPorChunk(): void {
+      const header = [
+        'indice', 'archivo', 'esperado', 'resultado', 'chunk',
+        'rms', 'goertzel', 'vad', 'f0',
+        'ch_rms', 'ch_goertzel', 'ch_vad', 'ch_f0',
+        'cb_rms', 'cb_goertzel', 'cb_vad', 'cb_f0',
+        'human_acc', 'buzon_acc',
+      ].join(';');
+
+      const filas: string[] = [];
+      for (const a of this.results) {
+        const esperado = this.esperadoDe(a.nombre_archivo);
+        for (const c of a.chunksData) {
+          filas.push([
+            a.indice,
+            `"${a.nombre_archivo}"`,
+            esperado,
+            a.estado,
+            c.chunk,
+            this.r(c.rms, 6), this.r(c.goertzel), this.r(c.vad), this.r(c.f0, 1),
+            this.r(c.ch_rms), this.r(c.ch_goertzel), this.r(c.ch_vad), this.r(c.ch_f0),
+            this.r(c.cb_rms), this.r(c.cb_goertzel), this.r(c.cb_vad), this.r(c.cb_f0),
+            this.r(c.human_acc), this.r(c.buzon_acc),
+          ].join(';'));
+        }
+      }
+
+      this.descargarCsv(`amd-porchunk-${Date.now()}.csv`, [header, ...filas].join('\n'));
     }
 
     // Helpers de display (icono y texto por estado)
