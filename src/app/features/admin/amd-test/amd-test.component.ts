@@ -410,6 +410,12 @@ export class AmdTestComponent {
         rows.map(sel).filter((v): v is number => typeof v === 'number' && isFinite(v));
       const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
       const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+      // Desviacion estandar (poblacional). null si hay menos de 2 muestras.
+      const std = (a: number[]) => {
+        if (a.length < 2) return null;
+        const m = a.reduce((x, y) => x + y, 0) / a.length;
+        return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length);
+      };
 
       const goe = nums(c => c.goertzel);
       const rms = nums(c => c.rms);
@@ -423,6 +429,7 @@ export class AmdTestComponent {
         goertzel_avg: avg(goe),
         vad_avg: avg(vad),
         f0_avg: avg(f0v),
+        f0_std: std(f0v),   // varianza del pitch: hipotesis humano_std > buzon_std
         // aporte acumulado de cada detector a cada score
         ap_buzon_rms: sum(rows.map(c => c.cb_rms)),
         ap_buzon_goertzel: sum(rows.map(c => c.cb_goertzel)),
@@ -451,7 +458,7 @@ export class AmdTestComponent {
       const header = [
         'indice', 'archivo', 'esperado', 'resultado', 'acierto',
         'chunks', 'decision_en_chunk', 'human_score', 'buzon_score',
-        'rms_avg', 'rms_max', 'goertzel_min', 'goertzel_max', 'goertzel_avg', 'vad_avg', 'f0_avg',
+        'rms_avg', 'rms_max', 'goertzel_min', 'goertzel_max', 'goertzel_avg', 'vad_avg', 'f0_avg', 'f0_std',
         'ap_buzon_rms', 'ap_buzon_goertzel', 'ap_buzon_vad', 'ap_buzon_f0',
         'ap_human_rms', 'ap_human_goertzel', 'ap_human_vad', 'ap_human_f0',
         'primer_vad', 'primer_goertzel', 'primer_numpy', 'primer_f0',
@@ -473,7 +480,7 @@ export class AmdTestComponent {
           this.r(a.human_score), this.r(a.buzon_score),
           this.r(s.rms_avg, 6), this.r(s.rms_max, 6),
           this.r(s.goertzel_min), this.r(s.goertzel_max), this.r(s.goertzel_avg),
-          this.r(s.vad_avg), this.r(s.f0_avg, 1),
+          this.r(s.vad_avg), this.r(s.f0_avg, 1), this.r(s.f0_std, 1),
           this.r(s.ap_buzon_rms), this.r(s.ap_buzon_goertzel), this.r(s.ap_buzon_vad), this.r(s.ap_buzon_f0),
           this.r(s.ap_human_rms), this.r(s.ap_human_goertzel), this.r(s.ap_human_vad), this.r(s.ap_human_f0),
           a.primerVad ?? '', a.primerGoertzel ?? '', a.primerNumpy ?? '', a.primerF0 ?? '',
