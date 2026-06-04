@@ -44,8 +44,8 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                 <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1">
-                  <span class="inline-flex rounded-full px-2 py-1 text-[10px] font-bold" [class]="getEstadoClass(value(row, 'estadoPrevalidacion', 'estado_prevalidacion'))">
-                    {{ value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '-' }}
+                  <span class="inline-flex max-w-40 whitespace-normal break-words rounded-full px-2 py-1 text-[10px] font-bold leading-tight" [class]="getEstadoClass(value(row, 'estadoPrevalidacion', 'estado_prevalidacion'))">
+                    {{ formatEstado(value(row, 'estadoPrevalidacion', 'estado_prevalidacion')) }}
                   </span>
                 </td>
                 <td class="px-2 py-2 text-center" [attr.rowspan]="hasAgente(row) ? 2 : 1">
@@ -144,6 +144,11 @@ export class BcpPrevalidacionArchivoWidget {
     if (estado === 'LISTO_PARA_APROBAR') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
     if (estado === 'REQUIERE_REVISION_MONTO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  }
+
+  formatEstado(estado: string | null | undefined): string {
+    if (!estado) return '-';
+    return estado.replace(/_/g, ' ');
   }
 
   getDiffClass(value: number | string | null | undefined): string {
