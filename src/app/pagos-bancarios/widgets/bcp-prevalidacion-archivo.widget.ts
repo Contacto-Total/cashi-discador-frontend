@@ -30,11 +30,9 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               <th class="px-2 py-2 text-left font-bold">Fecha</th>
               <th class="px-2 py-2 text-right font-bold">Monto</th>
               <th class="px-2 py-2 text-left font-bold">Nro. operación</th>
-              <th class="px-2 py-2 text-left font-bold">Tipo match</th>
               <th class="px-2 py-2 text-left font-bold">Estado</th>
               <th class="px-2 py-2 text-right font-bold">Diff días</th>
               <th class="px-2 py-2 text-right font-bold">Diff monto</th>
-              <th class="px-2 py-2 text-left font-bold">PC / Cuota</th>
               <th class="px-2 py-2 text-center font-bold">Aprobar</th>
             </tr>
           </thead>
@@ -48,20 +46,12 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                 <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
                 <td class="px-2 py-2 whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1">
-                  <span class="font-semibold text-slate-800 dark:text-slate-100">{{ value(row, 'tipoMatch', 'tipo_match') || '-' }}</span>
-                  <div class="text-[10px] text-slate-500 dark:text-slate-400">Prioridad {{ value(row, 'prioridad') ?? '-' }}</div>
-                </td>
-                <td class="px-2 py-2 whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1">
                   <span class="inline-flex rounded-full px-2 py-1 text-[10px] font-bold" [class]="getEstadoClass(value(row, 'estadoPrevalidacion', 'estado_prevalidacion'))">
                     {{ value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '-' }}
                   </span>
                 </td>
                 <td class="px-2 py-2 text-right font-medium whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1" [class]="getDiffClass(value(row, 'diffDias', 'diff_dias'))">{{ value(row, 'diffDias', 'diff_dias') ?? '-' }}</td>
                 <td class="px-2 py-2 text-right font-medium whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1" [class]="getDiffClass(value(row, 'diffMonto', 'diff_monto'))">{{ formatDiff(value(row, 'diffMonto', 'diff_monto')) }}</td>
-                <td class="px-2 py-2 text-slate-600 dark:text-slate-300 whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1">
-                  <div>PC: {{ value(row, 'pcIds', 'pc_ids') || '-' }}</div>
-                  <div>Cuota: {{ value(row, 'cuotaIds', 'cuota_ids') || '-' }}</div>
-                </td>
                 <td class="px-2 py-2 text-center" [attr.rowspan]="hasAgente(row) ? 2 : 1">
                   <button type="button" (click)="toggleAprobado(idx)" [disabled]="!isListo(row)" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed" [class]="isAprobado(idx) ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'">
                     <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" [class]="isAprobado(idx) ? 'translate-x-4' : 'translate-x-1'"></span>
@@ -82,7 +72,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
           } @empty {
             <tbody>
               <tr>
-                <td colspan="11" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
               </tr>
             </tbody>
           }
