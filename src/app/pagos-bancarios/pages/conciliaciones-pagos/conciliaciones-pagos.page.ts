@@ -54,7 +54,6 @@ export class ConciliacionesPagosPage {
 
     this.conciliacionPagosService.obtenerPosiblesMatch(params).subscribe({
       next: (response) => {
-        console.log('[CONCILIACION-PAGOS] Posibles match:', response);
         this.resultados.set(response);
         this.showResultados.set(true);
         this.isLoading.set(false);

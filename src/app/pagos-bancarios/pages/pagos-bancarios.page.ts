@@ -10,11 +10,12 @@ import {
   BcpPagoManualFiltros,
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
+import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -290,6 +291,13 @@ import {
                 <p class="text-sm text-amber-700 dark:text-amber-400">{{ resultado()?.duplicadosOmitidos }} registros ya existen</p>
               </div>
             </div>
+          }
+
+          @if (resultado()?.prevalidacion && resultado()!.prevalidacion!.length > 0) {
+            <app-bcp-prevalidacion-archivo
+              [data]="resultado()!.prevalidacion!"
+              [todosAprobables]="resultado()?.todosAprobables === true"
+            ></app-bcp-prevalidacion-archivo>
           }
 
           <!-- Tabla de detalles -->
