@@ -203,40 +203,115 @@ export class BcpPrevalidacionArchivoWidget {
 
   descargarReporteFallos(): void {
     const fallos = this.data.filter(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
-    const rows = fallos.map(row => {
+    const fechaCarga = new Date();
+    const rows = fallos.map((row, index) => {
       const recomendacion = this.getRecomendacion(row);
       return {
-        Estado: this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '',
-        'Problema detectado': recomendacion.problema,
+        '#': index + 1,
+        Documento: this.value(row, 'documentoBanco', 'documento_banco') || '',
+        Problema: recomendacion.problema,
         'Acción recomendada': recomendacion.accion,
+        Estado: this.getEstadoLabel(this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion')),
         'Documento banco': this.value(row, 'documentoBanco', 'documento_banco') || '',
         'Fecha banco': this.value(row, 'fechaBanco', 'fecha_banco') || '',
         'Monto banco': this.value(row, 'montoBanco', 'monto_banco') ?? '',
         'Nro operación banco': this.value(row, 'numeroOperacion', 'numero_operacion') || '',
-        'Fecha sistema': this.value(row, 'fechaPago', 'fecha_pago') || '',
-        'Monto sistema': this.value(row, 'montoPago', 'monto_pago') ?? '',
-        'Operación sistema': this.value(row, 'operacionAgente', 'operacion_agente') || '',
-        'Diferencia días': this.value(row, 'diffDias', 'diff_dias') ?? '',
-        'Diferencia monto': this.value(row, 'diffMonto', 'diff_monto') ?? '',
-        Tenant: this.value(row, 'tenantId', 'tenant_id') ?? '',
-        Cartera: this.value(row, 'carteraId', 'cartera_id') ?? '',
-        Subcartera: this.value(row, 'subcarteraId', 'subcartera_id') ?? '',
-        pcIds: this.value(row, 'pcIds', 'pc_ids') || '',
-        cuotaIds: this.value(row, 'cuotaIds', 'cuota_ids') || '',
-        idGestion: this.value(row, 'idGestion', 'id_gestion') ?? ''
+        'Fecha registrada': this.value(row, 'fechaPago', 'fecha_pago') || '',
+        'Monto registrado': this.value(row, 'montoPago', 'monto_pago') ?? '',
+        'Operación registrada': this.value(row, 'operacionAgente', 'operacion_agente') || ''
       };
     });
 
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    worksheet['!cols'] = [
-      { wch: 36 }, { wch: 60 }, { wch: 60 }, { wch: 18 }, { wch: 14 }, { wch: 14 },
-      { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 16 }, { wch: 18 },
-      { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 14 }
+    const encabezado = [
+      ['Incidencias de carga BCP'],
+      ['Fecha y hora de carga', fechaCarga.toLocaleString('es-PE')],
+      ['Total de incidencias', fallos.length],
+      [],
+      ['Revise primero Documento, Problema y Acción recomendada. Las columnas bancarias/sistema son solo referencia.'],
+      []
     ];
 
+    const worksheet = XLSX.utils.aoa_to_sheet(encabezado);
+    XLSX.utils.sheet_add_json(worksheet, rows, { origin: 'A7' });
+
+    worksheet['!cols'] = [
+      { wch: 6 },
+      { wch: 16 },
+      { wch: 30 },
+      { wch: 65 },
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 14 },
+      { wch: 22 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 22 }
+    ];
+    worksheet['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 11 } }
+    ];
+
+    this.applyReporteFallosStyles(worksheet, rows.length);
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Fallos');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Incidencias');
     XLSX.writeFile(workbook, `reporte-fallos-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
+
+  private applyReporteFallosStyles(worksheet: XLSX.WorkSheet, rowCount: number): void {
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:L1');
+
+    worksheet['A1'].s = {
+      font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '1E293B' } },
+      alignment: { horizontal: 'center', vertical: 'center' }
+    };
+
+    for (const cell of ['A2', 'A3', 'A5']) {
+      if (worksheet[cell]) {
+        worksheet[cell].s = { font: { bold: true, color: { rgb: '334155' } } };
+      }
+    }
+
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const address = XLSX.utils.encode_cell({ r: 6, c: col });
+      if (worksheet[address]) {
+        worksheet[address].s = {
+          font: { bold: true, color: { rgb: 'FFFFFF' } },
+          fill: { fgColor: { rgb: '475569' } },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+          border: this.excelBorder()
+        };
+      }
+    }
+
+    for (let row = 7; row < 7 + rowCount; row++) {
+      const estadoCell = worksheet[XLSX.utils.encode_cell({ r: row, c: 4 })];
+      const estado = estadoCell?.v;
+      const fill = estado === 'REVISIÓN' ? 'FEF3C7' : 'FEE2E2';
+
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const address = XLSX.utils.encode_cell({ r: row, c: col });
+        if (worksheet[address]) {
+          worksheet[address].s = {
+            fill: { fgColor: { rgb: fill } },
+            alignment: { vertical: 'top', wrapText: true },
+            border: this.excelBorder()
+          };
+        }
+      }
+    }
+  }
+
+  private excelBorder(): any {
+    return {
+      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+    };
   }
 
   getGroupClass(row: PrevalidacionArchivoBcp): string {
