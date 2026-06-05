@@ -16,11 +16,12 @@ import {
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
 import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
+import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget],
+  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -341,6 +342,13 @@ import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-arch
                 <p class="text-sm text-amber-700 dark:text-amber-400">{{ resultado()?.duplicadosOmitidos }} registros ya existen</p>
               </div>
             </div>
+          }
+
+          @if (hasPagosDuplicados()) {
+            <app-bcp-pagos-duplicados
+              [pagos]="resultado()?.pagosDuplicados || []"
+              [estadoCarga]="resultado()?.estadoCarga"
+            ></app-bcp-pagos-duplicados>
           }
 
           @if (resultado()?.prevalidacion && resultado()!.prevalidacion!.length > 0) {
@@ -1341,6 +1349,12 @@ export class PagosBancariosPage implements OnInit {
         && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioId)
         && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId);
     });
+  }
+
+  hasPagosDuplicados(): boolean {
+    const estadoCarga = this.resultado()?.estadoCarga;
+    return (estadoCarga === 'ARCHIVO_CON_PAGOS_DUPLICADOS' || estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS')
+      && (this.resultado()?.pagosDuplicados?.length || 0) > 0;
   }
 
   private matchesContextFilter(row: any, camelKey: string, snakeKey: string, selectedId: number): boolean {

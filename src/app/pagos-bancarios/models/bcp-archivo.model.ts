@@ -52,6 +52,27 @@ export interface BcpArchivoResultado {
   duplicadosOmitidos: number;
   prevalidacion?: PrevalidacionArchivoBcp[];
   todosAprobables?: boolean;
+  estadoCarga?: EstadoCargaArchivoBcp;
+  pagosDuplicados?: BcpPagoDuplicado[];
+}
+
+export type EstadoCargaArchivoBcp =
+  | 'PREVALIDADO'
+  | 'ARCHIVO_CON_PAGOS_DUPLICADOS'
+  | 'TODOS_PAGOS_YA_REGISTRADOS'
+  | 'PROCESADO_SIN_PREVALIDACION';
+
+export type MotivoPagoDuplicadoBcp =
+  | 'NUMERO_OPERACION_EXISTENTE'
+  | 'DOCUMENTO_FECHA_MONTO_EXISTENTE';
+
+export interface BcpPagoDuplicado {
+  documento: string;
+  fechaBanco: string;
+  montoBanco: number;
+  banco: string;
+  numeroOperacion: string | null;
+  motivo: MotivoPagoDuplicadoBcp | string;
 }
 
 export type EstadoPrevalidacionBcp =
