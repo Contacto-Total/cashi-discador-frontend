@@ -2,6 +2,7 @@ import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BcpPagosService } from '../services/bcp-pagos.service';
+import { AuthService } from '../../core/services/auth.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
@@ -12,6 +13,7 @@ import {
   BcpPagoManualResponse,
   BcpPagoManual,
   BcpPagoManualFiltros,
+  AprobarArchivoBcpResponse,
   PrevalidacionArchivoBcp,
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
@@ -355,7 +357,26 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
             <app-bcp-prevalidacion-archivo
               [data]="getPrevalidacionFiltrada()"
               [todosAprobables]="resultado()?.todosAprobables === true"
+              [approvalEnabled]="canAprobarArchivo()"
+              [isSaving]="isApprovingArchivo()"
+              (guardar)="aprobarArchivo()"
             ></app-bcp-prevalidacion-archivo>
+          }
+
+          @if (resultadoAprobacion(); as aprobacion) {
+            <div class="mb-6 rounded-lg border p-4" [class]="aprobacion.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+              <p class="font-semibold">{{ aprobacion.mensaje }}</p>
+              @if (aprobacion.exitoso) {
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacion.archivoId }} · Pagos insertados: {{ aprobacion.pagosInsertados }} · Verificados: {{ aprobacion.pagosVerificados }} · Conciliaciones: {{ aprobacion.conciliacionesAprobadas }}</p>
+              }
+              @if (aprobacion.errores && aprobacion.errores.length > 0) {
+                <ul class="mt-2 list-disc pl-5 text-sm">
+                  @for (error of aprobacion.errores; track error) {
+                    <li>{{ error }}</li>
+                  }
+                </ul>
+              }
+            </div>
           }
 
           <!-- Tabla de detalles -->
@@ -1119,6 +1140,8 @@ export class PagosBancariosPage implements OnInit {
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   resultado = signal<BcpArchivoResultado | null>(null);
+  isApprovingArchivo = signal(false);
+  resultadoAprobacion = signal<AprobarArchivoBcpResponse | null>(null);
 
   // Carga OH
   selectedFileOh = signal<File | null>(null);
@@ -1183,6 +1206,7 @@ export class PagosBancariosPage implements OnInit {
 
   constructor(
     private bcpService: BcpPagosService,
+    private authService: AuthService,
     private tenantService: TenantService,
     private portfolioService: PortfolioService
   ) {}
@@ -1317,6 +1341,7 @@ export class PagosBancariosPage implements OnInit {
       this.selectedFile.set(file);
       this.errorMessage.set(null);
       this.resultado.set(null);
+      this.resultadoAprobacion.set(null);
     }
   }
 
@@ -1326,6 +1351,7 @@ export class PagosBancariosPage implements OnInit {
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    this.resultadoAprobacion.set(null);
 
     this.bcpService.cargarArchivo(file).subscribe({
       next: (resultado) => {
@@ -1355,6 +1381,59 @@ export class PagosBancariosPage implements OnInit {
     const estadoCarga = this.resultado()?.estadoCarga;
     return (estadoCarga === 'ARCHIVO_CON_PAGOS_DUPLICADOS' || estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS')
       && (this.resultado()?.pagosDuplicados?.length || 0) > 0;
+  }
+
+  canAprobarArchivo(): boolean {
+    const resultado = this.resultado();
+    const prevalidacion = resultado?.prevalidacion || [];
+    const hasDuplicados = (resultado?.pagosDuplicados?.length || 0) > 0;
+
+    return resultado?.todosAprobables === true
+      && prevalidacion.length > 0
+      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR')
+      && !hasDuplicados;
+  }
+
+  aprobarArchivo(): void {
+    const resultado = this.resultado();
+    const user = this.authService.getCurrentUser();
+
+    if (!resultado || !this.canAprobarArchivo() || !user) return;
+
+    this.isApprovingArchivo.set(true);
+    this.resultadoAprobacion.set(null);
+    this.errorMessage.set(null);
+
+    this.bcpService.aprobarArchivo({
+      nombreArchivo: resultado.nombreArchivo,
+      cabecera: resultado.cabecera,
+      detalles: resultado.detalles || [],
+      prevalidacion: resultado.prevalidacion || [],
+      aprobadoPorId: user.id,
+      aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
+    }).subscribe({
+      next: (response) => {
+        this.resultadoAprobacion.set(response);
+        this.isApprovingArchivo.set(false);
+
+        if (response.exitoso) {
+          this.selectedFile.set(null);
+          this.resultado.set(null);
+        }
+      },
+      error: (error) => {
+        const response = error.error as AprobarArchivoBcpResponse | undefined;
+        this.resultadoAprobacion.set(response || {
+          exitoso: false,
+          mensaje: error.error?.mensaje || error.error?.message || 'No se pudo aprobar el archivo.',
+          pagosInsertados: 0,
+          pagosVerificados: 0,
+          conciliacionesAprobadas: 0,
+          errores: error.error?.errores || []
+        });
+        this.isApprovingArchivo.set(false);
+      }
+    });
   }
 
   private matchesContextFilter(row: any, camelKey: string, snakeKey: string, selectedId: number): boolean {

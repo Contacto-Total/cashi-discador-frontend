@@ -50,10 +50,10 @@ export interface BcpArchivoResultado {
   errores: string[];
   archivoId: number | null;
   duplicadosOmitidos: number;
-  prevalidacion?: PrevalidacionArchivoBcp[];
+  prevalidacion?: PrevalidacionArchivoBcp[] | null;
   todosAprobables?: boolean;
   estadoCarga?: EstadoCargaArchivoBcp;
-  pagosDuplicados?: BcpPagoDuplicado[];
+  pagosDuplicados?: BcpPagoDuplicado[] | null;
 }
 
 export type EstadoCargaArchivoBcp =
@@ -73,6 +73,27 @@ export interface BcpPagoDuplicado {
   banco: string;
   numeroOperacion: string | null;
   motivo: MotivoPagoDuplicadoBcp | string;
+}
+
+export interface AprobarArchivoBcpRequest {
+  nombreArchivo: string;
+  cabecera: BcpArchivoCabecera | null;
+  detalles: BcpArchivoDetalle[];
+  prevalidacion: PrevalidacionArchivoBcp[];
+  aprobadoPorId: number;
+  aprobadoPorNombre: string;
+  observacion?: string;
+  toleranciaMonto?: number;
+}
+
+export interface AprobarArchivoBcpResponse {
+  exitoso: boolean;
+  mensaje: string;
+  archivoId?: number;
+  pagosInsertados: number;
+  pagosVerificados: number;
+  conciliacionesAprobadas: number;
+  errores: string[];
 }
 
 export type EstadoPrevalidacionBcp =

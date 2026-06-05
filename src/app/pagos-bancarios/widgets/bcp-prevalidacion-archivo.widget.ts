@@ -1,4 +1,4 @@
-import { Component, Input, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as XLSX from 'xlsx';
 import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
@@ -96,8 +96,8 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               Descargar reporte de fallos
             </button>
           }
-          <button type="button" [disabled]="!puedeGuardar()" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
-            Guardar
+          <button type="button" (click)="guardar.emit()" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
+            {{ isSaving ? 'Guardando...' : 'Guardar' }}
           </button>
         </div>
       </div>
@@ -107,6 +107,9 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 export class BcpPrevalidacionArchivoWidget {
   @Input() data: PrevalidacionArchivoBcp[] = [];
   @Input() todosAprobables = false;
+  @Input() approvalEnabled = false;
+  @Input() isSaving = false;
+  @Output() guardar = new EventEmitter<void>();
 
   private aprobados = signal<Record<number, boolean>>({});
 
@@ -190,7 +193,7 @@ export class BcpPrevalidacionArchivoWidget {
   }
 
   puedeGuardar(): boolean {
-    return this.todosAprobables && this.data.length > 0 && this.data.every((row, index) => this.isListo(row) && this.isAprobado(index));
+    return this.approvalEnabled && this.todosAprobables && this.data.length > 0 && this.data.every((row, index) => this.isListo(row) && this.isAprobado(index));
   }
 
   tieneFallos(): boolean {
