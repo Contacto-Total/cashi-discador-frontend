@@ -130,6 +130,10 @@ export class BcpPrevalidacionArchivoWidget {
       problema: 'Fecha distinta al banco.',
       accion: 'Corregir la fecha del pago tipificado para que coincida con la fecha bancaria y volver a cargar el archivo.'
     },
+    PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO: {
+      problema: 'Nro. operación coincide, pero el documento del banco es distinto al documento registrado por el agente.',
+      accion: 'Revisar manualmente el voucher/pago registrado. No se puede enlazar automáticamente porque el documento no coincide.'
+    },
     DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
       problema: 'Documento no existe.',
       accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
@@ -337,13 +341,13 @@ export class BcpPrevalidacionArchivoWidget {
 
   getEstadoClass(estado: string | null | undefined): string {
     if (estado === 'LISTO_PARA_APROBAR') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
   }
 
   getEstadoLabel(estado: string | null | undefined): string {
     if (estado === 'LISTO_PARA_APROBAR') return 'LISTO';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO') return 'REVISIÓN';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO') return 'REVISIÓN';
     if (!estado) return '-';
     return 'ACCIÓN';
   }
