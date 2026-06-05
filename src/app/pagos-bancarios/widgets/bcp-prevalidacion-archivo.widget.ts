@@ -23,7 +23,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full text-xs">
+        <table class="min-w-full border-separate border-spacing-y-1 text-xs">
           <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 uppercase tracking-wide">
             <tr>
               <th class="px-2 py-2 text-left font-bold w-20">Origen</th>
@@ -35,45 +35,53 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               <th class="px-2 py-2 text-left font-bold">Problema</th>
               <th class="px-2 py-2 text-left font-bold">Acción</th>
               <th class="px-2 py-2 text-center font-bold">Aprobar</th>
+              <th class="px-2 py-2 text-center font-bold">Auto</th>
             </tr>
           </thead>
 
           @for (row of data; track trackRow(row, $index); let idx = $index) {
             <tbody [class]="getGroupClass(row)">
               <tr class="border-t" [class]="getGroupBorderClass(row)">
-                <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300">BANCO</td>
+                <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</td>
                 <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoBanco', 'documento_banco') || '-' }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaBanco', 'fecha_banco') || '-' }}</td>
                 <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
-                <td class="px-2 py-2 whitespace-nowrap" [attr.rowspan]="hasAgente(row) ? 2 : 1">
-                  <span class="inline-flex max-w-40 whitespace-normal break-words rounded-full px-2 py-1 text-[10px] font-bold leading-tight" [class]="getEstadoClass(value(row, 'estadoPrevalidacion', 'estado_prevalidacion'))">
-                    {{ formatEstado(value(row, 'estadoPrevalidacion', 'estado_prevalidacion')) }}
+                <td class="px-2 py-2 whitespace-nowrap" rowspan="2">
+                  <span class="inline-flex rounded-full px-2 py-1 text-[10px] font-bold leading-tight" [class]="getEstadoClass(value(row, 'estadoPrevalidacion', 'estado_prevalidacion'))">
+                    {{ getEstadoLabel(value(row, 'estadoPrevalidacion', 'estado_prevalidacion')) }}
                   </span>
                 </td>
-                <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" [attr.rowspan]="hasAgente(row) ? 2 : 1">{{ getRecomendacion(row).problema }}</td>
-                <td class="px-2 py-2 max-w-64 text-slate-700 dark:text-slate-300 leading-snug" [attr.rowspan]="hasAgente(row) ? 2 : 1">{{ getRecomendacion(row).accion }}</td>
-                <td class="px-2 py-2 text-center" [attr.rowspan]="hasAgente(row) ? 2 : 1">
+                <td class="px-2 py-2 max-w-44 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ getRecomendacion(row).problema }}</td>
+                <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ getRecomendacion(row).accion }}</td>
+                <td class="px-2 py-2 text-center" rowspan="2">
                   <button type="button" (click)="toggleAprobado(idx)" [disabled]="!isListo(row)" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed" [class]="isAprobado(idx) ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'">
                     <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" [class]="isAprobado(idx) ? 'translate-x-4' : 'translate-x-1'"></span>
                   </button>
                 </td>
+                <td class="px-2 py-2 text-center rounded-tr-lg" rowspan="2">
+                  @if (showAutoRegistro(row)) {
+                    <button type="button" class="px-2 py-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 whitespace-nowrap">
+                      Auto registrar
+                    </button>
+                  } @else {
+                    <span class="text-slate-400">-</span>
+                  }
+                </td>
               </tr>
 
-              @if (hasAgente(row)) {
-                <tr>
-                  <td class="px-2 py-2 font-bold text-purple-700 dark:text-purple-300">AGENTE</td>
-                  <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoAgente', 'documento_agente') || '-' }}</td>
-                  <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaPago', 'fecha_pago') || '-' }}</td>
-                  <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago')) }}</td>
-                  <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'operacionAgente', 'operacion_agente') || '-' }}</td>
-                </tr>
-              }
+              <tr>
+                <td class="px-2 py-2 font-bold text-purple-700 dark:text-purple-300 rounded-bl-lg">AGENTE</td>
+                <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoAgente', 'documento_agente') || '-' }}</td>
+                <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaPago', 'fecha_pago') || '-' }}</td>
+                <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago')) }}</td>
+                <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'operacionAgente', 'operacion_agente') || '-' }}</td>
+              </tr>
             </tbody>
           } @empty {
             <tbody>
               <tr>
-                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="10" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
               </tr>
             </tbody>
           }
@@ -108,35 +116,35 @@ export class BcpPrevalidacionArchivoWidget {
       accion: 'Puede aprobarse la carga.'
     },
     REQUIERE_REVISION_MONTO: {
-      problema: 'El documento y la fecha coinciden, pero el monto registrado no coincide con el banco.',
+      problema: 'Monto distinto al banco.',
       accion: 'Revisar y corregir el monto tipificado o verificar si corresponde a un pago parcial.'
     },
     PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA: {
-      problema: 'Existe un pago registrado con monto compatible, pero la fecha difiere de la fecha bancaria.',
+      problema: 'Fecha fuera de tolerancia.',
       accion: 'Corregir la fecha de pago tipificada o revisar si corresponde ampliar tolerancia.'
     },
     DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
-      problema: 'El documento del pago bancario no existe en la base de clientes.',
+      problema: 'Documento no existe.',
       accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
     },
     NO_TIENE_PROMESA: {
-      problema: 'El cliente no tiene promesa activa registrada.',
+      problema: 'Sin promesa activa.',
       accion: 'Crear una promesa de pago antes de conciliar.'
     },
     PROMESA_SIN_CUOTAS_PENDIENTES: {
-      problema: 'El cliente tiene promesa, pero no tiene cuotas pendientes, parciales o vencidas.',
+      problema: 'Promesa sin cuotas pendientes.',
       accion: 'Verificar si la promesa ya fue completada o si corresponde crear una nueva promesa.'
     },
     FALTA_TIPIFICACION_CANCELACION: {
-      problema: 'El pago cae dentro del rango de una cuota, pero no existe registro de pago/tipificación de cancelación.',
+      problema: 'Falta cancelación.',
       accion: 'Registrar tipificación de cancelación o generar automáticamente el pago asociado.'
     },
     CLIENTE_MULTIPLES_CARTERAS_NO_COINCIDE_MONTO_FECHA: {
-      problema: 'El cliente existe en varias carteras, pero no se encontró pago compatible por monto/fecha.',
+      problema: 'Varias carteras sin match.',
       accion: 'Revisar manualmente la cartera correcta y validar monto/fecha tipificados.'
     },
     FECHA_FUERA_DE_RANGO_DE_PROMESA: {
-      problema: 'El cliente tiene promesa, pero la fecha bancaria no cae dentro del rango de sus cuotas.',
+      problema: 'Fecha fuera de promesa.',
       accion: 'Revisar fecha de promesa/cuota o corregir la fecha del pago tipificado.'
     },
     SIN_CANDIDATO: {
@@ -249,6 +257,18 @@ export class BcpPrevalidacionArchivoWidget {
     if (estado === 'LISTO_PARA_APROBAR') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
     if (estado === 'REQUIERE_REVISION_MONTO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+  }
+
+  getEstadoLabel(estado: string | null | undefined): string {
+    if (estado === 'LISTO_PARA_APROBAR') return 'LISTO';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA') return 'REVISIÓN';
+    if (!estado) return '-';
+    return 'ACCIÓN';
+  }
+
+  showAutoRegistro(row: PrevalidacionArchivoBcp): boolean {
+    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
+    return estado === 'NO_TIENE_PROMESA' || estado === 'FALTA_TIPIFICACION_CANCELACION';
   }
 
   formatEstado(estado: string | null | undefined): string {
