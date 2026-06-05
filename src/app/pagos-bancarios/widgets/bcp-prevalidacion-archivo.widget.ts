@@ -1,5 +1,6 @@
 import { Component, Input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import * as XLSX from 'xlsx';
 import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 
 @Component({
@@ -31,6 +32,8 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               <th class="px-2 py-2 text-right font-bold">Monto</th>
               <th class="px-2 py-2 text-left font-bold">Nro. operación</th>
               <th class="px-2 py-2 text-left font-bold">Estado</th>
+              <th class="px-2 py-2 text-left font-bold">Problema</th>
+              <th class="px-2 py-2 text-left font-bold">Acción</th>
               <th class="px-2 py-2 text-center font-bold">Aprobar</th>
             </tr>
           </thead>
@@ -48,6 +51,8 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                     {{ formatEstado(value(row, 'estadoPrevalidacion', 'estado_prevalidacion')) }}
                   </span>
                 </td>
+                <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" [attr.rowspan]="hasAgente(row) ? 2 : 1">{{ getRecomendacion(row).problema }}</td>
+                <td class="px-2 py-2 max-w-64 text-slate-700 dark:text-slate-300 leading-snug" [attr.rowspan]="hasAgente(row) ? 2 : 1">{{ getRecomendacion(row).accion }}</td>
                 <td class="px-2 py-2 text-center" [attr.rowspan]="hasAgente(row) ? 2 : 1">
                   <button type="button" (click)="toggleAprobado(idx)" [disabled]="!isListo(row)" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed" [class]="isAprobado(idx) ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'">
                     <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" [class]="isAprobado(idx) ? 'translate-x-4' : 'translate-x-1'"></span>
@@ -68,7 +73,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
           } @empty {
             <tbody>
               <tr>
-                <td colspan="7" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
               </tr>
             </tbody>
           }
@@ -77,9 +82,16 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 
       <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex items-center justify-between gap-3">
         <p class="text-xs text-slate-500 dark:text-slate-400">El guardado se habilita solo cuando todos los registros están listos y aprobados.</p>
-        <button type="button" [disabled]="!puedeGuardar()" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
-          Guardar
-        </button>
+        <div class="flex items-center gap-2">
+          @if (tieneFallos()) {
+            <button type="button" (click)="descargarReporteFallos()" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-amber-600 text-white hover:bg-amber-700">
+              Descargar reporte de fallos
+            </button>
+          }
+          <button type="button" [disabled]="!puedeGuardar()" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
+            Guardar
+          </button>
+        </div>
       </div>
     </div>
   `
@@ -89,6 +101,49 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() todosAprobables = false;
 
   private aprobados = signal<Record<number, boolean>>({});
+
+  private readonly recomendacionesPorEstado: Record<string, { problema: string; accion: string }> = {
+    LISTO_PARA_APROBAR: {
+      problema: 'Pago conciliable',
+      accion: 'Puede aprobarse la carga.'
+    },
+    REQUIERE_REVISION_MONTO: {
+      problema: 'El documento y la fecha coinciden, pero el monto registrado no coincide con el banco.',
+      accion: 'Revisar y corregir el monto tipificado o verificar si corresponde a un pago parcial.'
+    },
+    PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA: {
+      problema: 'Existe un pago registrado con monto compatible, pero la fecha difiere de la fecha bancaria.',
+      accion: 'Corregir la fecha de pago tipificada o revisar si corresponde ampliar tolerancia.'
+    },
+    DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
+      problema: 'El documento del pago bancario no existe en la base de clientes.',
+      accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
+    },
+    NO_TIENE_PROMESA: {
+      problema: 'El cliente no tiene promesa activa registrada.',
+      accion: 'Crear una promesa de pago antes de conciliar.'
+    },
+    PROMESA_SIN_CUOTAS_PENDIENTES: {
+      problema: 'El cliente tiene promesa, pero no tiene cuotas pendientes, parciales o vencidas.',
+      accion: 'Verificar si la promesa ya fue completada o si corresponde crear una nueva promesa.'
+    },
+    FALTA_TIPIFICACION_CANCELACION: {
+      problema: 'El pago cae dentro del rango de una cuota, pero no existe registro de pago/tipificación de cancelación.',
+      accion: 'Registrar tipificación de cancelación o generar automáticamente el pago asociado.'
+    },
+    CLIENTE_MULTIPLES_CARTERAS_NO_COINCIDE_MONTO_FECHA: {
+      problema: 'El cliente existe en varias carteras, pero no se encontró pago compatible por monto/fecha.',
+      accion: 'Revisar manualmente la cartera correcta y validar monto/fecha tipificados.'
+    },
+    FECHA_FUERA_DE_RANGO_DE_PROMESA: {
+      problema: 'El cliente tiene promesa, pero la fecha bancaria no cae dentro del rango de sus cuotas.',
+      accion: 'Revisar fecha de promesa/cuota o corregir la fecha del pago tipificado.'
+    },
+    SIN_CANDIDATO: {
+      problema: 'No se encontró candidato de conciliación.',
+      accion: 'Revisión manual requerida.'
+    }
+  };
 
   value(row: any, camelKey: string, snakeKey?: string): any {
     return row?.[camelKey] ?? (snakeKey ? row?.[snakeKey] : undefined);
@@ -124,6 +179,56 @@ export class BcpPrevalidacionArchivoWidget {
 
   puedeGuardar(): boolean {
     return this.todosAprobables && this.data.length > 0 && this.data.every((row, index) => this.isListo(row) && this.isAprobado(index));
+  }
+
+  tieneFallos(): boolean {
+    return this.data.some(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
+  }
+
+  getRecomendacion(row: PrevalidacionArchivoBcp): { problema: string; accion: string } {
+    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
+    return this.recomendacionesPorEstado[estado] || {
+      problema: 'Estado de prevalidación no reconocido.',
+      accion: 'Revisión manual requerida.'
+    };
+  }
+
+  descargarReporteFallos(): void {
+    const fallos = this.data.filter(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
+    const rows = fallos.map(row => {
+      const recomendacion = this.getRecomendacion(row);
+      return {
+        Estado: this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '',
+        'Problema detectado': recomendacion.problema,
+        'Acción recomendada': recomendacion.accion,
+        'Documento banco': this.value(row, 'documentoBanco', 'documento_banco') || '',
+        'Fecha banco': this.value(row, 'fechaBanco', 'fecha_banco') || '',
+        'Monto banco': this.value(row, 'montoBanco', 'monto_banco') ?? '',
+        'Nro operación banco': this.value(row, 'numeroOperacion', 'numero_operacion') || '',
+        'Fecha sistema': this.value(row, 'fechaPago', 'fecha_pago') || '',
+        'Monto sistema': this.value(row, 'montoPago', 'monto_pago') ?? '',
+        'Operación sistema': this.value(row, 'operacionAgente', 'operacion_agente') || '',
+        'Diferencia días': this.value(row, 'diffDias', 'diff_dias') ?? '',
+        'Diferencia monto': this.value(row, 'diffMonto', 'diff_monto') ?? '',
+        Tenant: this.value(row, 'tenantId', 'tenant_id') ?? '',
+        Cartera: this.value(row, 'carteraId', 'cartera_id') ?? '',
+        Subcartera: this.value(row, 'subcarteraId', 'subcartera_id') ?? '',
+        pcIds: this.value(row, 'pcIds', 'pc_ids') || '',
+        cuotaIds: this.value(row, 'cuotaIds', 'cuota_ids') || '',
+        idGestion: this.value(row, 'idGestion', 'id_gestion') ?? ''
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    worksheet['!cols'] = [
+      { wch: 36 }, { wch: 60 }, { wch: 60 }, { wch: 18 }, { wch: 14 }, { wch: 14 },
+      { wch: 22 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 16 }, { wch: 18 },
+      { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 14 }
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Fallos');
+    XLSX.writeFile(workbook, `reporte-fallos-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   getGroupClass(row: PrevalidacionArchivoBcp): string {
