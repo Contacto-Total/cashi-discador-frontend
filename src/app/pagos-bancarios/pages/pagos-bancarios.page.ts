@@ -1142,6 +1142,7 @@ export class PagosBancariosPage implements OnInit {
   resultado = signal<BcpArchivoResultado | null>(null);
   isApprovingArchivo = signal(false);
   resultadoAprobacion = signal<AprobarArchivoBcpResponse | null>(null);
+  archivoAprobado = signal(false);
 
   // Carga OH
   selectedFileOh = signal<File | null>(null);
@@ -1342,6 +1343,7 @@ export class PagosBancariosPage implements OnInit {
       this.errorMessage.set(null);
       this.resultado.set(null);
       this.resultadoAprobacion.set(null);
+      this.archivoAprobado.set(false);
     }
   }
 
@@ -1352,6 +1354,7 @@ export class PagosBancariosPage implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.resultadoAprobacion.set(null);
+    this.archivoAprobado.set(false);
 
     this.bcpService.cargarArchivo(file).subscribe({
       next: (resultado) => {
@@ -1388,7 +1391,8 @@ export class PagosBancariosPage implements OnInit {
     const prevalidacion = resultado?.prevalidacion || [];
     const hasDuplicados = (resultado?.pagosDuplicados?.length || 0) > 0;
 
-    return resultado?.todosAprobables === true
+    return !this.archivoAprobado()
+      && resultado?.todosAprobables === true
       && prevalidacion.length > 0
       && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR')
       && !hasDuplicados;
@@ -1418,7 +1422,7 @@ export class PagosBancariosPage implements OnInit {
 
         if (response.exitoso) {
           this.selectedFile.set(null);
-          this.resultado.set(null);
+          this.archivoAprobado.set(true);
         }
       },
       error: (error) => {
