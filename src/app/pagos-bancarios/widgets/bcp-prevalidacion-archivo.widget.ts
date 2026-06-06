@@ -23,7 +23,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
       </div>
 
       <div class="overflow-x-auto">
-        <table class="min-w-full border-separate border-spacing-y-1 text-xs">
+        <table class="min-w-full border-separate border-spacing-y-2 text-xs">
           <thead class="bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 uppercase tracking-wide">
             <tr>
               <th class="px-2 py-2 text-left font-bold w-20">Origen</th>
@@ -41,7 +41,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 
           @for (row of data; track trackRow(row, $index); let idx = $index) {
             <tbody [class]="getGroupClass(row)">
-              <tr class="border-t" [class]="getGroupBorderClass(row)">
+              <tr class="border-t-2" [class]="getGroupBorderClass(row)">
                 <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</td>
                 <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoBanco', 'documento_banco') || '-' }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaBanco', 'fecha_banco') || '-' }}</td>
@@ -64,6 +64,10 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                     <button type="button" class="px-2 py-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 whitespace-nowrap">
                       Auto registrar
                     </button>
+                  } @else if (showPagoVoluntario(row)) {
+                    <button type="button" class="px-2 py-1 rounded-md bg-sky-600 text-white text-[10px] font-bold hover:bg-sky-700 whitespace-nowrap">
+                      Registrar pago voluntario
+                    </button>
                   } @else {
                     <span class="text-slate-400">-</span>
                   }
@@ -71,11 +75,11 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               </tr>
 
               <tr>
-                <td class="px-2 py-2 font-bold text-purple-700 dark:text-purple-300 rounded-bl-lg">AGENTE</td>
-                <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoAgente', 'documento_agente') || '-' }}</td>
-                <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaPago', 'fecha_pago') || '-' }}</td>
-                <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago')) }}</td>
-                <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'operacionAgente', 'operacion_agente') || '-' }}</td>
+                <td class="px-2 pb-2 pt-1 font-bold text-purple-700 dark:text-purple-300 rounded-bl-lg">AGENTE</td>
+                <td class="px-2 pb-2 pt-1 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoAgente', 'documento_agente') || '-' }}</td>
+                <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaPago', 'fecha_pago') || '-' }}</td>
+                <td class="px-2 pb-2 pt-1 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoPago', 'monto_pago')) }}</td>
+                <td class="px-2 pb-2 pt-1 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'operacionAgente', 'operacion_agente') || '-' }}</td>
               </tr>
             </tbody>
           } @empty {
@@ -131,8 +135,8 @@ export class BcpPrevalidacionArchivoWidget {
       accion: 'Corregir la fecha del pago tipificado para que coincida con la fecha bancaria y volver a cargar el archivo.'
     },
     PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO: {
-      problema: 'Nro. operación coincide, pero el documento del banco es distinto al documento registrado por el agente.',
-      accion: 'Revisar manualmente el voucher/pago registrado. No se puede enlazar automáticamente porque el documento no coincide.'
+      problema: 'Documento distinto al registrado.',
+      accion: 'Revisar voucher/pago. No se enlaza automáticamente.'
     },
     DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
       problema: 'Documento no existe.',
@@ -354,7 +358,15 @@ export class BcpPrevalidacionArchivoWidget {
 
   showAutoRegistro(row: PrevalidacionArchivoBcp): boolean {
     const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    return estado === 'NO_TIENE_PROMESA' || estado === 'FALTA_TIPIFICACION_CANCELACION';
+    return false;
+  }
+
+  showPagoVoluntario(row: PrevalidacionArchivoBcp): boolean {
+    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
+    return estado === 'NO_TIENE_PROMESA'
+      || estado === 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
+      || estado === 'PROMESA_SIN_CUOTAS_PENDIENTES'
+      || estado === 'FALTA_TIPIFICACION_CANCELACION';
   }
 
   formatEstado(estado: string | null | undefined): string {
