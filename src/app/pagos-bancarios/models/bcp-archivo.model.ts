@@ -50,6 +50,88 @@ export interface BcpArchivoResultado {
   errores: string[];
   archivoId: number | null;
   duplicadosOmitidos: number;
+  prevalidacion?: PrevalidacionArchivoBcp[] | null;
+  todosAprobables?: boolean;
+  estadoCarga?: EstadoCargaArchivoBcp;
+  pagosDuplicados?: BcpPagoDuplicado[] | null;
+}
+
+export type EstadoCargaArchivoBcp =
+  | 'PREVALIDADO'
+  | 'ARCHIVO_CON_PAGOS_DUPLICADOS'
+  | 'TODOS_PAGOS_YA_REGISTRADOS'
+  | 'PROCESADO_SIN_PREVALIDACION';
+
+export type MotivoPagoDuplicadoBcp =
+  | 'NUMERO_OPERACION_EXISTENTE'
+  | 'DOCUMENTO_FECHA_MONTO_EXISTENTE';
+
+export interface BcpPagoDuplicado {
+  documento: string;
+  fechaBanco: string;
+  montoBanco: number;
+  banco: string;
+  numeroOperacion: string | null;
+  motivo: MotivoPagoDuplicadoBcp | string;
+}
+
+export interface AprobarArchivoBcpRequest {
+  nombreArchivo: string;
+  cabecera: BcpArchivoCabecera | null;
+  detalles: BcpArchivoDetalle[];
+  prevalidacion: PrevalidacionArchivoBcp[];
+  aprobadoPorId: number;
+  aprobadoPorNombre: string;
+  observacion?: string;
+  toleranciaMonto?: number;
+}
+
+export interface AprobarArchivoBcpResponse {
+  exitoso: boolean;
+  mensaje: string;
+  archivoId?: number;
+  pagosInsertados: number;
+  pagosVerificados: number;
+  conciliacionesAprobadas: number;
+  errores: string[];
+}
+
+export type EstadoPrevalidacionBcp =
+  | 'LISTO_PARA_APROBAR'
+  | 'REQUIERE_REVISION_MONTO'
+  | 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA'
+  | 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO'
+  | 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO'
+  | 'DOCUMENTO_NO_EXISTE_EN_CLIENTES'
+  | 'NO_TIENE_PROMESA'
+  | 'PROMESA_SIN_CUOTAS_PENDIENTES'
+  | 'FALTA_TIPIFICACION_CANCELACION'
+  | 'CLIENTE_MULTIPLES_CARTERAS_NO_COINCIDE_MONTO_FECHA'
+  | 'CUOTAS_ANTERIORES_VENCIDAS_SIN_PAGO'
+  | 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
+  | 'SIN_CANDIDATO';
+
+export interface PrevalidacionArchivoBcp {
+  tipoMatch: string;
+  prioridad: number;
+  pcIds: string | null;
+  cuotaIds: string | null;
+  idGestion: number | null;
+  tenantId?: number | null;
+  carteraId?: number | null;
+  subcarteraId?: number | null;
+  diffDias: number | null;
+  diffMonto: number | null;
+  documentoBanco: string;
+  fechaBanco: string;
+  montoBanco: number;
+  numeroOperacion: string | null;
+  banco: string;
+  documentoAgente: string | null;
+  fechaPago: string | null;
+  montoPago: number | null;
+  operacionAgente: string | null;
+  estadoPrevalidacion: EstadoPrevalidacionBcp | string;
 }
 
 /**

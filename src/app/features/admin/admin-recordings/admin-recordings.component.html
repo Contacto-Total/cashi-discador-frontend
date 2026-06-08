@@ -150,13 +150,6 @@
             </th>
             <th></th>
             <th></th>
-            <th></th>
-            <th></th>
-            <th>
-              <select [(ngModel)]="filterTipificacion" (change)="applyFilters()">
-                <option *ngFor="let tip of getUniqueTipificaciones()" [value]="tip.value">{{ tip.label }}</option>
-              </select>
-            </th>
             <th class="col-action">
               <button class="btn-clear-filters" (click)="clearFilters()" title="Limpiar filtros">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
@@ -168,41 +161,29 @@
           <tr>
             <th (click)="sort('documento')" class="sortable">
               Documento
-              <span class="sort-icon" *ngIf="sortField === 'documento'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+              <span class="sort-icon" *ngIf="sortField === 'documento'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th (click)="sort('telefono')" class="sortable">
               Teléfono
-              <span class="sort-icon" *ngIf="sortField === 'telefono'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+              <span class="sort-icon" *ngIf="sortField === 'telefono'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th (click)="sort('cliente')" class="sortable">
               Cliente
-              <span class="sort-icon" *ngIf="sortField === 'cliente'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+              <span class="sort-icon" *ngIf="sortField === 'cliente'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th (click)="sort('campana')" class="sortable">
               Campaña
-              <span class="sort-icon" *ngIf="sortField === 'campana'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+              <span class="sort-icon" *ngIf="sortField === 'campana'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th (click)="sort('agente')" class="sortable">
               Agente
-              <span class="sort-icon" *ngIf="sortField === 'agente'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+              <span class="sort-icon" *ngIf="sortField === 'agente'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th (click)="sort('fechaInicio')" class="sortable">
               Fecha
-              <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
+              <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
             <th>Hora</th>
-            <th (click)="sort('duracionSegundos')" class="sortable">
-              Duración
-              <span class="sort-icon" *ngIf="sortField === 'duracionSegundos'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
-            </th>
-            <th (click)="sort('resultado')" class="sortable">
-              Resultado
-              <span class="sort-icon" *ngIf="sortField === 'resultado'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
-            </th>
-            <th (click)="sort('tipificacion')" class="sortable">
-              Tipificación
-              <span class="sort-icon" *ngIf="sortField === 'tipificacion'">{{ sortOrder === 1 ? '\u25B2' : '\u25BC' }}</span>
-            </th>
             <th class="col-action">Audio</th>
           </tr>
         </thead>
@@ -216,9 +197,6 @@
             <td>{{ recording.agente || '-' }}</td>
             <td class="cell-mono">{{ formatDate(recording.fechaInicio) }}</td>
             <td class="cell-mono">{{ formatTime(recording.fechaInicio) }}</td>
-            <td class="cell-mono">{{ formatDuration(recording.duracionSegundos) }}</td>
-            <td class="cell-truncate" [title]="recording.resultado">{{ recording.resultado || '-' }}</td>
-            <td class="cell-truncate" [title]="recording.tipificacion">{{ recording.tipificacion || '-' }}</td>
             <td class="col-action">
               <button class="btn-audio" (click)="downloadAudio(recording)"
                       [disabled]="downloadingUuid === recording.uuidLlamada"

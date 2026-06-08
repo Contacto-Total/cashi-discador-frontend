@@ -37,13 +37,77 @@ export class MessageService {
   private typingMap = new Map<string, { typing: boolean; media: 'text' | 'audio' }>();
   private typingTimers = new Map<string, any>();
 
+  private readonly originalTitle = document.title;
+
   constructor(
     private apiService: ApiService,
     private wsService: WebsocketService
   ) {
     console.log('🔧 MessageService constructor called');
+    this.requestNotificationPermission();
     this.initializeWebSocket();
     this.loadChatsAndContacts();
+  }
+
+  private requestNotificationPermission(): void {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
+
+  private playNotificationSound(): void {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx() as AudioContext;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {}
+  }
+
+  private showBrowserNotification(chatId: string, message: Message): void {
+    if (document.hasFocus()) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const chat = this.allItemsSubject.value.find(c => c.jid === chatId);
+    const title = chat?.name || chatId;
+    let body = message.text || '';
+    if (message.hasMedia && !body) {
+      const kind = message.media?.kind;
+      body = kind === 'image' ? '📷 Foto'
+           : kind === 'video' ? '🎥 Video'
+           : kind === 'audio' ? '🎵 Mensaje de voz'
+           : '📎 Adjunto';
+    }
+    const n = new Notification(title, {
+      body: body.substring(0, 100),
+      icon: chat?.profilePictureUrl || '/favicon.ico',
+      tag: chatId,
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
+
+  updateDocumentTitle(): void {
+    const total = this.allItemsSubject.value.reduce((s, c) => s + (c.unreadCount || 0), 0);
+    document.title = total > 0 ? `(${total}) ${this.originalTitle}` : this.originalTitle;
+  }
+
+  markChatAsUnread(chatId: string): void {
+    const allItems = [...this.allItemsSubject.value];
+    const i = allItems.findIndex(c => c.jid === chatId);
+    if (i !== -1) {
+      allItems[i] = { ...allItems[i], unreadCount: Math.max(1, allItems[i].unreadCount || 0) };
+      this.allItemsSubject.next(allItems);
+      this.updateDocumentTitle();
+    }
   }
 
   private initializeWebSocket(): void {
@@ -151,11 +215,13 @@ export class MessageService {
       messages.push(message);
       console.log(`✅ Mensaje nuevo agregado: ${message.msgId}`);
 
-      // Si es INCOMING y no estoy en ese chat, incrementar contador
+      // Si es INCOMING y no estoy en ese chat, incrementar contador + notificar
       if (!isFromMe) {
         const currentChat = this.currentChatSubject.value;
         if (!currentChat || currentChat.jid !== chatId) {
           this.incrementUnreadCount(chatId);
+          this.playNotificationSound();
+          this.showBrowserNotification(chatId, message);
         }
       }
     } else {
@@ -375,16 +441,38 @@ export class MessageService {
       next: ({ chats, contacts }) => {
         console.log('✅ Datos cargados - Chats:', chats.length, '| Contactos:', contacts.length);
 
-        this.chatsSubject.next(chats);
+        // Marcar grupos por JID
+        const enrichedChats = chats.map(c => ({ ...c, isGroup: c.jid.endsWith('@g.us') }));
+
+        this.chatsSubject.next(enrichedChats);
         this.contactsSubject.next(contacts);
 
         // Filtrar y ordenar chats con mensajes
-        const chatsWithMessages = chats
+        const chatsWithMessages = enrichedChats
           .filter(chat => chat.lastMsgTs && chat.lastMsgTs > 0)
           .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));
 
         console.log('📋 Chats con mensajes:', chatsWithMessages.length);
         this.allItemsSubject.next(chatsWithMessages);
+
+        // El Go service carga fotos de perfil en background tras /chats.
+        // Re-fetch a los 4s para capturar las URLs que ya llegaron.
+        setTimeout(() => {
+          this.apiService.getChats().subscribe({
+            next: (refreshedChats) => {
+              const current = this.allItemsSubject.value;
+              const updated = current.map(chat => {
+                const fresh = refreshedChats.find(c => c.jid === chat.jid);
+                if (fresh?.profilePictureUrl && !chat.profilePictureUrl) {
+                  return { ...chat, profilePictureUrl: fresh.profilePictureUrl };
+                }
+                return chat;
+              });
+              this.allItemsSubject.next(updated);
+            },
+            error: () => {}
+          });
+        }, 4000);
       },
       error: (err) => {
         console.error('❌ Error cargando chats/contactos:', err);
@@ -590,6 +678,8 @@ export class MessageService {
       allItems[itemIndex].lastMsgText = lastMessage.text;
       allItems[itemIndex].lastMsgTs = lastMessage.timestamp;
       allItems[itemIndex].lastMsgFromMe = lastMessage.fromMe;
+      allItems[itemIndex].lastMsgHasMedia = lastMessage.hasMedia;
+      allItems[itemIndex].lastMsgMediaKind = lastMessage.media?.kind;
     } else {
       // Chat nuevo - crear
       const newChat: Chat = {
@@ -638,6 +728,7 @@ export class MessageService {
       this.chatsSubject.next(chats);
     }
 
+    this.updateDocumentTitle();
     console.log(`📬 Contador de no leídos incrementado para ${chatId}`);
   }
 
@@ -660,5 +751,6 @@ export class MessageService {
     if (count === 0) {
       console.log(`✅ Chat marcado como leído: ${chatId}`);
     }
+    this.updateDocumentTitle();
   }
 }

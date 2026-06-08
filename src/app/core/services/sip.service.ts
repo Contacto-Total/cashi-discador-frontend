@@ -613,12 +613,27 @@ export class SipService {
 
       // Listen for remote audio tracks
       pc.addEventListener('track', async (event: RTCTrackEvent) => {
-        console.log('🎵 Received remote audio track:', {
+        console.log('🎵 Received remote track:', {
           trackId: event.track.id,
           trackKind: event.track.kind,
           trackEnabled: event.track.enabled,
           streamCount: event.streams.length
         });
+
+        // CRÍTICO: ignorar pistas que no sean audio (ej. video del eavesdrop).
+        // Sin esto el handler se dispara 2 veces (audio + video), la 2da interrumpe
+        // a la 1ra, salta AbortError y se crea un 2do <audio> → ambos suenan = ECO.
+        if (event.track.kind !== 'audio') {
+          console.log('⏭️ Ignorando pista no-audio:', event.track.kind);
+          return;
+        }
+
+        // CRÍTICO: si ya estamos reproduciendo este mismo stream, no re-asignar.
+        // Re-setear srcObject con el mismo stream interrumpe el play() y duplica audio.
+        if (this.remoteAudio && this.remoteAudio.srcObject === event.streams[0]) {
+          console.log('⏭️ Stream ya en reproducción, omitiendo re-asignación');
+          return;
+        }
 
         if (this.remoteAudio && event.streams[0]) {
           // Set output device before playing
@@ -641,15 +656,22 @@ export class SipService {
           try {
             await this.remoteAudio.play();
             console.log('✅ Playing remote audio' + (sinkFailed ? ' (using system default device)' : ''));
-          } catch (playErr) {
-            console.error('❌ Error playing audio, retrying with new element:', playErr);
-            // Last resort: create fresh audio element and try again
-            this.remoteAudio = new Audio();
-            this.remoteAudio.autoplay = true;
-            this.remoteAudio.srcObject = event.streams[0];
-            this.remoteAudio.play()
-              .then(() => console.log('✅ Playing remote audio (retry succeeded)'))
-              .catch(err => console.error('❌ Error playing audio after retry:', err));
+          } catch (playErr: any) {
+            // AbortError = el play() fue interrumpido por otra asignación; el elemento
+            // actual probablemente ya está sonando. NO crear otro o se duplica (eco).
+            if (playErr?.name === 'AbortError') {
+              console.warn('⚠️ play() interrumpido (AbortError) - el audio ya está activo, NO se crea otro elemento');
+            } else {
+              console.error('❌ Error playing audio, retrying with new element:', playErr);
+              // Apagar el elemento viejo ANTES de crear uno nuevo (evita 2 sonando = eco)
+              try { this.remoteAudio.pause(); this.remoteAudio.srcObject = null; } catch {}
+              this.remoteAudio = new Audio();
+              this.remoteAudio.autoplay = true;
+              this.remoteAudio.srcObject = event.streams[0];
+              this.remoteAudio.play()
+                .then(() => console.log('✅ Playing remote audio (retry succeeded)'))
+                .catch(err => console.error('❌ Error playing audio after retry:', err));
+            }
           }
         }
       });
@@ -684,14 +706,19 @@ export class SipService {
             try {
               await this.remoteAudio.play();
               console.log('✅ Playing remote audio from monitoring' + (sinkFailed ? ' (using system default device)' : ''));
-            } catch (playErr) {
-              console.error('❌ Error playing audio, retrying with new element:', playErr);
-              this.remoteAudio = new Audio();
-              this.remoteAudio.autoplay = true;
-              this.remoteAudio.srcObject = remoteStream;
-              this.remoteAudio.play()
-                .then(() => console.log('✅ Playing remote audio from monitoring (retry succeeded)'))
-                .catch(err => console.error('❌ Error playing audio after retry:', err));
+            } catch (playErr: any) {
+              if (playErr?.name === 'AbortError') {
+                console.warn('⚠️ play() interrumpido (AbortError) - el audio ya está activo, NO se crea otro elemento');
+              } else {
+                console.error('❌ Error playing audio, retrying with new element:', playErr);
+                try { this.remoteAudio.pause(); this.remoteAudio.srcObject = null; } catch {}
+                this.remoteAudio = new Audio();
+                this.remoteAudio.autoplay = true;
+                this.remoteAudio.srcObject = remoteStream;
+                this.remoteAudio.play()
+                  .then(() => console.log('✅ Playing remote audio from monitoring (retry succeeded)'))
+                  .catch(err => console.error('❌ Error playing audio after retry:', err));
+              }
             }
             clearInterval(trackCheckInterval);
           }

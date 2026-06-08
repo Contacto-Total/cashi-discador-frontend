@@ -2,19 +2,28 @@ import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BcpPagosService } from '../services/bcp-pagos.service';
+import { AuthService } from '../../core/services/auth.service';
+import { TenantService } from '../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../maintenance/services/portfolio.service';
+import { Tenant } from '../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import {
   BcpArchivoResultado,
   BcpPagoManualRequest,
   BcpPagoManualResponse,
   BcpPagoManual,
   BcpPagoManualFiltros,
+  AprobarArchivoBcpResponse,
+  PrevalidacionArchivoBcp,
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
+import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
+import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -207,6 +216,51 @@ import {
             Cargar Archivo BCP (formato CREP)
           </h2>
 
+          <div class="mb-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor</label>
+              <select
+                [(ngModel)]="selectedTenantId"
+                (ngModelChange)="onTenantChange($event)"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option [ngValue]="0">Todos los proveedores</option>
+                @for (tenant of tenants(); track tenant.id) {
+                  <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+              <select
+                [(ngModel)]="selectedPortfolioId"
+                (ngModelChange)="onPortfolioChange($event)"
+                [disabled]="selectedTenantId === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Todas las carteras</option>
+                @for (portfolio of portfolios(); track portfolio.id) {
+                  <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+              <select
+                [(ngModel)]="selectedSubPortfolioId"
+                [disabled]="selectedPortfolioId === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Todas las subcarteras</option>
+                @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                  <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div class="flex-1">
               <label
@@ -289,6 +343,39 @@ import {
                 <p class="font-medium text-amber-800 dark:text-amber-300">Archivo ya procesado</p>
                 <p class="text-sm text-amber-700 dark:text-amber-400">{{ resultado()?.duplicadosOmitidos }} registros ya existen</p>
               </div>
+            </div>
+          }
+
+          @if (hasPagosDuplicados()) {
+            <app-bcp-pagos-duplicados
+              [pagos]="resultado()?.pagosDuplicados || []"
+              [estadoCarga]="resultado()?.estadoCarga"
+            ></app-bcp-pagos-duplicados>
+          }
+
+          @if (resultado()?.prevalidacion && resultado()!.prevalidacion!.length > 0) {
+            <app-bcp-prevalidacion-archivo
+              [data]="getPrevalidacionFiltrada()"
+              [todosAprobables]="resultado()?.todosAprobables === true"
+              [approvalEnabled]="canAprobarArchivo()"
+              [isSaving]="isApprovingArchivo()"
+              (guardar)="aprobarArchivo()"
+            ></app-bcp-prevalidacion-archivo>
+          }
+
+          @if (resultadoAprobacion(); as aprobacion) {
+            <div class="mb-6 rounded-lg border p-4" [class]="aprobacion.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+              <p class="font-semibold">{{ aprobacion.mensaje }}</p>
+              @if (aprobacion.exitoso) {
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacion.archivoId }} · Pagos insertados: {{ aprobacion.pagosInsertados }} · Verificados: {{ aprobacion.pagosVerificados }} · Conciliaciones: {{ aprobacion.conciliacionesAprobadas }}</p>
+              }
+              @if (aprobacion.errores && aprobacion.errores.length > 0) {
+                <ul class="mt-2 list-disc pl-5 text-sm">
+                  @for (error of aprobacion.errores; track error) {
+                    <li>{{ error }}</li>
+                  }
+                </ul>
+              }
             </div>
           }
 
@@ -1053,6 +1140,9 @@ export class PagosBancariosPage implements OnInit {
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   resultado = signal<BcpArchivoResultado | null>(null);
+  isApprovingArchivo = signal(false);
+  resultadoAprobacion = signal<AprobarArchivoBcpResponse | null>(null);
+  archivoAprobado = signal(false);
 
   // Carga OH
   selectedFileOh = signal<File | null>(null);
@@ -1108,7 +1198,19 @@ export class PagosBancariosPage implements OnInit {
   showConciliacionModal = signal(false);
   resultadoConciliacion = signal<ResultadoConciliacion | null>(null);
 
-  constructor(private bcpService: BcpPagosService) {}
+  tenants = signal<Tenant[]>([]);
+  portfolios = signal<Portfolio[]>([]);
+  subPortfolios = signal<SubPortfolio[]>([]);
+  selectedTenantId = 0;
+  selectedPortfolioId = 0;
+  selectedSubPortfolioId = 0;
+
+  constructor(
+    private bcpService: BcpPagosService,
+    private authService: AuthService,
+    private tenantService: TenantService,
+    private portfolioService: PortfolioService
+  ) {}
 
   ngOnInit(): void {
     // Cargar lista si estamos en el tab manual
@@ -1117,6 +1219,42 @@ export class PagosBancariosPage implements OnInit {
     }
     // Cargar configuración de conciliación
     this.cargarConfiguracion();
+    this.cargarTenants();
+  }
+
+  cargarTenants(): void {
+    this.tenantService.getAllTenants().subscribe({
+      next: (tenants) => this.tenants.set(tenants),
+      error: (error) => console.error('Error cargando proveedores:', error)
+    });
+  }
+
+  onTenantChange(tenantId: number): void {
+    this.selectedTenantId = Number(tenantId) || 0;
+    this.selectedPortfolioId = 0;
+    this.selectedSubPortfolioId = 0;
+    this.portfolios.set([]);
+    this.subPortfolios.set([]);
+
+    if (this.selectedTenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
+        next: (portfolios) => this.portfolios.set(portfolios),
+        error: (error) => console.error('Error cargando carteras:', error)
+      });
+    }
+  }
+
+  onPortfolioChange(portfolioId: number): void {
+    this.selectedPortfolioId = Number(portfolioId) || 0;
+    this.selectedSubPortfolioId = 0;
+    this.subPortfolios.set([]);
+
+    if (this.selectedPortfolioId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
+        next: (subPortfolios) => this.subPortfolios.set(subPortfolios),
+        error: (error) => console.error('Error cargando subcarteras:', error)
+      });
+    }
   }
 
   // === Configuración de Conciliación ===
@@ -1204,6 +1342,8 @@ export class PagosBancariosPage implements OnInit {
       this.selectedFile.set(file);
       this.errorMessage.set(null);
       this.resultado.set(null);
+      this.resultadoAprobacion.set(null);
+      this.archivoAprobado.set(false);
     }
   }
 
@@ -1213,6 +1353,8 @@ export class PagosBancariosPage implements OnInit {
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    this.resultadoAprobacion.set(null);
+    this.archivoAprobado.set(false);
 
     this.bcpService.cargarArchivo(file).subscribe({
       next: (resultado) => {
@@ -1227,6 +1369,82 @@ export class PagosBancariosPage implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  getPrevalidacionFiltrada(): PrevalidacionArchivoBcp[] {
+    const rows = this.resultado()?.prevalidacion || [];
+    return rows.filter(row => {
+      return this.matchesContextFilter(row, 'tenantId', 'tenant_id', this.selectedTenantId)
+        && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioId)
+        && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId);
+    });
+  }
+
+  hasPagosDuplicados(): boolean {
+    const estadoCarga = this.resultado()?.estadoCarga;
+    return (estadoCarga === 'ARCHIVO_CON_PAGOS_DUPLICADOS' || estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS')
+      && (this.resultado()?.pagosDuplicados?.length || 0) > 0;
+  }
+
+  canAprobarArchivo(): boolean {
+    const resultado = this.resultado();
+    const prevalidacion = resultado?.prevalidacion || [];
+    const hasDuplicados = (resultado?.pagosDuplicados?.length || 0) > 0;
+
+    return !this.archivoAprobado()
+      && resultado?.todosAprobables === true
+      && prevalidacion.length > 0
+      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR')
+      && !hasDuplicados;
+  }
+
+  aprobarArchivo(): void {
+    const resultado = this.resultado();
+    const user = this.authService.getCurrentUser();
+
+    if (!resultado || !this.canAprobarArchivo() || !user) return;
+
+    this.isApprovingArchivo.set(true);
+    this.resultadoAprobacion.set(null);
+    this.errorMessage.set(null);
+
+    this.bcpService.aprobarArchivo({
+      nombreArchivo: resultado.nombreArchivo,
+      cabecera: resultado.cabecera,
+      detalles: resultado.detalles || [],
+      prevalidacion: resultado.prevalidacion || [],
+      aprobadoPorId: user.id,
+      aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
+    }).subscribe({
+      next: (response) => {
+        this.resultadoAprobacion.set(response);
+        this.isApprovingArchivo.set(false);
+
+        if (response.exitoso) {
+          this.selectedFile.set(null);
+          this.archivoAprobado.set(true);
+        }
+      },
+      error: (error) => {
+        const response = error.error as AprobarArchivoBcpResponse | undefined;
+        this.resultadoAprobacion.set(response || {
+          exitoso: false,
+          mensaje: error.error?.mensaje || error.error?.message || 'No se pudo aprobar el archivo.',
+          pagosInsertados: 0,
+          pagosVerificados: 0,
+          conciliacionesAprobadas: 0,
+          errores: error.error?.errores || []
+        });
+        this.isApprovingArchivo.set(false);
+      }
+    });
+  }
+
+  private matchesContextFilter(row: any, camelKey: string, snakeKey: string, selectedId: number): boolean {
+    if (!selectedId) return true;
+    const value = row?.[camelKey] ?? row?.[snakeKey];
+    if (value === null || value === undefined || value === '') return true;
+    return Number(value) === Number(selectedId);
   }
 
   // === Carga OH ===

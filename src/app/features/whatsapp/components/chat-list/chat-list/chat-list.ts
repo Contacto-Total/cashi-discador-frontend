@@ -40,6 +40,12 @@ export class ChatList implements OnInit {
   selectedChatJid: string | null = null;
   isDarkMode: boolean = false;
   filterMode: 'all' | 'unread' = 'all';
+  showNewChatInput = false;
+  newChatNumber = '';
+  contextMenuChat: Chat | null = null;
+  contextMenuX = 0;
+  contextMenuY = 0;
+  showContextMenu = false;
 
   constructor(
     private messageService: MessageService,
@@ -174,6 +180,77 @@ export class ChatList implements OnInit {
   truncateMessage(message?: string): string {
     if (!message) return 'Toca para iniciar conversación';
     return message.length > 50 ? message.substring(0, 50) + '...' : message;
+  }
+
+  getMediaIcon(chat: Chat): string {
+    switch (chat.lastMsgMediaKind) {
+      case 'image':    return '📷';
+      case 'video':    return '🎥';
+      case 'audio':    return '🎵';
+      case 'document': return '📄';
+      case 'sticker':  return '🎭';
+      default:         return '📎';
+    }
+  }
+
+  getLastMsgPreview(chat: Chat): string {
+    if (chat.isTyping) return 'escribiendo…';
+    if (chat.lastMsgHasMedia) {
+      const icon = this.getMediaIcon(chat);
+      const caption = chat.lastMsgText?.trim() ? ` ${chat.lastMsgText}` : '';
+      switch (chat.lastMsgMediaKind) {
+        case 'image':    return `${icon} Foto${caption}`;
+        case 'video':    return `${icon} Video${caption}`;
+        case 'audio':    return `${icon} Mensaje de voz`;
+        case 'document': return `${icon} Documento`;
+        case 'sticker':  return `${icon} Sticker`;
+        default:         return `${icon} Adjunto`;
+      }
+    }
+    if (!chat.lastMsgText) return 'Toca para iniciar conversación';
+    return chat.lastMsgText.length > 48
+      ? chat.lastMsgText.substring(0, 48) + '…'
+      : chat.lastMsgText;
+  }
+
+  toggleNewChat(): void {
+    this.showNewChatInput = !this.showNewChatInput;
+    this.newChatNumber = '';
+  }
+
+  startNewChat(): void {
+    const raw = this.newChatNumber.replace(/\D/g, '');
+    if (!raw) return;
+    const jid = raw.startsWith('51') ? `${raw}@s.whatsapp.net` : `51${raw}@s.whatsapp.net`;
+    const newChat: Chat = {
+      jid,
+      name: `+${raw.startsWith('51') ? raw : '51' + raw}`,
+      lastMsgText: '',
+      lastMsgTs: 0,
+      unreadCount: 0,
+      isGroup: false,
+    };
+    this.showNewChatInput = false;
+    this.newChatNumber = '';
+    this.selectChat(newChat);
+  }
+
+  openContextMenu(event: MouseEvent, chat: Chat): void {
+    event.preventDefault();
+    this.contextMenuChat = chat;
+    this.contextMenuX = event.clientX;
+    this.contextMenuY = event.clientY;
+    this.showContextMenu = true;
+  }
+
+  closeContextMenu(): void {
+    this.showContextMenu = false;
+    this.contextMenuChat = null;
+  }
+
+  markAsUnread(chat: Chat): void {
+    this.messageService.markChatAsUnread(chat.jid);
+    this.closeContextMenu();
   }
 
   // Formatear nombre del chat para mostrar números bonitos

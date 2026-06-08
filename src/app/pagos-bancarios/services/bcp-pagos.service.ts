@@ -3,6 +3,8 @@ import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AprobarArchivoBcpRequest,
+  AprobarArchivoBcpResponse,
   BcpArchivoResultado,
   BcpPagoManualRequest,
   BcpPagoManualResponse,
@@ -32,6 +34,11 @@ export class BcpPagosService {
     console.log('[BCP] Cargando archivo:', file.name);
 
     return this.http.post<BcpArchivoResultado>(`${this.baseUrl}/cargar-archivo`, formData);
+  }
+
+  aprobarArchivo(request: AprobarArchivoBcpRequest): Observable<AprobarArchivoBcpResponse> {
+    console.log('[BCP] Aprobando archivo:', request.nombreArchivo);
+    return this.http.post<AprobarArchivoBcpResponse>(`${this.baseUrl}/aprobar-archivo`, request);
   }
 
   /**

@@ -992,7 +992,7 @@ import { CallService } from '../../core/services/call.service';
             }
 
             <!-- Selector de Cuota para Cancelación -->
-            @if (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0)) {
+            @if (isCancellationTypification() && hasInstallmentsForCancellation()) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
@@ -1168,6 +1168,13 @@ import { CallService } from '../../core/services/call.service';
               </div>
             }
 
+            @if (isCancellationTypification() && !hasInstallmentsForCancellation()) {
+              <div class="mt-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
+                <span>Cliente no cuenta con promesa.</span>
+              </div>
+            }
+
             <!-- Botón para subir comprobante (opcional) - Sin OCR -->
             @if (isCancellationTypification() && selectedInstallmentForCancellation()) {
               <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
@@ -1261,7 +1268,7 @@ import { CallService } from '../../core/services/call.service';
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation())"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation())"
                 [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
@@ -2325,8 +2332,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     document.body.style.userSelect = '';
   }
 
-  // Cronogramas de pago activos
+  // Cronogramas de pago
   activePaymentSchedules = signal<any[]>([]);
+  allPaymentSchedules = signal<any[]>([]);
   reprogrammingCuotaId = signal<number | null>(null);
   reprogramDateDraft = signal<string>('');
 
@@ -2387,9 +2395,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return allPending;
   });
 
-  // Computed para obtener cuotas VENCIDAS de la ÚLTIMA promesa (seleccionables para pago retroactivo)
+  // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
+  // Flujo separado: no altera la lógica histórica de promesas activas
   overdueInstallments = computed(() => {
-    const schedules = this.activePaymentSchedules();
+    const schedules = this.allPaymentSchedules();
     if (schedules.length === 0) return [];
 
     // Solo la última promesa (la más reciente)
@@ -2424,6 +2433,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     return overdue;
+  });
+
+  hasInstallmentsForCancellation = computed(() => {
+    return this.pendingInstallmentsForCancellation().length > 0 || this.overdueInstallments().length > 0;
   });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
@@ -3537,6 +3550,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!documento) {
       console.warn('⚠️ No hay documento del cliente, no se pueden cargar cronogramas');
       this.activePaymentSchedules.set([]);
+      this.allPaymentSchedules.set([]);
       return;
     }
 
@@ -3553,6 +3567,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         if (!records || records.length === 0) {
           this.activePaymentSchedules.set([]);
+          this.allPaymentSchedules.set([]);
           return;
         }
 
@@ -3591,16 +3606,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           };
         });
 
-        // Incluir cronogramas con cuotas pendientes o vencidas para permitir
-        // cancelación/pago retroactivo sobre la última promesa aunque esté vencida.
-        const activeSchedules = schedules.filter((s: any) => {
-          if (s.cuotasPendientes > 0) return true;
-          const installments = s.installments || [];
-          return installments.some((c: any) => {
-            const estado = (c.status || '').toUpperCase();
-            return estado === 'VENCIDA' || estado === 'VENCIDO';
-          });
+        // Ordenar DESC por fecha de gestión para garantizar que [0] sea la promesa inmediata
+        const sortedSchedules = [...schedules].sort((a: any, b: any) => {
+          const dateA = new Date(a?.fechaGestion || 0).getTime();
+          const dateB = new Date(b?.fechaGestion || 0).getTime();
+          return dateB - dateA;
         });
+
+        // Mantener TODAS para lógica de cancelación (solo usa la inmediata)
+        this.allPaymentSchedules.set(sortedSchedules);
+
+        // Mantener comportamiento histórico de promesas activas:
+        // solo cronogramas con cuotas pendientes.
+        const activeSchedules = sortedSchedules.filter((s: any) =>
+          s.cuotasPendientes > 0
+        );
 
         console.log('📅 Cronogramas transformados:', schedules);
         console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
