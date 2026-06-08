@@ -35,7 +35,6 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               <th class="px-2 py-2 text-left font-bold">Problema</th>
               <th class="px-2 py-2 text-left font-bold">Acción</th>
               <th class="px-2 py-2 text-center font-bold">Aprobar</th>
-              <th class="px-2 py-2 text-center font-bold">Auto</th>
             </tr>
           </thead>
 
@@ -59,19 +58,6 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                     <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" [class]="isAprobado(idx) ? 'translate-x-4' : 'translate-x-1'"></span>
                   </button>
                 </td>
-                <td class="px-2 py-2 text-center rounded-tr-lg" rowspan="2">
-                  @if (showAutoRegistro(row)) {
-                    <button type="button" class="px-2 py-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 whitespace-nowrap">
-                      Auto registrar
-                    </button>
-                  } @else if (showPagoVoluntario(row)) {
-                    <button type="button" class="px-2 py-1 rounded-md bg-sky-600 text-white text-[10px] font-bold hover:bg-sky-700 whitespace-nowrap">
-                      Registrar pago voluntario
-                    </button>
-                  } @else {
-                    <span class="text-slate-400">-</span>
-                  }
-                </td>
               </tr>
 
               <tr>
@@ -85,7 +71,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
           } @empty {
             <tbody>
               <tr>
-                <td colspan="10" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
               </tr>
             </tbody>
           }
@@ -126,21 +112,21 @@ export class BcpPrevalidacionArchivoWidget {
       problema: 'Monto distinto al banco.',
       accion: 'Revisar y corregir el monto tipificado o verificar si corresponde a un pago parcial.'
     },
-    PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA: {
-      problema: 'Fecha fuera de tolerancia.',
-      accion: 'Corregir la fecha de pago tipificada o revisar si corresponde ampliar tolerancia.'
-    },
     PAGO_REGISTRADO_FECHA_DISTINTA_BANCO: {
       problema: 'Fecha distinta al banco.',
       accion: 'Corregir la fecha del pago tipificado para que coincida con la fecha bancaria y volver a cargar el archivo.'
     },
-    PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO: {
-      problema: 'Documento distinto al registrado.',
-      accion: 'Revisar voucher/pago. No se enlaza automáticamente.'
+    PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO: {
+      problema: 'Fecha y monto distintos al banco.',
+      accion: 'Revisar y corregir fecha/monto del pago tipificado antes de volver a cargar.'
     },
     DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
       problema: 'Documento no existe.',
       accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
+    },
+    CLIENTE_NO_PERTENECE_A_CONTEXTO: {
+      problema: 'Cliente fuera del contexto.',
+      accion: 'Validar tenant, cartera y subcartera seleccionados para esta carga.'
     },
     NO_TIENE_PROMESA: {
       problema: 'Sin promesa activa.',
@@ -153,10 +139,6 @@ export class BcpPrevalidacionArchivoWidget {
     FALTA_TIPIFICACION_CANCELACION: {
       problema: 'Falta cancelación.',
       accion: 'Registrar tipificación de cancelación o generar automáticamente el pago asociado.'
-    },
-    CLIENTE_MULTIPLES_CARTERAS_NO_COINCIDE_MONTO_FECHA: {
-      problema: 'Varias carteras sin match.',
-      accion: 'Revisar manualmente la cartera correcta y validar monto/fecha tipificados.'
     },
     FECHA_FUERA_DE_RANGO_DE_PROMESA: {
       problema: 'Fecha fuera de promesa.',
@@ -345,28 +327,15 @@ export class BcpPrevalidacionArchivoWidget {
 
   getEstadoClass(estado: string | null | undefined): string {
     if (estado === 'LISTO_PARA_APROBAR') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
   }
 
   getEstadoLabel(estado: string | null | undefined): string {
     if (estado === 'LISTO_PARA_APROBAR') return 'LISTO';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO') return 'REVISIÓN';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'REVISIÓN';
     if (!estado) return '-';
     return 'ACCIÓN';
-  }
-
-  showAutoRegistro(row: PrevalidacionArchivoBcp): boolean {
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    return false;
-  }
-
-  showPagoVoluntario(row: PrevalidacionArchivoBcp): boolean {
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    return estado === 'NO_TIENE_PROMESA'
-      || estado === 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
-      || estado === 'PROMESA_SIN_CUOTAS_PENDIENTES'
-      || estado === 'FALTA_TIPIFICACION_CANCELACION';
   }
 
   formatEstado(estado: string | null | undefined): string {
