@@ -255,7 +255,12 @@ export class CartasPendientesComponent implements OnInit {
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
-    const date = new Date(dateStr + 'T00:00:00');
+
+    const datePart = String(dateStr).split(/[T\s]/)[0];
+    const date = new Date(`${datePart}T00:00:00`);
+
+    if (Number.isNaN(date.getTime())) return '-';
+
     return date.toLocaleDateString('es-PE', {
       day: '2-digit',
       month: 'short',
