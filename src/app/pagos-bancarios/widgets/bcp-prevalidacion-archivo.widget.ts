@@ -127,8 +127,8 @@ export class BcpPrevalidacionArchivoWidget {
       accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
     },
     CLIENTE_NO_PERTENECE_A_CONTEXTO: {
-      problema: 'Cliente fuera de cartera.',
-      accion: 'Validar la cartera/subcartera seleccionada para esta carga.'
+      problema: 'Cliente pertenece a otra subcartera.',
+      accion: 'Validar la subcartera correcta para esta carga.'
     },
     NO_TIENE_PROMESA: {
       problema: 'Sin promesa activa.',
@@ -186,11 +186,10 @@ export class BcpPrevalidacionArchivoWidget {
 
   puedeGuardar(): boolean {
     const aprobadas = this.getFilasAprobadas();
-    const aprobables = this.getFilasAprobables();
+    const todasListas = this.data.length > 0 && this.data.every(row => this.isListo(row));
     return this.approvalEnabled
-      && aprobables.length > 0
-      && aprobadas.length === aprobables.length
-      && aprobables.every((row, index) => this.isAprobado(this.data.indexOf(row)) && this.isListo(row));
+      && todasListas
+      && aprobadas.length === this.data.length;
   }
 
   getFilasAprobadas(): PrevalidacionArchivoBcp[] {
@@ -276,27 +275,7 @@ export class BcpPrevalidacionArchivoWidget {
       ws.getCell(cell).font = { bold: true, color: { argb: '334155' } };
     });
 
-    const resumen = this.getResumenIncidencias(fallos);
     let row = 6;
-    ws.getCell(`A${row}`).value = 'Resumen por tipo';
-    ws.getCell(`A${row}`).font = { bold: true, size: 12, color: { argb: '1E293B' } };
-    row++;
-
-    Object.entries(resumen).forEach(([estado, total]) => {
-      const resumenRow = ws.getRow(row);
-      resumenRow.getCell(1).value = this.getEstadoLabel(estado);
-      resumenRow.getCell(2).value = total;
-      resumenRow.getCell(3).value = this.formatEstado(estado);
-      [1, 2, 3].forEach(col => {
-        const cell = resumenRow.getCell(col);
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
-        cell.border = this.excelBorder();
-        cell.alignment = { vertical: 'middle' };
-      });
-      row++;
-    });
-
-    row += 2;
     const headerRowNumber = row;
     const headers = ['#', 'Documento', 'Estado', 'Problema', 'Acción recomendada', 'Fecha banco', 'Monto banco', 'Nro. operación', 'Fecha sistema', 'Monto sistema', 'Operación sistema', 'Estado técnico'];
     const headerRow = ws.getRow(headerRowNumber);
@@ -350,14 +329,6 @@ export class BcpPrevalidacionArchivoWidget {
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
-  }
-
-  private getResumenIncidencias(rows: PrevalidacionArchivoBcp[]): Record<string, number> {
-    return rows.reduce((acc, row) => {
-      const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || 'SIN_ESTADO';
-      acc[estado] = (acc[estado] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
   }
 
   private getExcelFillColor(estado: string): string {

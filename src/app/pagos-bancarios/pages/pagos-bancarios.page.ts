@@ -1385,7 +1385,7 @@ export class PagosBancariosPage implements OnInit {
 
     return !this.archivoAprobado()
       && prevalidacion.length > 0
-      && prevalidacion.some(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR');
+      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR');
   }
 
   aprobarArchivo(filasAprobadas: PrevalidacionArchivoBcp[]): void {

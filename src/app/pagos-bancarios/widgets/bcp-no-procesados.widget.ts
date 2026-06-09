@@ -9,7 +9,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
   template: `
     <div class="mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
       <div class="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70">
-        <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Pagos no pertenecientes a la cartera seleccionada</h2>
+        <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Pagos pertenecientes a otra subcartera</h2>
         <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Estos registros se muestran como referencia. No se aprueban ni se envían a conciliación.</p>
       </div>
 
