@@ -1,6 +1,7 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import * as XLSX from 'xlsx';
+import { Workbook } from 'exceljs';
+import { saveAs } from 'file-saver';
 import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 
 @Component({
@@ -227,116 +228,150 @@ export class BcpPrevalidacionArchivoWidget {
     };
   }
 
-  descargarReporteFallos(): void {
+  async descargarReporteFallos(): Promise<void> {
     const fallos = this.data.filter(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
+    if (fallos.length === 0) return;
+
     const fechaCarga = new Date();
-    const rows = fallos.map((row, index) => {
-      const recomendacion = this.getRecomendacion(row);
-      return {
-        '#': index + 1,
-        Documento: this.value(row, 'documentoBanco', 'documento_banco') || '',
-        Problema: recomendacion.problema,
-        'Acción recomendada': recomendacion.accion,
-        Estado: this.getEstadoLabel(this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion')),
-        'Documento banco': this.value(row, 'documentoBanco', 'documento_banco') || '',
-        'Fecha banco': this.value(row, 'fechaBanco', 'fecha_banco') || '',
-        'Monto banco': this.value(row, 'montoBanco', 'monto_banco') ?? '',
-        'Nro operación banco': this.value(row, 'numeroOperacion', 'numero_operacion') || '',
-        'Fecha registrada': this.value(row, 'fechaPago', 'fecha_pago') || '',
-        'Monto registrado': this.value(row, 'montoPago', 'monto_pago') ?? '',
-        'Operación registrada': this.value(row, 'operacionAgente', 'operacion_agente') || ''
-      };
+    const workbook = new Workbook();
+    workbook.creator = 'Sistema de Cobranza';
+    workbook.created = fechaCarga;
+
+    const ws = workbook.addWorksheet('Incidencias', {
+      properties: { tabColor: { argb: 'EF4444' } }
     });
 
-    const encabezado = [
-      ['Incidencias de carga BCP'],
-      ['Fecha y hora de carga', fechaCarga.toLocaleString('es-PE')],
-      ['Total de incidencias', fallos.length],
-      [],
-      ['Revise primero Documento, Problema y Acción recomendada. Las columnas bancarias/sistema son solo referencia.'],
-      []
+    ws.columns = [
+      { width: 6 },
+      { width: 16 },
+      { width: 18 },
+      { width: 28 },
+      { width: 58 },
+      { width: 14 },
+      { width: 14 },
+      { width: 14 },
+      { width: 20 },
+      { width: 16 },
+      { width: 14 },
+      { width: 20 }
     ];
 
-    const worksheet = XLSX.utils.aoa_to_sheet(encabezado);
-    XLSX.utils.sheet_add_json(worksheet, rows, { origin: 'A7' });
+    ws.mergeCells('A1:L1');
+    const title = ws.getCell('A1');
+    title.value = 'INCIDENCIAS DE PREVALIDACIÓN BCP';
+    title.font = { bold: true, size: 16, color: { argb: 'FFFFFF' } };
+    title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E293B' } };
+    title.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 28;
 
-    worksheet['!cols'] = [
-      { wch: 6 },
-      { wch: 16 },
-      { wch: 30 },
-      { wch: 65 },
-      { wch: 12 },
-      { wch: 18 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 22 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 22 }
-    ];
-    worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
-      { s: { r: 4, c: 0 }, e: { r: 4, c: 11 } }
-    ];
+    ws.getCell('A3').value = 'Fecha y hora:';
+    ws.getCell('B3').value = fechaCarga.toLocaleString('es-PE');
+    ws.getCell('D3').value = 'Total incidencias:';
+    ws.getCell('E3').value = fallos.length;
+    ws.getCell('A4').value = 'Indicacion:';
+    ws.getCell('B4').value = 'Corregir primero Documento, Problema y Acción recomendada. Luego volver a cargar el archivo.';
+    ws.mergeCells('B4:L4');
 
-    this.applyReporteFallosStyles(worksheet, rows.length);
+    ['A3', 'D3', 'A4'].forEach(cell => {
+      ws.getCell(cell).font = { bold: true, color: { argb: '334155' } };
+    });
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Incidencias');
-    XLSX.writeFile(workbook, `reporte-fallos-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const resumen = this.getResumenIncidencias(fallos);
+    let row = 6;
+    ws.getCell(`A${row}`).value = 'Resumen por tipo';
+    ws.getCell(`A${row}`).font = { bold: true, size: 12, color: { argb: '1E293B' } };
+    row++;
+
+    Object.entries(resumen).forEach(([estado, total]) => {
+      const resumenRow = ws.getRow(row);
+      resumenRow.getCell(1).value = this.getEstadoLabel(estado);
+      resumenRow.getCell(2).value = total;
+      resumenRow.getCell(3).value = this.formatEstado(estado);
+      [1, 2, 3].forEach(col => {
+        const cell = resumenRow.getCell(col);
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
+        cell.border = this.excelBorder();
+        cell.alignment = { vertical: 'middle' };
+      });
+      row++;
+    });
+
+    row += 2;
+    const headerRowNumber = row;
+    const headers = ['#', 'Documento', 'Estado', 'Problema', 'Acción recomendada', 'Fecha banco', 'Monto banco', 'Nro. operación', 'Fecha sistema', 'Monto sistema', 'Operación sistema', 'Estado técnico'];
+    const headerRow = ws.getRow(headerRowNumber);
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1);
+      cell.value = header;
+      cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '475569' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = this.excelBorder();
+    });
+    ws.getRow(headerRowNumber).height = 24;
+    row++;
+
+    fallos.forEach((item, index) => {
+      const estado = this.value(item, 'estadoPrevalidacion', 'estado_prevalidacion') || '';
+      const recomendacion = this.getRecomendacion(item);
+      const dataRow = ws.getRow(row);
+      const values = [
+        index + 1,
+        this.value(item, 'documentoBanco', 'documento_banco') || '',
+        this.getEstadoLabel(estado),
+        recomendacion.problema,
+        recomendacion.accion,
+        this.value(item, 'fechaBanco', 'fecha_banco') || '',
+        Number(this.value(item, 'montoBanco', 'monto_banco') || 0),
+        this.value(item, 'numeroOperacion', 'numero_operacion') || '',
+        this.value(item, 'fechaPago', 'fecha_pago') || '',
+        this.value(item, 'montoPago', 'monto_pago') !== null && this.value(item, 'montoPago', 'monto_pago') !== undefined ? Number(this.value(item, 'montoPago', 'monto_pago')) : '',
+        this.value(item, 'operacionAgente', 'operacion_agente') || '',
+        estado
+      ];
+
+      values.forEach((value, colIndex) => {
+        const cell = dataRow.getCell(colIndex + 1);
+        cell.value = value;
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
+        cell.border = this.excelBorder();
+        cell.alignment = { vertical: 'top', wrapText: true };
+        if (colIndex === 6 || colIndex === 9) cell.numFmt = '"S/." #,##0.00';
+      });
+      dataRow.height = 34;
+      row++;
+    });
+
+    ws.autoFilter = {
+      from: { row: headerRowNumber, column: 1 },
+      to: { row: headerRowNumber, column: headers.length }
+    };
+    ws.views = [{ state: 'frozen', ySplit: headerRowNumber }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  private applyReporteFallosStyles(worksheet: XLSX.WorkSheet, rowCount: number): void {
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:L1');
+  private getResumenIncidencias(rows: PrevalidacionArchivoBcp[]): Record<string, number> {
+    return rows.reduce((acc, row) => {
+      const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || 'SIN_ESTADO';
+      acc[estado] = (acc[estado] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+  }
 
-    worksheet['A1'].s = {
-      font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: '1E293B' } },
-      alignment: { horizontal: 'center', vertical: 'center' }
-    };
-
-    for (const cell of ['A2', 'A3', 'A5']) {
-      if (worksheet[cell]) {
-        worksheet[cell].s = { font: { bold: true, color: { rgb: '334155' } } };
-      }
-    }
-
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const address = XLSX.utils.encode_cell({ r: 6, c: col });
-      if (worksheet[address]) {
-        worksheet[address].s = {
-          font: { bold: true, color: { rgb: 'FFFFFF' } },
-          fill: { fgColor: { rgb: '475569' } },
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-          border: this.excelBorder()
-        };
-      }
-    }
-
-    for (let row = 7; row < 7 + rowCount; row++) {
-      const estadoCell = worksheet[XLSX.utils.encode_cell({ r: row, c: 4 })];
-      const estado = estadoCell?.v;
-      const fill = estado === 'REVISIÓN' ? 'FEF3C7' : 'FEE2E2';
-
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const address = XLSX.utils.encode_cell({ r: row, c: col });
-        if (worksheet[address]) {
-          worksheet[address].s = {
-            fill: { fgColor: { rgb: fill } },
-            alignment: { vertical: 'top', wrapText: true },
-            border: this.excelBorder()
-          };
-        }
-      }
-    }
+  private getExcelFillColor(estado: string): string {
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'FEF3C7';
+    if (estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO') return 'E2E8F0';
+    return 'FEE2E2';
   }
 
   private excelBorder(): any {
     return {
-      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+      top: { style: 'thin', color: { argb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { argb: 'CBD5E1' } },
+      left: { style: 'thin', color: { argb: 'CBD5E1' } },
+      right: { style: 'thin', color: { argb: 'CBD5E1' } }
     };
   }
 
