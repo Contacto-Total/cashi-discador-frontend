@@ -22,7 +22,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               <th class="px-3 py-2 text-right font-bold">Monto banco</th>
               <th class="px-3 py-2 text-left font-bold">Nro. operación</th>
               <th class="px-3 py-2 text-left font-bold">Estado</th>
-              <th class="px-3 py-2 text-left font-bold">Tenant/Cartera/Subcartera</th>
+              <th class="px-3 py-2 text-left font-bold">Cartera/Subcartera</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -33,7 +33,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                 <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
                 <td class="px-3 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'estadoPrevalidacion', 'estado_prevalidacion') || '-' }}</td>
-                <td class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ value(row, 'tenantId', 'tenant_id') || '-' }}/{{ value(row, 'carteraId', 'cartera_id') || '-' }}/{{ value(row, 'subcarteraId', 'subcartera_id') || '-' }}</td>
+                <td class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ value(row, 'carteraId', 'cartera_id') || '-' }}/{{ value(row, 'subcarteraId', 'subcartera_id') || '-' }}</td>
               </tr>
             }
           </tbody>

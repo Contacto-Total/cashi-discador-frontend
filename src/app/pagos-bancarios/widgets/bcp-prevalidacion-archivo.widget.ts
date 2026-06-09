@@ -125,8 +125,8 @@ export class BcpPrevalidacionArchivoWidget {
       accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
     },
     CLIENTE_NO_PERTENECE_A_CONTEXTO: {
-      problema: 'Cliente fuera del contexto.',
-      accion: 'Validar tenant, cartera y subcartera seleccionados para esta carga.'
+      problema: 'Cliente fuera de cartera.',
+      accion: 'Validar la cartera/subcartera seleccionada para esta carga.'
     },
     NO_TIENE_PROMESA: {
       problema: 'Sin promesa activa.',

@@ -384,43 +384,6 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
             </div>
           }
 
-          <!-- Tabla de detalles -->
-          @if (resultado()?.detalles && resultado()!.detalles.length > 0) {
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos</h2>
-                <span class="text-sm text-slate-600 dark:text-slate-400">{{ resultado()?.detalles?.length }} registros</span>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-slate-100 dark:bg-slate-700/50">
-                    <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Documento</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Monto</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Nro. Op.</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Sucursal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Terminal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Agencia</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (d of resultado()?.detalles; track d.numeroFila) {
-                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento || d.codigoDepositante }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.numeroOperacion }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.sucursal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.terminal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.agencia }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          }
         }
       }
 
