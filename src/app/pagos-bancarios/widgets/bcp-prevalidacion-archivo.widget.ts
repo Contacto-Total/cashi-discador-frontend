@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import * as XLSX from 'xlsx';
-import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
+import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 
 @Component({
   selector: 'app-bcp-prevalidacion-archivo',
@@ -15,8 +15,8 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
           <p class="text-xs text-slate-500 dark:text-slate-400">Comparación entre archivo cargado y pagos registrados por agente</p>
         </div>
         <div class="text-right">
-          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="todosAprobables ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
-            {{ todosAprobables ? 'Todos aprobables' : 'Requiere revisión' }}
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
+            {{ approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión' }}
           </span>
           <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{{ data.length }} registro(s)</p>
         </div>
@@ -86,7 +86,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               Descargar reporte de fallos
             </button>
           }
-          <button type="button" (click)="guardar.emit()" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
+          <button type="button" (click)="guardar.emit(getFilasAprobadas())" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
             {{ isSaving ? 'Guardando...' : 'Guardar' }}
           </button>
         </div>
@@ -99,7 +99,8 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() todosAprobables = false;
   @Input() approvalEnabled = false;
   @Input() isSaving = false;
-  @Output() guardar = new EventEmitter<void>();
+  @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
+  @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
 
   private aprobados = signal<Record<number, boolean>>({});
 
@@ -168,7 +169,7 @@ export class BcpPrevalidacionArchivoWidget {
   }
 
   isListo(row: PrevalidacionArchivoBcp): boolean {
-    return this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') === 'LISTO_PARA_APROBAR' && this.hasAgente(row);
+    return this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') === 'LISTO_PARA_APROBAR' && this.hasAgente(row) && !this.isDuplicado(row);
   }
 
   isAprobado(index: number): boolean {
@@ -183,7 +184,27 @@ export class BcpPrevalidacionArchivoWidget {
   }
 
   puedeGuardar(): boolean {
-    return this.approvalEnabled && this.todosAprobables && this.data.length > 0 && this.data.every((row, index) => this.isListo(row) && this.isAprobado(index));
+    const aprobadas = this.getFilasAprobadas();
+    return this.approvalEnabled && aprobadas.length > 0 && aprobadas.every(row => this.isListo(row));
+  }
+
+  getFilasAprobadas(): PrevalidacionArchivoBcp[] {
+    return this.data.filter((row, index) => this.isAprobado(index) && this.isListo(row));
+  }
+
+  isDuplicado(row: PrevalidacionArchivoBcp): boolean {
+    const documento = String(this.value(row, 'documentoBanco', 'documento_banco') || '');
+    const fecha = String(this.value(row, 'fechaBanco', 'fecha_banco') || '');
+    const monto = Number(this.value(row, 'montoBanco', 'monto_banco'));
+    const operacion = String(this.value(row, 'numeroOperacion', 'numero_operacion') || '');
+
+    return this.pagosDuplicados.some(dup => {
+      const dupOperacion = String(dup.numeroOperacion || '');
+      return String(dup.documento || '') === documento
+        && String(dup.fechaBanco || '') === fecha
+        && Math.abs(Number(dup.montoBanco) - monto) < 0.01
+        && (!dupOperacion || !operacion || dupOperacion === operacion);
+    });
   }
 
   tieneFallos(): boolean {

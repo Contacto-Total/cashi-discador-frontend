@@ -360,7 +360,8 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
               [todosAprobables]="resultado()?.todosAprobables === true"
               [approvalEnabled]="canAprobarArchivo()"
               [isSaving]="isApprovingArchivo()"
-              (guardar)="aprobarArchivo()"
+              [pagosDuplicados]="resultado()?.pagosDuplicados || []"
+              (guardar)="aprobarArchivo($event)"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -1350,7 +1351,9 @@ export class PagosBancariosPage implements OnInit {
   }
 
   getPrevalidacionProcesada(): PrevalidacionArchivoBcp[] {
-    return this.resultado()?.prevalidacionProcesados || this.resultado()?.prevalidacion || [];
+    const resultado: any = this.resultado();
+    const rows = resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+    return rows.filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO');
   }
 
   getPrevalidacionProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
@@ -1360,6 +1363,11 @@ export class PagosBancariosPage implements OnInit {
         && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioId)
         && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId);
     });
+  }
+
+  getPrevalidacionOriginal(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultado();
+    return resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
   }
 
   hasRequiredBcpContext(): boolean {
@@ -1383,11 +1391,14 @@ export class PagosBancariosPage implements OnInit {
       && !hasDuplicados;
   }
 
-  aprobarArchivo(): void {
+  aprobarArchivo(filasAprobadas: PrevalidacionArchivoBcp[]): void {
     const resultado = this.resultado();
     const user = this.authService.getCurrentUser();
 
-    if (!resultado || !this.canAprobarArchivo() || !user) return;
+    if (!resultado || !this.canAprobarArchivo() || !user || !filasAprobadas || filasAprobadas.length === 0) return;
+
+    const paresAprobados = this.getParesAprobados(filasAprobadas);
+    if (paresAprobados.length === 0) return;
 
     this.isApprovingArchivo.set(true);
     this.resultadoAprobacion.set(null);
@@ -1396,8 +1407,8 @@ export class PagosBancariosPage implements OnInit {
     this.bcpService.aprobarArchivo({
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
-      detalles: this.getDetallesProcesadosListos(),
-      prevalidacion: this.getPrevalidacionProcesadaFiltrada().filter(row => this.isPrevalidacionLista(row)),
+      detalles: paresAprobados.map(par => par.detalle),
+      prevalidacion: paresAprobados.map(par => par.prevalidacion),
       aprobadoPorId: user.id,
       aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
     }).subscribe({
@@ -1436,23 +1447,14 @@ export class PagosBancariosPage implements OnInit {
     return row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR';
   }
 
-  private getDetallesProcesadosListos(): any[] {
+  private getParesAprobados(filasAprobadas: PrevalidacionArchivoBcp[]): Array<{ detalle: any; prevalidacion: PrevalidacionArchivoBcp }> {
     const detalles = this.resultado()?.detalles || [];
-    const aprobables = this.getPrevalidacionProcesadaFiltrada().filter(row => this.isPrevalidacionLista(row));
+    const prevalidacion = this.getPrevalidacionOriginal();
+    const aprobadas = new Set(filasAprobadas);
 
-    return detalles.filter((detalle: any) => aprobables.some((row: any) => {
-      const doc = row.documentoBanco ?? row.documento_banco;
-      const fecha = row.fechaBanco ?? row.fecha_banco;
-      const monto = Number(row.montoBanco ?? row.monto_banco);
-      const operacion = row.numeroOperacion ?? row.numero_operacion;
-      const detalleDoc = detalle.documento || detalle.codigoDepositante;
-      const detalleMonto = Number(detalle.montoPagado);
-
-      return String(detalleDoc || '') === String(doc || '')
-        && String(detalle.fechaPago || '') === String(fecha || '')
-        && Math.abs(detalleMonto - monto) < 0.01
-        && (!operacion || String(detalle.numeroOperacion || '') === String(operacion));
-    }));
+    return detalles
+      .map((detalle: any, index: number) => ({ detalle, prevalidacion: prevalidacion[index] }))
+      .filter(par => !!par.prevalidacion && aprobadas.has(par.prevalidacion) && this.isPrevalidacionLista(par.prevalidacion));
   }
 
   // === Carga OH ===

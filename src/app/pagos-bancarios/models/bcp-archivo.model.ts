@@ -60,6 +60,7 @@ export interface BcpArchivoResultado {
 
 export type EstadoCargaArchivoBcp =
   | 'PREVALIDADO'
+  | 'PREVALIDADO_CON_DUPLICADOS_CONTEXTO'
   | 'ARCHIVO_CON_PAGOS_DUPLICADOS'
   | 'TODOS_PAGOS_YA_REGISTRADOS'
   | 'PROCESADO_SIN_PREVALIDACION';
