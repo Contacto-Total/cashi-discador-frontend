@@ -173,7 +173,7 @@ export class BcpPrevalidacionArchivoWidget {
 
   isAprobado(index: number): boolean {
     const state = this.aprobados();
-    return state[index] ?? this.isListo(this.data[index]);
+    return state[index] ?? false;
   }
 
   toggleAprobado(index: number): void {

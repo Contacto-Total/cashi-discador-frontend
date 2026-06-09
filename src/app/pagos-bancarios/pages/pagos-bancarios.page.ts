@@ -1374,11 +1374,10 @@ export class PagosBancariosPage implements OnInit {
 
   canAprobarArchivo(): boolean {
     const resultado = this.resultado();
-    const prevalidacion = this.getPrevalidacionProcesada();
+    const prevalidacion = this.getPrevalidacionProcesadaFiltrada();
     const hasDuplicados = (resultado?.pagosDuplicados?.length || 0) > 0;
 
     return !this.archivoAprobado()
-      && resultado?.todosAprobables === true
       && prevalidacion.length > 0
       && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR')
       && !hasDuplicados;
@@ -1398,7 +1397,7 @@ export class PagosBancariosPage implements OnInit {
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
       detalles: this.getDetallesProcesadosListos(),
-      prevalidacion: this.getPrevalidacionProcesada().filter(row => this.isPrevalidacionLista(row)),
+      prevalidacion: this.getPrevalidacionProcesadaFiltrada().filter(row => this.isPrevalidacionLista(row)),
       aprobadoPorId: user.id,
       aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
     }).subscribe({
@@ -1439,7 +1438,7 @@ export class PagosBancariosPage implements OnInit {
 
   private getDetallesProcesadosListos(): any[] {
     const detalles = this.resultado()?.detalles || [];
-    const aprobables = this.getPrevalidacionProcesada().filter(row => this.isPrevalidacionLista(row));
+    const aprobables = this.getPrevalidacionProcesadaFiltrada().filter(row => this.isPrevalidacionLista(row));
 
     return detalles.filter((detalle: any) => aprobables.some((row: any) => {
       const doc = row.documentoBanco ?? row.documento_banco;
