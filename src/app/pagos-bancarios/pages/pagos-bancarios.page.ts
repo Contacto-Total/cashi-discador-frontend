@@ -1381,14 +1381,11 @@ export class PagosBancariosPage implements OnInit {
   }
 
   canAprobarArchivo(): boolean {
-    const resultado = this.resultado();
     const prevalidacion = this.getPrevalidacionProcesadaFiltrada();
-    const hasDuplicados = (resultado?.pagosDuplicados?.length || 0) > 0;
 
     return !this.archivoAprobado()
       && prevalidacion.length > 0
-      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR')
-      && !hasDuplicados;
+      && prevalidacion.some(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR');
   }
 
   aprobarArchivo(filasAprobadas: PrevalidacionArchivoBcp[]): void {
