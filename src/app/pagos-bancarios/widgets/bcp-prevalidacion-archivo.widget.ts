@@ -185,11 +185,19 @@ export class BcpPrevalidacionArchivoWidget {
 
   puedeGuardar(): boolean {
     const aprobadas = this.getFilasAprobadas();
-    return this.approvalEnabled && aprobadas.length > 0 && aprobadas.every(row => this.isListo(row));
+    const aprobables = this.getFilasAprobables();
+    return this.approvalEnabled
+      && aprobables.length > 0
+      && aprobadas.length === aprobables.length
+      && aprobables.every((row, index) => this.isAprobado(this.data.indexOf(row)) && this.isListo(row));
   }
 
   getFilasAprobadas(): PrevalidacionArchivoBcp[] {
     return this.data.filter((row, index) => this.isAprobado(index) && this.isListo(row));
+  }
+
+  getFilasAprobables(): PrevalidacionArchivoBcp[] {
+    return this.data.filter(row => this.isListo(row));
   }
 
   isDuplicado(row: PrevalidacionArchivoBcp): boolean {
