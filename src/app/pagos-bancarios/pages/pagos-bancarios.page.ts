@@ -251,6 +251,7 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
               <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
               <select
                 [(ngModel)]="selectedSubPortfolioId"
+                (ngModelChange)="onSubPortfolioChange($event)"
                 [disabled]="selectedPortfolioId === 0"
                 class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
               >
@@ -1204,6 +1205,7 @@ export class PagosBancariosPage implements OnInit {
     this.selectedSubPortfolioId = 0;
     this.portfolios.set([]);
     this.subPortfolios.set([]);
+    this.clearBcpCargaResult();
 
     if (this.selectedTenantId > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
@@ -1217,6 +1219,7 @@ export class PagosBancariosPage implements OnInit {
     this.selectedPortfolioId = Number(portfolioId) || 0;
     this.selectedSubPortfolioId = 0;
     this.subPortfolios.set([]);
+    this.clearBcpCargaResult();
 
     if (this.selectedPortfolioId > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
@@ -1224,6 +1227,18 @@ export class PagosBancariosPage implements OnInit {
         error: (error) => console.error('Error cargando subcarteras:', error)
       });
     }
+  }
+
+  onSubPortfolioChange(subPortfolioId: number): void {
+    this.selectedSubPortfolioId = Number(subPortfolioId) || 0;
+    this.clearBcpCargaResult();
+  }
+
+  private clearBcpCargaResult(): void {
+    this.resultado.set(null);
+    this.resultadoAprobacion.set(null);
+    this.errorMessage.set(null);
+    this.archivoAprobado.set(false);
   }
 
   // === Configuración de Conciliación ===
