@@ -1361,7 +1361,8 @@ export class PagosBancariosPage implements OnInit {
     return rows.filter(row => {
       return this.matchesContextFilter(row, 'tenantId', 'tenant_id', this.selectedTenantId)
         && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioId)
-        && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId);
+        && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId)
+        && !this.isPrevalidacionDuplicada(row);
     });
   }
 
@@ -1470,6 +1471,19 @@ export class PagosBancariosPage implements OnInit {
     return row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR';
   }
 
+  private isPrevalidacionDuplicada(row: PrevalidacionArchivoBcp): boolean {
+    const operacionesDuplicadas = new Set(
+      (this.resultado()?.pagosDuplicados || [])
+        .map(pago => pago.numeroOperacion?.trim())
+        .filter(Boolean)
+    );
+
+    if (operacionesDuplicadas.size === 0) return false;
+
+    const operacion = ((row as any).numeroOperacion || (row as any).numero_operacion || '').trim();
+    return !!operacion && operacionesDuplicadas.has(operacion);
+  }
+
   private getParesAprobados(filasAprobadas: PrevalidacionArchivoBcp[]): Array<{ detalle: any; prevalidacion: PrevalidacionArchivoBcp }> {
     const detalles = this.resultado()?.detalles || [];
     const prevalidacion = this.getPrevalidacionOriginal();
@@ -1477,7 +1491,10 @@ export class PagosBancariosPage implements OnInit {
 
     return detalles
       .map((detalle: any, index: number) => ({ detalle, prevalidacion: prevalidacion[index] }))
-      .filter(par => !!par.prevalidacion && aprobadas.has(par.prevalidacion) && this.isPrevalidacionLista(par.prevalidacion));
+      .filter(par => !!par.prevalidacion
+        && aprobadas.has(par.prevalidacion)
+        && this.isPrevalidacionLista(par.prevalidacion)
+        && !this.isPrevalidacionDuplicada(par.prevalidacion));
   }
 
   // === Carga OH ===
