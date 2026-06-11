@@ -347,13 +347,6 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
             </div>
           }
 
-          @if (hasPagosDuplicados()) {
-            <app-bcp-pagos-duplicados
-              [pagos]="resultado()?.pagosDuplicados || []"
-              [estadoCarga]="resultado()?.estadoCarga"
-            ></app-bcp-pagos-duplicados>
-          }
-
           @if (getPrevalidacionProcesada().length > 0) {
             <app-bcp-prevalidacion-archivo
               [data]="getPrevalidacionProcesadaFiltrada()"
@@ -363,6 +356,13 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
               [pagosDuplicados]="resultado()?.pagosDuplicados || []"
               (guardar)="aprobarArchivo($event)"
             ></app-bcp-prevalidacion-archivo>
+          }
+
+          @if (hasPagosDuplicados()) {
+            <app-bcp-pagos-duplicados
+              [pagos]="resultado()?.pagosDuplicados || []"
+              [estadoCarga]="resultado()?.estadoCarga"
+            ></app-bcp-pagos-duplicados>
           }
 
           @if (resultado()?.prevalidacionNoProcesados && resultado()!.prevalidacionNoProcesados!.length > 0) {
@@ -1375,9 +1375,14 @@ export class PagosBancariosPage implements OnInit {
   }
 
   hasPagosDuplicados(): boolean {
-    const estadoCarga = this.resultado()?.estadoCarga;
-    return (estadoCarga === 'ARCHIVO_CON_PAGOS_DUPLICADOS' || estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS')
-      && (this.resultado()?.pagosDuplicados?.length || 0) > 0;
+    const resultado = this.resultado();
+    const estadoCarga = resultado?.estadoCarga;
+
+    return estadoCarga === 'PREVALIDADO_CON_DUPLICADOS_CONTEXTO'
+      || estadoCarga === 'ARCHIVO_CON_PAGOS_DUPLICADOS'
+      || estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS'
+      || (resultado?.pagosDuplicados?.length ?? 0) > 0
+      || (resultado?.duplicadosOmitidos ?? 0) > 0;
   }
 
   canAprobarArchivo(): boolean {
