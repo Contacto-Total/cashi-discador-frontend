@@ -1410,27 +1410,48 @@ export class PagosBancariosPage implements OnInit {
       aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
     }).subscribe({
       next: (response) => {
-        this.resultadoAprobacion.set(response);
+        const aprobacion = this.normalizeAprobacionResponse(response);
+        this.resultadoAprobacion.set(aprobacion);
         this.isApprovingArchivo.set(false);
 
-        if (response.exitoso) {
+        if (aprobacion.exitoso) {
           this.selectedFile.set(null);
           this.archivoAprobado.set(true);
         }
       },
       error: (error) => {
-        const response = error.error as AprobarArchivoBcpResponse | undefined;
-        this.resultadoAprobacion.set(response || {
-          exitoso: false,
-          mensaje: error.error?.mensaje || error.error?.message || 'No se pudo aprobar el archivo.',
-          pagosInsertados: 0,
-          pagosVerificados: 0,
-          conciliacionesAprobadas: 0,
-          errores: error.error?.errores || []
-        });
+        this.resultadoAprobacion.set(this.normalizeAprobacionResponse(this.getAprobacionErrorBody(error)));
         this.isApprovingArchivo.set(false);
       }
     });
+  }
+
+  private getAprobacionErrorBody(error: any): Partial<AprobarArchivoBcpResponse> | undefined {
+    const body = error?.error;
+
+    if (!body) return undefined;
+    if (typeof body !== 'string') return body;
+
+    try {
+      return JSON.parse(body);
+    } catch {
+      return { exitoso: false, mensaje: body };
+    }
+  }
+
+  private normalizeAprobacionResponse(response?: Partial<AprobarArchivoBcpResponse> | null): AprobarArchivoBcpResponse {
+    const errores = Array.isArray(response?.errores) ? response.errores : [];
+    const mensaje = response?.mensaje || errores[0] || 'No se pudo aprobar el archivo';
+
+    return {
+      exitoso: response?.exitoso === true,
+      mensaje,
+      archivoId: response?.archivoId,
+      pagosInsertados: response?.pagosInsertados ?? 0,
+      pagosVerificados: response?.pagosVerificados ?? 0,
+      conciliacionesAprobadas: response?.conciliacionesAprobadas ?? 0,
+      errores
+    };
   }
 
   private matchesContextFilter(row: any, camelKey: string, snakeKey: string, selectedId: number): boolean {
