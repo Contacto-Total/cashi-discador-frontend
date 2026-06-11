@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -35,11 +35,10 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
               <th class="px-2 py-2 text-left font-bold">Estado</th>
               <th class="px-2 py-2 text-left font-bold">Problema</th>
               <th class="px-2 py-2 text-left font-bold">Acción</th>
-              <th class="px-2 py-2 text-center font-bold">Aprobar</th>
             </tr>
           </thead>
 
-          @for (row of data; track trackRow(row, $index); let idx = $index) {
+          @for (row of data; track trackRow(row, $index)) {
             <tbody [class]="getGroupClass(row)">
               <tr class="border-t-2" [class]="getGroupBorderClass(row)">
                 <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</td>
@@ -54,11 +53,6 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
                 </td>
                 <td class="px-2 py-2 max-w-44 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ getRecomendacion(row).problema }}</td>
                 <td class="px-2 py-2 max-w-56 text-slate-700 dark:text-slate-300 leading-snug" rowspan="2">{{ getRecomendacion(row).accion }}</td>
-                <td class="px-2 py-2 text-center" rowspan="2">
-                  <button type="button" (click)="toggleAprobado(idx)" [disabled]="!isListo(row)" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed" [class]="isAprobado(idx) ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'">
-                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" [class]="isAprobado(idx) ? 'translate-x-4' : 'translate-x-1'"></span>
-                  </button>
-                </td>
               </tr>
 
               <tr>
@@ -72,7 +66,7 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
           } @empty {
             <tbody>
               <tr>
-                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="8" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
               </tr>
             </tbody>
           }
@@ -80,16 +74,18 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
       </div>
 
       <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 flex items-center justify-between gap-3">
-        <p class="text-xs text-slate-500 dark:text-slate-400">El guardado se habilita solo cuando todos los registros están listos y aprobados.</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400">El guardado se habilita solo cuando todos los registros están listos para aprobar.</p>
         <div class="flex items-center gap-2">
           @if (tieneFallos()) {
             <button type="button" (click)="descargarReporteFallos()" class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-amber-600 text-white hover:bg-amber-700">
               Descargar reporte de fallos
             </button>
           }
-          <button type="button" (click)="guardar.emit(getFilasAprobadas())" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
-            {{ isSaving ? 'Guardando...' : 'Guardar' }}
-          </button>
+          @if (showGuardar) {
+            <button type="button" (click)="guardar.emit(getFilasAprobadas())" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
+              {{ isSaving ? 'Guardando...' : 'Guardar' }}
+            </button>
+          }
         </div>
       </div>
     </div>
@@ -101,9 +97,8 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() approvalEnabled = false;
   @Input() isSaving = false;
   @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
+  @Input() showGuardar = true;
   @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
-
-  private aprobados = signal<Record<number, boolean>>({});
 
   private readonly recomendacionesPorEstado: Record<string, { problema: string; accion: string }> = {
     LISTO_PARA_APROBAR: {
@@ -173,27 +168,14 @@ export class BcpPrevalidacionArchivoWidget {
     return this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') === 'LISTO_PARA_APROBAR' && this.hasAgente(row) && !this.isDuplicado(row);
   }
 
-  isAprobado(index: number): boolean {
-    const state = this.aprobados();
-    return state[index] ?? false;
-  }
-
-  toggleAprobado(index: number): void {
-    if (!this.isListo(this.data[index])) return;
-    const current = this.aprobados();
-    this.aprobados.set({ ...current, [index]: !this.isAprobado(index) });
-  }
-
   puedeGuardar(): boolean {
-    const aprobadas = this.getFilasAprobadas();
     const todasListas = this.data.length > 0 && this.data.every(row => this.isListo(row));
     return this.approvalEnabled
-      && todasListas
-      && aprobadas.length === this.data.length;
+      && todasListas;
   }
 
   getFilasAprobadas(): PrevalidacionArchivoBcp[] {
-    return this.data.filter((row, index) => this.isAprobado(index) && this.isListo(row));
+    return this.data.filter(row => this.isListo(row));
   }
 
   getFilasAprobables(): PrevalidacionArchivoBcp[] {

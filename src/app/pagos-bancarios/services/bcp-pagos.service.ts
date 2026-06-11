@@ -54,9 +54,16 @@ export class BcpPagosService {
    * @param file Archivo Excel a procesar
    * @returns Resultado con detalles de pagos
    */
-  cargarArchivoOh(file: File): Observable<BcpArchivoResultado> {
+  cargarArchivoOh(file: File, request: BcpArchivoCargaRequest): Observable<BcpArchivoResultado> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('tenantId', request.tenantId.toString());
+    formData.append('carteraId', request.carteraId.toString());
+    formData.append('subcarteraId', request.subcarteraId.toString());
+
+    if (request.toleranciaMonto !== undefined) {
+      formData.append('toleranciaMonto', request.toleranciaMonto.toString());
+    }
 
     console.log('[OH] Cargando archivo Excel:', file.name);
 
