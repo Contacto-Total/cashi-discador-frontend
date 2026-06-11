@@ -822,6 +822,52 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
             Cargar Archivo Excel de Pagos
           </h2>
 
+          <div class="mb-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor</label>
+              <select
+                [(ngModel)]="selectedTenantIdOh"
+                (ngModelChange)="onTenantChangeOh($event)"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option [ngValue]="0">Seleccione proveedor...</option>
+                @for (tenant of tenants(); track tenant.id) {
+                  <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+              <select
+                [(ngModel)]="selectedPortfolioIdOh"
+                (ngModelChange)="onPortfolioChangeOh($event)"
+                [disabled]="selectedTenantIdOh === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Seleccione cartera...</option>
+                @for (portfolio of portfoliosOh(); track portfolio.id) {
+                  <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+              <select
+                [(ngModel)]="selectedSubPortfolioIdOh"
+                (ngModelChange)="onSubPortfolioChangeOh($event)"
+                [disabled]="selectedPortfolioIdOh === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Seleccione subcartera...</option>
+                @for (subPortfolio of subPortfoliosOh(); track subPortfolio.id) {
+                  <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div class="flex-1">
               <label
@@ -851,7 +897,7 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 
             <button
               (click)="procesarArchivoOh()"
-              [disabled]="!selectedFileOh() || isLoadingOh()"
+              [disabled]="!selectedFileOh() || !hasRequiredOhContext() || isLoadingOh()"
               class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               @if (isLoadingOh()) {
@@ -878,6 +924,18 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 
         <!-- Resultados de carga OH -->
         @if (resultadoOh()) {
+          @if (resultadoOh()?.duplicadosOmitidos && resultadoOh()!.duplicadosOmitidos > 0) {
+            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
+              <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-amber-800 dark:text-amber-300">Se omitieron {{ resultadoOh()?.duplicadosOmitidos }} pagos ya cargados</p>
+                <p class="text-sm text-amber-700 dark:text-amber-400">La prevalidación muestra solo los pagos nuevos devueltos por el servicio.</p>
+              </div>
+            </div>
+          }
+
           @if (resultadoOh()?.exitoso && resultadoOh()?.archivoId) {
             <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-3">
               <svg class="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -895,53 +953,36 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
             </div>
           }
 
-          @if (!resultadoOh()?.exitoso && resultadoOh()?.duplicadosOmitidos && resultadoOh()!.duplicadosOmitidos > 0) {
-            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
-              <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
-              <div>
-                <p class="font-medium text-amber-800 dark:text-amber-300">Todos los registros ya existen</p>
-                <p class="text-sm text-amber-700 dark:text-amber-400">{{ resultadoOh()?.duplicadosOmitidos }} registros duplicados</p>
-              </div>
-            </div>
+          @if (getPrevalidacionOhProcesadaFiltrada().length > 0) {
+            <app-bcp-prevalidacion-archivo
+              [data]="getPrevalidacionOhProcesadaFiltrada()"
+              [todosAprobables]="resultadoOh()?.todosAprobables === true"
+              [approvalEnabled]="canAprobarArchivoOh()"
+              [isSaving]="isApprovingArchivoOh()"
+              [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
+              (guardar)="aprobarArchivoOh($event)"
+            ></app-bcp-prevalidacion-archivo>
           }
 
-          <!-- Tabla de detalles OH (Preview) -->
-          @if (resultadoOh()?.detalles && resultadoOh()!.detalles.length > 0) {
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Preview de Pagos OH</h2>
-                <span class="text-sm text-slate-600 dark:text-slate-400">
-                  {{ resultadoOh()?.detalles?.length }} registros cargados
-                </span>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-purple-100 dark:bg-purple-900/20">
-                    <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">#</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">DNI</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (d of resultadoOh()?.detalles?.slice(0, 10); track d.numeroFila) {
-                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{{ d.numeroFila }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-              @if (resultadoOh()!.detalles.length > 10) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 text-center text-sm text-slate-600 dark:text-slate-400">
-                  ... y {{ resultadoOh()!.detalles.length - 10 }} registros más
-                </div>
+          @if (hasPagosDuplicadosOh()) {
+            <app-bcp-pagos-duplicados
+              [pagos]="resultadoOh()?.pagosDuplicados || []"
+              [estadoCarga]="resultadoOh()?.estadoCarga"
+            ></app-bcp-pagos-duplicados>
+          }
+
+          @if (resultadoAprobacionOh(); as aprobacionOh) {
+            <div class="mb-6 rounded-lg border p-4" [class]="aprobacionOh.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+              <p class="font-semibold">{{ aprobacionOh.mensaje }}</p>
+              @if (aprobacionOh.exitoso) {
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacionOh.archivoId }} · Pagos insertados: {{ aprobacionOh.pagosInsertados }} · Verificados: {{ aprobacionOh.pagosVerificados }} · Conciliaciones: {{ aprobacionOh.conciliacionesAprobadas }}</p>
+              }
+              @if (aprobacionOh.errores && aprobacionOh.errores.length > 0) {
+                <ul class="mt-2 list-disc pl-5 text-sm">
+                  @for (error of aprobacionOh.errores; track error) {
+                    <li>{{ error }}</li>
+                  }
+                </ul>
               }
             </div>
           }
@@ -1119,6 +1160,9 @@ export class PagosBancariosPage implements OnInit {
   isLoadingOh = signal(false);
   errorMessageOh = signal<string | null>(null);
   resultadoOh = signal<BcpArchivoResultado | null>(null);
+  isApprovingArchivoOh = signal(false);
+  resultadoAprobacionOh = signal<AprobarArchivoBcpResponse | null>(null);
+  archivoOhAprobado = signal(false);
 
   // Ingreso Manual
   pagoManual: BcpPagoManualRequest = {
@@ -1174,6 +1218,11 @@ export class PagosBancariosPage implements OnInit {
   selectedTenantId = 0;
   selectedPortfolioId = 0;
   selectedSubPortfolioId = 0;
+  portfoliosOh = signal<Portfolio[]>([]);
+  subPortfoliosOh = signal<SubPortfolio[]>([]);
+  selectedTenantIdOh = 0;
+  selectedPortfolioIdOh = 0;
+  selectedSubPortfolioIdOh = 0;
 
   constructor(
     private bcpService: BcpPagosService,
@@ -1239,6 +1288,52 @@ export class PagosBancariosPage implements OnInit {
     this.resultadoAprobacion.set(null);
     this.errorMessage.set(null);
     this.archivoAprobado.set(false);
+  }
+
+  onTenantChangeOh(tenantId: number): void {
+    this.selectedTenantIdOh = Number(tenantId) || 0;
+    this.selectedPortfolioIdOh = 0;
+    this.selectedSubPortfolioIdOh = 0;
+    this.portfoliosOh.set([]);
+    this.subPortfoliosOh.set([]);
+    this.clearOhCargaResult();
+
+    if (this.selectedTenantIdOh > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedTenantIdOh).subscribe({
+        next: (portfolios) => this.portfoliosOh.set(portfolios),
+        error: (error) => console.error('Error cargando carteras OH:', error)
+      });
+    }
+  }
+
+  onPortfolioChangeOh(portfolioId: number): void {
+    this.selectedPortfolioIdOh = Number(portfolioId) || 0;
+    this.selectedSubPortfolioIdOh = 0;
+    this.subPortfoliosOh.set([]);
+    this.clearOhCargaResult();
+
+    if (this.selectedPortfolioIdOh > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioIdOh).subscribe({
+        next: (subPortfolios) => this.subPortfoliosOh.set(subPortfolios),
+        error: (error) => console.error('Error cargando subcarteras OH:', error)
+      });
+    }
+  }
+
+  onSubPortfolioChangeOh(subPortfolioId: number): void {
+    this.selectedSubPortfolioIdOh = Number(subPortfolioId) || 0;
+    this.clearOhCargaResult();
+  }
+
+  hasRequiredOhContext(): boolean {
+    return this.selectedTenantIdOh > 0 && this.selectedPortfolioIdOh > 0 && this.selectedSubPortfolioIdOh > 0;
+  }
+
+  private clearOhCargaResult(): void {
+    this.resultadoOh.set(null);
+    this.resultadoAprobacionOh.set(null);
+    this.errorMessageOh.set(null);
+    this.archivoOhAprobado.set(false);
   }
 
   // === Configuración de Conciliación ===
@@ -1526,6 +1621,8 @@ export class PagosBancariosPage implements OnInit {
       this.selectedFileOh.set(file);
       this.errorMessageOh.set(null);
       this.resultadoOh.set(null);
+      this.resultadoAprobacionOh.set(null);
+      this.archivoOhAprobado.set(false);
     }
   }
 
@@ -1533,10 +1630,22 @@ export class PagosBancariosPage implements OnInit {
     const file = this.selectedFileOh();
     if (!file) return;
 
+    if (!this.hasRequiredOhContext()) {
+      this.errorMessageOh.set('Seleccione proveedor, cartera y subcartera para prevalidar el archivo OH.');
+      return;
+    }
+
     this.isLoadingOh.set(true);
     this.errorMessageOh.set(null);
+    this.resultadoAprobacionOh.set(null);
+    this.archivoOhAprobado.set(false);
 
-    this.bcpService.cargarArchivoOh(file).subscribe({
+    this.bcpService.cargarArchivoOh(file, {
+      tenantId: this.selectedTenantIdOh,
+      carteraId: this.selectedPortfolioIdOh,
+      subcarteraId: this.selectedSubPortfolioIdOh,
+      toleranciaMonto: this.configTolerancia || undefined
+    }).subscribe({
       next: (resultado) => {
         this.resultadoOh.set(resultado);
         if (!resultado.exitoso) {
@@ -1549,6 +1658,105 @@ export class PagosBancariosPage implements OnInit {
         this.isLoadingOh.set(false);
       }
     });
+  }
+
+  getPrevalidacionOhProcesada(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultadoOh();
+    const detalles = resultado?.detalles || [];
+    const prevalidacion = this.getPrevalidacionOhOriginal();
+
+    return prevalidacion
+      .map((row: any, index: number) => {
+        const detalle = detalles[index] || {};
+        return {
+          ...row,
+          documentoBanco: row.documentoBanco ?? row.documento_banco ?? detalle.documento,
+          fechaBanco: row.fechaBanco ?? row.fecha_banco ?? detalle.fechaPago,
+          montoBanco: row.montoBanco ?? row.monto_banco ?? detalle.montoPagado,
+          numeroOperacion: row.numeroOperacion ?? row.numero_operacion ?? detalle.numeroOperacion,
+          banco: row.banco ?? detalle.banco,
+          __prevalidacionIndex: index
+        };
+      })
+      .filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO');
+  }
+
+  getPrevalidacionOhOriginal(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultadoOh();
+    return resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+  }
+
+  getPrevalidacionOhProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
+    const rows = this.getPrevalidacionOhProcesada();
+    return rows.filter(row => {
+      return this.matchesContextFilter(row, 'tenantId', 'tenant_id', this.selectedTenantIdOh)
+        && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioIdOh)
+        && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioIdOh);
+    });
+  }
+
+  hasPagosDuplicadosOh(): boolean {
+    return (this.resultadoOh()?.pagosDuplicados?.length ?? 0) > 0;
+  }
+
+  canAprobarArchivoOh(): boolean {
+    const prevalidacion = this.getPrevalidacionOhProcesadaFiltrada();
+
+    return !this.archivoOhAprobado()
+      && this.resultadoOh()?.todosAprobables === true
+      && prevalidacion.length > 0;
+  }
+
+  aprobarArchivoOh(filasAprobadas: PrevalidacionArchivoBcp[]): void {
+    const resultado = this.resultadoOh();
+    const user = this.authService.getCurrentUser();
+
+    if (!resultado || !this.canAprobarArchivoOh() || !user || !filasAprobadas || filasAprobadas.length === 0) return;
+
+    const paresAprobados = this.getParesAprobadosOh(filasAprobadas);
+    if (paresAprobados.length === 0) return;
+
+    this.isApprovingArchivoOh.set(true);
+    this.resultadoAprobacionOh.set(null);
+    this.errorMessageOh.set(null);
+
+    this.bcpService.aprobarArchivo({
+      nombreArchivo: resultado.nombreArchivo,
+      cabecera: resultado.cabecera,
+      detalles: paresAprobados.map(par => par.detalle),
+      prevalidacion: paresAprobados.map(par => par.prevalidacion),
+      aprobadoPorId: user.id,
+      aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
+    }).subscribe({
+      next: (response) => {
+        const aprobacion = this.normalizeAprobacionResponse(response);
+        this.resultadoAprobacionOh.set(aprobacion);
+        this.isApprovingArchivoOh.set(false);
+
+        if (aprobacion.exitoso) {
+          this.selectedFileOh.set(null);
+          this.archivoOhAprobado.set(true);
+        }
+      },
+      error: (error) => {
+        this.resultadoAprobacionOh.set(this.normalizeAprobacionResponse(this.getAprobacionErrorBody(error)));
+        this.isApprovingArchivoOh.set(false);
+      }
+    });
+  }
+
+  private getParesAprobadosOh(filasAprobadas: PrevalidacionArchivoBcp[]): Array<{ detalle: any; prevalidacion: PrevalidacionArchivoBcp }> {
+    const detalles = this.resultadoOh()?.detalles || [];
+    const prevalidacion = this.getPrevalidacionOhOriginal();
+    const aprobadas = new Set(filasAprobadas);
+
+    return filasAprobadas
+      .filter(row => aprobadas.has(row) && this.isPrevalidacionLista(row))
+      .map((row: any) => {
+        const index = Number(row.__prevalidacionIndex);
+        return { detalle: detalles[index], prevalidacion: prevalidacion[index] };
+      })
+      .filter(par => !!par.detalle && !!par.prevalidacion);
   }
 
   // === Ingreso Manual ===
