@@ -1,7 +1,8 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import * as XLSX from 'xlsx';
-import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
+import { Workbook } from 'exceljs';
+import { saveAs } from 'file-saver';
+import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
 
 @Component({
   selector: 'app-bcp-prevalidacion-archivo',
@@ -15,8 +16,8 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
           <p class="text-xs text-slate-500 dark:text-slate-400">Comparación entre archivo cargado y pagos registrados por agente</p>
         </div>
         <div class="text-right">
-          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="todosAprobables ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
-            {{ todosAprobables ? 'Todos aprobables' : 'Requiere revisión' }}
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
+            {{ approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión' }}
           </span>
           <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{{ data.length }} registro(s)</p>
         </div>
@@ -35,7 +36,6 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               <th class="px-2 py-2 text-left font-bold">Problema</th>
               <th class="px-2 py-2 text-left font-bold">Acción</th>
               <th class="px-2 py-2 text-center font-bold">Aprobar</th>
-              <th class="px-2 py-2 text-center font-bold">Auto</th>
             </tr>
           </thead>
 
@@ -59,19 +59,6 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
                     <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" [class]="isAprobado(idx) ? 'translate-x-4' : 'translate-x-1'"></span>
                   </button>
                 </td>
-                <td class="px-2 py-2 text-center rounded-tr-lg" rowspan="2">
-                  @if (showAutoRegistro(row)) {
-                    <button type="button" class="px-2 py-1 rounded-md bg-indigo-600 text-white text-[10px] font-bold hover:bg-indigo-700 whitespace-nowrap">
-                      Auto registrar
-                    </button>
-                  } @else if (showPagoVoluntario(row)) {
-                    <button type="button" class="px-2 py-1 rounded-md bg-sky-600 text-white text-[10px] font-bold hover:bg-sky-700 whitespace-nowrap">
-                      Registrar pago voluntario
-                    </button>
-                  } @else {
-                    <span class="text-slate-400">-</span>
-                  }
-                </td>
               </tr>
 
               <tr>
@@ -85,7 +72,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
           } @empty {
             <tbody>
               <tr>
-                <td colspan="10" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
+                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay prevalidación disponible.</td>
               </tr>
             </tbody>
           }
@@ -100,7 +87,7 @@ import { PrevalidacionArchivoBcp } from '../models/bcp-archivo.model';
               Descargar reporte de fallos
             </button>
           }
-          <button type="button" (click)="guardar.emit()" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
+          <button type="button" (click)="guardar.emit(getFilasAprobadas())" [disabled]="!puedeGuardar() || isSaving" class="px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-400">
             {{ isSaving ? 'Guardando...' : 'Guardar' }}
           </button>
         </div>
@@ -113,7 +100,8 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() todosAprobables = false;
   @Input() approvalEnabled = false;
   @Input() isSaving = false;
-  @Output() guardar = new EventEmitter<void>();
+  @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
+  @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
 
   private aprobados = signal<Record<number, boolean>>({});
 
@@ -126,21 +114,21 @@ export class BcpPrevalidacionArchivoWidget {
       problema: 'Monto distinto al banco.',
       accion: 'Revisar y corregir el monto tipificado o verificar si corresponde a un pago parcial.'
     },
-    PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA: {
-      problema: 'Fecha fuera de tolerancia.',
-      accion: 'Corregir la fecha de pago tipificada o revisar si corresponde ampliar tolerancia.'
-    },
     PAGO_REGISTRADO_FECHA_DISTINTA_BANCO: {
       problema: 'Fecha distinta al banco.',
       accion: 'Corregir la fecha del pago tipificado para que coincida con la fecha bancaria y volver a cargar el archivo.'
     },
-    PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO: {
-      problema: 'Documento distinto al registrado.',
-      accion: 'Revisar voucher/pago. No se enlaza automáticamente.'
+    PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO: {
+      problema: 'Fecha y monto distintos al banco.',
+      accion: 'Revisar y corregir fecha/monto del pago tipificado antes de volver a cargar.'
     },
     DOCUMENTO_NO_EXISTE_EN_CLIENTES: {
       problema: 'Documento no existe.',
       accion: 'Validar DNI/documento o revisar si pertenece a otra base no cargada.'
+    },
+    CLIENTE_NO_PERTENECE_A_CONTEXTO: {
+      problema: 'Cliente pertenece a otra subcartera.',
+      accion: 'Validar la subcartera correcta para esta carga.'
     },
     NO_TIENE_PROMESA: {
       problema: 'Sin promesa activa.',
@@ -153,10 +141,6 @@ export class BcpPrevalidacionArchivoWidget {
     FALTA_TIPIFICACION_CANCELACION: {
       problema: 'Falta cancelación.',
       accion: 'Registrar tipificación de cancelación o generar automáticamente el pago asociado.'
-    },
-    CLIENTE_MULTIPLES_CARTERAS_NO_COINCIDE_MONTO_FECHA: {
-      problema: 'Varias carteras sin match.',
-      accion: 'Revisar manualmente la cartera correcta y validar monto/fecha tipificados.'
     },
     FECHA_FUERA_DE_RANGO_DE_PROMESA: {
       problema: 'Fecha fuera de promesa.',
@@ -186,12 +170,12 @@ export class BcpPrevalidacionArchivoWidget {
   }
 
   isListo(row: PrevalidacionArchivoBcp): boolean {
-    return this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') === 'LISTO_PARA_APROBAR' && this.hasAgente(row);
+    return this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') === 'LISTO_PARA_APROBAR' && this.hasAgente(row) && !this.isDuplicado(row);
   }
 
   isAprobado(index: number): boolean {
     const state = this.aprobados();
-    return state[index] ?? this.isListo(this.data[index]);
+    return state[index] ?? false;
   }
 
   toggleAprobado(index: number): void {
@@ -201,7 +185,34 @@ export class BcpPrevalidacionArchivoWidget {
   }
 
   puedeGuardar(): boolean {
-    return this.approvalEnabled && this.todosAprobables && this.data.length > 0 && this.data.every((row, index) => this.isListo(row) && this.isAprobado(index));
+    const aprobadas = this.getFilasAprobadas();
+    const todasListas = this.data.length > 0 && this.data.every(row => this.isListo(row));
+    return this.approvalEnabled
+      && todasListas
+      && aprobadas.length === this.data.length;
+  }
+
+  getFilasAprobadas(): PrevalidacionArchivoBcp[] {
+    return this.data.filter((row, index) => this.isAprobado(index) && this.isListo(row));
+  }
+
+  getFilasAprobables(): PrevalidacionArchivoBcp[] {
+    return this.data.filter(row => this.isListo(row));
+  }
+
+  isDuplicado(row: PrevalidacionArchivoBcp): boolean {
+    const documento = String(this.value(row, 'documentoBanco', 'documento_banco') || '');
+    const fecha = String(this.value(row, 'fechaBanco', 'fecha_banco') || '');
+    const monto = Number(this.value(row, 'montoBanco', 'monto_banco'));
+    const operacion = String(this.value(row, 'numeroOperacion', 'numero_operacion') || '');
+
+    return this.pagosDuplicados.some(dup => {
+      const dupOperacion = String(dup.numeroOperacion || '');
+      return String(dup.documento || '') === documento
+        && String(dup.fechaBanco || '') === fecha
+        && Math.abs(Number(dup.montoBanco) - monto) < 0.01
+        && (!dupOperacion || !operacion || dupOperacion === operacion);
+    });
   }
 
   tieneFallos(): boolean {
@@ -216,116 +227,122 @@ export class BcpPrevalidacionArchivoWidget {
     };
   }
 
-  descargarReporteFallos(): void {
+  async descargarReporteFallos(): Promise<void> {
     const fallos = this.data.filter(row => this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion') !== 'LISTO_PARA_APROBAR');
+    if (fallos.length === 0) return;
+
     const fechaCarga = new Date();
-    const rows = fallos.map((row, index) => {
-      const recomendacion = this.getRecomendacion(row);
-      return {
-        '#': index + 1,
-        Documento: this.value(row, 'documentoBanco', 'documento_banco') || '',
-        Problema: recomendacion.problema,
-        'Acción recomendada': recomendacion.accion,
-        Estado: this.getEstadoLabel(this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion')),
-        'Documento banco': this.value(row, 'documentoBanco', 'documento_banco') || '',
-        'Fecha banco': this.value(row, 'fechaBanco', 'fecha_banco') || '',
-        'Monto banco': this.value(row, 'montoBanco', 'monto_banco') ?? '',
-        'Nro operación banco': this.value(row, 'numeroOperacion', 'numero_operacion') || '',
-        'Fecha registrada': this.value(row, 'fechaPago', 'fecha_pago') || '',
-        'Monto registrado': this.value(row, 'montoPago', 'monto_pago') ?? '',
-        'Operación registrada': this.value(row, 'operacionAgente', 'operacion_agente') || ''
-      };
+    const workbook = new Workbook();
+    workbook.creator = 'Sistema de Cobranza';
+    workbook.created = fechaCarga;
+
+    const ws = workbook.addWorksheet('Incidencias', {
+      properties: { tabColor: { argb: 'EF4444' } }
     });
 
-    const encabezado = [
-      ['Incidencias de carga BCP'],
-      ['Fecha y hora de carga', fechaCarga.toLocaleString('es-PE')],
-      ['Total de incidencias', fallos.length],
-      [],
-      ['Revise primero Documento, Problema y Acción recomendada. Las columnas bancarias/sistema son solo referencia.'],
-      []
+    ws.columns = [
+      { width: 6 },
+      { width: 16 },
+      { width: 18 },
+      { width: 28 },
+      { width: 58 },
+      { width: 14 },
+      { width: 14 },
+      { width: 14 },
+      { width: 20 },
+      { width: 16 },
+      { width: 14 },
+      { width: 20 }
     ];
 
-    const worksheet = XLSX.utils.aoa_to_sheet(encabezado);
-    XLSX.utils.sheet_add_json(worksheet, rows, { origin: 'A7' });
+    ws.mergeCells('A1:L1');
+    const title = ws.getCell('A1');
+    title.value = 'INCIDENCIAS DE PREVALIDACIÓN BCP';
+    title.font = { bold: true, size: 16, color: { argb: 'FFFFFF' } };
+    title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '1E293B' } };
+    title.alignment = { horizontal: 'center', vertical: 'middle' };
+    ws.getRow(1).height = 28;
 
-    worksheet['!cols'] = [
-      { wch: 6 },
-      { wch: 16 },
-      { wch: 30 },
-      { wch: 65 },
-      { wch: 12 },
-      { wch: 18 },
-      { wch: 14 },
-      { wch: 14 },
-      { wch: 22 },
-      { wch: 16 },
-      { wch: 16 },
-      { wch: 22 }
-    ];
-    worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
-      { s: { r: 4, c: 0 }, e: { r: 4, c: 11 } }
-    ];
+    ws.getCell('A3').value = 'Fecha y hora:';
+    ws.getCell('B3').value = fechaCarga.toLocaleString('es-PE');
+    ws.getCell('D3').value = 'Total incidencias:';
+    ws.getCell('E3').value = fallos.length;
+    ws.getCell('A4').value = 'Indicacion:';
+    ws.getCell('B4').value = 'Corregir primero Documento, Problema y Acción recomendada. Luego volver a cargar el archivo.';
+    ws.mergeCells('B4:L4');
 
-    this.applyReporteFallosStyles(worksheet, rows.length);
+    ['A3', 'D3', 'A4'].forEach(cell => {
+      ws.getCell(cell).font = { bold: true, color: { argb: '334155' } };
+    });
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Incidencias');
-    XLSX.writeFile(workbook, `reporte-fallos-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    let row = 6;
+    const headerRowNumber = row;
+    const headers = ['#', 'Documento', 'Estado', 'Problema', 'Acción recomendada', 'Fecha banco', 'Monto banco', 'Nro. operación', 'Fecha sistema', 'Monto sistema', 'Operación sistema', 'Estado técnico'];
+    const headerRow = ws.getRow(headerRowNumber);
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1);
+      cell.value = header;
+      cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '475569' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+      cell.border = this.excelBorder();
+    });
+    ws.getRow(headerRowNumber).height = 24;
+    row++;
+
+    fallos.forEach((item, index) => {
+      const estado = this.value(item, 'estadoPrevalidacion', 'estado_prevalidacion') || '';
+      const recomendacion = this.getRecomendacion(item);
+      const dataRow = ws.getRow(row);
+      const values = [
+        index + 1,
+        this.value(item, 'documentoBanco', 'documento_banco') || '',
+        this.getEstadoLabel(estado),
+        recomendacion.problema,
+        recomendacion.accion,
+        this.value(item, 'fechaBanco', 'fecha_banco') || '',
+        Number(this.value(item, 'montoBanco', 'monto_banco') || 0),
+        this.value(item, 'numeroOperacion', 'numero_operacion') || '',
+        this.value(item, 'fechaPago', 'fecha_pago') || '',
+        this.value(item, 'montoPago', 'monto_pago') !== null && this.value(item, 'montoPago', 'monto_pago') !== undefined ? Number(this.value(item, 'montoPago', 'monto_pago')) : '',
+        this.value(item, 'operacionAgente', 'operacion_agente') || '',
+        estado
+      ];
+
+      values.forEach((value, colIndex) => {
+        const cell = dataRow.getCell(colIndex + 1);
+        cell.value = value;
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
+        cell.border = this.excelBorder();
+        cell.alignment = { vertical: 'top', wrapText: true };
+        if (colIndex === 6 || colIndex === 9) cell.numFmt = '"S/." #,##0.00';
+      });
+      dataRow.height = 34;
+      row++;
+    });
+
+    ws.autoFilter = {
+      from: { row: headerRowNumber, column: 1 },
+      to: { row: headerRowNumber, column: headers.length }
+    };
+    ws.views = [{ state: 'frozen', ySplit: headerRowNumber }];
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  private applyReporteFallosStyles(worksheet: XLSX.WorkSheet, rowCount: number): void {
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:L1');
-
-    worksheet['A1'].s = {
-      font: { bold: true, sz: 16, color: { rgb: 'FFFFFF' } },
-      fill: { fgColor: { rgb: '1E293B' } },
-      alignment: { horizontal: 'center', vertical: 'center' }
-    };
-
-    for (const cell of ['A2', 'A3', 'A5']) {
-      if (worksheet[cell]) {
-        worksheet[cell].s = { font: { bold: true, color: { rgb: '334155' } } };
-      }
-    }
-
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const address = XLSX.utils.encode_cell({ r: 6, c: col });
-      if (worksheet[address]) {
-        worksheet[address].s = {
-          font: { bold: true, color: { rgb: 'FFFFFF' } },
-          fill: { fgColor: { rgb: '475569' } },
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-          border: this.excelBorder()
-        };
-      }
-    }
-
-    for (let row = 7; row < 7 + rowCount; row++) {
-      const estadoCell = worksheet[XLSX.utils.encode_cell({ r: row, c: 4 })];
-      const estado = estadoCell?.v;
-      const fill = estado === 'REVISIÓN' ? 'FEF3C7' : 'FEE2E2';
-
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const address = XLSX.utils.encode_cell({ r: row, c: col });
-        if (worksheet[address]) {
-          worksheet[address].s = {
-            fill: { fgColor: { rgb: fill } },
-            alignment: { vertical: 'top', wrapText: true },
-            border: this.excelBorder()
-          };
-        }
-      }
-    }
+  private getExcelFillColor(estado: string): string {
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'FEF3C7';
+    if (estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO') return 'E2E8F0';
+    return 'FEE2E2';
   }
 
   private excelBorder(): any {
     return {
-      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
+      top: { style: 'thin', color: { argb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { argb: 'CBD5E1' } },
+      left: { style: 'thin', color: { argb: 'CBD5E1' } },
+      right: { style: 'thin', color: { argb: 'CBD5E1' } }
     };
   }
 
@@ -345,28 +362,15 @@ export class BcpPrevalidacionArchivoWidget {
 
   getEstadoClass(estado: string | null | undefined): string {
     if (estado === 'LISTO_PARA_APROBAR') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
   }
 
   getEstadoLabel(estado: string | null | undefined): string {
     if (estado === 'LISTO_PARA_APROBAR') return 'LISTO';
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO') return 'REVISIÓN';
+    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'REVISIÓN';
     if (!estado) return '-';
     return 'ACCIÓN';
-  }
-
-  showAutoRegistro(row: PrevalidacionArchivoBcp): boolean {
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    return false;
-  }
-
-  showPagoVoluntario(row: PrevalidacionArchivoBcp): boolean {
-    const estado = this.value(row, 'estadoPrevalidacion', 'estado_prevalidacion');
-    return estado === 'NO_TIENE_PROMESA'
-      || estado === 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
-      || estado === 'PROMESA_SIN_CUOTAS_PENDIENTES'
-      || estado === 'FALTA_TIPIFICACION_CANCELACION';
   }
 
   formatEstado(estado: string | null | undefined): string {

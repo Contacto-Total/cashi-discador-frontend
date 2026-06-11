@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   AprobarArchivoBcpRequest,
   AprobarArchivoBcpResponse,
+  BcpArchivoCargaRequest,
   BcpArchivoResultado,
   BcpPagoManualRequest,
   BcpPagoManualResponse,
@@ -27,9 +28,16 @@ export class BcpPagosService {
    * @param file Archivo TXT a procesar
    * @returns Resultado con cabecera y detalles de pagos
    */
-  cargarArchivo(file: File): Observable<BcpArchivoResultado> {
+  cargarArchivo(file: File, request: BcpArchivoCargaRequest): Observable<BcpArchivoResultado> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('tenantId', request.tenantId.toString());
+    formData.append('carteraId', request.carteraId.toString());
+    formData.append('subcarteraId', request.subcarteraId.toString());
+
+    if (request.toleranciaMonto !== undefined) {
+      formData.append('toleranciaMonto', request.toleranciaMonto.toString());
+    }
 
     console.log('[BCP] Cargando archivo:', file.name);
 

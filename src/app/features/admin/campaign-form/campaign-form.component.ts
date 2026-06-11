@@ -105,6 +105,10 @@ export class CampaignFormComponent implements OnInit {
   distinctValuesForField: string[] = [];
   loadingDistinctValues: boolean = false;
 
+  // Filtros PERIODO (campos YYYYMM, ej: 202504) → selección por AÑO
+  availableYears: string[] = [];
+  newFilterSelectedYears: string[] = [];
+
   // Filtros FECHA
   newFilterMinDate: string = '';
   newFilterMaxDate: string = '';
@@ -242,6 +246,9 @@ export class CampaignFormComponent implements OnInit {
   getSelectedFieldDataType(): string {
     if (this.selectedFieldId === 0) return '';
     const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+    // Campos PERIODO (YYYYMM) se marcan con formato='PERIODO' en definiciones_campos.
+    // Se filtran por AÑO aunque el dato sea NUMERICO.
+    if ((field?.format || '').toUpperCase() === 'PERIODO') return 'PERIODO';
     const dt = field?.dataType || 'NUMERICO';
     // BOOLEAN/BIT se maneja igual que TEXTO (selección de valores distintos)
     return dt === 'BOOLEAN' ? 'TEXTO' : dt;
@@ -256,6 +263,8 @@ export class CampaignFormComponent implements OnInit {
     this.distinctValuesForField = [];
     this.newFilterMinDate = '';
     this.newFilterMaxDate = '';
+    this.availableYears = [];
+    this.newFilterSelectedYears = [];
 
     if (dataType === 'TEXTO' && this.selectedTenantId && this.selectedPortfolioId && this.selectedSubPortfolioId) {
       const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
@@ -275,6 +284,46 @@ export class CampaignFormComponent implements OnInit {
         });
       }
     }
+
+    // PERIODO: traemos los valores crudos (YYYYMM) y derivamos los AÑOS únicos en el cliente
+    if (dataType === 'PERIODO' && this.selectedTenantId && this.selectedPortfolioId && this.selectedSubPortfolioId) {
+      const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (field) {
+        this.loadingDistinctValues = true;
+        this.campaignService.getDistinctValues(
+          this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId, field.fieldCode
+        ).subscribe({
+          next: (values) => {
+            const years = new Set<string>();
+            values.forEach(v => {
+              const n = Number(v);                 // "202504" o "202504.00" → 202504
+              if (!isNaN(n) && n >= 100000) {       // un periodo YYYYMM tiene 6 dígitos
+                years.add(String(Math.floor(n / 100)));
+              }
+            });
+            this.availableYears = Array.from(years).sort().reverse(); // años descendentes
+            this.loadingDistinctValues = false;
+          },
+          error: (err) => {
+            console.error('Error loading periodo values:', err);
+            this.loadingDistinctValues = false;
+          }
+        });
+      }
+    }
+  }
+
+  toggleYear(year: string): void {
+    const idx = this.newFilterSelectedYears.indexOf(year);
+    if (idx >= 0) {
+      this.newFilterSelectedYears.splice(idx, 1);
+    } else {
+      this.newFilterSelectedYears.push(year);
+    }
+  }
+
+  isYearSelected(year: string): boolean {
+    return this.newFilterSelectedYears.includes(year);
   }
 
   toggleDistinctValue(value: string): void {
@@ -324,6 +373,37 @@ export class CampaignFormComponent implements OnInit {
         this.error = 'Ingrese al menos una fecha (desde o hasta)';
         return;
       }
+      if (dataType === 'PERIODO' && this.newFilterSelectedYears.length === 0) {
+        this.error = 'Seleccione al menos un año';
+        return;
+      }
+    }
+
+    // PERIODO: cada año seleccionado se convierte en un rango NUMERICO [YYYY01, YYYY12].
+    // El backend ya soporta NUMERICO (BETWEEN) y une varios rangos del mismo campo con OR,
+    // así que años no contiguos (ej. 2023 y 2025) también funcionan. Sin cambios en backend.
+    if (tieneCampo && dataType === 'PERIODO') {
+      const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (selectedField) {
+        for (const y of this.newFilterSelectedYears) {
+          const yr = Number(y);
+          this.campaignFilters.push({
+            fieldDefinitionId: selectedField.id,
+            fieldCode: selectedField.fieldCode,
+            fieldName: `${selectedField.fieldName} (${y})`,
+            dataType: 'NUMERICO',
+            minValue: yr * 100 + 1,    // YYYY01
+            maxValue: yr * 100 + 12,   // YYYY12
+            tipoContacto: this.selectedTipoContacto ?? undefined
+          });
+        }
+      }
+      this.selectedFieldId = 0;
+      this.newFilterSelectedYears = [];
+      this.availableYears = [];
+      this.selectedTipoContacto = null;
+      this.error = null;
+      return;
     }
 
     // Si solo tiene tipo de contacto (sin campo), crear filtro solo con tipoContacto
@@ -368,6 +448,8 @@ export class CampaignFormComponent implements OnInit {
     this.distinctValuesForField = [];
     this.newFilterMinDate = '';
     this.newFilterMaxDate = '';
+    this.availableYears = [];
+    this.newFilterSelectedYears = [];
     this.selectedTipoContacto = null;
     this.error = null;
   }

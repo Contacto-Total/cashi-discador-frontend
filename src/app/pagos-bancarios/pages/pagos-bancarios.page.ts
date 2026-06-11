@@ -19,11 +19,12 @@ import {
 } from '../models/bcp-archivo.model';
 import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
 import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
+import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget],
+  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -224,7 +225,7 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
                 (ngModelChange)="onTenantChange($event)"
                 class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option [ngValue]="0">Todos los proveedores</option>
+                <option [ngValue]="0">Seleccione proveedor...</option>
                 @for (tenant of tenants(); track tenant.id) {
                   <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
                 }
@@ -239,7 +240,7 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
                 [disabled]="selectedTenantId === 0"
                 class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
               >
-                <option [ngValue]="0">Todas las carteras</option>
+                <option [ngValue]="0">Seleccione cartera...</option>
                 @for (portfolio of portfolios(); track portfolio.id) {
                   <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
                 }
@@ -253,7 +254,7 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
                 [disabled]="selectedPortfolioId === 0"
                 class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
               >
-                <option [ngValue]="0">Todas las subcarteras</option>
+                <option [ngValue]="0">Seleccione subcartera...</option>
                 @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
                   <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
                 }
@@ -290,7 +291,7 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
 
             <button
               (click)="procesarArchivo()"
-              [disabled]="!selectedFile() || isLoading()"
+              [disabled]="!selectedFile() || isLoading() || !hasRequiredBcpContext()"
               class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               @if (isLoading()) {
@@ -353,14 +354,19 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
             ></app-bcp-pagos-duplicados>
           }
 
-          @if (resultado()?.prevalidacion && resultado()!.prevalidacion!.length > 0) {
+          @if (getPrevalidacionProcesada().length > 0) {
             <app-bcp-prevalidacion-archivo
-              [data]="getPrevalidacionFiltrada()"
+              [data]="getPrevalidacionProcesadaFiltrada()"
               [todosAprobables]="resultado()?.todosAprobables === true"
               [approvalEnabled]="canAprobarArchivo()"
               [isSaving]="isApprovingArchivo()"
-              (guardar)="aprobarArchivo()"
+              [pagosDuplicados]="resultado()?.pagosDuplicados || []"
+              (guardar)="aprobarArchivo($event)"
             ></app-bcp-prevalidacion-archivo>
+          }
+
+          @if (resultado()?.prevalidacionNoProcesados && resultado()!.prevalidacionNoProcesados!.length > 0) {
+            <app-bcp-no-procesados [data]="resultado()!.prevalidacionNoProcesados!"></app-bcp-no-procesados>
           }
 
           @if (resultadoAprobacion(); as aprobacion) {
@@ -379,43 +385,6 @@ import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget
             </div>
           }
 
-          <!-- Tabla de detalles -->
-          @if (resultado()?.detalles && resultado()!.detalles.length > 0) {
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos</h2>
-                <span class="text-sm text-slate-600 dark:text-slate-400">{{ resultado()?.detalles?.length }} registros</span>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-slate-100 dark:bg-slate-700/50">
-                    <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Documento</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Monto</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Nro. Op.</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Sucursal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Terminal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Agencia</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (d of resultado()?.detalles; track d.numeroFila) {
-                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento || d.codigoDepositante }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.numeroOperacion }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.sucursal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.terminal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.agencia }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          }
         }
       }
 
@@ -1351,12 +1320,22 @@ export class PagosBancariosPage implements OnInit {
     const file = this.selectedFile();
     if (!file) return;
 
+    if (!this.hasRequiredBcpContext()) {
+      this.errorMessage.set('Seleccione proveedor, cartera y subcartera para prevalidar el archivo.');
+      return;
+    }
+
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.resultadoAprobacion.set(null);
     this.archivoAprobado.set(false);
 
-    this.bcpService.cargarArchivo(file).subscribe({
+    this.bcpService.cargarArchivo(file, {
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId,
+      toleranciaMonto: this.configTolerancia || undefined
+    }).subscribe({
       next: (resultado) => {
         this.resultado.set(resultado);
         if (!resultado.exitoso) {
@@ -1371,13 +1350,28 @@ export class PagosBancariosPage implements OnInit {
     });
   }
 
-  getPrevalidacionFiltrada(): PrevalidacionArchivoBcp[] {
-    const rows = this.resultado()?.prevalidacion || [];
+  getPrevalidacionProcesada(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultado();
+    const rows = resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+    return rows.filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO');
+  }
+
+  getPrevalidacionProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
+    const rows = this.getPrevalidacionProcesada();
     return rows.filter(row => {
       return this.matchesContextFilter(row, 'tenantId', 'tenant_id', this.selectedTenantId)
         && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioId)
         && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId);
     });
+  }
+
+  getPrevalidacionOriginal(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultado();
+    return resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+  }
+
+  hasRequiredBcpContext(): boolean {
+    return this.selectedTenantId > 0 && this.selectedPortfolioId > 0 && this.selectedSubPortfolioId > 0;
   }
 
   hasPagosDuplicados(): boolean {
@@ -1387,22 +1381,21 @@ export class PagosBancariosPage implements OnInit {
   }
 
   canAprobarArchivo(): boolean {
-    const resultado = this.resultado();
-    const prevalidacion = resultado?.prevalidacion || [];
-    const hasDuplicados = (resultado?.pagosDuplicados?.length || 0) > 0;
+    const prevalidacion = this.getPrevalidacionProcesadaFiltrada();
 
     return !this.archivoAprobado()
-      && resultado?.todosAprobables === true
       && prevalidacion.length > 0
-      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR')
-      && !hasDuplicados;
+      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR');
   }
 
-  aprobarArchivo(): void {
+  aprobarArchivo(filasAprobadas: PrevalidacionArchivoBcp[]): void {
     const resultado = this.resultado();
     const user = this.authService.getCurrentUser();
 
-    if (!resultado || !this.canAprobarArchivo() || !user) return;
+    if (!resultado || !this.canAprobarArchivo() || !user || !filasAprobadas || filasAprobadas.length === 0) return;
+
+    const paresAprobados = this.getParesAprobados(filasAprobadas);
+    if (paresAprobados.length === 0) return;
 
     this.isApprovingArchivo.set(true);
     this.resultadoAprobacion.set(null);
@@ -1411,8 +1404,8 @@ export class PagosBancariosPage implements OnInit {
     this.bcpService.aprobarArchivo({
       nombreArchivo: resultado.nombreArchivo,
       cabecera: resultado.cabecera,
-      detalles: resultado.detalles || [],
-      prevalidacion: resultado.prevalidacion || [],
+      detalles: paresAprobados.map(par => par.detalle),
+      prevalidacion: paresAprobados.map(par => par.prevalidacion),
       aprobadoPorId: user.id,
       aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
     }).subscribe({
@@ -1445,6 +1438,20 @@ export class PagosBancariosPage implements OnInit {
     const value = row?.[camelKey] ?? row?.[snakeKey];
     if (value === null || value === undefined || value === '') return true;
     return Number(value) === Number(selectedId);
+  }
+
+  private isPrevalidacionLista(row: any): boolean {
+    return row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR';
+  }
+
+  private getParesAprobados(filasAprobadas: PrevalidacionArchivoBcp[]): Array<{ detalle: any; prevalidacion: PrevalidacionArchivoBcp }> {
+    const detalles = this.resultado()?.detalles || [];
+    const prevalidacion = this.getPrevalidacionOriginal();
+    const aprobadas = new Set(filasAprobadas);
+
+    return detalles
+      .map((detalle: any, index: number) => ({ detalle, prevalidacion: prevalidacion[index] }))
+      .filter(par => !!par.prevalidacion && aprobadas.has(par.prevalidacion) && this.isPrevalidacionLista(par.prevalidacion));
   }
 
   // === Carga OH ===

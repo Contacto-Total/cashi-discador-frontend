@@ -51,6 +51,8 @@ export interface BcpArchivoResultado {
   archivoId: number | null;
   duplicadosOmitidos: number;
   prevalidacion?: PrevalidacionArchivoBcp[] | null;
+  prevalidacionProcesados?: PrevalidacionArchivoBcp[] | null;
+  prevalidacionNoProcesados?: PrevalidacionArchivoBcp[] | null;
   todosAprobables?: boolean;
   estadoCarga?: EstadoCargaArchivoBcp;
   pagosDuplicados?: BcpPagoDuplicado[] | null;
@@ -58,6 +60,7 @@ export interface BcpArchivoResultado {
 
 export type EstadoCargaArchivoBcp =
   | 'PREVALIDADO'
+  | 'PREVALIDADO_CON_DUPLICADOS_CONTEXTO'
   | 'ARCHIVO_CON_PAGOS_DUPLICADOS'
   | 'TODOS_PAGOS_YA_REGISTRADOS'
   | 'PROCESADO_SIN_PREVALIDACION';
@@ -73,6 +76,13 @@ export interface BcpPagoDuplicado {
   banco: string;
   numeroOperacion: string | null;
   motivo: MotivoPagoDuplicadoBcp | string;
+}
+
+export interface BcpArchivoCargaRequest {
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+  toleranciaMonto?: number;
 }
 
 export interface AprobarArchivoBcpRequest {
@@ -99,15 +109,13 @@ export interface AprobarArchivoBcpResponse {
 export type EstadoPrevalidacionBcp =
   | 'LISTO_PARA_APROBAR'
   | 'REQUIERE_REVISION_MONTO'
-  | 'PAGO_REGISTRADO_FECHA_FUERA_TOLERANCIA'
   | 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO'
-  | 'PAGO_REGISTRADO_DOCUMENTO_DISTINTO_BANCO'
+  | 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO'
   | 'DOCUMENTO_NO_EXISTE_EN_CLIENTES'
+  | 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
   | 'NO_TIENE_PROMESA'
   | 'PROMESA_SIN_CUOTAS_PENDIENTES'
   | 'FALTA_TIPIFICACION_CANCELACION'
-  | 'CLIENTE_MULTIPLES_CARTERAS_NO_COINCIDE_MONTO_FECHA'
-  | 'CUOTAS_ANTERIORES_VENCIDAS_SIN_PAGO'
   | 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
   | 'SIN_CANDIDATO';
 
