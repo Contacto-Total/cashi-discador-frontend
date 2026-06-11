@@ -390,6 +390,31 @@
               </div>
             </ng-container>
 
+            <!-- PERIODO: Multiselect de años (YYYYMM → captura todos los meses del año) -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'PERIODO'">
+              <div class="form-group texto-values-group" style="grid-column: span 2;">
+                <label>Años Disponibles <small>(captura todos los meses del año seleccionado)</small></label>
+                <div *ngIf="loadingDistinctValues" class="info-message">
+                  <span>Cargando años...</span>
+                </div>
+                <div *ngIf="!loadingDistinctValues && availableYears.length > 0" class="distinct-values-list">
+                  <label class="distinct-value-item" *ngFor="let y of availableYears">
+                    <input
+                      type="checkbox"
+                      [checked]="isYearSelected(y)"
+                      (change)="toggleYear(y)">
+                    <span>{{ y }}</span>
+                  </label>
+                </div>
+                <div *ngIf="!loadingDistinctValues && availableYears.length === 0" class="info-message">
+                  <span>No se encontraron periodos para este campo.</span>
+                </div>
+                <div *ngIf="newFilterSelectedYears.length > 0" class="selected-count">
+                  {{ newFilterSelectedYears.length }} año(s) seleccionado(s)
+                </div>
+              </div>
+            </ng-container>
+
             <!-- FECHA: Rango de fechas -->
             <ng-container *ngIf="getSelectedFieldDataType() === 'FECHA'">
               <div class="form-group">
