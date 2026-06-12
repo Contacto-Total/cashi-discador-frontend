@@ -6,7 +6,9 @@ import {
   GestionesReportService,
   ReporteGestionesDTO,
   ResumenMetricas,
-  ReporteResponse
+  ReporteResponse,
+  AgenteGestion,
+  GestionesFiltros
 } from './gestiones-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
@@ -30,47 +32,33 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
       <!-- Filtros -->
       <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 mb-6">
+        <!-- Fila 1: fechas + jerarquia + asesor -->
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <!-- Fecha Desde -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Fecha Desde *
-            </label>
-            <input
-              type="date"
-              [(ngModel)]="filtros.fechaDesde"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Desde *</label>
+            <input type="date" [(ngModel)]="filtros.fechaDesde"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
           </div>
 
           <!-- Fecha Hasta -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Fecha Hasta *
-            </label>
-            <input
-              type="date"
-              [(ngModel)]="filtros.fechaHasta"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Hasta *</label>
+            <input type="date" [(ngModel)]="filtros.fechaHasta"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
           </div>
 
           <!-- Proveedor -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Proveedor
-            </label>
-            <select
-              [(ngModel)]="filtros.idProveedor"
-              (ngModelChange)="onProveedorChange($event)"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Proveedor</label>
+            <select [(ngModel)]="filtros.idProveedor" (ngModelChange)="onProveedorChange($event)"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
               <option [ngValue]="null">Todos</option>
               @for (prov of proveedores(); track prov.id) {
                 <option [ngValue]="prov.id">{{ prov.nombreInquilino }}</option>
@@ -80,18 +68,13 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Cartera -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Cartera
-            </label>
-            <select
-              [(ngModel)]="filtros.idCartera"
-              (ngModelChange)="onCarteraChange($event)"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cartera</label>
+            <select [(ngModel)]="filtros.idCartera" (ngModelChange)="onCarteraChange($event)"
               [disabled]="!filtros.idProveedor"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               <option [ngValue]="null">Todas</option>
               @for (cart of carteras(); track cart.id) {
                 <option [ngValue]="cart.id">{{ cart.nombreCartera }}</option>
@@ -101,17 +84,12 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
           <!-- Subcartera -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Subcartera
-            </label>
-            <select
-              [(ngModel)]="filtros.idSubcartera"
-              [disabled]="!filtros.idCartera"
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcartera</label>
+            <select [(ngModel)]="filtros.idSubcartera" [disabled]="!filtros.idCartera"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               <option [ngValue]="null">Todas</option>
               @for (sub of subcarteras(); track sub.id) {
                 <option [ngValue]="sub.id">{{ sub.nombreSubcartera }}</option>
@@ -119,15 +97,100 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </select>
           </div>
 
-          <!-- Botones -->
+          <!-- Asesor (autocomplete) -->
+          <div class="relative">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Asesor</label>
+            <div class="relative">
+              <input type="text" [(ngModel)]="asesorBusqueda"
+                (ngModelChange)="onAsesorInput($event)"
+                (focus)="showAsesorList.set(true)"
+                (blur)="showAsesorList.set(false)"
+                placeholder="Todos"
+                autocomplete="off"
+                class="w-full px-3 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg
+                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              @if (filtros.idAgente) {
+                <button type="button" (mousedown)="clearAsesor()"
+                  class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                  <lucide-angular name="x" [size]="16"></lucide-angular>
+                </button>
+              }
+            </div>
+            @if (showAsesorList() && agentesFiltrados().length > 0) {
+              <ul class="absolute z-30 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-gray-200
+                         dark:border-gray-600 bg-white dark:bg-gray-700 shadow-lg text-sm">
+                @for (ag of agentesFiltrados(); track ag.id) {
+                  <li (mousedown)="selectAsesor(ag)"
+                    class="px-3 py-2 cursor-pointer text-gray-800 dark:text-gray-100
+                           hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                    {{ ag.nombre }}
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+
+        <!-- Fila 2: documento + celular + estado de gestion -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mt-4">
+          <!-- Documento -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Documento</label>
+            <input type="text" inputmode="numeric" [(ngModel)]="filtros.documento" placeholder="Ej: 12345678"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+
+          <!-- Celular -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">N° Celular</label>
+            <input type="text" inputmode="numeric" [(ngModel)]="filtros.celular" placeholder="Ej: 987654321"
+              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+
+          <!-- Estado de gestion (chips multi-seleccion) -->
+          <div class="lg:col-span-4">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Estado de gestión</label>
+              @if (estadosSeleccionados().length > 0) {
+                <button type="button" (click)="estadosSeleccionados.set([])"
+                  class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Limpiar</button>
+              }
+            </div>
+            <div class="flex flex-wrap gap-2">
+              @for (e of estadosDisponibles; track e.value) {
+                <button type="button" (click)="toggleEstado(e.value)" [class]="chipClass(e.value)">
+                  <span class="w-2 h-2 rounded-full"
+                    [class]="isEstadoActivo(e.value) ? 'bg-white' : e.dot"></span>
+                  {{ e.label }}
+                </button>
+              }
+              <span class="text-xs text-gray-400 dark:text-gray-500 self-center ml-1">
+                {{ estadosSeleccionados().length === 0 ? '(ninguno = todos)' : '' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fila 3: acciones -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
+          @if (!filtros.fechaDesde || !filtros.fechaHasta) {
+            <p class="text-sm text-amber-600 dark:text-amber-400">
+              * Las fechas son obligatorias para evitar consultas muy grandes
+            </p>
+          } @else {
+            <span></span>
+          }
           <div class="flex items-end gap-2">
-            <button
-              (click)="buscar()"
+            <button (click)="buscar()"
               [disabled]="loading() || !filtros.fechaDesde || !filtros.fechaHasta"
-              class="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold
+              class="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold
                      rounded-lg transition-colors flex items-center justify-center gap-2
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               @if (loading()) {
                 <lucide-angular name="loader-2" [size]="18" class="animate-spin"></lucide-angular>
               } @else {
@@ -135,25 +198,16 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
               }
               Buscar
             </button>
-            <button
-              (click)="exportarExcel()"
+            <button (click)="exportarExcel()"
               [disabled]="loading() || data().length === 0"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
+              class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold
                      rounded-lg transition-colors flex items-center gap-2
-                     disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+                     disabled:opacity-50 disabled:cursor-not-allowed">
               <lucide-angular name="download" [size]="18"></lucide-angular>
               Excel
             </button>
           </div>
         </div>
-
-        <!-- Mensaje de fechas requeridas -->
-        @if (!filtros.fechaDesde || !filtros.fechaHasta) {
-          <p class="mt-2 text-sm text-amber-600 dark:text-amber-400">
-            * Las fechas son obligatorias para evitar consultas muy grandes
-          </p>
-        }
       </div>
 
       <!-- Metricas -->
@@ -364,12 +418,30 @@ export class GestionesReportComponent implements OnInit {
   carteras = signal<Cartera[]>([]);
   subcarteras = signal<Subcartera[]>([]);
 
+  // Asesor (autocomplete)
+  private agentes: AgenteGestion[] = [];
+  agentesFiltrados = signal<AgenteGestion[]>([]);
+  asesorBusqueda = '';
+  showAsesorList = signal(false);
+
+  // Estado de gestion (chips multi-seleccion)
+  estadosDisponibles = [
+    { value: 'COMPLETADA',    label: 'Completada',    dot: 'bg-green-500',  active: 'bg-green-500 border-green-500 text-white' },
+    { value: 'SIN_CONTACTO',  label: 'Sin Contacto',  dot: 'bg-orange-500', active: 'bg-orange-500 border-orange-500 text-white' },
+    { value: 'NO_GESTIONADA', label: 'No Gestionada', dot: 'bg-yellow-500', active: 'bg-yellow-500 border-yellow-500 text-white' },
+    { value: 'ANULADA',       label: 'Anulada',       dot: 'bg-red-500',    active: 'bg-red-500 border-red-500 text-white' }
+  ];
+  estadosSeleccionados = signal<string[]>([]);
+
   filtros = {
     fechaDesde: '',
     fechaHasta: '',
     idProveedor: null as number | null,
     idCartera: null as number | null,
-    idSubcartera: null as number | null
+    idSubcartera: null as number | null,
+    idAgente: null as number | null,
+    documento: '',
+    celular: ''
   };
 
   constructor(
@@ -390,6 +462,71 @@ export class GestionesReportComponent implements OnInit {
       next: (data) => this.proveedores.set(data),
       error: (err) => console.error('Error cargando proveedores:', err)
     });
+
+    this.reporteService.getAgentes().subscribe({
+      next: (data) => { this.agentes = data; this.agentesFiltrados.set(data.slice(0, 50)); },
+      error: (err) => console.error('Error cargando asesores:', err)
+    });
+  }
+
+  // ===== Asesor autocomplete =====
+  onAsesorInput(texto: string): void {
+    this.showAsesorList.set(true);
+    const q = (texto || '').trim().toLowerCase();
+    // Si el usuario edita el texto, se invalida la seleccion previa
+    this.filtros.idAgente = null;
+    const base = q
+      ? this.agentes.filter(a => a.nombre.toLowerCase().includes(q))
+      : this.agentes;
+    this.agentesFiltrados.set(base.slice(0, 50));
+  }
+
+  selectAsesor(ag: AgenteGestion): void {
+    this.filtros.idAgente = ag.id;
+    this.asesorBusqueda = ag.nombre;
+    this.showAsesorList.set(false);
+  }
+
+  clearAsesor(): void {
+    this.filtros.idAgente = null;
+    this.asesorBusqueda = '';
+    this.agentesFiltrados.set(this.agentes.slice(0, 50));
+    this.showAsesorList.set(false);
+  }
+
+  // ===== Estado de gestion chips =====
+  toggleEstado(value: string): void {
+    const actuales = this.estadosSeleccionados();
+    this.estadosSeleccionados.set(
+      actuales.includes(value) ? actuales.filter(v => v !== value) : [...actuales, value]
+    );
+  }
+
+  isEstadoActivo(value: string): boolean {
+    return this.estadosSeleccionados().includes(value);
+  }
+
+  chipClass(value: string): string {
+    const base = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border transition-colors cursor-pointer';
+    const est = this.estadosDisponibles.find(e => e.value === value);
+    if (this.isEstadoActivo(value)) {
+      return `${base} ${est?.active ?? ''}`;
+    }
+    return `${base} bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600`;
+  }
+
+  /** Construye el objeto de filtros para el service */
+  private buildFiltros(): GestionesFiltros {
+    return {
+      fechaDesde: this.filtros.fechaDesde,
+      fechaHasta: this.filtros.fechaHasta,
+      idCartera: this.filtros.idCartera,
+      idSubcartera: this.filtros.idSubcartera,
+      idAgente: this.filtros.idAgente,
+      documento: this.filtros.documento,
+      telefono: this.filtros.celular,
+      estadosGestion: this.estadosSeleccionados()
+    };
   }
 
   onProveedorChange(idProveedor: number | null): void {
@@ -429,17 +566,7 @@ export class GestionesReportComponent implements OnInit {
   private loadPreview(): void {
     this.loading.set(true);
 
-    this.reporteService.getReporte(
-      this.filtros.fechaDesde,
-      this.filtros.fechaHasta,
-      this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined,
-      undefined,
-      undefined,
-      undefined,
-      0,
-      this.previewSize
-    ).subscribe({
+    this.reporteService.getReporte(this.buildFiltros(), 0, this.previewSize).subscribe({
       next: (response) => {
         this.data.set(response.data);
         this.metricas.set(response.metricas);
@@ -462,12 +589,7 @@ export class GestionesReportComponent implements OnInit {
 
     this.loading.set(true);
 
-    this.reporteService.exportarExcel(
-      this.filtros.fechaDesde,
-      this.filtros.fechaHasta,
-      this.filtros.idCartera || undefined,
-      this.filtros.idSubcartera || undefined
-    ).subscribe({
+    this.reporteService.exportarExcel(this.buildFiltros()).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
