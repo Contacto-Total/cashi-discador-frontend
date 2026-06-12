@@ -2651,15 +2651,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // se resetea al guardar. No usamos isTipifying porque la carga manual lo
   // activa en la entrada sin que haya habido llamada.
   protected llamadaRealizada = signal(false);
-  // Referencias estables para registrar/desregistrar en el lock service y el
-  // listener de beforeunload (deben ser la MISMA referencia en add/remove).
+  // Referencia estable para registrar/desregistrar en el lock service
+  // (debe ser la MISMA referencia en register/unregister).
   private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
-  private boundBeforeUnload = (e: BeforeUnloadEvent) => {
-    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
-      e.preventDefault();
-      e.returnValue = '';
-    }
-  };
   // Trampa de historial para el botón "Atrás" del navegador. El CanDeactivate
   // guard es asíncrono y en back rápido/múltiple el navegador procesa varios
   // popstate antes de que Angular cancele/restaure la URL, dejando escapar. Esta
@@ -2746,11 +2740,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.loadManagementHistory();
 
     // Bloqueo de salida: si se hizo una llamada, la única vía de salida es
-    // Guardar Gestión. Cubre el botón de logout (vía el service) y el
-    // refresh/cierre de pestaña (vía beforeunload). El sidebar y el back se
-    // cubren con el CanDeactivate guard de la ruta.
+    // Guardar Gestión. El sidebar se cubre con el CanDeactivate guard de la
+    // ruta, el botón de logout vía el lock service, y el botón Atrás del
+    // navegador vía la trampa de historial (popstate). No usamos beforeunload
+    // porque su diálogo nativo también aparece al dar Atrás y no se puede
+    // personalizar; cerrar pestaña/recargar quedan sin aviso (acto deliberado).
     this.gestionLock.register(this.boundLockCheck);
-    window.addEventListener('beforeunload', this.boundBeforeUnload);
     window.addEventListener('popstate', this.boundPopState);
 
     // Verificar estado inicial de la llamada
@@ -3908,7 +3903,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // salida forzada por /login). El unregister por identidad evita borrar el
     // predicado de otra instancia.
     this.gestionLock.unregister(this.boundLockCheck);
-    window.removeEventListener('beforeunload', this.boundBeforeUnload);
     window.removeEventListener('popstate', this.boundPopState);
 
     if (this.callTimer) {
