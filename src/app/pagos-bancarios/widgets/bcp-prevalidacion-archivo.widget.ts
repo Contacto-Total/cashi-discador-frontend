@@ -42,7 +42,11 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
             <tbody [class]="getGroupClass(row)">
               <tr class="border-t-2" [class]="getGroupBorderClass(row)">
                 <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</td>
-                <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoBanco', 'documento_banco') || '-' }}</td>
+                <td class="px-2 py-2 font-semibold whitespace-nowrap">
+                  <button type="button" (click)="documentoClick.emit(row)" class="text-left text-blue-700 underline-offset-2 hover:underline dark:text-blue-300" [disabled]="!value(row, 'documentoBanco', 'documento_banco')">
+                    {{ value(row, 'documentoBanco', 'documento_banco') || '-' }}
+                  </button>
+                </td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaBanco', 'fecha_banco') || '-' }}</td>
                 <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
@@ -99,6 +103,7 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
   @Input() showGuardar = true;
   @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
+  @Output() documentoClick = new EventEmitter<PrevalidacionArchivoBcp>();
 
   private readonly recomendacionesPorEstado: Record<string, { problema: string; accion: string }> = {
     LISTO_PARA_APROBAR: {

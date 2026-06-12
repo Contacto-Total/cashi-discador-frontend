@@ -11,6 +11,8 @@ import {
   BcpPagoManualResponse,
   BcpPagoManualFiltros,
   BcpPagoManualListResponse,
+  ResumenConciliacionCliente,
+  ResumenConciliacionClienteRequest,
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
 
@@ -47,6 +49,15 @@ export class BcpPagosService {
   aprobarArchivo(request: AprobarArchivoBcpRequest): Observable<AprobarArchivoBcpResponse> {
     console.log('[BCP] Aprobando archivo:', request.nombreArchivo);
     return this.http.post<AprobarArchivoBcpResponse>(`${this.baseUrl}/aprobar-archivo`, request);
+  }
+
+  obtenerResumenConciliacionCliente(documento: string, request: ResumenConciliacionClienteRequest): Observable<ResumenConciliacionCliente> {
+    const params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    return this.http.get<ResumenConciliacionCliente>(`${this.baseUrl}/clientes/${encodeURIComponent(documento)}/resumen-conciliacion`, { params });
   }
 
   /**

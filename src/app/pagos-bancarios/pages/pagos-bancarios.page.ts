@@ -15,16 +15,18 @@ import {
   BcpPagoManualFiltros,
   AprobarArchivoBcpResponse,
   PrevalidacionArchivoBcp,
+  ResumenConciliacionCliente,
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
 import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
 import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
+import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget],
+  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -356,6 +358,7 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
               [isSaving]="isApprovingArchivo()"
               [pagosDuplicados]="resultado()?.pagosDuplicados || []"
               (guardar)="aprobarArchivo($event)"
+              (documentoClick)="abrirResumenConciliacion($event, 'bcp')"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -969,6 +972,7 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
               [isSaving]="isApprovingArchivoOh()"
               [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
               (guardar)="aprobarArchivoOh($event)"
+              (documentoClick)="abrirResumenConciliacion($event, 'oh')"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -1155,6 +1159,15 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
           </div>
         </div>
       }
+
+      <app-cliente-resumen-conciliacion-drawer
+        [open]="resumenDrawerOpen()"
+        [loading]="isLoadingResumenCliente()"
+        [error]="resumenClienteError()"
+        [documento]="resumenClienteDocumento()"
+        [resumen]="resumenCliente()"
+        (close)="cerrarResumenConciliacion()"
+      ></app-cliente-resumen-conciliacion-drawer>
     </div>
   `
 })
@@ -1227,6 +1240,12 @@ export class PagosBancariosPage implements OnInit {
   isLoadingConciliacion = signal(false);
   showConciliacionModal = signal(false);
   resultadoConciliacion = signal<ResultadoConciliacion | null>(null);
+
+  resumenDrawerOpen = signal(false);
+  isLoadingResumenCliente = signal(false);
+  resumenClienteError = signal<string | null>(null);
+  resumenClienteDocumento = signal<string | null>(null);
+  resumenCliente = signal<ResumenConciliacionCliente | null>(null);
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
@@ -1422,6 +1441,46 @@ export class PagosBancariosPage implements OnInit {
 
   cerrarModalConciliacion(): void {
     this.showConciliacionModal.set(false);
+  }
+
+  abrirResumenConciliacion(row: PrevalidacionArchivoBcp, origen: 'bcp' | 'oh'): void {
+    const documento = String((row as any).documentoBanco || (row as any).documento_banco || '').trim();
+    if (!documento) return;
+
+    const request = origen === 'bcp'
+      ? {
+        tenantId: this.selectedTenantId,
+        carteraId: this.selectedPortfolioId,
+        subcarteraId: this.selectedSubPortfolioId
+      }
+      : {
+        tenantId: this.selectedTenantIdOh,
+        carteraId: this.selectedPortfolioIdOh,
+        subcarteraId: this.selectedSubPortfolioIdOh
+      };
+
+    if (!request.tenantId || !request.carteraId || !request.subcarteraId) return;
+
+    this.resumenDrawerOpen.set(true);
+    this.isLoadingResumenCliente.set(true);
+    this.resumenClienteError.set(null);
+    this.resumenClienteDocumento.set(documento);
+    this.resumenCliente.set(null);
+
+    this.bcpService.obtenerResumenConciliacionCliente(documento, request).subscribe({
+      next: (resumen) => {
+        this.resumenCliente.set(resumen);
+        this.isLoadingResumenCliente.set(false);
+      },
+      error: (error) => {
+        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo cargar el resumen de conciliación.');
+        this.isLoadingResumenCliente.set(false);
+      }
+    });
+  }
+
+  cerrarResumenConciliacion(): void {
+    this.resumenDrawerOpen.set(false);
   }
 
   // === Carga Masiva ===
