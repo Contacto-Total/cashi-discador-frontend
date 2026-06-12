@@ -2645,6 +2645,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Se levanta al guardar (onSaveSuccess) para habilitar la navegación
   // programática de salida. Muere con la instancia del componente.
   private salidaAutorizada = false;
+  // Marcador explícito de "se colocó una llamada en esta gestión". Es FALSE al
+  // entrar (incluida la entrada manual, que setea isTipifying sin llamada) y
+  // solo se vuelve TRUE al iniciar una llamada (startCall / iniciarRellamada);
+  // se resetea al guardar. No usamos isTipifying porque la carga manual lo
+  // activa en la entrada sin que haya habido llamada.
+  protected llamadaRealizada = signal(false);
   // Referencias estables para registrar/desregistrar en el lock service y el
   // listener de beforeunload (deben ser la MISMA referencia en add/remove).
   private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
@@ -2693,13 +2699,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   ) {}
 
   /**
-   * Indica si hay una gestión "en curso": se hizo (o está en curso) una llamada
-   * y aún no se guarda. Es un método (no computed) porque `callStartTime` es un
-   * campo plano no reactivo; se evalúa fresco en cada chequeo de salida.
-   * Refleja el mismo predicado usado al guardar (ver saveManagement).
+   * Indica si hay una gestión "en curso": se colocó una llamada en esta gestión
+   * (en curso o ya finalizada) y aún no se guarda. NO incluye isTipifying porque
+   * la entrada manual lo activa sin que haya habido llamada (falso positivo de
+   * bloqueo). `llamadaRealizada` cubre tanto llamadas normales (startCall) como
+   * manuales/rellamada (iniciarRellamada).
    */
   hasGestionEnCurso(): boolean {
-    return this.callActive() || this.rellamadaCallActive() || this.isTipifying() || !!this.callStartTime;
+    return this.callActive() || this.rellamadaCallActive() || this.llamadaRealizada();
   }
 
   /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
@@ -3906,7 +3913,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Validamos que es una rellamada
     if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
-    
+    this.llamadaRealizada.set(true); // llamada manual/rellamada: bloquea salida hasta guardar
+
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
     this.sipService.setCurrentOutgoingNumber(phoneNumber);
@@ -4031,6 +4039,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   startCall() {
     this.callActive.set(true);
+    this.llamadaRealizada.set(true); // se colocó una llamada: bloquea salida hasta guardar
     this.callDuration.set(0);
     this.callStartTime = new Date().toISOString();
 
@@ -5608,6 +5617,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
     // Todas las ramas de este método terminan navegando fuera de la pantalla.
     this.salidaAutorizada = true;
+    this.llamadaRealizada.set(false); // gestión cerrada: ya no hay llamada pendiente de guardar
     this.saving.set(false);
     this.showSuccess.set(true);
 
