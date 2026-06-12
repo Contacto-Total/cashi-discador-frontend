@@ -8,8 +8,8 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
   imports: [CommonModule],
   template: `
     @if (open) {
-      <div class="fixed inset-y-0 right-0 z-50 flex justify-end pointer-events-none">
-        <aside class="pointer-events-auto h-screen w-[520px] max-w-[94vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+      <div class="fixed inset-0 z-50 flex justify-end bg-transparent" (click)="close.emit()">
+        <aside class="h-screen w-[520px] max-w-[94vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
           <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -69,9 +69,9 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                           <thead class="bg-slate-100 text-left text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                             <tr>
                               <th class="w-[22%] px-1.5 py-1.5 font-semibold">Cuota</th>
-                              <th class="w-[23%] px-1.5 py-1.5 font-semibold">Programación</th>
-                              <th class="w-[22%] px-1.5 py-1.5 font-semibold">Ejecución</th>
-                              <th class="w-[33%] px-1.5 py-1.5 font-semibold">Validación</th>
+                              <th class="w-[23%] px-1.5 py-1.5 font-semibold">Promesa</th>
+                              <th class="w-[22%] px-1.5 py-1.5 font-semibold">Agente</th>
+                              <th class="w-[33%] px-1.5 py-1.5 font-semibold">BANCO</th>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
