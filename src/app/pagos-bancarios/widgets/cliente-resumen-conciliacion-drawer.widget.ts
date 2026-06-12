@@ -68,10 +68,10 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                         <table class="w-full table-fixed text-[10px] leading-tight">
                           <thead class="bg-slate-100 text-left text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                             <tr>
-                              <th class="w-[22%] px-1.5 py-1.5 font-semibold">Cuota</th>
+                              <th class="w-[15%] px-1.5 py-1.5 font-semibold">Cuota</th>
                               <th class="w-[23%] px-1.5 py-1.5 font-semibold">Promesa</th>
-                              <th class="w-[22%] px-1.5 py-1.5 font-semibold">Agente</th>
-                              <th class="w-[33%] px-1.5 py-1.5 font-semibold">BANCO</th>
+                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">Agente</th>
+                              <th class="w-[28%] px-1.5 py-1.5 font-semibold">BANCO</th>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -92,15 +92,14 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                                   @if (cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) {
                                     <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
                                   }
-                                </td>
-                                <td class="px-1.5 py-1.5">
-                                  <div class="flex flex-wrap gap-1">
+                                  <div class="mt-1 flex flex-wrap gap-1">
                                     @if (hasPagoVerificado(cuota)) {
                                       <span class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
                                     }
-                                    @for (id of getPagoBancarioIds(cuota); track id) {
-                                      <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">PB {{ id }}</span>
-                                    }
+                                  </div>
+                                </td>
+                                <td class="px-1.5 py-1.5">
+                                  <div class="flex flex-wrap gap-1">
                                     @for (operacion of getOperaciones(cuota); track operacion) {
                                       <span class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Op. {{ operacion }}</span>
                                     }
