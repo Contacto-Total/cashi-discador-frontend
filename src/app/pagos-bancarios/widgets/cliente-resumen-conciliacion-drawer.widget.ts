@@ -8,8 +8,8 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
   imports: [CommonModule],
   template: `
     @if (open) {
-      <div class="fixed inset-y-0 right-0 z-50 flex w-full justify-end bg-black/20 pr-3 pt-3 sm:w-auto" (click)="close.emit()">
-        <aside class="h-[calc(100vh-1.5rem)] w-[92vw] max-w-md overflow-y-auto rounded-l-2xl bg-white shadow-2xl dark:bg-slate-900" (click)="$event.stopPropagation()">
+      <div class="fixed inset-y-0 right-0 z-50 flex justify-end pointer-events-none">
+        <aside class="pointer-events-auto h-screen w-[440px] max-w-[92vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
           <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -65,33 +65,31 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                           </div>
                           <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Pago real: {{ cuota.fechaPagoReal || '-' }} · S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
 
-                          <div class="mt-2 overflow-x-auto">
-                            <table class="min-w-full text-xs">
-                              <thead class="text-left text-slate-500 dark:text-slate-400">
-                                <tr>
-                                  <th class="py-1 pr-2">Fecha</th>
-                                  <th class="py-1 pr-2 text-right">Monto</th>
-                                  <th class="py-1 pr-3">Banco</th>
-                                  <th class="py-1 pr-2">V.</th>
-                                  <th class="py-1 pr-2">PB</th>
-                                </tr>
-                              </thead>
-                              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                                @for (pago of cuota.pagos; track pago.pagoCuotaId) {
-                                  <tr>
-                                    <td class="py-2 pr-2 text-slate-700 dark:text-slate-300">{{ pago.fechaPago }}</td>
-                                    <td class="py-2 pr-2 text-right font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pago.montoPago) }}</td>
-                                    <td class="py-2 pr-3 text-slate-700 dark:text-slate-300">{{ pago.banco }}</td>
-                                    <td class="py-2 pr-2" [class]="pago.verificadoBanco ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'">{{ pago.verificadoBanco ? 'Sí' : 'No' }}</td>
-                                    <td class="py-2 pr-2 text-slate-700 dark:text-slate-300">{{ pago.pagoBancarioId || '-' }}</td>
-                                  </tr>
-                                } @empty {
-                                  <tr>
-                                    <td colspan="5" class="py-3 text-center text-slate-500 dark:text-slate-400">Sin pagos registrados para esta cuota.</td>
-                                  </tr>
-                                }
-                              </tbody>
-                            </table>
+                          <div class="mt-2 space-y-2">
+                            @for (pago of cuota.pagos; track pago.pagoCuotaId) {
+                              <div class="rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800/60">
+                                <div class="flex items-center justify-between gap-3">
+                                  <div>
+                                    <p class="text-xs font-semibold text-slate-900 dark:text-white">{{ pago.fechaPago }} · {{ pago.banco }}</p>
+                                    <p class="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Operación: {{ pago.numeroOperacion || '-' }}</p>
+                                  </div>
+                                  <p class="text-sm font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(pago.montoPago) }}</p>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                                  <span class="rounded-full px-2 py-0.5 font-semibold" [class]="pago.verificadoBanco ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
+                                    {{ pago.verificadoBanco ? 'Verificado banco' : 'No verificado' }}
+                                  </span>
+                                  <span class="rounded-full bg-blue-100 px-2 py-0.5 font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                                    Pago bancario: {{ pago.pagoBancarioId || '-' }}
+                                  </span>
+                                  @if (pago.fechaVerificacion) {
+                                    <span class="rounded-full bg-slate-200 px-2 py-0.5 font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-300">{{ pago.fechaVerificacion }}</span>
+                                  }
+                                </div>
+                              </div>
+                            } @empty {
+                              <div class="rounded-lg border border-dashed border-slate-300 p-3 text-center text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">Sin pagos registrados para esta cuota.</div>
+                            }
                           </div>
                         </div>
                       }
