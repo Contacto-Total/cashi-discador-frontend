@@ -358,7 +358,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
               [isSaving]="isApprovingArchivo()"
               [pagosDuplicados]="resultado()?.pagosDuplicados || []"
               (guardar)="aprobarArchivo($event)"
-              (documentoClick)="abrirResumenConciliacion($event, 'bcp')"
+              (documentoClick)="abrirResumenConciliacionBcp($event)"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -972,7 +972,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
               [isSaving]="isApprovingArchivoOh()"
               [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
               (guardar)="aprobarArchivoOh($event)"
-              (documentoClick)="abrirResumenConciliacion($event, 'oh')"
+              (documentoClick)="abrirResumenConciliacionOh($event)"
             ></app-bcp-prevalidacion-archivo>
           }
 
@@ -1443,7 +1443,15 @@ export class PagosBancariosPage implements OnInit {
     this.showConciliacionModal.set(false);
   }
 
-  abrirResumenConciliacion(row: PrevalidacionArchivoBcp, origen: 'bcp' | 'oh'): void {
+  abrirResumenConciliacionBcp(row: PrevalidacionArchivoBcp): void {
+    this.abrirResumenConciliacion(row, 'bcp');
+  }
+
+  abrirResumenConciliacionOh(row: PrevalidacionArchivoBcp): void {
+    this.abrirResumenConciliacion(row, 'oh');
+  }
+
+  private abrirResumenConciliacion(row: PrevalidacionArchivoBcp, origen: 'bcp' | 'oh'): void {
     const documento = String((row as any).documentoBanco || (row as any).documento_banco || '').trim();
     if (!documento) return;
 
