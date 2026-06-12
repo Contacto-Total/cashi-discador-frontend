@@ -92,14 +92,17 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                                   @if (cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) {
                                     <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
                                   }
-                                  <div class="mt-1 flex flex-wrap gap-1">
-                                    @if (hasPagoVerificado(cuota)) {
-                                      <span class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Verificado</span>
-                                    }
-                                  </div>
                                 </td>
                                 <td class="px-1.5 py-1.5">
                                   <div class="flex flex-wrap gap-1">
+                                    @if (cuota.pagos.length > 0) {
+                                      <span class="rounded-full px-1.5 py-0.5 text-[9px] font-bold" [class]="hasPagoVerificado(cuota) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'">
+                                        {{ hasPagoVerificado(cuota) ? 'Verificado' : 'No verificado' }}
+                                      </span>
+                                    }
+                                    @for (id of getPagoBancarioIds(cuota); track id) {
+                                      <span class="rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">Pb {{ id }}</span>
+                                    }
                                     @for (operacion of getOperaciones(cuota); track operacion) {
                                       <span class="rounded-full bg-slate-200 px-1.5 py-0.5 text-[9px] font-bold text-slate-600 dark:bg-slate-700 dark:text-slate-300">Op. {{ operacion }}</span>
                                     }
