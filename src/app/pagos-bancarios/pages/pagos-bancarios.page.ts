@@ -366,6 +366,14 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
             ></app-bcp-pagos-duplicados>
           }
 
+          @if (getPagosYaConciliados().length > 0) {
+            <app-bcp-no-procesados
+              [data]="getPagosYaConciliados()"
+              title="Pagos ya conciliados previamente"
+              description="Este pago ya fue conciliado previamente. Estos registros no se aprueban ni se envían a conciliación."
+            ></app-bcp-no-procesados>
+          }
+
           @if (resultado()?.prevalidacionNoProcesados && resultado()!.prevalidacionNoProcesados!.length > 0) {
             <app-bcp-no-procesados [data]="resultado()!.prevalidacionNoProcesados!"></app-bcp-no-procesados>
           }
@@ -971,6 +979,14 @@ import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
             ></app-bcp-pagos-duplicados>
           }
 
+          @if (getPagosYaConciliadosOh().length > 0) {
+            <app-bcp-no-procesados
+              [data]="getPagosYaConciliadosOh()"
+              title="Pagos ya conciliados previamente"
+              description="Este pago ya fue conciliado previamente. Estos registros no se aprueban ni se envían a conciliación."
+            ></app-bcp-no-procesados>
+          }
+
           @if (resultadoAprobacionOh(); as aprobacionOh) {
             <div class="mb-6 rounded-lg border p-4" [class]="aprobacionOh.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
               <p class="font-semibold">{{ aprobacionOh.mensaje }}</p>
@@ -1463,7 +1479,8 @@ export class PagosBancariosPage implements OnInit {
   getPrevalidacionProcesada(): PrevalidacionArchivoBcp[] {
     const resultado: any = this.resultado();
     const rows = resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
-    return rows.filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO');
+    return rows.filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
+      && !this.isPagoYaConciliado(row));
   }
 
   getPrevalidacionProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
@@ -1479,6 +1496,10 @@ export class PagosBancariosPage implements OnInit {
   getPrevalidacionOriginal(): PrevalidacionArchivoBcp[] {
     const resultado: any = this.resultado();
     return resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+  }
+
+  getPagosYaConciliados(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOriginal().filter(row => this.isPagoYaConciliado(row));
   }
 
   hasRequiredBcpContext(): boolean {
@@ -1578,7 +1599,13 @@ export class PagosBancariosPage implements OnInit {
   }
 
   private isPrevalidacionLista(row: any): boolean {
-    return row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR';
+    return !this.isPagoYaConciliado(row)
+      && (row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR');
+  }
+
+  private isPagoYaConciliado(row: any): boolean {
+    return row?.estadoPrevalidacion === 'PAGO_YA_CONCILIADO_PREVIAMENTE'
+      || row?.estado_prevalidacion === 'PAGO_YA_CONCILIADO_PREVIAMENTE';
   }
 
   private isPrevalidacionDuplicada(row: PrevalidacionArchivoBcp): boolean {
@@ -1661,24 +1688,28 @@ export class PagosBancariosPage implements OnInit {
   }
 
   getPrevalidacionOhProcesada(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOhConDetalle()
+      .filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
+        && !this.isPagoYaConciliado(row));
+  }
+
+  private getPrevalidacionOhConDetalle(): PrevalidacionArchivoBcp[] {
     const resultado: any = this.resultadoOh();
     const detalles = resultado?.detalles || [];
     const prevalidacion = this.getPrevalidacionOhOriginal();
 
-    return prevalidacion
-      .map((row: any, index: number) => {
-        const detalle = detalles[index] || {};
-        return {
-          ...row,
-          documentoBanco: row.documentoBanco ?? row.documento_banco ?? detalle.documento,
-          fechaBanco: row.fechaBanco ?? row.fecha_banco ?? detalle.fechaPago,
-          montoBanco: row.montoBanco ?? row.monto_banco ?? detalle.montoPagado,
-          numeroOperacion: row.numeroOperacion ?? row.numero_operacion ?? detalle.numeroOperacion,
-          banco: row.banco ?? detalle.banco,
-          __prevalidacionIndex: index
-        };
-      })
-      .filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO');
+    return prevalidacion.map((row: any, index: number) => {
+      const detalle = detalles[index] || {};
+      return {
+        ...row,
+        documentoBanco: row.documentoBanco ?? row.documento_banco ?? detalle.documento,
+        fechaBanco: row.fechaBanco ?? row.fecha_banco ?? detalle.fechaPago,
+        montoBanco: row.montoBanco ?? row.monto_banco ?? detalle.montoPagado,
+        numeroOperacion: row.numeroOperacion ?? row.numero_operacion ?? detalle.numeroOperacion,
+        banco: row.banco ?? detalle.banco,
+        __prevalidacionIndex: index
+      };
+    });
   }
 
   getPrevalidacionOhOriginal(): PrevalidacionArchivoBcp[] {
@@ -1693,6 +1724,10 @@ export class PagosBancariosPage implements OnInit {
         && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioIdOh)
         && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioIdOh);
     });
+  }
+
+  getPagosYaConciliadosOh(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOhConDetalle().filter(row => this.isPagoYaConciliado(row));
   }
 
   hasPagosDuplicadosOh(): boolean {

@@ -117,6 +117,7 @@ export type EstadoPrevalidacionBcp =
   | 'PROMESA_SIN_CUOTAS_PENDIENTES'
   | 'FALTA_TIPIFICACION_CANCELACION'
   | 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
+  | 'PAGO_YA_CONCILIADO_PREVIAMENTE'
   | 'SIN_CANDIDATO';
 
 export interface PrevalidacionArchivoBcp {

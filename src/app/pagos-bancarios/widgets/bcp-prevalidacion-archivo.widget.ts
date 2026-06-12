@@ -141,6 +141,10 @@ export class BcpPrevalidacionArchivoWidget {
       problema: 'Fecha fuera de promesa.',
       accion: 'Revisar fecha de promesa/cuota o corregir la fecha del pago tipificado.'
     },
+    PAGO_YA_CONCILIADO_PREVIAMENTE: {
+      problema: 'Este pago ya fue conciliado previamente.',
+      accion: 'No se aprueba ni se envía a conciliación.'
+    },
     SIN_CANDIDATO: {
       problema: 'No se encontró candidato de conciliación.',
       accion: 'Revisión manual requerida.'
