@@ -44,6 +44,9 @@ import { CartaAcuerdoService } from '../../core/services/carta-acuerdo.service';
 import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/confirm-carta-dialog/confirm-carta-dialog.component';
 import { FirstInstallmentConfigService } from '../../maintenance/services/first-installment-config.service';
 import { CallService } from '../../core/services/call.service';
+import { ToastService } from '../../shared/services/toast.service';
+import { GestionLockService } from '../../core/services/gestion-lock.service';
+import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
 
 @Component({
   selector: 'app-collection-management',
@@ -1741,7 +1744,7 @@ import { CallService } from '../../core/services/call.service';
     }
   `]
 })
-export class CollectionManagementPage implements OnInit, OnDestroy {
+export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquearSalida {
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
@@ -2638,6 +2641,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   private managementId?: string;
   private callStartTime?: string;
 
+  // --- Bloqueo de salida durante una gestión con llamada en curso ---
+  // Se levanta al guardar (onSaveSuccess) para habilitar la navegación
+  // programática de salida. Muere con la instancia del componente.
+  private salidaAutorizada = false;
+  // Referencias estables para registrar/desregistrar en el lock service y el
+  // listener de beforeunload (deben ser la MISMA referencia en add/remove).
+  private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
+  private boundBeforeUnload = (e: BeforeUnloadEvent) => {
+    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
   private outgoingCallSubscription?: Subscription;
@@ -2670,12 +2687,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private comprobanteService: ComprobanteService,
     private cartaAcuerdoService: CartaAcuerdoService,
     private firstInstallmentConfigService: FirstInstallmentConfigService,
-    private callService: CallService
+    private callService: CallService,
+    private toast: ToastService,
+    private gestionLock: GestionLockService
   ) {}
+
+  /**
+   * Indica si hay una gestión "en curso": se hizo (o está en curso) una llamada
+   * y aún no se guarda. Es un método (no computed) porque `callStartTime` es un
+   * campo plano no reactivo; se evalúa fresco en cada chequeo de salida.
+   * Refleja el mismo predicado usado al guardar (ver saveManagement).
+   */
+  hasGestionEnCurso(): boolean {
+    return this.callActive() || this.rellamadaCallActive() || this.isTipifying() || !!this.callStartTime;
+  }
+
+  /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
+  puedeSalir(_nextUrl: string): boolean {
+    return this.salidaAutorizada || !this.hasGestionEnCurso();
+  }
 
   ngOnInit() {
     this.loadTenants();
     this.loadManagementHistory();
+
+    // Bloqueo de salida: si se hizo una llamada, la única vía de salida es
+    // Guardar Gestión. Cubre el botón de logout (vía el service) y el
+    // refresh/cierre de pestaña (vía beforeunload). El sidebar y el back se
+    // cubren con el CanDeactivate guard de la ruta.
+    this.gestionLock.register(this.boundLockCheck);
+    window.addEventListener('beforeunload', this.boundBeforeUnload);
 
     // Verificar estado inicial de la llamada
     const initialCallState = this.sipService.getCallState();
@@ -3828,6 +3869,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Liberar el bloqueo de salida al destruir el componente (cubre incluso la
+    // salida forzada por /login). El unregister por identidad evita borrar el
+    // predicado de otra instancia.
+    this.gestionLock.unregister(this.boundLockCheck);
+    window.removeEventListener('beforeunload', this.boundBeforeUnload);
+
     if (this.callTimer) {
       clearInterval(this.callTimer);
     }
@@ -3941,43 +3988,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!this.rellamadaCallActive()) return;
     this.sipService.hangup();
     // El handler de onCallStatus limpia los flags automáticamente
-  }
-
-  cancelarTipificacion() {
-    console.log('❌ Cancelando tipificación...');
-
-    // Si hay rellamada activa, colgarla primero
-    if (this.rellamadaCallActive()) {
-      console.log('📵 Colgando rellamada activa antes de cancelar tipificación...');
-      this.sipService.hangup();
-      this.isRellamada.set(false);
-      this.rellamadaCallActive.set(false);
-      this.sipService.setRellamadaActive(false);
-      this.sipService.clearCurrentOutgoingNumber(); // Limpiar número stale de rellamada
-      this.showRellamadaDropdown.set(false);
-    }
-
-    // Si hay llamada activa, colgarla primero
-    if (this.callActive()) {
-      console.log('📵 Colgando llamada activa antes de cancelar tipificación...');
-      this.endCall(false);
-    }
-
-    // Desbloquear llamadas entrantes
-    this.isTipifying.set(false);
-    this.sipService.blockIncomingCallsMode(false);
-    console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
-
-    // Navegar PRIMERO, luego cambiar a DISPONIBLE
-    // Esto evita que el auto-dialer asigne una llamada mientras el agente aún está aquí
-    const currentUser = this.authService.getCurrentUser();
-    const agentId = currentUser?.id || 1;
-    this.router.navigate(['/agent-dashboard']).then(() => {
-      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-        next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-        error: (err: any) => console.error('❌ Error cambiando estado:', err)
-      });
-    });
   }
 
   protected openScheduleDetail(managementId: number) {
@@ -5595,6 +5605,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private onSaveSuccess(resultadoCodigo: string, gestionCodigo: string) {
+    // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
+    // Todas las ramas de este método terminan navegando fuera de la pantalla.
+    this.salidaAutorizada = true;
     this.saving.set(false);
     this.showSuccess.set(true);
 
