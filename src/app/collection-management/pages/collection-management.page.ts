@@ -2660,6 +2660,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       e.returnValue = '';
     }
   };
+  // Trampa de historial para el botón "Atrás" del navegador. El CanDeactivate
+  // guard es asíncrono y en back rápido/múltiple el navegador procesa varios
+  // popstate antes de que Angular cancele/restaure la URL, dejando escapar. Esta
+  // trampa es SÍNCRONA: re-empuja el estado en cada popstate mientras hay
+  // gestión con llamada sin guardar, sin ventana asíncrona que explotar.
+  private historyTrapArmed = false;
+  private boundPopState = () => {
+    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
+      history.pushState(null, '', location.href); // deshacer el back inmediatamente
+      this.toast.warning('Debes guardar la gestión antes de salir');
+    } else {
+      this.historyTrapArmed = false; // sin bloqueo: permitir el back real
+    }
+  };
 
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
@@ -2714,6 +2728,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return this.salidaAutorizada || !this.hasGestionEnCurso();
   }
 
+  /**
+   * Arma la trampa de historial empujando un estado centinela (mismo URL) la
+   * primera vez que se coloca una llamada. A partir de ahí, cada "Atrás" del
+   * navegador pop-ea este centinela y el listener de popstate lo vuelve a
+   * empujar, neutralizando el botón Atrás mientras la gestión esté bloqueada.
+   */
+  private armHistoryTrap(): void {
+    if (!this.historyTrapArmed) {
+      history.pushState(null, '', location.href);
+      this.historyTrapArmed = true;
+    }
+  }
+
   ngOnInit() {
     this.loadTenants();
     this.loadManagementHistory();
@@ -2724,6 +2751,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // cubren con el CanDeactivate guard de la ruta.
     this.gestionLock.register(this.boundLockCheck);
     window.addEventListener('beforeunload', this.boundBeforeUnload);
+    window.addEventListener('popstate', this.boundPopState);
 
     // Verificar estado inicial de la llamada
     const initialCallState = this.sipService.getCallState();
@@ -3881,6 +3909,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // predicado de otra instancia.
     this.gestionLock.unregister(this.boundLockCheck);
     window.removeEventListener('beforeunload', this.boundBeforeUnload);
+    window.removeEventListener('popstate', this.boundPopState);
 
     if (this.callTimer) {
       clearInterval(this.callTimer);
@@ -3914,6 +3943,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
     this.llamadaRealizada.set(true); // llamada manual/rellamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
 
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
@@ -4040,6 +4070,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   startCall() {
     this.callActive.set(true);
     this.llamadaRealizada.set(true); // se colocó una llamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
     this.callDuration.set(0);
     this.callStartTime = new Date().toISOString();
 
