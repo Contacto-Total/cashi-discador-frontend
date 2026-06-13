@@ -11,6 +11,8 @@ import {
   BcpPagoManualResponse,
   BcpPagoManualFiltros,
   BcpPagoManualListResponse,
+  ResumenConciliacionCliente,
+  ResumenConciliacionClienteRequest,
   ResultadoConciliacion
 } from '../models/bcp-archivo.model';
 
@@ -49,14 +51,30 @@ export class BcpPagosService {
     return this.http.post<AprobarArchivoBcpResponse>(`${this.baseUrl}/aprobar-archivo`, request);
   }
 
+  obtenerResumenConciliacionCliente(documento: string, request: ResumenConciliacionClienteRequest): Observable<ResumenConciliacionCliente> {
+    const params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    return this.http.get<ResumenConciliacionCliente>(`${this.baseUrl}/clientes/${encodeURIComponent(documento)}/resumen-conciliacion`, { params });
+  }
+
   /**
    * Carga y procesa un archivo Excel de Financiera OH
    * @param file Archivo Excel a procesar
    * @returns Resultado con detalles de pagos
    */
-  cargarArchivoOh(file: File): Observable<BcpArchivoResultado> {
+  cargarArchivoOh(file: File, request: BcpArchivoCargaRequest): Observable<BcpArchivoResultado> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('tenantId', request.tenantId.toString());
+    formData.append('carteraId', request.carteraId.toString());
+    formData.append('subcarteraId', request.subcarteraId.toString());
+
+    if (request.toleranciaMonto !== undefined) {
+      formData.append('toleranciaMonto', request.toleranciaMonto.toString());
+    }
 
     console.log('[OH] Cargando archivo Excel:', file.name);
 

@@ -11,7 +11,7 @@ import { BcpPagoDuplicado, EstadoCargaArchivoBcp } from '../models/bcp-archivo.m
       <div class="border-b border-red-200 px-4 py-3 dark:border-red-800">
         <h2 class="text-lg font-semibold text-red-800 dark:text-red-300">Archivo con pagos duplicados</h2>
         <p class="mt-1 text-sm text-red-700 dark:text-red-400">
-          {{ getMensajeEstado() }} No se habilitará guardado/aprobación para este archivo.
+          {{ getMensajeEstado() }} Revise los pagos omitidos antes de continuar.
         </p>
       </div>
 
@@ -41,6 +41,12 @@ import { BcpPagoDuplicado, EstadoCargaArchivoBcp } from '../models/bcp-archivo.m
                   </span>
                 </td>
               </tr>
+            } @empty {
+              <tr>
+                <td colspan="6" class="px-3 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                  No se recibieron detalles de pagos duplicados.
+                </td>
+              </tr>
             }
           </tbody>
         </table>
@@ -59,6 +65,9 @@ export class BcpPagosDuplicadosWidget {
   getMensajeEstado(): string {
     if (this.estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS') {
       return 'Todos los pagos del archivo ya se encuentran registrados.';
+    }
+    if (this.estadoCarga === 'PREVALIDADO_CON_DUPLICADOS_CONTEXTO') {
+      return 'Existen pagos ya registrados en el contexto seleccionado.';
     }
     return 'Se encontraron pagos ya registrados en el archivo.';
   }

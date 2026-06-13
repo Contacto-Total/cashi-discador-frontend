@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 import { adminOrSupervisorGuard } from './core/guards/admin-or-supervisor.guard';
+import { gestionPendienteGuard } from './core/guards/gestion-pendiente.guard';
 
 export const routes: Routes = [
   {
@@ -204,7 +205,8 @@ export const routes: Routes = [
   {
     path: 'collection-management',
     loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    canDeactivate: [gestionPendienteGuard]
   },
   {
     path: 'seguimiento',

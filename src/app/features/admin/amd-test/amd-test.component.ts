@@ -49,6 +49,7 @@ export interface Results_Audios {
   primerGoertzel: number | null;
   primerF0: number | null;
   decisison_en_Chunk: number | null;
+  source: string | null;            // quién decidió: dsp | gpt | whisper | fallsafe
   f0_promedio: number | null;
   ts_inicio: string;
   ts_fin: string;
@@ -165,6 +166,7 @@ export class AmdTestComponent {
         primerGoertzel: null,
         primerF0: null,
         decisison_en_Chunk: null,
+        source: null,
         f0_promedio: null,
         ts_inicio: '',
         ts_fin: '',
@@ -337,6 +339,7 @@ export class AmdTestComponent {
             audio.buzon_score = d.scores?.buzon ?? audio.buzon_score;
             audio.decisison_en_Chunk = d.decided_at_chunk ?? audio.decisison_en_Chunk;
           }
+          audio.source = evt['source'] ?? audio.source;   // dsp | gpt | whisper | fallsafe
           break;
         }
 
@@ -456,7 +459,7 @@ export class AmdTestComponent {
     // exportar el RESUMEN por audio (1 fila por audio) — accuracy + rangos + aportes
     exportCsv(): void {
       const header = [
-        'indice', 'archivo', 'esperado', 'resultado', 'acierto',
+        'indice', 'archivo', 'esperado', 'resultado', 'source', 'acierto',
         'chunks', 'decision_en_chunk', 'human_score', 'buzon_score',
         'rms_avg', 'rms_max', 'goertzel_min', 'goertzel_max', 'goertzel_avg', 'vad_avg', 'f0_avg', 'f0_std',
         'ap_buzon_rms', 'ap_buzon_goertzel', 'ap_buzon_vad', 'ap_buzon_f0',
@@ -474,6 +477,7 @@ export class AmdTestComponent {
           `"${a.nombre_archivo}"`,
           esperado,
           a.estado,
+          a.source ?? '',
           acierto,
           a.chunks,
           a.decisison_en_Chunk ?? '',

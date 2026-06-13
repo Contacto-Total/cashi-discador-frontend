@@ -117,6 +117,7 @@ export type EstadoPrevalidacionBcp =
   | 'PROMESA_SIN_CUOTAS_PENDIENTES'
   | 'FALTA_TIPIFICACION_CANCELACION'
   | 'FECHA_FUERA_DE_RANGO_DE_PROMESA'
+  | 'PAGO_YA_CONCILIADO_PREVIAMENTE'
   | 'SIN_CANDIDATO';
 
 export interface PrevalidacionArchivoBcp {
@@ -140,6 +141,58 @@ export interface PrevalidacionArchivoBcp {
   montoPago: number | null;
   operacionAgente: string | null;
   estadoPrevalidacion: EstadoPrevalidacionBcp | string;
+}
+
+export interface ResumenConciliacionClienteRequest {
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+}
+
+export interface ResumenConciliacionCliente {
+  documento: string;
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+  nombreCliente: string | null;
+  pagoCumplido: boolean;
+  promesas: PromesaResumenConciliacion[];
+}
+
+export interface PromesaResumenConciliacion {
+  idGestion: number;
+  grupoPromesaUuid: string;
+  fechaGestion: string;
+  estadoPago: string;
+  montoPromesa: number;
+  montoPagadoReal: number;
+  totalCuotas: number;
+  nombreAgente: string;
+  rutaTipificacion: string;
+  cuotas: CuotaResumenConciliacion[];
+}
+
+export interface CuotaResumenConciliacion {
+  cuotaId: number;
+  numeroCuota: number;
+  fechaPromesa: string;
+  montoPromesa: number;
+  estado: string;
+  fechaPagoReal: string | null;
+  montoPagadoReal: number | null;
+  pagos: PagoResumenConciliacion[];
+}
+
+export interface PagoResumenConciliacion {
+  pagoCuotaId: number;
+  transaccionId: number | null;
+  fechaPago: string;
+  montoPago: number;
+  banco: string;
+  numeroOperacion: string | null;
+  verificadoBanco: boolean;
+  pagoBancarioId: number | null;
+  fechaVerificacion: string | null;
 }
 
 /**
