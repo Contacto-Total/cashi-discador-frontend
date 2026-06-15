@@ -221,16 +221,17 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
             </select>
           </div>
 
-          <!-- Gestiones de sistema (incluir / excluir / solo) -->
+          <!-- Tipo de gestion -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gestiones de sistema</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de gestión</label>
             <select [(ngModel)]="filtros.gestionSistema"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-              <option value="">Todas (incluye sistema)</option>
-              <option value="EXCLUIR">Excluir sistema</option>
-              <option value="SOLO">Solo sistema</option>
+              <option value="">Seleccione</option>
+              <option value="EXCLUIR">Gestión Call</option>
+              <option value="SOLO">Gestión Progresivo, Predictivo</option>
+              <option value="EXTERNA">Gestión Externa</option>
             </select>
           </div>
         </div>
@@ -526,7 +527,7 @@ export class GestionesReportComponent implements OnInit {
     idSubcartera: null as number | null,
     documento: '',
     celular: '',
-    gestionSistema: '' as '' | 'EXCLUIR' | 'SOLO'
+    gestionSistema: '' as '' | 'EXCLUIR' | 'SOLO' | 'EXTERNA'
   };
 
   constructor(

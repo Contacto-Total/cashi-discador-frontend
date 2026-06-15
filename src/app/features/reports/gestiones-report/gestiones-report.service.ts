@@ -95,7 +95,7 @@ export interface GestionesFiltros {
   rutaNivel1?: string | null;
   rutaNivel2?: string | null;
   rutaNivel3?: string | null;
-  gestionSistema?: string | null; // '' | 'EXCLUIR' | 'SOLO'
+  gestionSistema?: string | null; // '' (todas) | 'EXCLUIR' (Call) | 'SOLO' (Progresivo/Predictivo) | 'EXTERNA' (vacío)
 }
 
 @Injectable({
