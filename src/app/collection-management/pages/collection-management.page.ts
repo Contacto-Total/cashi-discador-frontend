@@ -1072,8 +1072,8 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                               class="w-4 h-4 text-amber-600"
                             />
                             <div>
-                              <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                              <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'">
+                              <span class="font-bold text-xs" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-slate-900 dark:text-slate-100'">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-50' : 'text-amber-700 dark:text-amber-300'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
                               @if (tienePagoParcial(cuota)) {
@@ -1083,10 +1083,10 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                           </div>
                           <div class="text-right">
                             @if (tienePagoParcial(cuota)) {
-                              <span class="text-xs opacity-70 mr-1">S/ {{ cuota.monto?.toFixed(2) }}</span>
-                              <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                              <span class="text-xs opacity-70 mr-1" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-50' : 'text-slate-700 dark:text-slate-300'">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-slate-950 dark:text-white'">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
                             } @else {
-                              <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-slate-950 dark:text-white'">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
                             }
                           </div>
                         </label>
@@ -1138,13 +1138,18 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
-                          [max]="todayDate"
+                          [max]="cancellationPaymentMaxDate()"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                         <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                          Por defecto: hoy
+                          Máximo: {{ cancellationPaymentMaxDateLabel() }}
                         </p>
+                        @if (!isCancellationPaymentDateValid()) {
+                          <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
+                            La fecha de pago no puede superar el vencimiento + 1 día.
+                          </p>
+                        }
                       </div>
                     </div>
                     <!-- Info de distribución si el monto es diferente -->
@@ -1271,8 +1276,8 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation())"
-                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
+                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid() + ' | Fecha pago válida: ' + isCancellationPaymentDateValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
@@ -2440,6 +2445,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   hasInstallmentsForCancellation = computed(() => {
     return this.pendingInstallmentsForCancellation().length > 0 || this.overdueInstallments().length > 0;
+  });
+
+  cancellationPaymentMaxDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const dueDate = cuota?.dueDate || cuota?.fechaPago || cuota?.fechaPromesa;
+    if (!dueDate) return this.todayDate;
+
+    const maxDate = this.parseDateLocal(String(dueDate).split('T')[0]);
+    maxDate.setDate(maxDate.getDate() + 1);
+
+    const today = this.parseDateLocal(this.todayDate);
+    return this.toDateInputValue(maxDate > today ? today : maxDate);
+  });
+
+  cancellationPaymentMaxDateLabel = computed(() => {
+    return this.formatDate(this.cancellationPaymentMaxDate());
+  });
+
+  isCancellationPaymentDateValid = computed(() => {
+    if (!this.isCancellationTypification()) return true;
+
+    const cuota = this.selectedInstallmentForCancellation();
+    if (!cuota) return true;
+
+    const fechaPago = this.fechaPagoEditable();
+    if (!fechaPago) return false;
+
+    const pagoDate = this.parseDateLocal(fechaPago);
+    const maxDate = this.parseDateLocal(this.cancellationPaymentMaxDate());
+    return pagoDate <= maxDate;
   });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
@@ -5014,8 +5049,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   private parseDateLocal(dateString: string): Date {
     if (!dateString) return new Date();
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
     return new Date(year, month - 1, day);
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   /**
@@ -5785,6 +5827,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone()) {
       newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
+    }
+
+    if (this.isCancellationTypification() && !this.isCancellationPaymentDateValid()) {
+      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no puede superar el vencimiento de la cuota + 1 día';
     }
 
     // 3. Validar campos dinámicos requeridos
