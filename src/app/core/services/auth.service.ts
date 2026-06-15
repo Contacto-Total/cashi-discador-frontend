@@ -43,6 +43,17 @@ export class AuthService {
     this.currentUserSubject = new BehaviorSubject<User | null>(user);
     this.currentUser$ = this.currentUserSubject.asObservable();
 
+    // Reconciliación de estado al arrancar: si hay token pero NO hay objeto usuario
+    // (callcenter_user ausente o corrupto), el estado quedó inconsistente. Esto provoca
+    // el bucle /login <-> /agent-dashboard, porque isAuthenticated() mira solo el token
+    // (true) mientras los componentes miran getCurrentUser() (null) y rebotan a /login.
+    // Limpiamos todo para caer en un login usable en vez de rebotar infinitamente.
+    if (!user && localStorage.getItem(this.TOKEN_KEY)) {
+      localStorage.removeItem(this.TOKEN_KEY);
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem(this.USER_KEY);
+    }
+
     // Escuchar cambios en localStorage (desde otras pestañas)
     window.addEventListener('storage', (event) => {
       if (event.key === this.TOKEN_KEY && !event.newValue) {
