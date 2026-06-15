@@ -529,22 +529,31 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                     <lucide-angular name="phone" [size]="14" [class]="errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"></lucide-angular>
                   </div>
                   <span [class]="'font-bold text-xs ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white')">
-                    {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfono Contactado' }}
+                    {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : (telefonoContactadoBloqueado() ? 'Teléfono Contactado (de la llamada)' : 'Teléfono Contactado') }}
                   </span>
                   @if (selectedManualPhone()) {
-                    <span class="ml-auto text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{{ selectedManualPhone() }}</span>
+                    <span class="ml-auto inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">
+                      @if (telefonoContactadoBloqueado()) {
+                        <lucide-angular name="lock" [size]="11" title="Número de la llamada, no editable"></lucide-angular>
+                      }
+                      {{ selectedManualPhone() }}
+                    </span>
                   }
                 </div>
                 <div class="flex flex-wrap gap-1">
                   @for (tel of telefonosMetodo(); track tel.numero) {
                     <button
-                      (click)="selectedManualPhone.set(tel.numero)"
-                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] cursor-pointer ' +
+                      [disabled]="telefonoContactadoBloqueado()"
+                      (click)="!telefonoContactadoBloqueado() && selectedManualPhone.set(tel.numero)"
+                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] ' +
+                        (telefonoContactadoBloqueado() ? 'cursor-not-allowed ' : 'cursor-pointer ') +
                         (selectedManualPhone() === tel.numero
                           ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
-                          : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
-                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50')"
+                          : (telefonoContactadoBloqueado()
+                            ? 'opacity-40 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                            : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
+                              ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
+                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50'))"
                     >
                       <lucide-angular
                         [name]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
@@ -1775,6 +1784,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   // Evita hacer muchos clicks en rellamada y saturar el SIP
   protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
+
+  // "Teléfono Contactado" queda BLOQUEADO cuando el número proviene de una llamada/rellamada
+  // (activeCallPhone) y pertenece al cliente: el asesor ya no puede cambiarlo manualmente.
+  protected telefonoContactadoBloqueado = computed(() =>
+    !!this.activeCallPhone() && this.telefonosMetodo().some(t => t.numero === this.activeCallPhone()));
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
