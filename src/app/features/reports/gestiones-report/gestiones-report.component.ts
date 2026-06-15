@@ -449,9 +449,10 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-80 max-w-[90vw]
                     flex flex-col items-center gap-4">
-          <div class="relative w-12 h-12 flex items-center justify-center">
-            <lucide-angular name="loader-2" [size]="48" class="animate-spin text-blue-500 absolute"></lucide-angular>
-            <lucide-angular [name]="loadingAction() === 'exportar' ? 'download' : 'search'" [size]="20"
+          <div class="relative w-16 h-16 flex items-center justify-center">
+            <div class="absolute inset-0 rounded-full border-4 border-blue-100 dark:border-gray-700
+                        border-t-blue-500 dark:border-t-blue-400 animate-spin"></div>
+            <lucide-angular [name]="loadingAction() === 'exportar' ? 'download' : 'search'" [size]="24"
               class="text-blue-600 dark:text-blue-400"></lucide-angular>
           </div>
           <p class="text-gray-700 dark:text-gray-200 font-medium">
