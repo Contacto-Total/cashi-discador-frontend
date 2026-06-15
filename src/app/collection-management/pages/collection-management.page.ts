@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, effect, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -2745,7 +2745,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     private callService: CallService,
     private toast: ToastService,
     private gestionLock: GestionLockService
-  ) {}
+  ) {
+    // Auto-selecciona en "Teléfono Contactado" el último número discado (discador o
+    // rellamada). Como activeCallPhone se actualiza en cada llamada, si el asesor
+    // rellama a otro número, la selección se actualiza sola (gana la última llamada).
+    // Se acota a los teléfonos del cliente cargado para evitar cruces entre clientes;
+    // el asesor puede sobreescribir manualmente después (el effect no re-dispara salvo
+    // que haya una nueva llamada).
+    effect(() => {
+      const discado = this.activeCallPhone();
+      if (!discado) return;
+      const esDelCliente = this.telefonosMetodo().some(t => t.numero === discado);
+      if (esDelCliente) {
+        this.selectedManualPhone.set(discado);
+      }
+    }, { allowSignalWrites: true });
+  }
 
   /**
    * Indica si hay una gestión "en curso": se colocó una llamada en esta gestión
@@ -5825,7 +5840,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
                                 this.activeCallClientId() === this.customerData()?.id;
     const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
-    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone()) {
+    // El número discado (activeCallPhone) cuenta como teléfono contactado aunque no se
+    // haya marcado en el selector (p. ej. número no registrado en la lista del cliente).
+    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone() && !this.activeCallPhone()) {
       newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
     }
 
