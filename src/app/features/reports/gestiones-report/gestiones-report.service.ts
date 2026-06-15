@@ -95,6 +95,7 @@ export interface GestionesFiltros {
   rutaNivel1?: string | null;
   rutaNivel2?: string | null;
   rutaNivel3?: string | null;
+  gestionSistema?: string | null; // '' | 'EXCLUIR' | 'SOLO'
 }
 
 @Injectable({
@@ -118,6 +119,7 @@ export class GestionesReportService {
     if (f.rutaNivel1) params = params.set('rutaNivel1', f.rutaNivel1);
     if (f.rutaNivel2) params = params.set('rutaNivel2', f.rutaNivel2);
     if (f.rutaNivel3) params = params.set('rutaNivel3', f.rutaNivel3);
+    if (f.gestionSistema) params = params.set('gestionSistema', f.gestionSistema);
     if (f.idAgentes && f.idAgentes.length) {
       for (const id of f.idAgentes) {
         params = params.append('idAgentes', id.toString());
