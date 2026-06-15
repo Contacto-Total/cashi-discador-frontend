@@ -237,16 +237,16 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
 
         <!-- Fila 3: acciones -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
-          @if (!filtros.fechaDesde || !filtros.fechaHasta) {
+          @if (!puedeConsultar) {
             <p class="text-sm text-amber-600 dark:text-amber-400">
-              * Las fechas son obligatorias para evitar consultas muy grandes
+              * Mínimo requerido para consultar: Fecha Desde, Fecha Hasta, Proveedor y Cartera
             </p>
           } @else {
             <span></span>
           }
           <div class="flex items-end gap-2">
             <button (click)="buscar()"
-              [disabled]="loadingAction() !== null || !filtros.fechaDesde || !filtros.fechaHasta"
+              [disabled]="loadingAction() !== null || !puedeConsultar"
               class="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold
                      rounded-lg transition-colors flex items-center justify-center gap-2
                      disabled:opacity-50 disabled:cursor-not-allowed">
@@ -689,9 +689,15 @@ export class GestionesReportComponent implements OnInit {
     };
   }
 
+  /** Mínimo requerido para consultar: fechas + proveedor + cartera. */
+  get puedeConsultar(): boolean {
+    return !!this.filtros.fechaDesde && !!this.filtros.fechaHasta
+        && !!this.filtros.idProveedor && !!this.filtros.idCartera;
+  }
+
   buscar(): void {
-    if (!this.filtros.fechaDesde || !this.filtros.fechaHasta) {
-      alert('Las fechas son obligatorias');
+    if (!this.puedeConsultar) {
+      alert('Debe seleccionar como mínimo: Fecha Desde, Fecha Hasta, Proveedor y Cartera');
       return;
     }
     this.loadingAction.set('buscar');
@@ -711,8 +717,8 @@ export class GestionesReportComponent implements OnInit {
   }
 
   exportarExcel(): void {
-    if (!this.filtros.fechaDesde || !this.filtros.fechaHasta) {
-      alert('Las fechas son obligatorias');
+    if (!this.puedeConsultar) {
+      alert('Debe seleccionar como mínimo: Fecha Desde, Fecha Hasta, Proveedor y Cartera');
       return;
     }
     this.loadingAction.set('exportar');
