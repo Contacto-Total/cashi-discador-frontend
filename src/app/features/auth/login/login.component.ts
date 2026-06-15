@@ -208,8 +208,10 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
 
-    // Redirect if already logged in
-    if (this.authService.isAuthenticated()) {
+    // Redirect if already logged in.
+    // Se exige token válido Y objeto usuario presente: si hay token pero no user
+    // (estado inconsistente), NO redirigir — evita el bucle /login <-> /agent-dashboard.
+    if (this.authService.isAuthenticated() && this.authService.getCurrentUser()) {
       // Load dynamic menu and navigate to first item
       this.menuPermissionService.loadVisibleMenu().subscribe({
         next: (menuItems) => {
