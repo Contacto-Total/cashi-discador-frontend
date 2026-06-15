@@ -1059,7 +1059,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                         <label
                           class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
                           [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
-                            ? 'bg-amber-600 text-white shadow-md dark:bg-amber-500'
+                            ? 'bg-amber-200 text-slate-950 shadow-md border border-amber-500 dark:bg-amber-300 dark:text-slate-950'
                             : 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-300 dark:border-amber-700'"
                         >
                           <div class="flex items-center gap-3">
@@ -1072,21 +1072,21 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                               class="w-4 h-4 text-amber-600"
                             />
                             <div>
-                              <span class="font-bold text-xs" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-slate-900 dark:text-slate-100'">Cuota {{ cuota.numeroCuota }}</span>
-                              <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-50' : 'text-amber-700 dark:text-amber-300'">
+                              <span class="font-bold text-xs" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-900 dark:text-slate-100'">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-900' : 'text-amber-700 dark:text-amber-300'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
                               @if (tienePagoParcial(cuota)) {
-                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-500 text-slate-950' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
                               }
                             </div>
                           </div>
                           <div class="text-right">
                             @if (tienePagoParcial(cuota)) {
-                              <span class="text-xs opacity-70 mr-1" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-50' : 'text-slate-700 dark:text-slate-300'">S/ {{ cuota.monto?.toFixed(2) }}</span>
-                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-slate-950 dark:text-white'">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                              <span class="text-xs opacity-70 mr-1" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-800' : 'text-slate-700 dark:text-slate-300'">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-950 dark:text-white'">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
                             } @else {
-                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-slate-950 dark:text-white'">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-950 dark:text-white'">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
                             }
                           </div>
                         </label>
@@ -1147,7 +1147,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                         </p>
                         @if (!isCancellationPaymentDateValid()) {
                           <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
-                            La fecha de pago no puede superar el vencimiento + 1 día.
+                            La fecha de pago no es válida para la cuota seleccionada.
                           </p>
                         }
                       </div>
@@ -5543,11 +5543,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               fecha: fechaPago
             });
 
-            // Buscar el grupoPromesaUuid de la cuota
-            const schedule = this.activePaymentSchedules().find(s =>
+            // Buscar también en todos los cronogramas porque las cuotas vencidas no siempre están activas.
+            const schedule = [...this.activePaymentSchedules(), ...this.allPaymentSchedules()].find(s =>
               s.installments?.some((c: any) => c.id === selectedCuota.id)
             );
-            const grupoPromesaUuid = schedule?.grupoPromesaUuid || schedule?.id;
+            const grupoPromesaUuid = selectedCuota.grupoPromesaUuid || schedule?.grupoPromesaUuid || selectedCuota.scheduleId || schedule?.id;
 
             if (!grupoPromesaUuid) {
               console.error('No se encontró el grupoPromesaUuid');
@@ -5830,7 +5830,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     if (this.isCancellationTypification() && !this.isCancellationPaymentDateValid()) {
-      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no puede superar el vencimiento de la cuota + 1 día';
+      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no es válida para la cuota seleccionada';
     }
 
     // 3. Validar campos dinámicos requeridos
