@@ -76,16 +76,25 @@ export interface AgenteGestion {
   nombre: string;
 }
 
+export interface TipificacionCatalogo {
+  id: number;
+  nombre: string;
+  nivel: number;
+  parentId: number | null;
+}
+
 export interface GestionesFiltros {
   fechaDesde?: string;
   fechaHasta?: string;
   idCartera?: number | null;
   idSubcartera?: number | null;
-  idAgente?: number | null;
+  idAgentes?: number[];
   idCampana?: number | null;
   documento?: string;
   telefono?: string;
-  estadosGestion?: string[];
+  rutaNivel1?: string | null;
+  rutaNivel2?: string | null;
+  rutaNivel3?: string | null;
 }
 
 @Injectable({
@@ -103,13 +112,15 @@ export class GestionesReportService {
     if (f.fechaHasta) params = params.set('fechaHasta', f.fechaHasta);
     if (f.idCartera) params = params.set('idCartera', f.idCartera.toString());
     if (f.idSubcartera) params = params.set('idSubcartera', f.idSubcartera.toString());
-    if (f.idAgente) params = params.set('idAgente', f.idAgente.toString());
     if (f.idCampana) params = params.set('idCampana', f.idCampana.toString());
     if (f.documento && f.documento.trim()) params = params.set('documento', f.documento.trim());
     if (f.telefono && f.telefono.trim()) params = params.set('telefono', f.telefono.trim());
-    if (f.estadosGestion && f.estadosGestion.length) {
-      for (const e of f.estadosGestion) {
-        params = params.append('estadosGestion', e);
+    if (f.rutaNivel1) params = params.set('rutaNivel1', f.rutaNivel1);
+    if (f.rutaNivel2) params = params.set('rutaNivel2', f.rutaNivel2);
+    if (f.rutaNivel3) params = params.set('rutaNivel3', f.rutaNivel3);
+    if (f.idAgentes && f.idAgentes.length) {
+      for (const id of f.idAgentes) {
+        params = params.append('idAgentes', id.toString());
       }
     }
     return params;
@@ -127,8 +138,17 @@ export class GestionesReportService {
     return this.http.get(`${this.baseUrl}/excel`, { params, responseType: 'blob' });
   }
 
-  /** Asesores con gestiones registradas (para el filtro de asesor) */
-  getAgentes(): Observable<AgenteGestion[]> {
-    return this.http.get<AgenteGestion[]>(`${this.baseUrl}/agentes`);
+  /** Asesores con gestiones, acotados a proveedor/cartera/subcartera */
+  getAgentes(idTenant?: number | null, idCartera?: number | null, idSubcartera?: number | null): Observable<AgenteGestion[]> {
+    let params = new HttpParams();
+    if (idTenant) params = params.set('idTenant', idTenant.toString());
+    if (idCartera) params = params.set('idCartera', idCartera.toString());
+    if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
+    return this.http.get<AgenteGestion[]>(`${this.baseUrl}/agentes`, { params });
+  }
+
+  /** Catálogo de tipificaciones (niveles 1-3) para los filtros en cascada */
+  getTipificaciones(): Observable<TipificacionCatalogo[]> {
+    return this.http.get<TipificacionCatalogo[]>(`${this.baseUrl}/tipificaciones`);
   }
 }
