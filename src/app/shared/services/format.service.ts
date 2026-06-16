@@ -73,12 +73,16 @@ export class FormatService {
     ).format(d);
   }
 
-  /** Fecha + hora: dd/MM/yyyy HH:mm (o HH:mm:ss si withSeconds). */
-  dateTime(value: DateInput, withSeconds = false): string {
+  /**
+   * Fecha + hora: dd/MM/yyyy HH:mm (orden según locale).
+   * `withSeconds` agrega los segundos. `dateParts` permite un estilo de fecha custom
+   * (p.ej. sin año o año de 2 dígitos) para los casos compactos.
+   */
+  dateTime(value: DateInput, withSeconds = false, dateParts?: Intl.DateTimeFormatOptions): string {
     const d = this.toDate(value);
     if (!d) return '';
     return new Intl.DateTimeFormat(this._locale(), {
-      day: '2-digit', month: '2-digit', year: 'numeric',
+      ...(dateParts ?? { day: '2-digit', month: '2-digit', year: 'numeric' }),
       hour: '2-digit', minute: '2-digit',
       ...(withSeconds ? { second: '2-digit' } : {}),
       hour12: false,

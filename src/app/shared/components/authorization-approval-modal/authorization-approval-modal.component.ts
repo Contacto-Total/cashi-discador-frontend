@@ -1,13 +1,13 @@
 import { Component, EventEmitter, Input, Output, signal, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
-import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AutorizacionService, SolicitudAutorizacion, CuotaSolicitud } from '../../../core/services/autorizacion.service';
 
 @Component({
   selector: 'app-authorization-approval-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, CurrencyPipe, DatePipe],
+  imports: [CommonModule, FormsModule],
   template: `
     @if (visible && solicitud) {
       <div class="modal-overlay">

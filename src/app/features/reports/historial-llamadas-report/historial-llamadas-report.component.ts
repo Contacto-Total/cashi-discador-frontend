@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -8,11 +8,12 @@ import {
   ResumenMetricas,
   ReporteResponse
 } from './historial-llamadas-report.service';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-historial-llamadas-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppDateTimePipe],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->
@@ -302,7 +303,7 @@ import {
                       {{ item.uuidLlamada || '-' }}
                     </td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">
-                      {{ item.fechaInicioLlamada | date:'dd/MM/yy HH:mm' }}
+                      {{ item.fechaInicioLlamada | appDateTime:'short' }}
                     </td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white">
                       <div class="flex items-center gap-2">

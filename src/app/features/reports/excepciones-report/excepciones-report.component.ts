@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -13,7 +13,7 @@ import { FormatService } from '@/shared/services/format.service';
 @Component({
   selector: 'app-excepciones-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->

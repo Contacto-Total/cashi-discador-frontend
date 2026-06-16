@@ -68,7 +68,7 @@
         <div class="metric-content">
           <span class="metric-label">Fecha Inicio</span>
           <span class="metric-value">
-            {{ statistics.fechaInicio ? (statistics.fechaInicio | date: 'dd-MM-yyyy') : '-' }}
+            {{ statistics.fechaInicio ? (statistics.fechaInicio | appDate) : '-' }}
           </span>
         </div>
       </div>
@@ -79,7 +79,7 @@
         <div class="metric-content">
           <span class="metric-label">Fecha Final</span>
           <span class="metric-value">
-            {{ statistics.fechaFinal ? (statistics.fechaFinal | date: 'dd-MM-yyyy') : '-' }}
+            {{ statistics.fechaFinal ? (statistics.fechaFinal | appDate) : '-' }}
           </span>
         </div>
       </div>

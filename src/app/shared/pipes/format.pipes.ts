@@ -27,19 +27,32 @@ function digitsToIntl(digitsInfo?: string): Intl.NumberFormatOptions | undefined
  * Reemplazan los usos de `| date`, `| number`, `| currency`, `| percent`.
  */
 
+/** Estilos compactos de fecha (orden/separador los pone el locale). */
+type DateStyle = 'short' | 'dayMonth';
+const DATE_STYLE_OPTS: Record<DateStyle, Intl.DateTimeFormatOptions> = {
+  short: { day: '2-digit', month: '2-digit', year: '2-digit' },   // dd/MM/yy
+  dayMonth: { day: '2-digit', month: '2-digit' },                  // dd/MM
+};
+
 @Pipe({ name: 'appDate', standalone: true })
 export class AppDatePipe implements PipeTransform {
   private fmt = inject(FormatService);
-  transform(value: DateInput): string {
-    return this.fmt.date(value);
+  /** style: 'short' (año 2 díg.) | 'dayMonth' (sin año). Sin style = fecha completa. */
+  transform(value: DateInput, style?: DateStyle): string {
+    return this.fmt.date(value, style ? DATE_STYLE_OPTS[style] : undefined);
   }
 }
 
 @Pipe({ name: 'appDateTime', standalone: true })
 export class AppDateTimePipe implements PipeTransform {
   private fmt = inject(FormatService);
-  transform(value: DateInput, withSeconds = false): string {
-    return this.fmt.dateTime(value, withSeconds);
+  /** style: 'seconds' (HH:mm:ss) | 'short' (año 2 díg.) | 'dayMonth' (sin año). */
+  transform(value: DateInput, style?: 'seconds' | DateStyle): string {
+    if (style === 'seconds') return this.fmt.dateTime(value, true);
+    if (style === 'short' || style === 'dayMonth') {
+      return this.fmt.dateTime(value, false, DATE_STYLE_OPTS[style]);
+    }
+    return this.fmt.dateTime(value, false);
   }
 }
 
