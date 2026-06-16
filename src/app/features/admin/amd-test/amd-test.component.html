@@ -199,12 +199,12 @@
             <div class="card-scores">
               <div class="score score-h">
                 <span class="score-tag">human</span>
-                <strong>{{ audio.human_score | number:'1.2-2' }}</strong>
+                <strong>{{ audio.human_score | appNumber:'1.2-2' }}</strong>
               </div>
               <div class="score-divider"></div>
               <div class="score score-b">
                 <span class="score-tag">buzón</span>
-                <strong>{{ audio.buzon_score | number:'1.2-2' }}</strong>
+                <strong>{{ audio.buzon_score | appNumber:'1.2-2' }}</strong>
               </div>
             </div>
             <div class="card-stats mono">
@@ -218,7 +218,7 @@
               f0 {{ chunkLabel(audio.primerF0) }}
             </div>
             <div class="card-f0 mono">
-              f0 promedio {{ audio.f0_promedio !== null ? (audio.f0_promedio | number:'1.2-2') + ' Hz' : 'none' }}
+              f0 promedio {{ audio.f0_promedio !== null ? (audio.f0_promedio | appNumber:'1.2-2') + ' Hz' : 'none' }}
             </div>
           }
         </article>

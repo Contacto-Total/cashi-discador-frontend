@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
@@ -27,13 +27,14 @@ import { ToastService } from './shared/services/toast.service';
 import { GestionLockService } from './core/services/gestion-lock.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
+    AppDateTimePipe,
     RouterOutlet,
     RouterModule,
     LucideAngularModule,

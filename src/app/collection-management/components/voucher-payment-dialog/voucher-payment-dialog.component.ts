@@ -6,6 +6,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ComprobanteService } from '../../services/comprobante.service';
 import { ComprobanteUploadResponse, ValidationResult } from '../../models/comprobante.model';
+import { FormatService } from '@/shared/services/format.service';
+import { AppCurrencyPipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 export interface VoucherPaymentDialogData {
   nombreCliente: string;
@@ -44,7 +46,9 @@ export interface VoucherPaymentDialogResult {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    AppCurrencyPipe,
+    AppNumberPipe
   ],
   template: `
     <div class="voucher-dialog" [class.dark-mode]="isDarkMode()">
@@ -103,10 +107,10 @@ export interface VoucherPaymentDialogResult {
                     <div class="installment-chip" [class.active]="cuota.numeroCuota === cuotaMasProxima()?.numeroCuota">
                       <span class="chip-number">C{{ cuota.numeroCuota }}</span>
                       @if (cuota.montoPagadoReal && cuota.montoPagadoReal > 0) {
-                        <span class="chip-amount-original">S/{{ cuota.monto | number:'1.2-2' }}</span>
-                        <span class="chip-amount">S/{{ getSaldoPendiente(cuota) | number:'1.2-2' }}</span>
+                        <span class="chip-amount-original">{{ cuota.monto | appCurrency }}</span>
+                        <span class="chip-amount">{{ getSaldoPendiente(cuota) | appCurrency }}</span>
                       } @else {
-                        <span class="chip-amount">S/{{ cuota.monto | number:'1.2-2' }}</span>
+                        <span class="chip-amount">{{ cuota.monto | appCurrency }}</span>
                       }
                     </div>
                   }
@@ -115,10 +119,10 @@ export interface VoucherPaymentDialogResult {
                   <mat-icon>arrow_forward</mat-icon>
                   <span>Próxima cuota:</span>
                   @if (cuotaMasProxima()?.montoPagadoReal && cuotaMasProxima()!.montoPagadoReal! > 0) {
-                    <strong>C{{ cuotaMasProxima()?.numeroCuota }} - S/{{ getSaldoPendiente(cuotaMasProxima()!) | number:'1.2-2' }}</strong>
+                    <strong>C{{ cuotaMasProxima()?.numeroCuota }} - {{ getSaldoPendiente(cuotaMasProxima()!) | appCurrency }}</strong>
                     <span class="partial-badge">Parcial</span>
                   } @else {
-                    <strong>C{{ cuotaMasProxima()?.numeroCuota }} - S/{{ cuotaMasProxima()?.monto | number:'1.2-2' }}</strong>
+                    <strong>C{{ cuotaMasProxima()?.numeroCuota }} - {{ cuotaMasProxima()?.monto | appCurrency }}</strong>
                   }
                   <span class="date-badge">{{ formatDate(cuotaMasProxima()?.dueDate) }}</span>
                 </div>
@@ -148,7 +152,7 @@ export interface VoucherPaymentDialogResult {
                     </div>
                     <div class="validation-content">
                       <span class="validation-label">Monto</span>
-                      <span class="validation-value">S/{{ uploadResponse()?.ocrResult?.monto | number:'1.2-2' }}</span>
+                      <span class="validation-value">{{ uploadResponse()?.ocrResult?.monto | appCurrency }}</span>
                     </div>
                   </div>
 
@@ -204,7 +208,7 @@ export interface VoucherPaymentDialogResult {
                   <mat-icon>{{ cuotaCoincidente() ? 'check_circle' : 'info' }}</mat-icon>
                   <span>Se registrará:</span>
                   <strong>Cuota {{ (cuotaCoincidente() || cuotaMasProxima())?.numeroCuota }}</strong>
-                  <span class="amount">(S/{{ (cuotaCoincidente() || cuotaMasProxima())?.monto | number:'1.2-2' }})</span>
+                  <span class="amount">({{ (cuotaCoincidente() || cuotaMasProxima())?.monto | appCurrency }})</span>
                 </div>
 
                 <!-- Auto-selección info -->
@@ -237,7 +241,7 @@ export interface VoucherPaymentDialogResult {
                     <button mat-icon-button (click)="zoomOut()" [disabled]="zoomLevel() <= 0.5" class="zoom-btn">
                       <mat-icon>remove</mat-icon>
                     </button>
-                    <span class="zoom-level">{{ (zoomLevel() * 100) | number:'1.0-0' }}%</span>
+                    <span class="zoom-level">{{ (zoomLevel() * 100) | appNumber:'1.0-0' }}%</span>
                     <button mat-icon-button (click)="zoomIn()" [disabled]="zoomLevel() >= 3" class="zoom-btn">
                       <mat-icon>add</mat-icon>
                     </button>
@@ -804,7 +808,8 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
   constructor(
     public dialogRef: MatDialogRef<VoucherPaymentDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: VoucherPaymentDialogData,
-    private comprobanteService: ComprobanteService
+    private comprobanteService: ComprobanteService,
+    private fmt: FormatService
   ) {}
 
   ngOnInit(): void {
@@ -929,7 +934,7 @@ export class VoucherPaymentDialogComponent implements OnInit, OnDestroy {
     if (!dateValue) return '-';
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       const [y, m, d] = dateValue.split('-').map(Number);
-      return new Date(y, m - 1, d).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      return this.fmt.date(new Date(y, m - 1, d));
     }
     return dateValue;
   }

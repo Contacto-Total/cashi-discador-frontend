@@ -1,4 +1,5 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -31,6 +32,8 @@ import { LucideAngularModule } from 'lucide-angular';
   styleUrl: './chat-list.scss'
 })
 export class ChatList implements OnInit {
+  private fmt = inject(FormatService);
+
   @Output() chatSelected = new EventEmitter<Chat>();
 
   allItems: Chat[] = [];
@@ -169,11 +172,11 @@ export class ChatList implements OnInit {
     const diff = now.getTime() - date.getTime();
 
     if (diff < 86400000) {
-      return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+      return this.fmt.time(date, false);
     } else if (diff < 604800000) {
-      return date.toLocaleDateString('es-PE', { weekday: 'short' });
+      return this.fmt.date(date, { weekday: 'short' });
     } else {
-      return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+      return this.fmt.date(date, { day: '2-digit', month: '2-digit' });
     }
   }
 

@@ -19,6 +19,7 @@ import { computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { SuccessDialogComponent } from '@/SMS_DYNAMIC/Common/success-dialog.component';
 import {RoundWizardDialogComponent} from "@/SMS_DYNAMIC/Common/round-wizard-dialog.component";
+import { FormatService } from '@/shared/services/format.service';
 import { FormArray, FormGroup, Validators, ValidatorFn, AbstractControl, ValidationErrors } from '@angular/forms';
 
 
@@ -47,6 +48,7 @@ export class DynQueryPageComponent implements OnInit {
   private api = inject(DynQueryService);
   private comboApi = inject(ComboService);
   private router = inject(Router);
+  private fmt = inject(FormatService);
   sampleRow = signal<Row|null>(null);
 
   @ViewChild('tplArea') tplArea?: ElementRef<HTMLTextAreaElement>;
@@ -367,12 +369,12 @@ export class DynQueryPageComponent implements OnInit {
     const firstName = (s: any) => String(s ?? '').trim().split(/\s+/)[0] || '';
     const fmtInt = (v: any) => {
       const n = Number(v);
-      return Number.isFinite(n) ? Math.trunc(n).toLocaleString('es-PE') : '';
+      return Number.isFinite(n) ? this.fmt.number(Math.trunc(n)) : '';
     };
     const hoy = new Date();
     const manana = new Date(hoy.getTime() + 24 * 60 * 60 * 1000);
     const fmtDate = (d: Date) =>
-      d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit'});
+      this.fmt.date(d, { day: '2-digit', month: '2-digit'});
 
     return tpl.replace(VAR_PATTERN, (_m, key: string) => {
       switch (key) {

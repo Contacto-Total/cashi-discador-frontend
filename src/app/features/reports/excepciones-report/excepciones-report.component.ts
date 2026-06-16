@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -8,6 +8,7 @@ import {
   ResumenMetricas,
   ReporteResponse
 } from './excepciones-report.service';
+import { FormatService } from '@/shared/services/format.service';
 
 @Component({
   selector: 'app-excepciones-report',
@@ -211,6 +212,8 @@ export class ExcepcionesReportComponent implements OnInit {
   data = signal<ReporteExcepcionDTO[]>([]);
   metricas = signal<ResumenMetricas | null>(null);
 
+  private fmt = inject(FormatService);
+
   constructor(private reporteService: ExcepcionesReportService) {}
 
   ngOnInit(): void {
@@ -303,18 +306,11 @@ export class ExcepcionesReportComponent implements OnInit {
 
   formatCurrency(value: number | null): string {
     if (value === null || value === undefined) return '-';
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(value);
+    return this.fmt.currency(value);
   }
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return this.fmt.date(new Date(dateStr));
   }
 }

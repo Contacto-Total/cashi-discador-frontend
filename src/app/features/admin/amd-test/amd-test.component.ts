@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormatService } from '@/shared/services/format.service';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { LucideAngularModule } from 'lucide-angular';
 
 // Llamaos obviamente al servicio
@@ -60,11 +62,13 @@ export interface Results_Audios {
 @Component({
   selector: 'app-amd-test',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, AppNumberPipe],
   templateUrl: './amd-test.component.html',
   styleUrls: ['./amd-test.component.css'],
 })
 export class AmdTestComponent {
+  private fmt = inject(FormatService);
+
   // Variables de carga
   isDragging = false;
   uploadError: string | null = null;
@@ -187,7 +191,7 @@ export class AmdTestComponent {
 
     // hora actual como texto "HH:MM:SS"
     private horaActual(): string {
-      return new Date().toLocaleTimeString('es-PE', { hour12: false });
+      return this.fmt.time(new Date());
     }
 
     // para milisegundos

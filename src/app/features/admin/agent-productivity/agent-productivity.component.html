@@ -101,7 +101,7 @@
           <lucide-angular name="clipboard-list" [size]="24"></lucide-angular>
         </div>
         <div class="kpi-content">
-          <span class="kpi-value">{{ summary?.totalGestiones | number }}</span>
+          <span class="kpi-value">{{ summary?.totalGestiones | appNumber }}</span>
           <span class="kpi-label">Total Gestiones</span>
           <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioGestiones)">
             {{ formatPercent(summary?.cambioGestiones) }}
@@ -113,7 +113,7 @@
           <lucide-angular name="handshake" [size]="24"></lucide-angular>
         </div>
         <div class="kpi-content">
-          <span class="kpi-value">{{ summary?.totalPromesas | number }}</span>
+          <span class="kpi-value">{{ summary?.totalPromesas | appNumber }}</span>
           <span class="kpi-label">Promesas Generadas</span>
           <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioPromesas)">
             {{ formatPercent(summary?.cambioPromesas) }}
@@ -137,7 +137,7 @@
           <lucide-angular name="percent" [size]="24"></lucide-angular>
         </div>
         <div class="kpi-content">
-          <span class="kpi-value">{{ summary?.efectividadProyeccion | number:'1.1-1' }}%</span>
+          <span class="kpi-value">{{ summary?.efectividadProyeccion | appNumber:'1.1-1' }}%</span>
           <span class="kpi-label">% Efectividad Proyeccion</span>
           <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividadProyeccion)">
             {{ formatPercent(summary?.cambioEfectividadProyeccion) }}
@@ -149,7 +149,7 @@
           <lucide-angular name="target" [size]="24"></lucide-angular>
         </div>
         <div class="kpi-content">
-          <span class="kpi-value">{{ summary?.efectividadGeneral | number:'1.1-1' }}%</span>
+          <span class="kpi-value">{{ summary?.efectividadGeneral | appNumber:'1.1-1' }}%</span>
           <span class="kpi-label">% Efectividad General</span>
           <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividadGeneral)">
             {{ formatPercent(summary?.cambioEfectividadGeneral) }}
@@ -193,9 +193,9 @@
                   <span class="agent-name">{{ agent.nombreAgente }}</span>
                 </div>
               </td>
-              <td class="col-num">{{ agent.totalGestiones | number }}</td>
+              <td class="col-num">{{ agent.totalGestiones | appNumber }}</td>
               <td class="col-num">
-                <span class="promesas-badge">{{ agent.totalPromesas | number }}</span>
+                <span class="promesas-badge">{{ agent.totalPromesas | appNumber }}</span>
               </td>
               <td class="col-money">S/ {{ formatMoney(agent.proyeccion) }}</td>
               <td class="col-money">S/ {{ formatMoney(agent.proyeccionTotal) }}</td>
@@ -203,13 +203,13 @@
               <td class="col-pct">
                 <div class="efectividad-bar">
                   <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadProyeccion, 100)"></div>
-                  <span class="bar-label">{{ agent.efectividadProyeccion | number:'1.0-0' }}%</span>
+                  <span class="bar-label">{{ agent.efectividadProyeccion | appNumber:'1.0-0' }}%</span>
                 </div>
               </td>
               <td class="col-pct">
                 <div class="efectividad-bar efectividad-general">
                   <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadGeneral, 100)"></div>
-                  <span class="bar-label">{{ agent.efectividadGeneral | number:'1.0-0' }}%</span>
+                  <span class="bar-label">{{ agent.efectividadGeneral | appNumber:'1.0-0' }}%</span>
                 </div>
               </td>
               <td class="col-trend">
@@ -357,10 +357,10 @@
             <tbody>
               <tr *ngFor="let a of corteAgents">
                 <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
-                <td>{{ a.pdpMonto12 | number:'1.0-0' }}</td>
-                <td>{{ a.pdpMonto15 | number:'1.0-0' }}</td>
-                <td>{{ a.pdpMonto17 | number:'1.0-0' }}</td>
-                <td class="corte-cierre">{{ a.pdpMonto23 | number:'1.0-0' }}</td>
+                <td>{{ a.pdpMonto12 | appNumber:'1.0-0' }}</td>
+                <td>{{ a.pdpMonto15 | appNumber:'1.0-0' }}</td>
+                <td>{{ a.pdpMonto17 | appNumber:'1.0-0' }}</td>
+                <td class="corte-cierre">{{ a.pdpMonto23 | appNumber:'1.0-0' }}</td>
               </tr>
             </tbody>
             <tfoot>
@@ -391,19 +391,19 @@
             <tbody>
               <tr *ngFor="let a of corteAgents">
                 <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
-                <td>{{ a.pdpCant12 ? (a.pdpMonto12 / a.pdpCant12 | number:'1.0-0') : '-' }}</td>
-                <td>{{ a.pdpCant15 ? (a.pdpMonto15 / a.pdpCant15 | number:'1.0-0') : '-' }}</td>
-                <td>{{ a.pdpCant17 ? (a.pdpMonto17 / a.pdpCant17 | number:'1.0-0') : '-' }}</td>
-                <td class="corte-cierre">{{ a.pdpCant23 ? (a.pdpMonto23 / a.pdpCant23 | number:'1.0-0') : '-' }}</td>
+                <td>{{ a.pdpCant12 ? (a.pdpMonto12 / a.pdpCant12 | appNumber:'1.0-0') : '-' }}</td>
+                <td>{{ a.pdpCant15 ? (a.pdpMonto15 / a.pdpCant15 | appNumber:'1.0-0') : '-' }}</td>
+                <td>{{ a.pdpCant17 ? (a.pdpMonto17 / a.pdpCant17 | appNumber:'1.0-0') : '-' }}</td>
+                <td class="corte-cierre">{{ a.pdpCant23 ? (a.pdpMonto23 / a.pdpCant23 | appNumber:'1.0-0') : '-' }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr>
                 <td class="corte-agent"><strong>TOTAL</strong></td>
-                <td><strong>{{ corteTotal('pdpCant12') ? (corteTotal('pdpMonto12') / corteTotal('pdpCant12') | number:'1.0-0') : '-' }}</strong></td>
-                <td><strong>{{ corteTotal('pdpCant15') ? (corteTotal('pdpMonto15') / corteTotal('pdpCant15') | number:'1.0-0') : '-' }}</strong></td>
-                <td><strong>{{ corteTotal('pdpCant17') ? (corteTotal('pdpMonto17') / corteTotal('pdpCant17') | number:'1.0-0') : '-' }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant23') ? (corteTotal('pdpMonto23') / corteTotal('pdpCant23') | number:'1.0-0') : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant12') ? (corteTotal('pdpMonto12') / corteTotal('pdpCant12') | appNumber:'1.0-0') : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant15') ? (corteTotal('pdpMonto15') / corteTotal('pdpCant15') | appNumber:'1.0-0') : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('pdpCant17') ? (corteTotal('pdpMonto17') / corteTotal('pdpCant17') | appNumber:'1.0-0') : '-' }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('pdpCant23') ? (corteTotal('pdpMonto23') / corteTotal('pdpCant23') | appNumber:'1.0-0') : '-' }}</strong></td>
               </tr>
             </tfoot>
           </table>
@@ -425,19 +425,19 @@
             <tbody>
               <tr *ngFor="let a of corteAgents">
                 <td class="corte-agent">{{ shortName(a.nombreAgente) }}</td>
-                <td>{{ a.cd12 ? (a.pdpCant12 / a.cd12 * 100 | number:'1.0-1') + '%' : '-' }}</td>
-                <td>{{ a.cd15 ? (a.pdpCant15 / a.cd15 * 100 | number:'1.0-1') + '%' : '-' }}</td>
-                <td>{{ a.cd17 ? (a.pdpCant17 / a.cd17 * 100 | number:'1.0-1') + '%' : '-' }}</td>
-                <td class="corte-cierre">{{ a.cd23 ? (a.pdpCant23 / a.cd23 * 100 | number:'1.0-1') + '%' : '-' }}</td>
+                <td>{{ a.cd12 ? (a.pdpCant12 / a.cd12 * 100 | appNumber:'1.0-1') + '%' : '-' }}</td>
+                <td>{{ a.cd15 ? (a.pdpCant15 / a.cd15 * 100 | appNumber:'1.0-1') + '%' : '-' }}</td>
+                <td>{{ a.cd17 ? (a.pdpCant17 / a.cd17 * 100 | appNumber:'1.0-1') + '%' : '-' }}</td>
+                <td class="corte-cierre">{{ a.cd23 ? (a.pdpCant23 / a.cd23 * 100 | appNumber:'1.0-1') + '%' : '-' }}</td>
               </tr>
             </tbody>
             <tfoot>
               <tr>
                 <td class="corte-agent"><strong>TOTAL</strong></td>
-                <td><strong>{{ corteTotal('cd12') ? (corteTotal('pdpCant12') / corteTotal('cd12') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
-                <td><strong>{{ corteTotal('cd15') ? (corteTotal('pdpCant15') / corteTotal('cd15') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
-                <td><strong>{{ corteTotal('cd17') ? (corteTotal('pdpCant17') / corteTotal('cd17') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
-                <td class="corte-cierre"><strong>{{ corteTotal('cd23') ? (corteTotal('pdpCant23') / corteTotal('cd23') * 100 | number:'1.0-1') + '%' : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('cd12') ? (corteTotal('pdpCant12') / corteTotal('cd12') * 100 | appNumber:'1.0-1') + '%' : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('cd15') ? (corteTotal('pdpCant15') / corteTotal('cd15') * 100 | appNumber:'1.0-1') + '%' : '-' }}</strong></td>
+                <td><strong>{{ corteTotal('cd17') ? (corteTotal('pdpCant17') / corteTotal('cd17') * 100 | appNumber:'1.0-1') + '%' : '-' }}</strong></td>
+                <td class="corte-cierre"><strong>{{ corteTotal('cd23') ? (corteTotal('pdpCant23') / corteTotal('cd23') * 100 | appNumber:'1.0-1') + '%' : '-' }}</strong></td>
               </tr>
             </tfoot>
           </table>

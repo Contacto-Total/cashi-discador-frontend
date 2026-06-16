@@ -185,7 +185,7 @@
 
     <!-- Query Info -->
     <div class="text-center text-xs text-gray-500">
-      Consulta realizada: {{ response.queryDate | date:'dd/MM/yyyy HH:mm:ss' }}
+      Consulta realizada: {{ response.queryDate | appDateTime:true }}
     </div>
   </div>
 </div>

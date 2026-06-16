@@ -100,7 +100,7 @@
             <span class="vuelta-stat-lbl">Pendientes</span>
           </div>
           <div class="vuelta-stat-mini">
-            <span class="vuelta-stat-val" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad | number:'1.2-2' }}%</span>
+            <span class="vuelta-stat-val" style="color: #8e44ad;">{{ autoDialerStats.vueltaStats.tasaContactabilidad | appNumber:'1.2-2' }}%</span>
             <span class="vuelta-stat-lbl">Tasa</span>
           </div>
         </div>
@@ -110,7 +110,7 @@
                [style.width.%]="(autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100">
           </div>
           <span class="vuelta-progress-text">
-            {{ ((autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100) | number:'1.0-0' }}%
+            {{ ((autoDialerStats.vueltaStats.procesados / autoDialerStats.vueltaStats.total) * 100) | appNumber:'1.0-0' }}%
           </span>
         </div>
         <!-- Chips por vuelta -->
@@ -192,7 +192,7 @@
           <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="percent" [size]="18"></lucide-angular></span>
             <div class="metric-info">
-              <span class="metric-value">{{ autoDialerStats.contactabilidadOperativa | number:'1.2-2' }}%</span>
+              <span class="metric-value">{{ autoDialerStats.contactabilidadOperativa | appNumber:'1.2-2' }}%</span>
               <span class="metric-label">Contactab. Op.</span>
             </div>
           </div>
@@ -216,7 +216,7 @@
           <div class="metric-item metric-compact card-positive">
             <span class="metric-icon"><lucide-angular name="percent" [size]="18"></lucide-angular></span>
             <div class="metric-info">
-              <span class="metric-value">{{ autoDialerStats.opTasaGestion | number:'1.2-2'}}%</span>
+              <span class="metric-value">{{ autoDialerStats.opTasaGestion | appNumber:'1.2-2'}}%</span>
               <span class="metric-label">Tasa Gestión</span>
             </div>
           </div>
@@ -261,7 +261,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let llamada of llamadasOrdenadas; trackBy: trackByLlamada" class="llamada-row">
-                <td class="llamada-hora">{{ llamada.fechaInicio | date: 'HH:mm:ss' }}</td>
+                <td class="llamada-hora">{{ llamada.fechaInicio | appTime }}</td>
                 <td class="llamada-telefono">{{ llamada.anexoDestino }}</td>
                 <td class="llamada-agente">{{ llamada.nombreAgente }}</td>
                 <td class="llamada-estado">
@@ -403,7 +403,7 @@
         <span class="btn-dismiss-content">
           <lucide-angular name="check" [size]="18" class="btn-dismiss-icon"></lucide-angular>
           <span class="btn-dismiss-label">Entendido</span>
-          <span class="btn-dismiss-timer">{{ alertRemainingTime | number:'1.0-0' }}s</span>
+          <span class="btn-dismiss-timer">{{ alertRemainingTime | appNumber:'1.0-0' }}s</span>
         </span>
       </button>
     </div>

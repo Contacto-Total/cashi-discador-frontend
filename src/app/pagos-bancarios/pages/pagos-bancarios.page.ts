@@ -1,4 +1,5 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BcpPagosService } from '../services/bcp-pagos.service';
@@ -1259,6 +1260,8 @@ export class PagosBancariosPage implements OnInit {
   selectedPortfolioIdOh = 0;
   selectedSubPortfolioIdOh = 0;
 
+  private fmt = inject(FormatService);
+
   constructor(
     private bcpService: BcpPagosService,
     private authService: AuthService,
@@ -2086,7 +2089,7 @@ export class PagosBancariosPage implements OnInit {
 
   formatMonto(monto: number | undefined): string {
     if (monto === undefined || monto === null) return '0.00';
-    return monto.toLocaleString('es-PE', {
+    return this.fmt.number(monto, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormArray, FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
@@ -6,6 +6,7 @@ import { CreatePaymentAgreementRequest } from '../../models/create-payment-agree
 import { AgreementsService } from '../../services/agreements.service';
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { AgreementDataResponse } from '../../models/agreement-data.response';
+import { FormatService } from '@/shared/services/format.service';
 
 @Component({
   selector: 'app-payment-agreement-card-page',
@@ -15,6 +16,8 @@ import { AgreementDataResponse } from '../../models/agreement-data.response';
   styleUrls: ['./payment-agreement-card-page.component.css']
 })
 export class PaymentAgreementCardPageComponent implements OnInit {
+  private fmt = inject(FormatService);
+
   agreementForm: FormGroup;
   searchForm: FormGroup;
 
@@ -196,7 +199,7 @@ export class PaymentAgreementCardPageComponent implements OnInit {
     const [year, month, day] = dateString.split('-').map(Number);
     const date = new Date(year, month - 1, day);
 
-    const formatted = date.toLocaleDateString('es-PE', {
+    const formatted = this.fmt.date(date, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

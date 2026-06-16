@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, signal, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AutorizacionService, SolicitudAutorizacion, CuotaSolicitud } from '../../../core/services/autorizacion.service';
@@ -500,17 +501,15 @@ export class AuthorizationApprovalModalComponent {
   comentarios = '';
   procesando = signal<boolean>(false);
 
+  private fmt = inject(FormatService);
+
   constructor(private autorizacionService: AutorizacionService) {}
 
   formatFecha(fecha: string): string {
     if (!fecha) return 'N/A';
     try {
       const date = new Date(fecha);
-      return date.toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return this.fmt.date(date);
     } catch {
       return fecha;
     }

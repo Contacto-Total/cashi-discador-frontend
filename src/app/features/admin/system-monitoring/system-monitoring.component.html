@@ -15,7 +15,7 @@
       </select>
       <div class="last-updated" *ngIf="lastUpdated">
         <span class="pulse-dot"></span>
-        <span>{{ lastUpdated | date:'HH:mm:ss' }}</span>
+        <span>{{ lastUpdated | appTime }}</span>
       </div>
     </div>
   </div>
@@ -184,7 +184,7 @@
                 <div class="error-details">
                   <span class="error-method">{{ err.method }}</span>
                   <span class="error-url" [title]="err.url">{{ err.url }}</span>
-                  <span class="error-time">{{ err.timestamp | date:'HH:mm:ss' }}</span>
+                  <span class="error-time">{{ err.timestamp | appTime }}</span>
                 </div>
               </div>
             </div>

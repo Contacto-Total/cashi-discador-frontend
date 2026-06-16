@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 
@@ -138,6 +139,7 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
   `
 })
 export class ClienteResumenConciliacionDrawerWidget {
+  private fmt = inject(FormatService);
   @Input() open = false;
   @Input() loading = false;
   @Input() error: string | null = null;
@@ -159,11 +161,7 @@ export class ClienteResumenConciliacionDrawerWidget {
     const date = new Date(text);
     if (Number.isNaN(date.getTime())) return String(value);
 
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date).replace(/\//g, '-');
+    return this.fmt.date(date).replace(/\//g, '-');
   }
 
   formatDateTime(value: string | null | undefined): string {
@@ -175,14 +173,7 @@ export class ClienteResumenConciliacionDrawerWidget {
     const date = new Date(text);
     if (Number.isNaN(date.getTime())) return String(value);
 
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).format(date).replace(/\//g, '-');
+    return this.fmt.dateTime(date).replace(/\//g, '-');
   }
 
   hasValue(value: unknown): boolean {

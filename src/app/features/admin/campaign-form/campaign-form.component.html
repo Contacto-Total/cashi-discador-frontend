@@ -474,14 +474,14 @@
                 <div class="range-display">
                   <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
                     <span class="range-label">Mínimo</span>
-                    <span class="range-number">{{ filter.minValue | number }}</span>
+                    <span class="range-number">{{ filter.minValue | appNumber }}</span>
                   </div>
                   <div class="range-separator" *ngIf="filter.minValue !== undefined && filter.maxValue !== undefined">
                     <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
                   </div>
                   <div class="range-value" *ngIf="filter.maxValue !== undefined && filter.maxValue !== null">
                     <span class="range-label">Máximo</span>
-                    <span class="range-number">{{ filter.maxValue | number }}</span>
+                    <span class="range-number">{{ filter.maxValue | appNumber }}</span>
                   </div>
                 </div>
               </div>
@@ -639,23 +639,23 @@
         <div class="preview-info">
           <div class="info-item">
             <span class="info-label">Total en Subcartera:</span>
-            <span class="info-value">{{ previewData.totalClientesSubcartera | number }}</span>
+            <span class="info-value">{{ previewData.totalClientesSubcartera | appNumber }}</span>
           </div>
           <div class="info-item" *ngIf="previewData.excluidosPorBlacklist > 0">
             <span class="info-label">Excluidos por Blacklist:</span>
-            <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | number }}</span>
+            <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | appNumber }}</span>
           </div>
           <div class="info-item" *ngIf="(previewData.excluidosPorPagoCumplido ?? 0) > 0">
             <span class="info-label">Excluidos por Pago Cumplido:</span>
-            <span class="info-value text-red">-{{ previewData.excluidosPorPagoCumplido | number }}</span>
+            <span class="info-value text-red">-{{ previewData.excluidosPorPagoCumplido | appNumber }}</span>
           </div>
           <div class="info-item" *ngIf="(previewData.excluidosPorFiltros ?? 0) > 0">
             <span class="info-label">Excluidos por Filtros:</span>
-            <span class="info-value text-orange">-{{ previewData.excluidosPorFiltros | number }}</span>
+            <span class="info-value text-orange">-{{ previewData.excluidosPorFiltros | appNumber }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Disponibles:</span>
-            <span class="info-value text-green">{{ (previewData.totalConFiltros ?? previewData.totalDespuesBlacklist) | number }}</span>
+            <span class="info-value text-green">{{ (previewData.totalConFiltros ?? previewData.totalDespuesBlacklist) | appNumber }}</span>
           </div>
         </div>
 
@@ -676,14 +676,14 @@
                   <span class="tipo-code" [style.background-color]="tipo.color">{{ tipo.codigo }}</span>
                 </td>
                 <td>{{ tipo.nombre }}</td>
-                <td class="text-right">{{ (previewData.porTipoContactoFiltrado[tipo.codigo] || 0) | number }}</td>
+                <td class="text-right">{{ (previewData.porTipoContactoFiltrado[tipo.codigo] || 0) | appNumber }}</td>
                 <td class="text-right">{{ getPreviewPercentage(previewData.porTipoContactoFiltrado[tipo.codigo] || 0) }}%</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
                 <td colspan="2"><strong>TOTAL</strong></td>
-                <td class="text-right"><strong>{{ getPreviewTotal() | number }}</strong></td>
+                <td class="text-right"><strong>{{ getPreviewTotal() | appNumber }}</strong></td>
                 <td class="text-right"><strong>100.0%</strong></td>
               </tr>
             </tfoot>
