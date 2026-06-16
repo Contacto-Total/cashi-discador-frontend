@@ -55,7 +55,20 @@ export class FormatService {
   /** Normaliza cualquier entrada a Date válida o null. */
   private toDate(value: DateInput): Date | null {
     if (value === null || value === undefined || value === '') return null;
-    const d = value instanceof Date ? value : new Date(value);
+    if (value instanceof Date) return isNaN(value.getTime()) ? null : value;
+    if (typeof value === 'number') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const s = String(value).trim();
+    // Strings "naive" del backend (sin timezone): "YYYY-MM-DD" o "YYYY-MM-DD[ T]HH:mm[:ss]".
+    // Se parsean como hora LOCAL para evitar el corrimiento de un día que produce
+    // `new Date('YYYY-MM-DD')` (que lo interpreta como UTC medianoche → día anterior en UTC-5).
+    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+    if (m) {
+      return new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0));
+    }
+    const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
   }
 

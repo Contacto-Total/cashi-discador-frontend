@@ -3945,13 +3945,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   private formatDateTime(dateTimeString: string): string {
-    const date = new Date(dateTimeString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    // Fecha+hora siguiendo el idioma del navegador (FormatService).
+    return this.fmt.dateTime(dateTimeString);
   }
 
   private calculateCallDuration(callDetail: any): string {
@@ -4192,22 +4187,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-      
-      // 1. Separamos la cadena en fecha y hora (usando espacio o 'T' como separador)
-      const partes = dateStr.split(/[ T]/);
-      const soloFecha = partes[0]; // Ej: "2026-04-07"
-      
-      // Extraemos la hora y le quitamos los microsegundos (lo que está después del punto)
-      const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
-      
-      // 2. Formateamos la fecha de AAAA-MM-DD a DD/MM/AAAA
-    const dateParts = soloFecha.split('-');
-      let fechaFormateada = soloFecha;
-    if (dateParts.length === 3) {
-      fechaFormateada = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-    }
-
-      // 3. Juntamos la fecha formateada con la hora al final (si existe)
+    // La FECHA sigue el idioma del navegador (FormatService); la HORA se conserva literal.
+    const partes = dateStr.split(/[ T]/);
+    const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
+    const fechaFormateada = this.fmt.date(partes[0]) || partes[0];
     return soloHora ? `${fechaFormateada} ${soloHora}` : fechaFormateada;
   }
 
@@ -4317,11 +4300,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     if (fechaPrimeraCuota) {
-      // fecha viene como "YYYY-MM-DD", mostrar como "DD/MM"
-      const dateParts = fechaPrimeraCuota.split('-');
-      if (dateParts.length >= 3) {
-        parts.push(`${dateParts[2]}/${dateParts[1]}`);
-      }
+      // fecha compacta (día/mes) siguiendo el idioma del navegador
+      const f = this.fmt.date(fechaPrimeraCuota, { day: '2-digit', month: '2-digit' });
+      if (f) parts.push(f);
     }
 
     return parts.join(' · ');
