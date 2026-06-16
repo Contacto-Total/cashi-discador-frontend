@@ -509,6 +509,9 @@ export class GestionesReportComponent implements OnInit {
   asesorBusqueda = '';
   showAsesorList = signal(false);
   selectedAgentes = signal<number[]>([]);
+  // Secuencia para descartar respuestas viejas: si cambian cartera/subcartera rapido,
+  // la respuesta de un alcance anterior no debe pisar la del actual (lista "trabada").
+  private agentesReqSeq = 0;
 
   // Tipificacion (cascada N1 -> N2 -> N3)
   private tipificaciones: TipificacionCatalogo[] = [];
@@ -595,18 +598,23 @@ export class GestionesReportComponent implements OnInit {
 
   // ===== Asesor multi-seleccion =====
   private reloadAgentes(): void {
+    const seq = ++this.agentesReqSeq;
+    // Limpiar de inmediato: al cambiar de cartera/subcartera no debe quedar visible la
+    // lista (ni la seleccion) del alcance anterior mientras llega la nueva respuesta.
+    this.agentes = [];
+    this.agentesFiltrados.set([]);
+    this.selectedAgentes.set([]);
+    this.asesorBusqueda = '';
     this.reporteService.getAgentes(this.filtros.idProveedor, this.filtros.idCartera, this.filtros.idSubcartera).subscribe({
       next: (data) => {
+        if (seq !== this.agentesReqSeq) { return; } // respuesta de un alcance ya superado
         this.agentes = data;
         this.filtrarAgentes(this.asesorBusqueda);
-        // Podar asesores seleccionados que ya no existen en el nuevo alcance
-        const validos = new Set(data.map(a => a.id));
-        const podados = this.selectedAgentes().filter(id => validos.has(id));
-        if (podados.length !== this.selectedAgentes().length) {
-          this.selectedAgentes.set(podados);
-        }
       },
-      error: (err) => console.error('Error cargando asesores:', err)
+      error: (err) => {
+        if (seq !== this.agentesReqSeq) { return; }
+        console.error('Error cargando asesores:', err);
+      }
     });
   }
 
