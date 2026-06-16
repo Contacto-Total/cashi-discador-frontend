@@ -5,22 +5,43 @@ export type DateInput = Date | string | number | null | undefined;
 /**
  * Servicio ÚNICO de formateo de fechas, horas, números y moneda.
  *
- * Fase 1: el locale está FIJO en 'es-PE' (comportamiento idéntico al anterior),
- * pero todo el formateo de la app pasa por aquí en vez de tener 'es-PE'
- * hardcodeado en ~75 sitios. Esto elimina la inconsistencia previa y deja el
- * cambio de locale en UN solo punto.
+ * Todo el formateo de la app pasa por aquí en vez de tener 'es-PE' hardcodeado en
+ * ~75 sitios. Esto deja el locale en UN solo punto.
  *
- * Fase 2 (futuro): `setLocale()` podrá enlazarse al idioma del navegador o a una
- * preferencia de usuario, con allow-list y fallback a es-PE. La política por tipo
- * (p.ej. mantener la fecha en dd/MM aunque cambie el locale) se decide aquí.
+ * Fase 2 (ACTIVA): el locale se enlaza al idioma del navegador (`navigator.language`)
+ * al crear el servicio, con fallback a 'es-PE'. Modo "completo": TODO sigue al
+ * navegador, incluidas las fechas (en-US → MM/DD/YYYY, es-PE → DD/MM/YYYY) y los
+ * separadores de número/moneda. El símbolo de moneda se mantiene "S/" (es el PEN del
+ * negocio, no depende del idioma). `setLocale()` permite override (p.ej. preferencia
+ * de usuario) en el futuro.
  *
  * Se basa en `Intl.*` (nativo): no requiere registerLocaleData ni infla el bundle,
  * y NO toca el parsing de entrada (input type=date ISO + date-formats.ts).
  */
 @Injectable({ providedIn: 'root' })
 export class FormatService {
-  /** Fuente única de verdad del locale. */
-  private readonly _locale = signal<string>('es-PE');
+  /**
+   * Resuelve el locale del navegador (BCP47, p.ej. "en-US", "es-ES", "pt-BR").
+   * Fallback a 'es-PE' si no hay `navigator`, viene vacío o Intl no lo acepta.
+   * Se lee UNA sola vez al crear el servicio (el idioma no cambia en la sesión) →
+   * los pipes puros formatean con el locale correcto desde el arranque, sin
+   * necesidad de reactividad.
+   */
+  private static resolveBrowserLocale(): string {
+    try {
+      const nav = typeof navigator !== 'undefined'
+        ? (navigator.language || (navigator.languages && navigator.languages[0]) || '')
+        : '';
+      if (!nav) return 'es-PE';
+      new Intl.DateTimeFormat(nav); // valida el tag; lanza RangeError si es inválido
+      return nav;
+    } catch {
+      return 'es-PE';
+    }
+  }
+
+  /** Fuente única de verdad del locale (Fase 2: enlazado al idioma del navegador). */
+  private readonly _locale = signal<string>(FormatService.resolveBrowserLocale());
   readonly locale = this._locale.asReadonly();
 
   /** Moneda por defecto del negocio. */
