@@ -97,17 +97,17 @@
               <span class="meta-tag">{{ campaign.dialMode }}</span>
               <span class="meta-tag">Max: {{ campaign.maxAttempts }}</span>
               <span class="meta-tag">Int: {{ campaign.intensidad || 50 }}</span>
-              <span class="meta-tag meta-date" *ngIf="campaign.createdAt">{{ campaign.createdAt | date: 'short' }}</span>
+              <span class="meta-tag meta-date" *ngIf="campaign.createdAt">{{ campaign.createdAt | appDateTime }}</span>
             </div>
             <div class="card-meta" *ngIf="campaign.primeraActivacion || campaign.ultimaActivacion || campaign.ultimaDesactivacion" style="margin-top: 4px;">
               <span class="meta-tag" *ngIf="campaign.primeraActivacion" style="color: #10B981;" title="Primera activación">
-                1ra: {{ campaign.primeraActivacion | date: 'dd/MM HH:mm' }}
+                1ra: {{ campaign.primeraActivacion | appDateTime: 'dayMonth' }}
               </span>
               <span class="meta-tag" *ngIf="campaign.ultimaActivacion" style="color: #3B82F6;" title="Última activación">
-                Act: {{ campaign.ultimaActivacion | date: 'dd/MM HH:mm' }}
+                Act: {{ campaign.ultimaActivacion | appDateTime: 'dayMonth' }}
               </span>
               <span class="meta-tag" *ngIf="campaign.ultimaDesactivacion" style="color: #EF4444;" title="Última desactivación">
-                Des: {{ campaign.ultimaDesactivacion | date: 'dd/MM HH:mm' }}
+                Des: {{ campaign.ultimaDesactivacion | appDateTime: 'dayMonth' }}
               </span>
             </div>
           </div>

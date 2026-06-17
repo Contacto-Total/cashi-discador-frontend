@@ -22,6 +22,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_FORMATS } from '@angular/material/core';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 export const MY_DATE_FORMATS = {
   parse: {
@@ -42,7 +43,8 @@ export const MY_DATE_FORMATS = {
     MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    AppNumberPipe
   ],
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.css'],

@@ -4,11 +4,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { Subscription, interval } from 'rxjs';
 import { startWith, switchMap } from 'rxjs/operators';
 import { SystemHealthService, SystemHealth } from '../../../core/services/system-health.service';
+import { AppTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-system-health',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, AppTimePipe],
   templateUrl: './system-health.component.html',
   styleUrls: ['./system-health.component.css']
 })

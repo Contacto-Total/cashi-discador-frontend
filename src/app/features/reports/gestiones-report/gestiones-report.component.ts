@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
@@ -13,11 +13,12 @@ import {
 } from './gestiones-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
+import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-gestiones-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppDatePipe, AppNumberPipe],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->
@@ -390,7 +391,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                 @for (item of data(); track item.id) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-medium">{{ item.id }}</td>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaGestion | date:'dd/MM/yy' }}</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaGestion | appDate:'short' }}</td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-mono text-xs">{{ item.documentoCliente }}</td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.nombreCliente | slice:0:20 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreAgente | slice:0:15 }}</td>
@@ -407,7 +408,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.campoMontoOrigen || '-' }}</td>
                     <td class="px-3 py-2 text-right text-gray-900 dark:text-white">
                       @if (item.montoPromesa) {
-                        S/ {{ item.montoPromesa | number:'1.2-2' }}
+                        S/ {{ item.montoPromesa | appNumber:'1.2-2' }}
                       } @else {
                         -
                       }
@@ -423,7 +424,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     </td>
                     <td class="px-3 py-2 text-right text-green-600 dark:text-green-400">
                       @if (item.montoPagadoReal) {
-                        S/ {{ item.montoPagadoReal | number:'1.2-2' }}
+                        S/ {{ item.montoPagadoReal | appNumber:'1.2-2' }}
                       } @else {
                         -
                       }
@@ -441,7 +442,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                       flex flex-col sm:flex-row items-center justify-between gap-3">
             <p class="text-sm text-gray-600 dark:text-gray-400">
               Vista previa de <span class="font-semibold">{{ data().length }}</span> de
-              <span class="font-semibold">{{ totalRecords() | number }}</span> registros
+              <span class="font-semibold">{{ totalRecords() | appNumber }}</span> registros
             </p>
             <button
               (click)="exportarExcel()"
@@ -451,7 +452,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                      disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <lucide-angular name="download" [size]="18"></lucide-angular>
-              Exportar todo a Excel ({{ totalRecords() | number }} registros)
+              Exportar todo a Excel ({{ totalRecords() | appNumber }} registros)
             </button>
           </div>
         }
@@ -509,6 +510,9 @@ export class GestionesReportComponent implements OnInit {
   asesorBusqueda = '';
   showAsesorList = signal(false);
   selectedAgentes = signal<number[]>([]);
+  // Secuencia para descartar respuestas viejas: si cambian cartera/subcartera rapido,
+  // la respuesta de un alcance anterior no debe pisar la del actual (lista "trabada").
+  private agentesReqSeq = 0;
 
   // Tipificacion (cascada N1 -> N2 -> N3)
   private tipificaciones: TipificacionCatalogo[] = [];
@@ -595,18 +599,23 @@ export class GestionesReportComponent implements OnInit {
 
   // ===== Asesor multi-seleccion =====
   private reloadAgentes(): void {
+    const seq = ++this.agentesReqSeq;
+    // Limpiar de inmediato: al cambiar de cartera/subcartera no debe quedar visible la
+    // lista (ni la seleccion) del alcance anterior mientras llega la nueva respuesta.
+    this.agentes = [];
+    this.agentesFiltrados.set([]);
+    this.selectedAgentes.set([]);
+    this.asesorBusqueda = '';
     this.reporteService.getAgentes(this.filtros.idProveedor, this.filtros.idCartera, this.filtros.idSubcartera).subscribe({
       next: (data) => {
+        if (seq !== this.agentesReqSeq) { return; } // respuesta de un alcance ya superado
         this.agentes = data;
         this.filtrarAgentes(this.asesorBusqueda);
-        // Podar asesores seleccionados que ya no existen en el nuevo alcance
-        const validos = new Set(data.map(a => a.id));
-        const podados = this.selectedAgentes().filter(id => validos.has(id));
-        if (podados.length !== this.selectedAgentes().length) {
-          this.selectedAgentes.set(podados);
-        }
       },
-      error: (err) => console.error('Error cargando asesores:', err)
+      error: (err) => {
+        if (seq !== this.agentesReqSeq) { return; }
+        console.error('Error cargando asesores:', err);
+      }
     });
   }
 

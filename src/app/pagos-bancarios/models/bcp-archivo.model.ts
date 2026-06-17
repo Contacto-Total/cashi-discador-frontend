@@ -156,7 +156,14 @@ export interface ResumenConciliacionCliente {
   subcarteraId: number;
   nombreCliente: string | null;
   pagoCumplido: boolean;
+  intentosCancelacion?: IntentoCancelacionResumenConciliacion[];
   promesas: PromesaResumenConciliacion[];
+}
+
+export interface IntentoCancelacionResumenConciliacion {
+  idGestion: number;
+  fechaGestion: string;
+  metodoContacto: 'GESTION_AUTOMATICA' | 'GESTION_MANUAL' | 'GESTION_PROGRESIVO' | 'GESTION_PREDICTIVO' | null;
 }
 
 export interface PromesaResumenConciliacion {

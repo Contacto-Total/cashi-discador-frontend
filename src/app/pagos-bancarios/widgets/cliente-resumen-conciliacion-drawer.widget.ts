@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 
@@ -32,7 +33,7 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
             } @else if (error) {
               <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
             } @else if (resumen) {
-              <div class="mb-3 grid grid-cols-2 gap-2">
+              <div class="mb-3 grid grid-cols-3 gap-2">
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Tiene carta</p>
                   <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
@@ -41,8 +42,40 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Promesas</p>
                   <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ resumen.promesas.length }}</p>
                 </div>
+                <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400">Intentos cancelación</p>
+                  <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ getIntentosCancelacion().length }}</p>
+                </div>
               </div>
 
+              <div class="mb-3 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
+                <button type="button" class="rounded-md px-2 py-1.5 transition-colors" [class]="activeView === 'promesas' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'" (click)="activeView = 'promesas'">
+                  Promesas
+                </button>
+                <button type="button" class="rounded-md px-2 py-1.5 transition-colors" [class]="activeView === 'cancelaciones' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'" (click)="activeView = 'cancelaciones'">
+                  Cancelaciones
+                </button>
+              </div>
+
+              @if (activeView === 'cancelaciones') {
+                <div class="space-y-2">
+                  @for (intento of getIntentosCancelacion(); track intento.idGestion) {
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                          <p class="text-xs font-bold text-slate-900 dark:text-white">Gestión {{ intento.idGestion }}</p>
+                          <p class="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">{{ formatDateTime(intento.fechaGestion) }}</p>
+                        </div>
+                        <span class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold" [class]="getMetodoClass(intento.metodoContacto)">
+                          {{ formatMetodoContacto(intento.metodoContacto) }}
+                        </span>
+                      </div>
+                    </div>
+                  } @empty {
+                    <div class="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No hay intentos de cancelación para este cliente.</div>
+                  }
+                </div>
+              } @else {
               <div class="space-y-2">
                 @for (promesa of resumen.promesas; track promesa.idGestion) {
                   <details class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
@@ -130,6 +163,7 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                   <div class="rounded-xl border border-slate-200 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">No hay promesas para este cliente.</div>
                 }
               </div>
+              }
             }
           </div>
         </aside>
@@ -138,6 +172,8 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
   `
 })
 export class ClienteResumenConciliacionDrawerWidget {
+  private fmt = inject(FormatService);
+  activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
   @Input() loading = false;
   @Input() error: string | null = null;
@@ -159,11 +195,7 @@ export class ClienteResumenConciliacionDrawerWidget {
     const date = new Date(text);
     if (Number.isNaN(date.getTime())) return String(value);
 
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    }).format(date).replace(/\//g, '-');
+    return this.fmt.date(date).replace(/\//g, '-');
   }
 
   formatDateTime(value: string | null | undefined): string {
@@ -175,14 +207,7 @@ export class ClienteResumenConciliacionDrawerWidget {
     const date = new Date(text);
     if (Number.isNaN(date.getTime())) return String(value);
 
-    return new Intl.DateTimeFormat('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).format(date).replace(/\//g, '-');
+    return this.fmt.dateTime(date).replace(/\//g, '-');
   }
 
   hasValue(value: unknown): boolean {
@@ -210,5 +235,27 @@ export class ClienteResumenConciliacionDrawerWidget {
     if (estado === 'PARCIAL') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
     if (estado === 'VENCIDA') return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
     return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+  }
+
+  getIntentosCancelacion(): NonNullable<ResumenConciliacionCliente['intentosCancelacion']> {
+    return this.resumen?.intentosCancelacion || [];
+  }
+
+  formatMetodoContacto(value: string | null | undefined): string {
+    const labels: Record<string, string> = {
+      GESTION_AUTOMATICA: 'Automática',
+      GESTION_MANUAL: 'Manual',
+      GESTION_PROGRESIVO: 'Progresivo',
+      GESTION_PREDICTIVO: 'Predictivo'
+    };
+    return value ? labels[value] || value : 'Sin método';
+  }
+
+  getMetodoClass(value: string | null | undefined): string {
+    if (value === 'GESTION_AUTOMATICA') return 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300';
+    if (value === 'GESTION_MANUAL') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300';
+    if (value === 'GESTION_PROGRESIVO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+    if (value === 'GESTION_PREDICTIVO') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
+    return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
   }
 }

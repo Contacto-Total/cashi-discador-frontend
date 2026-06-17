@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -10,11 +10,12 @@ import {
 } from './continuidad-report.service';
 import { Cartera, Inquilino, Subcartera } from '@/comisiones/models/comision.model';
 import { ComisionesService } from '@/comisiones/services/comisiones.service';
+import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-continuidad-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppDatePipe, AppNumberPipe],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->
@@ -213,7 +214,7 @@ import { ComisionesService } from '@/comisiones/services/comisiones.service';
               </div>
               <div>
                 <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {{ metricas()!.porcentajeRecuperacionPromedio | number:'1.1-1' }}%
+                  {{ metricas()!.porcentajeRecuperacionPromedio | appNumber:'1.1-1' }}%
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">% Recuperación Prom.</p>
               </div>
@@ -225,19 +226,19 @@ import { ComisionesService } from '@/comisiones/services/comisiones.service';
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div class="bg-gradient-to-r from-gray-700 to-gray-800 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-gray-300 uppercase">Monto Total Original</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalOriginal | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalOriginal | appNumber:'1.2-2' }}</p>
           </div>
           <div class="bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-amber-100 uppercase">Pagado Previo</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagadoPrevio | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagadoPrevio | appNumber:'1.2-2' }}</p>
           </div>
           <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-green-100 uppercase">Pagado en Continuidad</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagadoContinuidad | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagadoContinuidad | appNumber:'1.2-2' }}</p>
           </div>
           <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-red-100 uppercase">Monto Pendiente</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPendiente | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPendiente | appNumber:'1.2-2' }}</p>
           </div>
         </div>
       }
@@ -288,18 +289,18 @@ import { ComisionesService } from '@/comisiones/services/comisiones.service';
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-mono text-xs">{{ item.documentoCliente }}</td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.nombreCliente | slice:0:25 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreCartera }}</td>
-                    <td class="px-3 py-2 text-right text-gray-900 dark:text-white">S/ {{ item.montoOriginalPromesa | number:'1.2-2' }}</td>
-                    <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400">S/ {{ item.montoPagadoPrevio | number:'1.2-2' }}</td>
-                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaContinuidad | date:'dd/MM/yy' }}</td>
+                    <td class="px-3 py-2 text-right text-gray-900 dark:text-white">S/ {{ item.montoOriginalPromesa | appNumber:'1.2-2' }}</td>
+                    <td class="px-3 py-2 text-right text-amber-600 dark:text-amber-400">S/ {{ item.montoPagadoPrevio | appNumber:'1.2-2' }}</td>
+                    <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaContinuidad | appDate:'short' }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.asesorContinuidad | slice:0:15 }}</td>
-                    <td class="px-3 py-2 text-right text-gray-900 dark:text-white font-semibold">S/ {{ item.montoContinuidad | number:'1.2-2' }}</td>
+                    <td class="px-3 py-2 text-right text-gray-900 dark:text-white font-semibold">S/ {{ item.montoContinuidad | appNumber:'1.2-2' }}</td>
                     <td class="px-3 py-2 text-center">
                       <span [class]="getEstadoClass(item.estadoContinuidad)">
                         {{ item.estadoContinuidad }}
                       </span>
                     </td>
-                    <td class="px-3 py-2 text-right text-green-600 dark:text-green-400">S/ {{ item.pagadoEnContinuidad | number:'1.2-2' }}</td>
-                    <td class="px-3 py-2 text-right text-red-600 dark:text-red-400">S/ {{ item.pendienteContinuidad | number:'1.2-2' }}</td>
+                    <td class="px-3 py-2 text-right text-green-600 dark:text-green-400">S/ {{ item.pagadoEnContinuidad | appNumber:'1.2-2' }}</td>
+                    <td class="px-3 py-2 text-right text-red-600 dark:text-red-400">S/ {{ item.pendienteContinuidad | appNumber:'1.2-2' }}</td>
                     <td class="px-3 py-2 text-center">
                       <div class="flex items-center justify-center gap-1">
                         <div class="w-16 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -310,7 +311,7 @@ import { ComisionesService } from '@/comisiones/services/comisiones.service';
                           ></div>
                         </div>
                         <span class="text-xs text-gray-600 dark:text-gray-400 w-10">
-                          {{ item.porcentajeAvance | number:'1.0-0' }}%
+                          {{ item.porcentajeAvance | appNumber:'1.0-0' }}%
                         </span>
                       </div>
                     </td>

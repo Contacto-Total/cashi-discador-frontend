@@ -47,6 +47,8 @@ import { CallService } from '../../core/services/call.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { GestionLockService } from '../../core/services/gestion-lock.service';
 import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
+import { FormatService } from '@/shared/services/format.service';
+import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-collection-management',
@@ -57,7 +59,8 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
     LucideAngularModule,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
-    StatusAlarmClockComponent
+    StatusAlarmClockComponent,
+    AppCurrencyPipe
   ],
   template: `
     <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
@@ -786,19 +789,19 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                       <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2">
                         <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">Monto Original</div>
                         <div class="text-sm font-bold text-gray-800 dark:text-gray-100">
-                          S/ {{ continuidadData()!.montoOriginal | number:'1.2-2' }}
+                          {{ continuidadData()!.montoOriginal | appCurrency }}
                         </div>
                       </div>
                       <div class="bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
                         <div class="text-xs text-green-600 dark:text-green-400 uppercase font-medium">Ya Pagado</div>
                         <div class="text-sm font-bold text-green-700 dark:text-green-300">
-                          S/ {{ continuidadData()!.montoPagado | number:'1.2-2' }}
+                          {{ continuidadData()!.montoPagado | appCurrency }}
                         </div>
                       </div>
                       <div class="bg-amber-100 dark:bg-amber-900/50 rounded-lg p-2 ring-2 ring-amber-400 dark:ring-amber-500">
                         <div class="text-xs text-amber-700 dark:text-amber-300 uppercase font-medium">Saldo Restante</div>
                         <div class="text-lg font-bold text-amber-800 dark:text-amber-200">
-                          S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}
+                          {{ continuidadData()!.saldoRestante | appCurrency }}
                         </div>
                       </div>
                     </div>
@@ -812,7 +815,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                   <!-- Instrucción -->
                   <div class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg p-2">
                     <lucide-angular name="info" [size]="14"></lucide-angular>
-                    <span>La nueva promesa debe ser por el saldo restante de <strong>S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}</strong></span>
+                    <span>La nueva promesa debe ser por el saldo restante de <strong>{{ continuidadData()!.saldoRestante | appCurrency }}</strong></span>
                   </div>
                 </div>
               }
@@ -946,7 +949,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                         </div>
                       </div>
                       <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
-                        S/ {{ schedule.totalAmount | number:'1.2-2' }}
+                        {{ schedule.totalAmount | appCurrency }}
                       </div>
                     </div>
 
@@ -960,7 +963,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                               <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
                               <span class="text-gray-500 dark:text-gray-400">Vence: {{ formatDate(installment.dueDate) }}</span>
                             </div>
-                            <span class="font-bold text-purple-700 dark:text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
+                            <span class="font-bold text-purple-700 dark:text-purple-300">{{ installment.amount | appCurrency }}</span>
                           </div>
                         }
                       }
@@ -989,7 +992,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                           type="button"
                           (click)="applyFullSchedulePayment()"
                           class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1">
-                          Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
+                          Pagar Todo ({{ calculatePendingAmount(schedule) | appCurrency }})
                         </button>
                       }
                     </div>
@@ -1582,7 +1585,7 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
                               <div [class]="'rounded-md border px-2 py-1.5 ' + getHistorialPromesaItemClass(cuota.status, $index)">
                                 <div class="flex items-center justify-between gap-1">
                                   <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
-                                  <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
+                                  <span class="font-bold text-slate-900 dark:text-slate-100">{{ cuota.amount | appCurrency }}</span>
                                 </div>
                                 <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                                   <span>{{ formatDate(cuota.dueDate) }}</span>
@@ -2758,7 +2761,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     private firstInstallmentConfigService: FirstInstallmentConfigService,
     private callService: CallService,
     private toast: ToastService,
-    private gestionLock: GestionLockService
+    private gestionLock: GestionLockService,
+    private fmt: FormatService
   ) {
     // Auto-selecciona en "Teléfono Contactado" el último número discado (discador o
     // rellamada). Como activeCallPhone se actualiza en cada llamada, si el asesor
@@ -3941,13 +3945,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   private formatDateTime(dateTimeString: string): string {
-    const date = new Date(dateTimeString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    // Fecha+hora siguiendo el idioma del navegador (FormatService).
+    return this.fmt.dateTime(dateTimeString);
   }
 
   private calculateCallDuration(callDetail: any): string {
@@ -4188,22 +4187,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-      
-      // 1. Separamos la cadena en fecha y hora (usando espacio o 'T' como separador)
-      const partes = dateStr.split(/[ T]/);
-      const soloFecha = partes[0]; // Ej: "2026-04-07"
-      
-      // Extraemos la hora y le quitamos los microsegundos (lo que está después del punto)
-      const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
-      
-      // 2. Formateamos la fecha de AAAA-MM-DD a DD/MM/AAAA
-    const dateParts = soloFecha.split('-');
-      let fechaFormateada = soloFecha;
-    if (dateParts.length === 3) {
-      fechaFormateada = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-    }
-
-      // 3. Juntamos la fecha formateada con la hora al final (si existe)
+    // La FECHA sigue el idioma del navegador (FormatService); la HORA se conserva literal.
+    const partes = dateStr.split(/[ T]/);
+    const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
+    const fechaFormateada = this.fmt.date(partes[0]) || partes[0];
     return soloHora ? `${fechaFormateada} ${soloHora}` : fechaFormateada;
   }
 
@@ -4306,18 +4293,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!monto || monto <= 0) return '';
 
     const parts: string[] = [];
-    parts.push(`S/${monto.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+    parts.push(this.fmt.currency(monto, { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
 
     if (totalCuotas && totalCuotas > 0) {
       parts.push(`${totalCuotas} cuota${totalCuotas > 1 ? 's' : ''}`);
     }
 
     if (fechaPrimeraCuota) {
-      // fecha viene como "YYYY-MM-DD", mostrar como "DD/MM"
-      const dateParts = fechaPrimeraCuota.split('-');
-      if (dateParts.length >= 3) {
-        parts.push(`${dateParts[2]}/${dateParts[1]}`);
-      }
+      // fecha compacta (día/mes) siguiendo el idioma del navegador
+      const f = this.fmt.date(fechaPrimeraCuota, { day: '2-digit', month: '2-digit' });
+      if (f) parts.push(f);
     }
 
     return parts.join(' · ');
@@ -5049,10 +5034,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Formatea un valor numérico como moneda (Soles)
    */
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(value);
+    return this.fmt.currency(value);
   }
 
   /**
@@ -5061,9 +5043,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   formatByType(field: { value: number; formato: string; rawValue: string }): string {
     switch (field.formato) {
       case 'PORCENTAJE':
-        return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(field.value) + '%';
+        return this.fmt.percent(field.value, 2);
       case 'NUMERO':
-        return new Intl.NumberFormat('es-PE').format(field.value);
+        return this.fmt.number(field.value);
       case 'TEXTO':
         return field.rawValue;
       case 'MONEDA':
@@ -5955,7 +5937,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     switch (format) {
       case 'currency':
-        return 'S/ ' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return this.fmt.currency(value);
 
       case 'number':
         return String(value);
@@ -5963,7 +5945,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'date':
         if (typeof value === 'string') {
           const date = new Date(value);
-          return date.toLocaleDateString('es-PE');
+          return this.fmt.date(date);
         }
         return String(value);
 
@@ -6011,11 +5993,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       } else {
         date = dateValue;
       }
-      return date.toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return this.fmt.date(date);
     } catch {
       return String(dateValue);
     }

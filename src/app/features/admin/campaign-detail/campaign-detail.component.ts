@@ -8,6 +8,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, CampaignStatistics, CampaignCall } from '../../../core/services/campaign-admin.service';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+import { AppNumberPipe, AppDateTimePipe, AppDatePipe } from '@/shared/pipes/format.pipes';
 
 // Registrar TODOS los componentes necesarios de Chart.js
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
@@ -15,7 +16,7 @@ Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective, LucideAngularModule],
+  imports: [CommonModule, FormsModule, BaseChartDirective, LucideAngularModule, AppNumberPipe, AppDateTimePipe, AppDatePipe],
   templateUrl: './campaign-detail.component.html',
   styleUrls: ['./campaign-detail.component.css'],
   encapsulation: ViewEncapsulation.None

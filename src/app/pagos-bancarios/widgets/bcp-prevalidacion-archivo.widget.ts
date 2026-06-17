@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -96,6 +97,7 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
   `
 })
 export class BcpPrevalidacionArchivoWidget {
+  private fmt = inject(FormatService);
   @Input() data: PrevalidacionArchivoBcp[] = [];
   @Input() todosAprobables = false;
   @Input() approvalEnabled = false;
@@ -255,7 +257,7 @@ export class BcpPrevalidacionArchivoWidget {
     ws.getRow(1).height = 28;
 
     ws.getCell('A3').value = 'Fecha y hora:';
-    ws.getCell('B3').value = fechaCarga.toLocaleString('es-PE');
+    ws.getCell('B3').value = this.fmt.dateTime(fechaCarga, true);
     ws.getCell('D3').value = 'Total incidencias:';
     ws.getCell('E3').value = fallos.length;
     ws.getCell('A4').value = 'Indicacion:';

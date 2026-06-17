@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -6,6 +6,7 @@ import { CartaAcuerdoService, CartaPendiente } from '../../core/services/carta-a
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { UserRole } from '../../core/models/user.model';
+import { FormatService } from '@/shared/services/format.service';
 
 @Component({
   selector: 'app-cartas-pendientes',
@@ -161,6 +162,7 @@ import { UserRole } from '../../core/models/user.model';
   `
 })
 export class CartasPendientesComponent implements OnInit {
+  private fmt = inject(FormatService);
   loading = signal(false);
   cartasPendientes = signal<CartaPendiente[]>([]);
   generando = signal<number | null>(null);
@@ -247,10 +249,7 @@ export class CartasPendientesComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(value);
+    return this.fmt.currency(value);
   }
 
   formatDate(dateStr: string): string {
@@ -261,11 +260,7 @@ export class CartasPendientesComponent implements OnInit {
 
     if (Number.isNaN(date.getTime())) return '-';
 
-    return date.toLocaleDateString('es-PE', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    return this.fmt.date(date);
   }
 
   private formatDateToInput(date: Date): string {
