@@ -459,7 +459,7 @@
 .flip-container {
   margin-bottom: 30px;
   position: relative;
-  height: 380px;
+  height: 420px;
 }
 
 .flip-card-front,
@@ -515,12 +515,21 @@
   border-radius: 12px;
   padding: 20px;
   height: 100%;
+  align-items: stretch;
 }
 
 .chart-section,
 .stats-table-section {
   display: flex;
   flex-direction: column;
+}
+
+.chart-section {
+  align-items: center;
+}
+
+.stats-table-section {
+  min-width: 0;
 }
 
 .chart-section h3,
@@ -535,8 +544,9 @@
 /* Chart Wrapper */
 .chart-wrapper {
   position: relative;
-  height: 280px;
-  width: 280px;
+  height: 300px;
+  width: 300px;
+  max-width: 100%;
   margin: 0 auto;
   display: flex;
   align-items: center;
