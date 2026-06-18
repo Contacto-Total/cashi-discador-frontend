@@ -360,8 +360,7 @@
   align-items: center;
 }
 
-.btn-page,
-.btn-page-number {
+.btn-page {
   padding: 8px 12px;
   background: #0f172a;
   color: #e2e8f0;
@@ -372,8 +371,7 @@
   transition: all 0.3s;
 }
 
-.btn-page:hover:not(:disabled),
-.btn-page-number:hover {
+.btn-page:hover:not(:disabled) {
   background: #334155;
   border-color: #475569;
 }
@@ -383,10 +381,28 @@
   cursor: not-allowed;
 }
 
-.btn-page-number.active {
-  background: #3B82F6;
+.page-jump {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.page-input {
+  width: 72px;
+  padding: 8px 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.page-input:focus {
+  outline: none;
   border-color: #3B82F6;
-  color: white;
 }
 
 /* Error Message */
@@ -753,17 +769,25 @@ body.light-theme .pagination-info {
   color: #64748b;
 }
 
-body.light-theme .btn-page,
-body.light-theme .btn-page-number {
+body.light-theme .btn-page {
   background: #f8fafc;
   color: #1e293b;
   border-color: #e2e8f0;
 }
 
-body.light-theme .btn-page:hover:not(:disabled),
-body.light-theme .btn-page-number:hover {
+body.light-theme .btn-page:hover:not(:disabled) {
   background: #e2e8f0;
   border-color: #cbd5e1;
+}
+
+body.light-theme .page-jump {
+  color: #64748b;
+}
+
+body.light-theme .page-input {
+  background: #f8fafc;
+  color: #1e293b;
+  border-color: #e2e8f0;
 }
 
 body.light-theme .loading-state {
