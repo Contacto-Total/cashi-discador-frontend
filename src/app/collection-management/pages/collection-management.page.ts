@@ -1038,7 +1038,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                           />
                           <div>
                             <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                            <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-gray-500 dark:text-gray-400'">
                               Vence: {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (tienePagoParcial(cuota)) {
@@ -1150,12 +1150,13 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
+                          [min]="cancellationPaymentMinDate()"
                           [max]="cancellationPaymentMaxDate()"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                         <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                          Máximo: {{ cancellationPaymentMaxDateLabel() }}
+                          Rango: {{ cancellationPaymentMinDateLabel() }} - {{ cancellationPaymentMaxDateLabel() }}
                         </p>
                         @if (!isCancellationPaymentDateValid()) {
                           <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
@@ -2409,7 +2410,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               allPending.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2439,7 +2441,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           overdue.push({
             ...cuota,
             scheduleId: latestSchedule.id,
-            grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+            grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+            fechaInicioPromesa: latestSchedule.fechaGestion
           });
         } else if (estado === 'PENDIENTE') {
           const fechaPago = cuota.dueDate || cuota.fechaPago;
@@ -2449,7 +2452,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               overdue.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2470,10 +2474,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!dueDate) return this.todayDate;
 
     const maxDate = this.parseDateLocal(String(dueDate).split('T')[0]);
-    maxDate.setDate(maxDate.getDate() + 1);
-
     const today = this.parseDateLocal(this.todayDate);
     return this.toDateInputValue(maxDate > today ? today : maxDate);
+  });
+
+  cancellationPaymentMinDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const startDate = cuota?.fechaInicioPromesa || cuota?.fechaGestion || cuota?.startDate;
+    if (!startDate) return '';
+
+    return String(startDate).split('T')[0];
+  });
+
+  cancellationPaymentMinDateLabel = computed(() => {
+    const minDate = this.cancellationPaymentMinDate();
+    return minDate ? this.formatDate(minDate) : 'Sin límite';
   });
 
   cancellationPaymentMaxDateLabel = computed(() => {
@@ -2490,6 +2505,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!fechaPago) return false;
 
     const pagoDate = this.parseDateLocal(fechaPago);
+    const minDateValue = this.cancellationPaymentMinDate();
+    if (minDateValue) {
+      const minDate = this.parseDateLocal(minDateValue);
+      if (pagoDate < minDate) return false;
+    }
+
     const maxDate = this.parseDateLocal(this.cancellationPaymentMaxDate());
     return pagoDate <= maxDate;
   });
