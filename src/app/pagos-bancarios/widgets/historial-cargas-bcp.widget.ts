@@ -129,17 +129,15 @@ import { ArchivoCargaDetalleItem, ArchivoCargaHistorialItem } from '../models/bc
                 <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ detalleError() }}</div>
               } @else {
                 <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                  <table class="min-w-[1180px] text-xs">
+                  <table class="min-w-[980px] text-xs">
                     <thead class="bg-slate-100 text-left uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       <tr>
                         <th class="px-3 py-2">Fila</th>
                         <th class="px-3 py-2">Documento</th>
                         <th class="px-3 py-2">Cliente</th>
-                        <th class="px-3 py-2">Banco</th>
-                        <th class="px-3 py-2 text-right">Monto banco</th>
+                        <th class="px-3 py-2">Pago banco</th>
                         <th class="px-3 py-2">Operación</th>
-                        <th class="px-3 py-2 text-right">Aplicado</th>
-                        <th class="px-3 py-2">Cuota</th>
+                        <th class="px-3 py-2">Aplicación</th>
                         <th class="px-3 py-2">Agente</th>
                         <th class="px-3 py-2">Relación</th>
                         <th class="px-3 py-2">Aprobación</th>
@@ -151,18 +149,26 @@ import { ArchivoCargaDetalleItem, ArchivoCargaHistorialItem } from '../models/bc
                           <td class="px-3 py-2 font-semibold text-slate-900 dark:text-white">{{ row.numeroFila }}</td>
                           <td class="px-3 py-2 font-mono text-slate-700 dark:text-slate-300">{{ row.documento }}</td>
                           <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ row.nombreCliente }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ row.fechaBanco }} · {{ row.banco }} · {{ row.medioAtencion }}</td>
-                          <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(row.montoBanco) }}</td>
+                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">
+                            <span class="whitespace-nowrap">{{ formatDate(row.fechaBanco) }} · {{ row.banco }}</span>
+                            <span class="ml-1 font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(row.montoBanco) }}</span>
+                            @if (row.medioAtencion) {
+                              <span class="ml-1 text-slate-500">{{ row.medioAtencion }}</span>
+                            }
+                          </td>
                           <td class="px-3 py-2 font-mono text-slate-700 dark:text-slate-300">{{ row.numeroOperacion || '-' }}</td>
-                          <td class="px-3 py-2 text-right font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(row.montoAplicado) }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">#{{ row.numeroCuota }} · {{ row.estadoCuota }}<br><span class="text-slate-500">{{ row.fechaPromesa }} · S/ {{ formatMoney(row.montoPromesa) }}</span></td>
+                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">
+                            <span class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(row.montoAplicado) }}</span>
+                            <span class="ml-1">→ Cuota {{ row.numeroCuota }} · {{ row.estadoCuota }}</span>
+                            <span class="ml-1 whitespace-nowrap text-slate-500">{{ formatDate(row.fechaPromesa) }}</span>
+                          </td>
                           <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ row.nombreAgente }}</td>
                           <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ formatTipoRelacion(row.tipoRelacion) }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ formatDateTime(row.fechaAprobacion) }}</td>
+                          <td class="px-3 py-2 whitespace-nowrap text-slate-700 dark:text-slate-300">{{ formatDateTime(row.fechaAprobacion) }}</td>
                         </tr>
                       } @empty {
                         <tr>
-                          <td colspan="11" class="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Sin conciliaciones para este archivo.</td>
+                          <td colspan="9" class="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Sin conciliaciones para este archivo.</td>
                         </tr>
                       }
                     </tbody>
@@ -332,6 +338,14 @@ export class HistorialCargasBcpWidget implements OnInit {
     const text = String(value);
     const match = text.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
     if (match) return `${match[3]}-${match[2]}-${match[1]} ${match[4]}:${match[5]}`;
+    return text;
+  }
+
+  formatDate(value: string | null | undefined): string {
+    if (!value) return '-';
+    const text = String(value);
+    const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return `${match[3]}-${match[2]}-${match[1]}`;
     return text;
   }
 
