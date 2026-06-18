@@ -2419,7 +2419,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    return allPending;
+    return this.sortInstallmentsByDueDate(allPending);
   });
 
   // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
@@ -2461,8 +2461,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    return overdue;
+    return this.sortInstallmentsByDueDate(overdue);
   });
+
+  private sortInstallmentsByDueDate(installments: any[]): any[] {
+    return [...(installments || [])].sort((a: any, b: any) => {
+      const dateA = this.getInstallmentDueTime(a);
+      const dateB = this.getInstallmentDueTime(b);
+
+      if (dateA !== dateB) return dateA - dateB;
+      return Number(a?.numeroCuota || a?.installmentNumber || 0) - Number(b?.numeroCuota || b?.installmentNumber || 0);
+    });
+  }
+
+  private getInstallmentDueTime(installment: any): number {
+    const rawDate = installment?.dueDate || installment?.fechaPromesa || installment?.fechaPago;
+    if (!rawDate) return Number.MAX_SAFE_INTEGER;
+
+    const date = this.parseDateLocal(String(rawDate).split('T')[0]);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+  }
 
   hasInstallmentsForCancellation = computed(() => {
     return this.pendingInstallmentsForCancellation().length > 0 || this.overdueInstallments().length > 0;
@@ -3740,7 +3758,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Solo necesitamos adaptar el formato para este componente
         const schedules = records.map((schedule: any) => {
           // El servicio ya devuelve installments (no cuotasPromesa)
-          const installments = schedule.installments || [];
+          const installments = this.sortInstallmentsByDueDate(schedule.installments || []);
 
           // Encontrar cuotas pendientes
           const pendingCuotas = installments.filter((c: any) =>
@@ -3756,7 +3774,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
             fechaGestion: schedule.startDate,
-            installments: installments.map((c: any) => ({
+            installments: this.sortInstallmentsByDueDate(installments.map((c: any) => ({
               id: c.id,
               numeroCuota: c.numeroCuota || c.installmentNumber,
               monto: c.montoPromesa || c.monto || c.amount,
@@ -3765,7 +3783,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               fechaPromesa: c.fechaPromesa || c.dueDate || c.fechaPago,
               status: c.status || 'PENDIENTE',
               montoPagadoReal: c.montoPagadoReal || 0
-            })),
+            }))),
             nextDueDate: nextCuota?.fechaPromesa || nextCuota?.dueDate || nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
