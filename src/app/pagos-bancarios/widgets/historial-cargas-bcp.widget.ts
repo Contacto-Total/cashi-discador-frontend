@@ -95,7 +95,7 @@ import { ArchivoCargaDetalleItem, ArchivoCargaHistorialItem } from '../models/bc
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="5" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay cargas para el contexto seleccionado.</td>
+                  <td colspan="5" class="px-4 py-10 text-center text-sm text-slate-500 dark:text-slate-400">No hay cargas para el subcartera seleccionado.</td>
                 </tr>
               }
             </tbody>
@@ -129,46 +129,45 @@ import { ArchivoCargaDetalleItem, ArchivoCargaHistorialItem } from '../models/bc
                 <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ detalleError() }}</div>
               } @else {
                 <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
-                  <table class="min-w-[980px] text-xs">
+                  <table class="min-w-[860px] text-[11px] leading-tight">
                     <thead class="bg-slate-100 text-left uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                       <tr>
-                        <th class="px-3 py-2">Fila</th>
-                        <th class="px-3 py-2">Documento</th>
-                        <th class="px-3 py-2">Cliente</th>
-                        <th class="px-3 py-2">Pago banco</th>
-                        <th class="px-3 py-2">Operación</th>
-                        <th class="px-3 py-2">Aplicación</th>
-                        <th class="px-3 py-2">Agente</th>
-                        <th class="px-3 py-2">Relación</th>
-                        <th class="px-3 py-2">Aprobación</th>
+                        <th class="px-2 py-1.5">N</th>
+                        <th class="px-2 py-1.5">Documento</th>
+                        <th class="px-2 py-1.5">Cliente</th>
+                        <th class="px-2 py-1.5">Pago banco</th>
+                        <th class="px-2 py-1.5">Pago sistema</th>
+                        <th class="px-2 py-1.5">Agente</th>
+                        <th class="px-2 py-1.5">Relación</th>
+                        <th class="px-2 py-1.5">Aprobación</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                       @for (row of detalle(); track row.conciliacionId) {
                         <tr class="align-top hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                          <td class="px-3 py-2 font-semibold text-slate-900 dark:text-white">{{ row.numeroFila }}</td>
-                          <td class="px-3 py-2 font-mono text-slate-700 dark:text-slate-300">{{ row.documento }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ row.nombreCliente }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">
-                            <span class="whitespace-nowrap">{{ formatDate(row.fechaBanco) }} · {{ row.banco }}</span>
+                          <td class="px-2 py-1.5 font-semibold text-slate-900 dark:text-white">{{ row.numeroFila }}</td>
+                          <td class="px-2 py-1.5 font-mono text-slate-700 dark:text-slate-300">{{ row.documento }}</td>
+                          <td class="px-2 py-1.5 text-slate-700 dark:text-slate-300">{{ row.nombreCliente }}</td>
+                          <td class="px-2 py-1.5 text-slate-700 dark:text-slate-300">
+                            <span class="whitespace-nowrap">{{ formatDate(row.fechaBanco) }}</span>
                             <span class="ml-1 font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(row.montoBanco) }}</span>
+                            <span class="ml-1">{{ row.banco }}</span>
                             @if (row.medioAtencion) {
                               <span class="ml-1 text-slate-500">{{ row.medioAtencion }}</span>
                             }
                           </td>
-                          <td class="px-3 py-2 font-mono text-slate-700 dark:text-slate-300">{{ row.numeroOperacion || '-' }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">
+                          <td class="px-2 py-1.5 text-slate-700 dark:text-slate-300">
+                            <span class="whitespace-nowrap">{{ formatDate(row.fechaPromesa) }}</span>
                             <span class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(row.montoAplicado) }}</span>
-                            <span class="ml-1">→ Cuota {{ row.numeroCuota }} · {{ row.estadoCuota }}</span>
-                            <span class="ml-1 whitespace-nowrap text-slate-500">{{ formatDate(row.fechaPromesa) }}</span>
+                            <span class="ml-1">Cuota {{ row.numeroCuota }} · {{ row.estadoCuota }}</span>
                           </td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ row.nombreAgente }}</td>
-                          <td class="px-3 py-2 text-slate-700 dark:text-slate-300">{{ formatTipoRelacion(row.tipoRelacion) }}</td>
-                          <td class="px-3 py-2 whitespace-nowrap text-slate-700 dark:text-slate-300">{{ formatDateTime(row.fechaAprobacion) }}</td>
+                          <td class="px-2 py-1.5 text-slate-700 dark:text-slate-300">{{ row.nombreAgente }}</td>
+                          <td class="px-2 py-1.5 text-slate-700 dark:text-slate-300">{{ formatTipoRelacion(row.tipoRelacion) }}</td>
+                          <td class="px-2 py-1.5 whitespace-nowrap text-slate-700 dark:text-slate-300">{{ formatDateTime(row.fechaAprobacion) }}</td>
                         </tr>
                       } @empty {
                         <tr>
-                          <td colspan="9" class="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Sin conciliaciones para este archivo.</td>
+                          <td colspan="8" class="px-3 py-8 text-center text-sm text-slate-500 dark:text-slate-400">Sin conciliaciones para este archivo.</td>
                         </tr>
                       }
                     </tbody>
