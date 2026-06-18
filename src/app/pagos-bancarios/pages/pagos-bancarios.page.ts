@@ -371,6 +371,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
               [approvalEnabled]="canAprobarArchivo()"
               [isSaving]="isApprovingArchivo()"
               [pagosDuplicados]="resultado()?.pagosDuplicados || []"
+              [completed]="archivoAprobado()"
               (guardar)="aprobarArchivo($event)"
               (documentoClick)="abrirResumenConciliacionBcp($event)"
             ></app-bcp-prevalidacion-archivo>
@@ -985,6 +986,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
               [approvalEnabled]="canAprobarArchivoOh()"
               [isSaving]="isApprovingArchivoOh()"
               [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
+              [completed]="archivoOhAprobado()"
               (guardar)="aprobarArchivoOh($event)"
               (documentoClick)="abrirResumenConciliacionOh($event)"
             ></app-bcp-prevalidacion-archivo>
