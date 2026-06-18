@@ -23,11 +23,12 @@ import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-arch
 import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
+import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget],
+  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -208,6 +209,18 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               Carga OH
+            </button>
+            <button
+              (click)="activeTab.set('historial')"
+              [class]="activeTab() === 'historial'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Historial
             </button>
           </nav>
         </div>
@@ -1010,6 +1023,10 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
         }
       }
 
+      @if (activeTab() === 'historial') {
+        <app-historial-cargas-bcp></app-historial-cargas-bcp>
+      }
+
       <!-- Modal de confirmación de eliminación -->
       @if (showDeleteModal()) {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -1174,7 +1191,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
 })
 export class PagosBancariosPage implements OnInit {
   // Tab activa
-  activeTab = signal<'masiva' | 'manual' | 'oh'>('masiva');
+  activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial'>('masiva');
 
   // Carga Masiva BCP
   selectedFile = signal<File | null>(null);

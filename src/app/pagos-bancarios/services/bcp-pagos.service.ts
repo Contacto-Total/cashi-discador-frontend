@@ -11,6 +11,10 @@ import {
   BcpPagoManualResponse,
   BcpPagoManualFiltros,
   BcpPagoManualListResponse,
+  ArchivoCargaDetalleItem,
+  ArchivoCargaDetalleRequest,
+  ArchivoCargaHistorialPage,
+  HistorialArchivosCargaRequest,
   ResumenConciliacionCliente,
   ResumenConciliacionClienteRequest,
   ResultadoConciliacion
@@ -58,6 +62,27 @@ export class BcpPagosService {
       .set('subcarteraId', request.subcarteraId.toString());
 
     return this.http.get<ResumenConciliacionCliente>(`${this.baseUrl}/clientes/${encodeURIComponent(documento)}/resumen-conciliacion`, { params });
+  }
+
+  listarHistorialArchivosCarga(request: HistorialArchivosCargaRequest): Observable<ArchivoCargaHistorialPage> {
+    let params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    if (request.page !== undefined) params = params.set('page', request.page.toString());
+    if (request.size !== undefined) params = params.set('size', request.size.toString());
+
+    return this.http.get<ArchivoCargaHistorialPage>(`${this.baseUrl}/archivos-carga/historial`, { params });
+  }
+
+  obtenerDetalleArchivoCarga(archivoCargaId: number, request: ArchivoCargaDetalleRequest): Observable<ArchivoCargaDetalleItem[]> {
+    const params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    return this.http.get<ArchivoCargaDetalleItem[]>(`${this.baseUrl}/archivos-carga/${archivoCargaId}/detalle`, { params });
   }
 
   /**
