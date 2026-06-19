@@ -16,8 +16,7 @@ import {
   ArchivoCargaHistorialPage,
   HistorialArchivosCargaRequest,
   ResumenConciliacionCliente,
-  ResumenConciliacionClienteRequest,
-  ResultadoConciliacion
+  ResumenConciliacionClienteRequest
 } from '../models/bcp-archivo.model';
 
 @Injectable({
@@ -40,10 +39,6 @@ export class BcpPagosService {
     formData.append('tenantId', request.tenantId.toString());
     formData.append('carteraId', request.carteraId.toString());
     formData.append('subcarteraId', request.subcarteraId.toString());
-
-    if (request.toleranciaMonto !== undefined) {
-      formData.append('toleranciaMonto', request.toleranciaMonto.toString());
-    }
 
     console.log('[BCP] Cargando archivo:', file.name);
 
@@ -96,10 +91,6 @@ export class BcpPagosService {
     formData.append('tenantId', request.tenantId.toString());
     formData.append('carteraId', request.carteraId.toString());
     formData.append('subcarteraId', request.subcarteraId.toString());
-
-    if (request.toleranciaMonto !== undefined) {
-      formData.append('toleranciaMonto', request.toleranciaMonto.toString());
-    }
 
     console.log('[OH] Cargando archivo Excel:', file.name);
 
@@ -157,40 +148,6 @@ export class BcpPagosService {
   eliminarPagoManual(id: number): Observable<BcpPagoManualResponse> {
     console.log('[BCP] Eliminando pago manual ID:', id);
     return this.http.delete<BcpPagoManualResponse>(`${this.baseUrl}/manuales/${id}`);
-  }
-
-  // ============== CONFIGURACIÓN DE CONCILIACIÓN ==============
-
-  /**
-   * Obtiene la configuración actual de conciliación
-   */
-  obtenerConfiguracionConciliacion(): Observable<{ toleranciaMonto: number }> {
-    console.log('[BCP] Obteniendo configuración de conciliación');
-    return this.http.get<{ toleranciaMonto: number }>(`${this.baseUrl}/conciliacion/config`);
-  }
-
-  /**
-   * Actualiza la tolerancia de monto para conciliación
-   * @param tolerancia Valor en soles (ej: 1.00 = ±1 sol de tolerancia)
-   */
-  actualizarToleranciaMonto(tolerancia: number): Observable<{ exitoso: boolean; mensaje: string; toleranciaMonto?: number }> {
-    console.log('[BCP] Actualizando tolerancia de monto a:', tolerancia);
-    const params = new HttpParams().set('tolerancia', tolerancia.toString());
-    return this.http.put<{ exitoso: boolean; mensaje: string; toleranciaMonto?: number }>(
-      `${this.baseUrl}/conciliacion/config/tolerancia-monto`,
-      null,
-      { params }
-    );
-  }
-
-  // ============== CONCILIACIÓN MANUAL ==============
-
-  /**
-   * Ejecuta la conciliación completa: pagos pendientes + re-intento de pagos "por fuera"
-   */
-  ejecutarConciliacionCompleta(): Observable<ResultadoConciliacion> {
-    console.log('[BCP] Ejecutando conciliación completa...');
-    return this.http.post<ResultadoConciliacion>(`${this.baseUrl}/conciliar-completo`, null);
   }
 
   // ============== REPORTES DE CONCILIACIÓN ==============

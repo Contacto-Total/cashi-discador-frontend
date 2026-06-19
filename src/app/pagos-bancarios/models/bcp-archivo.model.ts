@@ -82,7 +82,6 @@ export interface BcpArchivoCargaRequest {
   tenantId: number;
   carteraId: number;
   subcarteraId: number;
-  toleranciaMonto?: number;
 }
 
 export interface AprobarArchivoBcpRequest {
@@ -93,7 +92,6 @@ export interface AprobarArchivoBcpRequest {
   aprobadoPorId: number;
   aprobadoPorNombre: string;
   observacion?: string;
-  toleranciaMonto?: number;
 }
 
 export interface AprobarArchivoBcpResponse {
@@ -348,24 +346,3 @@ export interface BcpPagoManualListResponse {
   totalPages: number;
 }
 
-/**
- * Detalle de un match de conciliación
- */
-export interface MatchDetalle {
-  bcpPagoDetalleId: number;
-  transaccionId: number;
-  documento: string;
-  monto: number;
-  resultado: string;
-}
-
-/**
- * Resultado de la conciliación bancaria
- */
-export interface ResultadoConciliacion {
-  totalProcesados: number;
-  matchesEncontrados: number;
-  sinMatch: number;
-  detallesMatch: MatchDetalle[];
-  pagosSinMatch: BcpPagoManual[];
-}
