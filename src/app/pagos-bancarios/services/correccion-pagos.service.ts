@@ -38,6 +38,6 @@ export class CorreccionPagosService {
       .set('carteraId', contexto.carteraId.toString())
       .set('subcarteraId', contexto.subcarteraId.toString());
 
-    return this.http.patch<CorregirPagoResponse>(`${this.baseUrl}/${pagoCuotaId}/corregir`, request, { params });
+    return this.http.put<CorregirPagoResponse>(`${this.baseUrl}/${pagoCuotaId}/corregir`, request, { params });
   }
 }
