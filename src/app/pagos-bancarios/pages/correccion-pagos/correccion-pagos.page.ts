@@ -161,7 +161,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-re
         <section class="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
             <div>
-              <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Pagos pendientes</h2>
+              <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Pagos a conciliar</h2>
               <p class="text-xs text-slate-500 dark:text-slate-400">{{ pagos().length }} registro(s) encontrados</p>
             </div>
           </div>
