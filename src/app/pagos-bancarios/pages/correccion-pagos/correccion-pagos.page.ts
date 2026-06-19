@@ -8,11 +8,14 @@ import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 import { CorreccionPagosService } from '../../services/correccion-pagos.service';
 import { CorregirPagoResponse, PagoPendienteConciliacion } from '../../models/correccion-pagos.model';
+import { BcpPagosService } from '../../services/bcp-pagos.service';
+import { ResumenConciliacionCliente } from '../../models/bcp-archivo.model';
+import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-resumen-conciliacion-drawer.widget';
 
 @Component({
   selector: 'app-correccion-pagos',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ClienteResumenConciliacionDrawerWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -22,15 +25,36 @@ import { CorregirPagoResponse, PagoPendienteConciliacion } from '../../models/co
             Busca pagos pendientes de conciliación por DNI y corrige la fecha o monto del pago cuota.
           </p>
         </div>
-        <a
-          routerLink="/pagos-bancarios"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-        >
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-          </svg>
-          Volver
-        </a>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            (click)="abrirResumenCliente()"
+            [disabled]="!canVerResumen() || isLoadingResumenCliente()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            @if (isLoadingResumenCliente()) {
+              <svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            } @else {
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+              </svg>
+            }
+            Ver resumen
+          </button>
+
+          <a
+            routerLink="/pagos-bancarios"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Volver
+          </a>
+        </div>
       </div>
 
       <section class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
@@ -273,6 +297,15 @@ import { CorregirPagoResponse, PagoPendienteConciliacion } from '../../models/co
           }
         </aside>
       </div>
+
+      <app-cliente-resumen-conciliacion-drawer
+        [open]="resumenDrawerOpen()"
+        [loading]="isLoadingResumenCliente()"
+        [error]="resumenClienteError()"
+        [documento]="resumenClienteDocumento()"
+        [resumen]="resumenCliente()"
+        (close)="cerrarResumenCliente()"
+      ></app-cliente-resumen-conciliacion-drawer>
     </div>
   `
 })
@@ -280,6 +313,7 @@ export class CorreccionPagosPage implements OnInit {
   private readonly tenantService = inject(TenantService);
   private readonly portfolioService = inject(PortfolioService);
   private readonly correccionPagosService = inject(CorreccionPagosService);
+  private readonly bcpPagosService = inject(BcpPagosService);
 
   tenants = signal<Tenant[]>([]);
   portfolios = signal<Portfolio[]>([]);
@@ -290,6 +324,11 @@ export class CorreccionPagosPage implements OnInit {
   isSaving = signal(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
+  resumenDrawerOpen = signal(false);
+  isLoadingResumenCliente = signal(false);
+  resumenClienteError = signal<string | null>(null);
+  resumenClienteDocumento = signal<string | null>(null);
+  resumenCliente = signal<ResumenConciliacionCliente | null>(null);
 
   documento = '';
   selectedTenantId = 0;
@@ -358,6 +397,10 @@ export class CorreccionPagosPage implements OnInit {
       && this.selectedTenantId > 0
       && this.selectedPortfolioId > 0
       && this.selectedSubPortfolioId > 0;
+  }
+
+  canVerResumen(): boolean {
+    return this.canBuscar();
   }
 
   buscarPagos(): void {
@@ -435,6 +478,39 @@ export class CorreccionPagosPage implements OnInit {
         this.isSaving.set(false);
       }
     });
+  }
+
+  abrirResumenCliente(): void {
+    if (!this.canVerResumen()) return;
+
+    const documento = this.selectedPago()?.documento || this.documento.trim();
+    if (!documento) return;
+
+    this.resumenDrawerOpen.set(true);
+    this.isLoadingResumenCliente.set(true);
+    this.resumenClienteError.set(null);
+    this.resumenClienteDocumento.set(documento);
+    this.resumenCliente.set(null);
+
+    this.bcpPagosService.obtenerResumenConciliacionCliente(documento, {
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
+    }).subscribe({
+      next: (resumen) => {
+        this.resumenCliente.set(resumen);
+        this.isLoadingResumenCliente.set(false);
+      },
+      error: (error) => {
+        console.error('Error cargando resumen de cliente:', error);
+        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo cargar el resumen del cliente.');
+        this.isLoadingResumenCliente.set(false);
+      }
+    });
+  }
+
+  cerrarResumenCliente(): void {
+    this.resumenDrawerOpen.set(false);
   }
 
   formatMonto(value: number | null | undefined): string {
