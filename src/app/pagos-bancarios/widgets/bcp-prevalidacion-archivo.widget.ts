@@ -307,7 +307,10 @@ export class BcpPrevalidacionArchivoWidget {
       values.forEach((value, colIndex) => {
         const cell = dataRow.getCell(colIndex + 1);
         cell.value = value;
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
+        const fillColor = this.getExcelCellFillColor(estado, colIndex);
+        if (fillColor) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+        }
         cell.border = this.excelBorder();
         cell.alignment = { vertical: 'top', wrapText: true };
         if (colIndex === 6 || colIndex === 9) cell.numFmt = '"S/." #,##0.00';
@@ -326,10 +329,24 @@ export class BcpPrevalidacionArchivoWidget {
     saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  private getExcelFillColor(estado: string): string {
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'FEF3C7';
+  private getExcelCellFillColor(estado: string, colIndex: number): string | null {
+    const yellow = 'FEF3C7';
+
+    if (estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO') {
+      return colIndex === 5 || colIndex === 8 ? yellow : null;
+    }
+
+    if (estado === 'REQUIERE_REVISION_MONTO') {
+      return colIndex === 6 || colIndex === 9 ? yellow : null;
+    }
+
+    if (estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') {
+      return colIndex === 5 || colIndex === 6 || colIndex === 8 || colIndex === 9 ? yellow : null;
+    }
+
     if (estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO') return 'E2E8F0';
-    return 'FEE2E2';
+    if (estado !== 'LISTO_PARA_APROBAR') return 'FEE2E2';
+    return null;
   }
 
   private excelBorder(): any {
