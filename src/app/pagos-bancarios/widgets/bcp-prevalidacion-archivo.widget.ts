@@ -17,8 +17,8 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
           <p class="text-xs text-slate-500 dark:text-slate-400">Comparación entre archivo cargado y pagos registrados por agente</p>
         </div>
         <div class="text-right">
-          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
-            {{ approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión' }}
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="completed || approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
+            {{ completed ? 'Guardado' : (approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión') }}
           </span>
           <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{{ data.length }} registro(s)</p>
         </div>
@@ -104,6 +104,7 @@ export class BcpPrevalidacionArchivoWidget {
   @Input() isSaving = false;
   @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
   @Input() showGuardar = true;
+  @Input() completed = false;
   @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
   @Output() documentoClick = new EventEmitter<PrevalidacionArchivoBcp>();
 
@@ -181,7 +182,8 @@ export class BcpPrevalidacionArchivoWidget {
 
   puedeGuardar(): boolean {
     const todasListas = this.data.length > 0 && this.data.every(row => this.isListo(row));
-    return this.approvalEnabled
+    return !this.completed
+      && this.approvalEnabled
       && todasListas;
   }
 
@@ -305,7 +307,10 @@ export class BcpPrevalidacionArchivoWidget {
       values.forEach((value, colIndex) => {
         const cell = dataRow.getCell(colIndex + 1);
         cell.value = value;
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
+        const fillColor = this.getExcelCellFillColor(estado, colIndex);
+        if (fillColor) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+        }
         cell.border = this.excelBorder();
         cell.alignment = { vertical: 'top', wrapText: true };
         if (colIndex === 6 || colIndex === 9) cell.numFmt = '"S/." #,##0.00';
@@ -324,10 +329,24 @@ export class BcpPrevalidacionArchivoWidget {
     saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  private getExcelFillColor(estado: string): string {
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'FEF3C7';
+  private getExcelCellFillColor(estado: string, colIndex: number): string | null {
+    const yellow = 'FEF3C7';
+
+    if (estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO') {
+      return colIndex === 5 || colIndex === 8 ? yellow : null;
+    }
+
+    if (estado === 'REQUIERE_REVISION_MONTO') {
+      return colIndex === 6 || colIndex === 9 ? yellow : null;
+    }
+
+    if (estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') {
+      return colIndex === 5 || colIndex === 6 || colIndex === 8 || colIndex === 9 ? yellow : null;
+    }
+
     if (estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO') return 'E2E8F0';
-    return 'FEE2E2';
+    if (estado !== 'LISTO_PARA_APROBAR') return 'FEE2E2';
+    return null;
   }
 
   private excelBorder(): any {

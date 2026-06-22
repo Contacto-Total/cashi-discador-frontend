@@ -296,13 +296,18 @@
           <lucide-angular name="arrow-left" [size]="16"></lucide-angular> Anterior
         </button>
 
-        <button
-          *ngFor="let page of getPageNumbers()"
-          class="btn-page-number"
-          [class.active]="page === currentPage"
-          (click)="onPageChange(page)">
-          {{ page + 1 }}
-        </button>
+        <div class="page-jump">
+          <span>Página</span>
+          <input
+            type="number"
+            class="page-input"
+            [value]="currentPage + 1"
+            min="1"
+            [max]="totalPages"
+            (change)="onPageInputChange($event)"
+            (keyup.enter)="onPageInputChange($event)">
+          <span>de {{ totalPages }}</span>
+        </div>
 
         <button
           class="btn-page"

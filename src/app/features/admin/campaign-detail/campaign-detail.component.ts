@@ -170,8 +170,19 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
    * Maneja el cambio de página
    */
   onPageChange(page: number): void {
+    if (page < 0 || (this.totalPages > 0 && page >= this.totalPages)) return;
     this.currentPage = page;
     this.loadCalls();
+  }
+
+  onPageInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const page = Number(input.value);
+    if (!Number.isInteger(page) || page < 1 || page > this.totalPages) {
+      input.value = String(this.currentPage + 1);
+      return;
+    }
+    this.onPageChange(page - 1);
   }
 
   /**
@@ -197,17 +208,6 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
    */
   goBack(): void {
     this.router.navigate(['/admin/campaigns']);
-  }
-
-  /**
-   * Genera el array de números de página para la paginación
-   */
-  getPageNumbers(): number[] {
-    const pages: number[] = [];
-    for (let i = 0; i < this.totalPages; i++) {
-      pages.push(i);
-    }
-    return pages;
   }
 
   /**

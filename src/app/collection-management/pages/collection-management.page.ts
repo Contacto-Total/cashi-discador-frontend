@@ -1038,7 +1038,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                           />
                           <div>
                             <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                            <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-gray-500 dark:text-gray-400'">
                               Vence: {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (tienePagoParcial(cuota)) {
@@ -1150,12 +1150,13 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
+                          [min]="cancellationPaymentMinDate()"
                           [max]="cancellationPaymentMaxDate()"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                         <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                          Máximo: {{ cancellationPaymentMaxDateLabel() }}
+                          Rango: {{ cancellationPaymentMinDateLabel() }} - {{ cancellationPaymentMaxDateLabel() }}
                         </p>
                         @if (!isCancellationPaymentDateValid()) {
                           <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
@@ -1765,6 +1766,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
+  protected activeCallId = signal<number | null>(null); // ID de la llamada del discador (marcador_llamadas.id) para enlazar la gestión
   protected isManualSource = signal(false); // true solo cuando viene desde /manual-management con source=manual
   protected callDuration = signal(0);
   protected saving = signal(false);
@@ -2244,6 +2246,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Teléfono seleccionado para gestión manual (sin llamada)
   selectedManualPhone = signal<string>('');
 
+  // True solo cuando estamos en gestión manual sin llamada activa → habilita selección en el panel "Teléfonos"
+  protected modoSeleccionTelefono = computed(() =>
+      this.isManualSource() && !this.callActive() && !this.rellamadaCallActive()
+    );
+
   // Agregar teléfono
   showAddContactForm = signal(false);
   newContactType: 'telefono' | 'email' = 'telefono';
@@ -2409,7 +2416,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               allPending.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2417,7 +2425,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    return allPending;
+    return this.sortInstallmentsByDueDate(allPending);
   });
 
   // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
@@ -2439,7 +2447,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           overdue.push({
             ...cuota,
             scheduleId: latestSchedule.id,
-            grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+            grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+            fechaInicioPromesa: latestSchedule.fechaGestion
           });
         } else if (estado === 'PENDIENTE') {
           const fechaPago = cuota.dueDate || cuota.fechaPago;
@@ -2449,7 +2458,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               overdue.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2457,8 +2467,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    return overdue;
+    return this.sortInstallmentsByDueDate(overdue);
   });
+
+  private sortInstallmentsByDueDate(installments: any[]): any[] {
+    return [...(installments || [])].sort((a: any, b: any) => {
+      const dateA = this.getInstallmentDueTime(a);
+      const dateB = this.getInstallmentDueTime(b);
+
+      if (dateA !== dateB) return dateA - dateB;
+      return Number(a?.numeroCuota || a?.installmentNumber || 0) - Number(b?.numeroCuota || b?.installmentNumber || 0);
+    });
+  }
+
+  private getInstallmentDueTime(installment: any): number {
+    const rawDate = installment?.dueDate || installment?.fechaPromesa || installment?.fechaPago;
+    if (!rawDate) return Number.MAX_SAFE_INTEGER;
+
+    const date = this.parseDateLocal(String(rawDate).split('T')[0]);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+  }
 
   hasInstallmentsForCancellation = computed(() => {
     return this.pendingInstallmentsForCancellation().length > 0 || this.overdueInstallments().length > 0;
@@ -2470,10 +2498,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!dueDate) return this.todayDate;
 
     const maxDate = this.parseDateLocal(String(dueDate).split('T')[0]);
-    maxDate.setDate(maxDate.getDate() + 1);
-
     const today = this.parseDateLocal(this.todayDate);
     return this.toDateInputValue(maxDate > today ? today : maxDate);
+  });
+
+  cancellationPaymentMinDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const startDate = cuota?.fechaInicioPromesa || cuota?.fechaGestion || cuota?.startDate;
+    if (!startDate) return '';
+
+    return String(startDate).split('T')[0];
+  });
+
+  cancellationPaymentMinDateLabel = computed(() => {
+    const minDate = this.cancellationPaymentMinDate();
+    return minDate ? this.formatDate(minDate) : 'Sin límite';
   });
 
   cancellationPaymentMaxDateLabel = computed(() => {
@@ -2490,6 +2529,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!fechaPago) return false;
 
     const pagoDate = this.parseDateLocal(fechaPago);
+    const minDateValue = this.cancellationPaymentMinDate();
+    if (minDateValue) {
+      const minDate = this.parseDateLocal(minDateValue);
+      if (pagoDate < minDate) return false;
+    }
+
     const maxDate = this.parseDateLocal(this.cancellationPaymentMaxDate());
     return pagoDate <= maxDate;
   });
@@ -3490,6 +3535,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           if (predictiveData.phoneNumber) {
             console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
             this.activeCallPhone.set(predictiveData.anexoDestino || predictiveData.phoneNumber);
+            if (predictiveData.llamadaId) {
+              this.activeCallId.set(predictiveData.llamadaId);
+            }
             this.autoLoadCustomerByPhone(predictiveData.phoneNumber);
             return;
           }
@@ -3530,6 +3578,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Guardar contactId del discador para posible rellamada
         if (fullData.contactId) {
           this.dialerContactId.set(fullData.contactId);
+        }
+
+        // Guardar el id de la llamada del discador para enlazar la gestión (registros_gestion.id_llamada)
+        if (fullData.llamadaId) {
+          this.activeCallId.set(fullData.llamadaId);
         }
 
         // Guardar el número real discado
@@ -3719,7 +3772,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Solo necesitamos adaptar el formato para este componente
         const schedules = records.map((schedule: any) => {
           // El servicio ya devuelve installments (no cuotasPromesa)
-          const installments = schedule.installments || [];
+          const installments = this.sortInstallmentsByDueDate(schedule.installments || []);
 
           // Encontrar cuotas pendientes
           const pendingCuotas = installments.filter((c: any) =>
@@ -3735,7 +3788,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
             fechaGestion: schedule.startDate,
-            installments: installments.map((c: any) => ({
+            installments: this.sortInstallmentsByDueDate(installments.map((c: any) => ({
               id: c.id,
               numeroCuota: c.numeroCuota || c.installmentNumber,
               monto: c.montoPromesa || c.monto || c.amount,
@@ -3744,7 +3797,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               fechaPromesa: c.fechaPromesa || c.dueDate || c.fechaPago,
               status: c.status || 'PENDIENTE',
               montoPagadoReal: c.montoPagadoReal || 0
-            })),
+            }))),
             nextDueDate: nextCuota?.fechaPromesa || nextCuota?.dueDate || nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
@@ -5525,7 +5578,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
-        idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
+        idLlamada: this.activeCallId(),  // id de la llamada del discador (marcador_llamadas.id); backend lo rescata si viene null
         duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
         // Información del agente y dispositivo
@@ -5731,6 +5784,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.callStartTime = undefined;
     this.activeCallPhone.set('');
     this.activeCallClientId.set(null);
+    this.activeCallId.set(null);
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
 

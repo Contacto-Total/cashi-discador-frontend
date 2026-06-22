@@ -82,7 +82,6 @@ export interface BcpArchivoCargaRequest {
   tenantId: number;
   carteraId: number;
   subcarteraId: number;
-  toleranciaMonto?: number;
 }
 
 export interface AprobarArchivoBcpRequest {
@@ -93,7 +92,6 @@ export interface AprobarArchivoBcpRequest {
   aprobadoPorId: number;
   aprobadoPorNombre: string;
   observacion?: string;
-  toleranciaMonto?: number;
 }
 
 export interface AprobarArchivoBcpResponse {
@@ -202,6 +200,77 @@ export interface PagoResumenConciliacion {
   fechaVerificacion: string | null;
 }
 
+export interface HistorialArchivosCargaRequest {
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+  page?: number;
+  size?: number;
+}
+
+export interface ArchivoCargaHistorialItem {
+  archivoCargaId: number;
+  nombreArchivo: string;
+  subidoPorNombre: string;
+  cantidadPagos: number;
+  fechaCarga: string;
+}
+
+export interface ArchivoCargaHistorialPage {
+  content: ArchivoCargaHistorialItem[];
+  pageable: object;
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+export interface ArchivoCargaDetalleRequest {
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
+}
+
+export type TipoRelacionArchivoCarga = 'BCP_A_CUOTA' | 'BCP_A_TRANSACCION';
+
+export interface ArchivoCargaDetalleItem {
+  conciliacionId: number;
+  archivoCargaId: number;
+  nombreArchivo: string;
+  fechaCarga: string;
+  bcpPagoDetalleId: number;
+  numeroFila: number;
+  documento: string;
+  codigoDepositante: string;
+  fechaBanco: string;
+  horaAtencion: string;
+  montoBanco: number;
+  banco: string;
+  medioAtencion: string;
+  numeroOperacion: string;
+  pagoCuotaId: number;
+  transaccionId: number;
+  montoAplicado: number;
+  tipoRelacion: TipoRelacionArchivoCarga | string;
+  fechaAprobacion: string;
+  cuotaId: number;
+  numeroCuota: number;
+  fechaPromesa: string;
+  montoPromesa: number;
+  estadoCuota: string;
+  gestionId: number;
+  nombreCliente: string;
+  nombreAgente: string;
+  estadoPagoGestion: string;
+  rutaNivel1: string;
+  rutaNivel2: string;
+  rutaNivel3: string;
+  rutaNivel4: string;
+}
+
 /**
  * DTO para registro manual de pago
  */
@@ -277,24 +346,3 @@ export interface BcpPagoManualListResponse {
   totalPages: number;
 }
 
-/**
- * Detalle de un match de conciliación
- */
-export interface MatchDetalle {
-  bcpPagoDetalleId: number;
-  transaccionId: number;
-  documento: string;
-  monto: number;
-  resultado: string;
-}
-
-/**
- * Resultado de la conciliación bancaria
- */
-export interface ResultadoConciliacion {
-  totalProcesados: number;
-  matchesEncontrados: number;
-  sinMatch: number;
-  detallesMatch: MatchDetalle[];
-  pagosSinMatch: BcpPagoManual[];
-}
