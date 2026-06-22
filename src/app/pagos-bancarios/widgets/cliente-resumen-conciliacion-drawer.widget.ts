@@ -103,7 +103,7 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                             <tr>
                               <th class="w-[15%] px-1.5 py-1.5 font-semibold">Cuota</th>
                               <th class="w-[23%] px-1.5 py-1.5 font-semibold">Promesa</th>
-                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">Agente</th>
+                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">PBP Agent</th>
                               <th class="w-[28%] px-1.5 py-1.5 font-semibold">BANCO</th>
                             </tr>
                           </thead>
