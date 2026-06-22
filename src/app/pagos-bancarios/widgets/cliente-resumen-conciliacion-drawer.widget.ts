@@ -1,12 +1,15 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
-import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { FormsModule } from '@angular/forms';
+import { CuotaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { CorreccionPagosService } from '../services/correccion-pagos.service';
+import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
 
 @Component({
   selector: 'app-cliente-resumen-conciliacion-drawer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     @if (open) {
       <div class="fixed inset-0 z-50 flex justify-end bg-transparent" (click)="close.emit()">
@@ -125,6 +128,11 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                                   @if (cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) {
                                     <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
                                   }
+                                  @if (canCrearPago(cuota)) {
+                                    <button type="button" (click)="abrirCrearPago(cuota)" class="mt-1 rounded-md bg-emerald-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-emerald-700">
+                                      Crear Pago
+                                    </button>
+                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5">
                                   <div class="flex flex-wrap gap-1">
@@ -168,18 +176,71 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
           </div>
         </aside>
       </div>
+
+      @if (crearPagoModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarCrearPago()">
+          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Crear pago</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Cuota {{ cuotaCrearPago?.numeroCuota }} · S/ {{ formatMoney(cuotaCrearPago?.montoPromesa) }}</p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                <input type="date" [(ngModel)]="crearPagoFecha" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                <input type="number" min="0.01" step="0.01" [(ngModel)]="crearPagoMonto" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+
+              @if (crearPagoError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ crearPagoError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarCrearPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="crearPago()" [disabled]="!canGuardarCrearPago() || creandoPago" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ creandoPago ? 'Creando...' : 'Crear Pago' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `
 })
-export class ClienteResumenConciliacionDrawerWidget {
+export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   private fmt = inject(FormatService);
+  private correccionPagosService = inject(CorreccionPagosService);
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
   @Input() loading = false;
   @Input() error: string | null = null;
   @Input() documento: string | null = null;
   @Input() resumen: ResumenConciliacionCliente | null = null;
+  @Input() tenantId: number | null = null;
+  @Input() carteraId: number | null = null;
+  @Input() subcarteraId: number | null = null;
   @Output() close = new EventEmitter<void>();
+  @Output() refreshRequested = new EventEmitter<void>();
+
+  cuotasValidas: CuotaValidaTipificar[] = [];
+  isLoadingCuotasValidas = false;
+  crearPagoModalOpen = false;
+  cuotaCrearPago: CuotaResumenConciliacion | null = null;
+  crearPagoFecha = '';
+  crearPagoMonto: number | null = null;
+  crearPagoError: string | null = null;
+  creandoPago = false;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
+      this.cargarCuotasValidasTipificar();
+    }
+  }
 
   formatMoney(value: number | null | undefined): string {
     if (value === null || value === undefined) return '0.00';
@@ -212,6 +273,69 @@ export class ClienteResumenConciliacionDrawerWidget {
 
   hasValue(value: unknown): boolean {
     return value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== '-';
+  }
+
+  canCrearPago(cuota: CuotaResumenConciliacion): boolean {
+    if (this.isLoadingCuotasValidas || this.creandoPago) return false;
+    if (cuota.estado === 'PAGADA') return false;
+    if (this.hasValue(cuota.fechaPagoReal) || cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) return false;
+    if (this.getPrimeraCuotaSinPago()?.cuotaId !== cuota.cuotaId) return false;
+    return this.cuotasValidas.some(item => item.cuotaId === cuota.cuotaId);
+  }
+
+  abrirCrearPago(cuota: CuotaResumenConciliacion): void {
+    if (!this.canCrearPago(cuota)) return;
+    this.cuotaCrearPago = cuota;
+    this.crearPagoFecha = this.toDateInputValue(cuota.fechaPromesa);
+    this.crearPagoMonto = Number(cuota.montoPromesa || 0);
+    this.crearPagoError = null;
+    this.crearPagoModalOpen = true;
+  }
+
+  cerrarCrearPago(): void {
+    if (this.creandoPago) return;
+    this.crearPagoModalOpen = false;
+    this.cuotaCrearPago = null;
+    this.crearPagoError = null;
+  }
+
+  canGuardarCrearPago(): boolean {
+    return !!this.cuotaCrearPago && !!this.crearPagoFecha && Number(this.crearPagoMonto) > 0 && this.hasRequiredContext();
+  }
+
+  crearPago(): void {
+    if (!this.cuotaCrearPago || !this.canGuardarCrearPago()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.creandoPago = true;
+    this.crearPagoError = null;
+
+    this.correccionPagosService.crearCancelacion(
+      this.cuotaCrearPago.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaPago: this.crearPagoFecha,
+        montoPago: Number(this.crearPagoMonto)
+      }
+    ).subscribe({
+      next: () => {
+        this.creandoPago = false;
+        this.crearPagoModalOpen = false;
+        this.cuotaCrearPago = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.crearPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago.';
+        this.creandoPago = false;
+      }
+    });
   }
 
   hasPagoVerificado(cuota: any): boolean {
@@ -257,5 +381,50 @@ export class ClienteResumenConciliacionDrawerWidget {
     if (value === 'GESTION_PROGRESIVO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     if (value === 'GESTION_PREDICTIVO') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
     return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+  }
+
+  private cargarCuotasValidasTipificar(): void {
+    if (!this.open || !this.hasRequiredContext() || !this.getDocumento()) {
+      this.cuotasValidas = [];
+      return;
+    }
+
+    this.isLoadingCuotasValidas = true;
+    this.correccionPagosService.buscarCuotasValidasTipificar({
+      documento: this.getDocumento(),
+      tenantId: Number(this.tenantId),
+      carteraId: Number(this.carteraId),
+      subcarteraId: Number(this.subcarteraId)
+    }).subscribe({
+      next: (cuotas) => {
+        this.cuotasValidas = cuotas;
+        this.isLoadingCuotasValidas = false;
+      },
+      error: () => {
+        this.cuotasValidas = [];
+        this.isLoadingCuotasValidas = false;
+      }
+    });
+  }
+
+  private getPrimeraCuotaSinPago(): CuotaResumenConciliacion | null {
+    return this.resumen?.promesas
+      .flatMap(promesa => promesa.cuotas || [])
+      .find(cuota => cuota.estado !== 'PAGADA'
+        && !this.hasValue(cuota.fechaPagoReal)
+        && (cuota.montoPagadoReal === null || cuota.montoPagadoReal === undefined)) || null;
+  }
+
+  private hasRequiredContext(): boolean {
+    return Number(this.tenantId) > 0 && Number(this.carteraId) > 0 && Number(this.subcarteraId) > 0;
+  }
+
+  private getDocumento(): string {
+    return String(this.documento || this.resumen?.documento || '').trim();
+  }
+
+  private toDateInputValue(value: string | null | undefined): string {
+    if (!value) return '';
+    return String(value).slice(0, 10);
   }
 }

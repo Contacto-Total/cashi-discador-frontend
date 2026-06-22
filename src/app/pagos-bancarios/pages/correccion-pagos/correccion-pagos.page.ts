@@ -304,7 +304,11 @@ import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-re
         [error]="resumenClienteError()"
         [documento]="resumenClienteDocumento()"
         [resumen]="resumenCliente()"
+        [tenantId]="selectedTenantId"
+        [carteraId]="selectedPortfolioId"
+        [subcarteraId]="selectedSubPortfolioId"
         (close)="cerrarResumenCliente()"
+        (refreshRequested)="abrirResumenCliente()"
       ></app-cliente-resumen-conciliacion-drawer>
     </div>
   `
