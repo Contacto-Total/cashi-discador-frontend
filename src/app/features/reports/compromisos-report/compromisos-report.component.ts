@@ -1,5 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
@@ -10,11 +10,12 @@ import {
 import { CompromisosReportService, AgenteCompromiso } from './compromisos-report.service';
 import { ComisionesService } from '../../../comisiones/services/comisiones.service';
 import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comision.model';
+import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-compromisos-report',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppDatePipe, AppNumberPipe],
   template: `
     <div class="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
       <!-- Header -->
@@ -268,15 +269,15 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-purple-100 uppercase">Monto Total Promesas</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPromesas | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPromesas | appNumber:'1.2-2' }}</p>
           </div>
           <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-green-100 uppercase">Monto Pagado</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagado | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPagado | appNumber:'1.2-2' }}</p>
           </div>
           <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl shadow-md p-4 text-white">
             <p class="text-xs text-red-100 uppercase">Monto Pendiente</p>
-            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPendiente | number:'1.2-2' }}</p>
+            <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPendiente | appNumber:'1.2-2' }}</p>
           </div>
         </div>
       }
@@ -322,7 +323,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                 @for (item of data(); track item.id) {
                   <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-medium">{{ item.id }}</td>
-                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaGestion | date:'dd/MM/yy' }}</td>
+                    <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.fechaGestion | appDate:'short' }}</td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white font-mono text-xs">{{ item.documentoCliente }}</td>
                     <td class="px-3 py-2 text-gray-900 dark:text-white">{{ item.nombreCliente | slice:0:20 }}</td>
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.nombreAgente | slice:0:15 }}</td>
@@ -332,7 +333,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     <td class="px-3 py-2 text-gray-600 dark:text-gray-400 text-xs">{{ item.campoMontoOrigen || '-' }}</td>
                     <td class="px-3 py-2 text-right text-gray-900 dark:text-white">
                       @if (item.montoPromesa) {
-                        S/ {{ item.montoPromesa | number:'1.2-2' }}
+                        S/ {{ item.montoPromesa | appNumber:'1.2-2' }}
                       } @else { - }
                     </td>
                     <td class="px-3 py-2 text-center text-gray-900 dark:text-white">{{ item.totalCuotas || '-' }}</td>
@@ -343,7 +344,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     </td>
                     <td class="px-3 py-2 text-right text-green-600 dark:text-green-400">
                       @if (item.montoPagadoReal) {
-                        S/ {{ item.montoPagadoReal | number:'1.2-2' }}
+                        S/ {{ item.montoPagadoReal | appNumber:'1.2-2' }}
                       } @else { - }
                     </td>
                   </tr>

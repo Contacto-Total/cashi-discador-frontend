@@ -1,4 +1,6 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ComisionesService } from '../services/comisiones.service';
@@ -17,7 +19,7 @@ import {
 @Component({
   selector: 'app-comisiones',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AppNumberPipe],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -659,7 +661,7 @@ import {
                         </td>
                         <td class="px-4 py-3 text-sm text-right">
                           <span [class]="agente.metaAlcanzada ? 'text-green-600 font-semibold' : 'text-amber-600'">
-                            {{ agente.porcentajeCumplimiento | number:'1.1-1' }}%
+                            {{ agente.porcentajeCumplimiento | appNumber:'1.1-1' }}%
                           </span>
                         </td>
                         <td class="px-4 py-3 text-sm text-right text-blue-600">
@@ -960,6 +962,8 @@ export class ComisionesPage implements OnInit {
     { value: 11, label: 'Noviembre' },
     { value: 12, label: 'Diciembre' }
   ];
+
+  private fmt = inject(FormatService);
 
   constructor(public comisionesService: ComisionesService) {}
 
@@ -1449,7 +1453,7 @@ export class ComisionesPage implements OnInit {
 
   formatMonto(monto: number | undefined): string {
     if (monto === undefined || monto === null) return '0.00';
-    return monto.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return this.fmt.number(monto, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   mostrarMensaje(msg: string, error: boolean) {

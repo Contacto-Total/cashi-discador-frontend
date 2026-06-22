@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, effect, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -44,6 +44,11 @@ import { CartaAcuerdoService } from '../../core/services/carta-acuerdo.service';
 import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/confirm-carta-dialog/confirm-carta-dialog.component';
 import { FirstInstallmentConfigService } from '../../maintenance/services/first-installment-config.service';
 import { CallService } from '../../core/services/call.service';
+import { ToastService } from '../../shared/services/toast.service';
+import { GestionLockService } from '../../core/services/gestion-lock.service';
+import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
+import { FormatService } from '@/shared/services/format.service';
+import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-collection-management',
@@ -54,7 +59,8 @@ import { CallService } from '../../core/services/call.service';
     LucideAngularModule,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
-    StatusAlarmClockComponent
+    StatusAlarmClockComponent,
+    AppCurrencyPipe
   ],
   template: `
     <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
@@ -526,22 +532,31 @@ import { CallService } from '../../core/services/call.service';
                     <lucide-angular name="phone" [size]="14" [class]="errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"></lucide-angular>
                   </div>
                   <span [class]="'font-bold text-xs ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white')">
-                    {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfono Contactado' }}
+                    {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : (telefonoContactadoBloqueado() ? 'Teléfono Contactado (de la llamada)' : 'Teléfono Contactado') }}
                   </span>
                   @if (selectedManualPhone()) {
-                    <span class="ml-auto text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{{ selectedManualPhone() }}</span>
+                    <span class="ml-auto inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">
+                      @if (telefonoContactadoBloqueado()) {
+                        <lucide-angular name="lock" [size]="11" title="Número de la llamada, no editable"></lucide-angular>
+                      }
+                      {{ selectedManualPhone() }}
+                    </span>
                   }
                 </div>
                 <div class="flex flex-wrap gap-1">
                   @for (tel of telefonosMetodo(); track tel.numero) {
                     <button
-                      (click)="selectedManualPhone.set(tel.numero)"
-                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] cursor-pointer ' +
+                      [disabled]="telefonoContactadoBloqueado()"
+                      (click)="!telefonoContactadoBloqueado() && selectedManualPhone.set(tel.numero)"
+                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] ' +
+                        (telefonoContactadoBloqueado() ? 'cursor-not-allowed ' : 'cursor-pointer ') +
                         (selectedManualPhone() === tel.numero
                           ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
-                          : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
-                            ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50')"
+                          : (telefonoContactadoBloqueado()
+                            ? 'opacity-40 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                            : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
+                              ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
+                              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50'))"
                     >
                       <lucide-angular
                         [name]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
@@ -774,19 +789,19 @@ import { CallService } from '../../core/services/call.service';
                       <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2">
                         <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">Monto Original</div>
                         <div class="text-sm font-bold text-gray-800 dark:text-gray-100">
-                          S/ {{ continuidadData()!.montoOriginal | number:'1.2-2' }}
+                          {{ continuidadData()!.montoOriginal | appCurrency }}
                         </div>
                       </div>
                       <div class="bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
                         <div class="text-xs text-green-600 dark:text-green-400 uppercase font-medium">Ya Pagado</div>
                         <div class="text-sm font-bold text-green-700 dark:text-green-300">
-                          S/ {{ continuidadData()!.montoPagado | number:'1.2-2' }}
+                          {{ continuidadData()!.montoPagado | appCurrency }}
                         </div>
                       </div>
                       <div class="bg-amber-100 dark:bg-amber-900/50 rounded-lg p-2 ring-2 ring-amber-400 dark:ring-amber-500">
                         <div class="text-xs text-amber-700 dark:text-amber-300 uppercase font-medium">Saldo Restante</div>
                         <div class="text-lg font-bold text-amber-800 dark:text-amber-200">
-                          S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}
+                          {{ continuidadData()!.saldoRestante | appCurrency }}
                         </div>
                       </div>
                     </div>
@@ -800,7 +815,7 @@ import { CallService } from '../../core/services/call.service';
                   <!-- Instrucción -->
                   <div class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg p-2">
                     <lucide-angular name="info" [size]="14"></lucide-angular>
-                    <span>La nueva promesa debe ser por el saldo restante de <strong>S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}</strong></span>
+                    <span>La nueva promesa debe ser por el saldo restante de <strong>{{ continuidadData()!.saldoRestante | appCurrency }}</strong></span>
                   </div>
                 </div>
               }
@@ -934,7 +949,7 @@ import { CallService } from '../../core/services/call.service';
                         </div>
                       </div>
                       <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
-                        S/ {{ schedule.totalAmount | number:'1.2-2' }}
+                        {{ schedule.totalAmount | appCurrency }}
                       </div>
                     </div>
 
@@ -948,7 +963,7 @@ import { CallService } from '../../core/services/call.service';
                               <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
                               <span class="text-gray-500 dark:text-gray-400">Vence: {{ formatDate(installment.dueDate) }}</span>
                             </div>
-                            <span class="font-bold text-purple-700 dark:text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
+                            <span class="font-bold text-purple-700 dark:text-purple-300">{{ installment.amount | appCurrency }}</span>
                           </div>
                         }
                       }
@@ -977,7 +992,7 @@ import { CallService } from '../../core/services/call.service';
                           type="button"
                           (click)="applyFullSchedulePayment()"
                           class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1">
-                          Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
+                          Pagar Todo ({{ calculatePendingAmount(schedule) | appCurrency }})
                         </button>
                       }
                     </div>
@@ -1023,7 +1038,7 @@ import { CallService } from '../../core/services/call.service';
                           />
                           <div>
                             <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                            <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-gray-500 dark:text-gray-400'">
                               Vence: {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (tienePagoParcial(cuota)) {
@@ -1056,7 +1071,7 @@ import { CallService } from '../../core/services/call.service';
                         <label
                           class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
                           [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
-                            ? 'bg-amber-600 text-white shadow-md dark:bg-amber-500'
+                            ? 'bg-amber-200 text-slate-950 shadow-md border border-amber-500 dark:bg-amber-300 dark:text-slate-950'
                             : 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-300 dark:border-amber-700'"
                         >
                           <div class="flex items-center gap-3">
@@ -1069,21 +1084,21 @@ import { CallService } from '../../core/services/call.service';
                               class="w-4 h-4 text-amber-600"
                             />
                             <div>
-                              <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                              <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'">
+                              <span class="font-bold text-xs" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-900 dark:text-slate-100'">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-900' : 'text-amber-700 dark:text-amber-300'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
                               @if (tienePagoParcial(cuota)) {
-                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-400 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-500 text-slate-950' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
                               }
                             </div>
                           </div>
                           <div class="text-right">
                             @if (tienePagoParcial(cuota)) {
-                              <span class="text-xs opacity-70 mr-1">S/ {{ cuota.monto?.toFixed(2) }}</span>
-                              <span class="font-bold text-sm">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                              <span class="text-xs opacity-70 mr-1" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-800' : 'text-slate-700 dark:text-slate-300'">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-950 dark:text-white'">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
                             } @else {
-                              <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-950 dark:text-white'">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
                             }
                           </div>
                         </label>
@@ -1135,13 +1150,19 @@ import { CallService } from '../../core/services/call.service';
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
-                          [max]="todayDate"
+                          [min]="cancellationPaymentMinDate()"
+                          [max]="cancellationPaymentMaxDate()"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                         <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                          Por defecto: hoy
+                          Rango: {{ cancellationPaymentMinDateLabel() }} - {{ cancellationPaymentMaxDateLabel() }}
                         </p>
+                        @if (!isCancellationPaymentDateValid()) {
+                          <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
+                            La fecha de pago no es válida para la cuota seleccionada.
+                          </p>
+                        }
                       </div>
                     </div>
                     <!-- Info de distribución si el monto es diferente -->
@@ -1268,8 +1289,8 @@ import { CallService } from '../../core/services/call.service';
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation())"
-                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
+                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid() + ' | Fecha pago válida: ' + isCancellationPaymentDateValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
@@ -1565,7 +1586,7 @@ import { CallService } from '../../core/services/call.service';
                               <div [class]="'rounded-md border px-2 py-1.5 ' + getHistorialPromesaItemClass(cuota.status, $index)">
                                 <div class="flex items-center justify-between gap-1">
                                   <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
-                                  <span class="font-bold text-slate-900 dark:text-slate-100">S/ {{ cuota.amount | number:'1.2-2' }}</span>
+                                  <span class="font-bold text-slate-900 dark:text-slate-100">{{ cuota.amount | appCurrency }}</span>
                                 </div>
                                 <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
                                   <span>{{ formatDate(cuota.dueDate) }}</span>
@@ -1741,7 +1762,7 @@ import { CallService } from '../../core/services/call.service';
     }
   `]
 })
-export class CollectionManagementPage implements OnInit, OnDestroy {
+export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquearSalida {
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
@@ -1768,6 +1789,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   // Evita hacer muchos clicks en rellamada y saturar el SIP
   protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
+
+  // "Teléfono Contactado" queda BLOQUEADO cuando el número proviene de una llamada/rellamada
+  // (activeCallPhone) y pertenece al cliente: el asesor ya no puede cambiarlo manualmente.
+  protected telefonoContactadoBloqueado = computed(() =>
+    !!this.activeCallPhone() && this.telefonosMetodo().some(t => t.numero === this.activeCallPhone()));
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
@@ -2390,7 +2416,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               allPending.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2398,7 +2425,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    return allPending;
+    return this.sortInstallmentsByDueDate(allPending);
   });
 
   // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
@@ -2420,7 +2447,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           overdue.push({
             ...cuota,
             scheduleId: latestSchedule.id,
-            grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+            grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+            fechaInicioPromesa: latestSchedule.fechaGestion
           });
         } else if (estado === 'PENDIENTE') {
           const fechaPago = cuota.dueDate || cuota.fechaPago;
@@ -2430,7 +2458,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               overdue.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2438,11 +2467,76 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    return overdue;
+    return this.sortInstallmentsByDueDate(overdue);
   });
+
+  private sortInstallmentsByDueDate(installments: any[]): any[] {
+    return [...(installments || [])].sort((a: any, b: any) => {
+      const dateA = this.getInstallmentDueTime(a);
+      const dateB = this.getInstallmentDueTime(b);
+
+      if (dateA !== dateB) return dateA - dateB;
+      return Number(a?.numeroCuota || a?.installmentNumber || 0) - Number(b?.numeroCuota || b?.installmentNumber || 0);
+    });
+  }
+
+  private getInstallmentDueTime(installment: any): number {
+    const rawDate = installment?.dueDate || installment?.fechaPromesa || installment?.fechaPago;
+    if (!rawDate) return Number.MAX_SAFE_INTEGER;
+
+    const date = this.parseDateLocal(String(rawDate).split('T')[0]);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+  }
 
   hasInstallmentsForCancellation = computed(() => {
     return this.pendingInstallmentsForCancellation().length > 0 || this.overdueInstallments().length > 0;
+  });
+
+  cancellationPaymentMaxDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const dueDate = cuota?.dueDate || cuota?.fechaPago || cuota?.fechaPromesa;
+    if (!dueDate) return this.todayDate;
+
+    const maxDate = this.parseDateLocal(String(dueDate).split('T')[0]);
+    const today = this.parseDateLocal(this.todayDate);
+    return this.toDateInputValue(maxDate > today ? today : maxDate);
+  });
+
+  cancellationPaymentMinDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const startDate = cuota?.fechaInicioPromesa || cuota?.fechaGestion || cuota?.startDate;
+    if (!startDate) return '';
+
+    return String(startDate).split('T')[0];
+  });
+
+  cancellationPaymentMinDateLabel = computed(() => {
+    const minDate = this.cancellationPaymentMinDate();
+    return minDate ? this.formatDate(minDate) : 'Sin límite';
+  });
+
+  cancellationPaymentMaxDateLabel = computed(() => {
+    return this.formatDate(this.cancellationPaymentMaxDate());
+  });
+
+  isCancellationPaymentDateValid = computed(() => {
+    if (!this.isCancellationTypification()) return true;
+
+    const cuota = this.selectedInstallmentForCancellation();
+    if (!cuota) return true;
+
+    const fechaPago = this.fechaPagoEditable();
+    if (!fechaPago) return false;
+
+    const pagoDate = this.parseDateLocal(fechaPago);
+    const minDateValue = this.cancellationPaymentMinDate();
+    if (minDateValue) {
+      const minDate = this.parseDateLocal(minDateValue);
+      if (pagoDate < minDate) return false;
+    }
+
+    const maxDate = this.parseDateLocal(this.cancellationPaymentMaxDate());
+    return pagoDate <= maxDate;
   });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
@@ -2644,6 +2738,40 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   private managementId?: string;
   private callStartTime?: string;
 
+  // --- Bloqueo de salida durante una gestión con llamada en curso ---
+  // Se levanta al guardar (onSaveSuccess) para habilitar la navegación
+  // programática de salida. Muere con la instancia del componente.
+  private salidaAutorizada = false;
+  // Marcador explícito de "se colocó una llamada en esta gestión". Es FALSE al
+  // entrar (incluida la entrada manual, que setea isTipifying sin llamada) y
+  // solo se vuelve TRUE al iniciar una llamada (startCall / iniciarRellamada);
+  // se resetea al guardar. No usamos isTipifying porque la carga manual lo
+  // activa en la entrada sin que haya habido llamada.
+  protected llamadaRealizada = signal(false);
+  // Referencias estables para registrar/desregistrar en el lock service y el
+  // listener de beforeunload (deben ser la MISMA referencia en add/remove).
+  private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
+  private boundBeforeUnload = (e: BeforeUnloadEvent) => {
+    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+  // Trampa de historial para el botón "Atrás" del navegador. El CanDeactivate
+  // guard es asíncrono y en back rápido/múltiple el navegador procesa varios
+  // popstate antes de que Angular cancele/restaure la URL, dejando escapar. Esta
+  // trampa es SÍNCRONA: re-empuja el estado en cada popstate mientras hay
+  // gestión con llamada sin guardar, sin ventana asíncrona que explotar.
+  private historyTrapArmed = false;
+  private boundPopState = () => {
+    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
+      history.pushState(null, '', location.href); // deshacer el back inmediatamente
+      this.toast.warning('Debes guardar la gestión antes de salir');
+    } else {
+      this.historyTrapArmed = false; // sin bloqueo: permitir el back real
+    }
+  };
+
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
   private outgoingCallSubscription?: Subscription;
@@ -2676,12 +2804,67 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private comprobanteService: ComprobanteService,
     private cartaAcuerdoService: CartaAcuerdoService,
     private firstInstallmentConfigService: FirstInstallmentConfigService,
-    private callService: CallService
-  ) {}
+    private callService: CallService,
+    private toast: ToastService,
+    private gestionLock: GestionLockService,
+    private fmt: FormatService
+  ) {
+    // Auto-selecciona en "Teléfono Contactado" el último número discado (discador o
+    // rellamada). Como activeCallPhone se actualiza en cada llamada, si el asesor
+    // rellama a otro número, la selección se actualiza sola (gana la última llamada).
+    // Se acota a los teléfonos del cliente cargado para evitar cruces entre clientes;
+    // el asesor puede sobreescribir manualmente después (el effect no re-dispara salvo
+    // que haya una nueva llamada).
+    effect(() => {
+      const discado = this.activeCallPhone();
+      if (!discado) return;
+      const esDelCliente = this.telefonosMetodo().some(t => t.numero === discado);
+      if (esDelCliente) {
+        this.selectedManualPhone.set(discado);
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  /**
+   * Indica si hay una gestión "en curso": se colocó una llamada en esta gestión
+   * (en curso o ya finalizada) y aún no se guarda. NO incluye isTipifying porque
+   * la entrada manual lo activa sin que haya habido llamada (falso positivo de
+   * bloqueo). `llamadaRealizada` cubre tanto llamadas normales (startCall) como
+   * manuales/rellamada (iniciarRellamada).
+   */
+  hasGestionEnCurso(): boolean {
+    return this.callActive() || this.rellamadaCallActive() || this.llamadaRealizada();
+  }
+
+  /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
+  puedeSalir(_nextUrl: string): boolean {
+    return this.salidaAutorizada || !this.hasGestionEnCurso();
+  }
+
+  /**
+   * Arma la trampa de historial empujando un estado centinela (mismo URL) la
+   * primera vez que se coloca una llamada. A partir de ahí, cada "Atrás" del
+   * navegador pop-ea este centinela y el listener de popstate lo vuelve a
+   * empujar, neutralizando el botón Atrás mientras la gestión esté bloqueada.
+   */
+  private armHistoryTrap(): void {
+    if (!this.historyTrapArmed) {
+      history.pushState(null, '', location.href);
+      this.historyTrapArmed = true;
+    }
+  }
 
   ngOnInit() {
     this.loadTenants();
     this.loadManagementHistory();
+
+    // Bloqueo de salida: si se hizo una llamada, la única vía de salida es
+    // Guardar Gestión. Cubre el botón de logout (vía el service) y el
+    // refresh/cierre de pestaña (vía beforeunload). El sidebar y el back se
+    // cubren con el CanDeactivate guard de la ruta.
+    this.gestionLock.register(this.boundLockCheck);
+    window.addEventListener('beforeunload', this.boundBeforeUnload);
+    window.addEventListener('popstate', this.boundPopState);
 
     // Verificar estado inicial de la llamada
     const initialCallState = this.sipService.getCallState();
@@ -3589,7 +3772,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Solo necesitamos adaptar el formato para este componente
         const schedules = records.map((schedule: any) => {
           // El servicio ya devuelve installments (no cuotasPromesa)
-          const installments = schedule.installments || [];
+          const installments = this.sortInstallmentsByDueDate(schedule.installments || []);
 
           // Encontrar cuotas pendientes
           const pendingCuotas = installments.filter((c: any) =>
@@ -3605,7 +3788,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
             fechaGestion: schedule.startDate,
-            installments: installments.map((c: any) => ({
+            installments: this.sortInstallmentsByDueDate(installments.map((c: any) => ({
               id: c.id,
               numeroCuota: c.numeroCuota || c.installmentNumber,
               monto: c.montoPromesa || c.monto || c.amount,
@@ -3614,7 +3797,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               fechaPromesa: c.fechaPromesa || c.dueDate || c.fechaPago,
               status: c.status || 'PENDIENTE',
               montoPagadoReal: c.montoPagadoReal || 0
-            })),
+            }))),
             nextDueDate: nextCuota?.fechaPromesa || nextCuota?.dueDate || nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
@@ -3815,13 +3998,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private formatDateTime(dateTimeString: string): string {
-    const date = new Date(dateTimeString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    // Fecha+hora siguiendo el idioma del navegador (FormatService).
+    return this.fmt.dateTime(dateTimeString);
   }
 
   private calculateCallDuration(callDetail: any): string {
@@ -3842,6 +4020,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Liberar el bloqueo de salida al destruir el componente (cubre incluso la
+    // salida forzada por /login). El unregister por identidad evita borrar el
+    // predicado de otra instancia.
+    this.gestionLock.unregister(this.boundLockCheck);
+    window.removeEventListener('beforeunload', this.boundBeforeUnload);
+    window.removeEventListener('popstate', this.boundPopState);
+
     if (this.callTimer) {
       clearInterval(this.callTimer);
     }
@@ -3873,7 +4058,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Validamos que es una rellamada
     if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
-    
+    this.llamadaRealizada.set(true); // llamada manual/rellamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
+
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
     this.sipService.setCurrentOutgoingNumber(phoneNumber);
@@ -3957,43 +4144,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // El handler de onCallStatus limpia los flags automáticamente
   }
 
-  cancelarTipificacion() {
-    console.log('❌ Cancelando tipificación...');
-
-    // Si hay rellamada activa, colgarla primero
-    if (this.rellamadaCallActive()) {
-      console.log('📵 Colgando rellamada activa antes de cancelar tipificación...');
-      this.sipService.hangup();
-      this.isRellamada.set(false);
-      this.rellamadaCallActive.set(false);
-      this.sipService.setRellamadaActive(false);
-      this.sipService.clearCurrentOutgoingNumber(); // Limpiar número stale de rellamada
-      this.showRellamadaDropdown.set(false);
-    }
-
-    // Si hay llamada activa, colgarla primero
-    if (this.callActive()) {
-      console.log('📵 Colgando llamada activa antes de cancelar tipificación...');
-      this.endCall(false);
-    }
-
-    // Desbloquear llamadas entrantes
-    this.isTipifying.set(false);
-    this.sipService.blockIncomingCallsMode(false);
-    console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
-
-    // Navegar PRIMERO, luego cambiar a DISPONIBLE
-    // Esto evita que el auto-dialer asigne una llamada mientras el agente aún está aquí
-    const currentUser = this.authService.getCurrentUser();
-    const agentId = currentUser?.id || 1;
-    this.router.navigate(['/agent-dashboard']).then(() => {
-      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-        next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-        error: (err: any) => console.error('❌ Error cambiando estado:', err)
-      });
-    });
-  }
-
   protected openScheduleDetail(managementId: number) {
     this.scheduleManagementId.set(managementId);
     this.showScheduleDetail.set(true);
@@ -4035,6 +4185,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   startCall() {
     this.callActive.set(true);
+    this.llamadaRealizada.set(true); // se colocó una llamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
     this.callDuration.set(0);
     this.callStartTime = new Date().toISOString();
 
@@ -4088,22 +4240,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-      
-      // 1. Separamos la cadena en fecha y hora (usando espacio o 'T' como separador)
-      const partes = dateStr.split(/[ T]/);
-      const soloFecha = partes[0]; // Ej: "2026-04-07"
-      
-      // Extraemos la hora y le quitamos los microsegundos (lo que está después del punto)
-      const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
-      
-      // 2. Formateamos la fecha de AAAA-MM-DD a DD/MM/AAAA
-    const dateParts = soloFecha.split('-');
-      let fechaFormateada = soloFecha;
-    if (dateParts.length === 3) {
-      fechaFormateada = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-    }
-
-      // 3. Juntamos la fecha formateada con la hora al final (si existe)
+    // La FECHA sigue el idioma del navegador (FormatService); la HORA se conserva literal.
+    const partes = dateStr.split(/[ T]/);
+    const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
+    const fechaFormateada = this.fmt.date(partes[0]) || partes[0];
     return soloHora ? `${fechaFormateada} ${soloHora}` : fechaFormateada;
   }
 
@@ -4206,18 +4346,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!monto || monto <= 0) return '';
 
     const parts: string[] = [];
-    parts.push(`S/${monto.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+    parts.push(this.fmt.currency(monto, { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
 
     if (totalCuotas && totalCuotas > 0) {
       parts.push(`${totalCuotas} cuota${totalCuotas > 1 ? 's' : ''}`);
     }
 
     if (fechaPrimeraCuota) {
-      // fecha viene como "YYYY-MM-DD", mostrar como "DD/MM"
-      const dateParts = fechaPrimeraCuota.split('-');
-      if (dateParts.length >= 3) {
-        parts.push(`${dateParts[2]}/${dateParts[1]}`);
-      }
+      // fecha compacta (día/mes) siguiendo el idioma del navegador
+      const f = this.fmt.date(fechaPrimeraCuota, { day: '2-digit', month: '2-digit' });
+      if (f) parts.push(f);
     }
 
     return parts.join(' · ');
@@ -4949,10 +5087,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Formatea un valor numérico como moneda (Soles)
    */
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(value);
+    return this.fmt.currency(value);
   }
 
   /**
@@ -4961,9 +5096,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   formatByType(field: { value: number; formato: string; rawValue: string }): string {
     switch (field.formato) {
       case 'PORCENTAJE':
-        return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(field.value) + '%';
+        return this.fmt.percent(field.value, 2);
       case 'NUMERO':
-        return new Intl.NumberFormat('es-PE').format(field.value);
+        return this.fmt.number(field.value);
       case 'TEXTO':
         return field.rawValue;
       case 'MONEDA':
@@ -4978,8 +5113,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private parseDateLocal(dateString: string): Date {
     if (!dateString) return new Date();
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
     return new Date(year, month - 1, day);
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   /**
@@ -5465,11 +5607,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               fecha: fechaPago
             });
 
-            // Buscar el grupoPromesaUuid de la cuota
-            const schedule = this.activePaymentSchedules().find(s =>
+            // Buscar también en todos los cronogramas porque las cuotas vencidas no siempre están activas.
+            const schedule = [...this.activePaymentSchedules(), ...this.allPaymentSchedules()].find(s =>
               s.installments?.some((c: any) => c.id === selectedCuota.id)
             );
-            const grupoPromesaUuid = schedule?.grupoPromesaUuid || schedule?.id;
+            const grupoPromesaUuid = selectedCuota.grupoPromesaUuid || schedule?.grupoPromesaUuid || selectedCuota.scheduleId || schedule?.id;
 
             if (!grupoPromesaUuid) {
               console.error('No se encontró el grupoPromesaUuid');
@@ -5609,6 +5751,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private onSaveSuccess(resultadoCodigo: string, gestionCodigo: string) {
+    // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
+    // Todas las ramas de este método terminan navegando fuera de la pantalla.
+    this.salidaAutorizada = true;
+    this.llamadaRealizada.set(false); // gestión cerrada: ya no hay llamada pendiente de guardar
     this.saving.set(false);
     this.showSuccess.set(true);
 
@@ -5744,8 +5890,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                                 this.activeCallClientId() === this.customerData()?.id;
     const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
-    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone()) {
+    // El número discado (activeCallPhone) cuenta como teléfono contactado aunque no se
+    // haya marcado en el selector (p. ej. número no registrado en la lista del cliente).
+    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone() && !this.activeCallPhone()) {
       newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
+    }
+
+    if (this.isCancellationTypification() && !this.isCancellationPaymentDateValid()) {
+      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no es válida para la cuota seleccionada';
     }
 
     // 3. Validar campos dinámicos requeridos
@@ -5839,7 +5991,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     switch (format) {
       case 'currency':
-        return 'S/ ' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return this.fmt.currency(value);
 
       case 'number':
         return String(value);
@@ -5847,7 +5999,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       case 'date':
         if (typeof value === 'string') {
           const date = new Date(value);
-          return date.toLocaleDateString('es-PE');
+          return this.fmt.date(date);
         }
         return String(value);
 
@@ -5895,11 +6047,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       } else {
         date = dateValue;
       }
-      return date.toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return this.fmt.date(date);
     } catch {
       return String(dateValue);
     }

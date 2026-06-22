@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -16,8 +17,8 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
           <p class="text-xs text-slate-500 dark:text-slate-400">Comparación entre archivo cargado y pagos registrados por agente</p>
         </div>
         <div class="text-right">
-          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
-            {{ approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión' }}
+          <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold" [class]="completed || approvalEnabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'">
+            {{ completed ? 'Guardado' : (approvalEnabled ? 'Listo para aprobar' : 'Requiere revisión') }}
           </span>
           <p class="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{{ data.length }} registro(s)</p>
         </div>
@@ -42,7 +43,11 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
             <tbody [class]="getGroupClass(row)">
               <tr class="border-t-2" [class]="getGroupBorderClass(row)">
                 <td class="px-2 py-2 font-bold text-blue-700 dark:text-blue-300 rounded-tl-lg">BANCO</td>
-                <td class="px-2 py-2 font-semibold text-slate-800 dark:text-slate-100 whitespace-nowrap">{{ value(row, 'documentoBanco', 'documento_banco') || '-' }}</td>
+                <td class="px-2 py-2 font-semibold whitespace-nowrap">
+                  <button type="button" (click)="documentoClick.emit(row)" class="text-left text-blue-700 underline-offset-2 hover:underline dark:text-blue-300" [disabled]="!value(row, 'documentoBanco', 'documento_banco')">
+                    {{ value(row, 'documentoBanco', 'documento_banco') || '-' }}
+                  </button>
+                </td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'fechaBanco', 'fecha_banco') || '-' }}</td>
                 <td class="px-2 py-2 text-right font-semibold text-slate-900 dark:text-white whitespace-nowrap">{{ formatMoney(value(row, 'montoBanco', 'monto_banco')) }}</td>
                 <td class="px-2 py-2 text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ value(row, 'numeroOperacion', 'numero_operacion') || '-' }}</td>
@@ -92,13 +97,16 @@ import { BcpPagoDuplicado, PrevalidacionArchivoBcp } from '../models/bcp-archivo
   `
 })
 export class BcpPrevalidacionArchivoWidget {
+  private fmt = inject(FormatService);
   @Input() data: PrevalidacionArchivoBcp[] = [];
   @Input() todosAprobables = false;
   @Input() approvalEnabled = false;
   @Input() isSaving = false;
   @Input() pagosDuplicados: BcpPagoDuplicado[] = [];
   @Input() showGuardar = true;
+  @Input() completed = false;
   @Output() guardar = new EventEmitter<PrevalidacionArchivoBcp[]>();
+  @Output() documentoClick = new EventEmitter<PrevalidacionArchivoBcp>();
 
   private readonly recomendacionesPorEstado: Record<string, { problema: string; accion: string }> = {
     LISTO_PARA_APROBAR: {
@@ -141,6 +149,10 @@ export class BcpPrevalidacionArchivoWidget {
       problema: 'Fecha fuera de promesa.',
       accion: 'Revisar fecha de promesa/cuota o corregir la fecha del pago tipificado.'
     },
+    PAGO_YA_CONCILIADO_PREVIAMENTE: {
+      problema: 'Este pago ya fue conciliado previamente.',
+      accion: 'No se aprueba ni se envía a conciliación.'
+    },
     SIN_CANDIDATO: {
       problema: 'No se encontró candidato de conciliación.',
       accion: 'Revisión manual requerida.'
@@ -170,7 +182,8 @@ export class BcpPrevalidacionArchivoWidget {
 
   puedeGuardar(): boolean {
     const todasListas = this.data.length > 0 && this.data.every(row => this.isListo(row));
-    return this.approvalEnabled
+    return !this.completed
+      && this.approvalEnabled
       && todasListas;
   }
 
@@ -246,7 +259,7 @@ export class BcpPrevalidacionArchivoWidget {
     ws.getRow(1).height = 28;
 
     ws.getCell('A3').value = 'Fecha y hora:';
-    ws.getCell('B3').value = fechaCarga.toLocaleString('es-PE');
+    ws.getCell('B3').value = this.fmt.dateTime(fechaCarga, true);
     ws.getCell('D3').value = 'Total incidencias:';
     ws.getCell('E3').value = fallos.length;
     ws.getCell('A4').value = 'Indicacion:';
@@ -294,7 +307,10 @@ export class BcpPrevalidacionArchivoWidget {
       values.forEach((value, colIndex) => {
         const cell = dataRow.getCell(colIndex + 1);
         cell.value = value;
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: this.getExcelFillColor(estado) } };
+        const fillColor = this.getExcelCellFillColor(estado, colIndex);
+        if (fillColor) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+        }
         cell.border = this.excelBorder();
         cell.alignment = { vertical: 'top', wrapText: true };
         if (colIndex === 6 || colIndex === 9) cell.numFmt = '"S/." #,##0.00';
@@ -313,10 +329,24 @@ export class BcpPrevalidacionArchivoWidget {
     saveAs(new Blob([buffer]), `reporte-incidencias-bcp-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
-  private getExcelFillColor(estado: string): string {
-    if (estado === 'REQUIERE_REVISION_MONTO' || estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO' || estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') return 'FEF3C7';
+  private getExcelCellFillColor(estado: string, colIndex: number): string | null {
+    const yellow = 'FEF3C7';
+
+    if (estado === 'PAGO_REGISTRADO_FECHA_DISTINTA_BANCO') {
+      return colIndex === 5 || colIndex === 8 ? yellow : null;
+    }
+
+    if (estado === 'REQUIERE_REVISION_MONTO') {
+      return colIndex === 6 || colIndex === 9 ? yellow : null;
+    }
+
+    if (estado === 'PAGO_REGISTRADO_FECHA_MONTO_DISTINTOS_BANCO') {
+      return colIndex === 5 || colIndex === 6 || colIndex === 8 || colIndex === 9 ? yellow : null;
+    }
+
     if (estado === 'CLIENTE_NO_PERTENECE_A_CONTEXTO') return 'E2E8F0';
-    return 'FEE2E2';
+    if (estado !== 'LISTO_PARA_APROBAR') return 'FEE2E2';
+    return null;
   }
 
   private excelBorder(): any {

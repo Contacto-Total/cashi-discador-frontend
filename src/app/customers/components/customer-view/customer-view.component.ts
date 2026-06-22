@@ -1,4 +1,5 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomerService, CustomerResource, ContactMethodResource, PagosClienteResponse } from '../../services/customer.service';
@@ -975,6 +976,7 @@ export class CustomerViewComponent implements OnInit {
   private customerService = inject(CustomerService);
   private apiSystemConfigService = inject(ApiSystemConfigService);
   private managementService = inject(ManagementService);
+  private fmt = inject(FormatService);
 
   customer = signal<CustomerResource | null>(null);
   activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias' | 'cuentas' | 'pagos' | 'gestiones'>('cuentas');
@@ -1367,9 +1369,8 @@ export class CustomerViewComponent implements OnInit {
 
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return dateStr;
+    // Fecha siguiendo el idioma del navegador (FormatService).
+    return this.fmt.date(dateStr) || dateStr;
   }
 
   private formatCanalDisplay(canal: string | undefined): string {

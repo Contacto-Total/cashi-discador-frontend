@@ -1,5 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormatService } from '@/shared/services/format.service';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { PromiseManagementService } from './services/promise-management.service';
@@ -15,6 +16,8 @@ import { UserRole } from '../../../core/models/user.model';
   styleUrls: ['./promise-management.component.css']
 })
 export class PromiseManagementComponent implements OnInit {
+  private fmt = inject(FormatService);
+
   // Estado principal
   promesas = signal<PromesaGestion[]>([]);
   loading = signal(false);
@@ -329,10 +332,7 @@ export class PromiseManagementComponent implements OnInit {
   }
 
   formatMonto(monto: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(monto || 0);
+    return this.fmt.currency(monto || 0);
   }
 
   formatDate(dateStr: string): string {
@@ -344,7 +344,7 @@ export class PromiseManagementComponent implements OnInit {
     } else {
       date = new Date(dateStr);
     }
-    return date.toLocaleDateString('es-PE', {
+    return this.fmt.date(date, {
       day: '2-digit',
       month: 'short',
       year: 'numeric'

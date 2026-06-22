@@ -68,7 +68,7 @@
         <div class="metric-content">
           <span class="metric-label">Fecha Inicio</span>
           <span class="metric-value">
-            {{ statistics.fechaInicio ? (statistics.fechaInicio | date: 'dd-MM-yyyy') : '-' }}
+            {{ statistics.fechaInicio ? (statistics.fechaInicio | appDate) : '-' }}
           </span>
         </div>
       </div>
@@ -79,7 +79,7 @@
         <div class="metric-content">
           <span class="metric-label">Fecha Final</span>
           <span class="metric-value">
-            {{ statistics.fechaFinal ? (statistics.fechaFinal | date: 'dd-MM-yyyy') : '-' }}
+            {{ statistics.fechaFinal ? (statistics.fechaFinal | appDate) : '-' }}
           </span>
         </div>
       </div>
@@ -89,7 +89,7 @@
         <span class="metric-icon"><lucide-angular name="file-text" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Total de Registros</span>
-          <span class="metric-value">{{ statistics.totalRegistros | number }}</span>
+          <span class="metric-value">{{ statistics.totalRegistros | appNumber }}</span>
         </div>
       </div>
 
@@ -98,7 +98,7 @@
         <span class="metric-icon"><lucide-angular name="refresh-cw" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Falta Reintentar</span>
-          <span class="metric-value">{{ statistics.faltaReintentar | number }}</span>
+          <span class="metric-value">{{ statistics.faltaReintentar | appNumber }}</span>
         </div>
       </div>
 
@@ -107,7 +107,7 @@
         <span class="metric-icon"><lucide-angular name="check-circle" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Reintentos Completados</span>
-          <span class="metric-value">{{ statistics.reintentosCompletados | number }}</span>
+          <span class="metric-value">{{ statistics.reintentosCompletados | appNumber }}</span>
         </div>
       </div>
 
@@ -116,7 +116,7 @@
         <span class="metric-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
         <div class="metric-content">
           <span class="metric-label">Falta Llamar</span>
-          <span class="metric-value">{{ statistics.faltaLlamar | number }}</span>
+          <span class="metric-value">{{ statistics.faltaLlamar | appNumber }}</span>
         </div>
       </div>
 
@@ -173,37 +173,37 @@
               <tbody>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasContestadas, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #10B981"></span> Contestadas</td>
-                  <td>{{ statistics.llamadasContestadas | number }}</td>
+                  <td>{{ statistics.llamadasContestadas | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasContestadas, statistics.totalLlamadas) }}</td>
                 </tr>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasCortas, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #F59E0B"></span> Cortas</td>
-                  <td>{{ statistics.llamadasCortas | number }}</td>
+                  <td>{{ statistics.llamadasCortas | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasCortas, statistics.totalLlamadas) }}</td>
                 </tr>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasAbandonadas, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #EF4444"></span> Abandonadas</td>
-                  <td>{{ statistics.llamadasAbandonadas | number }}</td>
+                  <td>{{ statistics.llamadasAbandonadas | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasAbandonadas, statistics.totalLlamadas) }}</td>
                 </tr>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasNoContestadas, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #F97316"></span> No Responden</td>
-                  <td>{{ statistics.llamadasNoContestadas | number }}</td>
+                  <td>{{ statistics.llamadasNoContestadas | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasNoContestadas, statistics.totalLlamadas) }}</td>
                 </tr>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasBuzonVoz, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #3B82F6"></span> Buzón de Voz</td>
-                  <td>{{ statistics.llamadasBuzonVoz | number }}</td>
+                  <td>{{ statistics.llamadasBuzonVoz | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasBuzonVoz, statistics.totalLlamadas) }}</td>
                 </tr>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasFallidas, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #6B7280"></span> Fallidas</td>
-                  <td>{{ statistics.llamadasFallidas | number }}</td>
+                  <td>{{ statistics.llamadasFallidas | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasFallidas, statistics.totalLlamadas) }}</td>
                 </tr>
                 <tr [ngClass]="getRowClass(getPercentage(statistics.llamadasPausadas, statistics.totalLlamadas))">
                   <td><span class="color-dot" style="background-color: #94A3B8"></span> Pausadas</td>
-                  <td>{{ statistics.llamadasPausadas | number }}</td>
+                  <td>{{ statistics.llamadasPausadas | appNumber }}</td>
                   <td>{{ getPercentage(statistics.llamadasPausadas, statistics.totalLlamadas) }}</td>
                 </tr>
               </tbody>
@@ -259,7 +259,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let call of calls">
-            <td>{{ call.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td>{{ call.fecha | appDateTime }}</td>
             <td>{{ call.telefono }}</td>
             <td>{{ call.dato }}</td>
             <td>
@@ -296,13 +296,18 @@
           <lucide-angular name="arrow-left" [size]="16"></lucide-angular> Anterior
         </button>
 
-        <button
-          *ngFor="let page of getPageNumbers()"
-          class="btn-page-number"
-          [class.active]="page === currentPage"
-          (click)="onPageChange(page)">
-          {{ page + 1 }}
-        </button>
+        <div class="page-jump">
+          <span>Página</span>
+          <input
+            type="number"
+            class="page-input"
+            [value]="currentPage + 1"
+            min="1"
+            [max]="totalPages"
+            (change)="onPageInputChange($event)"
+            (keyup.enter)="onPageInputChange($event)">
+          <span>de {{ totalPages }}</span>
+        </div>
 
         <button
           class="btn-page"

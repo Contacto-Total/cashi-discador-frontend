@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -32,6 +33,8 @@ export class MetaProductividadComponent implements OnInit {
   // Para filtrar portfolios/subportfolios en el modal
   filteredPortfolios: Portfolio[] = [];
   filteredSubPortfolios: SubPortfolio[] = [];
+
+  private fmt = inject(FormatService);
 
   constructor(
     private metaService: MetaProductividadService,
@@ -260,11 +263,11 @@ export class MetaProductividadComponent implements OnInit {
 
   formatNumber(value: number | null | undefined): string {
     if (value === null || value === undefined) return '-';
-    return value.toLocaleString('es-PE');
+    return this.fmt.number(value);
   }
 
   formatMoney(value: number | null | undefined): string {
     if (value === null || value === undefined) return '-';
-    return 'S/ ' + value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return this.fmt.currency(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 }

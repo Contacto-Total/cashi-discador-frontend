@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
@@ -23,15 +23,18 @@ import { RecordatoriosModalComponent } from './shared/components/recordatorios-m
 import { RecordatoriosService } from './core/services/recordatorios.service';
 import { SupervisionService } from './core/services/supervision.service';
 import { ToastNotificationComponent } from './shared/components/toast-notification/toast-notification.component';
+import { ToastService } from './shared/services/toast.service';
+import { GestionLockService } from './core/services/gestion-lock.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
+    AppDateTimePipe,
     RouterOutlet,
     RouterModule,
     LucideAngularModule,
@@ -94,7 +97,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private supervisionService: SupervisionService,
     private peripheralHealthService: PeripheralHealthService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private toast: ToastService,
+    private gestionLock: GestionLockService
   ) {}
 
   // Notificaciones methods
@@ -333,7 +338,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.dialogRef = null;
 
       if (result === 'logout') {
-        this.logout();
+        this.logout(true);
       }
       // NO llamar cerrarSesionPorInactividad si result === 'timeout'
       // porque onTimeout$ ya lo llamó (evita duplicado)
@@ -358,7 +363,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     alert('Tu sesión ha expirado por inactividad');
 
     // Cerrar sesión DESPUÉS de que el usuario acepte
-    this.logout();
+    this.logout(true);
 
     // Resetear flag solo después de que la navegación complete
     setTimeout(() => {
@@ -556,7 +561,15 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
 
-  logout(): void {
+  logout(forced = false): void {
+    // Bloqueo de salida: si hay una gestión con llamada sin guardar, el logout
+    // manual queda bloqueado (la única vía de salida es Guardar Gestión).
+    // El logout forzado (inactividad / sesión expirada) siempre procede.
+    if (!forced && this.gestionLock.isLocked) {
+      this.toast.warning('Debes guardar la gestión antes de cerrar sesión');
+      return;
+    }
+
     console.log('[LOGOUT] Iniciando proceso de cierre de sesión...');
 
     // Obtener el usuario actual antes de limpiar todo

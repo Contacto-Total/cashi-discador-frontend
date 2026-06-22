@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, SecurityContext } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, SecurityContext, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -34,6 +35,8 @@ import { PickerComponent } from '@ctrl/ngx-emoji-mart';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
+  private fmt = inject(FormatService);
+
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
@@ -474,9 +477,9 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
       const d = new Date(this.contactLastSeen);
       const today = new Date();
       const sameDay = d.toDateString() === today.toDateString();
-      const time = d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+      const time = this.fmt.time(d, false);
       if (sameDay) return `últ. vez hoy a las ${time}`;
-      return `últ. vez ${d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })} a las ${time}`;
+      return `últ. vez ${this.fmt.date(d, { day: '2-digit', month: '2-digit' })} a las ${time}`;
     }
     return '';
   }
@@ -859,10 +862,7 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
   formatTime(timestamp: number): string {
     if (!timestamp) return '';
-    return new Date(timestamp).toLocaleTimeString('es-PE', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return this.fmt.time(timestamp, false);
   }
 
   // Retorna true cuando hay que mostrar un separador de fecha DESPUÉS del
@@ -898,7 +898,7 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
     const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
     if (date.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
-    return date.toLocaleDateString('es-PE', opts);
+    return this.fmt.date(date, opts);
   }
 
   get isGroupChat(): boolean {

@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 import { adminOrSupervisorGuard } from './core/guards/admin-or-supervisor.guard';
+import { gestionPendienteGuard } from './core/guards/gestion-pendiente.guard';
 
 export const routes: Routes = [
   {
@@ -204,7 +205,8 @@ export const routes: Routes = [
   {
     path: 'collection-management',
     loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    canDeactivate: [gestionPendienteGuard]
   },
   {
     path: 'seguimiento',
@@ -316,6 +318,11 @@ export const routes: Routes = [
   {
     path: 'pagos-bancarios',
     loadComponent: () => import('./pagos-bancarios/pages/pagos-bancarios.page').then(m => m.PagosBancariosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
+    path: 'correccion-pagos',
+    loadComponent: () => import('./pagos-bancarios/pages/correccion-pagos/correccion-pagos.page').then(m => m.CorreccionPagosPage),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {

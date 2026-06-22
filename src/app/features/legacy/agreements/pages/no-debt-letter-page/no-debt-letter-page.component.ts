@@ -1,9 +1,10 @@
-import { Component, effect } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../../../shared/services/theme.service';
+import { FormatService } from '@/shared/services/format.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -13,6 +14,8 @@ import { ThemeService } from '../../../../../shared/services/theme.service';
   styleUrls: ['./no-debt-letter-page.component.css']
 })
 export class NoDebtLetterPageComponent {
+  private fmt = inject(FormatService);
+
   searchForm: FormGroup;
   letterForm: FormGroup;
   isDarkMode = false;
@@ -63,7 +66,7 @@ export class NoDebtLetterPageComponent {
     if (!dateString) return '';
     const [year, month, day] = dateString.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-    const formatted = date.toLocaleDateString('es-PE', {
+    const formatted = this.fmt.date(date, {
       day: 'numeric',
       month: 'long',
       year: 'numeric'

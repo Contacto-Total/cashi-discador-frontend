@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { FormatService } from '@/shared/services/format.service';
 
 export interface CustomerDisplayConfig {
   title: string;
@@ -80,6 +81,7 @@ export interface ImportResponse {
 })
 export class CustomerDisplayService {
   private http = inject(HttpClient);
+  private fmt = inject(FormatService);
   private apiUrl = `${environment.tipificacionUrl}/customers`;
 
   /**
@@ -130,18 +132,15 @@ export class CustomerDisplayService {
 
     switch (format) {
       case 'currency':
-        return new Intl.NumberFormat('es-PE', {
-          style: 'currency',
-          currency: 'PEN'
-        }).format(value);
+        return this.fmt.currency(value);
 
       case 'number':
-        return new Intl.NumberFormat('es-PE').format(value);
+        return this.fmt.number(value);
 
       case 'date':
         if (typeof value === 'string') {
           const date = new Date(value);
-          return new Intl.DateTimeFormat('es-PE').format(date);
+          return this.fmt.date(date);
         }
         return value.toString();
 

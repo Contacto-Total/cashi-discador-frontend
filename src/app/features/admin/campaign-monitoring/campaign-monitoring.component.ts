@@ -1,5 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormatService } from '@/shared/services/format.service';
+import { AppNumberPipe, AppTimePipe } from '@/shared/pipes/format.pipes';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription, interval, Subject, of } from 'rxjs';
@@ -22,12 +24,14 @@ interface AgentAlert {
 @Component({
   selector: 'app-campaign-monitoring',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, StatusAlarmClockComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, StatusAlarmClockComponent, AppNumberPipe, AppTimePipe],
   templateUrl: './campaign-monitoring.component.html',
   styleUrls: ['./campaign-monitoring.component.css'],
   encapsulation: ViewEncapsulation.None
 })
 export class CampaignMonitoringComponent implements OnInit, OnDestroy {
+  private fmt = inject(FormatService);
+
   // Campaigns
   campaigns: Campaign[] = [];
   selectedCampaignId: number | null = null;
@@ -764,7 +768,7 @@ export class CampaignMonitoringComponent implements OnInit, OnDestroy {
    */
   getCurrentTime(): string {
     const now = new Date();
-    return now.toLocaleTimeString('es-PE', { hour12: false });
+    return this.fmt.time(now);
   }
 
   /**

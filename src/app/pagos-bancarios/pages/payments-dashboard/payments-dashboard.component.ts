@@ -1,4 +1,6 @@
-import { Component, OnInit, OnDestroy, signal, effect, computed, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, effect, computed, ChangeDetectorRef, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { BaseChartDirective } from 'ng2-charts';
@@ -21,7 +23,7 @@ Chart.register(
 @Component({
   selector: 'app-payments-dashboard',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, BaseChartDirective],
+  imports: [CommonModule, LucideAngularModule, BaseChartDirective, AppNumberPipe],
   template: `
     <div class="min-h-screen bg-gray-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -51,7 +53,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Pagos Banco</p>
-                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ dashboard()?.totalPagosBanco | number }}</p>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ dashboard()?.totalPagosBanco | appNumber }}</p>
                 <p class="text-sm text-blue-600 dark:text-blue-400 font-medium">{{ formatCurrency(dashboard()?.montoTotalBanco) }}</p>
               </div>
               <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
@@ -65,7 +67,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Conciliados</p>
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ dashboard()?.pagosConciliados | number }}</p>
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ dashboard()?.pagosConciliados | appNumber }}</p>
                 <p class="text-sm text-green-600 dark:text-green-400 font-medium">{{ formatCurrency(dashboard()?.montoConciliado) }}</p>
               </div>
               <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
@@ -79,7 +81,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Pagos Voluntarios</p>
-                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ dashboard()?.pagosPorFuera | number }}</p>
+                <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ dashboard()?.pagosPorFuera | appNumber }}</p>
                 <p class="text-sm text-amber-600 dark:text-amber-400 font-medium">{{ formatCurrency(dashboard()?.montoPorFuera) }}</p>
               </div>
               <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center">
@@ -93,7 +95,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Sin Verificar</p>
-                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ dashboard()?.pagosNoVerificados | number }}</p>
+                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ dashboard()?.pagosNoVerificados | appNumber }}</p>
                 <p class="text-sm text-red-600 dark:text-red-400 font-medium">{{ formatCurrency(dashboard()?.montoNoVerificado) }}</p>
               </div>
               <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
@@ -110,7 +112,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Total Promesas</p>
-                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ dashboard()?.totalPromesas | number }}</p>
+                <p class="text-2xl font-bold text-gray-800 dark:text-white">{{ dashboard()?.totalPromesas | appNumber }}</p>
                 <p class="text-sm text-indigo-600 dark:text-indigo-400 font-medium">{{ formatCurrency(dashboard()?.montoPrometido) }}</p>
               </div>
               <div class="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
@@ -124,7 +126,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Cumplidas</p>
-                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ dashboard()?.promesasCumplidas | number }}</p>
+                <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ dashboard()?.promesasCumplidas | appNumber }}</p>
               </div>
               <div class="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
                 <lucide-angular name="badge-check" [size]="24" class="text-green-600 dark:text-green-400"></lucide-angular>
@@ -137,7 +139,7 @@ Chart.register(
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Vencidas</p>
-                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ dashboard()?.promesasVencidas | number }}</p>
+                <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ dashboard()?.promesasVencidas | appNumber }}</p>
               </div>
               <div class="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                 <lucide-angular name="clock" [size]="24" class="text-red-600 dark:text-red-400"></lucide-angular>
@@ -151,7 +153,7 @@ Chart.register(
               <div>
                 <p class="text-sm text-gray-500 dark:text-gray-400">Tasa Cumplimiento</p>
                 <p class="text-2xl font-bold" [class]="getTasaClass(dashboard()?.tasaCumplimiento || 0)">
-                  {{ dashboard()?.tasaCumplimiento | number:'1.1-1' }}%
+                  {{ dashboard()?.tasaCumplimiento | appNumber:'1.1-1' }}%
                 </p>
               </div>
               <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
@@ -266,7 +268,7 @@ Chart.register(
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-medium text-gray-800 dark:text-white truncate">{{ agente.nombreAgente }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ agente.promesasRegistradas }} promesas · {{ agente.tasaCumplimiento | number:'1.0-0' }}% cumplimiento
+                      {{ agente.promesasRegistradas }} promesas · {{ agente.tasaCumplimiento | appNumber:'1.0-0' }}% cumplimiento
                     </p>
                   </div>
                   <div class="text-right">
@@ -451,6 +453,8 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
   tendenciaChartData: ChartData<'line'> = { labels: [], datasets: [] };
   bancosChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
+  private fmt = inject(FormatService);
+
   constructor(
     private dashboardService: PaymentsDashboardService,
     private themeService: ThemeService,
@@ -571,7 +575,7 @@ export class PaymentsDashboardComponent implements OnInit, OnDestroy {
 
   formatCurrency(value: number | null | undefined): string {
     if (value == null) return 'S/ 0.00';
-    return 'S/ ' + value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return this.fmt.currency(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   formatDate(dateStr: string): string {

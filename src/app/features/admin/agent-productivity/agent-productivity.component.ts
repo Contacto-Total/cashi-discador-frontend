@@ -1,5 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormatService } from '@/shared/services/format.service';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Subscription } from 'rxjs';
@@ -26,11 +28,13 @@ type TabType = 'productividad' | 'corteHorario';
 @Component({
   selector: 'app-agent-productivity',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppNumberPipe],
   templateUrl: './agent-productivity.component.html',
   styleUrls: ['./agent-productivity.component.css']
 })
 export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewInit {
+  private fmt = inject(FormatService);
+
   // Exponer Math para el template
   Math = Math;
 
@@ -420,7 +424,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   private formatChartDate(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+    return this.fmt.date(date, { day: '2-digit', month: 'short' });
   }
 
   // Helpers para template
@@ -433,7 +437,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   formatMoney(value: number): string {
-    return value?.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00';
+    return this.fmt.number(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00';
   }
 
   formatPercent(value: number | undefined): string {
@@ -518,7 +522,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   corteTotalMoney(field: string): string {
     const total = this.corteAgents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
-    return total.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    return this.fmt.number(total, { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
   shortName(name: string): string {

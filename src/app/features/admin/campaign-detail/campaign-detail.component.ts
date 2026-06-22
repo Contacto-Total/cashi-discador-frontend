@@ -8,6 +8,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { CampaignAdminService, CampaignStatistics, CampaignCall } from '../../../core/services/campaign-admin.service';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+import { AppNumberPipe, AppDateTimePipe, AppDatePipe } from '@/shared/pipes/format.pipes';
 
 // Registrar TODOS los componentes necesarios de Chart.js
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
@@ -15,7 +16,7 @@ Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 @Component({
   selector: 'app-campaign-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, BaseChartDirective, LucideAngularModule],
+  imports: [CommonModule, FormsModule, BaseChartDirective, LucideAngularModule, AppNumberPipe, AppDateTimePipe, AppDatePipe],
   templateUrl: './campaign-detail.component.html',
   styleUrls: ['./campaign-detail.component.css'],
   encapsulation: ViewEncapsulation.None
@@ -169,8 +170,19 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
    * Maneja el cambio de página
    */
   onPageChange(page: number): void {
+    if (page < 0 || (this.totalPages > 0 && page >= this.totalPages)) return;
     this.currentPage = page;
     this.loadCalls();
+  }
+
+  onPageInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const page = Number(input.value);
+    if (!Number.isInteger(page) || page < 1 || page > this.totalPages) {
+      input.value = String(this.currentPage + 1);
+      return;
+    }
+    this.onPageChange(page - 1);
   }
 
   /**
@@ -196,17 +208,6 @@ export class CampaignDetailComponent implements OnInit, OnDestroy {
    */
   goBack(): void {
     this.router.navigate(['/admin/campaigns']);
-  }
-
-  /**
-   * Genera el array de números de página para la paginación
-   */
-  getPageNumbers(): number[] {
-    const pages: number[] = [];
-    for (let i = 0; i < this.totalPages; i++) {
-      pages.push(i);
-    }
-    return pages;
   }
 
   /**

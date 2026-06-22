@@ -1,4 +1,5 @@
-import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed, effect } from '@angular/core';
+import { Component, input, Input, Output, EventEmitter, OnInit, signal, computed, effect, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -366,7 +367,7 @@ export class PaymentScheduleComponent implements OnInit {
         return {
           minDate: formatDate(today),
           maxDate: formatDate(lastDayOfMonth),
-          message: `Solo fechas dentro del mes actual (hasta ${lastDayOfMonth.toLocaleDateString('es-PE')})`
+          message: `Solo fechas dentro del mes actual (hasta ${this.fmt.date(lastDayOfMonth)})`
         };
       case 'FUERA_MES':
         // Permitir desde mañana, cuotas espaciadas cada 30 días
@@ -409,6 +410,8 @@ export class PaymentScheduleComponent implements OnInit {
 
   // Track previous amounts to detect significant changes
   private previousAmountsKey = '';
+
+  private fmt = inject(FormatService);
 
   constructor() {
     // Effect que resetea la selección cuando los montos disponibles cambian significativamente
@@ -810,10 +813,7 @@ export class PaymentScheduleComponent implements OnInit {
   }
 
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(value);
+    return this.fmt.currency(value);
   }
 
   /**
