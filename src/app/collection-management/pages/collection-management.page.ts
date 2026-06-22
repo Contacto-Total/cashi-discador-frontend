@@ -1745,6 +1745,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
+  protected activeCallId = signal<number | null>(null); // ID de la llamada del discador (marcador_llamadas.id) para enlazar la gestión
   protected isManualSource = signal(false); // true solo cuando viene desde /manual-management con source=manual
   protected callDuration = signal(0);
   protected saving = signal(false);
@@ -2218,6 +2219,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   // Teléfono seleccionado para gestión manual (sin llamada)
   selectedManualPhone = signal<string>('');
+
+  // True solo cuando estamos en gestión manual sin llamada activa → habilita selección en el panel "Teléfonos"
+  protected modoSeleccionTelefono = computed(() =>
+      this.isManualSource() && !this.callActive() && !this.rellamadaCallActive()
+    );
 
   // Agregar teléfono
   showAddContactForm = signal(false);
@@ -3346,6 +3352,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           if (predictiveData.phoneNumber) {
             console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
             this.activeCallPhone.set(predictiveData.anexoDestino || predictiveData.phoneNumber);
+            if (predictiveData.llamadaId) {
+              this.activeCallId.set(predictiveData.llamadaId);
+            }
             this.autoLoadCustomerByPhone(predictiveData.phoneNumber);
             return;
           }
@@ -3386,6 +3395,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Guardar contactId del discador para posible rellamada
         if (fullData.contactId) {
           this.dialerContactId.set(fullData.contactId);
+        }
+
+        // Guardar el id de la llamada del discador para enlazar la gestión (registros_gestion.id_llamada)
+        if (fullData.llamadaId) {
+          this.activeCallId.set(fullData.llamadaId);
         }
 
         // Guardar el número real discado
@@ -5422,7 +5436,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
-        idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
+        idLlamada: this.activeCallId(),  // id de la llamada del discador (marcador_llamadas.id); backend lo rescata si viene null
         duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
         // Información del agente y dispositivo
@@ -5624,6 +5638,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.callStartTime = undefined;
     this.activeCallPhone.set('');
     this.activeCallClientId.set(null);
+    this.activeCallId.set(null);
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
 
