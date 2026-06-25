@@ -82,7 +82,7 @@ export class CorreccionPagosService {
       .set('carteraId', contexto.carteraId.toString())
       .set('subcarteraId', contexto.subcarteraId.toString());
 
-    return this.http.post<AmpliarVencimientoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/ampliar-vencimiento`, request, { params });
+    return this.http.post<AmpliarVencimientoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/regularizar-fecha`, request, { params });
   }
 
   crearPromesaSistemaPagoBanco(
