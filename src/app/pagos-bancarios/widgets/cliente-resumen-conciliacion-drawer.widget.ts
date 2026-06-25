@@ -221,29 +221,54 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
             <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
               <h3 class="text-sm font-bold text-slate-900 dark:text-white">Ampliar vencimiento</h3>
               <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Cuota {{ cuotaAmpliar?.numeroCuota }} · Vence {{ formatDate(cuotaAmpliar?.fechaPromesa) }} · máximo {{ formatDate(ampliarFechaMax) }}
+                Cuota {{ cuotaAmpliar?.numeroCuota }} · Vence {{ formatDate(cuotaAmpliar?.fechaPromesa) }} · máximo {{ formatDate(getAmpliarFechaMax()) }}
               </p>
             </div>
 
             <div class="space-y-3 px-4 py-4">
-              <div>
-                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento</label>
-                <input type="date" [(ngModel)]="ampliarFechaVencimientoNueva" [min]="ampliarFechaMin" [max]="ampliarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              <div class="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
+                <button type="button" (click)="ampliarModo = 'corta'" class="rounded-md px-2 py-1.5 transition-colors" [class]="ampliarModo === 'corta' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
+                  Hasta 3 días
+                </button>
+                <button type="button" (click)="setAmpliarModoMayor()" [disabled]="!ampliarMayorHabilitada" class="rounded-md px-2 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40" [class]="ampliarModo === 'mayor' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
+                  Mayor a 3 días
+                </button>
               </div>
-              <div class="grid grid-cols-2 gap-3">
+
+              @if (ampliarModo === 'corta') {
                 <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
-                  <input type="date" [(ngModel)]="ampliarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento</label>
+                  <input type="date" [(ngModel)]="ampliarFechaVencimientoNueva" [min]="ampliarFechaMin" [max]="ampliarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
                 </div>
-                <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
-                  <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                    <input type="date" [(ngModel)]="ampliarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                    <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </div>
                 </div>
-              </div>
-              <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                <input type="checkbox" [(ngModel)]="ampliarPagoCorrespondeAsesor" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
-                Pago corresponde al asesor original
-              </label>
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <input type="checkbox" [(ngModel)]="ampliarPagoCorrespondeAsesor" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+                  Pago corresponde al asesor original
+                </label>
+              } @else {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
+                  Se creará una nueva promesa y el pago se asignará al sistema. Disponible solo para promesas de una cuota.
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                    <input type="date" [(ngModel)]="ampliarMayorFechaPago" [min]="ampliarMayorFechaMin" [max]="ampliarMayorFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                    <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMayorMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              }
 
               @if (ampliarError) {
                 <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ ampliarError }}</div>
@@ -252,7 +277,7 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
 
             <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
               <button type="button" (click)="cerrarAmpliarVencimiento()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
-              <button type="button" (click)="ampliarVencimiento()" [disabled]="!canGuardarAmpliacion() || ampliandoVencimiento" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+              <button type="button" (click)="guardarAmpliacion()" [disabled]="!canGuardarAmpliacion() || ampliandoVencimiento" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
                 {{ ampliandoVencimiento ? 'Ampliando...' : 'Ampliar' }}
               </button>
             </div>
@@ -295,6 +320,12 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   ampliarPagoCorrespondeAsesor = true;
   ampliarError: string | null = null;
   ampliandoVencimiento = false;
+  ampliarModo: 'corta' | 'mayor' = 'corta';
+  ampliarMayorHabilitada = false;
+  ampliarMayorFechaPago = '';
+  ampliarMayorFechaMin = '';
+  ampliarMayorFechaMax = '';
+  ampliarMayorMontoPago: number | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
@@ -417,8 +448,23 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     this.ampliarFechaPago = this.todayInputValue();
     this.ampliarMontoPago = Number(cuota.montoPromesa || 0);
     this.ampliarPagoCorrespondeAsesor = true;
+    this.ampliarModo = 'corta';
+    this.ampliarMayorFechaMin = this.addDays(fechaPromesa, 4);
+    this.ampliarMayorFechaMax = this.endOfMonth(fechaPromesa);
+    this.ampliarMayorHabilitada = this.isCuotaUnica(cuota) && this.ampliarMayorFechaMin <= this.ampliarMayorFechaMax;
+    this.ampliarMayorFechaPago = this.ampliarMayorFechaMin <= this.ampliarMayorFechaMax ? this.ampliarMayorFechaMin : '';
+    this.ampliarMayorMontoPago = Number(cuota.montoPromesa || 0);
     this.ampliarError = null;
     this.ampliarModalOpen = true;
+  }
+
+  setAmpliarModoMayor(): void {
+    if (!this.ampliarMayorHabilitada) return;
+    this.ampliarModo = 'mayor';
+  }
+
+  getAmpliarFechaMax(): string {
+    return this.ampliarModo === 'mayor' ? this.ampliarMayorFechaMax : this.ampliarFechaMax;
   }
 
   cerrarAmpliarVencimiento(): void {
@@ -429,6 +475,16 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   }
 
   canGuardarAmpliacion(): boolean {
+    if (this.ampliarModo === 'mayor') {
+      return !!this.cuotaAmpliar
+        && this.ampliarMayorHabilitada
+        && !!this.ampliarMayorFechaPago
+        && Number(this.ampliarMayorMontoPago) > 0
+        && this.hasRequiredContext()
+        && this.ampliarMayorFechaPago >= this.ampliarMayorFechaMin
+        && this.ampliarMayorFechaPago <= this.ampliarMayorFechaMax;
+    }
+
     return !!this.cuotaAmpliar
       && !!this.ampliarFechaVencimientoNueva
       && !!this.ampliarFechaPago
@@ -436,6 +492,15 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       && this.hasRequiredContext()
       && this.ampliarFechaVencimientoNueva >= this.ampliarFechaMin
       && this.ampliarFechaVencimientoNueva <= this.ampliarFechaMax;
+  }
+
+  guardarAmpliacion(): void {
+    if (this.ampliarModo === 'mayor') {
+      this.crearPromesaSistemaPagoBanco();
+      return;
+    }
+
+    this.ampliarVencimiento();
   }
 
   ampliarVencimiento(): void {
@@ -470,6 +535,41 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       },
       error: (error) => {
         this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo ampliar el vencimiento.';
+        this.ampliandoVencimiento = false;
+      }
+    });
+  }
+
+  crearPromesaSistemaPagoBanco(): void {
+    if (!this.cuotaAmpliar || !this.canGuardarAmpliacion()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.ampliandoVencimiento = true;
+    this.ampliarError = null;
+
+    this.correccionPagosService.crearPromesaSistemaPagoBanco(
+      this.cuotaAmpliar.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaPago: this.ampliarMayorFechaPago,
+        montoPago: Number(this.ampliarMayorMontoPago)
+      }
+    ).subscribe({
+      next: () => {
+        this.ampliandoVencimiento = false;
+        this.ampliarModalOpen = false;
+        this.cuotaAmpliar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear la nueva promesa.';
         this.ampliandoVencimiento = false;
       }
     });
@@ -584,6 +684,17 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     const date = new Date(year, month - 1, day);
     date.setDate(date.getDate() + days);
     return this.toDateInputValue(date.toISOString());
+  }
+
+  private endOfMonth(value: string): string {
+    const [year, month] = value.split('-').map(Number);
+    const date = new Date(year, month, 0);
+    return this.toDateInputValue(date.toISOString());
+  }
+
+  private isCuotaUnica(cuota: CuotaResumenConciliacion): boolean {
+    const promesa = (this.resumen?.promesas || []).find(item => (item.cuotas || []).some(row => row.cuotaId === cuota.cuotaId));
+    return (promesa?.cuotas || []).length === 1;
   }
 
   private todayInputValue(): string {

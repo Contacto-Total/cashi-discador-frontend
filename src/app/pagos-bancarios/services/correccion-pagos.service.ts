@@ -12,6 +12,8 @@ import {
   CorregirPagoResponse,
   CrearCancelacionRequest,
   CrearCancelacionResponse,
+  CrearPromesaSistemaPagoBancoRequest,
+  CrearPromesaSistemaPagoBancoResponse,
   CuotaValidaTipificar,
   PagoPendienteConciliacion
 } from '../models/correccion-pagos.model';
@@ -81,5 +83,18 @@ export class CorreccionPagosService {
       .set('subcarteraId', contexto.subcarteraId.toString());
 
     return this.http.post<AmpliarVencimientoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/ampliar-vencimiento`, request, { params });
+  }
+
+  crearPromesaSistemaPagoBanco(
+    cuotaId: number,
+    contexto: CorreccionPagoContexto,
+    request: CrearPromesaSistemaPagoBancoRequest
+  ): Observable<CrearPromesaSistemaPagoBancoResponse> {
+    const params = new HttpParams()
+      .set('tenantId', contexto.tenantId.toString())
+      .set('carteraId', contexto.carteraId.toString())
+      .set('subcarteraId', contexto.subcarteraId.toString());
+
+    return this.http.post<CrearPromesaSistemaPagoBancoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/crear-promesa-sistema-pago-banco`, request, { params });
   }
 }

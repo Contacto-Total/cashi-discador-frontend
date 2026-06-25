@@ -127,3 +127,24 @@ export interface AmpliarVencimientoResponse {
   estadoCuota: string;
   estadoPagoGestion: string;
 }
+
+export interface CrearPromesaSistemaPagoBancoRequest {
+  documento: string;
+  fechaPago: string;
+  montoPago: number;
+}
+
+export interface CrearPromesaSistemaPagoBancoResponse {
+  pagoCuotaId: number;
+  cuotaId: number;
+  gestionId: number;
+  grupoPromesaUuid: string;
+  documento: string;
+  transaccionId: number;
+  fechaPago: string;
+  montoPago: number;
+  banco: string;
+  numeroOperacion: string | null;
+  estadoCuota: string;
+  estadoPagoGestion: string;
+}
