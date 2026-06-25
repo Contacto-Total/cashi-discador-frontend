@@ -521,7 +521,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       },
       {
         documento,
-        fechaVencimientoNueva: this.ampliarFechaVencimientoNueva,
         fechaPago: this.ampliarFechaPago,
         montoPago: Number(this.ampliarMontoPago),
         pagoCorrespondeAsesor: this.ampliarPagoCorrespondeAsesor

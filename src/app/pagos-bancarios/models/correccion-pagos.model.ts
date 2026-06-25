@@ -100,7 +100,6 @@ export interface CrearCancelacionResponse {
 
 export interface AmpliarVencimientoRequest {
   documento: string;
-  fechaVencimientoNueva: string;
   fechaPago: string;
   montoPago: number;
   pagoCorrespondeAsesor: boolean;
