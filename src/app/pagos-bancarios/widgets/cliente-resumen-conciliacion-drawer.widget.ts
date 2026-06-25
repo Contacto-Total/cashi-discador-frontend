@@ -36,7 +36,7 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
             } @else if (error) {
               <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
             } @else if (resumen) {
-              <div class="mb-3 grid grid-cols-3 gap-2">
+              <div class="mb-3 grid grid-cols-4 gap-2">
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Tiene carta</p>
                   <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
@@ -49,6 +49,10 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Intentos cancelación</p>
                   <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ getIntentosCancelacion().length }}</p>
                 </div>
+                <button type="button" (click)="abrirPagoVoluntario()" class="rounded-lg border border-red-300 bg-red-600 p-2 text-left text-white shadow-sm transition-colors hover:bg-red-700 dark:border-red-800">
+                  <p class="text-[10px] font-bold uppercase tracking-wide text-red-100">Acción crítica</p>
+                  <p class="mt-0.5 text-sm font-black">Pago voluntario</p>
+                </button>
               </div>
 
               <div class="mb-3 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
@@ -278,6 +282,46 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
           </div>
         </div>
       }
+
+      @if (pagoVoluntarioModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarPagoVoluntario()">
+          <div class="w-full max-w-md rounded-xl border border-red-200 bg-white shadow-2xl dark:border-red-900 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">
+              <h3 class="text-sm font-black text-red-800 dark:text-red-200">Pago voluntario al sistema</h3>
+              <p class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
+                Esta acción es única y no se puede revertir. Si la fecha o el monto son incorrectos, se aplicarán sanciones.
+              </p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
+                Úsalo solo para pagos fuera de lógica normal de promesas o pagos antiguos que impiden el match del extracto bancario.
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                  <input type="date" [(ngModel)]="pagoVoluntarioFecha" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="pagoVoluntarioMonto" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+              </div>
+
+              @if (pagoVoluntarioError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ pagoVoluntarioError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-red-200 px-4 py-3 dark:border-red-900">
+              <button type="button" (click)="cerrarPagoVoluntario()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="crearPagoVoluntario()" [disabled]="!canCrearPagoVoluntario() || creandoPagoVoluntario" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ creandoPagoVoluntario ? 'Creando...' : 'Confirmar pago voluntario' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `
 })
@@ -319,6 +363,11 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   ampliarMayorFechaMin = '';
   ampliarMayorFechaMax = '';
   ampliarMayorMontoPago: number | null = null;
+  pagoVoluntarioModalOpen = false;
+  pagoVoluntarioFecha = '';
+  pagoVoluntarioMonto: number | null = null;
+  pagoVoluntarioError: string | null = null;
+  creandoPagoVoluntario = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
@@ -561,6 +610,56 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       error: (error) => {
         this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear la nueva promesa.';
         this.ampliandoVencimiento = false;
+      }
+    });
+  }
+
+  abrirPagoVoluntario(): void {
+    this.pagoVoluntarioFecha = '';
+    this.pagoVoluntarioMonto = null;
+    this.pagoVoluntarioError = null;
+    this.pagoVoluntarioModalOpen = true;
+  }
+
+  cerrarPagoVoluntario(): void {
+    if (this.creandoPagoVoluntario) return;
+    this.pagoVoluntarioModalOpen = false;
+    this.pagoVoluntarioError = null;
+  }
+
+  canCrearPagoVoluntario(): boolean {
+    return !!this.getDocumento()
+      && !!this.pagoVoluntarioFecha
+      && Number(this.pagoVoluntarioMonto) > 0
+      && this.hasRequiredContext();
+  }
+
+  crearPagoVoluntario(): void {
+    if (!this.canCrearPagoVoluntario()) return;
+
+    this.creandoPagoVoluntario = true;
+    this.pagoVoluntarioError = null;
+
+    this.correccionPagosService.crearPagoVoluntarioSistema(
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento: this.getDocumento(),
+        fechaPago: this.pagoVoluntarioFecha,
+        montoPago: Number(this.pagoVoluntarioMonto)
+      }
+    ).subscribe({
+      next: () => {
+        this.creandoPagoVoluntario = false;
+        this.pagoVoluntarioModalOpen = false;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.pagoVoluntarioError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago voluntario.';
+        this.creandoPagoVoluntario = false;
       }
     });
   }
