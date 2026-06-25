@@ -554,10 +554,10 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
 
   private getPrimeraCuotaVencidaUltimaPromesaVencida(): { promesa: ResumenConciliacionCliente['promesas'][number]; cuota: CuotaResumenConciliacion } | null {
     const promesa = [...(this.resumen?.promesas || [])]
-      .filter(item => String(item.estadoPago || '').toUpperCase() === 'VENCIDA')
       .sort((a, b) => this.getTime(b.fechaGestion) - this.getTime(a.fechaGestion))[0];
 
     if (!promesa) return null;
+    if (String(promesa.estadoPago || '').toUpperCase() !== 'VENCIDA') return null;
 
     const cuota = [...(promesa.cuotas || [])]
       .filter(cuota => String(cuota.estado || '').toUpperCase() === 'VENCIDA')
