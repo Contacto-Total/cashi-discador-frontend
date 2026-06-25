@@ -120,8 +120,8 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   <p>{{ formatDate(cuota.fechaPromesa) }}</p>
                                   <p class="font-semibold">S/ {{ formatMoney(cuota.montoPromesa) }}</p>
-                                  @if (canAmpliarVencimiento(cuota)) {
-                                    <button type="button" (click)="abrirAmpliarVencimiento(cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
+                                  @if (canAmpliarVencimiento(promesa, cuota)) {
+                                    <button type="button" (click)="abrirAmpliarVencimiento(promesa, cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
                                       Ampliar
                                     </button>
                                   }
@@ -343,9 +343,10 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     return this.cuotasValidas.some(item => item.cuotaId === cuota.cuotaId);
   }
 
-  canAmpliarVencimiento(cuota: CuotaResumenConciliacion): boolean {
+  canAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
     if (this.ampliandoVencimiento) return false;
-    return this.getPrimeraCuotaVencidaUltimaPromesaVencida()?.cuotaId === cuota.cuotaId;
+    const target = this.getPrimeraCuotaVencidaUltimaPromesaVencida();
+    return target?.promesa.idGestion === promesa.idGestion && target.cuota.cuotaId === cuota.cuotaId;
   }
 
   abrirCrearPago(cuota: CuotaResumenConciliacion): void {
@@ -403,8 +404,8 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     });
   }
 
-  abrirAmpliarVencimiento(cuota: CuotaResumenConciliacion): void {
-    if (!this.canAmpliarVencimiento(cuota)) return;
+  abrirAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): void {
+    if (!this.canAmpliarVencimiento(promesa, cuota)) return;
 
     const fechaPromesa = this.toDateInputValue(cuota.fechaPromesa);
     const fechaMax = this.addDays(fechaPromesa, 3);
@@ -551,16 +552,18 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
         && (cuota.montoPagadoReal === null || cuota.montoPagadoReal === undefined)) || null;
   }
 
-  private getPrimeraCuotaVencidaUltimaPromesaVencida(): CuotaResumenConciliacion | null {
+  private getPrimeraCuotaVencidaUltimaPromesaVencida(): { promesa: ResumenConciliacionCliente['promesas'][number]; cuota: CuotaResumenConciliacion } | null {
     const promesa = [...(this.resumen?.promesas || [])]
       .filter(item => String(item.estadoPago || '').toUpperCase() === 'VENCIDA')
       .sort((a, b) => this.getTime(b.fechaGestion) - this.getTime(a.fechaGestion))[0];
 
     if (!promesa) return null;
 
-    return [...(promesa.cuotas || [])]
+    const cuota = [...(promesa.cuotas || [])]
       .filter(cuota => String(cuota.estado || '').toUpperCase() === 'VENCIDA')
       .sort((a, b) => this.getTime(a.fechaPromesa) - this.getTime(b.fechaPromesa) || a.numeroCuota - b.numeroCuota)[0] || null;
+
+    return cuota ? { promesa, cuota } : null;
   }
 
   private hasRequiredContext(): boolean {
