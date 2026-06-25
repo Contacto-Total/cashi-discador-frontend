@@ -120,6 +120,11 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   <p>{{ formatDate(cuota.fechaPromesa) }}</p>
                                   <p class="font-semibold">S/ {{ formatMoney(cuota.montoPromesa) }}</p>
+                                  @if (canAmpliarVencimiento(cuota)) {
+                                    <button type="button" (click)="abrirAmpliarVencimiento(cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
+                                      Ampliar
+                                    </button>
+                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   @if (hasValue(cuota.fechaPagoReal)) {
@@ -209,6 +214,51 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
           </div>
         </div>
       }
+
+      @if (ampliarModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarAmpliarVencimiento()">
+          <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Ampliar vencimiento</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                Cuota {{ cuotaAmpliar?.numeroCuota }} · Vence {{ formatDate(cuotaAmpliar?.fechaPromesa) }} · máximo {{ formatDate(ampliarFechaMax) }}
+              </p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento</label>
+                <input type="date" [(ngModel)]="ampliarFechaVencimientoNueva" [min]="ampliarFechaMin" [max]="ampliarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                  <input type="date" [(ngModel)]="ampliarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+              </div>
+              <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <input type="checkbox" [(ngModel)]="ampliarPagoCorrespondeAsesor" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+                Pago corresponde al asesor original
+              </label>
+
+              @if (ampliarError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ ampliarError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarAmpliarVencimiento()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="ampliarVencimiento()" [disabled]="!canGuardarAmpliacion() || ampliandoVencimiento" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ ampliandoVencimiento ? 'Ampliando...' : 'Ampliar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `
 })
@@ -235,6 +285,16 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   crearPagoMonto: number | null = null;
   crearPagoError: string | null = null;
   creandoPago = false;
+  ampliarModalOpen = false;
+  cuotaAmpliar: CuotaResumenConciliacion | null = null;
+  ampliarFechaVencimientoNueva = '';
+  ampliarFechaMin = '';
+  ampliarFechaMax = '';
+  ampliarFechaPago = '';
+  ampliarMontoPago: number | null = null;
+  ampliarPagoCorrespondeAsesor = true;
+  ampliarError: string | null = null;
+  ampliandoVencimiento = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
@@ -281,6 +341,11 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     if (this.hasValue(cuota.fechaPagoReal) || cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) return false;
     if (this.getPrimeraCuotaSinPago()?.cuotaId !== cuota.cuotaId) return false;
     return this.cuotasValidas.some(item => item.cuotaId === cuota.cuotaId);
+  }
+
+  canAmpliarVencimiento(cuota: CuotaResumenConciliacion): boolean {
+    if (this.ampliandoVencimiento) return false;
+    return this.getPrimeraCuotaVencidaUltimaPromesaVencida()?.cuotaId === cuota.cuotaId;
   }
 
   abrirCrearPago(cuota: CuotaResumenConciliacion): void {
@@ -334,6 +399,77 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       error: (error) => {
         this.crearPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago.';
         this.creandoPago = false;
+      }
+    });
+  }
+
+  abrirAmpliarVencimiento(cuota: CuotaResumenConciliacion): void {
+    if (!this.canAmpliarVencimiento(cuota)) return;
+
+    const fechaPromesa = this.toDateInputValue(cuota.fechaPromesa);
+    const fechaMax = this.addDays(fechaPromesa, 3);
+
+    this.cuotaAmpliar = cuota;
+    this.ampliarFechaMin = fechaPromesa;
+    this.ampliarFechaMax = fechaMax;
+    this.ampliarFechaVencimientoNueva = fechaMax;
+    this.ampliarFechaPago = this.todayInputValue();
+    this.ampliarMontoPago = Number(cuota.montoPromesa || 0);
+    this.ampliarPagoCorrespondeAsesor = true;
+    this.ampliarError = null;
+    this.ampliarModalOpen = true;
+  }
+
+  cerrarAmpliarVencimiento(): void {
+    if (this.ampliandoVencimiento) return;
+    this.ampliarModalOpen = false;
+    this.cuotaAmpliar = null;
+    this.ampliarError = null;
+  }
+
+  canGuardarAmpliacion(): boolean {
+    return !!this.cuotaAmpliar
+      && !!this.ampliarFechaVencimientoNueva
+      && !!this.ampliarFechaPago
+      && Number(this.ampliarMontoPago) > 0
+      && this.hasRequiredContext()
+      && this.ampliarFechaVencimientoNueva >= this.ampliarFechaMin
+      && this.ampliarFechaVencimientoNueva <= this.ampliarFechaMax;
+  }
+
+  ampliarVencimiento(): void {
+    if (!this.cuotaAmpliar || !this.canGuardarAmpliacion()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.ampliandoVencimiento = true;
+    this.ampliarError = null;
+
+    this.correccionPagosService.ampliarVencimiento(
+      this.cuotaAmpliar.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaVencimientoNueva: this.ampliarFechaVencimientoNueva,
+        fechaPago: this.ampliarFechaPago,
+        montoPago: Number(this.ampliarMontoPago),
+        pagoCorrespondeAsesor: this.ampliarPagoCorrespondeAsesor
+      }
+    ).subscribe({
+      next: () => {
+        this.ampliandoVencimiento = false;
+        this.ampliarModalOpen = false;
+        this.cuotaAmpliar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo ampliar el vencimiento.';
+        this.ampliandoVencimiento = false;
       }
     });
   }
@@ -415,6 +551,18 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
         && (cuota.montoPagadoReal === null || cuota.montoPagadoReal === undefined)) || null;
   }
 
+  private getPrimeraCuotaVencidaUltimaPromesaVencida(): CuotaResumenConciliacion | null {
+    const promesa = [...(this.resumen?.promesas || [])]
+      .filter(item => String(item.estadoPago || '').toUpperCase() === 'VENCIDA')
+      .sort((a, b) => this.getTime(b.fechaGestion) - this.getTime(a.fechaGestion))[0];
+
+    if (!promesa) return null;
+
+    return [...(promesa.cuotas || [])]
+      .filter(cuota => String(cuota.estado || '').toUpperCase() === 'VENCIDA')
+      .sort((a, b) => this.getTime(a.fechaPromesa) - this.getTime(b.fechaPromesa) || a.numeroCuota - b.numeroCuota)[0] || null;
+  }
+
   private hasRequiredContext(): boolean {
     return Number(this.tenantId) > 0 && Number(this.carteraId) > 0 && Number(this.subcarteraId) > 0;
   }
@@ -426,5 +574,26 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   private toDateInputValue(value: string | null | undefined): string {
     if (!value) return '';
     return String(value).slice(0, 10);
+  }
+
+  private addDays(value: string, days: number): string {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + days);
+    return this.toDateInputValue(date.toISOString());
+  }
+
+  private todayInputValue(): string {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private getTime(value: string | null | undefined): number {
+    if (!value) return 0;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
   }
 }

@@ -97,3 +97,33 @@ export interface CrearCancelacionResponse {
   estadoCuota: string;
   estadoPagoGestion: string;
 }
+
+export interface AmpliarVencimientoRequest {
+  documento: string;
+  fechaVencimientoNueva: string;
+  fechaPago: string;
+  montoPago: number;
+  pagoCorrespondeAsesor: boolean;
+  banco?: string;
+  numeroOperacion?: string;
+  observaciones?: string;
+}
+
+export interface AmpliarVencimientoResponse {
+  pagoCuotaId: number;
+  cuotaId: number;
+  gestionId: number;
+  grupoPromesaUuid: string;
+  documento: string;
+  transaccionId: number;
+  fechaVencimientoAnterior: string;
+  fechaVencimientoNueva: string;
+  fechaPago: string;
+  montoPago: number;
+  pagoCorrespondeAsesor: boolean;
+  banco: string;
+  numeroOperacion: string | null;
+  asesorId: number;
+  estadoCuota: string;
+  estadoPagoGestion: string;
+}

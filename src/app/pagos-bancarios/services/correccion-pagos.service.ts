@@ -3,6 +3,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AmpliarVencimientoRequest,
+  AmpliarVencimientoResponse,
   BuscarCuotasValidasTipificarRequest,
   BuscarPagosPendientesConciliacionRequest,
   CorreccionPagoContexto,
@@ -66,5 +68,18 @@ export class CorreccionPagosService {
       .set('subcarteraId', contexto.subcarteraId.toString());
 
     return this.http.post<CrearCancelacionResponse>(`${this.baseUrl}/cuotas/${cuotaId}/crear-cancelacion`, request, { params });
+  }
+
+  ampliarVencimiento(
+    cuotaId: number,
+    contexto: CorreccionPagoContexto,
+    request: AmpliarVencimientoRequest
+  ): Observable<AmpliarVencimientoResponse> {
+    const params = new HttpParams()
+      .set('tenantId', contexto.tenantId.toString())
+      .set('carteraId', contexto.carteraId.toString())
+      .set('subcarteraId', contexto.subcarteraId.toString());
+
+    return this.http.post<AmpliarVencimientoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/ampliar-vencimiento`, request, { params });
   }
 }
