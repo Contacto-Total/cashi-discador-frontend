@@ -12,6 +12,8 @@ import {
   CorregirPagoResponse,
   CrearCancelacionRequest,
   CrearCancelacionResponse,
+  CrearPagoVoluntarioSistemaRequest,
+  CrearPagoVoluntarioSistemaResponse,
   CrearPromesaSistemaPagoBancoRequest,
   CrearPromesaSistemaPagoBancoResponse,
   CuotaValidaTipificar,
@@ -96,5 +98,17 @@ export class CorreccionPagosService {
       .set('subcarteraId', contexto.subcarteraId.toString());
 
     return this.http.post<CrearPromesaSistemaPagoBancoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/crear-promesa-sistema-pago-banco`, request, { params });
+  }
+
+  crearPagoVoluntarioSistema(
+    contexto: CorreccionPagoContexto,
+    request: CrearPagoVoluntarioSistemaRequest
+  ): Observable<CrearPagoVoluntarioSistemaResponse> {
+    const params = new HttpParams()
+      .set('tenantId', contexto.tenantId.toString())
+      .set('carteraId', contexto.carteraId.toString())
+      .set('subcarteraId', contexto.subcarteraId.toString());
+
+    return this.http.post<CrearPagoVoluntarioSistemaResponse>(`${this.baseUrl}/voluntario-sistema`, request, { params });
   }
 }

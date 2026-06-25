@@ -147,3 +147,23 @@ export interface CrearPromesaSistemaPagoBancoResponse {
   estadoCuota: string;
   estadoPagoGestion: string;
 }
+
+export interface CrearPagoVoluntarioSistemaRequest {
+  documento: string;
+  fechaPago: string;
+  montoPago: number;
+}
+
+export interface CrearPagoVoluntarioSistemaResponse {
+  pagoCuotaId: number;
+  cuotaId: number | null;
+  gestionId: number | null;
+  documento: string;
+  transaccionId: number;
+  fechaPago: string;
+  montoPago: number;
+  banco: string;
+  numeroOperacion: string | null;
+  estadoCuota: string | null;
+  estadoPagoGestion: string | null;
+}
