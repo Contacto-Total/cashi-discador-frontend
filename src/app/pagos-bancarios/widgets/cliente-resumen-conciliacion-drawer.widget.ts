@@ -231,24 +231,18 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
                   Hasta 3 días
                 </button>
                 <button type="button" (click)="setAmpliarModoMayor()" [disabled]="!ampliarMayorHabilitada" class="rounded-md px-2 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40" [class]="ampliarModo === 'mayor' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
-                  Mayor a 3 días
+                  1 cuota dentro mes
                 </button>
               </div>
 
               @if (ampliarModo === 'corta') {
                 <div>
-                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento</label>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento <span class="font-normal text-slate-500 dark:text-slate-400">(usar fecha que banco registró)</span></label>
                   <input type="date" [(ngModel)]="ampliarFechaVencimientoNueva" [min]="ampliarFechaMin" [max]="ampliarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
-                    <input type="date" [(ngModel)]="ampliarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                  </div>
-                  <div>
-                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
-                    <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
-                  </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto registrado en banco</label>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
                 </div>
                 <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   <input type="checkbox" [(ngModel)]="ampliarPagoCorrespondeAsesor" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
@@ -315,7 +309,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   ampliarFechaVencimientoNueva = '';
   ampliarFechaMin = '';
   ampliarFechaMax = '';
-  ampliarFechaPago = '';
   ampliarMontoPago: number | null = null;
   ampliarPagoCorrespondeAsesor = true;
   ampliarError: string | null = null;
@@ -445,7 +438,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     this.ampliarFechaMin = fechaPromesa;
     this.ampliarFechaMax = fechaMax;
     this.ampliarFechaVencimientoNueva = fechaMax;
-    this.ampliarFechaPago = this.todayInputValue();
     this.ampliarMontoPago = Number(cuota.montoPromesa || 0);
     this.ampliarPagoCorrespondeAsesor = true;
     this.ampliarModo = 'corta';
@@ -487,7 +479,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
 
     return !!this.cuotaAmpliar
       && !!this.ampliarFechaVencimientoNueva
-      && !!this.ampliarFechaPago
       && Number(this.ampliarMontoPago) > 0
       && this.hasRequiredContext()
       && this.ampliarFechaVencimientoNueva >= this.ampliarFechaMin
@@ -521,7 +512,7 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       },
       {
         documento,
-        fechaPago: this.ampliarFechaPago,
+        fechaPago: this.ampliarFechaVencimientoNueva,
         montoPago: Number(this.ampliarMontoPago),
         pagoCorrespondeAsesor: this.ampliarPagoCorrespondeAsesor
       }
@@ -694,14 +685,6 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   private isCuotaUnica(cuota: CuotaResumenConciliacion): boolean {
     const promesa = (this.resumen?.promesas || []).find(item => (item.cuotas || []).some(row => row.cuotaId === cuota.cuotaId));
     return (promesa?.cuotas || []).length === 1;
-  }
-
-  private todayInputValue(): string {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 
   private getTime(value: string | null | undefined): number {
