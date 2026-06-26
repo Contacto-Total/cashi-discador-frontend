@@ -149,8 +149,10 @@ export class CampaignFormComponent implements OnInit {
   ngOnInit(): void {
   this.loadTenants();
 
-    this.startDate = new Date();
-    this.endDate = new Date();
+    // Default en alta: fecha/hora actual en los inputs datetime-local (los que onSubmit consume)
+    const ahora = this.toDateTimeLocal(new Date().toISOString());
+    this.startDateString = ahora;
+    this.endDateString = ahora;
 
   this.route.params.subscribe(params => {
     if (params['id']) {
