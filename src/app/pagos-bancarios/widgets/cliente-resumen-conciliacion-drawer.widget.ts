@@ -12,8 +12,16 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
   imports: [CommonModule, FormsModule],
   template: `
     @if (open) {
-      <div class="fixed inset-0 z-50 flex justify-end bg-transparent" (click)="close.emit()">
-        <aside class="h-screen w-[520px] max-w-[94vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+      <div
+        [ngClass]="mode === 'drawer' ? 'fixed inset-0 z-50 flex justify-end bg-transparent' : 'mt-4'"
+        (click)="onBackdropClick()"
+      >
+        <aside
+          [ngClass]="mode === 'drawer'
+            ? 'h-screen w-[520px] max-w-[94vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900'
+            : 'w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900'"
+          (click)="$event.stopPropagation()"
+        >
           <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -26,7 +34,9 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                   }
                 </p>
               </div>
-              <button type="button" (click)="close.emit()" class="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
+              @if (mode === 'drawer') {
+                <button type="button" (click)="close.emit()" class="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
+              }
             </div>
           </div>
 
@@ -382,6 +392,7 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   @Input() error: string | null = null;
   @Input() documento: string | null = null;
   @Input() resumen: ResumenConciliacionCliente | null = null;
+  @Input() mode: 'drawer' | 'inline' = 'drawer';
   @Input() tenantId: number | null = null;
   @Input() carteraId: number | null = null;
   @Input() subcarteraId: number | null = null;
@@ -428,6 +439,12 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
       this.cargarCuotasValidasTipificar();
       this.cargarPagosModificables();
+    }
+  }
+
+  onBackdropClick(): void {
+    if (this.mode === 'drawer') {
+      this.close.emit();
     }
   }
 
