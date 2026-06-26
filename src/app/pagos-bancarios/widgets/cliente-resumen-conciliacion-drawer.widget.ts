@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CuotaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 import { CorreccionPagosService } from '../services/correccion-pagos.service';
-import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
+import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/correccion-pagos.model';
 
 @Component({
   selector: 'app-cliente-resumen-conciliacion-drawer',
@@ -137,6 +137,11 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
                                   @if (cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) {
                                     <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
                                   }
+                                  @if (getPagoModificable(cuota)) {
+                                    <button type="button" (click)="abrirModificarPago(cuota)" class="mt-1 rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-blue-700">
+                                      Modificar
+                                    </button>
+                                  }
                                   @if (canCrearPago(cuota)) {
                                     <button type="button" (click)="abrirCrearPago(cuota)" class="mt-1 rounded-md bg-emerald-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-emerald-700">
                                       Crear Pago
@@ -213,6 +218,49 @@ import { CuotaValidaTipificar } from '../models/correccion-pagos.model';
               <button type="button" (click)="cerrarCrearPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
               <button type="button" (click)="crearPago()" [disabled]="!canGuardarCrearPago() || creandoPago" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400">
                 {{ creandoPago ? 'Creando...' : 'Crear Pago' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (modificarPagoModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarModificarPago()">
+          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Modificar pago cuota</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pago #{{ pagoModificar?.pagoCuotaId }} · Cuota {{ pagoModificar?.numeroCuota }}</p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
+                <div>
+                  <span class="block text-slate-500 dark:text-slate-400">Fecha actual</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">{{ formatDate(pagoModificar?.fechaPago) }}</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500 dark:text-slate-400">Monto actual</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pagoModificar?.montoPago) }}</span>
+                </div>
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha</label>
+                <input type="date" [(ngModel)]="modificarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nuevo monto</label>
+                <input type="number" min="0.01" step="0.01" [(ngModel)]="modificarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+
+              @if (modificarPagoError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ modificarPagoError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarModificarPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="modificarPago()" [disabled]="!canGuardarModificarPago() || modificandoPago" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ modificandoPago ? 'Guardando...' : 'Guardar cambios' }}
               </button>
             </div>
           </div>
@@ -341,6 +389,7 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   @Output() refreshRequested = new EventEmitter<void>();
 
   cuotasValidas: CuotaValidaTipificar[] = [];
+  pagosModificables: PagoPendienteConciliacion[] = [];
   isLoadingCuotasValidas = false;
   crearPagoModalOpen = false;
   cuotaCrearPago: CuotaResumenConciliacion | null = null;
@@ -368,10 +417,17 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   pagoVoluntarioMonto: number | null = null;
   pagoVoluntarioError: string | null = null;
   creandoPagoVoluntario = false;
+  modificarPagoModalOpen = false;
+  pagoModificar: PagoPendienteConciliacion | null = null;
+  modificarFechaPago = '';
+  modificarMontoPago: number | null = null;
+  modificarPagoError: string | null = null;
+  modificandoPago = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
       this.cargarCuotasValidasTipificar();
+      this.cargarPagosModificables();
     }
   }
 
@@ -414,6 +470,14 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     if (this.hasValue(cuota.fechaPagoReal) || cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) return false;
     if (this.getPrimeraCuotaSinPago()?.cuotaId !== cuota.cuotaId) return false;
     return this.cuotasValidas.some(item => item.cuotaId === cuota.cuotaId);
+  }
+
+  getPagoModificable(cuota: CuotaResumenConciliacion): PagoPendienteConciliacion | null {
+    const pagosNoVerificados = (cuota.pagos || []).filter(pago => pago.verificadoBanco === false);
+    if (pagosNoVerificados.length === 0) return null;
+
+    return this.pagosModificables.find(item => item.cuotaId === cuota.cuotaId
+      && pagosNoVerificados.some(pago => pago.pagoCuotaId === item.pagoCuotaId)) || null;
   }
 
   canAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
@@ -473,6 +537,62 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       error: (error) => {
         this.crearPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago.';
         this.creandoPago = false;
+      }
+    });
+  }
+
+  abrirModificarPago(cuota: CuotaResumenConciliacion): void {
+    const pago = this.getPagoModificable(cuota);
+    if (!pago) return;
+
+    this.pagoModificar = pago;
+    this.modificarFechaPago = this.toDateInputValue(pago.fechaPago);
+    this.modificarMontoPago = Number(pago.montoPago || 0);
+    this.modificarPagoError = null;
+    this.modificarPagoModalOpen = true;
+  }
+
+  cerrarModificarPago(): void {
+    if (this.modificandoPago) return;
+    this.modificarPagoModalOpen = false;
+    this.pagoModificar = null;
+    this.modificarPagoError = null;
+  }
+
+  canGuardarModificarPago(): boolean {
+    return !!this.pagoModificar
+      && !!this.modificarFechaPago
+      && Number(this.modificarMontoPago) > 0
+      && this.hasRequiredContext();
+  }
+
+  modificarPago(): void {
+    if (!this.pagoModificar || !this.canGuardarModificarPago()) return;
+
+    this.modificandoPago = true;
+    this.modificarPagoError = null;
+
+    this.correccionPagosService.corregirPago(
+      this.pagoModificar.pagoCuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        fechaPago: this.modificarFechaPago,
+        montoPago: Number(this.modificarMontoPago)
+      }
+    ).subscribe({
+      next: () => {
+        this.modificandoPago = false;
+        this.modificarPagoModalOpen = false;
+        this.pagoModificar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.modificarPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo modificar el pago.';
+        this.modificandoPago = false;
       }
     });
   }
@@ -729,6 +849,27 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       error: () => {
         this.cuotasValidas = [];
         this.isLoadingCuotasValidas = false;
+      }
+    });
+  }
+
+  private cargarPagosModificables(): void {
+    if (!this.open || !this.hasRequiredContext() || !this.getDocumento()) {
+      this.pagosModificables = [];
+      return;
+    }
+
+    this.correccionPagosService.buscarPendientesConciliacion({
+      documento: this.getDocumento(),
+      tenantId: Number(this.tenantId),
+      carteraId: Number(this.carteraId),
+      subcarteraId: Number(this.subcarteraId)
+    }).subscribe({
+      next: (pagos) => {
+        this.pagosModificables = pagos;
+      },
+      error: () => {
+        this.pagosModificables = [];
       }
     });
   }
