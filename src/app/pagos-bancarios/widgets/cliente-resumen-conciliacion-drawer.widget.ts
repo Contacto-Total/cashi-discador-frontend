@@ -120,7 +120,7 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                             <tr>
                               <th class="w-[15%] px-1.5 py-1.5 font-semibold">Cuota</th>
                               <th class="w-[23%] px-1.5 py-1.5 font-semibold">Promesa</th>
-                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">PBP Agent</th>
+                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">Pg Regist Agente</th>
                               <th class="w-[28%] px-1.5 py-1.5 font-semibold">BANCO</th>
                             </tr>
                           </thead>
@@ -141,11 +141,11 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                   }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
-                                  @if (hasValue(cuota.fechaPagoReal)) {
-                                    <p>{{ formatDate(cuota.fechaPagoReal) }}</p>
+                                  @if (hasValue(getPbpAgentFecha(cuota))) {
+                                    <p>{{ formatDate(getPbpAgentFecha(cuota)) }}</p>
                                   }
-                                  @if (cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) {
-                                    <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
+                                  @if (getPbpAgentMonto(cuota) !== null && getPbpAgentMonto(cuota) !== undefined) {
+                                    <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(getPbpAgentMonto(cuota)) }}</p>
                                   }
                                   @if (getPagoModificable(cuota)) {
                                     <button type="button" (click)="abrirModificarPago(cuota)" class="mt-1 rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-blue-700">
@@ -495,6 +495,17 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
 
     return this.pagosModificables.find(item => item.cuotaId === cuota.cuotaId
       && pagosNoVerificados.some(pago => pago.pagoCuotaId === item.pagoCuotaId)) || null;
+  }
+
+  getPbpAgentFecha(cuota: CuotaResumenConciliacion): string | null {
+    if (this.hasValue(cuota.fechaPagoReal)) return cuota.fechaPagoReal;
+    return this.getPagoModificable(cuota)?.fechaPago || null;
+  }
+
+  getPbpAgentMonto(cuota: CuotaResumenConciliacion): number | null {
+    const montoReal = cuota.montoPagadoReal;
+    if (montoReal !== null && montoReal !== undefined && Number(montoReal) > 0) return montoReal;
+    return this.getPagoModificable(cuota)?.montoPago ?? montoReal ?? null;
   }
 
   canAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
