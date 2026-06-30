@@ -1306,6 +1306,19 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
         <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+          @if (purchaseOrder() || purchasePeriod()) {
+            <div class="p-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+              <div [class]="'rounded-lg border px-2 py-2 text-xs font-bold uppercase shadow-sm ' + purchaseBlockClass()">
+                @if (purchaseOrder()) {
+                  <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
+                }
+                @if (purchasePeriod()) {
+                  <div class="mt-1">PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
+                }
+              </div>
+            </div>
+          }
+
           <!-- Resumen Rápido Deuda -->
           <div class="p-2 bg-red-100 dark:bg-red-950/20">
             <div class="text-center">
@@ -1317,17 +1330,6 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
           <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
           <div class="p-2 flex-1 overflow-y-auto">
-            @if (purchaseOrder() || purchasePeriod()) {
-              <div [class]="'mb-2 rounded-lg border px-2 py-2 text-xs font-bold uppercase shadow-sm ' + purchaseBlockClass()">
-                @if (purchaseOrder()) {
-                  <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
-                }
-                @if (purchasePeriod()) {
-                  <div class="mt-1">PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
-                }
-              </div>
-            }
-
             @if (clientAmountFields().length > 0) {
               <div class="space-y-1.5">
                 @for (field of clientAmountFields(); track field.field; let i = $index) {
