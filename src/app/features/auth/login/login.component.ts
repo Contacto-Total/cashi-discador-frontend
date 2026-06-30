@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { LucideAngularModule } from 'lucide-angular';
 import { AuthService } from '../../../core/services/auth.service';
 import { MenuPermissionService } from '../../../core/services/menu-permission.service';
-import * as THREE from 'three';
+// import * as THREE from 'three'; // DESHABILITADO: efecto navideño 3D (descomentar en diciembre + reactivar bloques THREE.JS abajo)
 
 @Component({
   selector: 'app-login',
@@ -63,7 +63,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
   // ================================================================
 
-  // ========== THREE.JS - Árbol 3D Realista ==========
+  // ========== THREE.JS - Árbol 3D Realista (DESHABILITADO) ==========
+  /*
   @ViewChild('treeCanvas', { static: false }) treeCanvasRef!: ElementRef<HTMLCanvasElement>;
   private renderer!: THREE.WebGLRenderer;
   private scene!: THREE.Scene;
@@ -73,15 +74,18 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private lights3D: THREE.PointLight[] = [];
   private snowParticles!: THREE.Points;
   private star!: THREE.Mesh;
+  */
   // ===================================================
 
-  // ========== THREE.JS - Nieve Fullscreen ==========
+  // ========== THREE.JS - Nieve Fullscreen (DESHABILITADO) ==========
+  /*
   @ViewChild('snowCanvas', { static: false }) snowCanvasRef!: ElementRef<HTMLCanvasElement>;
   private snowRenderer!: THREE.WebGLRenderer;
   private snowScene!: THREE.Scene;
   private snowCamera!: THREE.PerspectiveCamera;
   private snowAnimationId: number = 0;
   private fullscreenSnow!: THREE.Points;
+  */
   // =================================================
 
   constructor(
@@ -275,6 +279,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.typingTimeout) {
       clearTimeout(this.typingTimeout);
     }
+    // ===== Limpieza Three.js (DESHABILITADO) =====
+    /*
     // Limpiar Three.js - Árbol
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -289,9 +295,11 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.snowRenderer) {
       this.snowRenderer.dispose();
     }
+    */
   }
 
-  // ========== THREE.JS - Inicialización del Árbol 3D ==========
+  // ========== THREE.JS - Inicialización del Árbol 3D (DESHABILITADO) ==========
+  /*
   private initThreeJS(): void {
     if (!this.treeCanvasRef || !this.showChristmasHat) return;
 
@@ -598,9 +606,11 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.renderer.render(this.scene, this.camera);
   }
+  */
   // ================================================================
 
-  // ========== THREE.JS - Nieve Fullscreen ==========
+  // ========== THREE.JS - Nieve Fullscreen (DESHABILITADO) ==========
+  /*
   private initFullscreenSnow(): void {
     if (!this.snowCanvasRef || !this.showChristmasHat) return;
 
@@ -700,6 +710,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.snowRenderer.render(this.snowScene, this.snowCamera);
   }
+  */
   // =================================================
 
   private updateRobotMessage(): void {
@@ -761,13 +772,15 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     // Usar polling continuo para detectar autocompletado
     this.startAutofillPolling();
 
-    // Inicializar Three.js para el árbol 3D y nieve fullscreen (solo en Navidad)
+    // Inicializar Three.js para el árbol 3D y nieve fullscreen (solo en Navidad) - DESHABILITADO
+    /*
     if (this.showChristmasHat) {
       setTimeout(() => {
         this.initThreeJS();
         this.initFullscreenSnow();
       }, 100);
     }
+    */
   }
 
   private startAutofillPolling(): void {
