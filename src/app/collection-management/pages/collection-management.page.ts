@@ -1317,6 +1317,17 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
           <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
           <div class="p-2 flex-1 overflow-y-auto">
+            @if (purchaseOrder() || purchasePeriod()) {
+              <div [class]="'mb-2 rounded-lg border px-2 py-2 text-xs font-bold uppercase shadow-sm ' + purchaseBlockClass()">
+                @if (purchaseOrder()) {
+                  <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
+                }
+                @if (purchasePeriod()) {
+                  <div class="mt-1">PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
+                }
+              </div>
+            }
+
             @if (clientAmountFields().length > 0) {
               <div class="space-y-1.5">
                 @for (field of clientAmountFields(); track field.field; let i = $index) {
@@ -5154,6 +5165,37 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return totalField?.value || fields[0].value;
     }
     return this.customerData().deuda?.saldo_total || 0;
+  }
+
+  purchaseOrder(): string {
+    const rawValue = this.rawClientData()['orden_compra'];
+    return rawValue === undefined || rawValue === null ? '' : String(rawValue).trim().toUpperCase();
+  }
+
+  purchasePeriod(): string {
+    const rawValue = this.rawClientData()['periodo_compra'];
+    if (rawValue === undefined || rawValue === null || rawValue === '') return '';
+
+    const digits = String(rawValue).replace(/\D/g, '');
+    if (digits.length < 6) return String(rawValue).trim();
+
+    const year = digits.slice(0, 4);
+    const month = digits.slice(4, 6);
+    const monthNumber = Number(month);
+    if (monthNumber < 1 || monthNumber > 12) return String(rawValue).trim();
+
+    return `${month}/${year}`;
+  }
+
+  purchaseBlockClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300';
+      default:
+        return 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300';
+    }
   }
 
   /**

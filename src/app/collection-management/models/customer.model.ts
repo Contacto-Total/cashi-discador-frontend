@@ -30,6 +30,8 @@ export interface CustomerDebt {
 export interface CustomerData {
   id?: number;  // ID numérico del cliente (PK de la tabla clientes)
   id_cliente: string;  // Código del cliente (ej: CLI-2025-0087453)
+  periodo_compra?: string | number | null;
+  orden_compra?: string | null;
   nombre_completo: string;
   tipo_documento: string;
   numero_documento: string;

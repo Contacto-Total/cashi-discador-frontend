@@ -27,6 +27,8 @@ export interface CustomerData {
   id: number;
   tenantId: number;
   customerId: string;
+  periodo_compra?: string | number | null;
+  orden_compra?: string | null;
   documentCode: string;
   fullName: string;
   status: string;

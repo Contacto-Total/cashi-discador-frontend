@@ -6,6 +6,8 @@ import { environment } from '../../../environments/environment';
 export interface CustomerResource {
   id: number;
   customerId: string;
+  periodo_compra?: string | number | null;
+  orden_compra?: string | null;
   fullName: string;
   documentType: string;
   documentNumber: string;
