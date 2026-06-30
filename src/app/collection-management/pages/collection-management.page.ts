@@ -1308,7 +1308,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           @if (purchaseOrder() || purchasePeriod()) {
             <div class="bg-white dark:bg-slate-900">
-              <div [class]="'px-1 py-0.5 text-xs leading-tight font-bold uppercase ' + purchaseBlockClass()">
+              <div [class]="'px-1 pt-1 pb-0.5 text-sm leading-tight font-bold uppercase text-center ' + purchaseBlockClass()">
                 @if (purchaseOrder()) {
                   <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
                 }
