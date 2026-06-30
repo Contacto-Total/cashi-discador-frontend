@@ -2527,7 +2527,8 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
           // Convertir objetos Date a strings en formato d/M/yyyy
           const processedData = (jsonData as Record<string, any>[]).map(row => {
             const processedRow: Record<string, any> = {};
-            for (const [key, value] of Object.entries(row)) {
+            for (const [rawKey, value] of Object.entries(row)) {
+              const key = rawKey.trim();
               if (value instanceof Date) {
                 // Convertir Date a string en formato d/M/yyyy
                 const day = value.getDate();
