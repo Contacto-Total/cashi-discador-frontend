@@ -5202,25 +5202,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseBlockClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'bg-[#E9F8F6] text-[#4DB3A7] dark:bg-[#123C38] dark:text-[#4DB3A7]';
-      case 'SEGUNDA':
         return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'bg-[#E9F8F6] text-[#4DB3A7] dark:bg-[#123C38] dark:text-[#4DB3A7]';
       default:
         return 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300';
     }
   }
 
   purchaseColumnClass(): string {
-    if (!this.hasRightPanelClientData()) return 'bg-white dark:bg-slate-900';
-
-    switch (this.purchaseOrder()) {
-      case 'PRIMERA':
-        return 'bg-[#E9F8F6] dark:bg-[#0F2F2C]';
-      case 'SEGUNDA':
-        return 'bg-red-50 dark:bg-red-950/20';
-      default:
-        return 'bg-green-50 dark:bg-green-950/20';
-    }
+    return 'bg-white dark:bg-slate-900';
   }
 
   purchaseSummaryClass(): string {
@@ -5230,9 +5221,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseTextClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'text-[#4DB3A7]';
-      case 'SEGUNDA':
         return this.themeService.isDarkMode() ? 'text-red-300' : 'text-red-800';
+      case 'SEGUNDA':
+        return 'text-[#4DB3A7]';
       default:
         return this.themeService.isDarkMode() ? 'text-green-300' : 'text-green-800';
     }
@@ -5241,9 +5232,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseAccentTextClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'text-[#4DB3A7]';
-      case 'SEGUNDA':
         return this.themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700';
+      case 'SEGUNDA':
+        return 'text-[#4DB3A7]';
       default:
         return this.themeService.isDarkMode() ? 'text-emerald-300' : 'text-green-700';
     }
@@ -5252,9 +5243,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseSelectedRowClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'ring-1 ring-[#4DB3A7] bg-[#D8F1ED] dark:bg-[#123C38]';
-      case 'SEGUNDA':
         return 'ring-1 ring-red-500 bg-red-100 dark:bg-red-950/40';
+      case 'SEGUNDA':
+        return 'ring-1 ring-[#4DB3A7] bg-[#D8F1ED] dark:bg-[#123C38]';
       default:
         return 'ring-1 ring-green-500 bg-green-100 dark:bg-green-950/40';
     }
@@ -5263,9 +5254,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseSelectedTextClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'text-[#228E82] dark:text-[#4DB3A7]';
-      case 'SEGUNDA':
         return 'text-red-700 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'text-[#228E82] dark:text-[#4DB3A7]';
       default:
         return 'text-green-700 dark:text-green-300';
     }
@@ -5278,16 +5269,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   getAmountRowClass(index: number): string {
     const colorsByOrder: Record<string, string[]> = {
       PRIMERA: [
-        'bg-[#E9F8F6] !text-black dark:bg-[#123C38] dark:!text-[#4DB3A7]',
-        'bg-white/60 !text-black dark:bg-[#0F2F2C] dark:!text-[#4DB3A7]',
+        'bg-white !text-black dark:bg-slate-900 dark:!text-red-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-red-300',
       ],
       SEGUNDA: [
-        'bg-red-50 !text-black dark:bg-red-950/30 dark:!text-red-300',
-        'bg-white/70 !text-black dark:bg-red-950/10 dark:!text-red-300',
+        'bg-white !text-black dark:bg-slate-900 dark:!text-[#4DB3A7]',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-[#4DB3A7]',
       ],
       DEFAULT: [
-        'bg-green-50 !text-black dark:bg-green-950/30 dark:!text-green-300',
-        'bg-white/70 !text-black dark:bg-green-950/10 dark:!text-green-300',
+        'bg-white !text-black dark:bg-slate-900 dark:!text-green-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-green-300',
       ]
     };
 
