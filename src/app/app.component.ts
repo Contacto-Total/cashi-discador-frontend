@@ -359,10 +359,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.dialogRef = null;
     }
 
-    // Mostrar alerta PRIMERO (bloqueante)
-    alert('Tu sesión ha expirado por inactividad');
+    // Notificación NO bloqueante. Antes había un alert() nativo (el diálogo
+    // "cobranza.contactototal.com.pe dice…") que BLOQUEABA el hilo: como en la
+    // inactividad el usuario está ausente, nunca lo cerraba y por eso el logout
+    // (y el disconnectAgent que marca DESCONECTADO) quedaba diferido → el estado
+    // del agente se trababa en BD (EN_REUNION/TIPIFICANDO/etc.).
+    this.toast.warning('Tu sesión se cerró por inactividad');
 
-    // Cerrar sesión DESPUÉS de que el usuario acepte
+    // Cerrar sesión de inmediato (marca DESCONECTADO en backend vía disconnectAgent)
     this.logout(true);
 
     // Resetear flag solo después de que la navegación complete

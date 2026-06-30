@@ -2,6 +2,7 @@ import { Component, signal, OnInit, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { BcpPagosService } from '../services/bcp-pagos.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TenantService } from '../../maintenance/services/tenant.service';
@@ -16,18 +17,18 @@ import {
   BcpPagoManualFiltros,
   AprobarArchivoBcpResponse,
   PrevalidacionArchivoBcp,
-  ResumenConciliacionCliente,
-  ResultadoConciliacion
+  ResumenConciliacionCliente
 } from '../models/bcp-archivo.model';
 import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
 import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
 import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
 import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
+import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -40,134 +41,16 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
             Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
           </p>
         </div>
-        <div class="flex items-center gap-2">
-          <!-- Botón de conciliación manual -->
-          <button
-            (click)="ejecutarConciliacion()"
-            [disabled]="isLoadingConciliacion()"
-            class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            title="Ejecutar conciliación de pagos"
-          >
-            @if (isLoadingConciliacion()) {
-              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Conciliando...
-            } @else {
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-              </svg>
-              Ejecutar Conciliación
-            }
-          </button>
-
-          <!-- Botón de configuración -->
-          <button
-            (click)="toggleConfigPanel()"
-            class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            title="Configuración de conciliación"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </button>
-        </div>
+        <a
+          routerLink="/correccion-pagos"
+          class="inline-flex items-center gap-3 rounded-xl bg-green-700 px-6 py-3 text-base font-bold !text-white shadow-md shadow-green-900/20 transition-colors hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-offset-slate-900"
+        >
+          <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Corrección de pagos
+        </a>
       </div>
-
-      <!-- Panel de configuración de conciliación -->
-      @if (showConfigPanel()) {
-        <div class="mb-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-              Configuración de Conciliación
-            </h2>
-            <button
-              (click)="showConfigPanel.set(false)"
-              class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Tolerancia de monto -->
-            <div class="space-y-3">
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Tolerancia de Monto (en soles)
-              </label>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                Diferencia máxima permitida entre el monto del banco y el monto registrado por la asesora para hacer match.
-                <br>Ejemplo: Si es 1.00, un pago de S/150.50 hará match con S/150.00 o S/151.00
-              </p>
-              <div class="flex items-center gap-3">
-                <div class="relative flex-1 max-w-xs">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">S/</span>
-                  <input
-                    type="number"
-                    [(ngModel)]="configTolerancia"
-                    min="0"
-                    max="10"
-                    step="0.10"
-                    class="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="0.00"
-                  />
-                </div>
-                <button
-                  (click)="guardarConfiguracion()"
-                  [disabled]="isLoadingConfig()"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                >
-                  @if (isLoadingConfig()) {
-                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
-                  } @else {
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                  }
-                  Guardar
-                </button>
-              </div>
-              @if (configMessage()) {
-                <p class="text-sm" [class]="configMessage()!.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                  {{ configMessage()!.text }}
-                </p>
-              }
-            </div>
-
-            <!-- Info de configuración actual -->
-            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
-              <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Configuración Actual</h3>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Tolerancia de monto:</span>
-                  <span class="font-medium text-slate-800 dark:text-white">
-                    @if (configTolerancia === 0) {
-                      Match exacto
-                    } @else {
-                      ± S/ {{ configTolerancia.toFixed(2) }}
-                    }
-                  </span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Tolerancia de fecha:</span>
-                  <span class="font-medium text-slate-800 dark:text-white">Match exacto</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
 
       <!-- Tabs -->
       <div class="mb-6">
@@ -208,6 +91,18 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
               Carga OH
+            </button>
+            <button
+              (click)="activeTab.set('historial')"
+              [class]="activeTab() === 'historial'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Historial
             </button>
           </nav>
         </div>
@@ -358,6 +253,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
               [approvalEnabled]="canAprobarArchivo()"
               [isSaving]="isApprovingArchivo()"
               [pagosDuplicados]="resultado()?.pagosDuplicados || []"
+              [completed]="archivoAprobado()"
               (guardar)="aprobarArchivo($event)"
               (documentoClick)="abrirResumenConciliacionBcp($event)"
             ></app-bcp-prevalidacion-archivo>
@@ -972,6 +868,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
               [approvalEnabled]="canAprobarArchivoOh()"
               [isSaving]="isApprovingArchivoOh()"
               [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
+              [completed]="archivoOhAprobado()"
               (guardar)="aprobarArchivoOh($event)"
               (documentoClick)="abrirResumenConciliacionOh($event)"
             ></app-bcp-prevalidacion-archivo>
@@ -1008,6 +905,10 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
             </div>
           }
         }
+      }
+
+      @if (activeTab() === 'historial') {
+        <app-historial-cargas-bcp></app-historial-cargas-bcp>
       }
 
       <!-- Modal de confirmación de eliminación -->
@@ -1051,130 +952,24 @@ import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resum
         </div>
       }
 
-      <!-- Modal de resultado de conciliación -->
-      @if (showConciliacionModal()) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full mx-4 overflow-hidden">
-            <!-- Header -->
-            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between"
-                 [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
-                   ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                   : 'bg-slate-50 dark:bg-slate-700/50'">
-              <div class="flex items-center gap-3">
-                <div class="p-2 rounded-full"
-                     [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
-                       ? 'bg-emerald-100 dark:bg-emerald-800/50'
-                       : 'bg-slate-200 dark:bg-slate-600'">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                       [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
-                         ? 'text-emerald-600 dark:text-emerald-400'
-                         : 'text-slate-500 dark:text-slate-400'">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Resultado de Conciliación</h3>
-              </div>
-              <button
-                (click)="cerrarModalConciliacion()"
-                class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            <!-- Body -->
-            <div class="p-6">
-              <!-- Estadísticas -->
-              <div class="grid grid-cols-3 gap-4 mb-6">
-                <div class="text-center p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                  <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ resultadoConciliacion()?.totalProcesados || 0 }}</p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Total Procesados</p>
-                </div>
-                <div class="text-center p-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                  <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ resultadoConciliacion()?.matchesEncontrados || 0 }}</p>
-                  <p class="text-xs text-emerald-600 dark:text-emerald-400">Matches</p>
-                </div>
-                <div class="text-center p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ resultadoConciliacion()?.sinMatch || 0 }}</p>
-                  <p class="text-xs text-amber-600 dark:text-amber-400">Sin Match</p>
-                </div>
-              </div>
-
-              <!-- Mensaje explicativo -->
-              <div class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                @if (resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0) {
-                  <p class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    Se encontraron {{ resultadoConciliacion()?.matchesEncontrados }} coincidencias entre pagos del banco y pagos registrados.
-                  </p>
-                } @else {
-                  <p class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    No se encontraron nuevas coincidencias. Los pagos pendientes siguen como "pagos por fuera".
-                  </p>
-                }
-              </div>
-
-              <!-- Detalle de matches (si hay) -->
-              @if (resultadoConciliacion()?.detallesMatch && resultadoConciliacion()!.detallesMatch.length > 0) {
-                <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                  <div class="bg-slate-50 dark:bg-slate-700/50 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Detalle de Matches
-                  </div>
-                  <div class="max-h-48 overflow-y-auto">
-                    @for (match of resultadoConciliacion()?.detallesMatch?.slice(0, 10); track match.bcpPagoDetalleId) {
-                      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-sm flex justify-between items-center">
-                        <span class="text-slate-700 dark:text-slate-300">
-                          DNI: <span class="font-medium">{{ match.documento }}</span>
-                        </span>
-                        <span class="text-emerald-600 dark:text-emerald-400 font-medium">
-                          S/ {{ formatMonto(match.monto) }}
-                        </span>
-                      </div>
-                    }
-                    @if (resultadoConciliacion()!.detallesMatch.length > 10) {
-                      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-sm text-center text-slate-500 dark:text-slate-400">
-                        ... y {{ resultadoConciliacion()!.detallesMatch.length - 10 }} más
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 flex justify-end">
-              <button
-                (click)="cerrarModalConciliacion()"
-                class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-
       <app-cliente-resumen-conciliacion-drawer
         [open]="resumenDrawerOpen()"
         [loading]="isLoadingResumenCliente()"
         [error]="resumenClienteError()"
         [documento]="resumenClienteDocumento()"
         [resumen]="resumenCliente()"
+        [tenantId]="resumenCliente()?.tenantId || selectedTenantId || selectedTenantIdOh"
+        [carteraId]="resumenCliente()?.carteraId || selectedPortfolioId || selectedPortfolioIdOh"
+        [subcarteraId]="resumenCliente()?.subcarteraId || selectedSubPortfolioId || selectedSubPortfolioIdOh"
         (close)="cerrarResumenConciliacion()"
+        (refreshRequested)="refrescarResumenConciliacion()"
       ></app-cliente-resumen-conciliacion-drawer>
     </div>
   `
 })
 export class PagosBancariosPage implements OnInit {
   // Tab activa
-  activeTab = signal<'masiva' | 'manual' | 'oh'>('masiva');
+  activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial'>('masiva');
 
   // Carga Masiva BCP
   selectedFile = signal<File | null>(null);
@@ -1231,17 +1026,6 @@ export class PagosBancariosPage implements OnInit {
   pagoAEliminar = signal<BcpPagoManual | null>(null);
   isDeleting = signal(false);
 
-  // Configuración de conciliación
-  showConfigPanel = signal(false);
-  configTolerancia = 0;
-  isLoadingConfig = signal(false);
-  configMessage = signal<{ success: boolean; text: string } | null>(null);
-
-  // Conciliación manual
-  isLoadingConciliacion = signal(false);
-  showConciliacionModal = signal(false);
-  resultadoConciliacion = signal<ResultadoConciliacion | null>(null);
-
   resumenDrawerOpen = signal(false);
   isLoadingResumenCliente = signal(false);
   resumenClienteError = signal<string | null>(null);
@@ -1274,8 +1058,6 @@ export class PagosBancariosPage implements OnInit {
     if (this.activeTab() === 'manual') {
       this.cargarPagosManuales();
     }
-    // Cargar configuración de conciliación
-    this.cargarConfiguracion();
     this.cargarTenants();
   }
 
@@ -1374,78 +1156,6 @@ export class PagosBancariosPage implements OnInit {
     this.archivoOhAprobado.set(false);
   }
 
-  // === Configuración de Conciliación ===
-  toggleConfigPanel(): void {
-    this.showConfigPanel.set(!this.showConfigPanel());
-    if (this.showConfigPanel()) {
-      this.cargarConfiguracion();
-    }
-  }
-
-  cargarConfiguracion(): void {
-    this.bcpService.obtenerConfiguracionConciliacion().subscribe({
-      next: (config) => {
-        this.configTolerancia = config.toleranciaMonto;
-      },
-      error: (error) => {
-        console.error('Error cargando configuración:', error);
-        this.configTolerancia = 0;
-      }
-    });
-  }
-
-  guardarConfiguracion(): void {
-    this.isLoadingConfig.set(true);
-    this.configMessage.set(null);
-
-    this.bcpService.actualizarToleranciaMonto(this.configTolerancia).subscribe({
-      next: (result) => {
-        if (result.exitoso) {
-          this.configMessage.set({ success: true, text: 'Configuración guardada correctamente' });
-        } else {
-          this.configMessage.set({ success: false, text: result.mensaje });
-        }
-        this.isLoadingConfig.set(false);
-        // Limpiar mensaje después de 3 segundos
-        setTimeout(() => this.configMessage.set(null), 3000);
-      },
-      error: (error) => {
-        this.configMessage.set({ success: false, text: error.error?.mensaje || 'Error al guardar configuración' });
-        this.isLoadingConfig.set(false);
-      }
-    });
-  }
-
-  // === Conciliación Manual ===
-  ejecutarConciliacion(): void {
-    this.isLoadingConciliacion.set(true);
-    this.resultadoConciliacion.set(null);
-
-    this.bcpService.ejecutarConciliacionCompleta().subscribe({
-      next: (resultado) => {
-        this.resultadoConciliacion.set(resultado);
-        this.showConciliacionModal.set(true);
-        this.isLoadingConciliacion.set(false);
-      },
-      error: (error) => {
-        console.error('Error en conciliación:', error);
-        this.resultadoConciliacion.set({
-          totalProcesados: 0,
-          matchesEncontrados: 0,
-          sinMatch: 0,
-          detallesMatch: [],
-          pagosSinMatch: []
-        });
-        this.showConciliacionModal.set(true);
-        this.isLoadingConciliacion.set(false);
-      }
-    });
-  }
-
-  cerrarModalConciliacion(): void {
-    this.showConciliacionModal.set(false);
-  }
-
   abrirResumenConciliacionBcp(row: PrevalidacionArchivoBcp): void {
     this.abrirResumenConciliacion(row, 'bcp');
   }
@@ -1494,6 +1204,30 @@ export class PagosBancariosPage implements OnInit {
     this.resumenDrawerOpen.set(false);
   }
 
+  refrescarResumenConciliacion(): void {
+    const documento = this.resumenClienteDocumento();
+    const resumen = this.resumenCliente();
+    if (!documento || !resumen) return;
+
+    this.isLoadingResumenCliente.set(true);
+    this.resumenClienteError.set(null);
+
+    this.bcpService.obtenerResumenConciliacionCliente(documento, {
+      tenantId: resumen.tenantId,
+      carteraId: resumen.carteraId,
+      subcarteraId: resumen.subcarteraId
+    }).subscribe({
+      next: (nuevoResumen) => {
+        this.resumenCliente.set(nuevoResumen);
+        this.isLoadingResumenCliente.set(false);
+      },
+      error: (error) => {
+        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo refrescar el resumen de conciliación.');
+        this.isLoadingResumenCliente.set(false);
+      }
+    });
+  }
+
   // === Carga Masiva ===
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -1529,8 +1263,7 @@ export class PagosBancariosPage implements OnInit {
     this.bcpService.cargarArchivo(file, {
       tenantId: this.selectedTenantId,
       carteraId: this.selectedPortfolioId,
-      subcarteraId: this.selectedSubPortfolioId,
-      toleranciaMonto: this.configTolerancia || undefined
+      subcarteraId: this.selectedSubPortfolioId
     }).subscribe({
       next: (resultado) => {
         this.resultado.set(resultado);
@@ -1740,8 +1473,7 @@ export class PagosBancariosPage implements OnInit {
     this.bcpService.cargarArchivoOh(file, {
       tenantId: this.selectedTenantIdOh,
       carteraId: this.selectedPortfolioIdOh,
-      subcarteraId: this.selectedSubPortfolioIdOh,
-      toleranciaMonto: this.configTolerancia || undefined
+      subcarteraId: this.selectedSubPortfolioIdOh
     }).subscribe({
       next: (resultado) => {
         this.resultadoOh.set(resultado);

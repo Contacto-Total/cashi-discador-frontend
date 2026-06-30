@@ -70,6 +70,8 @@ export interface CustomerStaticData {
     id: number;
     customerId: string;
     identificationCode: string;
+    periodo_compra?: string | number | null;
+    orden_compra?: string | null;
     accountNumber?: string;
     // Información financiera/deuda
     overdueDays?: number | null;
@@ -110,6 +112,11 @@ export interface CustomerStaticData {
     subPortfolioName?: string;
     subPortfolioCode?: string;
   }
+
+export interface DynamicClientData extends Record<string, any> {
+  periodo_compra?: string | number | null;
+  orden_compra?: string | null;
+}
 
 // Interfaces para pagos bancarios
 export interface PagoBancario {
@@ -231,8 +238,8 @@ export class CustomerService {
     portfolioId: number,
     subPortfolioId: number,
     documento: string
-  ): Observable<Record<string, any>> {
-    return this.http.get<Record<string, any>>(`${environment.apiUrl}/client-search/find`, {
+  ): Observable<DynamicClientData> {
+    return this.http.get<DynamicClientData>(`${environment.apiUrl}/client-search/find`, {
       params: {
         tenantId: tenantId.toString(),
         portfolioId: portfolioId.toString(),
