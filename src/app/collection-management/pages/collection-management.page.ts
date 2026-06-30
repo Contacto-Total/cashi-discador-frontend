@@ -371,8 +371,8 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
           <div class="p-3 space-y-2">
             <!-- Control de Llamada - COMPACTO -->
             <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2 transition-colors duration-300 ' + (callActive() ? 'border-green-400 dark:border-green-500' : 'border-gray-200 dark:border-gray-700')">
-              <div class="flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs flex-shrink-0">
                   <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
                   </div>
                   Control de Llamada
@@ -382,11 +382,11 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                     </span>
                   }
                 </h3>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap justify-end gap-2 flex-1 min-w-0">
                   <button
                     (click)="toggleMute()"
                     [disabled]="!callActive() && !rellamadaCallActive()"
-                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                    [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                       ((callActive() || rellamadaCallActive())
                         ? (isMuted()
                           ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white'
@@ -398,7 +398,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                   <button
                     (click)="toggleHold()"
                     [disabled]="!callActive() && !rellamadaCallActive()"
-                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                    [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                       ((callActive() || rellamadaCallActive())
                         ? (isOnHold()
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white animate-pulse'
@@ -410,7 +410,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                   <button
                     (click)="endCall()"
                     [disabled]="!callActive()"
-                    class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                    class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                   >
                     Finalizar
                   </button>
@@ -418,7 +418,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                   <div class="relative">
                     <button
                       (click)="showWhatsappDropdown.set(!showWhatsappDropdown())"
-                      class="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                      class="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                     >
                       <lucide-angular name="message-circle" [size]="14"></lucide-angular>
                       WhatsApp
@@ -473,7 +473,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                       <button
                         (click)="canRellamar() && (activeCallPhone() ? iniciarRellamada(activeCallPhone()) : showRellamadaDropdown.set(!showRellamadaDropdown()))"
                         [disabled]="!canRellamar()"
-                        [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                        [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                           (canRellamar()
                             ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
                             : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
@@ -488,7 +488,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                         </div>
                         <button
                           (click)="colgarRellamada()"
-                          class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                          class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                         >
                           <lucide-angular name="phone-off" [size]="14"></lucide-angular>
                           Colgar
@@ -5192,7 +5192,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseBlockClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300';
+        return 'bg-blue-50 text-[#4DB3A7] dark:bg-blue-950/30 dark:text-[#4DB3A7]';
       case 'SEGUNDA':
         return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
       default:
@@ -5212,14 +5212,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   purchaseSummaryClass(): string {
-    switch (this.purchaseOrder()) {
-      case 'PRIMERA':
-        return 'bg-blue-100 dark:bg-blue-950/30';
-      case 'SEGUNDA':
-        return 'bg-red-100 dark:bg-red-950/30';
-      default:
-        return 'bg-green-100 dark:bg-green-950/30';
-    }
+    return '';
   }
 
   purchaseTextClass(): string {
