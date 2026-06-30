@@ -958,7 +958,11 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
         [error]="resumenClienteError()"
         [documento]="resumenClienteDocumento()"
         [resumen]="resumenCliente()"
+        [tenantId]="resumenCliente()?.tenantId || selectedTenantId || selectedTenantIdOh"
+        [carteraId]="resumenCliente()?.carteraId || selectedPortfolioId || selectedPortfolioIdOh"
+        [subcarteraId]="resumenCliente()?.subcarteraId || selectedSubPortfolioId || selectedSubPortfolioIdOh"
         (close)="cerrarResumenConciliacion()"
+        (refreshRequested)="refrescarResumenConciliacion()"
       ></app-cliente-resumen-conciliacion-drawer>
     </div>
   `
@@ -1198,6 +1202,30 @@ export class PagosBancariosPage implements OnInit {
 
   cerrarResumenConciliacion(): void {
     this.resumenDrawerOpen.set(false);
+  }
+
+  refrescarResumenConciliacion(): void {
+    const documento = this.resumenClienteDocumento();
+    const resumen = this.resumenCliente();
+    if (!documento || !resumen) return;
+
+    this.isLoadingResumenCliente.set(true);
+    this.resumenClienteError.set(null);
+
+    this.bcpService.obtenerResumenConciliacionCliente(documento, {
+      tenantId: resumen.tenantId,
+      carteraId: resumen.carteraId,
+      subcarteraId: resumen.subcarteraId
+    }).subscribe({
+      next: (nuevoResumen) => {
+        this.resumenCliente.set(nuevoResumen);
+        this.isLoadingResumenCliente.set(false);
+      },
+      error: (error) => {
+        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo refrescar el resumen de conciliación.');
+        this.isLoadingResumenCliente.set(false);
+      }
+    });
   }
 
   // === Carga Masiva ===

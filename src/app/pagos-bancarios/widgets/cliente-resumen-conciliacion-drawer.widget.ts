@@ -1,16 +1,27 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject } from '@angular/core';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
-import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { FormsModule } from '@angular/forms';
+import { CuotaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { CorreccionPagosService } from '../services/correccion-pagos.service';
+import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/correccion-pagos.model';
 
 @Component({
   selector: 'app-cliente-resumen-conciliacion-drawer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     @if (open) {
-      <div class="fixed inset-0 z-50 flex justify-end bg-transparent" (click)="close.emit()">
-        <aside class="h-screen w-[520px] max-w-[94vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+      <div
+        [ngClass]="mode === 'drawer' ? 'fixed inset-0 z-50 flex justify-end bg-transparent' : 'mt-4'"
+        (click)="onBackdropClick()"
+      >
+        <aside
+          [ngClass]="mode === 'drawer'
+            ? 'h-screen w-[520px] max-w-[94vw] overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900'
+            : 'w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900'"
+          (click)="$event.stopPropagation()"
+        >
           <div class="sticky top-0 z-10 border-b border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">
             <div class="flex items-start justify-between gap-4">
               <div>
@@ -23,7 +34,9 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                   }
                 </p>
               </div>
-              <button type="button" (click)="close.emit()" class="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
+              @if (mode === 'drawer') {
+                <button type="button" (click)="close.emit()" class="rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cerrar</button>
+              }
             </div>
           </div>
 
@@ -33,7 +46,7 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
             } @else if (error) {
               <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ error }}</div>
             } @else if (resumen) {
-              <div class="mb-3 grid grid-cols-3 gap-2">
+              <div class="mb-3 grid grid-cols-4 gap-2">
                 <div class="rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Tiene carta</p>
                   <p class="mt-0.5 text-sm font-bold" [class]="resumen.pagoCumplido ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'">{{ resumen.pagoCumplido ? 'Sí' : 'No' }}</p>
@@ -46,6 +59,10 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">Intentos cancelación</p>
                   <p class="mt-0.5 text-sm font-bold text-slate-900 dark:text-white">{{ getIntentosCancelacion().length }}</p>
                 </div>
+                <button type="button" (click)="abrirPagoVoluntario()" class="rounded-lg border border-red-300 bg-red-600 p-2 text-left text-white shadow-sm transition-colors hover:bg-red-700 dark:border-red-800">
+                  <p class="text-[10px] font-bold uppercase tracking-wide text-red-100">Acción crítica</p>
+                  <p class="mt-0.5 text-sm font-black">Pago voluntario</p>
+                </button>
               </div>
 
               <div class="mb-3 grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
@@ -103,7 +120,7 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                             <tr>
                               <th class="w-[15%] px-1.5 py-1.5 font-semibold">Cuota</th>
                               <th class="w-[23%] px-1.5 py-1.5 font-semibold">Promesa</th>
-                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">Agente</th>
+                              <th class="w-[34%] px-1.5 py-1.5 font-semibold">Pg Regist Agente</th>
                               <th class="w-[28%] px-1.5 py-1.5 font-semibold">BANCO</th>
                             </tr>
                           </thead>
@@ -117,13 +134,28 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   <p>{{ formatDate(cuota.fechaPromesa) }}</p>
                                   <p class="font-semibold">S/ {{ formatMoney(cuota.montoPromesa) }}</p>
+                                  @if (canAmpliarVencimiento(promesa, cuota)) {
+                                    <button type="button" (click)="abrirAmpliarVencimiento(promesa, cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
+                                      Ampliar
+                                    </button>
+                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
-                                  @if (hasValue(cuota.fechaPagoReal)) {
-                                    <p>{{ formatDate(cuota.fechaPagoReal) }}</p>
+                                  @if (hasValue(getPbpAgentFecha(cuota))) {
+                                    <p>{{ formatDate(getPbpAgentFecha(cuota)) }}</p>
                                   }
-                                  @if (cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) {
-                                    <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(cuota.montoPagadoReal) }}</p>
+                                  @if (getPbpAgentMonto(cuota) !== null && getPbpAgentMonto(cuota) !== undefined) {
+                                    <p class="font-bold text-slate-900 dark:text-white">S/ {{ formatMoney(getPbpAgentMonto(cuota)) }}</p>
+                                  }
+                                  @if (getPagoModificable(cuota)) {
+                                    <button type="button" (click)="abrirModificarPago(cuota)" class="mt-1 rounded-md bg-blue-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-blue-700">
+                                      Modificar
+                                    </button>
+                                  }
+                                  @if (canCrearPago(cuota)) {
+                                    <button type="button" (click)="abrirCrearPago(cuota)" class="mt-1 rounded-md bg-emerald-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-emerald-700">
+                                      Crear Pago
+                                    </button>
                                   }
                                 </td>
                                 <td class="px-1.5 py-1.5">
@@ -168,18 +200,253 @@ import { ResumenConciliacionCliente } from '../models/bcp-archivo.model';
           </div>
         </aside>
       </div>
+
+      @if (crearPagoModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarCrearPago()">
+          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Crear pago</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Cuota {{ cuotaCrearPago?.numeroCuota }} · S/ {{ formatMoney(cuotaCrearPago?.montoPromesa) }}</p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                <input type="date" [(ngModel)]="crearPagoFecha" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                <input type="number" min="0.01" step="0.01" [(ngModel)]="crearPagoMonto" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+
+              @if (crearPagoError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ crearPagoError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarCrearPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="crearPago()" [disabled]="!canGuardarCrearPago() || creandoPago" class="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ creandoPago ? 'Creando...' : 'Crear Pago' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (modificarPagoModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarModificarPago()">
+          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Modificar pago cuota</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pago #{{ pagoModificar?.pagoCuotaId }} · Cuota {{ pagoModificar?.numeroCuota }}</p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
+                <div>
+                  <span class="block text-slate-500 dark:text-slate-400">Fecha actual</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">{{ formatDate(pagoModificar?.fechaPago) }}</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500 dark:text-slate-400">Monto actual</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pagoModificar?.montoPago) }}</span>
+                </div>
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha</label>
+                <input type="date" [(ngModel)]="modificarFechaPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nuevo monto</label>
+                <input type="number" min="0.01" step="0.01" [(ngModel)]="modificarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+              </div>
+
+              @if (modificarPagoError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ modificarPagoError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarModificarPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="modificarPago()" [disabled]="!canGuardarModificarPago() || modificandoPago" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ modificandoPago ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (ampliarModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarAmpliarVencimiento()">
+          <div class="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Ampliar vencimiento</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                Cuota {{ cuotaAmpliar?.numeroCuota }} · Vence {{ formatDate(cuotaAmpliar?.fechaPromesa) }} · máximo {{ formatDate(getAmpliarFechaMax()) }}
+              </p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 text-xs font-semibold dark:border-slate-700 dark:bg-slate-800">
+                <button type="button" (click)="ampliarModo = 'corta'" class="rounded-md px-2 py-1.5 transition-colors" [class]="ampliarModo === 'corta' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
+                  Hasta 3 días
+                </button>
+                <button type="button" (click)="setAmpliarModoMayor()" [disabled]="!ampliarMayorHabilitada" class="rounded-md px-2 py-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-40" [class]="ampliarModo === 'mayor' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'">
+                  1 cuota dentro mes
+                </button>
+              </div>
+
+              @if (ampliarModo === 'corta') {
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Nueva fecha de vencimiento <span class="font-normal text-slate-500 dark:text-slate-400">(usar fecha que banco registró)</span></label>
+                  <input type="date" [(ngModel)]="ampliarFechaVencimientoNueva" [min]="ampliarFechaMin" [max]="ampliarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto registrado en banco</label>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  <input type="checkbox" [(ngModel)]="ampliarPagoCorrespondeAsesor" class="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500" />
+                  Pago corresponde al asesor original
+                </label>
+              } @else {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
+                  Se creará una nueva promesa y el pago se asignará al sistema. Disponible solo para promesas de una cuota.
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                    <input type="date" [(ngModel)]="ampliarMayorFechaPago" [min]="ampliarMayorFechaMin" [max]="ampliarMayorFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </div>
+                  <div>
+                    <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                    <input type="number" min="0.01" step="0.01" [(ngModel)]="ampliarMayorMontoPago" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </div>
+                </div>
+              }
+
+              @if (ampliarError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ ampliarError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarAmpliarVencimiento()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="guardarAmpliacion()" [disabled]="!canGuardarAmpliacion() || ampliandoVencimiento" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ ampliandoVencimiento ? 'Ampliando...' : 'Ampliar' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (pagoVoluntarioModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarPagoVoluntario()">
+          <div class="w-full max-w-md rounded-xl border border-red-200 bg-white shadow-2xl dark:border-red-900 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">
+              <h3 class="text-sm font-black text-red-800 dark:text-red-200">Pago voluntario al sistema</h3>
+              <p class="mt-1 text-xs font-semibold text-red-700 dark:text-red-300">
+                Esta acción es única y no se puede revertir. Si la fecha o el monto son incorrectos, se aplicarán sanciones.
+              </p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
+                Úsalo solo para pagos fuera de lógica normal de promesas o pagos antiguos que impiden el match del extracto bancario.
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha de pago</label>
+                  <input type="date" [(ngModel)]="pagoVoluntarioFecha" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+                <div>
+                  <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Monto</label>
+                  <input type="number" min="0.01" step="0.01" [(ngModel)]="pagoVoluntarioMonto" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </div>
+              </div>
+
+              @if (pagoVoluntarioError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ pagoVoluntarioError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-red-200 px-4 py-3 dark:border-red-900">
+              <button type="button" (click)="cerrarPagoVoluntario()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="crearPagoVoluntario()" [disabled]="!canCrearPagoVoluntario() || creandoPagoVoluntario" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ creandoPagoVoluntario ? 'Creando...' : 'Confirmar pago voluntario' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `
 })
-export class ClienteResumenConciliacionDrawerWidget {
+export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   private fmt = inject(FormatService);
+  private correccionPagosService = inject(CorreccionPagosService);
   activeView: 'promesas' | 'cancelaciones' = 'promesas';
   @Input() open = false;
   @Input() loading = false;
   @Input() error: string | null = null;
   @Input() documento: string | null = null;
   @Input() resumen: ResumenConciliacionCliente | null = null;
+  @Input() mode: 'drawer' | 'inline' = 'drawer';
+  @Input() tenantId: number | null = null;
+  @Input() carteraId: number | null = null;
+  @Input() subcarteraId: number | null = null;
   @Output() close = new EventEmitter<void>();
+  @Output() refreshRequested = new EventEmitter<void>();
+
+  cuotasValidas: CuotaValidaTipificar[] = [];
+  pagosModificables: PagoPendienteConciliacion[] = [];
+  isLoadingCuotasValidas = false;
+  crearPagoModalOpen = false;
+  cuotaCrearPago: CuotaResumenConciliacion | null = null;
+  crearPagoFecha = '';
+  crearPagoMonto: number | null = null;
+  crearPagoError: string | null = null;
+  creandoPago = false;
+  ampliarModalOpen = false;
+  cuotaAmpliar: CuotaResumenConciliacion | null = null;
+  ampliarFechaVencimientoNueva = '';
+  ampliarFechaMin = '';
+  ampliarFechaMax = '';
+  ampliarMontoPago: number | null = null;
+  ampliarPagoCorrespondeAsesor = true;
+  ampliarError: string | null = null;
+  ampliandoVencimiento = false;
+  ampliarModo: 'corta' | 'mayor' = 'corta';
+  ampliarMayorHabilitada = false;
+  ampliarMayorFechaPago = '';
+  ampliarMayorFechaMin = '';
+  ampliarMayorFechaMax = '';
+  ampliarMayorMontoPago: number | null = null;
+  pagoVoluntarioModalOpen = false;
+  pagoVoluntarioFecha = '';
+  pagoVoluntarioMonto: number | null = null;
+  pagoVoluntarioError: string | null = null;
+  creandoPagoVoluntario = false;
+  modificarPagoModalOpen = false;
+  pagoModificar: PagoPendienteConciliacion | null = null;
+  modificarFechaPago = '';
+  modificarMontoPago: number | null = null;
+  modificarPagoError: string | null = null;
+  modificandoPago = false;
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
+      this.cargarCuotasValidasTipificar();
+      this.cargarPagosModificables();
+    }
+  }
+
+  onBackdropClick(): void {
+    if (this.mode === 'drawer') {
+      this.close.emit();
+    }
+  }
 
   formatMoney(value: number | null | undefined): string {
     if (value === null || value === undefined) return '0.00';
@@ -212,6 +479,337 @@ export class ClienteResumenConciliacionDrawerWidget {
 
   hasValue(value: unknown): boolean {
     return value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== '-';
+  }
+
+  canCrearPago(cuota: CuotaResumenConciliacion): boolean {
+    if (this.isLoadingCuotasValidas || this.creandoPago) return false;
+    if (cuota.estado === 'PAGADA') return false;
+    if (this.hasValue(cuota.fechaPagoReal) || cuota.montoPagadoReal !== null && cuota.montoPagadoReal !== undefined) return false;
+    if (this.getPrimeraCuotaSinPago()?.cuotaId !== cuota.cuotaId) return false;
+    return this.cuotasValidas.some(item => item.cuotaId === cuota.cuotaId);
+  }
+
+  getPagoModificable(cuota: CuotaResumenConciliacion): PagoPendienteConciliacion | null {
+    const pagosNoVerificados = (cuota.pagos || []).filter(pago => pago.verificadoBanco === false);
+    if (pagosNoVerificados.length === 0) return null;
+
+    return this.pagosModificables.find(item => item.cuotaId === cuota.cuotaId
+      && pagosNoVerificados.some(pago => pago.pagoCuotaId === item.pagoCuotaId)) || null;
+  }
+
+  getPbpAgentFecha(cuota: CuotaResumenConciliacion): string | null {
+    if (this.hasValue(cuota.fechaPagoReal)) return cuota.fechaPagoReal;
+    return this.getPagoModificable(cuota)?.fechaPago || null;
+  }
+
+  getPbpAgentMonto(cuota: CuotaResumenConciliacion): number | null {
+    const montoReal = cuota.montoPagadoReal;
+    if (montoReal !== null && montoReal !== undefined && Number(montoReal) > 0) return montoReal;
+    return this.getPagoModificable(cuota)?.montoPago ?? montoReal ?? null;
+  }
+
+  canAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
+    if (this.ampliandoVencimiento) return false;
+    const target = this.getPrimeraCuotaVencidaUltimaPromesaVencida();
+    return target?.promesa.idGestion === promesa.idGestion && target.cuota.cuotaId === cuota.cuotaId;
+  }
+
+  abrirCrearPago(cuota: CuotaResumenConciliacion): void {
+    if (!this.canCrearPago(cuota)) return;
+    this.cuotaCrearPago = cuota;
+    this.crearPagoFecha = this.toDateInputValue(cuota.fechaPromesa);
+    this.crearPagoMonto = Number(cuota.montoPromesa || 0);
+    this.crearPagoError = null;
+    this.crearPagoModalOpen = true;
+  }
+
+  cerrarCrearPago(): void {
+    if (this.creandoPago) return;
+    this.crearPagoModalOpen = false;
+    this.cuotaCrearPago = null;
+    this.crearPagoError = null;
+  }
+
+  canGuardarCrearPago(): boolean {
+    return !!this.cuotaCrearPago && !!this.crearPagoFecha && Number(this.crearPagoMonto) > 0 && this.hasRequiredContext();
+  }
+
+  crearPago(): void {
+    if (!this.cuotaCrearPago || !this.canGuardarCrearPago()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.creandoPago = true;
+    this.crearPagoError = null;
+
+    this.correccionPagosService.crearCancelacion(
+      this.cuotaCrearPago.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaPago: this.crearPagoFecha,
+        montoPago: Number(this.crearPagoMonto)
+      }
+    ).subscribe({
+      next: () => {
+        this.creandoPago = false;
+        this.crearPagoModalOpen = false;
+        this.cuotaCrearPago = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.crearPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago.';
+        this.creandoPago = false;
+      }
+    });
+  }
+
+  abrirModificarPago(cuota: CuotaResumenConciliacion): void {
+    const pago = this.getPagoModificable(cuota);
+    if (!pago) return;
+
+    this.pagoModificar = pago;
+    this.modificarFechaPago = this.toDateInputValue(pago.fechaPago);
+    this.modificarMontoPago = Number(pago.montoPago || 0);
+    this.modificarPagoError = null;
+    this.modificarPagoModalOpen = true;
+  }
+
+  cerrarModificarPago(): void {
+    if (this.modificandoPago) return;
+    this.modificarPagoModalOpen = false;
+    this.pagoModificar = null;
+    this.modificarPagoError = null;
+  }
+
+  canGuardarModificarPago(): boolean {
+    return !!this.pagoModificar
+      && !!this.modificarFechaPago
+      && Number(this.modificarMontoPago) > 0
+      && this.hasRequiredContext();
+  }
+
+  modificarPago(): void {
+    if (!this.pagoModificar || !this.canGuardarModificarPago()) return;
+
+    this.modificandoPago = true;
+    this.modificarPagoError = null;
+
+    this.correccionPagosService.corregirPago(
+      this.pagoModificar.pagoCuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        fechaPago: this.modificarFechaPago,
+        montoPago: Number(this.modificarMontoPago)
+      }
+    ).subscribe({
+      next: () => {
+        this.modificandoPago = false;
+        this.modificarPagoModalOpen = false;
+        this.pagoModificar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.modificarPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo modificar el pago.';
+        this.modificandoPago = false;
+      }
+    });
+  }
+
+  abrirAmpliarVencimiento(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): void {
+    if (!this.canAmpliarVencimiento(promesa, cuota)) return;
+
+    const fechaPromesa = this.toDateInputValue(cuota.fechaPromesa);
+    const fechaMax = this.addDays(fechaPromesa, 3);
+
+    this.cuotaAmpliar = cuota;
+    this.ampliarFechaMin = fechaPromesa;
+    this.ampliarFechaMax = fechaMax;
+    this.ampliarFechaVencimientoNueva = fechaMax;
+    this.ampliarMontoPago = Number(cuota.montoPromesa || 0);
+    this.ampliarPagoCorrespondeAsesor = true;
+    this.ampliarModo = 'corta';
+    this.ampliarMayorFechaMin = this.addDays(fechaPromesa, 4);
+    this.ampliarMayorFechaMax = this.endOfMonth(fechaPromesa);
+    this.ampliarMayorHabilitada = this.isCuotaUnica(cuota) && this.ampliarMayorFechaMin <= this.ampliarMayorFechaMax;
+    this.ampliarMayorFechaPago = this.ampliarMayorFechaMin <= this.ampliarMayorFechaMax ? this.ampliarMayorFechaMin : '';
+    this.ampliarMayorMontoPago = Number(cuota.montoPromesa || 0);
+    this.ampliarError = null;
+    this.ampliarModalOpen = true;
+  }
+
+  setAmpliarModoMayor(): void {
+    if (!this.ampliarMayorHabilitada) return;
+    this.ampliarModo = 'mayor';
+  }
+
+  getAmpliarFechaMax(): string {
+    return this.ampliarModo === 'mayor' ? this.ampliarMayorFechaMax : this.ampliarFechaMax;
+  }
+
+  cerrarAmpliarVencimiento(): void {
+    if (this.ampliandoVencimiento) return;
+    this.ampliarModalOpen = false;
+    this.cuotaAmpliar = null;
+    this.ampliarError = null;
+  }
+
+  canGuardarAmpliacion(): boolean {
+    if (this.ampliarModo === 'mayor') {
+      return !!this.cuotaAmpliar
+        && this.ampliarMayorHabilitada
+        && !!this.ampliarMayorFechaPago
+        && Number(this.ampliarMayorMontoPago) > 0
+        && this.hasRequiredContext()
+        && this.ampliarMayorFechaPago >= this.ampliarMayorFechaMin
+        && this.ampliarMayorFechaPago <= this.ampliarMayorFechaMax;
+    }
+
+    return !!this.cuotaAmpliar
+      && !!this.ampliarFechaVencimientoNueva
+      && Number(this.ampliarMontoPago) > 0
+      && this.hasRequiredContext()
+      && this.ampliarFechaVencimientoNueva >= this.ampliarFechaMin
+      && this.ampliarFechaVencimientoNueva <= this.ampliarFechaMax;
+  }
+
+  guardarAmpliacion(): void {
+    if (this.ampliarModo === 'mayor') {
+      this.crearPromesaSistemaPagoBanco();
+      return;
+    }
+
+    this.ampliarVencimiento();
+  }
+
+  ampliarVencimiento(): void {
+    if (!this.cuotaAmpliar || !this.canGuardarAmpliacion()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.ampliandoVencimiento = true;
+    this.ampliarError = null;
+
+    this.correccionPagosService.ampliarVencimiento(
+      this.cuotaAmpliar.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaPago: this.ampliarFechaVencimientoNueva,
+        montoPago: Number(this.ampliarMontoPago),
+        pagoCorrespondeAsesor: this.ampliarPagoCorrespondeAsesor
+      }
+    ).subscribe({
+      next: () => {
+        this.ampliandoVencimiento = false;
+        this.ampliarModalOpen = false;
+        this.cuotaAmpliar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo ampliar el vencimiento.';
+        this.ampliandoVencimiento = false;
+      }
+    });
+  }
+
+  crearPromesaSistemaPagoBanco(): void {
+    if (!this.cuotaAmpliar || !this.canGuardarAmpliacion()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.ampliandoVencimiento = true;
+    this.ampliarError = null;
+
+    this.correccionPagosService.crearPromesaSistemaPagoBanco(
+      this.cuotaAmpliar.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaPago: this.ampliarMayorFechaPago,
+        montoPago: Number(this.ampliarMayorMontoPago)
+      }
+    ).subscribe({
+      next: () => {
+        this.ampliandoVencimiento = false;
+        this.ampliarModalOpen = false;
+        this.cuotaAmpliar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.ampliarError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear la nueva promesa.';
+        this.ampliandoVencimiento = false;
+      }
+    });
+  }
+
+  abrirPagoVoluntario(): void {
+    this.pagoVoluntarioFecha = '';
+    this.pagoVoluntarioMonto = null;
+    this.pagoVoluntarioError = null;
+    this.pagoVoluntarioModalOpen = true;
+  }
+
+  cerrarPagoVoluntario(): void {
+    if (this.creandoPagoVoluntario) return;
+    this.pagoVoluntarioModalOpen = false;
+    this.pagoVoluntarioError = null;
+  }
+
+  canCrearPagoVoluntario(): boolean {
+    return !!this.getDocumento()
+      && !!this.pagoVoluntarioFecha
+      && Number(this.pagoVoluntarioMonto) > 0
+      && this.hasRequiredContext();
+  }
+
+  crearPagoVoluntario(): void {
+    if (!this.canCrearPagoVoluntario()) return;
+
+    this.creandoPagoVoluntario = true;
+    this.pagoVoluntarioError = null;
+
+    this.correccionPagosService.crearPagoVoluntarioSistema(
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento: this.getDocumento(),
+        fechaPago: this.pagoVoluntarioFecha,
+        montoPago: Number(this.pagoVoluntarioMonto)
+      }
+    ).subscribe({
+      next: () => {
+        this.creandoPagoVoluntario = false;
+        this.pagoVoluntarioModalOpen = false;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.pagoVoluntarioError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo crear el pago voluntario.';
+        this.creandoPagoVoluntario = false;
+      }
+    });
   }
 
   hasPagoVerificado(cuota: any): boolean {
@@ -257,5 +855,109 @@ export class ClienteResumenConciliacionDrawerWidget {
     if (value === 'GESTION_PROGRESIVO') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
     if (value === 'GESTION_PREDICTIVO') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300';
     return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+  }
+
+  private cargarCuotasValidasTipificar(): void {
+    if (!this.open || !this.hasRequiredContext() || !this.getDocumento()) {
+      this.cuotasValidas = [];
+      return;
+    }
+
+    this.isLoadingCuotasValidas = true;
+    this.correccionPagosService.buscarCuotasValidasTipificar({
+      documento: this.getDocumento(),
+      tenantId: Number(this.tenantId),
+      carteraId: Number(this.carteraId),
+      subcarteraId: Number(this.subcarteraId)
+    }).subscribe({
+      next: (cuotas) => {
+        this.cuotasValidas = cuotas;
+        this.isLoadingCuotasValidas = false;
+      },
+      error: () => {
+        this.cuotasValidas = [];
+        this.isLoadingCuotasValidas = false;
+      }
+    });
+  }
+
+  private cargarPagosModificables(): void {
+    if (!this.open || !this.hasRequiredContext() || !this.getDocumento()) {
+      this.pagosModificables = [];
+      return;
+    }
+
+    this.correccionPagosService.buscarPendientesConciliacion({
+      documento: this.getDocumento(),
+      tenantId: Number(this.tenantId),
+      carteraId: Number(this.carteraId),
+      subcarteraId: Number(this.subcarteraId)
+    }).subscribe({
+      next: (pagos) => {
+        this.pagosModificables = pagos;
+      },
+      error: () => {
+        this.pagosModificables = [];
+      }
+    });
+  }
+
+  private getPrimeraCuotaSinPago(): CuotaResumenConciliacion | null {
+    return this.resumen?.promesas
+      .flatMap(promesa => promesa.cuotas || [])
+      .find(cuota => cuota.estado !== 'PAGADA'
+        && !this.hasValue(cuota.fechaPagoReal)
+        && (cuota.montoPagadoReal === null || cuota.montoPagadoReal === undefined)) || null;
+  }
+
+  private getPrimeraCuotaVencidaUltimaPromesaVencida(): { promesa: ResumenConciliacionCliente['promesas'][number]; cuota: CuotaResumenConciliacion } | null {
+    const promesa = [...(this.resumen?.promesas || [])]
+      .sort((a, b) => this.getTime(b.fechaGestion) - this.getTime(a.fechaGestion))[0];
+
+    if (!promesa) return null;
+    if (String(promesa.estadoPago || '').toUpperCase() !== 'VENCIDA') return null;
+
+    const cuota = [...(promesa.cuotas || [])]
+      .filter(cuota => String(cuota.estado || '').toUpperCase() === 'VENCIDA')
+      .sort((a, b) => this.getTime(a.fechaPromesa) - this.getTime(b.fechaPromesa) || a.numeroCuota - b.numeroCuota)[0] || null;
+
+    return cuota ? { promesa, cuota } : null;
+  }
+
+  private hasRequiredContext(): boolean {
+    return Number(this.tenantId) > 0 && Number(this.carteraId) > 0 && Number(this.subcarteraId) > 0;
+  }
+
+  private getDocumento(): string {
+    return String(this.documento || this.resumen?.documento || '').trim();
+  }
+
+  private toDateInputValue(value: string | null | undefined): string {
+    if (!value) return '';
+    return String(value).slice(0, 10);
+  }
+
+  private addDays(value: string, days: number): string {
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + days);
+    return this.toDateInputValue(date.toISOString());
+  }
+
+  private endOfMonth(value: string): string {
+    const [year, month] = value.split('-').map(Number);
+    const date = new Date(year, month, 0);
+    return this.toDateInputValue(date.toISOString());
+  }
+
+  private isCuotaUnica(cuota: CuotaResumenConciliacion): boolean {
+    const promesa = (this.resumen?.promesas || []).find(item => (item.cuotas || []).some(row => row.cuotaId === cuota.cuotaId));
+    return (promesa?.cuotas || []).length === 1;
+  }
+
+  private getTime(value: string | null | undefined): number {
+    if (!value) return 0;
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
   }
 }

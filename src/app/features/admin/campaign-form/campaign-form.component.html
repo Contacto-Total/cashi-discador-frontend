@@ -65,21 +65,15 @@
 
         <div class="form-row">
         <div class="form-group">
-          <label>Fecha Inicio</label>
-          <mat-form-field appearance="fill" class="form-input">
-            <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate">
-            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
-            <mat-datepicker #startPicker></mat-datepicker>
-          </mat-form-field>
+          <label>Fecha y Hora Inicio</label>
+          <input type="datetime-local" class="form-input"
+                 name="startDate" [(ngModel)]="startDateString">
         </div>
 
         <div class="form-group">
-          <label>Fecha Fin</label>
-          <mat-form-field appearance="fill" class="form-input">
-            <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate">
-            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
-            <mat-datepicker #endPicker></mat-datepicker>
-          </mat-form-field>
+          <label>Fecha y Hora Fin</label>
+          <input type="datetime-local" class="form-input"
+                 name="endDate" [(ngModel)]="endDateString">
         </div>
       </div>
       </div>
