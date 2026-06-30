@@ -1307,13 +1307,13 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
         <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           @if (purchaseOrder() || purchasePeriod()) {
-            <div class="p-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-              <div [class]="'rounded-lg border px-2 py-2 text-xs font-bold uppercase shadow-sm ' + purchaseBlockClass()">
+            <div class="px-2 py-1 bg-white dark:bg-slate-900">
+              <div [class]="'rounded px-1.5 py-1 text-[10px] leading-tight font-bold uppercase ' + purchaseBlockClass()">
                 @if (purchaseOrder()) {
                   <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
                 }
                 @if (purchasePeriod()) {
-                  <div class="mt-1">PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
+                  <div>PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
                 }
               </div>
             </div>
@@ -5192,11 +5192,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseBlockClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'border-red-200 bg-red-50 text-red-800 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300';
+        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
       case 'SEGUNDA':
-        return 'border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300';
+        return 'bg-sky-50 text-sky-800 dark:bg-sky-950/30 dark:text-sky-300';
       default:
-        return 'border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-300';
+        return 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300';
     }
   }
 
