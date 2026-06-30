@@ -1307,8 +1307,8 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
         <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
           @if (purchaseOrder() || purchasePeriod()) {
-            <div class="px-2 py-1 bg-white dark:bg-slate-900">
-              <div [class]="'rounded px-1.5 py-1 text-[10px] leading-tight font-bold uppercase ' + purchaseBlockClass()">
+            <div class="bg-white dark:bg-slate-900">
+              <div [class]="'px-1 py-0.5 text-xs leading-tight font-bold uppercase ' + purchaseBlockClass()">
                 @if (purchaseOrder()) {
                   <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
                 }
