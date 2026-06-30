@@ -139,6 +139,11 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                       Ampliar
                                     </button>
                                   }
+                                  @if (canRegularizarPagoPagado(promesa, cuota)) {
+                                    <button type="button" (click)="abrirRegularizarPagoPagado(cuota)" class="mt-1 rounded-md bg-red-600 px-2 py-1 text-[9px] font-bold text-white hover:bg-red-700">
+                                      Ampliar
+                                    </button>
+                                  }
                                 </td>
                                 <td class="px-1.5 py-1.5 text-slate-700 dark:text-slate-300">
                                   @if (hasValue(getPbpAgentFecha(cuota))) {
@@ -271,6 +276,43 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
               <button type="button" (click)="cerrarModificarPago()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
               <button type="button" (click)="modificarPago()" [disabled]="!canGuardarModificarPago() || modificandoPago" class="rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
                 {{ modificandoPago ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (regularizarPagoModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4" (click)="cerrarRegularizarPagoPagado()">
+          <div class="w-full max-w-sm rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">Regularizar pago pagado</h3>
+              <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Pago #{{ pagoRegularizar?.pagoCuotaId }} · Cuota {{ cuotaRegularizar?.numeroCuota }}</p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+                Esta acción mueve la fecha del pago registrado por el agente y la fecha de vencimiento de la cuota. Solo aplica a pagos no verificados por banco.
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Fecha banco</label>
+                <input type="date" [(ngModel)]="regularizarFechaPagoBanco" [min]="regularizarFechaMin" [max]="regularizarFechaMax" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                <p class="mt-1 text-[10px] text-slate-500 dark:text-slate-400">Máximo 3 días desde {{ formatDate(cuotaRegularizar?.fechaPromesa) }}.</p>
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-semibold text-slate-700 dark:text-slate-300">Observaciones</label>
+                <textarea [(ngModel)]="regularizarObservaciones" rows="2" class="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white" placeholder="Banco registró el pago días después"></textarea>
+              </div>
+
+              @if (regularizarPagoError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ regularizarPagoError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+              <button type="button" (click)="cerrarRegularizarPagoPagado()" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="regularizarPagoPagado()" [disabled]="!canGuardarRegularizarPagoPagado() || regularizandoPago" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ regularizandoPago ? 'Guardando...' : 'Regularizar' }}
               </button>
             </div>
           </div>
@@ -434,6 +476,15 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   modificarMontoPago: number | null = null;
   modificarPagoError: string | null = null;
   modificandoPago = false;
+  regularizarPagoModalOpen = false;
+  cuotaRegularizar: CuotaResumenConciliacion | null = null;
+  pagoRegularizar: PagoPendienteConciliacion | null = null;
+  regularizarFechaPagoBanco = '';
+  regularizarFechaMin = '';
+  regularizarFechaMax = '';
+  regularizarObservaciones = 'Banco registró el pago días después';
+  regularizarPagoError: string | null = null;
+  regularizandoPago = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
@@ -512,6 +563,14 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     if (this.ampliandoVencimiento) return false;
     const target = this.getPrimeraCuotaVencidaUltimaPromesaVencida();
     return target?.promesa.idGestion === promesa.idGestion && target.cuota.cuotaId === cuota.cuotaId;
+  }
+
+  canRegularizarPagoPagado(promesa: ResumenConciliacionCliente['promesas'][number], cuota: CuotaResumenConciliacion): boolean {
+    if (this.regularizandoPago) return false;
+    if (String(promesa.estadoPago || '').toUpperCase() !== 'PAGADA') return false;
+    if ((promesa.cuotas || []).length !== 1) return false;
+    if (String(cuota.estado || '').toUpperCase() !== 'PAGADA') return false;
+    return !!this.getPagoModificable(cuota);
   }
 
   abrirCrearPago(cuota: CuotaResumenConciliacion): void {
@@ -621,6 +680,75 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
       error: (error) => {
         this.modificarPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo modificar el pago.';
         this.modificandoPago = false;
+      }
+    });
+  }
+
+  abrirRegularizarPagoPagado(cuota: CuotaResumenConciliacion): void {
+    const pago = this.getPagoModificable(cuota);
+    if (!pago) return;
+
+    const fechaPromesa = this.toDateInputValue(cuota.fechaPromesa);
+    this.cuotaRegularizar = cuota;
+    this.pagoRegularizar = pago;
+    this.regularizarFechaMin = fechaPromesa;
+    this.regularizarFechaMax = this.addDays(fechaPromesa, 3);
+    this.regularizarFechaPagoBanco = this.toDateInputValue(pago.fechaPago) || fechaPromesa;
+    this.regularizarObservaciones = 'Banco registró el pago días después';
+    this.regularizarPagoError = null;
+    this.regularizarPagoModalOpen = true;
+  }
+
+  cerrarRegularizarPagoPagado(): void {
+    if (this.regularizandoPago) return;
+    this.regularizarPagoModalOpen = false;
+    this.cuotaRegularizar = null;
+    this.pagoRegularizar = null;
+    this.regularizarPagoError = null;
+  }
+
+  canGuardarRegularizarPagoPagado(): boolean {
+    return !!this.cuotaRegularizar
+      && !!this.pagoRegularizar
+      && !!this.regularizarFechaPagoBanco
+      && this.hasRequiredContext()
+      && this.regularizarFechaPagoBanco >= this.regularizarFechaMin
+      && this.regularizarFechaPagoBanco <= this.regularizarFechaMax;
+  }
+
+  regularizarPagoPagado(): void {
+    if (!this.cuotaRegularizar || !this.pagoRegularizar || !this.canGuardarRegularizarPagoPagado()) return;
+
+    const documento = this.getDocumento();
+    if (!documento) return;
+
+    this.regularizandoPago = true;
+    this.regularizarPagoError = null;
+
+    this.correccionPagosService.regularizarPagoPagado(
+      this.cuotaRegularizar.cuotaId,
+      {
+        tenantId: Number(this.tenantId),
+        carteraId: Number(this.carteraId),
+        subcarteraId: Number(this.subcarteraId)
+      },
+      {
+        documento,
+        fechaPagoBanco: this.regularizarFechaPagoBanco,
+        pagoCuotaId: this.pagoRegularizar.pagoCuotaId,
+        observaciones: this.regularizarObservaciones || undefined
+      }
+    ).subscribe({
+      next: () => {
+        this.regularizandoPago = false;
+        this.regularizarPagoModalOpen = false;
+        this.cuotaRegularizar = null;
+        this.pagoRegularizar = null;
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.regularizarPagoError = error.error?.mensaje || error.error?.message || error.message || 'No se pudo regularizar el pago pagado.';
+        this.regularizandoPago = false;
       }
     });
   }

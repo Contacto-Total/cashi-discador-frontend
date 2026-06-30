@@ -17,7 +17,9 @@ import {
   CrearPromesaSistemaPagoBancoRequest,
   CrearPromesaSistemaPagoBancoResponse,
   CuotaValidaTipificar,
-  PagoPendienteConciliacion
+  PagoPendienteConciliacion,
+  RegularizarPagoPagadoRequest,
+  RegularizarPagoPagadoResponse
 } from '../models/correccion-pagos.model';
 
 @Injectable({
@@ -110,5 +112,18 @@ export class CorreccionPagosService {
       .set('subcarteraId', contexto.subcarteraId.toString());
 
     return this.http.post<CrearPagoVoluntarioSistemaResponse>(`${this.baseUrl}/voluntario-sistema`, request, { params });
+  }
+
+  regularizarPagoPagado(
+    cuotaId: number,
+    contexto: CorreccionPagoContexto,
+    request: RegularizarPagoPagadoRequest
+  ): Observable<RegularizarPagoPagadoResponse> {
+    const params = new HttpParams()
+      .set('tenantId', contexto.tenantId.toString())
+      .set('carteraId', contexto.carteraId.toString())
+      .set('subcarteraId', contexto.subcarteraId.toString());
+
+    return this.http.put<RegularizarPagoPagadoResponse>(`${this.baseUrl}/cuotas/${cuotaId}/regularizar-pago-pagado`, request, { params });
   }
 }

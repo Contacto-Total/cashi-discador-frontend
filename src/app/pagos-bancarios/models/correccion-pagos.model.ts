@@ -167,3 +167,21 @@ export interface CrearPagoVoluntarioSistemaResponse {
   estadoCuota: string | null;
   estadoPagoGestion: string | null;
 }
+
+export interface RegularizarPagoPagadoRequest {
+  documento: string;
+  fechaPagoBanco: string;
+  pagoCuotaId: number;
+  observaciones?: string;
+}
+
+export interface RegularizarPagoPagadoResponse {
+  pagoCuotaId: number;
+  cuotaId: number;
+  gestionId: number;
+  documento: string;
+  transaccionId: number;
+  fechaPagoBanco: string;
+  estadoCuota: string;
+  estadoPagoGestion: string;
+}
