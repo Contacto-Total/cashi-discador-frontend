@@ -371,8 +371,8 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
           <div class="p-3 space-y-2">
             <!-- Control de Llamada - COMPACTO -->
             <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2 transition-colors duration-300 ' + (callActive() ? 'border-green-400 dark:border-green-500' : 'border-gray-200 dark:border-gray-700')">
-              <div class="flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs flex-shrink-0">
                   <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
                   </div>
                   Control de Llamada
@@ -382,11 +382,11 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                     </span>
                   }
                 </h3>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap justify-end gap-2 flex-1 min-w-0">
                   <button
                     (click)="toggleMute()"
                     [disabled]="!callActive() && !rellamadaCallActive()"
-                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                    [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                       ((callActive() || rellamadaCallActive())
                         ? (isMuted()
                           ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white'
@@ -398,7 +398,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                   <button
                     (click)="toggleHold()"
                     [disabled]="!callActive() && !rellamadaCallActive()"
-                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                    [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                       ((callActive() || rellamadaCallActive())
                         ? (isOnHold()
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white animate-pulse'
@@ -410,7 +410,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                   <button
                     (click)="endCall()"
                     [disabled]="!callActive()"
-                    class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                    class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                   >
                     Finalizar
                   </button>
@@ -418,7 +418,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                   <div class="relative">
                     <button
                       (click)="showWhatsappDropdown.set(!showWhatsappDropdown())"
-                      class="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                      class="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                     >
                       <lucide-angular name="message-circle" [size]="14"></lucide-angular>
                       WhatsApp
@@ -473,7 +473,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                       <button
                         (click)="canRellamar() && (activeCallPhone() ? iniciarRellamada(activeCallPhone()) : showRellamadaDropdown.set(!showRellamadaDropdown()))"
                         [disabled]="!canRellamar()"
-                        [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                        [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                           (canRellamar()
                             ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
                             : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
@@ -488,7 +488,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                         </div>
                         <button
                           (click)="colgarRellamada()"
-                          class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                          class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                         >
                           <lucide-angular name="phone-off" [size]="14"></lucide-angular>
                           Colgar
@@ -1305,76 +1305,95 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         </div>
 
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
-        <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
-          <!-- Resumen Rápido Deuda -->
-          <div class="p-2 bg-red-100 dark:bg-red-950/20">
-            <div class="text-center">
-              <div class="text-xs uppercase font-bold" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ getPrimaryAmountLabel() }}</div>
-              <div class="text-xl font-black" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-xs font-semibold" [ngClass]="themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700'">{{ clientDiasMora() }} días mora</div>
+        <div [class]="'w-72 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300 ' + purchaseColumnClass()">
+          @if (!hasRightPanelClientData()) {
+            <div class="flex flex-1 items-center justify-center px-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Cargando datos del cliente...
             </div>
-          </div>
-
-          <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
-          <div class="p-2 flex-1 overflow-y-auto">
-            @if (clientAmountFields().length > 0) {
-              <div class="space-y-1.5">
-                @for (field of clientAmountFields(); track field.field; let i = $index) {
-                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs cursor-pointer transition-all"
-                       [class]="(calcCampoSeleccionado() === field.field)
-                         ? 'ring-1 ring-blue-500 bg-blue-50 dark:bg-blue-950/40'
-                         : getAmountRowClass(i)"
-                       (click)="calcCampoSeleccionado.set(field.field)">
-                    <span class="truncate mr-2 font-medium"
-                          [ngClass]="calcCampoSeleccionado() === field.field
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm"
-                          [ngClass]="calcCampoSeleccionado() === field.field
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">
-                      {{ formatByType(field) }}
-                    </span>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Calculadora de Oferta - Compacta -->
-            @if (clientAmountFields().length > 0) {
-              <div class="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
-                <div class="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">Calcular oferta</div>
-                <!-- Fila: [% dcto] + S/[transf] -->
-                <div class="flex items-center gap-1">
-                  <input type="number" [ngModel]="calcDescuento() ?? ''" (ngModelChange)="calcDescuento.set($event === '' ? null : +$event)"
-                         placeholder="% dcto" min="0" max="100" step="1"
-                         class="w-14 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
-                                bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
-                                focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                  <span class="text-[10px] text-slate-400">% dcto</span>
-                  <span class="text-[10px] text-slate-400 mx-0.5">+</span>
-                  <input type="number" [ngModel]="calcCostoTransferencia()" (ngModelChange)="calcCostoTransferencia.set(+$event)"
-                         min="0" step="1"
-                         class="w-12 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
-                                bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
-                                focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                  <span class="text-[10px] text-slate-400">transf.</span>
+          } @else {
+            @if (purchaseOrder() || purchasePeriod()) {
+              <div>
+                <div [class]="'px-1 pt-2 pb-0.5 text-sm leading-tight font-bold uppercase text-center ' + purchaseBlockClass()">
+                  @if (purchaseOrder()) {
+                    <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
+                  }
+                  @if (purchasePeriod()) {
+                    <div>PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
+                  }
                 </div>
-                <!-- Resultado -->
-                @if (calcResultado(); as r) {
-                  <div class="mt-2 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5">
-                    <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                      <span>{{ r.campoLabel }} -{{ calcDescuento() }}% +S/{{ calcCostoTransferencia() }}</span>
-                    </div>
-                    <div class="flex justify-between items-center mt-0.5">
-                      <span class="text-[10px] font-bold text-green-700 dark:text-green-400">COBRAR</span>
-                      <span class="text-sm font-black text-green-700 dark:text-green-400">{{ formatCurrency(r.total) }}</span>
-                    </div>
-                  </div>
-                }
               </div>
             }
-          </div>
+
+            <!-- Resumen Rápido Deuda -->
+            <div [class]="'p-2 ' + purchaseSummaryClass()">
+              <div class="text-center">
+                <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ getPrimaryAmountLabel() }}</div>
+                <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+                <div class="text-xs font-semibold" [ngClass]="purchaseAccentTextClass()">{{ clientDiasMora() }} días mora</div>
+              </div>
+            </div>
+
+            <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
+            <div class="p-2 flex-1 overflow-y-auto">
+              @if (clientAmountFields().length > 0) {
+                <div class="space-y-1.5">
+                  @for (field of clientAmountFields(); track field.field; let i = $index) {
+                    <div class="flex justify-between items-center py-1 px-2 rounded text-xs cursor-pointer transition-all"
+                         [class]="(calcCampoSeleccionado() === field.field)
+                           ? purchaseSelectedRowClass()
+                           : getAmountRowClass(i)"
+                         (click)="calcCampoSeleccionado.set(field.field)">
+                      <span class="truncate mr-2 font-medium"
+                             [ngClass]="calcCampoSeleccionado() === field.field
+                               ? purchaseSelectedTextClass()
+                               : purchaseTextClass()">{{ field.label }}</span>
+                       <span class="font-bold whitespace-nowrap text-sm"
+                             [ngClass]="calcCampoSeleccionado() === field.field
+                               ? purchaseSelectedTextClass()
+                               : purchaseTextClass()">
+                        {{ formatByType(field) }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Calculadora de Oferta - Compacta -->
+              @if (clientAmountFields().length > 0) {
+                <div class="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
+                  <div class="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">Calcular oferta</div>
+                  <!-- Fila: [% dcto] + S/[transf] -->
+                  <div class="flex items-center gap-1">
+                    <input type="number" [ngModel]="calcDescuento() ?? ''" (ngModelChange)="calcDescuento.set($event === '' ? null : +$event)"
+                           placeholder="% dcto" min="0" max="100" step="1"
+                           class="w-14 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
+                                  bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+                                  focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <span class="text-[10px] text-slate-400">% dcto</span>
+                    <span class="text-[10px] text-slate-400 mx-0.5">+</span>
+                    <input type="number" [ngModel]="calcCostoTransferencia()" (ngModelChange)="calcCostoTransferencia.set(+$event)"
+                           min="0" step="1"
+                           class="w-12 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
+                                  bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+                                  focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <span class="text-[10px] text-slate-400">transf.</span>
+                  </div>
+                  <!-- Resultado -->
+                  @if (calcResultado(); as r) {
+                    <div class="mt-2 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5">
+                      <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                        <span>{{ r.campoLabel }} -{{ calcDescuento() }}% +S/{{ calcCostoTransferencia() }}</span>
+                      </div>
+                      <div class="flex justify-between items-center mt-0.5">
+                        <span class="text-[10px] font-bold text-green-700 dark:text-green-400">COBRAR</span>
+                        <span class="text-sm font-black text-green-700 dark:text-green-400">{{ formatCurrency(r.total) }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
         </div>
 
@@ -5156,15 +5175,114 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return this.customerData().deuda?.saldo_total || 0;
   }
 
+  purchaseOrder(): string {
+    const rawValue = this.rawClientData()['orden_compra'];
+    return rawValue === undefined || rawValue === null ? '' : String(rawValue).trim().toUpperCase();
+  }
+
+  purchasePeriod(): string {
+    const rawValue = this.rawClientData()['periodo_compra'];
+    if (rawValue === undefined || rawValue === null || rawValue === '') return '';
+
+    const digits = String(rawValue).replace(/\D/g, '');
+    if (digits.length < 6) return String(rawValue).trim();
+
+    const year = digits.slice(0, 4);
+    const month = digits.slice(4, 6);
+    const monthNumber = Number(month);
+    if (monthNumber < 1 || monthNumber > 12) return String(rawValue).trim();
+
+    return `${month}/${year}`;
+  }
+
+  hasRightPanelClientData(): boolean {
+    return Object.keys(this.rawClientData()).length > 0;
+  }
+
+  purchaseBlockClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'bg-[#E9F8F6] text-[#4DB3A7] dark:bg-[#123C38] dark:text-[#4DB3A7]';
+      default:
+        return 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300';
+    }
+  }
+
+  purchaseColumnClass(): string {
+    return 'bg-white dark:bg-slate-900';
+  }
+
+  purchaseSummaryClass(): string {
+    return '';
+  }
+
+  purchaseTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return this.themeService.isDarkMode() ? 'text-red-300' : 'text-red-800';
+      case 'SEGUNDA':
+        return 'text-[#4DB3A7]';
+      default:
+        return this.themeService.isDarkMode() ? 'text-green-300' : 'text-green-800';
+    }
+  }
+
+  purchaseAccentTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return this.themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700';
+      case 'SEGUNDA':
+        return 'text-[#4DB3A7]';
+      default:
+        return this.themeService.isDarkMode() ? 'text-emerald-300' : 'text-green-700';
+    }
+  }
+
+  purchaseSelectedRowClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'ring-1 ring-red-500 bg-red-100 dark:bg-red-950/40';
+      case 'SEGUNDA':
+        return 'ring-1 ring-[#4DB3A7] bg-[#D8F1ED] dark:bg-[#123C38]';
+      default:
+        return 'ring-1 ring-green-500 bg-green-100 dark:bg-green-950/40';
+    }
+  }
+
+  purchaseSelectedTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'text-red-700 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'text-[#228E82] dark:text-[#4DB3A7]';
+      default:
+        return 'text-green-700 dark:text-green-300';
+    }
+  }
+
   /**
    * Obtiene las clases CSS para cada fila de montos según su índice
    * Alterna entre 2 colores para mejor visualización
    */
   getAmountRowClass(index: number): string {
-    const colors = [
-      'bg-red-50 !text-black dark:bg-red-950/30 dark:!text-red-300',
-      'bg-white !text-black dark:bg-gray-800 dark:!text-red-400',
-    ];
+    const colorsByOrder: Record<string, string[]> = {
+      PRIMERA: [
+        'bg-white !text-black dark:bg-slate-900 dark:!text-red-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-red-300',
+      ],
+      SEGUNDA: [
+        'bg-white !text-black dark:bg-slate-900 dark:!text-[#4DB3A7]',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-[#4DB3A7]',
+      ],
+      DEFAULT: [
+        'bg-white !text-black dark:bg-slate-900 dark:!text-green-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-green-300',
+      ]
+    };
+
+    const colors = colorsByOrder[this.purchaseOrder()] || colorsByOrder['DEFAULT'];
     return colors[index % colors.length];
   }
 
