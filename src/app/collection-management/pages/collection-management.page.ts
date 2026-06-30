@@ -1305,10 +1305,10 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         </div>
 
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
-        <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
+        <div [class]="'w-72 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300 ' + purchaseColumnClass()">
           @if (purchaseOrder() || purchasePeriod()) {
-            <div class="bg-white dark:bg-slate-900">
-              <div [class]="'px-1 pt-1 pb-0.5 text-sm leading-tight font-bold uppercase text-center ' + purchaseBlockClass()">
+            <div>
+              <div [class]="'px-1 pt-2 pb-0.5 text-sm leading-tight font-bold uppercase text-center ' + purchaseBlockClass()">
                 @if (purchaseOrder()) {
                   <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
                 }
@@ -1320,11 +1320,11 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
           }
 
           <!-- Resumen Rápido Deuda -->
-          <div class="p-2 bg-red-100 dark:bg-red-950/20">
+          <div [class]="'p-2 ' + purchaseSummaryClass()">
             <div class="text-center">
-              <div class="text-xs uppercase font-bold" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ getPrimaryAmountLabel() }}</div>
-              <div class="text-xl font-black" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-xs font-semibold" [ngClass]="themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700'">{{ clientDiasMora() }} días mora</div>
+              <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ getPrimaryAmountLabel() }}</div>
+              <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+              <div class="text-xs font-semibold" [ngClass]="purchaseAccentTextClass()">{{ clientDiasMora() }} días mora</div>
             </div>
           </div>
 
@@ -1339,13 +1339,13 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                          : getAmountRowClass(i)"
                        (click)="calcCampoSeleccionado.set(field.field)">
                     <span class="truncate mr-2 font-medium"
-                          [ngClass]="calcCampoSeleccionado() === field.field
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm"
-                          [ngClass]="calcCampoSeleccionado() === field.field
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">
+                           [ngClass]="calcCampoSeleccionado() === field.field
+                             ? 'text-blue-700 dark:text-blue-300'
+                             : purchaseTextClass()">{{ field.label }}</span>
+                     <span class="font-bold whitespace-nowrap text-sm"
+                           [ngClass]="calcCampoSeleccionado() === field.field
+                             ? 'text-blue-700 dark:text-blue-300'
+                             : purchaseTextClass()">
                       {{ formatByType(field) }}
                     </span>
                   </div>
@@ -5192,11 +5192,55 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   purchaseBlockClass(): string {
     switch (this.purchaseOrder()) {
       case 'PRIMERA':
-        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
+        return 'bg-blue-50 text-blue-800 dark:bg-blue-950/30 dark:text-blue-300';
       case 'SEGUNDA':
-        return 'bg-sky-50 text-sky-800 dark:bg-sky-950/30 dark:text-sky-300';
+        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
       default:
         return 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300';
+    }
+  }
+
+  purchaseColumnClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'bg-blue-50 dark:bg-blue-950/20';
+      case 'SEGUNDA':
+        return 'bg-red-50 dark:bg-red-950/20';
+      default:
+        return 'bg-green-50 dark:bg-green-950/20';
+    }
+  }
+
+  purchaseSummaryClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'bg-blue-100 dark:bg-blue-950/30';
+      case 'SEGUNDA':
+        return 'bg-red-100 dark:bg-red-950/30';
+      default:
+        return 'bg-green-100 dark:bg-green-950/30';
+    }
+  }
+
+  purchaseTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return this.themeService.isDarkMode() ? 'text-blue-300' : 'text-blue-800';
+      case 'SEGUNDA':
+        return this.themeService.isDarkMode() ? 'text-red-300' : 'text-red-800';
+      default:
+        return this.themeService.isDarkMode() ? 'text-green-300' : 'text-green-800';
+    }
+  }
+
+  purchaseAccentTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return this.themeService.isDarkMode() ? 'text-sky-300' : 'text-blue-700';
+      case 'SEGUNDA':
+        return this.themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700';
+      default:
+        return this.themeService.isDarkMode() ? 'text-emerald-300' : 'text-green-700';
     }
   }
 
@@ -5205,10 +5249,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Alterna entre 2 colores para mejor visualización
    */
   getAmountRowClass(index: number): string {
-    const colors = [
-      'bg-red-50 !text-black dark:bg-red-950/30 dark:!text-red-300',
-      'bg-white !text-black dark:bg-gray-800 dark:!text-red-400',
-    ];
+    const colorsByOrder: Record<string, string[]> = {
+      PRIMERA: [
+        'bg-blue-50 !text-black dark:bg-blue-950/30 dark:!text-blue-300',
+        'bg-white/70 !text-black dark:bg-blue-950/10 dark:!text-blue-300',
+      ],
+      SEGUNDA: [
+        'bg-red-50 !text-black dark:bg-red-950/30 dark:!text-red-300',
+        'bg-white/70 !text-black dark:bg-red-950/10 dark:!text-red-300',
+      ],
+      DEFAULT: [
+        'bg-green-50 !text-black dark:bg-green-950/30 dark:!text-green-300',
+        'bg-white/70 !text-black dark:bg-green-950/10 dark:!text-green-300',
+      ]
+    };
+
+    const colors = colorsByOrder[this.purchaseOrder()] || colorsByOrder['DEFAULT'];
     return colors[index % colors.length];
   }
 
