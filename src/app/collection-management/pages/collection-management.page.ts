@@ -270,64 +270,55 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                     }
 
                     @if (isManualSource() && !callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
-                      <div id="phone-selector-panel" [class]="'mt-2 rounded-lg border p-2 transition-colors duration-300 ' +
-                        (errors()['phone'] && !selectedManualPhone()
-                          ? 'border-red-500 dark:border-red-600 ring-2 ring-red-300 dark:ring-red-800 animate-pulse bg-red-50 dark:bg-red-950/20'
-                          : 'border-amber-300 dark:border-amber-700 bg-amber-50/40 dark:bg-amber-950/10')">
-                        <div class="flex items-center gap-2 mb-2">
-                          <div [class]="'p-1 rounded ' + (errors()['phone'] && !selectedManualPhone() ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30')">
-                            <lucide-angular name="phone" [size]="14" [class]="errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"></lucide-angular>
-                          </div>
-                          <span [class]="'font-bold text-xs ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white')">
-                            {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfono Contactado' }}
-                          </span>
+                      <div id="phone-selector-panel">
+                        <div [class]="'text-xs font-semibold mt-1 ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400')">
+                          {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfonos' }}
                         </div>
-                        @if (selectedManualPhone()) {
-                          <div class="mb-2 inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">
-                            {{ selectedManualPhone() }}
-                          </div>
+
+                        @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
+                          <button
+                            type="button"
+                            [disabled]="telefonoContactadoBloqueado()"
+                            (click)="!telefonoContactadoBloqueado() && selectedManualPhone.set(tel.numero)"
+                            [class]="'w-full flex items-center gap-2 px-1.5 py-1 rounded border text-left transition-all duration-200 mt-1 ' +
+                              (telefonoContactadoBloqueado() ? 'cursor-not-allowed opacity-60 ' : 'cursor-pointer ') +
+                              (selectedManualPhone() === tel.numero
+                                ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700 ring-1 ring-green-300 dark:ring-green-800'
+                                : (!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
+                                  ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-red-300 opacity-80'
+                                  : i === 0
+                                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:border-green-300'
+                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-green-300 dark:hover:border-green-700'))"
+                          >
+                            <lucide-angular
+                              [name]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : i === 0 ? 'smartphone' : 'phone'"
+                              [size]="14"
+                              [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 dark:text-red-500' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">
+                            </lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-1">
+                                <span class="text-xs" [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 dark:text-red-500' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
+                                @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
+                                  <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                                }
+                                @if (osiptelBadge(tel.estadoOsiptel).icon) {
+                                  <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
+                                    <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="13"
+                                                    [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
+                                  </span>
+                                }
+                                @if (whatsappBadge(tel.estadoWhatsapp).show) {
+                                  <span [title]="whatsappBadge(tel.estadoWhatsapp).title" class="inline-flex items-center">
+                                    <svg [attr.class]="whatsappBadge(tel.estadoWhatsapp).class" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                      <path [attr.d]="whatsappIconPath"></path>
+                                    </svg>
+                                  </span>
+                                }
+                              </div>
+                              <div class="text-xs font-bold truncate" [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 line-through' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                            </div>
+                          </button>
                         }
-                        <div class="flex flex-col gap-1">
-                          @for (tel of telefonosMetodo(); track tel.numero) {
-                            <button
-                              type="button"
-                              [disabled]="telefonoContactadoBloqueado()"
-                              (click)="!telefonoContactadoBloqueado() && selectedManualPhone.set(tel.numero)"
-                              [class]="'w-full flex items-center gap-1.5 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] ' +
-                                (telefonoContactadoBloqueado() ? 'cursor-not-allowed ' : 'cursor-pointer ') +
-                                (selectedManualPhone() === tel.numero
-                                  ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
-                                  : (telefonoContactadoBloqueado()
-                                    ? 'opacity-40 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
-                                    : tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
-                                      ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-amber-300'
-                                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50'))"
-                            >
-                              <lucide-angular
-                                [name]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
-                                [size]="12"
-                                [class]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
-                              </lucide-angular>
-                              <span class="font-bold flex-1 truncate" [class]="tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
-                              @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
-                                <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
-                              }
-                              @if (osiptelBadge(tel.estadoOsiptel).icon) {
-                                <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
-                                  <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="12"
-                                                  [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
-                                </span>
-                              }
-                              @if (whatsappBadge(tel.estadoWhatsapp).show) {
-                                <span [title]="whatsappBadge(tel.estadoWhatsapp).title" class="inline-flex items-center">
-                                  <svg [attr.class]="whatsappBadge(tel.estadoWhatsapp).class" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path [attr.d]="whatsappIconPath"></path>
-                                  </svg>
-                                </span>
-                              }
-                            </button>
-                          }
-                        </div>
                       </div>
                     } @else {
                       <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">Teléfonos</div>
