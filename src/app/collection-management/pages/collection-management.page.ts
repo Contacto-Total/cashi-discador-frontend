@@ -7398,7 +7398,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto`, {
       documento,
       valor,
-      subtipo: this.newPhoneSubtipo
+      subtipo: this.newPhoneSubtipo,
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
     }).subscribe({
       next: () => {
         // Recargar la lista completa de teléfonos desde el backend
@@ -7441,7 +7444,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto-email`, {
       documento,
       valor,
-      subtipo: this.newEmailSubtipo
+      subtipo: this.newEmailSubtipo,
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
     }).subscribe({
       next: () => {
         const current = this.emailsMetodo();
