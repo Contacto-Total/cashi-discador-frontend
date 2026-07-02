@@ -219,7 +219,10 @@ export class DialerMainComponent implements OnInit, OnDestroy {
       agentId: this.agentId,
       phoneNumber: this.currentContact.phoneNumber,
       contactId: this.currentContact.id,
-      campaignId: this.campaignId || undefined
+      campaignId: this.campaignId || undefined,
+      tenantId: this.authService.getCurrentUser()?.tenantId,
+      carteraId: this.authService.getCurrentUser()?.portfolioId,
+      subcarteraId: this.authService.getCurrentUser()?.subPortfolioId
     };
 
     try {
@@ -274,6 +277,9 @@ export class DialerMainComponent implements OnInit, OnDestroy {
       phoneNumber: phoneNumber,
       idCliente: customerContext.idCliente,
       documento: customerContext.documento,
+      tenantId: customerContext.tenantId,
+      carteraId: customerContext.carteraId,
+      subcarteraId: customerContext.subcarteraId,
       contactId: undefined,
       campaignId: this.campaignId || undefined
     };
@@ -316,7 +322,9 @@ export class DialerMainComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async resolveCustomerForManualCall(phoneNumber: string): Promise<{ idCliente?: number; documento?: string }> {
+  private async resolveCustomerForManualCall(phoneNumber: string): Promise<{ idCliente?: number; documento?: string; tenantId?: number; carteraId?: number; subcarteraId?: number }> {
+    const currentUser = this.authService.getCurrentUser();
+
     try {
       const customers = await firstValueFrom(
         this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber)
@@ -326,14 +334,21 @@ export class DialerMainComponent implements OnInit, OnDestroy {
         const customer = customers[0];
         return {
           idCliente: customer.id || undefined,
-          documento: customer.documentNumber || undefined
+          documento: customer.documentNumber || undefined,
+          tenantId: customer.tenantId || currentUser?.tenantId,
+          carteraId: customer.portfolioId || currentUser?.portfolioId,
+          subcarteraId: customer.subPortfolioId || currentUser?.subPortfolioId
         };
       }
     } catch (error) {
       console.error('[Dialer] Error resolviendo cliente para llamada manual:', error);
     }
 
-    return {};
+    return {
+      tenantId: currentUser?.tenantId,
+      carteraId: currentUser?.portfolioId,
+      subcarteraId: currentUser?.subPortfolioId
+    };
   }
 
   hangupCall(): void {
