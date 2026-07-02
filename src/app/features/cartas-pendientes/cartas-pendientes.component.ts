@@ -27,59 +27,6 @@ import { FormatService } from '@/shared/services/format.service';
         </p>
       </div>
 
-      <!-- Filtros -->
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-6">
-        <div class="flex flex-wrap gap-4 items-end">
-          <div class="min-w-[160px] flex-1">
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fecha Inicio</label>
-            <input type="date" [(ngModel)]="filtroFechaInicio"
-              class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div class="min-w-[160px] flex-1">
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fecha Fin</label>
-            <input type="date" [(ngModel)]="filtroFechaFin"
-              class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div class="min-w-[150px] flex-1">
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Subcartera ID</label>
-            <input type="number" [(ngModel)]="filtroSubPortfolioId" placeholder="Todas"
-              class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div class="min-w-[190px] flex-1">
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Orden</label>
-            <select [ngModel]="ordenSeleccionado()" (ngModelChange)="cambiarOrden($event)"
-              class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="fechaGestion,desc">Más recientes</option>
-              <option value="fechaGestion,asc">Más antiguas</option>
-              <option value="montoPromesa,desc">Mayor monto</option>
-              <option value="montoPromesa,asc">Menor monto</option>
-              <option value="nombreCliente,asc">Cliente A-Z</option>
-              <option value="documentoCliente,asc">Documento A-Z</option>
-            </select>
-          </div>
-          <div class="min-w-[110px]">
-            <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Por página</label>
-            <select [ngModel]="tamanioPagina()" (ngModelChange)="cambiarTamanioPagina($event)"
-              class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option [value]="10">10</option>
-              <option [value]="20">20</option>
-              <option [value]="50">50</option>
-              <option [value]="100">100</option>
-            </select>
-          </div>
-          <button (click)="buscar()"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-            <lucide-angular name="search" [size]="16"></lucide-angular>
-            Buscar
-          </button>
-          <button (click)="limpiarFiltros()"
-            class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
-            <lucide-angular name="x" [size]="16"></lucide-angular>
-            Limpiar
-          </button>
-        </div>
-      </div>
-
       <!-- Resumen -->
       <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-6 flex items-center gap-4">
         <div class="w-12 h-12 bg-amber-100 dark:bg-amber-900/50 rounded-full flex items-center justify-center">
@@ -101,6 +48,42 @@ import { FormatService } from '@/shared/services/format.service';
           <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
         </div>
       }
+
+      <!-- Controles de tabla -->
+      <div class="mb-3 flex flex-wrap items-end justify-end gap-3">
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Inicio</label>
+          <input type="date" [(ngModel)]="filtroFechaInicio"
+            class="px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Fin</label>
+          <input type="date" [(ngModel)]="filtroFechaFin"
+            class="px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Orden</label>
+          <select [ngModel]="ordenSeleccionado()" (ngModelChange)="cambiarOrden($event)"
+            class="min-w-[170px] px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="fechaGestion,desc">Más recientes</option>
+            <option value="fechaGestion,asc">Más antiguas</option>
+            <option value="montoPromesa,desc">Mayor monto</option>
+            <option value="montoPromesa,asc">Menor monto</option>
+            <option value="nombreCliente,asc">Cliente A-Z</option>
+            <option value="documentoCliente,asc">Documento A-Z</option>
+          </select>
+        </div>
+        <button (click)="buscar()"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+          <lucide-angular name="search" [size]="16"></lucide-angular>
+          Buscar
+        </button>
+        <button (click)="limpiarFiltros()"
+          class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+          <lucide-angular name="x" [size]="16"></lucide-angular>
+          Limpiar
+        </button>
+      </div>
 
       <!-- Tabla -->
       @if (!loading() && cartasPendientes().length > 0) {
