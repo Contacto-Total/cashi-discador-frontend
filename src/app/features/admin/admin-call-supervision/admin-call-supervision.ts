@@ -9,6 +9,7 @@ import { AdminMonitoringService } from '../../../core/services/admin-monitoring.
 import { AuthService } from '../../../core/services/auth.service';
 import { SipService } from '../../../core/services/sip.service';
 import { SupervisionService, SupervisionMode } from '../../../core/services/supervision.service';
+import { WebsocketService } from '../../../core/services/websocket.service';
 import { Subscription, interval } from 'rxjs';
 
 interface ActiveCall {
@@ -41,9 +42,12 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
   isConnecting = false;
   isMuted = false;
   callDuration = 0;
+  callEnded = false;
 
   private callUuid: string = '';
   private timerSubscription?: Subscription;
+  private callEventSubscription?: Subscription;
+  private redirectTimer?: any;
   private sipRegistered = false;
 
   constructor(
@@ -52,7 +56,8 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
     private adminService: AdminMonitoringService,
     private authService: AuthService,
     private sipService: SipService,
-    public supervisionService: SupervisionService
+    public supervisionService: SupervisionService,
+    private websocketService: WebsocketService
   ) {}
 
   // Use the service's mode so it stays in sync with the floating panel
@@ -78,12 +83,65 @@ export class AdminCallSupervision implements OnInit, OnDestroy {
 
     // Start call duration timer
     this.startDurationTimer();
+
+    // Detectar cuando la llamada supervisada termina (el agente o el cliente cuelga)
+    this.watchMonitoredCallEnd();
+  }
+
+  /**
+   * Escucha los eventos de llamadas del dashboard. Cuando la llamada que estamos
+   * supervisando pasa a estado ENDED (agente o cliente colgó), muestra el aviso de
+   * "Llamada finalizada" y cierra la supervisión automáticamente.
+   */
+  private watchMonitoredCallEnd(): void {
+    this.callEventSubscription = this.websocketService.subscribe('/topic/admin/calls').subscribe({
+      next: (event: any) => {
+        const data = event?.data || event;
+        if (data && data.callUuid === this.callUuid && data.callState === 'ENDED') {
+          this.handleMonitoredCallEnded();
+        }
+      }
+    });
+  }
+
+  private handleMonitoredCallEnded(): void {
+    if (this.callEnded) return; // evitar doble ejecución (llegan hangups de ambas patas)
+    this.callEnded = true;
+    console.log('📴 La llamada supervisada finalizó:', this.callUuid);
+
+    // Notificar al backend para colgar la pata del supervisor en FreeSWITCH
+    const state = this.supervisionService.state();
+    if (state.callUuid && state.adminCallUuid) {
+      const currentUser = this.authService.getCurrentUser();
+      this.adminService.stopMonitoring(
+        state.callUuid,
+        state.adminCallUuid,
+        currentUser?.username || 'admin'
+      ).subscribe({
+        error: (err) => console.error('Error stopping monitoring on backend:', err)
+      });
+    }
+
+    // Colgar el audio local y limpiar el estado global (oculta el panel flotante)
+    this.sipService.hangup();
+    this.supervisionService.stopSupervision();
+
+    // Mostrar el aviso ~3s y volver al listado de monitoreo
+    this.redirectTimer = setTimeout(() => {
+      this.router.navigate(['/admin/monitoring']);
+    }, 3000);
   }
 
   ngOnDestroy(): void {
     // Stop timer (panel flotante tiene su propio timer)
     if (this.timerSubscription) {
       this.timerSubscription.unsubscribe();
+    }
+    if (this.callEventSubscription) {
+      this.callEventSubscription.unsubscribe();
+    }
+    if (this.redirectTimer) {
+      clearTimeout(this.redirectTimer);
     }
 
     // NO limpiar la supervisión aquí - el panel flotante sigue activo

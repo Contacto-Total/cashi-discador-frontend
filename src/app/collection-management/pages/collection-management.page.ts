@@ -119,6 +119,18 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
               <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (rellamadaCallActive() ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 animate-pulse' : callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
                 {{ rellamadaCallActive() ? 'RELLAMADA' : callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
               </div>
+              @if (showDialerDataRefreshButton()) {
+                <button
+                  type="button"
+                  (click)="refreshDialerCustomerData()"
+                  [disabled]="isLoadingCustomer()"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                  title="Recargar datos del cliente sin cortar la llamada"
+                >
+                  <lucide-angular name="refresh-cw" [size]="14" [class]="isLoadingCustomer() ? 'animate-spin' : ''"></lucide-angular>
+                  {{ isLoadingCustomer() ? 'Cargando...' : 'Recargar cliente' }}
+                </button>
+              }
               <!-- Indicador de umbral de tiempo (reloj de alarma) -->
               <app-status-alarm-clock
                 [color]="colorIndicador()"
@@ -3558,9 +3570,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Carga el cliente de la llamada activa del agente
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
-  loadFirstCustomer(retryCount: number = 0) {
+  loadFirstCustomer(retryCount: number = 0, forceRefresh: boolean = false) {
     // Si autoLoadCustomerByPhone ya cargó un cliente (llamada manual/saliente), no duplicar
-    if (this.customerData()?.id && retryCount === 0) {
+    if (this.customerData()?.id && retryCount === 0 && !forceRefresh) {
       console.log('📋 [FULL-DATA] Cliente ya cargado por autoLoadCustomerByPhone, omitiendo loadFirstCustomer');
       return;
     }
@@ -3579,7 +3591,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // El backend envía phoneNumber, contactId, etc. ANTES del bridge.
     // app.component los guarda en sessionStorage porque llegan antes de que esta página cargue.
     // ========================================
-    if (retryCount === 0) {
+    if (retryCount === 0 && !forceRefresh) {
       const predictiveDataStr = sessionStorage.getItem('predictive_call_data');
       if (predictiveDataStr) {
         sessionStorage.removeItem('predictive_call_data');
@@ -3618,7 +3630,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           // 2. Llamada terminó rápido (<3s): agente ya está tipificando pero los datos no llegaron
           if (retryCount < 2 && (this.callActive() || this.isTipifying()) && !this.customerData()?.id) {
             console.warn(`⚠️ [FULL-DATA] Sin datos pero en llamada/tipificando - reintentando en 2s (intento ${retryCount + 1}/3)`);
-            setTimeout(() => this.loadFirstCustomer(retryCount + 1), 2000);
+            setTimeout(() => this.loadFirstCustomer(retryCount + 1, forceRefresh), 2000);
           } else {
             console.warn('⚠️ [FULL-DATA] No se obtuvieron datos después de todos los intentos');
             this.isLoadingCustomer.set(false);
@@ -3657,6 +3669,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         }
       }
     });
+  }
+
+  protected showDialerDataRefreshButton(): boolean {
+    return false;
+  }
+
+  protected refreshDialerCustomerData(): void {
+    if (this.isLoadingCustomer()) return;
+
+    this.isManualSource.set(false);
+    this.loadFirstCustomer(0, true);
   }
 
   /**
@@ -5242,7 +5265,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'SEGUNDA':
         return 'bg-[#E9F8F6] text-[#4DB3A7] dark:bg-[#123C38] dark:text-[#4DB3A7]';
       default:
-        return 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-300';
+        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
     }
   }
 
@@ -5261,7 +5284,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'SEGUNDA':
         return 'text-[#4DB3A7]';
       default:
-        return this.themeService.isDarkMode() ? 'text-green-300' : 'text-green-800';
+        return this.themeService.isDarkMode() ? 'text-red-300' : 'text-red-800';
     }
   }
 
@@ -5272,7 +5295,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'SEGUNDA':
         return 'text-[#4DB3A7]';
       default:
-        return this.themeService.isDarkMode() ? 'text-emerald-300' : 'text-green-700';
+        return this.themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700';
     }
   }
 
@@ -5283,7 +5306,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'SEGUNDA':
         return 'ring-1 ring-[#4DB3A7] bg-[#D8F1ED] dark:bg-[#123C38]';
       default:
-        return 'ring-1 ring-green-500 bg-green-100 dark:bg-green-950/40';
+        return 'ring-1 ring-red-500 bg-red-100 dark:bg-red-950/40';
     }
   }
 
@@ -5294,7 +5317,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'SEGUNDA':
         return 'text-[#228E82] dark:text-[#4DB3A7]';
       default:
-        return 'text-green-700 dark:text-green-300';
+        return 'text-red-700 dark:text-red-300';
     }
   }
 
@@ -5313,8 +5336,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-[#4DB3A7]',
       ],
       DEFAULT: [
-        'bg-white !text-black dark:bg-slate-900 dark:!text-green-300',
-        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-green-300',
+        'bg-white !text-black dark:bg-slate-900 dark:!text-red-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-red-300',
       ]
     };
 
