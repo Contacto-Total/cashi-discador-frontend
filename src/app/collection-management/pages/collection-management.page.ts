@@ -4160,7 +4160,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
-      this.callService.makeCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
+      this.callService.makeCall({
+        agentId,
+        phoneNumber,
+        idCliente,
+        documento,
+        contactId,
+        tenantId: this.selectedTenantId,
+        carteraId: this.selectedPortfolioId,
+        subcarteraId: this.selectedSubPortfolioId
+      }).subscribe({
         next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
         error: (err: any) => {
           console.error('❌ [Rellamada] Error registrando llamada en BD:', err?.message || err);
