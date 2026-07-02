@@ -34,6 +34,9 @@ export interface CartaPendiente {
 export interface CartasPendientesResponse {
   success: boolean;
   total: number;
+  page: number;
+  size: number;
+  totalPages: number;
   data: CartaPendiente[];
 }
 
@@ -88,13 +91,21 @@ export class CartaAcuerdoService {
    * Obtiene la lista de cartas de acuerdo pendientes por generar
    */
   obtenerCartasPendientes(filtros?: {
+    page?: number;
+    size?: number;
+    sort?: string;
     tenantId?: number;
+    subPortfolioId?: number;
     agenteId?: number;
     fechaInicio?: string;
     fechaFin?: string;
   }): Observable<CartasPendientesResponse> {
     let params: any = {};
+    if (filtros?.page !== undefined) params.page = filtros.page;
+    if (filtros?.size !== undefined) params.size = filtros.size;
+    if (filtros?.sort) params.sort = filtros.sort;
     if (filtros?.tenantId) params.tenantId = filtros.tenantId;
+    if (filtros?.subPortfolioId) params.subPortfolioId = filtros.subPortfolioId;
     if (filtros?.agenteId) params.agenteId = filtros.agenteId;
     if (filtros?.fechaInicio) params.fechaInicio = filtros.fechaInicio;
     if (filtros?.fechaFin) params.fechaFin = filtros.fechaFin;
