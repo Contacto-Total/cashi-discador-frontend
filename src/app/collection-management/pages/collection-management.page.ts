@@ -7220,7 +7220,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   loadTelefonosMetodo(documento: string): void {
     if (!documento) return;
-    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`).pipe(
+    const params: Record<string, string> = {};
+
+    if (this.selectedTenantId) params['tenantId'] = String(this.selectedTenantId);
+    if (this.selectedPortfolioId) params['carteraId'] = String(this.selectedPortfolioId);
+    if (this.selectedSubPortfolioId) params['subcarteraId'] = String(this.selectedSubPortfolioId);
+
+    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`, { params }).pipe(
       catchError(err => {
         console.error('❌ Error cargando teléfonos de metodos_contacto:', err);
         return of([]);
