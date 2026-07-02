@@ -109,6 +109,13 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
             <div class="flex items-center gap-4">
+              <!-- Jerarquía del cliente (inquilino / cartera / subcartera) -->
+              @if (clientHierarchy(); as h) {
+                <div class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 max-w-[18rem]"
+                     [title]="h.inquilino + ' / ' + h.cartera + ' / ' + h.subcartera">
+                  <span class="block text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ h.inquilino }} / {{ h.cartera }} / {{ h.subcartera }}</span>
+                </div>
+              }
               <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (rellamadaCallActive() ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 animate-pulse' : callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
                 {{ rellamadaCallActive() ? 'RELLAMADA' : callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
               </div>
@@ -183,6 +190,17 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                       <div class="flex-1 min-w-0">
                         <div class="text-xs text-violet-500 dark:text-violet-400">Edad</div>
                         <div class="text-xs font-bold text-violet-700 dark:text-violet-300">{{ customerAge() }} años</div>
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Ocupación del cliente (desde tabla dinámica) -->
+                  @if (clientOcupacion()) {
+                    <div class="flex items-center gap-2 p-1.5 bg-cyan-50 dark:bg-cyan-950/30 rounded border border-cyan-200 dark:border-cyan-800">
+                      <lucide-angular name="briefcase" [size]="14" class="text-cyan-500 dark:text-cyan-400"></lucide-angular>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-xs text-cyan-500 dark:text-cyan-400">Ocupación</div>
+                        <div class="text-xs font-bold text-cyan-700 dark:text-cyan-300 break-words">{{ clientOcupacion() }}</div>
                       </div>
                     </div>
                   }
@@ -2247,6 +2265,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
 
+  // Jerarquía del cliente (inquilino/cartera/subcartera) para mostrar el contexto
+  // Ej: "Financiera Oh / CASTIGO / CASTIGO". Viene de /client-search/find.
+  clientHierarchy = signal<{ inquilino: string; cartera: string; subcartera: string } | null>(null);
+
   // Teléfonos desde metodos_contacto
   telefonosMetodo = signal<TelefonoMetodo[]>([]);
 
@@ -2629,6 +2651,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const rawData = this.rawClientData();
     const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
     return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
+  });
+
+  // Ocupación del cliente desde la tabla dinámica (ini_*).
+  // Busca la columna exacta y, si no, cualquier columna que contenga "ocupacion".
+  clientOcupacion = computed(() => {
+    const rawData = this.rawClientData();
+    const direct = rawData['ocupacion'] ?? rawData['ocupación'] ?? rawData['occupation'];
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+      return String(direct).trim();
+    }
+    const key = Object.keys(rawData).find(k => k.toLowerCase().includes('ocupacion') || k.toLowerCase().includes('ocupación'));
+    const val = key ? rawData[key] : null;
+    return val === undefined || val === null ? '' : String(val).trim();
   });
 
   // Cabeceras de configuración para mostrar nombres visuales
@@ -3250,6 +3285,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
     this.rawClientData.set(client);
     console.log('[CUSTOMER] Raw client data from ini_* table:', client);
+
+    // Capturar jerarquía (inquilino/cartera/subcartera) si viene en la respuesta
+    this.clientHierarchy.set(
+      (client?.nombreInquilino || client?.nombreCartera || client?.nombreSubcartera)
+        ? {
+            inquilino: client.nombreInquilino || '',
+            cartera: client.nombreCartera || '',
+            subcartera: client.nombreSubcartera || ''
+          }
+        : null
+    );
 
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
@@ -5103,7 +5149,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   formatByType(field: { value: number; formato: string; rawValue: string }): string {
     switch (field.formato) {
       case 'PORCENTAJE':
-        return this.fmt.percent(field.value, 2);
+        // El valor viene como fracción (ej. 0.5 = 50%), por eso se multiplica x100.
+        // min 0 / max 2 decimales → "50%", "65%", "12.5%" (sin ceros de más).
+        return this.fmt.number(field.value * 100, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
       case 'NUMERO':
         return this.fmt.number(field.value);
       case 'TEXTO':
