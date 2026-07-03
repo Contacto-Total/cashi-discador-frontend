@@ -38,7 +38,7 @@ export class AgreementsService {
         `Backend returned code ${error.status}, body was: ${error.error.message}`
       );
     }
-    return throwError(() => ({ status: error.status, message: error.error.message }));
+    return throwError(() => ({ status: error.status, message: error.error?.error || error.error?.message }));
   }
 
   downloadAgreementCard(createPaymentAgreementRequest: CreatePaymentAgreementRequest) {
@@ -57,8 +57,13 @@ export class AgreementsService {
     return this.http.get<AgreementDataResponse>(this.baseUrl + `/datos-cliente/${dni}`, this.httpOptions);
   }
 
-  getAgreementDataNuevo(dni: string) {
-    return this.http.get<any>(this.newBaseUrl + `/datos-cliente-nuevo/${dni}`, this.httpOptions)
+  getAgreementDataNuevo(dni: string, contexto?: { tenantId?: number; carteraId?: number; subcarteraId?: number }) {
+    const params: Record<string, string> = {};
+    if (contexto?.tenantId) params['tenantId'] = String(contexto.tenantId);
+    if (contexto?.carteraId) params['carteraId'] = String(contexto.carteraId);
+    if (contexto?.subcarteraId) params['subcarteraId'] = String(contexto.subcarteraId);
+
+    return this.http.get<any>(this.newBaseUrl + `/datos-cliente-nuevo/${dni}`, { ...this.httpOptions, params })
       .pipe(catchError(this.handleError));
   }
 
