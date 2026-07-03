@@ -5,7 +5,7 @@ import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../../../shared/services/theme.service';
 import { FormatService } from '@/shared/services/format.service';
-import { AuthService } from '../../../../../core/services/auth.service';
+import { ClientSearchService } from '../../../../../core/services/client-search.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -41,7 +41,7 @@ export class NoDebtLetterPageComponent {
     private fb: FormBuilder,
     private agreementsService: AgreementsService,
     private themeService: ThemeService,
-    private authService: AuthService
+    private clientSearchService: ClientSearchService
   ) {
     this.searchForm = this.fb.group({
       dniBusqueda: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]]
@@ -102,38 +102,43 @@ export class NoDebtLetterPageComponent {
   }
 
   private buscarNuevoSistema(dni: string) {
-    const currentUser = this.authService.getCurrentUser();
+    this.clientSearchService.findClientGlobal(dni).subscribe({
+      next: (result) => {
+        this.agreementsService.getAgreementDataNuevo(dni, {
+          tenantId: result.tenantId,
+          carteraId: result.portfolioId,
+          subcarteraId: result.subPortfolioId
+        }).subscribe({
+          next: (response: any) => {
+            this.letterForm.patchValue({
+              nombreCompleto: response.nombreCompleto,
+              dni: response.documento || dni,
+              numeroCuenta: response.numeroCuenta,
+              fechaActual: this.formatDate(new Date()),
+              fechaCancelacion: this.formatDate(new Date())
+            });
 
-    this.agreementsService.getAgreementDataNuevo(dni, {
-      tenantId: currentUser?.tenantId,
-      carteraId: currentUser?.portfolioId,
-      subcarteraId: currentUser?.subPortfolioId
-    }).subscribe({
-      next: (response: any) => {
-        this.letterForm.patchValue({
-          nombreCompleto: response.nombreCompleto,
-          dni: response.documento || dni,
-          numeroCuenta: response.numeroCuenta,
-          fechaActual: this.formatDate(new Date()),
-          fechaCancelacion: this.formatDate(new Date())
+            this.mostrarDocumento = true;
+            this.isLoading = false;
+            this.showToast('success', 'Datos cargados correctamente (sistema nuevo)');
+          },
+          error: (error: any) => this.handleNuevoSistemaError(error)
         });
-
-        this.mostrarDocumento = true;
-        this.isLoading = false;
-        this.showToast('success', 'Datos cargados correctamente (sistema nuevo)');
       },
-      error: (error: any) => {
-        this.isLoading = false;
-
-        if (error.status === 404) {
-          this.showToast('error', 'Cliente no encontrado en el sistema.');
-        } else if (error.status === 422) {
-          this.showToast('warning', error.message || 'El cliente no tiene promesa de pago registrada.');
-        } else {
-          this.showToast('error', 'Error al obtener datos del cliente.');
-        }
-      }
+      error: (error: any) => this.handleNuevoSistemaError(error)
     });
+  }
+
+  private handleNuevoSistemaError(error: any): void {
+    this.isLoading = false;
+
+    if (error.status === 404) {
+      this.showToast('error', 'Cliente no encontrado en el sistema.');
+    } else if (error.status === 422) {
+      this.showToast('warning', error.message || 'El cliente no tiene promesa de pago registrada.');
+    } else {
+      this.showToast('error', error.message || 'Error al obtener datos del cliente.');
+    }
   }
 
   private buscarAntiguoSistema(dni: string) {
