@@ -111,7 +111,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
             <div class="flex items-center gap-4">
               <!-- Jerarquía del cliente (inquilino / cartera / subcartera) -->
               @if (clientHierarchy(); as h) {
-                <div class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 min-w-[28rem] max-w-[42rem]"
+                <div class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 max-w-[42rem]"
                      [title]="h.inquilino + ' / ' + h.cartera + ' / ' + h.subcartera">
                   <span class="block text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ h.inquilino }} / {{ h.cartera }} / {{ h.subcartera }}</span>
                 </div>
