@@ -5,6 +5,7 @@ import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../../../shared/services/theme.service';
 import { FormatService } from '@/shared/services/format.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -39,7 +40,8 @@ export class NoDebtLetterPageComponent {
   constructor(
     private fb: FormBuilder,
     private agreementsService: AgreementsService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private authService: AuthService
   ) {
     this.searchForm = this.fb.group({
       dniBusqueda: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]]
@@ -100,7 +102,13 @@ export class NoDebtLetterPageComponent {
   }
 
   private buscarNuevoSistema(dni: string) {
-    this.agreementsService.getAgreementDataNuevo(dni).subscribe({
+    const currentUser = this.authService.getCurrentUser();
+
+    this.agreementsService.getAgreementDataNuevo(dni, {
+      tenantId: currentUser?.tenantId,
+      carteraId: currentUser?.portfolioId,
+      subcarteraId: currentUser?.subPortfolioId
+    }).subscribe({
       next: (response: any) => {
         this.letterForm.patchValue({
           nombreCompleto: response.nombreCompleto,
