@@ -2072,10 +2072,10 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     if (isDaily) {
       // Crear set de cabeceras de ACTUALIZACION
       this.headersActualizacion().forEach(header => {
-        headersActualizacionSet.add(header.headerName.toLowerCase());
+        headersActualizacionSet.add(header.headerName.trim().toLowerCase());
         if (header.aliases) {
           header.aliases.forEach(alias => {
-            headersActualizacionSet.add(alias.alias.toLowerCase());
+            headersActualizacionSet.add(alias.alias.trim().toLowerCase());
           });
         }
       });
@@ -2083,10 +2083,10 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
 
     // Crear set de cabeceras de INICIAL (usado por todos los modos)
     this.headersInicial().forEach(header => {
-      headersInicialSet.add(header.headerName.toLowerCase());
+      headersInicialSet.add(header.headerName.trim().toLowerCase());
       if (header.aliases) {
         header.aliases.forEach(alias => {
-          headersInicialSet.add(alias.alias.toLowerCase());
+          headersInicialSet.add(alias.alias.trim().toLowerCase());
         });
       }
     });
@@ -2095,7 +2095,7 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     const unregistered: UnregisteredColumn[] = [];
 
     fileToProcess.headers.forEach(headerName => {
-      const headerLower = headerName.toLowerCase();
+      const headerLower = headerName.trim().toLowerCase();
 
       if (isDaily) {
         // Para DAILY: verificar si falta en alguna de las dos tablas
