@@ -5713,7 +5713,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         error: (error) => {
           console.error('Error al guardar cronograma de pago:', error);
           this.saving.set(false);
-          alert('⚠️ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
+          // El backend valida promesas duplicadas/período de gracia (400 con mensaje claro).
+          // El frontend ya no replica esa lógica: si el backend manda un mensaje, se muestra tal cual.
+          if (error?.status === 400 && error?.error?.message) {
+            alert(`⚠️ No puede registrar una nueva Promesa de Pago.\n\n${error.error.message}`);
+          } else {
+            alert('⚠️ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
+          }
         }
       });
     } else {
