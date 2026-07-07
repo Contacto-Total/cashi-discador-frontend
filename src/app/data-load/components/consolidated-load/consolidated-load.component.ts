@@ -3066,7 +3066,9 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
       if (snapshotCompleted) {
         // El snapshot fue exitoso pero la carga falló
         // Mostrar diálogo especial informando que los datos están en histórico
-        const errorMessage = error?.message || error?.error?.message || 'Error desconocido en la carga';
+        //cambio errorMessage por getFriendlyErrorMessage()
+        //const errorMessage = error?.message || error?.error?.message || 'Error desconocido en la carga';
+        const errorMessage = this.getFriendlyErrorMessage(error);
         this.postSnapshotErrorMessage.set(errorMessage);
         this.archivedPeriodInfo.set(`cashi_historico_db (periodo ${archivePeriod})`);
         this.showPostSnapshotErrorDialog.set(true);
