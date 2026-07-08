@@ -75,6 +75,12 @@ export interface AmountOption {
                   min="0"
                   step="0.01"
                 >
+                @if (superaLimite) {
+                  <p class="text-xs text-red-600 font-bold mt-1">
+                    La promesa de pago supera la DEUDA TOTAL en más del 10%. Máximo permitido: S/ {{ limitePermitidoValor.toFixed(2) }}
+                  </p>
+                }
+
               } @else {
                 <lucide-angular name="edit-3" [size]="14" class="mt-0.5"></lucide-angular>
               }
@@ -323,6 +329,9 @@ export class PaymentScheduleComponent implements OnInit {
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
+  //definicion de variables para la validacion de promesa de pago
+  superaLimite: boolean = false;
+  limitePermitidoValor: number = 0;
   private _isCustomAmount = signal<boolean>(false);
   montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
   selectedBaseField = signal<string>('');  // Campo base seleccionado para "Excepción"
@@ -520,6 +529,22 @@ export class PaymentScheduleComponent implements OnInit {
   onCustomAmountChange(value: number): void {
     this.customAmountValue = value;
     this.selectedAmount.set(value);
+    //Validacion: la promesa no puede exceder la DEUDA TOTAL en más de 10%
+    const deudaTotalOption = this.availableAmounts().find(o => o.label === 'DEUDA TOTAL' || o.field === 'deuda_total');
+    if (deudaTotalOption && deudaTotalOption.value > 0) {
+      const limitePermitido = deudaTotalOption.value * 1.10;  // deuda total + 10%
+      this.superaLimite = value > limitePermitido;
+      this.limitePermitidoValor = limitePermitido;
+    } else {
+      this.superaLimite = false;
+    }
+    // Si supera el límite permitido, no se genera cronograma ni se emite (no deja continuar)
+    if (this.superaLimite) {
+      this.installments.set([]);
+      this.scheduleChange.emit(null);
+      return;
+    }
+
     // Re-calcular montoBase si hay campo base seleccionado
     if (this.selectedBaseField()) {
       const option = this.availableAmounts().find(o => o.field === this.selectedBaseField());
