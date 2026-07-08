@@ -147,13 +147,6 @@ export interface ContinuidadPromesaResponse {
   documentoCliente?: string;
 }
 
-export interface PromesaVencidaGraciaResponse {
-  enGracia: boolean;
-  idAgente?: number;
-  nombreAgente?: string;
-  finGracia?: string;
-}
-
 
 export interface CreateManagementRequest {
   customerId: string;
@@ -420,23 +413,6 @@ export class ManagementService {
         }
       }),
       map(records => this.transformToPaymentSchedules(records))
-    );
-  }
-
-  /**
-   * Verifica si un cliente está dentro del período de gracia de una promesa vencida
-   * (Regla B), para pintar la card de bloqueo antes de que el asesor intente guardar.
-   */
-  verificarPromesaVencidaGracia(
-    documento: string,
-    tenantId: number,
-    carteraId: number,
-    subcarteraId: number
-  ): Observable<PromesaVencidaGraciaResponse> {
-    const params = { tenantId: tenantId.toString(), carteraId: carteraId.toString(), subcarteraId: subcarteraId.toString() };
-    return this.http.get<PromesaVencidaGraciaResponse>(
-      `${this.baseUrl}/payment-schedule/documento/${documento}/vencida-en-gracia`,
-      { params }
     );
   }
 
