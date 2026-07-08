@@ -530,8 +530,9 @@ export class PaymentScheduleComponent implements OnInit {
     this.customAmountValue = value;
     this.selectedAmount.set(value);
     //Validacion: la promesa no puede exceder la DEUDA TOTAL en más de 10%
-    const deudaTotalOption = this.availableAmounts().find(o => o.label === 'DEUDA TOTAL' || o.field === 'deuda_total');
-    if (deudaTotalOption && deudaTotalOption.value > 0) {
+    const coincideDeudaTotal = (s?: string) =>
+        !!s && s.toString().trim().toLowerCase().replace(/\s+/g, '_').includes('deuda_total');
+    const deudaTotalOption = this.availableAmounts().find(o => coincideDeudaTotal(o.field) || coincideDeudaTotal(o.label));    if (deudaTotalOption && deudaTotalOption.value > 0) {
       const limitePermitido = deudaTotalOption.value * 1.10;  // deuda total + 10%
       this.superaLimite = value > limitePermitido;
       this.limitePermitidoValor = limitePermitido;
