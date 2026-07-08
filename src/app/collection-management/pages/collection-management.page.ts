@@ -2064,7 +2064,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,// agregar code
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
           continue;
         }
@@ -2094,7 +2096,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion // agregar code
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
         }
       }

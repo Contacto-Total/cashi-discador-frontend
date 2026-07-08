@@ -260,8 +260,9 @@ interface ConfiguracionCabecera {
                               Descuentos hasta {{ opcion.porcentajeAutoAprobacion ?? 10 }}% se aprueban automáticamente.
                               Descuentos mayores van a evaluación.
                             </p>
-                          </div> <!-- Agregar code -->
+                          </div>
                           <!-- Auto-aprobación de AUMENTO sobre la deuda -->
+                          @if(opcion.codigoOpcion==='personalizado'){
                           <div class="col-span-2 mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200                         
   dark:border-emerald-800">
                             <label class="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-2 flex items-center gap-1.5">
@@ -301,7 +302,7 @@ interface ConfiguracionCabecera {
                             <p class="text-[10px] text-red-600 dark:text-red-400 mt-2">
                               Si la promesa supera la deuda en más de {{ opcion.porcentajeMaximoPromesa ?? 10 }}%, no se podrá registrar.
                             </p>
-                          </div>
+                          </div>}
                         </div>
                       }
                     </div>
