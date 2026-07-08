@@ -2064,7 +2064,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,// agregar code
           });
           continue;
         }
@@ -2094,7 +2094,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion // agregar code
           });
         }
       }
@@ -5771,10 +5771,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           })),
           // Porcentaje de auto-aprobación para calcular excepciones
           porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+          porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+          porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
           generaCartaAcuerdo: paymentScheduleData.generaCartaAcuerdo
         },
         // También a nivel raíz para que el backend lo procese
-        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion
+        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+        porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+        porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa
       };
 
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);

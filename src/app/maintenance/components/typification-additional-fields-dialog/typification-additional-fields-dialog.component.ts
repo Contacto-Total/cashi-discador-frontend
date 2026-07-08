@@ -260,6 +260,47 @@ interface ConfiguracionCabecera {
                               Descuentos hasta {{ opcion.porcentajeAutoAprobacion ?? 10 }}% se aprueban automáticamente.
                               Descuentos mayores van a evaluación.
                             </p>
+                          </div> <!-- Agregar code -->
+                          <!-- Auto-aprobación de AUMENTO sobre la deuda -->
+                          <div class="col-span-2 mt-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200                         
+  dark:border-emerald-800">
+                            <label class="text-xs font-medium text-emerald-700 dark:text-emerald-300 mb-2 flex items-center gap-1.5">
+                              <lucide-angular name="trending-up" [size]="12"></lucide-angular>
+                              Aumento máximo sobre la deuda para auto-aprobación
+                            </label>
+                            <div class="flex items-center gap-3 mt-2">
+                              <input type="range" [value]="opcion.porcentajeAutoAprobacionAumento ?? 5"
+                                     (input)="onPorcentajeAumentoChange(opcion.codigoOpcion, $event)"
+                                     min="0" max="100" step="5"
+                                     class="flex-1 h-2 bg-emerald-200 dark:bg-emerald-800 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                              <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300 min-w-[50px] text-center">                              
+                                  {{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}%                                                                          
+                                </span>
+                            </div>
+                            <p class="text-[10px] text-emerald-600 dark:text-emerald-400 mt-2">
+                              Aumentos hasta {{ opcion.porcentajeAutoAprobacionAumento ?? 5 }}% sobre la deuda se aprueban automáticamente. Aumentos mayores
+                              van a evaluación.
+                            </p>
+                          </div>
+
+                          <!-- Bloqueo: límite máximo de la promesa sobre la deuda -->
+                          <div class="col-span-2 mt-2 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <label class="text-xs font-medium text-red-700 dark:text-red-300 mb-2 flex items-center gap-1.5">
+                              <lucide-angular name="ban" [size]="12"></lucide-angular>
+                              Límite máximo de la promesa sobre la deuda (bloqueo)
+                            </label>
+                            <div class="flex items-center gap-3 mt-2">
+                              <input type="range" [value]="opcion.porcentajeMaximoPromesa ?? 10"
+                                     (input)="onPorcentajeMaximoChange(opcion.codigoOpcion, $event)"
+                                     min="0" max="100" step="5"
+                                     class="flex-1 h-2 bg-red-200 dark:bg-red-800 rounded-lg appearance-none cursor-pointer accent-red-500">
+                              <span class="text-sm font-bold text-red-700 dark:text-red-300 min-w-[50px] text-center">                                      
+                                  {{ opcion.porcentajeMaximoPromesa ?? 10 }}%                                                                                 
+                                </span>
+                            </div>
+                            <p class="text-[10px] text-red-600 dark:text-red-400 mt-2">
+                              Si la promesa supera la deuda en más de {{ opcion.porcentajeMaximoPromesa ?? 10 }}%, no se podrá registrar.
+                            </p>
                           </div>
                         </div>
                       }
@@ -643,6 +684,23 @@ export class TypificationAdditionalFieldsDialogComponent {
     opcion.porcentajeAutoAprobacion = porcentaje;
     this.opciones.set([...opciones]);
   }
+  onPorcentajeAumentoChange(codigoOpcion: string, event: Event) {
+    const porcentaje = parseInt((event.target as HTMLInputElement).value, 10);
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (!opcion) return;
+    opcion.porcentajeAutoAprobacionAumento = porcentaje;
+    this.opciones.set([...opciones]);
+  }
+
+  onPorcentajeMaximoChange(codigoOpcion: string, event: Event) {
+    const porcentaje = parseInt((event.target as HTMLInputElement).value, 10);
+    const opciones = this.opciones();
+    const opcion = opciones.find(o => o.codigoOpcion === codigoOpcion);
+    if (!opcion) return;
+    opcion.porcentajeMaximoPromesa = porcentaje;
+    this.opciones.set([...opciones]);
+  }
 
   getOpcionesHabilitadasCount(): number {
     return this.opciones().filter(o => o.estaHabilitada).length;
@@ -679,7 +737,9 @@ export class TypificationAdditionalFieldsDialogComponent {
         generaCartaAcuerdo: o.generaCartaAcuerdo || false,
         minCuotas: o.minCuotas || 1,
         maxCuotas: o.maxCuotas || 6,
-        porcentajeAutoAprobacion: o.porcentajeAutoAprobacion ?? 10
+        porcentajeAutoAprobacion: o.porcentajeAutoAprobacion ?? 10,
+        porcentajeAutoAprobacionAumento: o.porcentajeAutoAprobacionAumento ?? 5,
+        porcentajeMaximoPromesa: o.porcentajeMaximoPromesa ?? 10
       }))
     };
 

@@ -242,11 +242,15 @@ export interface PaymentScheduleRequest {
   telefonoContacto?: string;
   // Porcentaje de auto-aprobación para excepciones
   porcentajeAutoAprobacion?: number;
+  porcentajeAutoAprobacionAumento?: number;
+  porcentajeMaximoPromesa?: number;
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
     cuotas: PaymentInstallmentRequest[];
     porcentajeAutoAprobacion?: number;  // Porcentaje para calcular excepciones
+    porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+    porcentajeMaximoPromesa?: number;
     generaCartaAcuerdo?: boolean;       // Si el monto genera carta de acuerdo
   };
 }
