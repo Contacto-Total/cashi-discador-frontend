@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Portfolio, SubPortfolio } from '../../../../../maintenance/models/portfolio.model';
 import { Tenant } from '../../../../../maintenance/models/tenant.model';
 import { PortfolioService } from '../../../../../maintenance/services/portfolio.service';
@@ -193,6 +194,7 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
   `
 })
 export class NoDebtLetterValidatedPageComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
   private readonly tenantService = inject(TenantService);
   private readonly portfolioService = inject(PortfolioService);
   private readonly noDebtLetterService = inject(NoDebtLetterValidatedService);
@@ -211,7 +213,24 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
   selectedSubPortfolioId = 0;
 
   ngOnInit(): void {
+    this.loadQueryParams();
     this.cargarTenants();
+
+    if (this.selectedTenantId > 0) {
+      this.loadPortfolios(this.selectedTenantId);
+    }
+
+    if (this.selectedPortfolioId > 0) {
+      this.loadSubPortfolios(this.selectedPortfolioId);
+    }
+  }
+
+  private loadQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    this.documento = params.get('documento') || '';
+    this.selectedTenantId = Number(params.get('tenantId')) || 0;
+    this.selectedPortfolioId = Number(params.get('carteraId')) || 0;
+    this.selectedSubPortfolioId = Number(params.get('subcarteraId')) || 0;
   }
 
   cargarTenants(): void {
@@ -233,13 +252,7 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
     this.clearMessages();
 
     if (this.selectedTenantId > 0) {
-      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
-        next: (portfolios) => this.portfolios.set(portfolios),
-        error: (error) => {
-          console.error('Error cargando carteras:', error);
-          this.errorMessage.set('No se pudieron cargar las carteras.');
-        }
-      });
+      this.loadPortfolios(this.selectedTenantId);
     }
   }
 
@@ -250,14 +263,28 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
     this.clearMessages();
 
     if (this.selectedPortfolioId > 0) {
-      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
-        next: (subPortfolios) => this.subPortfolios.set(subPortfolios),
-        error: (error) => {
-          console.error('Error cargando subcarteras:', error);
-          this.errorMessage.set('No se pudieron cargar las subcarteras.');
-        }
-      });
+      this.loadSubPortfolios(this.selectedPortfolioId);
     }
+  }
+
+  private loadPortfolios(tenantId: number): void {
+    this.portfolioService.getPortfoliosByTenant(tenantId).subscribe({
+      next: (portfolios) => this.portfolios.set(portfolios),
+      error: (error) => {
+        console.error('Error cargando carteras:', error);
+        this.errorMessage.set('No se pudieron cargar las carteras.');
+      }
+    });
+  }
+
+  private loadSubPortfolios(portfolioId: number): void {
+    this.portfolioService.getSubPortfoliosByPortfolio(portfolioId).subscribe({
+      next: (subPortfolios) => this.subPortfolios.set(subPortfolios),
+      error: (error) => {
+        console.error('Error cargando subcarteras:', error);
+        this.errorMessage.set('No se pudieron cargar las subcarteras.');
+      }
+    });
   }
 
   onSubPortfolioChange(subPortfolioId: number): void {

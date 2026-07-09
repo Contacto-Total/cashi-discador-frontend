@@ -26,6 +26,7 @@ import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-re
         <div class="flex flex-wrap items-center gap-2">
           <a
             routerLink="/cartas/no-adeudo"
+            [queryParams]="noDebtLetterQueryParams()"
             class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-200 dark:hover:bg-blue-900/40"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,6 +246,18 @@ export class CorreccionPagosPage implements OnInit {
 
   canVerResumen(): boolean {
     return this.canBuscar();
+  }
+
+  noDebtLetterQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    const documento = this.documento.trim();
+
+    if (documento) params['documento'] = documento;
+    if (this.selectedTenantId > 0) params['tenantId'] = this.selectedTenantId;
+    if (this.selectedPortfolioId > 0) params['carteraId'] = this.selectedPortfolioId;
+    if (this.selectedSubPortfolioId > 0) params['subcarteraId'] = this.selectedSubPortfolioId;
+
+    return params;
   }
 
   resumenVisible(): boolean {
