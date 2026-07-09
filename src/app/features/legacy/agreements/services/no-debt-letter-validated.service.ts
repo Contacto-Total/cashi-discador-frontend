@@ -30,15 +30,20 @@ export class NoDebtLetterValidatedService {
     tenantId: number;
     carteraId: number;
     subcarteraId: number;
+    documento?: string;
     page?: number;
     size?: number;
   }): Observable<EligibleNoDebtLetterClientsResponse> {
-    const queryParams = new HttpParams()
+    let queryParams = new HttpParams()
       .set('tenantId', params.tenantId.toString())
       .set('carteraId', params.carteraId.toString())
       .set('subcarteraId', params.subcarteraId.toString())
       .set('page', (params.page ?? 0).toString())
       .set('size', (params.size ?? 20).toString());
+
+    if (params.documento?.trim()) {
+      queryParams = queryParams.set('documento', params.documento.trim());
+    }
 
     return this.http.get<EligibleNoDebtLetterClientsResponse>(`${this.baseUrl}/elegibles`, { params: queryParams });
   }

@@ -38,7 +38,7 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
           <div>
             <label class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Proveedor</label>
             <select
@@ -86,6 +86,19 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
             </select>
           </div>
 
+          <div>
+            <label class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">DNI</label>
+            <input
+              type="text"
+              [(ngModel)]="documentoFiltro"
+              name="documentoFiltro"
+              maxlength="15"
+              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+              placeholder="Opcional"
+              (keyup.enter)="buscarElegibles()"
+            />
+          </div>
+
           <div class="flex items-end">
             <button
               type="button"
@@ -101,32 +114,6 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
                 Buscando...
               } @else {
                 Buscar elegibles
-              }
-            </button>
-          </div>
-        </div>
-
-        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
-          <p class="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">Generación manual por documento</p>
-          <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
-            <input
-              type="text"
-              [(ngModel)]="documento"
-              name="documento"
-              maxlength="15"
-              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              placeholder="Documento"
-            />
-            <button
-              type="button"
-              (click)="generarCarta()"
-              [disabled]="!canGenerate() || isLoading()"
-              class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-200 dark:hover:bg-blue-900/20"
-            >
-              @if (isLoading()) {
-                Generando...
-              } @else {
-                Generar PDF
               }
             </button>
           </div>
@@ -301,6 +288,7 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
   totalEligiblePages = signal(0);
 
   documento = '';
+  documentoFiltro = '';
   selectedTenantId = 0;
   selectedPortfolioId = 0;
   selectedSubPortfolioId = 0;
@@ -325,6 +313,7 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
   private loadQueryParams(): void {
     const params = this.route.snapshot.queryParamMap;
     this.documento = params.get('documento') || '';
+    this.documentoFiltro = params.get('documento') || '';
     this.selectedTenantId = Number(params.get('tenantId')) || 0;
     this.selectedPortfolioId = Number(params.get('carteraId')) || 0;
     this.selectedSubPortfolioId = Number(params.get('subcarteraId')) || 0;
@@ -409,6 +398,7 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
       tenantId: this.selectedTenantId,
       carteraId: this.selectedPortfolioId,
       subcarteraId: this.selectedSubPortfolioId,
+      documento: this.documentoFiltro,
       page,
       size: this.eligibleSize()
     }).subscribe({
