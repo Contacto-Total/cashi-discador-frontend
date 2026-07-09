@@ -8,7 +8,7 @@ import { catchError, firstValueFrom, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
-import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse } from '../services/management.service';
+import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse, PromesaVencidaGraciaResponse } from '../services/management.service';
 import { PaymentScheduleService, InstallmentResource } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
@@ -930,6 +930,48 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                 </div>
               </div>
               }
+            }
+
+            <!-- BLOQUEO PERIODO DE GRACIA - Promesa vencida reciente registrada por otro asesor -->
+            @if (showPromesaVencidaGraciaBlocking()) {
+              <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/40 border-2 border-amber-400 dark:border-amber-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
+                <div class="flex items-center gap-4">
+                  <div class="relative">
+                    <div class="p-3 bg-amber-500 dark:bg-amber-600 rounded-xl shadow-lg">
+                      <lucide-angular name="shield-alert" [size]="28" class="text-white animate-pulse"></lucide-angular>
+                    </div>
+                    <div class="absolute -top-1 -right-1 w-4 h-4 bg-orange-400 rounded-full animate-bounce"></div>
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="text-base font-bold text-amber-800 dark:text-amber-200">
+                      No puede registrar una nueva Promesa de Pago
+                    </h3>
+                    <p class="text-sm text-amber-600 dark:text-amber-300 mt-1">
+                      Este cliente tiene una promesa vencida recientemente registrada por
+                      <span class="font-bold text-amber-700 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full">
+                        {{ promesaVencidaGracia()?.nombreAgente }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-amber-200 dark:border-amber-700 p-3">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="info" [size]="18" class="text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div class="text-sm text-amber-700 dark:text-amber-300">
+                      <p class="font-medium">
+                        Solo {{ promesaVencidaGracia()?.nombreAgente }} puede registrar la nueva promesa con este cliente
+                        hasta el {{ promesaVencidaGracia()?.finGracia }} (período de gracia).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 flex justify-center">
+                  <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold border border-amber-300 dark:border-amber-600">
+                    <lucide-angular name="lock" [size]="14"></lucide-angular>
+                    Seleccione otra tipificación para continuar
+                  </span>
+                </div>
+              </div>
             }
 
             <!-- Schedule Helper - Payment Schedule Information -->
@@ -2022,7 +2064,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
           continue;
         }
@@ -2052,7 +2096,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
         }
       }
@@ -2162,6 +2208,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // 0. Verificar bloqueo de promesa activa
     if (this.showPromesaActivaBlocking()) {
       console.log('[isFormValid] ❌ Bloqueado: cliente tiene promesa activa');
+      return false;
+    }
+
+    // 0.1 Verificar bloqueo por período de gracia de promesa vencida de otro asesor
+    if (this.showPromesaVencidaGraciaBlocking()) {
+      console.log('[isFormValid] ❌ Bloqueado: cliente en período de gracia de otro asesor');
       return false;
     }
 
@@ -2408,6 +2460,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Cronogramas de pago
   activePaymentSchedules = signal<any[]>([]);
   allPaymentSchedules = signal<any[]>([]);
+  promesaVencidaGracia = signal<PromesaVencidaGraciaResponse | null>(null);
   reprogrammingCuotaId = signal<number | null>(null);
   reprogramDateDraft = signal<string>('');
 
@@ -2738,6 +2791,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Número de cuotas pendientes de la promesa activa
   promesaActivaPendingCount = signal<number>(0);
 
+  // ==================== BLOQUEO PERIODO DE GRACIA (PROMESA VENCIDA DE OTRO ASESOR) ====================
+  // Flag para mostrar la card de bloqueo cuando la última promesa del cliente está vencida
+  // y todavía dentro del período de gracia de otro asesor
+  showPromesaVencidaGraciaBlocking = signal<boolean>(false);
+
   // Computed: Opciones de monto para continuidad (solo saldo restante)
   continuityPaymentAmounts = computed<AmountOption[]>(() => {
     const data = this.continuidadData();
@@ -2759,6 +2817,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   shouldShowDynamicForm = computed<boolean>(() => {
     // Si hay bloqueo de promesa activa, NO mostrar formulario
     if (this.showPromesaActivaBlocking()) {
+      return false;
+    }
+
+    // Si hay bloqueo por período de gracia de otro asesor, NO mostrar formulario
+    if (this.showPromesaVencidaGraciaBlocking()) {
       return false;
     }
 
@@ -3829,6 +3892,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     console.log(`📅 Cargando cronogramas activos para documento ${documento}...`);
 
+    // Cargar en paralelo el estado del período de gracia por promesa vencida (Regla B)
+    this.loadPromesaVencidaGracia(documento);
+
     this.managementService.getActiveSchedulesByDocumento(documento).pipe(
       catchError((error) => {
         console.warn('⚠️ Error cargando cronogramas activos:', error);
@@ -3903,6 +3969,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           console.log(`📅 ¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
         }
       }
+    });
+  }
+
+  /**
+   * Carga el estado del período de gracia por promesa vencida (Regla B), para pintar
+   * la card de bloqueo si la última promesa del cliente está vencida y le pertenece
+   * todavía a otro asesor.
+   */
+  private loadPromesaVencidaGracia(documento: string) {
+    if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) {
+      this.promesaVencidaGracia.set(null);
+      return;
+    }
+
+    this.managementService.verificarPromesaVencidaGracia(
+      documento, this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId
+    ).pipe(
+      catchError((error) => {
+        console.warn('⚠️ Error verificando período de gracia de promesa vencida:', error);
+        return of(null);
+      })
+    ).subscribe(response => {
+      this.promesaVencidaGracia.set(response);
     });
   }
 
@@ -4490,6 +4579,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Resetear señales de continuidad y bloqueo de promesa activa al cambiar tipificación
     this.resetContinuidadState();
     this.resetPromesaActivaState();
+    this.showPromesaVencidaGraciaBlocking.set(false);
 
     if (levelIndex === 0) {
       this.managementForm.clasificacionNivel1 = value;
@@ -4603,8 +4693,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       } else {
         this.resetPromesaActivaState();
       }
+
+      // Verificar período de gracia de una promesa vencida de otro asesor (Regla B)
+      const gracia = this.promesaVencidaGracia();
+      const currentUser = this.authService.getCurrentUser();
+      const esOtroAsesor = gracia?.idAgente != null && gracia.idAgente !== currentUser?.id;
+      if (gracia?.enGracia && esOtroAsesor) {
+        console.log('[PROMESA-CHECK] ⚠️ Cliente en período de gracia de', gracia.nombreAgente, 'hasta', gracia.finGracia);
+        this.showPromesaVencidaGraciaBlocking.set(true);
+      } else {
+        this.showPromesaVencidaGraciaBlocking.set(false);
+      }
     } else {
       this.resetPromesaActivaState();
+      this.showPromesaVencidaGraciaBlocking.set(false);
     }
   }
 
@@ -5673,10 +5775,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           })),
           // Porcentaje de auto-aprobación para calcular excepciones
           porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+          porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+          porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
           generaCartaAcuerdo: paymentScheduleData.generaCartaAcuerdo
         },
         // También a nivel raíz para que el backend lo procese
-        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion
+        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+        porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+        porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa
       };
 
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);

@@ -14,6 +14,8 @@ export interface AmountOption {
   minCuotas?: number;  // Número mínimo de cuotas permitidas
   maxCuotas?: number;  // Número máximo de cuotas permitidas
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo para personalizado)
+  porcentajeAutoAprobacionAumento?: number;
+  porcentajeMaximoPromesa?: number;
 }
 
 @Component({
@@ -38,7 +40,7 @@ export interface AmountOption {
                 (selectedField() === option.field && !isCustomAmount()
                   ? 'border-blue-500 bg-blue-500 dark:bg-blue-600 text-white shadow-lg shadow-blue-500/30'
                   : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600')"
-              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo, option.minCuotas, option.maxCuotas, option.porcentajeAutoAprobacion)"
+              (click)="selectAmount(option.value, option.field, option.restriccionFecha, option.generaCartaAcuerdo, option.minCuotas, option.maxCuotas, option.porcentajeAutoAprobacion,  option.porcentajeAutoAprobacionAumento, option.porcentajeMaximoPromesa)"
             >
               <span class="text-[9px] opacity-70 leading-tight text-center truncate w-full">{{ option.label }}</span>
               <span class="text-xs font-bold mt-0.5">{{ formatCurrency(option.value) }}</span>
@@ -75,6 +77,12 @@ export interface AmountOption {
                   min="0"
                   step="0.01"
                 >
+                @if (superaLimite) {
+                  <p class="text-xs text-red-600 font-bold mt-1">
+                    La promesa de pago supera la DEUDA TOTAL en más del  {{ selectedPorcentajeMaximoPromesa() }}%. Máximo permitido: S/ {{ limitePermitidoValor.toFixed(2) }} <!--Actualizar code-->
+                  </p>
+                }
+
               } @else {
                 <lucide-angular name="edit-3" [size]="14" class="mt-0.5"></lucide-angular>
               }
@@ -320,9 +328,14 @@ export class PaymentScheduleComponent implements OnInit {
   selectedMinCuotas = signal<number>(1);   // Min cuotas de la opción seleccionada
   selectedMaxCuotas = signal<number>(6);   // Max cuotas de la opción seleccionada
   selectedPorcentajeAutoAprobacion = signal<number>(10);  // Porcentaje máximo de descuento para auto-aprobación
+  selectedPorcentajeAutoAprobacionAumento = signal<number>(5);
+  selectedPorcentajeMaximoPromesa = signal<number>(10);
   numberOfInstallments = signal<number>(1);
   installments = signal<PaymentInstallment[]>([]);
   customAmountValue: number = 0;
+  //definicion de variables para la validacion de promesa de pago
+  superaLimite: boolean = false;
+  limitePermitidoValor: number = 0;
   private _isCustomAmount = signal<boolean>(false);
   montoBase = signal<number | undefined>(undefined);  // Monto original del campo seleccionado
   selectedBaseField = signal<string>('');  // Campo base seleccionado para "Excepción"
@@ -438,7 +451,7 @@ export class PaymentScheduleComponent implements OnInit {
         // Si solo hay una opción (como en CONTINUIDAD), auto-seleccionarla
         if (amounts.length === 1 && amounts[0].value > 0) {
           console.log('[PaymentSchedule] Auto-selecting single amount option:', amounts[0]);
-          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo, amounts[0].minCuotas, amounts[0].maxCuotas, amounts[0].porcentajeAutoAprobacion);
+          this.selectAmount(amounts[0].value, amounts[0].field, amounts[0].restriccionFecha, amounts[0].generaCartaAcuerdo, amounts[0].minCuotas, amounts[0].maxCuotas, amounts[0].porcentajeAutoAprobacion, amounts[0].porcentajeAutoAprobacionAumento, amounts[0].porcentajeMaximoPromesa); //Actualizar code
         }
       }
 
@@ -456,7 +469,7 @@ export class PaymentScheduleComponent implements OnInit {
     return this._isCustomAmount();
   }
 
-  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean, minCuotas?: number, maxCuotas?: number, porcentajeAutoAprobacion?: number): void {
+  selectAmount(amount: number, field?: string, restriccion?: string, generaCartaAcuerdo?: boolean, minCuotas?: number, maxCuotas?: number, porcentajeAutoAprobacion?: number, porcentajeAutoAprobacionAumento?: number, porcentajeMaximoPromesa?: number): void {
     this._isCustomAmount.set(false);
     this.selectedAmount.set(amount);
     this.selectedField.set(field);
@@ -465,6 +478,8 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedMinCuotas.set(minCuotas ?? this.minInstallments);  // Min cuotas de la opción o default
     this.selectedMaxCuotas.set(maxCuotas ?? this.maxInstallments);  // Max cuotas de la opción o default
     this.selectedPorcentajeAutoAprobacion.set(porcentajeAutoAprobacion ?? 10);  // Porcentaje auto-aprobación
+    this.selectedPorcentajeAutoAprobacionAumento.set(porcentajeAutoAprobacionAumento ?? 5);
+    this.selectedPorcentajeMaximoPromesa.set(porcentajeMaximoPromesa ?? 10);
     this.montoBase.set(amount);  // Guardar monto original del campo
 
     // Ajustar número de cuotas si está fuera del nuevo rango
@@ -499,6 +514,8 @@ export class PaymentScheduleComponent implements OnInit {
     this.selectedMinCuotas.set(customOption?.minCuotas ?? this.minInstallments);
     this.selectedMaxCuotas.set(customOption?.maxCuotas ?? this.maxInstallments);
     this.selectedPorcentajeAutoAprobacion.set(customOption?.porcentajeAutoAprobacion ?? 10);
+    this.selectedPorcentajeAutoAprobacionAumento.set(customOption?.porcentajeAutoAprobacionAumento ?? 5);
+    this.selectedPorcentajeMaximoPromesa.set(customOption?.porcentajeMaximoPromesa ?? 10);
 
     // Ajustar número de cuotas si está fuera del nuevo rango
     const currentNum = this.numberOfInstallments();
@@ -520,6 +537,24 @@ export class PaymentScheduleComponent implements OnInit {
   onCustomAmountChange(value: number): void {
     this.customAmountValue = value;
     this.selectedAmount.set(value);
+    //Validacion: la promesa no puede exceder la DEUDA TOTAL en más de 10%
+    const coincideDeudaTotal = (s?: string) =>
+        !!s && s.toString().trim().toLowerCase().replace(/\s+/g, '_').includes('deuda_total');
+    const deudaTotalOption = this.availableAmounts().find(o => coincideDeudaTotal(o.field) || coincideDeudaTotal(o.label));    if (deudaTotalOption && deudaTotalOption.value > 0) {
+      const factorLimite = 1 + (this.selectedPorcentajeMaximoPromesa() / 100);//validacion restriccion
+      const limitePermitido = deudaTotalOption.value * factorLimite;
+      this.superaLimite = value > limitePermitido;
+      this.limitePermitidoValor = limitePermitido;
+    } else {
+      this.superaLimite = false;
+    }
+    // Si supera el límite permitido, no se genera cronograma ni se emite (no deja continuar)
+    if (this.superaLimite) {
+      this.installments.set([]);
+      this.scheduleChange.emit(null);
+      return;
+    }
+
     // Re-calcular montoBase si hay campo base seleccionado
     if (this.selectedBaseField()) {
       const option = this.availableAmounts().find(o => o.field === this.selectedBaseField());
@@ -806,7 +841,9 @@ export class PaymentScheduleComponent implements OnInit {
       campoMontoOrigen: this.selectedField(),
       montoBase: this.montoBase(),  // Monto original del campo (undefined si es monto libre)
       generaCartaAcuerdo: this.selectedGeneraCartaAcuerdo(),  // Si el monto seleccionado genera carta
-      porcentajeAutoAprobacion: this.selectedPorcentajeAutoAprobacion()  // Siempre enviar para calcular excepciones
+      porcentajeAutoAprobacion: this.selectedPorcentajeAutoAprobacion(),//Excepciones %
+      porcentajeAutoAprobacionAumento: this.selectedPorcentajeAutoAprobacionAumento(),
+      porcentajeMaximoPromesa: this.selectedPorcentajeMaximoPromesa()
     };
 
     this.scheduleChange.emit(config);
