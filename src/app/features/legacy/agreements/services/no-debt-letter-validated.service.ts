@@ -1,9 +1,10 @@
-import { HttpClient, HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams, HttpResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, from, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import {
+  EligibleNoDebtLetterClientsResponse,
   GenerateValidatedNoDebtLetterRequest,
   NoDebtLetterValidationErrorResponse
 } from '../models/no-debt-letter-validated.model';
@@ -23,6 +24,23 @@ export class NoDebtLetterValidatedService {
     }).pipe(
       catchError((error: HttpErrorResponse) => this.handleBlobError(error))
     );
+  }
+
+  getEligible(params: {
+    tenantId: number;
+    carteraId: number;
+    subcarteraId: number;
+    page?: number;
+    size?: number;
+  }): Observable<EligibleNoDebtLetterClientsResponse> {
+    const queryParams = new HttpParams()
+      .set('tenantId', params.tenantId.toString())
+      .set('carteraId', params.carteraId.toString())
+      .set('subcarteraId', params.subcarteraId.toString())
+      .set('page', (params.page ?? 0).toString())
+      .set('size', (params.size ?? 20).toString());
+
+    return this.http.get<EligibleNoDebtLetterClientsResponse>(`${this.baseUrl}/elegibles`, { params: queryParams });
   }
 
   private handleBlobError(error: HttpErrorResponse): Observable<never> {

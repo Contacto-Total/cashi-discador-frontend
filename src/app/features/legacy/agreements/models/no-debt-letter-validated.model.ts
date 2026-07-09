@@ -44,3 +44,23 @@ export interface NoDebtLetterValidationErrorResponse {
   cuotas?: NoDebtLetterRejectedInstallment[];
   pagos?: NoDebtLetterRejectedPayment[];
 }
+
+export interface EligibleNoDebtLetterClient {
+  gestionId: number;
+  documento: string;
+  nombreCliente: string;
+  montoPagado: number;
+  agenteId: number;
+  nombreAgente: string;
+  fechaPromesa: string;
+  fechaUltimoPago: string;
+}
+
+export interface EligibleNoDebtLetterClientsResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  data: EligibleNoDebtLetterClient[];
+}

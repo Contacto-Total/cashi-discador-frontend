@@ -6,7 +6,10 @@ import { Portfolio, SubPortfolio } from '../../../../../maintenance/models/portf
 import { Tenant } from '../../../../../maintenance/models/tenant.model';
 import { PortfolioService } from '../../../../../maintenance/services/portfolio.service';
 import { TenantService } from '../../../../../maintenance/services/tenant.service';
-import { NoDebtLetterValidationErrorResponse } from '../../models/no-debt-letter-validated.model';
+import {
+  EligibleNoDebtLetterClient,
+  NoDebtLetterValidationErrorResponse
+} from '../../models/no-debt-letter-validated.model';
 import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-validated.service';
 
 @Component({
@@ -30,24 +33,12 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
             </svg>
           </div>
           <div>
-            <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Datos de validación</h2>
-            <p class="text-xs text-slate-500 dark:text-slate-400">Completa el contexto del cliente antes de generar la carta.</p>
+            <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Clientes elegibles</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Completa el contexto para listar clientes disponibles para carta.</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-5">
-          <div>
-            <label class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Documento</label>
-            <input
-              type="text"
-              [(ngModel)]="documento"
-              name="documento"
-              maxlength="15"
-              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
-              placeholder="Ej: 12345678"
-            />
-          </div>
-
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
             <label class="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">Proveedor</label>
             <select
@@ -98,15 +89,41 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
           <div class="flex items-end">
             <button
               type="button"
-              (click)="generarCarta()"
-              [disabled]="!canGenerate() || isLoading()"
+              (click)="buscarElegibles()"
+              [disabled]="!canSearchEligible() || isLoadingEligible()"
               class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              @if (isLoading()) {
+              @if (isLoadingEligible()) {
                 <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                 </svg>
+                Buscando...
+              } @else {
+                Buscar elegibles
+              }
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
+          <p class="mb-2 text-xs font-semibold text-slate-700 dark:text-slate-300">Generación manual por documento</p>
+          <div class="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+            <input
+              type="text"
+              [(ngModel)]="documento"
+              name="documento"
+              maxlength="15"
+              class="w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+              placeholder="Documento"
+            />
+            <button
+              type="button"
+              (click)="generarCarta()"
+              [disabled]="!canGenerate() || isLoading()"
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-300 bg-white px-3 py-1.5 text-sm font-semibold text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-200 dark:hover:bg-blue-900/20"
+            >
+              @if (isLoading()) {
                 Generando...
               } @else {
                 Generar PDF
@@ -126,6 +143,76 @@ import { NoDebtLetterValidatedService } from '../../services/no-debt-letter-vali
             {{ errorMessage() }}
           </div>
         }
+      </section>
+
+      <section class="mt-4 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div class="flex flex-col gap-2 border-b border-slate-200 p-4 dark:border-slate-700 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-800 dark:text-white">Resultados elegibles</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Total: {{ totalEligible() }}</p>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <span>Pagina {{ eligiblePage() + 1 }} de {{ totalEligiblePages() || 1 }}</span>
+            <button
+              type="button"
+              (click)="changeEligiblePage(eligiblePage() - 1)"
+              [disabled]="eligiblePage() === 0 || isLoadingEligible()"
+              class="rounded-lg border border-slate-300 px-2 py-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
+            >Anterior</button>
+            <button
+              type="button"
+              (click)="changeEligiblePage(eligiblePage() + 1)"
+              [disabled]="eligiblePage() + 1 >= totalEligiblePages() || isLoadingEligible()"
+              class="rounded-lg border border-slate-300 px-2 py-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600"
+            >Siguiente</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold">Documento</th>
+                <th class="px-4 py-3 text-left font-semibold">Cliente</th>
+                <th class="px-4 py-3 text-left font-semibold">Monto pagado</th>
+                <th class="px-4 py-3 text-left font-semibold">Fecha promesa</th>
+                <th class="px-4 py-3 text-left font-semibold">Ultimo pago</th>
+                <th class="px-4 py-3 text-left font-semibold">Agente</th>
+                <th class="px-4 py-3 text-right font-semibold">Accion</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-700">
+              @if (isLoadingEligible()) {
+                <tr>
+                  <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">Cargando clientes elegibles...</td>
+                </tr>
+              } @else if (eligibleClients().length === 0) {
+                <tr>
+                  <td colspan="7" class="px-4 py-8 text-center text-slate-500 dark:text-slate-400">No hay clientes elegibles para el contexto seleccionado.</td>
+                </tr>
+              } @else {
+                @for (client of eligibleClients(); track client.gestionId) {
+                  <tr class="text-slate-700 dark:text-slate-200">
+                    <td class="px-4 py-3 font-medium">{{ client.documento }}</td>
+                    <td class="px-4 py-3">{{ client.nombreCliente }}</td>
+                    <td class="px-4 py-3">{{ client.montoPagado | number:'1.2-2' }}</td>
+                    <td class="px-4 py-3">{{ client.fechaPromesa || '-' }}</td>
+                    <td class="px-4 py-3">{{ client.fechaUltimoPago || '-' }}</td>
+                    <td class="px-4 py-3">{{ client.nombreAgente || client.agenteId || '-' }}</td>
+                    <td class="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        (click)="generarCarta(client.documento)"
+                        [disabled]="isLoading()"
+                        class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                      >Generar</button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
       </section>
 
       @if (validationError()) {
@@ -203,9 +290,15 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
   portfolios = signal<Portfolio[]>([]);
   subPortfolios = signal<SubPortfolio[]>([]);
   isLoading = signal(false);
+  isLoadingEligible = signal(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   validationError = signal<NoDebtLetterValidationErrorResponse | null>(null);
+  eligibleClients = signal<EligibleNoDebtLetterClient[]>([]);
+  totalEligible = signal(0);
+  eligiblePage = signal(0);
+  eligibleSize = signal(20);
+  totalEligiblePages = signal(0);
 
   documento = '';
   selectedTenantId = 0;
@@ -222,6 +315,10 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
 
     if (this.selectedPortfolioId > 0) {
       this.loadSubPortfolios(this.selectedPortfolioId);
+    }
+
+    if (this.canSearchEligible()) {
+      this.buscarElegibles();
     }
   }
 
@@ -249,6 +346,7 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
     this.selectedSubPortfolioId = 0;
     this.portfolios.set([]);
     this.subPortfolios.set([]);
+    this.clearEligibleResults();
     this.clearMessages();
 
     if (this.selectedTenantId > 0) {
@@ -260,6 +358,7 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
     this.selectedPortfolioId = Number(portfolioId) || 0;
     this.selectedSubPortfolioId = 0;
     this.subPortfolios.set([]);
+    this.clearEligibleResults();
     this.clearMessages();
 
     if (this.selectedPortfolioId > 0) {
@@ -289,7 +388,49 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
 
   onSubPortfolioChange(subPortfolioId: number): void {
     this.selectedSubPortfolioId = Number(subPortfolioId) || 0;
+    this.clearEligibleResults();
     this.clearMessages();
+  }
+
+  canSearchEligible(): boolean {
+    return this.selectedTenantId > 0
+      && this.selectedPortfolioId > 0
+      && this.selectedSubPortfolioId > 0;
+  }
+
+  buscarElegibles(page = 0): void {
+    if (!this.canSearchEligible()) return;
+
+    this.isLoadingEligible.set(true);
+    this.clearMessages();
+    this.eligiblePage.set(page);
+
+    this.noDebtLetterService.getEligible({
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId,
+      page,
+      size: this.eligibleSize()
+    }).subscribe({
+      next: (response) => {
+        this.eligibleClients.set(response.data || []);
+        this.totalEligible.set(response.total || 0);
+        this.eligiblePage.set(response.page || 0);
+        this.eligibleSize.set(response.size || this.eligibleSize());
+        this.totalEligiblePages.set(response.totalPages || 0);
+        this.isLoadingEligible.set(false);
+      },
+      error: (error) => {
+        console.error('Error cargando clientes elegibles:', error);
+        this.errorMessage.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudieron cargar los clientes elegibles.');
+        this.isLoadingEligible.set(false);
+      }
+    });
+  }
+
+  changeEligiblePage(page: number): void {
+    if (page < 0 || page >= this.totalEligiblePages()) return;
+    this.buscarElegibles(page);
   }
 
   canGenerate(): boolean {
@@ -299,10 +440,10 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
       && this.selectedSubPortfolioId > 0;
   }
 
-  generarCarta(): void {
-    if (!this.canGenerate()) return;
+  generarCarta(documentoSeleccionado?: string): void {
+    const documento = (documentoSeleccionado || this.documento).trim();
+    if (!documento || !this.canSearchEligible()) return;
 
-    const documento = this.documento.trim();
     this.isLoading.set(true);
     this.clearMessages();
 
@@ -317,6 +458,9 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
         this.downloadFile(response.body as Blob, filename);
         this.successMessage.set('Carta de no adeudo generada correctamente.');
         this.isLoading.set(false);
+        if (!documentoSeleccionado) {
+          this.documento = documento;
+        }
       },
       error: (error) => {
         console.error('Error generando carta de no adeudo:', error);
@@ -369,5 +513,12 @@ export class NoDebtLetterValidatedPageComponent implements OnInit {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.validationError.set(null);
+  }
+
+  private clearEligibleResults(): void {
+    this.eligibleClients.set([]);
+    this.totalEligible.set(0);
+    this.eligiblePage.set(0);
+    this.totalEligiblePages.set(0);
   }
 }
