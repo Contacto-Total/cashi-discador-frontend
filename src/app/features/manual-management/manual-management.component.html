@@ -6,7 +6,7 @@
     </div>
     <div>
       <h1 class="text-lg font-bold text-slate-800 dark:text-white transition-colors duration-300">Gestión Manual</h1>
-      <p class="text-xs text-slate-500 dark:text-gray-400 transition-colors duration-300">Busca un cliente por documento o teléfono para tipificar</p>
+      <p class="text-xs text-slate-500 dark:text-gray-400 transition-colors duration-300">Busca un cliente por documento, teléfono o nombre para tipificar</p>
     </div>
   </div>
 
@@ -18,7 +18,7 @@
         <span class="text-sm font-semibold text-slate-800 dark:text-white transition-colors duration-300">Buscar Cliente</span>
       </div>
 
-      <!-- Toggle: Documento / Teléfono -->
+      <!-- Toggle: Documento / Teléfono / Nombre -->
       <div class="flex gap-1 mb-3 bg-slate-100 dark:bg-slate-800 rounded-lg p-1 w-fit">
         <button
           (click)="setSearchType('documento')"
@@ -40,6 +40,16 @@
             Teléfono
           </span>
         </button>
+        <button
+          (click)="setSearchType('nombre')"
+          [class]="searchType() === 'nombre'
+            ? 'px-3 py-1.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-700 text-green-700 dark:text-green-400 shadow-sm transition-all duration-200'
+            : 'px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 transition-all duration-200'">
+          <span class="flex items-center gap-1">
+            <lucide-angular name="user" [size]="13"></lucide-angular>
+            Nombre
+          </span>
+        </button>
       </div>
 
       <div class="flex gap-3">
@@ -49,7 +59,7 @@
             [value]="searchValue()"
             (input)="onSearchInput($event)"
             (keyup.enter)="search()"
-            [placeholder]="searchType() === 'documento' ? 'Ingresa el documento del cliente (DNI/Cédula)' : 'Ingresa el número de teléfono'"
+            [placeholder]="getSearchPlaceholder()"
             class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-sm text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-green-400 group-hover:shadow-sm">
         </div>
         <button
@@ -75,6 +85,14 @@
       }
     </div>
 
+    @if (hasSearched() && !searching() && !searchError() && foundResults().length === 0) {
+      <div class="mt-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6 text-center shadow-sm transition-all duration-300 animate-scale-in">
+        <lucide-angular name="search-x" [size]="28" class="mx-auto mb-2 text-slate-400 dark:text-slate-500"></lucide-angular>
+        <div class="text-sm font-semibold text-slate-700 dark:text-slate-200">Sin resultados</div>
+        <div class="text-xs text-slate-500 dark:text-slate-400">No se encontraron clientes con el criterio ingresado.</div>
+      </div>
+    }
+
     <!-- Resultados encontrados -->
     @if (foundResults().length > 0) {
       <div class="mt-4 bg-white dark:bg-slate-900 rounded-xl border border-green-300 dark:border-green-700 p-4 shadow-md transition-all duration-300 animate-scale-in">
@@ -83,6 +101,11 @@
           <span class="text-sm font-semibold text-green-700 dark:text-green-400">
             {{ foundResults().length === 1 ? 'Cliente Encontrado' : 'Clientes Encontrados (' + foundResults().length + ')' }}
           </span>
+          @if (searchType() === 'nombre') {
+            <span class="text-xs text-slate-500 dark:text-slate-400">
+              Total: {{ nameSearchTotal() }} | Página {{ nameSearchPage() + 1 }} de {{ nameSearchTotalPages() || 1 }}
+            </span>
+          }
         </div>
 
         <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
@@ -115,7 +138,26 @@
         </div>
 
         <!-- Acción global -->
-        <div class="flex justify-end mt-4">
+        <div class="flex flex-col gap-3 mt-4 md:flex-row md:items-center md:justify-between">
+          @if (searchType() === 'nombre') {
+            <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+              <button
+                (click)="changeNamePage(nameSearchPage() - 1)"
+                [disabled]="nameSearchPage() === 0 || searching()"
+                class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-all duration-300">
+                Anterior
+              </button>
+              <span>Página {{ nameSearchPage() + 1 }} de {{ nameSearchTotalPages() || 1 }}</span>
+              <button
+                (click)="changeNamePage(nameSearchPage() + 1)"
+                [disabled]="nameSearchPage() + 1 >= nameSearchTotalPages() || searching()"
+                class="px-3 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition-all duration-300">
+                Siguiente
+              </button>
+            </div>
+          } @else {
+            <div></div>
+          }
           <button
             (click)="clearSearch()"
             class="px-4 py-2.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
