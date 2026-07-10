@@ -117,6 +117,7 @@ export interface UpdateHeaderConfigurationRequest {
   format?: string;
   required?: boolean;
   loadType?: LoadType;
+  regexPattern?:string;
 }
 
 export interface BulkCreateHeaderConfigurationRequest {
