@@ -186,6 +186,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-validated-page/no-debt-letter-validated-page.component').then(m => m.NoDebtLetterValidatedPageComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'cartas/no-adeudo/legacy',
+    loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-page/no-debt-letter-page.component').then(m => m.NoDebtLetterPageComponent),
+    canActivate: [authGuard]
+  },
 
   {
     path: 'admin/extensions',
