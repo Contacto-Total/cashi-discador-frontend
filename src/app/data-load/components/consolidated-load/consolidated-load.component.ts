@@ -2392,6 +2392,43 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Construye un set normalizado (trim + lowercase) de nombres de cabecera,
+   * incluyendo alias, a partir de una lista de HeaderConfiguration.
+   */
+  private buildHeaderNameSet(headers: HeaderConfiguration[]): Set<string> {
+    const set = new Set<string>();
+    headers.forEach(header => {
+      set.add(header.headerName.trim().toLowerCase());
+      if (header.aliases) {
+        header.aliases.forEach(alias => set.add(alias.alias.trim().toLowerCase()));
+      }
+    });
+    return set;
+  }
+
+  /**
+   * Recalcula missingInActualizacion/missingInInicial de las columnas no registradas
+   * de un archivo contra el estado ACTUAL de cabeceras (this.headersInicial()/headersActualizacion()),
+   * y quita del panel las que ya quedaron resueltas (creadas antes, en otro intento u otra sesión).
+   */
+  private refreshUnregisteredColumnsState(file: FileToProcess, isDaily: boolean): void {
+    if (!file.unregisteredColumns) return;
+
+    const inicialSet = this.buildHeaderNameSet(this.headersInicial());
+    const actualizacionSet = this.buildHeaderNameSet(this.headersActualizacion());
+
+    file.unregisteredColumns = file.unregisteredColumns.filter(col => {
+      const key = col.name.trim().toLowerCase();
+      if (isDaily) {
+        col.missingInActualizacion = !actualizacionSet.has(key);
+        col.missingInInicial = !inicialSet.has(key);
+        return col.missingInActualizacion || col.missingInInicial;
+      }
+      return !inicialSet.has(key);
+    });
+  }
+
+  /**
    * Valida la configuración de un archivo y lo marca como listo
    */
   async validateFileConfiguration(file: FileToProcess) {
@@ -2399,16 +2436,25 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
 
     // Si hay columnas seleccionadas para crear, crearlas primero
     const selectedColumns = file.unregisteredColumns?.filter(c => c.selected) || [];
+    const isDaily = this.selectedLoadMode() === 'DAILY';
 
     if (selectedColumns.length > 0) {
       this.isCreatingHeaders.set(true);
       try {
-        const isDaily = this.selectedLoadMode() === 'DAILY';
+        // Refrescar cabeceras desde el backend ANTES de crear: evita reintentar
+        // columnas que ya se crearon en un intento previo o en otra sesión
+        await this.loadHeaders(this.selectedSubPortfolioId);
+        const freshInicialSet = this.buildHeaderNameSet(this.headersInicial());
+        const freshActualizacionSet = this.buildHeaderNameSet(this.headersActualizacion());
 
         if (isDaily) {
-          // Para DAILY: crear columnas en las tablas donde falten
-          const colsForActualizacion = selectedColumns.filter(c => c.missingInActualizacion);
-          const colsForInicial = selectedColumns.filter(c => c.missingInInicial);
+          // Para DAILY: crear columnas solo en las tablas donde REALMENTE falten (estado fresco)
+          const colsForActualizacion = selectedColumns.filter(
+            c => !freshActualizacionSet.has(c.name.trim().toLowerCase())
+          );
+          const colsForInicial = selectedColumns.filter(
+            c => !freshInicialSet.has(c.name.trim().toLowerCase())
+          );
 
           // Crear en tabla ACTUALIZACION
           if (colsForActualizacion.length > 0) {
@@ -2446,39 +2492,50 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
             }));
           }
 
-          // Recargar cabeceras
+          // Recargar cabeceras y sincronizar el panel con el estado real
           await this.loadHeaders(this.selectedSubPortfolioId);
+          this.refreshUnregisteredColumnsState(file, isDaily);
 
-          // Mensaje de resumen
+          // Mensaje de resumen (solo si realmente se creó algo)
           const parts: string[] = [];
           if (colsForActualizacion.length > 0) parts.push(`${colsForActualizacion.length} en Diaria`);
           if (colsForInicial.length > 0) parts.push(`${colsForInicial.length} en Inicial`);
-          this.notificationService.success('Cabeceras creadas', `Se crearon: ${parts.join(', ')}`);
+          if (parts.length > 0) {
+            this.notificationService.success('Cabeceras creadas', `Se crearon: ${parts.join(', ')}`);
+          }
 
         } else {
-          // Para otros modos: comportamiento original
-          const headersToCreate: HeaderConfigurationItem[] = selectedColumns.map(col => ({
-            fieldDefinitionId: 0,
-            headerName: col.name,
-            displayLabel: col.displayLabel || col.name,
-            dataType: col.detectedType as DataType,
-            format: col.format,
-            required: false
-          }));
-
-          const request: BulkCreateHeaderConfigurationRequest = {
-            subPortfolioId: this.selectedSubPortfolioId,
-            loadType: LOAD_TYPES.INICIAL,
-            headers: headersToCreate
-          };
-
-          await firstValueFrom(this.headerConfigService.createBulk(request));
-          await this.loadHeaders(this.selectedSubPortfolioId);
-
-          this.notificationService.success(
-            'Cabeceras creadas',
-            `Se crearon ${selectedColumns.length} cabecera(s) exitosamente`
+          // Para otros modos: crear solo lo que REALMENTE falte (estado fresco)
+          const colsToCreate = selectedColumns.filter(
+            c => !freshInicialSet.has(c.name.trim().toLowerCase())
           );
+
+          if (colsToCreate.length > 0) {
+            const headersToCreate: HeaderConfigurationItem[] = colsToCreate.map(col => ({
+              fieldDefinitionId: 0,
+              headerName: col.name,
+              displayLabel: col.displayLabel || col.name,
+              dataType: col.detectedType as DataType,
+              format: col.format,
+              required: false
+            }));
+
+            const request: BulkCreateHeaderConfigurationRequest = {
+              subPortfolioId: this.selectedSubPortfolioId,
+              loadType: LOAD_TYPES.INICIAL,
+              headers: headersToCreate
+            };
+
+            await firstValueFrom(this.headerConfigService.createBulk(request));
+            await this.loadHeaders(this.selectedSubPortfolioId);
+
+            this.notificationService.success(
+              'Cabeceras creadas',
+              `Se crearon ${colsToCreate.length} cabecera(s) exitosamente`
+            );
+          }
+
+          this.refreshUnregisteredColumnsState(file, isDaily);
         }
       } catch (error: any) {
         console.error('Error creating headers:', error);

@@ -25,6 +25,16 @@ import { ClienteResumenConciliacionDrawerWidget } from '../../widgets/cliente-re
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <a
+            routerLink="/cartas/no-adeudo"
+            [queryParams]="noDebtLetterQueryParams()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-300 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-200 dark:hover:bg-blue-900/40"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Nueva versión
+          </a>
+          <a
             routerLink="/pagos-bancarios"
             class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
@@ -236,6 +246,18 @@ export class CorreccionPagosPage implements OnInit {
 
   canVerResumen(): boolean {
     return this.canBuscar();
+  }
+
+  noDebtLetterQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    const documento = this.documento.trim();
+
+    if (documento) params['documento'] = documento;
+    if (this.selectedTenantId > 0) params['tenantId'] = this.selectedTenantId;
+    if (this.selectedPortfolioId > 0) params['carteraId'] = this.selectedPortfolioId;
+    if (this.selectedSubPortfolioId > 0) params['subcarteraId'] = this.selectedSubPortfolioId;
+
+    return params;
   }
 
   resumenVisible(): boolean {

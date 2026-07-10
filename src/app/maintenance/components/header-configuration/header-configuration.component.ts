@@ -1728,7 +1728,8 @@ export class HeaderConfigurationComponent implements OnInit {
           await firstValueFrom(this.headerConfigService.update(header.id, {
             displayLabel: header.displayLabel,
             format: header.format,
-            required: header.required
+            required: header.required,
+            regexPattern: header.regexPattern
           }));
         } catch (error: any) {
           const friendlyMsg = this.getFriendlyErrorMessage(error);
@@ -2726,7 +2727,7 @@ export class HeaderConfigurationComponent implements OnInit {
       case 502:
       case 503:
       case 504:
-        return 'El servidor no está disponible. Por favor intente más tarde.';
+        return 'La carga no pudo completarse porque el servidor tardó demasiado en responder.';
       case 0:
         return 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
       default:
