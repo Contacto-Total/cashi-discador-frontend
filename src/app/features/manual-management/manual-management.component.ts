@@ -22,9 +22,14 @@ import { AgentState } from '../../core/models/agent-status.model';
 export class ManualManagementComponent implements OnInit, OnDestroy {
   // Búsqueda
   searchValue = signal('');
-  searchType = signal<'documento' | 'telefono'>('documento');
+  searchType = signal<'documento' | 'telefono' | 'nombre'>('documento');
   searching = signal(false);
   searchError = signal('');
+  hasSearched = signal(false);
+  nameSearchTotal = signal(0);
+  nameSearchPage = signal(0);
+  nameSearchSize = signal(20);
+  nameSearchTotalPages = signal(0);
 
   // Resultados encontrados (para mostrar contexto antes de navegar)
   foundResults = signal<GlobalSearchResult[]>([]);
@@ -86,19 +91,19 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     this.searchError.set('');
   }
 
-  setSearchType(type: 'documento' | 'telefono'): void {
+  setSearchType(type: 'documento' | 'telefono' | 'nombre'): void {
     this.searchType.set(type);
     this.searchValue.set('');
     this.foundResults.set([]);
     this.searchError.set('');
+    this.hasSearched.set(false);
+    this.resetNamePagination();
   }
 
-  search(): void {
+  search(page = 0): void {
     const value = this.searchValue().trim();
     if (!value) {
-      this.searchError.set(this.searchType() === 'documento'
-        ? 'Ingresa un documento para buscar'
-        : 'Ingresa un número de teléfono para buscar');
+      this.searchError.set(this.getEmptySearchMessage());
       return;
     }
 
@@ -112,9 +117,20 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.searchType() === 'nombre' && value.length < 3) {
+      this.searchError.set('Ingresa al menos 3 caracteres para buscar por nombre');
+      return;
+    }
+
     this.searching.set(true);
     this.searchError.set('');
     this.foundResults.set([]);
+    this.hasSearched.set(true);
+
+    if (this.searchType() === 'nombre') {
+      this.searchByName(value, page);
+      return;
+    }
 
     const obs = this.searchType() === 'documento'
       ? this.clientSearchService.findClientGlobal(value).pipe(map(result => [result]))
@@ -124,6 +140,7 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
       next: (results: GlobalSearchResult[]) => {
         this.searching.set(false);
         this.foundResults.set(results.filter(r => r && r.clientData && r.clientData.documento));
+        this.resetNamePagination();
       },
       error: (err) => {
         this.searching.set(false);
@@ -137,6 +154,37 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
         console.error('Error:', err);
       }
     });
+  }
+
+  searchByName(value: string, page: number): void {
+    this.clientSearchService.findClientsGlobalByName(value, page, this.nameSearchSize()).subscribe({
+      next: (response) => {
+        this.searching.set(false);
+        this.foundResults.set((response.data || []).filter(r => r && r.clientData && r.clientData.documento));
+        this.nameSearchTotal.set(response.total || 0);
+        this.nameSearchPage.set(response.page || 0);
+        this.nameSearchSize.set(response.size || this.nameSearchSize());
+        this.nameSearchTotalPages.set(response.totalPages || 0);
+      },
+      error: (err) => {
+        this.searching.set(false);
+        if (err.status === 404) {
+          this.foundResults.set([]);
+          this.nameSearchTotal.set(0);
+          this.nameSearchPage.set(0);
+          this.nameSearchTotalPages.set(0);
+        } else {
+          this.searchError.set('Error al buscar clientes por nombre');
+        }
+        console.error('Error:', err);
+      }
+    });
+  }
+
+  changeNamePage(page: number): void {
+    if (this.searchType() !== 'nombre') return;
+    if (page < 0 || page >= this.nameSearchTotalPages()) return;
+    this.search(page);
   }
 
   goToManagement(result: GlobalSearchResult): void {
@@ -157,6 +205,8 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
     this.searchValue.set('');
     this.foundResults.set([]);
     this.searchError.set('');
+    this.hasSearched.set(false);
+    this.resetNamePagination();
   }
 
   // ========== HELPERS ==========
@@ -170,5 +220,23 @@ export class ManualManagementComponent implements OnInit, OnDestroy {
 
   getClientPhone(client: DynamicClient): string {
     return client.telefono || client.telefono_1 || client.telefono_2 || 'Sin teléfono';
+  }
+
+  getSearchPlaceholder(): string {
+    if (this.searchType() === 'documento') return 'Ingresa el documento del cliente (DNI/Cédula)';
+    if (this.searchType() === 'telefono') return 'Ingresa el número de teléfono';
+    return 'Ingresa nombre, apellido o nombre completo';
+  }
+
+  getEmptySearchMessage(): string {
+    if (this.searchType() === 'documento') return 'Ingresa un documento para buscar';
+    if (this.searchType() === 'telefono') return 'Ingresa un número de teléfono para buscar';
+    return 'Ingresa un nombre o apellido para buscar';
+  }
+
+  private resetNamePagination(): void {
+    this.nameSearchTotal.set(0);
+    this.nameSearchPage.set(0);
+    this.nameSearchTotalPages.set(0);
   }
 }
