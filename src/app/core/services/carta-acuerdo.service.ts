@@ -76,6 +76,13 @@ export class CartaAcuerdoService {
   }
 
   /**
+   * Obtiene la plantilla de carta asignada a una subcartera (data null si no tiene)
+   */
+  obtenerPlantillaSubcartera(idSubcartera: number): Observable<{ success: boolean, data: any }> {
+    return this.http.get<{ success: boolean, data: any }>(`${environment.apiUrl}/plantillas-carta/asignacion/${idSubcartera}`);
+  }
+
+  /**
    * Descarga el PDF generado
    */
   descargarPdf(blob: Blob, nombreArchivo: string): void {

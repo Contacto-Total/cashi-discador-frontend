@@ -658,6 +658,16 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                       </div>
                       <div class="flex items-center gap-2">
                         @if (!hasScheduleEnEvaluacion(schedule)) {
+                        @if (cartaPlantillaDisponible()) {
+                        <button
+                          (click)="generarCartaDesdeBanner(schedule)"
+                          [disabled]="generandoCartaGestionId() === schedule.id"
+                          class="px-2.5 py-1 bg-black/20 dark:bg-white/20 hover:bg-black/30 dark:hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-black/30 dark:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                          [title]="cartasGeneradasGestionIds().has(schedule.id) ? 'Volver a generar la carta de acuerdo con los datos actuales de la promesa' : 'Generar la carta de acuerdo de pago'">
+                          <lucide-angular name="file-text" [size]="12"></lucide-angular>
+                          {{ generandoCartaGestionId() === schedule.id ? 'Generando...' : (cartasGeneradasGestionIds().has(schedule.id) ? 'Regenerar acuerdo' : 'Generar acuerdo') }}
+                        </button>
+                        }
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
                           class="px-2.5 py-1 bg-black/20 dark:bg-white/20 hover:bg-black/30 dark:hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-black/30 dark:border-white/30"
@@ -2791,6 +2801,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Número de cuotas pendientes de la promesa activa
   promesaActivaPendingCount = signal<number>(0);
 
+  // ==================== CARTA DE ACUERDO DESDE BANNER ====================
+  // El botón Generar/Regenerar acuerdo solo se muestra si la subcartera tiene plantilla asignada
+  cartaPlantillaDisponible = signal<boolean>(false);
+  // Gestiones que ya tienen carta generada (define la etiqueta Generar vs Regenerar)
+  cartasGeneradasGestionIds = signal<Set<number>>(new Set());
+  // Gestión cuya carta se está generando (deshabilita el botón mientras descarga)
+  generandoCartaGestionId = signal<number | null>(null);
+
   // ==================== BLOQUEO PERIODO DE GRACIA (PROMESA VENCIDA DE OTRO ASESOR) ====================
   // Flag para mostrar la card de bloqueo cuando la última promesa del cliente está vencida
   // y todavía dentro del período de gracia de otro asesor
@@ -3967,6 +3985,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
         if (activeSchedules.length > 0) {
           console.log(`📅 ¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
+          this.cargarEstadoCartaAcuerdo(Number(records[0]?.customerId) || null);
         }
       }
     });
@@ -7236,6 +7255,65 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         console.error('❌ Error generando carta:', error);
         alert('⚠️ Error al generar la Carta de Acuerdo. La gestión se guardó correctamente.');
         this.onSaveSuccess(contactLabel, managementLabel);
+      }
+    });
+  }
+
+  /**
+   * Carga el estado del botón de carta del banner de promesa activa:
+   * si la subcartera tiene plantilla asignada y qué gestiones ya tienen carta generada
+   */
+  private cargarEstadoCartaAcuerdo(idCliente: number | null): void {
+    const idSubcartera = this.selectedSubPortfolioId;
+    if (idSubcartera) {
+      this.cartaAcuerdoService.obtenerPlantillaSubcartera(idSubcartera).subscribe({
+        next: (resp) => this.cartaPlantillaDisponible.set(!!resp?.data),
+        error: () => this.cartaPlantillaDisponible.set(false)
+      });
+    } else {
+      this.cartaPlantillaDisponible.set(false);
+    }
+
+    if (idCliente) {
+      this.cartaAcuerdoService.obtenerHistorial(idCliente).subscribe({
+        next: (historial) => this.cartasGeneradasGestionIds.set(new Set((historial || []).map(h => h.idGestion))),
+        error: () => this.cartasGeneradasGestionIds.set(new Set())
+      });
+    } else {
+      this.cartasGeneradasGestionIds.set(new Set());
+    }
+  }
+
+  /**
+   * Genera (o regenera) la carta de acuerdo desde el banner de promesa activa.
+   * El backend relee la gestión y sus cuotas, así que la carta sale con los datos actuales.
+   */
+  protected generarCartaDesdeBanner(schedule: any): void {
+    const idGestion = Number(schedule?.id);
+    if (!idGestion || this.generandoCartaGestionId() === idGestion) return;
+
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      alert('⚠️ No se puede generar la carta: usuario no encontrado');
+      return;
+    }
+
+    this.generandoCartaGestionId.set(idGestion);
+    this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
+      next: (blob) => {
+        const docCliente = this.customerData()?.numero_documento || idGestion;
+        this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${docCliente}.pdf`);
+        this.cartasGeneradasGestionIds.update(ids => {
+          const nuevo = new Set(ids);
+          nuevo.add(idGestion);
+          return nuevo;
+        });
+        this.generandoCartaGestionId.set(null);
+      },
+      error: (error) => {
+        console.error('❌ Error generando carta desde banner:', error);
+        this.generandoCartaGestionId.set(null);
+        alert('⚠️ Error al generar la Carta de Acuerdo.');
       }
     });
   }
