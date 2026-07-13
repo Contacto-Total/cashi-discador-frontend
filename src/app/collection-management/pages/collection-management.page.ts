@@ -7266,8 +7266,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private cargarEstadoCartaAcuerdo(idCliente: number | null): void {
     const idSubcartera = this.selectedSubPortfolioId;
     if (idSubcartera) {
-      this.cartaAcuerdoService.obtenerPlantillaSubcartera(idSubcartera).subscribe({
-        next: (resp) => this.cartaPlantillaDisponible.set(!!resp?.data),
+      this.cartaAcuerdoService.tienePlantillaSubcartera(idSubcartera).subscribe({
+        next: (tiene) => this.cartaPlantillaDisponible.set(tiene),
         error: () => this.cartaPlantillaDisponible.set(false)
       });
     } else {

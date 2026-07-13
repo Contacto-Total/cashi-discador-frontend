@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface VerificarPromesaResponse {
@@ -76,10 +76,14 @@ export class CartaAcuerdoService {
   }
 
   /**
-   * Obtiene la plantilla de carta asignada a una subcartera (data null si no tiene)
+   * Verifica si una subcartera tiene plantilla de carta asignada.
+   * Usa el listado de asignaciones porque GET /asignacion/{id} responde 500
+   * (bug del backend: Map.of con data null en la rama sin asignación).
    */
-  obtenerPlantillaSubcartera(idSubcartera: number): Observable<{ success: boolean, data: any }> {
-    return this.http.get<{ success: boolean, data: any }>(`${environment.apiUrl}/plantillas-carta/asignacion/${idSubcartera}`);
+  tienePlantillaSubcartera(idSubcartera: number): Observable<boolean> {
+    return this.http.get<{ success: boolean, data: any[] }>(`${environment.apiUrl}/plantillas-carta/asignaciones`).pipe(
+      map(resp => (resp?.data || []).some(a => Number(a.idSubcartera) === Number(idSubcartera)))
+    );
   }
 
   /**
