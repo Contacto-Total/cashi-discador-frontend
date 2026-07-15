@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../../environments/environment';
 
 export interface ConnectionStatus {
@@ -43,25 +44,27 @@ export interface LogoutResult {
 })
 export class WhatsAppService {
   private http = inject(HttpClient);
-  private baseUrl = (environment as any).scraperServiceUrl || 'http://localhost:8090';
+  private baseUrl = `${environment.apiUrl}/v2/whatsapp`;
 
   getStatus(): Observable<ConnectionStatus> {
-    return this.http.get<ConnectionStatus>(`${this.baseUrl}/api/v1/whatsapp/status`);
+    return this.http.get<{ serverConnected: boolean }>(`${this.baseUrl}/accounts/health`).pipe(
+      map(resp => ({ status: resp.serverConnected ? 'CONNECTED' : 'DISCONNECTED', hasQR: false }))
+    );
   }
 
   connect(): Observable<QRResponse> {
-    return this.http.post<QRResponse>(`${this.baseUrl}/api/v1/whatsapp/connect`, {});
+    return of({ status: 'UNSUPPORTED', qrCode: null });
   }
 
   getQR(): Observable<QRResponse> {
-    return this.http.get<QRResponse>(`${this.baseUrl}/api/v1/whatsapp/qr`);
+    return of({ status: 'UNSUPPORTED', qrCode: null });
   }
 
   verifyPendingPhones(): Observable<BatchResult> {
-    return this.http.post<BatchResult>(`${this.baseUrl}/api/v1/whatsapp/verify`, {});
+    return of({ total: 0, withWhatsApp: 0, withoutWhatsApp: 0, results: [] });
   }
 
   logout(): Observable<LogoutResult> {
-    return this.http.post<LogoutResult>(`${this.baseUrl}/api/v1/whatsapp/logout`, {});
+    return of({ status: 'UNSUPPORTED' });
   }
 }

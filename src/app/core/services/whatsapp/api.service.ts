@@ -5,23 +5,51 @@ import { map } from 'rxjs/operators';
 import { Message, Chat, Contact } from '../../models/message.model';
 import { environment } from '../../../../environments/environment';
 
-interface GoMessage {
-  id: string;
-  fromMe: boolean;
-  text: string;
-  hasMedia: boolean;
+interface SpringPage<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+interface ConversationResponse {
+  id: number;
+  contactJid: string;
+  name?: string;
+  isGroup?: boolean;
+  lastMsgTs?: number;
+  lastMsgText?: string;
+  lastMsgFromMe?: boolean;
+  unreadCount?: number;
+  profilePictureUrl?: string;
+  blocked?: boolean;
+  windowExpiresAt?: string;
+}
+
+interface SpringMessage {
+  id?: number;
+  msgId: string;
+  chat: string;
+  conversationId?: number;
+  chatTitle?: string;
+  text?: string;
+  fromMe?: boolean;
+  hasMedia?: boolean;
   media?: any;
-  ts: number;
-  sender?: string;
-  senderName?: string;
+  timestamp: number;
+  messageType?: string;
+  status?: Message['status'];
   quotedMessageId?: string;
   quotedText?: string;
   quotedSender?: string;
   quotedFromMe?: boolean;
+  edited?: boolean;
+  deleted?: boolean;
 }
 
-interface PagedMessages {
-  messages: GoMessage[];
+interface MessagePageResponse {
+  messages: SpringMessage[];
   hasMore: boolean;
 }
 
@@ -30,99 +58,149 @@ interface PagedMessages {
 })
 export class ApiService {
 
-  // Go service (puerto 8090): tiempo real, envío, WebSocket
-  private readonly GO_BASE = environment.whatsappApiUrl;
+  private readonly API_BASE = `${environment.apiUrl}/v2/whatsapp`;
+  private readonly conversationIdsByJid = new Map<string, number>();
+  private readonly chatsByJid = new Map<string, Chat>();
 
   constructor(private http: HttpClient) {}
 
   getContacts(): Observable<Contact[]> {
-    return this.http.get<Contact[]>(`${this.GO_BASE}/contacts`);
+    // El modelo v2 expone búsqueda/listado por conversaciones, no agenda global.
+    return of([]);
   }
 
-  getChats(): Observable<Chat[]> {
-    return this.http.get<Chat[]>(`${this.GO_BASE}/chats`);
+  getChats(page = 0, size = 100): Observable<Chat[]> {
+    return this.http.get<SpringPage<ConversationResponse>>(`${this.API_BASE}/chats`, {
+      params: { page, size }
+    }).pipe(
+      map(resp => resp.content.map(c => this.mapConversation(c)))
+    );
   }
 
   getMessages(chat: string, before?: number): Observable<{ messages: Message[]; hasMore: boolean }> {
-    const encoded = encodeURIComponent(chat);
-    let url = `${this.GO_BASE}/messages/${encoded}?limit=60`;
-    if (before) url += `&before=${before}`;
-    return this.http.get<PagedMessages>(url).pipe(
+    const conversationId = this.conversationIdsByJid.get(chat);
+    if (!conversationId) {
+      return of({ messages: [], hasMore: false });
+    }
+
+    const params: Record<string, string | number> = { limit: 60 };
+    if (before) params['before'] = before;
+
+    return this.http.get<MessagePageResponse>(`${this.API_BASE}/chats/${conversationId}/messages`, { params }).pipe(
       map(resp => ({
         hasMore: resp.hasMore,
-        messages: resp.messages.map(m => ({
-          msgId:           m.id,
-          chat:            chat,
-          chatTitle:       chat,
-          text:            m.text || '',
-          fromMe:          m.fromMe,
-          timestamp:       m.ts,
-          hasMedia:        m.hasMedia || false,
-          media:           m.media,
-          status:          m.fromMe ? 'sent' as const : undefined,
-          sender:          m.sender,
-          senderName:      m.senderName,
-          quotedMessageId: m.quotedMessageId,
-          quotedText:      m.quotedText,
-          quotedSender:    m.quotedSender,
-          quotedFromMe:    m.quotedFromMe
-        }))
+        messages: resp.messages.map(m => this.mapMessage(m, chat))
       }))
     );
   }
 
   sendTextMessage(to: string, message: string, quotedMessageId?: string): Observable<any> {
-    const payload: any = { to, message };
+    const payload: any = {
+      conversationId: this.conversationIdsByJid.get(to),
+      targetJid: this.conversationIdsByJid.has(to) ? undefined : to,
+      type: 'TEXT',
+      body: message
+    };
     if (quotedMessageId) payload.quotedMessageId = quotedMessageId;
-    return this.http.post(`${this.GO_BASE}/send-text`, payload);
+    return this.http.post(`${this.API_BASE}/send`, payload);
   }
 
-  sendMediaMessage(to: string, media: string, mimetype: string, caption?: string): Observable<any> {
-    let kind = 'document';
-    if (mimetype.startsWith('image/'))  kind = 'image';
-    else if (mimetype.startsWith('video/')) kind = 'video';
-    else if (mimetype.startsWith('audio/')) kind = 'audio';
-
-    const payload: any = { to, base64: media, kind, mime: mimetype };
-    if (caption) payload.caption = caption;
-    return this.http.post(`${this.GO_BASE}/send-media`, payload);
+  sendMediaMessage(to: string, media: string, _mimetype: string, caption?: string): Observable<any> {
+    return this.http.post(`${this.API_BASE}/send`, {
+      conversationId: this.conversationIdsByJid.get(to),
+      targetJid: this.conversationIdsByJid.has(to) ? undefined : to,
+      type: 'MEDIA',
+      body: caption || '',
+      mediaRef: media
+    });
   }
 
-  markAsRead(chat: string, upTo?: string): Observable<any> {
-    return this.http.post(`${this.GO_BASE}/mark-read`, { chat, upTo: upTo || '' });
+  markAsRead(chat: string, _upTo?: string): Observable<any> {
+    const conversationId = this.conversationIdsByJid.get(chat);
+    if (!conversationId) return of(null);
+    return this.http.post(`${this.API_BASE}/chats/${conversationId}/mark-read`, {});
   }
 
-  // Reacción emoji a un mensaje (reaction='' la quita)
-  reactToMessage(to: string, msgId: string, reaction: string): Observable<any> {
-    return this.http.post(`${this.GO_BASE}/react`, { to, msgId, reaction });
+  reactToMessage(_to: string, _msgId: string, _reaction: string): Observable<any> {
+    return of({ ok: false, unsupported: true });
   }
 
-  // Editar texto de un mensaje propio ya enviado
-  editMessage(to: string, msgId: string, message: string): Observable<any> {
-    return this.http.post(`${this.GO_BASE}/edit`, { to, msgId, message });
+  editMessage(_to: string, _msgId: string, _message: string): Observable<any> {
+    return of({ ok: false, unsupported: true });
   }
 
-  // Eliminar un mensaje para todos (revoke)
-  deleteMessage(to: string, msgId: string): Observable<any> {
-    return this.http.post(`${this.GO_BASE}/delete`, { to, msgId });
+  deleteMessage(_to: string, _msgId: string): Observable<any> {
+    return of({ ok: false, unsupported: true });
   }
 
-  // Suscribirse a la presencia (online / última vez) de un contacto
-  subscribePresence(chat: string): Observable<any> {
-    return this.http.post(`${this.GO_BASE}/subscribe-presence`, { chat });
+  subscribePresence(_chat: string): Observable<any> {
+    return of({ ok: false, unsupported: true });
   }
 
-  // Enviar nuestro propio indicador de "escribiendo…/grabando…"
-  sendChatPresence(to: string, state: 'composing' | 'paused', media: 'text' | 'audio' = 'text'): Observable<any> {
-    return this.http.post(`${this.GO_BASE}/chat-presence`, { to, state, media });
+  sendChatPresence(_to: string, _state: 'composing' | 'paused', _media: 'text' | 'audio' = 'text'): Observable<any> {
+    return of({ ok: false, unsupported: true });
   }
 
-  // Estos endpoints no existen en el Go service — devuelven valores neutros
-  getWindowStatus(_chatJid: string): Observable<any> {
-    return of({ isBlocked: false, hasActiveWindow: false, hoursRemaining: 0, minutesRemaining: 0 });
+  getWindowStatus(chatJid: string): Observable<any> {
+    const chat = this.chatsByJid.get(chatJid);
+    return of(this.toWindowStatus(chat));
   }
 
   getBlockedChats(): Observable<any[]> {
-    return of([]);
+    return of([...this.chatsByJid.values()].filter(chat => chat.blocked));
+  }
+
+  private mapConversation(c: ConversationResponse): Chat {
+    const chat: Chat = {
+      id: c.id,
+      jid: c.contactJid,
+      name: c.name || c.contactJid,
+      lastMsgText: c.lastMsgText || '',
+      lastMsgTs: c.lastMsgTs || 0,
+      unreadCount: c.unreadCount || 0,
+      lastMsgFromMe: !!c.lastMsgFromMe,
+      profilePictureUrl: c.profilePictureUrl,
+      isGroup: !!c.isGroup,
+      blocked: !!c.blocked,
+      windowExpiresAt: c.windowExpiresAt
+    };
+    this.conversationIdsByJid.set(chat.jid, c.id);
+    this.chatsByJid.set(chat.jid, chat);
+    return chat;
+  }
+
+  private mapMessage(m: SpringMessage, fallbackChat: string): Message {
+    return {
+      msgId:           m.msgId,
+      chat:            m.chat || fallbackChat,
+      chatTitle:       m.chatTitle || fallbackChat,
+      text:            m.text || '',
+      fromMe:          !!m.fromMe,
+      timestamp:       m.timestamp,
+      hasMedia:        !!m.hasMedia,
+      media:           m.media,
+      status:          m.status || (m.fromMe ? 'sent' as const : undefined),
+      messageType:     m.messageType,
+      quotedMessageId: m.quotedMessageId,
+      quotedText:      m.quotedText,
+      quotedSender:    m.quotedSender,
+      quotedFromMe:    m.quotedFromMe,
+      isEdited:        !!m.edited,
+      isDeleted:       !!m.deleted
+    };
+  }
+
+  private toWindowStatus(chat?: Chat): any {
+    if (!chat) {
+      return { isBlocked: false, hasActiveWindow: false, hoursRemaining: 0, minutesRemaining: 0 };
+    }
+    const expiresAt = chat.windowExpiresAt ? new Date(chat.windowExpiresAt).getTime() : 0;
+    const remaining = expiresAt ? Math.max(0, expiresAt - Date.now()) : 0;
+    return {
+      isBlocked: !!chat.blocked,
+      hasActiveWindow: remaining > 0,
+      hoursRemaining: Math.floor(remaining / 3600000),
+      minutesRemaining: Math.floor((remaining % 3600000) / 60000)
+    };
   }
 }
