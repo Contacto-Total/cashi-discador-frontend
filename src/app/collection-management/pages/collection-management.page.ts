@@ -2554,7 +2554,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
             fechaInicioPromesa: latestSchedule.fechaGestion
           });
-        } else if (estado === 'PENDIENTE' || estado === 'PARCIAL') {
+        } else if (estado === 'PENDIENTE') {
           const fechaPago = cuota.dueDate || cuota.fechaPago;
           if (fechaPago) {
             const fechaPagoDate = this.parseDateLocal(fechaPago);
@@ -7056,12 +7056,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               if (fechaParsed) {
                 this.fechaPagoEditable.set(fechaParsed);
               } else {
-                // Si no se pudo parsear, usar el maximo permitido para la cuota
-                this.fechaPagoEditable.set(this.cancellationPaymentMaxDate());
+                // Si no se pudo parsear, usar fecha de hoy
+                this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
               }
             } else {
-              // Si no hay fecha OCR, usar el maximo permitido para la cuota
-              this.fechaPagoEditable.set(this.cancellationPaymentMaxDate());
+              // Si no hay fecha OCR, usar fecha de hoy
+              this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
             }
           }
         }
@@ -7148,7 +7148,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       : (cuota.monto || 0);
     this.montoPagoEditable.set(montoInicial);
     // Inicializar fecha con el maximo permitido: hoy, o el vencimiento si la cuota ya vencio
-    this.fechaPagoEditable.set(this.cancellationPaymentMaxDate());
+    this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
   }
 
   /**
