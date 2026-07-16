@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, SecurityContext, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FormatService } from '@/shared/services/format.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
@@ -55,21 +56,12 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   hasMoreMessages = false;
   loadingMore = false;
 
-  // Presencia del contacto
-  isContactOnline = false;
-  contactLastSeen?: number;
-  isContactTyping = false;
-  typingMedia: 'text' | 'audio' = 'text';
-
-  // Reacciones / edición
-  reactionMenuMsgId: string | null = null;
-  editingMessage: Message | null = null;
-  editText = '';
-  readonly quickReactions = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
-
-  // Debounce para enviar nuestro propio "escribiendo…"
-  private typingDebounce: any = null;
-  private typingSent = false;
+  // Agentes que están viendo este chat (IDs; sin resolver nombres por ahora)
+  viewers: string[] = [];
+  private viewersSub?: Subscription;
+  private viewerHeartbeat?: any;
+  private joinedConversationId: number | null = null;
+  private readonly VIEWER_HEARTBEAT_MS = 45000;
 
   // Emoji picker state
   showEmojiPicker = false;
@@ -178,40 +170,26 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     this.messageService.currentChat$.subscribe(chat => {
       this.currentChat = chat;
 
-      // Reset de presencia/edición al cambiar de chat
-      this.isContactOnline = false;
-      this.contactLastSeen = undefined;
-      this.isContactTyping = false;
-      this.cancelEdit();
-      this.reactionMenuMsgId = null;
+      // Soltar el chat anterior antes de registrarse en el nuevo
+      this.releaseViewer();
+      this.viewers = [];
 
       // Verificar estado de ventana cuando cambia el chat
       if (chat) {
         this.messagesLoading = true; // Mostrar loading al cambiar de chat
         this.checkWindowStatus();
         this.startWindowCheck();
+        this.registerViewer(chat);
       } else {
         this.stopWindowCheck();
       }
     });
 
-    // Presencia (en línea / última vez) del contacto actual
-    this.messageService.presence$.subscribe(map => {
-      if (!this.currentChat) return;
-      const p = map.get(this.currentChat.jid);
-      if (p) {
-        this.isContactOnline = p.online;
-        this.contactLastSeen = p.lastSeen;
-        this.cdr.markForCheck();
-      }
-    });
-
-    // Indicador "escribiendo…/grabando…" del contacto actual
-    this.messageService.typing$.subscribe(map => {
-      if (!this.currentChat) return;
-      const t = map.get(this.currentChat.jid);
-      this.isContactTyping = !!t?.typing;
-      this.typingMedia = t?.media || 'text';
+    // Quién más está viendo el chat abierto
+    this.viewersSub = this.messageService.viewers$.subscribe(map => {
+      const conversationId = this.currentChat?.id;
+      if (conversationId == null) return;
+      this.viewers = map.get(conversationId) || [];
       this.cdr.markForCheck();
     });
 
@@ -303,7 +281,46 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     this.stopWindowCheck();
     this.stopCountdown();
     this.cleanupRecording();
-    if (this.typingDebounce) clearTimeout(this.typingDebounce);
+    this.releaseViewer();
+    this.viewersSub?.unsubscribe();
+  }
+
+  // ===== Quién está viendo el chat =====
+
+  /**
+   * Marca al agente actual como viewer del chat abierto. El heartbeat mantiene
+   * viva la marca: en el backend caduca sola, así que cerrar la pestaña (que
+   * nunca manda el DELETE) no deja un viewer fantasma.
+   */
+  private registerViewer(chat: Chat): void {
+    const conversationId = chat.id;
+    if (conversationId == null) return;   // chat nuevo: aún no existe en BD
+
+    this.joinedConversationId = conversationId;
+
+    const join = () => this.apiService.joinViewers(conversationId).subscribe({
+      next: (res) => this.messageService.setViewers(conversationId, res.viewers || []),
+      error: () => {}   // sin agente identificado el backend responde 400: no rompe el chat
+    });
+
+    join();
+    this.viewerHeartbeat = setInterval(join, this.VIEWER_HEARTBEAT_MS);
+  }
+
+  private releaseViewer(): void {
+    if (this.viewerHeartbeat) {
+      clearInterval(this.viewerHeartbeat);
+      this.viewerHeartbeat = undefined;
+    }
+    if (this.joinedConversationId == null) return;
+
+    this.apiService.leaveViewers(this.joinedConversationId).subscribe({ error: () => {} });
+    this.joinedConversationId = null;
+  }
+
+  /** "Viendo: 49, 51" — IDs por ahora; TODO: resolver nombre del agente. */
+  getViewersLabel(): string {
+    return this.viewers.length > 0 ? `Viendo: ${this.viewers.join(', ')}` : '';
   }
 
   // Verificar estado de ventana de respuesta
@@ -465,91 +482,8 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     this.replyingTo = null;
   }
 
-  // ===== Presencia: texto del header =====
-  getContactStatus(): string {
-    if (this.isContactTyping) {
-      return this.typingMedia === 'audio' ? 'grabando audio…' : 'escribiendo…';
-    }
-    if (this.isContactOnline) {
-      return 'en línea';
-    }
-    if (this.contactLastSeen) {
-      const d = new Date(this.contactLastSeen);
-      const today = new Date();
-      const sameDay = d.toDateString() === today.toDateString();
-      const time = this.fmt.time(d, false);
-      if (sameDay) return `últ. vez hoy a las ${time}`;
-      return `últ. vez ${this.fmt.date(d, { day: '2-digit', month: '2-digit' })} a las ${time}`;
-    }
-    return '';
-  }
-
-  // ===== Enviar nuestro propio "escribiendo…" con debounce =====
-  onMessageInput(): void {
-    if (!this.currentChat) return;
-    const jid = this.currentChat.jid;
-    if (!this.typingSent) {
-      this.typingSent = true;
-      this.messageService.sendTypingState(jid, 'composing');
-    }
-    if (this.typingDebounce) clearTimeout(this.typingDebounce);
-    this.typingDebounce = setTimeout(() => {
-      this.typingSent = false;
-      this.messageService.sendTypingState(jid, 'paused');
-    }, 3000);
-  }
-
-  // ===== Reacciones =====
-  toggleReactionMenu(event: Event, msgId: string): void {
-    event.stopPropagation();
-    this.reactionMenuMsgId = this.reactionMenuMsgId === msgId ? null : msgId;
-    this.cdr.markForCheck();
-  }
-
-  react(event: Event, message: Message, emoji: string): void {
-    event.stopPropagation();
-    if (!this.currentChat) return;
-    this.messageService.reactToMessage(this.currentChat.jid, message.msgId, emoji);
-    this.reactionMenuMsgId = null;
-    this.cdr.markForCheck();
-  }
-
-  getReactionsSummary(message: Message): string {
-    if (!message.reactions || message.reactions.length === 0) return '';
-    return message.reactions.map(r => r.emoji).join(' ');
-  }
-
-  // ===== Editar mensaje propio =====
-  startEdit(message: Message): void {
-    if (!message.fromMe || message.isDeleted) return;
-    this.editingMessage = message;
-    this.editText = message.text;
-    this.reactionMenuMsgId = null;
-    this.cdr.markForCheck();
-  }
-
-  saveEdit(): void {
-    if (!this.currentChat || !this.editingMessage) return;
-    const text = this.editText.trim();
-    if (text && text !== this.editingMessage.text) {
-      this.messageService.editMessage(this.currentChat.jid, this.editingMessage.msgId, text);
-    }
-    this.cancelEdit();
-  }
-
-  cancelEdit(): void {
-    this.editingMessage = null;
-    this.editText = '';
-    this.cdr.markForCheck();
-  }
-
-  // ===== Eliminar mensaje para todos =====
-  deleteMessage(message: Message): void {
-    if (!this.currentChat || !message.fromMe) return;
-    this.messageService.deleteMessage(this.currentChat.jid, message.msgId);
-    this.reactionMenuMsgId = null;
-    this.cdr.markForCheck();
-  }
+  // Reaccionar, editar y eliminar mensajes, y la presencia/"escribiendo…", no
+  // existen en Spring v2: se quitaron de la UI en vez de seguir llamando al Go.
 
   // Emoji picker methods
   toggleEmojiPicker(event: Event): void {
@@ -812,10 +746,6 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     this.closeEmojiPicker();
-    if (this.reactionMenuMsgId !== null) {
-      this.reactionMenuMsgId = null;
-      this.cdr.markForCheck();
-    }
   }
 
   openFileSelector(): void {
