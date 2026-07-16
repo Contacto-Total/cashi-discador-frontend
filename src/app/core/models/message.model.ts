@@ -46,6 +46,7 @@ export interface MediaInfo {
 }
 
 export interface Chat {
+  id?: number;
   jid: string;
   name: string;
   subject?: string;
@@ -57,6 +58,8 @@ export interface Chat {
   isGroup?: boolean;
   lastMsgHasMedia?: boolean;
   lastMsgMediaKind?: string;
+  blocked?: boolean;
+  windowExpiresAt?: string;
 
   // Presencia (online / última vez / escribiendo)
   isOnline?: boolean;

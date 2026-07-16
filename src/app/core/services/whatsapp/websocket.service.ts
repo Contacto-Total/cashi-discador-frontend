@@ -9,8 +9,7 @@ import { environment } from '../../../../environments/environment';
 export class WebsocketService implements OnDestroy {
   private socket?: WebSocket;
   private messagesSubject = new Subject<WSMessage>();
-  // Go service es la fuente real de eventos en tiempo real
-  private readonly WS_URL = environment.whatsappWsUrl;
+  private readonly WS_URL = (environment as any).whatsappBackendWsUrl || '';
   private reconnectInterval = 3000;
   private reconnectTimer?: any;
   private destroyed = false;
@@ -21,12 +20,16 @@ export class WebsocketService implements OnDestroy {
 
   private connect(): void {
     if (this.destroyed) return;
+    if (!this.WS_URL) {
+      console.warn('WebSocket WhatsApp no configurado para backend v2');
+      return;
+    }
     if (this.socket?.readyState === WebSocket.OPEN) return;
 
     this.socket = new WebSocket(this.WS_URL);
 
     this.socket.onopen = () => {
-      console.log('✅ WebSocket conectado al Go service');
+      console.log('✅ WebSocket WhatsApp conectado');
       if (this.reconnectTimer) {
         clearTimeout(this.reconnectTimer);
         this.reconnectTimer = undefined;
