@@ -1,5 +1,6 @@
 import { Injectable, NgZone, OnDestroy } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
+import { AuthService } from '../auth.service';
 import { environment } from '../../../../environments/environment';
 
 export type WhatsAppEventType =
@@ -35,14 +36,25 @@ export class RealtimeService implements OnDestroy {
 
   events$: Observable<WhatsAppEvent> = this.eventsSubject.asObservable();
 
-  constructor(private zone: NgZone) {
+  constructor(private zone: NgZone, private auth: AuthService) {
     this.connect();
+  }
+
+  /**
+   * EventSource no puede mandar cabeceras, así que el JWT viaja por query param:
+   * el gateway lo traduce a `Authorization: Bearer` y lo quita de la URI antes de
+   * reenviar al backend. Se arma en cada connect() para que al reconectar tome el
+   * token renovado y no uno ya vencido.
+   */
+  private buildUrl(): string {
+    const token = this.auth.getToken();
+    return token ? `${this.URL}?token=${encodeURIComponent(token)}` : this.URL;
   }
 
   private connect(): void {
     if (this.destroyed || this.source) return;
 
-    this.source = new EventSource(this.URL);
+    this.source = new EventSource(this.buildUrl());
 
     this.source.addEventListener('whatsapp', (event: MessageEvent) => {
       try {
