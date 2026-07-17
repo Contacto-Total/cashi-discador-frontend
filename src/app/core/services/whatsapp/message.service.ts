@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { Message, Chat, Contact } from '../../models/message.model';
 import { ApiService } from './api.service';
-import { WebsocketService } from './websocket.service';
+import { RealtimeService, WhatsAppEvent } from './realtime.service';
 
 @Injectable({
   providedIn: 'root'
@@ -18,8 +18,7 @@ export class MessageService {
   private hasMoreSubject = new BehaviorSubject<boolean>(false);
   private loadingMoreSubject = new BehaviorSubject<boolean>(false);
   private windowStatusUpdateSubject = new BehaviorSubject<any>(null);
-  private presenceSubject = new BehaviorSubject<Map<string, { online: boolean; lastSeen?: number }>>(new Map());
-  private typingSubject = new BehaviorSubject<Map<string, { typing: boolean; media: 'text' | 'audio' }>>(new Map());
+  private viewersSubject = new BehaviorSubject<Map<number, string[]>>(new Map());
 
   chats$ = this.chatsSubject.asObservable();
   contacts$ = this.contactsSubject.asObservable();
@@ -29,24 +28,30 @@ export class MessageService {
   hasMore$ = this.hasMoreSubject.asObservable();
   loadingMore$ = this.loadingMoreSubject.asObservable();
   windowStatusUpdate$ = this.windowStatusUpdateSubject.asObservable();
-  presence$ = this.presenceSubject.asObservable();
-  typing$ = this.typingSubject.asObservable();
+  viewers$ = this.viewersSubject.asObservable();
 
-  // Mapas internos de presencia/escritura y timers para auto-expirar "escribiendo…"
-  private presenceMap = new Map<string, { online: boolean; lastSeen?: number }>();
-  private typingMap = new Map<string, { typing: boolean; media: 'text' | 'audio' }>();
-  private typingTimers = new Map<string, any>();
+  // ---- Paginación de la lista de chats ----
+  private readonly CHATS_PAGE_SIZE = 30;
+  private chatsPage = 0;
+  private chatsQuery = '';
+  private chatsHasMoreSubject = new BehaviorSubject<boolean>(false);
+  private chatsLoadingSubject = new BehaviorSubject<boolean>(false);
+
+  chatsHasMore$ = this.chatsHasMoreSubject.asObservable();
+  chatsLoading$ = this.chatsLoadingSubject.asObservable();
+
+  private viewersMap = new Map<number, string[]>();
 
   private readonly originalTitle = document.title;
 
   constructor(
     private apiService: ApiService,
-    private wsService: WebsocketService
+    private realtime: RealtimeService
   ) {
     console.log('🔧 MessageService constructor called');
     this.requestNotificationPermission();
-    this.initializeWebSocket();
-    this.loadChatsAndContacts();
+    this.initializeRealtime();
+    this.loadChats();
   }
 
   private requestNotificationPermission(): void {
@@ -110,54 +115,96 @@ export class MessageService {
     }
   }
 
-  private initializeWebSocket(): void {
-    this.wsService.getMessages().subscribe({
-      next: (wsMsg: any) => {
-        console.log('📨 WebSocket mensaje recibido:', wsMsg);
-
-        const msgType = wsMsg.type || wsMsg.Type;
-
-        switch (msgType) {
+  private initializeRealtime(): void {
+    this.realtime.events$.subscribe({
+      next: (event: WhatsAppEvent) => {
+        switch (event.type) {
           case 'INCOMING':
           case 'OUTGOING':
-          case 'MESSAGE':
-            this.handleIncomingMessage(wsMsg);
+            // Los handlers trabajan con un objeto plano; el chat vive en el
+            // sobre del evento, no en el payload.
+            this.handleIncomingMessage({
+              ...event.payload,
+              chat: event.chat || event.payload?.chat,
+              type: event.type
+            });
             break;
           case 'RECEIPT':
-            this.handleReceipt(wsMsg);
-            break;
-          case 'PRESENCE':
-            this.handlePresence(wsMsg);
-            break;
-          case 'TYPING':
-            this.handleTyping(wsMsg);
-            break;
-          case 'REACTION':
-            this.handleReaction(wsMsg);
-            break;
-          case 'EDIT':
-            this.handleEdit(wsMsg);
-            break;
-          case 'DELETE':
-            this.handleDelete(wsMsg);
+            this.handleReceipt({ ...event.payload, chat: event.chat });
             break;
           case 'CHAT_UPDATE':
-            this.loadChats();
+            this.handleChatUpdate(event);
             break;
-          case 'WINDOW_STATUS':
-          case 'WINDOW_UPDATE':
-          case 'BLOCKED':
-          case 'UNBLOCKED':
-            this.handleWindowStatusUpdate(wsMsg);
+          case 'VIEWERS':
+            this.handleViewers(event);
+            break;
+          case 'STATUS':
+            // Estado de la cuenta (conectada/baneada): sin UI en /whatsapp por ahora.
+            console.log('ℹ️ Estado de cuenta:', event.payload);
             break;
           default:
-            console.log('⚠️ Tipo de mensaje desconocido:', msgType);
+            console.log('⚠️ Evento realtime desconocido:', event.type);
         }
       },
       error: (err) => {
-        console.error('❌ WebSocket error:', err);
+        console.error('❌ Error en el stream realtime:', err);
       }
     });
+  }
+
+  /**
+   * Resumen de conversación recalculado por el backend: es la fuente de verdad
+   * del no-leído, la ventana de 24h y el último mensaje.
+   */
+  private handleChatUpdate(event: WhatsAppEvent): void {
+    if (!event.payload) return;
+
+    // toChat() refresca de paso las cachés del ApiService (id de conversación y
+    // estado de ventana), de las que tira getWindowStatus().
+    const fresh = this.apiService.toChat(event.payload);
+    const isCurrent = this.currentChatSubject.value?.jid === fresh.jid;
+
+    const allItems = [...this.allItemsSubject.value];
+    const i = allItems.findIndex(c => c.jid === fresh.jid);
+
+    if (i !== -1) {
+      // En el chat abierto el no-leído local manda: el backend todavía cuenta el
+      // mensaje que estamos a punto de marcar como leído.
+      allItems[i] = { ...allItems[i], ...fresh, unreadCount: isCurrent ? 0 : fresh.unreadCount };
+    } else {
+      allItems.push({ ...fresh, isGroup: fresh.jid.endsWith('@g.us') });
+    }
+
+    this.allItemsSubject.next(allItems.sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0)));
+    this.updateDocumentTitle();
+
+    // Alimenta el countdown de la ventana de 24h sin esperar al poll de 30s.
+    this.windowStatusUpdateSubject.next({
+      chat: fresh.jid,
+      isBlocked: !!fresh.blocked,
+      ...this.remainingWindow(fresh)
+    });
+  }
+
+  private remainingWindow(chat: Chat): { hoursRemaining: number; minutesRemaining: number } {
+    const expiresAt = chat.windowExpiresAt ? new Date(chat.windowExpiresAt).getTime() : 0;
+    const remaining = expiresAt ? Math.max(0, expiresAt - Date.now()) : 0;
+    return {
+      hoursRemaining: Math.floor(remaining / 3600000),
+      minutesRemaining: Math.floor((remaining % 3600000) / 60000)
+    };
+  }
+
+  private handleViewers(event: WhatsAppEvent): void {
+    if (event.conversationId == null) return;
+    this.viewersMap.set(event.conversationId, event.payload?.viewers || []);
+    this.viewersSubject.next(new Map(this.viewersMap));
+  }
+
+  /** Siembra la lista de viewers con la respuesta del POST/GET (no por evento). */
+  setViewers(conversationId: number, viewers: string[]): void {
+    this.viewersMap.set(conversationId, viewers);
+    this.viewersSubject.next(new Map(this.viewersMap));
   }
 
   private handleIncomingMessage(payload: any): void {
@@ -179,6 +226,7 @@ export class MessageService {
       hasMedia: payload.hasMedia || false,
       media: payload.media,
       status: payload.status || (isFromMe ? 'sent' : undefined),
+      sentByAgentId: payload.sentByAgentId,
       quotedMessageId: payload.quotedMessageId,
       quotedText: payload.quotedText,
       quotedSender: payload.quotedSender,
@@ -278,204 +326,48 @@ export class MessageService {
     }
   }
 
-  private handleWindowStatusUpdate(payload: any): void {
-    console.log('🔔 Actualización de estado de ventana recibida:', payload);
-
-    // Emitir el evento para que chat-window lo escuche
-    this.windowStatusUpdateSubject.next(payload);
+  /** Primera página de chats. `query` no vacío = búsqueda remota por nombre/número. */
+  loadChats(query = ''): void {
+    this.chatsQuery = query.trim();
+    this.fetchChatsPage(0, true);
   }
 
-  // ---- Presencia (en línea / última vez) ----
-  private handlePresence(payload: any): void {
-    if (!payload?.chat) return;
-    this.presenceMap.set(payload.chat, {
-      online: !!payload.online,
-      lastSeen: payload.lastSeen
-    });
-    this.presenceSubject.next(new Map(this.presenceMap));
-    this.patchChat(payload.chat, { isOnline: !!payload.online, lastSeen: payload.lastSeen });
+  /** Siguiente página (scroll al final de la lista). */
+  loadMoreChats(): void {
+    if (this.chatsLoadingSubject.value || !this.chatsHasMoreSubject.value) return;
+    this.fetchChatsPage(this.chatsPage + 1, false);
   }
 
-  // ---- Indicador "escribiendo…/grabando…" ----
-  private handleTyping(payload: any): void {
-    if (!payload?.chat) return;
-    const typing = payload.state === 'composing';
-    const media: 'text' | 'audio' = payload.media === 'audio' ? 'audio' : 'text';
-    this.typingMap.set(payload.chat, { typing, media });
-    this.typingSubject.next(new Map(this.typingMap));
-    this.patchChat(payload.chat, { isTyping: typing, typingMedia: media });
+  private fetchChatsPage(page: number, replace: boolean): void {
+    this.chatsLoadingSubject.next(true);
 
-    // Auto-expirar el "escribiendo…" tras 8s sin nuevas señales (WhatsApp no
-    // siempre manda el "paused"), para no dejarlo pegado.
-    const prev = this.typingTimers.get(payload.chat);
-    if (prev) clearTimeout(prev);
-    if (typing) {
-      this.typingTimers.set(payload.chat, setTimeout(() => {
-        this.typingMap.set(payload.chat, { typing: false, media });
-        this.typingSubject.next(new Map(this.typingMap));
-        this.patchChat(payload.chat, { isTyping: false });
-      }, 8000));
-    }
-  }
+    this.apiService.getChats(page, this.CHATS_PAGE_SIZE, this.chatsQuery).subscribe({
+      next: ({ chats, hasMore }) => {
+        const enriched = chats.map(c => ({ ...c, isGroup: c.jid.endsWith('@g.us') }));
 
-  // ---- Reacción emoji a un mensaje ----
-  private handleReaction(payload: any): void {
-    if (!payload?.chat || !payload.msgId) return;
-    const messages = this.messagesMap.get(payload.chat);
-    if (!messages) return;
-    const msg = messages.find(m => m.msgId === payload.msgId);
-    if (!msg) return;
+        // Merge por jid: al paginar, un chat que subió de posición entre páginas
+        // no debe entrar dos veces.
+        const byJid = new Map<string, Chat>(
+          (replace ? [] : this.allItemsSubject.value).map(c => [c.jid, c])
+        );
+        enriched.forEach(c => byJid.set(c.jid, { ...byJid.get(c.jid), ...c }));
 
-    const fromMe = !!payload.fromMe;
-    const reactions = (msg.reactions || []).filter(r => r.fromMe !== fromMe);
-    if (payload.reaction) {
-      reactions.push({ emoji: payload.reaction, fromMe });
-    }
-    msg.reactions = reactions;
-    this.emitIfCurrent(payload.chat, messages);
-  }
-
-  // ---- Edición de mensaje ----
-  private handleEdit(payload: any): void {
-    if (!payload?.chat || !payload.msgId) return;
-    const messages = this.messagesMap.get(payload.chat);
-    if (!messages) return;
-    const msg = messages.find(m => m.msgId === payload.msgId);
-    if (!msg) return;
-    msg.text = payload.text ?? msg.text;
-    msg.isEdited = true;
-    this.emitIfCurrent(payload.chat, messages);
-  }
-
-  // ---- Eliminación de mensaje (revoke) ----
-  private handleDelete(payload: any): void {
-    if (!payload?.chat || !payload.msgId) return;
-    const messages = this.messagesMap.get(payload.chat);
-    if (!messages) return;
-    const msg = messages.find(m => m.msgId === payload.msgId);
-    if (!msg) return;
-    msg.isDeleted = true;
-    msg.text = '';
-    msg.hasMedia = false;
-    msg.media = undefined;
-    this.emitIfCurrent(payload.chat, messages);
-  }
-
-  // Emite la lista de mensajes si el chat afectado es el que se está viendo.
-  private emitIfCurrent(chatId: string, messages: Message[]): void {
-    const currentChat = this.currentChatSubject.value;
-    if (currentChat && currentChat.jid === chatId) {
-      this.currentMessagesSubject.next([...messages]);
-    }
-  }
-
-  // Aplica cambios de presencia a un chat en la lista (para el punto verde).
-  // No tocamos currentChatSubject aquí: chat-window consume presence$/typing$
-  // directamente para evitar re-disparar la lógica de ventana en cada update.
-  private patchChat(chatId: string, patch: Partial<Chat>): void {
-    const allItems = [...this.allItemsSubject.value];
-    const i = allItems.findIndex(c => c.jid === chatId);
-    if (i !== -1) {
-      allItems[i] = { ...allItems[i], ...patch };
-      this.allItemsSubject.next(allItems);
-    }
-  }
-
-  // ---- Acciones salientes: reaccionar / editar / eliminar ----
-  reactToMessage(chatId: string, msgId: string, emoji: string): void {
-    const messages = this.messagesMap.get(chatId);
-    if (messages) {
-      const msg = messages.find(m => m.msgId === msgId);
-      if (msg) {
-        const mine = (msg.reactions || []).find(r => r.fromMe);
-        const same = mine?.emoji === emoji;
-        const reactions = (msg.reactions || []).filter(r => !r.fromMe);
-        if (!same && emoji) reactions.push({ emoji, fromMe: true });
-        msg.reactions = reactions;
-        this.emitIfCurrent(chatId, messages);
-        // Si tocó el mismo emoji, lo quitamos (toggle)
-        emoji = same ? '' : emoji;
-      }
-    }
-    this.apiService.reactToMessage(chatId, msgId, emoji).subscribe({
-      error: (err) => console.error('❌ Error al reaccionar:', err)
-    });
-  }
-
-  editMessage(chatId: string, msgId: string, newText: string): void {
-    this.apiService.editMessage(chatId, msgId, newText).subscribe({
-      next: () => {
-        const messages = this.messagesMap.get(chatId);
-        if (messages) {
-          const msg = messages.find(m => m.msgId === msgId);
-          if (msg) { msg.text = newText; msg.isEdited = true; this.emitIfCurrent(chatId, messages); }
-        }
-      },
-      error: (err) => console.error('❌ Error al editar:', err)
-    });
-  }
-
-  deleteMessage(chatId: string, msgId: string): void {
-    this.apiService.deleteMessage(chatId, msgId).subscribe({
-      next: () => this.handleDelete({ chat: chatId, msgId }),
-      error: (err) => console.error('❌ Error al eliminar:', err)
-    });
-  }
-
-  // Reenvía el indicador de "escribiendo…" propio al contacto.
-  sendTypingState(chatId: string, state: 'composing' | 'paused'): void {
-    this.apiService.sendChatPresence(chatId, state).subscribe({ error: () => {} });
-  }
-
-  loadChats(): void {
-    this.loadChatsAndContacts();
-  }
-
-  loadChatsAndContacts(): void {
-    console.log('📥 Cargando chats y contactos desde BD...');
-
-    forkJoin({
-      chats: this.apiService.getChats(),
-      contacts: this.apiService.getContacts()
-    }).subscribe({
-      next: ({ chats, contacts }) => {
-        console.log('✅ Datos cargados - Chats:', chats.length, '| Contactos:', contacts.length);
-
-        // Marcar grupos por JID
-        const enrichedChats = chats.map(c => ({ ...c, isGroup: c.jid.endsWith('@g.us') }));
-
-        this.chatsSubject.next(enrichedChats);
-        this.contactsSubject.next(contacts);
-
-        // Filtrar y ordenar chats con mensajes
-        const chatsWithMessages = enrichedChats
+        const merged = [...byJid.values()]
           .filter(chat => chat.lastMsgTs && chat.lastMsgTs > 0)
           .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));
 
-        console.log('📋 Chats con mensajes:', chatsWithMessages.length);
-        this.allItemsSubject.next(chatsWithMessages);
+        this.chatsPage = page;
+        this.chatsHasMoreSubject.next(hasMore);
+        this.chatsSubject.next(enriched);
+        this.allItemsSubject.next(merged);
+        this.chatsLoadingSubject.next(false);
+        this.updateDocumentTitle();
 
-        // El Go service carga fotos de perfil en background tras /chats.
-        // Re-fetch a los 4s para capturar las URLs que ya llegaron.
-        setTimeout(() => {
-          this.apiService.getChats().subscribe({
-            next: (refreshedChats) => {
-              const current = this.allItemsSubject.value;
-              const updated = current.map(chat => {
-                const fresh = refreshedChats.find(c => c.jid === chat.jid);
-                if (fresh?.profilePictureUrl && !chat.profilePictureUrl) {
-                  return { ...chat, profilePictureUrl: fresh.profilePictureUrl };
-                }
-                return chat;
-              });
-              this.allItemsSubject.next(updated);
-            },
-            error: () => {}
-          });
-        }, 4000);
+        console.log(`📋 Chats página ${page} (${enriched.length}, hasMore=${hasMore}, q="${this.chatsQuery}")`);
       },
       error: (err) => {
-        console.error('❌ Error cargando chats/contactos:', err);
+        this.chatsLoadingSubject.next(false);
+        console.error('❌ Error cargando chats:', err);
       }
     });
   }
@@ -492,8 +384,6 @@ export class MessageService {
     console.log('💬 Chat seleccionado:', chat.name);
     this.currentChatSubject.next(chat);
     this.loadMessages(chat.jid);
-
-    this.apiService.subscribePresence(chat.jid).subscribe({ error: () => {} });
 
     setTimeout(() => {
       this.updateChatUnreadCount(chat.jid, 0);
@@ -571,6 +461,7 @@ export class MessageService {
       hasMedia:        msg.hasMedia || false,
       media:           msg.media,
       status:          msg.status || (msg.fromMe ? 'sent' : undefined),
+      sentByAgentId:   msg.sentByAgentId,
       quotedMessageId: msg.quotedMessageId,
       quotedText:      msg.quotedText,
       quotedSender:    msg.quotedSender,

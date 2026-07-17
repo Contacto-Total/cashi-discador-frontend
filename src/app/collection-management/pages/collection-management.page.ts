@@ -7147,7 +7147,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       ? this.getSaldoPendienteCuota(cuota)
       : (cuota.monto || 0);
     this.montoPagoEditable.set(montoInicial);
-    // Inicializar fecha con hoy
+    // Inicializar fecha con el maximo permitido: hoy, o el vencimiento si la cuota ya vencio
     this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
   }
 

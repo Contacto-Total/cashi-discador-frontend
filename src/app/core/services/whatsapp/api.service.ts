@@ -11,9 +11,23 @@ interface SpringPage<T> {
   totalPages: number;
   number: number;
   size: number;
+  last?: boolean;
 }
 
-interface ConversationResponse {
+/** Una página de la lista de chats. */
+export interface ChatPage {
+  chats: Chat[];
+  page: number;
+  hasMore: boolean;
+  total: number;
+}
+
+export interface ViewersResponse {
+  conversationId: number;
+  viewers: string[];
+}
+
+export interface ConversationResponse {
   id: number;
   contactJid: string;
   name?: string;
@@ -40,6 +54,7 @@ interface SpringMessage {
   timestamp: number;
   messageType?: string;
   status?: Message['status'];
+  sentByAgentId?: string;
   quotedMessageId?: string;
   quotedText?: string;
   quotedSender?: string;
@@ -69,12 +84,46 @@ export class ApiService {
     return of([]);
   }
 
-  getChats(page = 0, size = 100): Observable<Chat[]> {
-    return this.http.get<SpringPage<ConversationResponse>>(`${this.API_BASE}/chats`, {
-      params: { page, size }
-    }).pipe(
-      map(resp => resp.content.map(c => this.mapConversation(c)))
+  /**
+   * Una página de chats. Con `q` la búsqueda la resuelve el backend (nombre o
+   * número), no un filtro local sobre lo ya cargado.
+   */
+  getChats(page = 0, size = 30, q = ''): Observable<ChatPage> {
+    const params: Record<string, string | number> = { page, size };
+    if (q.trim()) params['q'] = q.trim();
+
+    return this.http.get<SpringPage<ConversationResponse>>(`${this.API_BASE}/chats`, { params }).pipe(
+      map(resp => ({
+        chats: resp.content.map(c => this.mapConversation(c)),
+        page: resp.number,
+        // `last` puede no venir según el serializador de Page; el fallback por
+        // totalPages cubre ese caso.
+        hasMore: resp.last !== undefined ? !resp.last : (resp.number + 1) < resp.totalPages,
+        total: resp.totalElements
+      }))
     );
+  }
+
+  /** Registra al agente actual (header X-Agent-Id) como viewer del chat. */
+  joinViewers(conversationId: number): Observable<ViewersResponse> {
+    return this.http.post<ViewersResponse>(`${this.API_BASE}/chats/${conversationId}/viewers/me`, {});
+  }
+
+  /** Libera al agente actual como viewer del chat. */
+  leaveViewers(conversationId: number): Observable<ViewersResponse> {
+    return this.http.delete<ViewersResponse>(`${this.API_BASE}/chats/${conversationId}/viewers/me`);
+  }
+
+  getViewers(conversationId: number): Observable<ViewersResponse> {
+    return this.http.get<ViewersResponse>(`${this.API_BASE}/chats/${conversationId}/viewers`);
+  }
+
+  /**
+   * Convierte el payload de un evento CHAT_UPDATE (mismo shape que GET /chats) a
+   * Chat, refrescando de paso las cachés internas (ids y estado de ventana).
+   */
+  toChat(conversation: ConversationResponse): Chat {
+    return this.mapConversation(conversation);
   }
 
   getMessages(chat: string, before?: number): Observable<{ messages: Message[]; hasMore: boolean }> {
@@ -121,25 +170,8 @@ export class ApiService {
     return this.http.post(`${this.API_BASE}/chats/${conversationId}/mark-read`, {});
   }
 
-  reactToMessage(_to: string, _msgId: string, _reaction: string): Observable<any> {
-    return of({ ok: false, unsupported: true });
-  }
-
-  editMessage(_to: string, _msgId: string, _message: string): Observable<any> {
-    return of({ ok: false, unsupported: true });
-  }
-
-  deleteMessage(_to: string, _msgId: string): Observable<any> {
-    return of({ ok: false, unsupported: true });
-  }
-
-  subscribePresence(_chat: string): Observable<any> {
-    return of({ ok: false, unsupported: true });
-  }
-
-  sendChatPresence(_to: string, _state: 'composing' | 'paused', _media: 'text' | 'audio' = 'text'): Observable<any> {
-    return of({ ok: false, unsupported: true });
-  }
+  // Reacciones, editar/eliminar mensaje y presencia/typing no existen en Spring
+  // v2: se quitaron de la UI en vez de seguir llamando al Go directo.
 
   getWindowStatus(chatJid: string): Observable<any> {
     const chat = this.chatsByJid.get(chatJid);
@@ -181,6 +213,7 @@ export class ApiService {
       media:           m.media,
       status:          m.status || (m.fromMe ? 'sent' as const : undefined),
       messageType:     m.messageType,
+      sentByAgentId:   m.sentByAgentId,
       quotedMessageId: m.quotedMessageId,
       quotedText:      m.quotedText,
       quotedSender:    m.quotedSender,

@@ -2103,6 +2103,15 @@ body.light-theme {
       font-weight: 500;
     }
 
+    // "Viendo: 49, 51" — quién más tiene el chat abierto
+    &.viewers {
+      color: #10b981;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     &.typing {
       color: #10b981;
       font-style: italic;
@@ -2389,6 +2398,14 @@ body.light-theme {
     color: #94a3b8;
     font-style: italic;
     margin-right: 4px;
+  }
+
+  // Agente que envió el mensaje (solo salientes)
+  .message-footer .sent-by-agent {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-right: 6px;
+    white-space: nowrap;
   }
 
   // Mensaje eliminado

@@ -17,6 +17,9 @@ export interface Message {
   buttonReplyId?: string;
   listRowId?: string;
 
+  // Agente que envió el mensaje (solo salientes que salieron de la outbox)
+  sentByAgentId?: string;
+
   // Sender (grupos: participante que envió el mensaje)
   sender?: string;
   senderName?: string;

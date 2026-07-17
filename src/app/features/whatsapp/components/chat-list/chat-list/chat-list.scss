@@ -533,6 +533,17 @@
   p { font-size: 0.875rem; text-align: center; margin: 0; }
 }
 
+// Indicador de carga de la siguiente página de chats
+.chats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  font-size: 0.8125rem;
+  color: #475569;
+  opacity: 0.7;
+}
+
 // Context menu
 .context-menu {
   position: fixed;

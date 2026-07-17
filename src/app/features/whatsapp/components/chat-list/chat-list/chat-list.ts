@@ -1,4 +1,6 @@
-import { Component, OnInit, Output, EventEmitter, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter, inject } from '@angular/core';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
@@ -31,7 +33,7 @@ import { LucideAngularModule } from 'lucide-angular';
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss'
 })
-export class ChatList implements OnInit {
+export class ChatList implements OnInit, OnDestroy {
   private fmt = inject(FormatService);
 
   @Output() chatSelected = new EventEmitter<Chat>();
@@ -43,6 +45,13 @@ export class ChatList implements OnInit {
   selectedChatJid: string | null = null;
   isDarkMode: boolean = false;
   filterMode: 'all' | 'unread' = 'all';
+  chatsLoading = false;
+  chatsHasMore = false;
+
+  // La búsqueda la resuelve el backend (`q`); se debouncea para no lanzar una
+  // consulta por tecla.
+  private searchInput$ = new Subject<string>();
+  private subs = new Subscription();
   showNewChatInput = false;
   newChatNumber = '';
   contextMenuChat: Chat | null = null;
@@ -58,22 +67,58 @@ export class ChatList implements OnInit {
 
   ngOnInit(): void {
     // Suscribirse a los chats activos
-    this.messageService.allItems$.subscribe(items => {
+    this.subs.add(this.messageService.allItems$.subscribe(items => {
       console.log('📱 Chats activos:', items.length);
       this.allItems = items;
       this.filterChats();
-    });
+    }));
 
     // Suscribirse a TODOS los contactos para la búsqueda
-    this.messageService.contacts$.subscribe(contacts => {
-      console.log('📇 Todos los contactos:', contacts.length);
+    this.subs.add(this.messageService.contacts$.subscribe(contacts => {
       this.allContacts = contacts;
-    });
+    }));
 
     // Suscribirse al estado del tema
-    this.themeService.isDarkMode$.subscribe(isDark => {
+    this.subs.add(this.themeService.isDarkMode$.subscribe(isDark => {
       this.isDarkMode = isDark;
-    });
+    }));
+
+    // Estado de la paginación
+    this.subs.add(this.messageService.chatsLoading$.subscribe(v => this.chatsLoading = v));
+    this.subs.add(this.messageService.chatsHasMore$.subscribe(v => this.chatsHasMore = v));
+
+    this.subs.add(
+      this.searchInput$.pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe(q => this.messageService.loadChats(q))
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
+
+  /**
+   * Cada tecla filtra en local (respuesta inmediata sobre lo ya cargado) y, tras
+   * el debounce, dispara la búsqueda remota que trae los chats que no están en
+   * memoria.
+   */
+  onSearchChange(): void {
+    this.filterChats();
+    this.searchInput$.next(this.searchText.trim());
+  }
+
+  clearSearch(): void {
+    this.searchText = '';
+    this.onSearchChange();
+  }
+
+  /** Carga la siguiente página al acercarse al final de la lista. */
+  onScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    const nearEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+    if (nearEnd) {
+      this.messageService.loadMoreChats();
+    }
   }
 
   toggleTheme(): void {
@@ -197,7 +242,6 @@ export class ChatList implements OnInit {
   }
 
   getLastMsgPreview(chat: Chat): string {
-    if (chat.isTyping) return 'escribiendo…';
     if (chat.lastMsgHasMedia) {
       const icon = this.getMediaIcon(chat);
       const caption = chat.lastMsgText?.trim() ? ` ${chat.lastMsgText}` : '';
