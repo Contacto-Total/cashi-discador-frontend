@@ -84,10 +84,9 @@ export class MessageInputWidgetComponent {
 
   private getWindowWarning(chat: Chat | null): string {
     if (!chat) return '';
-    if (chat.blocked) return 'Chat fuera de ventana. Para escribir se requiere una plantilla.';
-    if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) {
-      return 'La ventana de 24h expiró. Para escribir se requiere una plantilla.';
-    }
+    if (chat.blocked) return '24 h expirado.';
+    if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '24 h expirado.';
     return '';
   }
+
 }

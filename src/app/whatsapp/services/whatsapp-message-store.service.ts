@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import { finalize } from 'rxjs';
+import { finalize, Subscription } from 'rxjs';
 import { Chat, conversationToChat, Message, SendMessageRequest, TypedWhatsAppEvent } from '../models';
 import { WhatsappApiService } from './whatsapp-api.service';
 import { WhatsappRealtimeService } from './whatsapp-realtime.service';
@@ -8,6 +8,7 @@ import { WhatsappRealtimeService } from './whatsapp-realtime.service';
 export class WhatsappMessageStoreService {
   private readonly messagesByConversation = signal(new Map<number, Message[]>());
   private readonly hasMoreByConversation = signal(new Map<number, boolean>());
+  private realtimeSubscription?: Subscription;
 
   readonly chats = signal<Chat[]>([]);
   readonly currentChat = signal<Chat | null>(null);
@@ -102,10 +103,13 @@ export class WhatsappMessageStoreService {
   }
 
   connectRealtime(token?: string): void {
-    this.realtime.connect(token).subscribe({ next: (event) => this.applyEvent(event) });
+    if (this.realtimeSubscription) return;
+    this.realtimeSubscription = this.realtime.connect(token).subscribe({ next: (event) => this.applyEvent(event) });
   }
 
   disconnectRealtime(): void {
+    this.realtimeSubscription?.unsubscribe();
+    this.realtimeSubscription = undefined;
     this.realtime.disconnect();
   }
 
@@ -190,7 +194,7 @@ export class WhatsappMessageStoreService {
   private getSendErrorMessage(error: unknown): string {
     const response = error as { status?: number; error?: { error?: string; detail?: string; message?: string } };
     if (response.status === 409 && response.error?.error === 'CHAT_BLOCKED') {
-      return response.error.detail || 'Fuera de la ventana de 24h. Requiere plantilla.';
+      return '24 h expirado.';
     }
     return response.error?.message || 'No se pudo enviar el mensaje.';
   }
