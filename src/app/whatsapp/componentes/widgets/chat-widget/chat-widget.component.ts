@@ -2,13 +2,14 @@ import { DatePipe } from '@angular/common';
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { Chat, Message } from '../../../models';
 import { UserInfoService, WhatsappMessageStoreService } from '../../../services';
+import { MessageInputWidgetComponent } from '../message-input-widget/message-input-widget.component';
 
 @Component({
   selector: 'app-whatsapp-chat-widget',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, MessageInputWidgetComponent],
   template: `
-    <section class="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+    <section class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
       @if (chat(); as selectedChat) {
         <header class="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
           <div class="grid size-11 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-slate-950">
@@ -33,7 +34,7 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
             <div class="mb-4 flex justify-center">
               <button
                 type="button"
-                class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+                class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
                 [disabled]="store.loadingMessages()"
                 (click)="store.loadMoreMessages()"
               >
@@ -53,11 +54,11 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
                 <article class="flex" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
                   <div [class]="bubbleClass(message)">
                     @if (isImage(message) && mediaUrl(message)) {
-                      <button type="button" class="block max-w-[260px] overflow-hidden rounded-lg" (click)="openImageViewer(message)">
-                        <img class="max-h-72 w-full object-cover" [src]="mediaUrl(message)" [alt]="message.media?.caption || message.text || 'Imagen'" />
+                      <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message)">
+                        <img class="max-h-48 w-full object-cover" [src]="mediaUrl(message)" [alt]="message.media?.caption || message.text || 'Imagen'" />
                       </button>
                     } @else if (isSticker(message) && mediaUrl(message)) {
-                      <img class="max-h-20 max-w-20 object-contain" [src]="mediaUrl(message)" [alt]="message.media?.caption || 'Sticker'" />
+                      <img class="max-h-12 max-w-12 object-contain" [src]="mediaUrl(message)" [alt]="message.media?.caption || 'Sticker'" />
                     } @else if (message.hasMedia) {
                       <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
                     }
@@ -79,10 +80,8 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
           }
         </div>
 
-        <footer class="border-t border-slate-200 bg-white px-5 py-4">
-          <div class="rounded-xl border border-dashed border-slate-300 px-4 py-3 text-sm text-slate-500">
-            Composer pendiente para el siguiente paso.
-          </div>
+        <footer class="border-t border-slate-200 bg-white px-4 py-3">
+          <app-whatsapp-message-input-widget />
         </footer>
       } @else {
         <div class="flex h-full flex-col items-center justify-center bg-slate-50 p-8 text-center">
@@ -104,7 +103,7 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
           </div>
           <button
             type="button"
-            class="rounded-lg border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            class="rounded-md border border-white/20 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
             (click)="closeImageViewer(); $event.stopPropagation()"
           >
             Cerrar
@@ -123,14 +122,14 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
         <div class="flex flex-wrap items-center justify-center gap-3 border-t border-white/10 pt-4" (click)="$event.stopPropagation()">
           <button
             type="button"
-            class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
+            class="rounded-md bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-slate-200"
             (click)="copyImage(imageMessage)"
           >
             Copiar
           </button>
           <button
             type="button"
-            class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
+            class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
             (click)="downloadImage(imageMessage)"
           >
             Descargar
@@ -151,6 +150,7 @@ export class ChatWidgetComponent {
     .map((viewerId) => this.viewerNames().get(viewerId) || viewerId)
     .join(', ')));
 
+  private lastChatId?: number;
   private pendingScrollToBottom = false;
 
   constructor(
@@ -158,14 +158,17 @@ export class ChatWidgetComponent {
     private readonly userInfo: UserInfoService
   ) {
     effect(() => {
-      this.chat()?.id;
-      this.pendingScrollToBottom = true;
-    });
+      const chatId = this.chat()?.id;
+      const messageCount = this.messages().length;
 
-    effect(() => {
-      this.messages().length;
-      if (!this.pendingScrollToBottom) return;
-      this.scrollToBottom();
+      if (chatId !== this.lastChatId) {
+        this.lastChatId = chatId;
+        this.pendingScrollToBottom = !!chatId;
+      }
+
+      if (this.pendingScrollToBottom && messageCount > 0) {
+        this.scrollToBottom();
+      }
     });
 
     effect(() => {
@@ -181,7 +184,7 @@ export class ChatWidgetComponent {
       return 'max-w-[78%] text-slate-900';
     }
 
-    const base = 'max-w-[78%] rounded-xl px-4 py-2 shadow-sm';
+    const base = 'max-w-[78%] rounded-lg px-4 py-2 shadow-sm';
     return message.fromMe
       ? `${base} bg-emerald-600 text-white rounded-br-sm`
       : `${base} bg-white text-slate-900 ring-1 ring-slate-200 rounded-bl-sm`;
@@ -293,10 +296,12 @@ export class ChatWidgetComponent {
 
   private scrollToBottom(): void {
     setTimeout(() => {
-      const element = this.messagesPanel?.nativeElement;
-      if (!element) return;
-      element.scrollTop = element.scrollHeight;
-      this.pendingScrollToBottom = false;
+      requestAnimationFrame(() => {
+        const element = this.messagesPanel?.nativeElement;
+        if (!element) return;
+        element.scrollTop = element.scrollHeight;
+        this.pendingScrollToBottom = false;
+      });
     });
   }
 }

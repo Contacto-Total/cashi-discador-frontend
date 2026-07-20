@@ -13,6 +13,8 @@ export class WhatsappMessageStoreService {
   readonly currentChat = signal<Chat | null>(null);
   readonly loadingChats = signal(false);
   readonly loadingMessages = signal(false);
+  readonly sendingMessage = signal(false);
+  readonly sendMessageError = signal<string | null>(null);
   readonly activeViewers = signal<string[]>([]);
   readonly chatsPage = signal(0);
   readonly chatsTotalPages = signal(0);
@@ -92,7 +94,11 @@ export class WhatsappMessageStoreService {
   }
 
   sendMessage(request: SendMessageRequest): void {
-    this.api.sendMessage(request).subscribe();
+    this.sendingMessage.set(true);
+    this.sendMessageError.set(null);
+    this.api.sendMessage(request).pipe(finalize(() => this.sendingMessage.set(false))).subscribe({
+      error: (error: unknown) => this.sendMessageError.set(this.getSendErrorMessage(error))
+    });
   }
 
   connectRealtime(token?: string): void {
@@ -179,5 +185,13 @@ export class WhatsappMessageStoreService {
   private mergeChats(current: Chat[], nextPage: Chat[]): Chat[] {
     const currentKeys = new Set(current.map((chat) => chat.id ?? chat.jid));
     return [...current, ...nextPage.filter((chat) => !currentKeys.has(chat.id ?? chat.jid))];
+  }
+
+  private getSendErrorMessage(error: unknown): string {
+    const response = error as { status?: number; error?: { error?: string; detail?: string; message?: string } };
+    if (response.status === 409 && response.error?.error === 'CHAT_BLOCKED') {
+      return response.error.detail || 'Fuera de la ventana de 24h. Requiere plantilla.';
+    }
+    return response.error?.message || 'No se pudo enviar el mensaje.';
   }
 }

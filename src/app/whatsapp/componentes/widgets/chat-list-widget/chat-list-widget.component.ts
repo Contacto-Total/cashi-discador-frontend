@@ -9,8 +9,8 @@ import { WhatsappMessageStoreService } from '../../../services';
   standalone: true,
   imports: [DatePipe, FormsModule],
   template: `
-    <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-lg">
-      <header class="border-b border-slate-200 p-4">
+    <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-950 shadow-lg">
+      <header class="border-b border-slate-200 p-3">
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600">WhatsApp</p>
@@ -18,7 +18,7 @@ import { WhatsappMessageStoreService } from '../../../services';
           </div>
           <button
             type="button"
-            class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+            class="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
             [disabled]="store.loadingChats()"
             (click)="reload()"
           >
@@ -29,7 +29,7 @@ import { WhatsappMessageStoreService } from '../../../services';
         <label class="mt-4 block">
           <span class="sr-only">Buscar chat</span>
           <input
-            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             type="search"
             placeholder="Buscar por nombre, teléfono o mensaje"
             [ngModel]="query()"
@@ -42,7 +42,7 @@ import { WhatsappMessageStoreService } from '../../../services';
         @if (store.loadingChats() && !store.chats().length) {
           <div class="space-y-2 p-2">
             @for (item of skeletonItems; track item) {
-              <div class="h-20 animate-pulse rounded-xl bg-slate-100"></div>
+              <div class="h-20 animate-pulse rounded-lg bg-slate-100"></div>
             }
           </div>
         } @else if (!store.chats().length) {
@@ -105,10 +105,10 @@ import { WhatsappMessageStoreService } from '../../../services';
         }
       </section>
 
-      <footer class="border-t border-slate-200 p-3">
+      <footer class="border-t border-slate-200 p-2">
         <button
           type="button"
-          class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           [disabled]="!store.hasMoreChats() || store.loadingChats()"
           (click)="store.loadNextChatsPage()"
         >
@@ -160,7 +160,7 @@ export class ChatListWidgetComponent implements OnInit {
   }
 
   chatButtonClass(chat: Chat): string {
-    const base = 'group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition';
+    const base = 'group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition';
     return this.isSelected(chat) ? `${base} bg-emerald-100 hover:bg-emerald-100` : `${base} hover:bg-slate-100`;
   }
 
