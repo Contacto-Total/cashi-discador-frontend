@@ -9,16 +9,17 @@ import { WhatsappMessageStoreService } from '../../../services';
   standalone: true,
   imports: [DatePipe, FormsModule],
   template: `
-    <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/90 text-slate-100 shadow-2xl">
-      <header class="border-b border-slate-800 p-4">
+    <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-lg">
+      <header class="border-b border-slate-200 p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-xs font-medium uppercase tracking-[0.25em] text-emerald-300">WhatsApp</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600">WhatsApp</p>
             <h2 class="mt-1 text-xl font-semibold">Conversaciones</h2>
           </div>
           <button
             type="button"
-            class="rounded-full border border-slate-700 px-3 py-2 text-xs font-medium text-slate-300 transition hover:border-emerald-400 hover:text-emerald-200"
+            class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+            [disabled]="store.loadingChats()"
             (click)="reload()"
           >
             Actualizar
@@ -28,7 +29,7 @@ import { WhatsappMessageStoreService } from '../../../services';
         <label class="mt-4 block">
           <span class="sr-only">Buscar chat</span>
           <input
-            class="w-full rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-emerald-400"
+            class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             type="search"
             placeholder="Buscar por nombre, teléfono o mensaje"
             [ngModel]="query()"
@@ -41,13 +42,13 @@ import { WhatsappMessageStoreService } from '../../../services';
         @if (store.loadingChats() && !store.chats().length) {
           <div class="space-y-2 p-2">
             @for (item of skeletonItems; track item) {
-              <div class="h-20 animate-pulse rounded-2xl bg-slate-900"></div>
+              <div class="h-20 animate-pulse rounded-xl bg-slate-100"></div>
             }
           </div>
         } @else if (!store.chats().length) {
-          <div class="flex h-full flex-col items-center justify-center px-8 text-center text-slate-400">
-            <div class="grid size-14 place-items-center rounded-full bg-slate-900 text-2xl">#</div>
-            <p class="mt-4 font-medium text-slate-200">Sin conversaciones</p>
+          <div class="flex h-full flex-col items-center justify-center px-8 text-center text-slate-500">
+            <div class="grid size-14 place-items-center rounded-full bg-slate-100 text-2xl">#</div>
+            <p class="mt-4 font-semibold text-slate-900">Sin conversaciones</p>
             <p class="mt-2 text-sm">No encontramos chats para mostrar con el filtro actual.</p>
           </div>
         } @else {
@@ -61,7 +62,7 @@ import { WhatsappMessageStoreService } from '../../../services';
                 <div class="relative shrink-0">
                   @if (chat.profilePictureUrl) {
                     <img
-                      class="size-12 rounded-full object-cover ring-1 ring-slate-700"
+                      class="size-12 rounded-full object-cover ring-1 ring-slate-200"
                       [src]="chat.profilePictureUrl"
                       [alt]="chat.name"
                     />
@@ -71,23 +72,23 @@ import { WhatsappMessageStoreService } from '../../../services';
                     </div>
                   }
                   @if (chat.blocked) {
-                    <span class="absolute -bottom-1 -right-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">24h</span>
+                    <span class="absolute -bottom-1 -right-1 rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">24h</span>
                   }
                 </div>
 
                 <div class="min-w-0 flex-1">
                   <div class="flex items-start justify-between gap-2">
-                    <p class="truncate text-sm font-semibold text-slate-100">{{ chat.name }}</p>
+                    <p class="truncate text-sm font-semibold text-slate-950">{{ chat.name }}</p>
                     @if (chat.lastMsgTs) {
-                      <time class="shrink-0 text-xs text-slate-500" [dateTime]="toIso(chat.lastMsgTs)">
+                      <time class="shrink-0 text-xs font-medium text-slate-500" [dateTime]="toIso(chat.lastMsgTs)">
                         {{ chat.lastMsgTs | date: 'HH:mm' }}
                       </time>
                     }
                   </div>
                   <div class="mt-1 flex items-center justify-between gap-2">
-                    <p class="truncate text-sm text-slate-400">
+                    <p class="truncate text-sm text-slate-600">
                       @if (chat.lastMsgFromMe) {
-                        <span class="text-emerald-300">Tú: </span>
+                        <span class="font-medium text-emerald-700">Tú: </span>
                       }
                       {{ preview(chat) }}
                     </p>
@@ -97,7 +98,9 @@ import { WhatsappMessageStoreService } from '../../../services';
                       </span>
                     }
                   </div>
-                  <p class="mt-1 truncate text-xs text-slate-600">{{ chat.jid }}</p>
+                  @if (displayContact(chat)) {
+                    <p class="mt-1 truncate text-xs text-slate-500">{{ displayContact(chat) }}</p>
+                  }
                 </div>
               </button>
             }
@@ -105,10 +108,10 @@ import { WhatsappMessageStoreService } from '../../../services';
         }
       </section>
 
-      <footer class="border-t border-slate-800 p-3">
+      <footer class="border-t border-slate-200 p-3">
         <button
           type="button"
-          class="w-full rounded-2xl border border-slate-800 px-4 py-3 text-sm font-medium text-slate-300 transition hover:border-emerald-400 hover:text-emerald-200 disabled:cursor-not-allowed disabled:opacity-50"
+          class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
           [disabled]="!store.hasMoreChats() || store.loadingChats()"
           (click)="store.loadNextChatsPage()"
         >
@@ -160,8 +163,8 @@ export class ChatListWidgetComponent implements OnInit {
   }
 
   chatButtonClass(chat: Chat): string {
-    const base = 'group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition';
-    return this.isSelected(chat) ? `${base} bg-emerald-500/20 hover:bg-emerald-500/20` : `${base} hover:bg-slate-900`;
+    const base = 'group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition';
+    return this.isSelected(chat) ? `${base} bg-emerald-100 hover:bg-emerald-100` : `${base} hover:bg-slate-100`;
   }
 
   trackChat(chat: Chat): string | number {
@@ -179,6 +182,11 @@ export class ChatListWidgetComponent implements OnInit {
   preview(chat: Chat): string {
     if (chat.lastMsgText?.trim()) return chat.lastMsgText;
     return chat.lastMsgTs ? 'Mensaje multimedia' : 'Sin mensajes recientes';
+  }
+
+  displayContact(chat: Chat): string {
+    const value = chat.jid.replace('@lid', '').replace('@s.whatsapp.net', '').replace('@g.us', '');
+    return value === chat.name ? '' : value;
   }
 
   toIso(timestamp: number): string {
