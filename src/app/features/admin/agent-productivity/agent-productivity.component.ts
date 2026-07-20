@@ -82,7 +82,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   ngOnInit(): void {
     this.loadTenants();
     this.setDefaultDates();
-    this.loadData();
+    // No se consulta al entrar: el usuario debe pulsar "Buscar" para lanzar la consulta.
   }
 
   ngAfterViewInit(): void {

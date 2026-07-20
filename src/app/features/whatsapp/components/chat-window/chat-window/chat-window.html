@@ -6,15 +6,11 @@
         <img *ngIf="currentChat.profilePictureUrl" [src]="currentChat.profilePictureUrl" class="avatar-icon profile-pic" alt="Profile">
         <lucide-angular *ngIf="!currentChat.profilePictureUrl && !isGroupChat" name="user" [size]="22" class="avatar-icon"></lucide-angular>
         <lucide-angular *ngIf="!currentChat.profilePictureUrl && isGroupChat" name="users" [size]="20" class="avatar-icon group-avatar-icon"></lucide-angular>
-        <span class="header-online-dot" *ngIf="isContactOnline && !isGroupChat" title="En línea"></span>
       </div>
       <div class="chat-info">
         <span class="chat-name">{{ getChatDisplayName() }}</span>
-        <span class="chat-status"
-              *ngIf="getContactStatus()"
-              [class.typing]="isContactTyping"
-              [class.online]="isContactOnline && !isContactTyping">
-          {{ getContactStatus() }}
+        <span class="chat-status viewers" *ngIf="getViewersLabel()" [title]="getViewersLabel()">
+          {{ getViewersLabel() }}
         </span>
       </div>
     </div>
@@ -99,26 +95,12 @@
           {{ getSenderDisplayName(message) }}
         </div>
 
-        <!-- Acciones del mensaje (aparecen al hover) -->
+        <!-- Acciones del mensaje (aparecen al hover).
+             Reaccionar/editar/eliminar no existen en Spring v2: se retiran hasta
+             que el backend los soporte. -->
         <div class="message-actions" *ngIf="!message.isDeleted">
           <button mat-icon-button class="msg-action-btn" (click)="replyToMessage(message)" title="Responder">
             <lucide-angular name="corner-up-left" [size]="18"></lucide-angular>
-          </button>
-          <button mat-icon-button class="msg-action-btn" (click)="toggleReactionMenu($event, message.msgId)" title="Reaccionar">
-            <lucide-angular name="smile-plus" [size]="18"></lucide-angular>
-          </button>
-          <button mat-icon-button class="msg-action-btn" *ngIf="message.fromMe" (click)="startEdit(message)" title="Editar">
-            <lucide-angular name="pencil" [size]="18"></lucide-angular>
-          </button>
-          <button mat-icon-button class="msg-action-btn" *ngIf="message.fromMe" (click)="deleteMessage(message)" title="Eliminar">
-            <lucide-angular name="trash-2" [size]="18"></lucide-angular>
-          </button>
-        </div>
-
-        <!-- Selector rápido de reacciones -->
-        <div class="reaction-picker" *ngIf="reactionMenuMsgId === message.msgId" (click)="$event.stopPropagation()">
-          <button class="reaction-option" *ngFor="let emoji of quickReactions" (click)="react($event, message, emoji)">
-            {{ emoji }}
           </button>
         </div>
 
@@ -230,6 +212,13 @@
         </div>
         <div class="message-footer">
           <span class="edited-tag" *ngIf="message.isEdited && !message.isDeleted">editado</span>
+          <!-- Agente que envió el mensaje (solo salientes desde el sistema).
+               TODO: resolver el nombre; por ahora se muestra el ID. -->
+          <span class="sent-by-agent"
+                *ngIf="message.fromMe && message.sentByAgentId && !message.isDeleted"
+                [title]="'Enviado por el agente ' + message.sentByAgentId">
+            Agente: {{ message.sentByAgentId }}
+          </span>
           <span class="message-time">{{ formatTime(message.timestamp) }}</span>
           <lucide-angular
             *ngIf="message.fromMe && !message.isDeleted && (message.status === 'delivered' || message.status === 'read')"
@@ -246,10 +235,6 @@
           </lucide-angular>
         </div>
 
-        <!-- Reacciones sobre el mensaje -->
-        <div class="message-reactions" *ngIf="message.reactions && message.reactions.length > 0">
-          <span class="reaction-chip" *ngFor="let r of message.reactions">{{ r.emoji }}</span>
-        </div>
       </div>
     </div>
 
@@ -263,30 +248,6 @@
 
   <!-- Input container -->
   <div class="input-container" *ngIf="currentChat">
-    <!-- Editar mensaje -->
-    <div *ngIf="editingMessage" class="edit-preview">
-      <div class="edit-preview-content">
-        <div class="edit-preview-header">
-          <lucide-angular name="pencil" [size]="18" class="reply-icon"></lucide-angular>
-          <span class="reply-preview-title">Editar mensaje</span>
-        </div>
-        <input
-          type="text"
-          class="edit-input"
-          [(ngModel)]="editText"
-          (keyup.enter)="saveEdit()"
-          (keyup.escape)="cancelEdit()"
-          autocomplete="off"
-          autofocus>
-      </div>
-      <button mat-icon-button class="edit-save-button" (click)="saveEdit()" title="Guardar">
-        <lucide-angular name="check" [size]="20"></lucide-angular>
-      </button>
-      <button mat-icon-button class="reply-close-button" (click)="cancelEdit()" title="Cancelar">
-        <lucide-angular name="x" [size]="20"></lucide-angular>
-      </button>
-    </div>
-
     <!-- Reply preview -->
     <div *ngIf="replyingTo" class="reply-preview">
       <div class="reply-preview-content">
@@ -334,7 +295,6 @@
         [placeholder]="getInputPlaceholder()"
         [(ngModel)]="messageText"
         (keypress)="onKeyPress($event)"
-        (input)="onMessageInput()"
         (click)="closeEmojiPicker()"
         [disabled]="isChatBlocked || isNewChat"
         autocomplete="off">
@@ -429,10 +389,9 @@
       </p>
       <!-- Subject/descripción para grupos -->
       <p *ngIf="isGroupChat && currentChat.subject" class="cip-subject">{{ currentChat.subject }}</p>
-      <!-- Estado online -->
-      <div *ngIf="!isGroupChat" class="cip-status">
-        <span class="cip-online-dot" [class.online]="isContactOnline"></span>
-        <span>{{ isContactOnline ? 'En línea' : (getContactStatus() || 'Desconectado') }}</span>
+      <!-- Quién está viendo el chat (Spring v2 no expone presencia del contacto) -->
+      <div *ngIf="getViewersLabel()" class="cip-status">
+        <span>{{ getViewersLabel() }}</span>
       </div>
     </div>
   </div>
