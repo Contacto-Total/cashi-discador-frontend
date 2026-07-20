@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, effect, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { Chat, Message } from '../../../models';
 import { UserInfoService, WhatsappMessageStoreService } from '../../../services';
 
@@ -28,7 +28,7 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
           }
         </header>
 
-        <div class="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-5 py-4">
+        <div #messagesPanel class="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-5 py-4">
           @if (store.hasMore()) {
             <div class="mb-4 flex justify-center">
               <button
@@ -57,7 +57,7 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
                         <img class="max-h-72 w-full object-cover" [src]="mediaUrl(message)" [alt]="message.media?.caption || message.text || 'Imagen'" />
                       </button>
                     } @else if (isSticker(message) && mediaUrl(message)) {
-                      <img class="max-h-40 max-w-40 object-contain" [src]="mediaUrl(message)" [alt]="message.media?.caption || 'Sticker'" />
+                      <img class="max-h-20 max-w-20 object-contain" [src]="mediaUrl(message)" [alt]="message.media?.caption || 'Sticker'" />
                     } @else if (message.hasMedia) {
                       <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
                     }
@@ -141,6 +141,8 @@ import { UserInfoService, WhatsappMessageStoreService } from '../../../services'
   `
 })
 export class ChatWidgetComponent {
+  @ViewChild('messagesPanel') private messagesPanel?: ElementRef<HTMLElement>;
+
   readonly chat = computed(() => this.store.currentChat());
   readonly messages = computed(() => this.store.currentMessages());
   readonly viewerNames = signal(new Map<string, string>());
@@ -149,10 +151,23 @@ export class ChatWidgetComponent {
     .map((viewerId) => this.viewerNames().get(viewerId) || viewerId)
     .join(', ')));
 
+  private pendingScrollToBottom = false;
+
   constructor(
     readonly store: WhatsappMessageStoreService,
     private readonly userInfo: UserInfoService
   ) {
+    effect(() => {
+      this.chat()?.id;
+      this.pendingScrollToBottom = true;
+    });
+
+    effect(() => {
+      this.messages().length;
+      if (!this.pendingScrollToBottom) return;
+      this.scrollToBottom();
+    });
+
     effect(() => {
       for (const viewerId of this.store.activeViewers()) {
         if (this.viewerNames().has(viewerId)) continue;
@@ -274,5 +289,14 @@ export class ChatWidgetComponent {
 
   private truncateViewers(value: string): string {
     return value.length > 90 ? `${value.slice(0, 90)}.....` : value;
+  }
+
+  private scrollToBottom(): void {
+    setTimeout(() => {
+      const element = this.messagesPanel?.nativeElement;
+      if (!element) return;
+      element.scrollTop = element.scrollHeight;
+      this.pendingScrollToBottom = false;
+    });
   }
 }
