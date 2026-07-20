@@ -2,18 +2,22 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { toUserInfoView, UserInfo, UserInfoView } from '../models';
+import { toUserInfoView, UserInfo, UserInfoView, UserSubportfolio } from '../models';
 import { map } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class UserInfoService {
-  private readonly apiBase = `${environment.apiUrl}/usuarios/info`;
+  private readonly apiBase = `${environment.apiUrl}/chatuser/info`;
   private readonly cache = new Map<number, Observable<UserInfoView>>();
 
   constructor(private readonly http: HttpClient) {}
 
   getUserInfo(idUsuario: number): Observable<UserInfo> {
     return this.http.get<UserInfo>(`${this.apiBase}/${idUsuario}`);
+  }
+
+  getUserSubportfolios(idUsuario: number): Observable<UserSubportfolio[]> {
+    return this.http.get<UserSubportfolio[]>(`${this.apiBase}/${idUsuario}/subcarteras`);
   }
 
   getUserInfoView(idUsuario: number): Observable<UserInfoView> {

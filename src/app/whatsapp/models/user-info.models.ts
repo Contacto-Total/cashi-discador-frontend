@@ -18,6 +18,8 @@ export interface UserAssignment {
   idSubcartera: number;
 }
 
+export type UserSubportfolio = UserAssignment;
+
 export interface UserInfo {
   idUsuario: number;
   primerNombre: string | null;

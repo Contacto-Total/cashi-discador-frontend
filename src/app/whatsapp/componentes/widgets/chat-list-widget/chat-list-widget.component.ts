@@ -98,9 +98,6 @@ import { WhatsappMessageStoreService } from '../../../services';
                       </span>
                     }
                   </div>
-                  @if (displayContact(chat)) {
-                    <p class="mt-1 truncate text-xs text-slate-500">{{ displayContact(chat) }}</p>
-                  }
                 </div>
               </button>
             }
@@ -182,11 +179,6 @@ export class ChatListWidgetComponent implements OnInit {
   preview(chat: Chat): string {
     if (chat.lastMsgText?.trim()) return chat.lastMsgText;
     return chat.lastMsgTs ? 'Mensaje multimedia' : 'Sin mensajes recientes';
-  }
-
-  displayContact(chat: Chat): string {
-    const value = chat.jid.replace('@lid', '').replace('@s.whatsapp.net', '').replace('@g.us', '');
-    return value === chat.name ? '' : value;
   }
 
   toIso(timestamp: number): string {
