@@ -5942,6 +5942,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             // Usar el nuevo endpoint de pagos
             this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, {
               grupoPromesaUuid: grupoPromesaUuid,
+              // Cuota elegida por el asesor: la distribución arranca en esta cuota y el excedente
+              // se aplica hacia adelante (sin tocar las anteriores). Si no eligió cuota va null →
+              // FIFO desde la más antigua, comportamiento retrocompatible.
+              cuotaId: selectedCuota ? Number(selectedCuota.id) : null,
               monto: montoPago,
               fechaPago: fechaPago,
               banco: null,
@@ -5952,6 +5956,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               comprobanteUrl: null
             }).subscribe({
               next: (result) => {
+                // El backend puede responder 200 con { success: false } al rechazar el pago
+                // (fecha posterior al vencimiento, cuota ya pagada o de otro grupo).
+                if (result && result.success === false) {
+                  this.handlePagoCancelacionRechazado(result.error || result.mensaje);
+                  return;
+                }
                 console.log('✅ Pago registrado exitosamente:', result);
                 // Limpiar la selección y campos editables
                 this.selectedInstallmentForCancellation.set(null);
@@ -5966,12 +5976,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               },
               error: (err) => {
                 console.error('⚠️ Error registrando pago:', err);
-                if (err.error?.error || err.error?.mensaje) {
-                  alert(`⚠️ ${err.error.error || err.error.mensaje || 'Error al registrar el pago.'}`);
-                }
-                // Aunque falle el pago, la gestión ya se guardó
-                this.selectedInstallmentForCancellation.set(null);
-                this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+                // Backend transaccional: si rechaza (HTTP 400) hizo rollback; no quedó nada a medias.
+                this.handlePagoCancelacionRechazado(err?.error?.error || err?.error?.mensaje);
               }
             });
           } else {
@@ -5985,6 +5991,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         }
       });
     }
+  }
+
+  /**
+   * Maneja el rechazo del backend al registrar un pago de cancelación (HTTP 400 o
+   * { success: false }). El backend es transaccional e hizo rollback, así que no quedó
+   * nada a medias. Se muestra el motivo y se mantiene la pantalla abierta (sin navegar ni
+   * limpiar cuota/monto/fecha) para que el asesor corrija y reintente.
+   *
+   * NOTA (deuda técnica): la gestión (createManagement) ya se guardó ANTES de este pago,
+   * porque el pago va anidado en su callback de éxito. Si el asesor reintenta con el botón
+   * Guardar se re-crea la gestión (duplicado). El caso común —fecha posterior al vencimiento—
+   * ya está bloqueado en UI por isCancellationPaymentDateValid()/botón deshabilitado, así que
+   * este rechazo solo ocurre con datos obsoletos (cuota ya pagada / de otro grupo). Para un
+   * reintento aislado del pago habría que desacoplarlo de createManagement.
+   */
+  private handlePagoCancelacionRechazado(mensaje?: string): void {
+    const detalle = mensaje || 'El pago fue rechazado. Verifica la fecha y la cuota, luego reintenta.';
+    alert(`⚠️ ${detalle}`);
+    // Re-habilitar el botón Guardar y conservar cuota/monto/fecha para permitir la corrección.
+    this.saving.set(false);
   }
 
   private registerCallToBackend(managementId: number) {
@@ -7147,7 +7173,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       ? this.getSaldoPendienteCuota(cuota)
       : (cuota.monto || 0);
     this.montoPagoEditable.set(montoInicial);
-    // Inicializar fecha con hoy
+    // Inicializar fecha con el maximo permitido: hoy, o el vencimiento si la cuota ya vencio
     this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
   }
 

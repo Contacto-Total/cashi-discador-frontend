@@ -47,9 +47,9 @@
         type="text"
         placeholder="Buscar o empezar un chat"
         [(ngModel)]="searchText"
-        (ngModelChange)="filterChats()"
+        (ngModelChange)="onSearchChange()"
         class="search-input">
-      <button *ngIf="searchText" class="search-clear" (click)="searchText=''; filterChats()">
+      <button *ngIf="searchText" class="search-clear" (click)="clearSearch()">
         <lucide-angular name="x" [size]="16"></lucide-angular>
       </button>
     </div>
@@ -62,7 +62,7 @@
   </div>
 
   <!-- Chat list -->
-  <div class="chat-list">
+  <div class="chat-list" (scroll)="onScroll($event)">
     <div
       *ngFor="let chat of filteredChats; trackBy: trackByChatJid"
       (click)="selectChat(chat)"
@@ -74,7 +74,6 @@
         <img *ngIf="chat.profilePictureUrl" [src]="chat.profilePictureUrl" class="profile-pic" alt="Profile">
         <lucide-angular *ngIf="!chat.profilePictureUrl && !chat.isGroup" name="user" [size]="26"></lucide-angular>
         <lucide-angular *ngIf="!chat.profilePictureUrl && chat.isGroup" name="users" [size]="24"></lucide-angular>
-        <span class="online-dot" *ngIf="chat.isOnline && !chat.isGroup" title="En línea"></span>
       </div>
 
       <div class="chat-content">
@@ -86,8 +85,8 @@
         </div>
 
         <div class="chat-bottom">
-          <span class="chat-last-message" [class.typing-preview]="chat.isTyping">
-            <span *ngIf="chat.lastMsgFromMe && !chat.isTyping && !chat.lastMsgHasMedia" class="sent-by-me">✓ </span>
+          <span class="chat-last-message">
+            <span *ngIf="chat.lastMsgFromMe && !chat.lastMsgHasMedia" class="sent-by-me">✓ </span>
             {{ getLastMsgPreview(chat) }}
           </span>
           <div class="chat-badges">
@@ -99,8 +98,13 @@
       </div>
     </div>
 
+    <!-- Cargando más chats (scroll infinito) -->
+    <div *ngIf="chatsLoading" class="chats-loading">
+      <span>Cargando chats…</span>
+    </div>
+
     <!-- Empty state -->
-    <div *ngIf="filteredChats.length === 0 && searchText" class="empty-search">
+    <div *ngIf="filteredChats.length === 0 && searchText && !chatsLoading" class="empty-search">
       <lucide-angular name="search" [size]="40"></lucide-angular>
       <p>Sin resultados para "{{ searchText }}"</p>
     </div>
