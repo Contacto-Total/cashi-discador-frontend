@@ -50,6 +50,7 @@ export interface Conversation {
 export interface Chat {
   id?: number;
   jid: string;
+  contactPhone?: string;
   name: string;
   lastMsgText?: string;
   lastMsgTs?: number;
@@ -166,6 +167,7 @@ export function conversationToChat(conversation: Conversation): Chat {
   return {
     id: conversation.id,
     jid: conversation.contactJid,
+    contactPhone: conversation.contactPhone,
     name: conversation.name || conversation.contactPhone || conversation.contactJid,
     lastMsgText: conversation.lastMsgText,
     lastMsgTs: conversation.lastMsgTs,

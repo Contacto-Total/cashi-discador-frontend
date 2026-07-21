@@ -283,7 +283,7 @@ export class ChatWidgetComponent {
   }
 
   displayContact(chat: Chat): string {
-    return chat.jid.replace('@lid', '').replace('@s.whatsapp.net', '').replace('@g.us', '');
+    return chat.contactPhone || chat.jid.replace('@lid', '').replace('@s.whatsapp.net', '').replace('@g.us', '');
   }
 
   initials(chat: Chat): string {
