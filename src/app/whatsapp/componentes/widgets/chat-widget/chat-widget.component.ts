@@ -70,7 +70,11 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
                     <div class="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-70">
                       <time [dateTime]="toIso(message.timestamp)">{{ message.timestamp | date: 'HH:mm' }}</time>
                       @if (message.fromMe && message.status) {
-                        <span [class]="messageStatusClass(message.status)" [attr.aria-label]="messageStatusAria(message.status)">
+                        <span
+                          [class]="messageStatusClass(message.status)"
+                          [style.color]="messageStatusColor(message.status)"
+                          [attr.aria-label]="messageStatusAria(message.status)"
+                        >
                           {{ messageStatusIcon(message.status) }}
                         </span>
                       }
@@ -309,6 +313,12 @@ export class ChatWidgetComponent {
 
   messageStatusClass(status: Message['status']): string {
     return `message-status status-${status || 'sent'}`;
+  }
+
+  messageStatusColor(status: Message['status']): string {
+    if (status === 'read') return '#7dd3fc';
+    if (status === 'error') return '#fecaca';
+    return '#e5e7eb';
   }
 
   messageStatusAria(status: Message['status']): string {

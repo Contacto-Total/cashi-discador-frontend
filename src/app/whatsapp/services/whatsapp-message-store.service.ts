@@ -1,6 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { finalize, Subscription } from 'rxjs';
-import { Chat, conversationToChat, Message, SendMessageRequest, TypedWhatsAppEvent } from '../models';
+import { Chat, conversationToChat, Message, MessageStatus, SendMessageRequest, TypedWhatsAppEvent } from '../models';
 import { WhatsappApiService } from './whatsapp-api.service';
 import { WhatsappRealtimeService } from './whatsapp-realtime.service';
 
@@ -122,7 +122,7 @@ export class WhatsappMessageStoreService {
         this.markCurrentChatRead(event.payload);
         break;
       case 'RECEIPT':
-        this.patchReceipt(event.payload.msgId, event.payload.status);
+        this.patchReceiptEvent(event.payload);
         break;
       case 'CHAT_UPDATE':
         this.upsertChat(conversationToChat(event.payload));
@@ -137,17 +137,42 @@ export class WhatsappMessageStoreService {
 
   private upsertMessage(message: Message): void {
     if (!message.conversationId) return;
+    const normalizedMessage: Message = {
+      ...message,
+      status: this.normalizeStatus(message.status) || message.status
+    };
     const current = this.messagesByConversation().get(message.conversationId) || [];
-    const index = current.findIndex((item) => item.msgId === message.msgId);
-    const next = index === -1 ? [...current, message] : current.map((item, i) => i === index ? { ...item, ...message } : item);
+    const index = current.findIndex((item) => item.msgId === normalizedMessage.msgId || String(item.id) === normalizedMessage.msgId);
+    const next = index === -1 ? [...current, normalizedMessage] : current.map((item, i) => i === index ? { ...item, ...normalizedMessage } : item);
     this.setMessages(message.conversationId, next.sort((a, b) => a.timestamp - b.timestamp));
   }
 
-  private patchReceipt(msgId: string, status: Message['status']): void {
+  private patchReceiptEvent(payload: unknown): void {
+    const receipt = payload as { msgId?: string; id?: string; ids?: string[]; status?: string; receipt?: string };
+    const status = this.normalizeStatus(receipt.status || receipt.receipt);
+    if (!status) return;
+
+    const messageIds = Array.isArray(receipt.ids)
+      ? receipt.ids
+      : receipt.msgId
+        ? [receipt.msgId]
+        : receipt.id
+          ? [receipt.id]
+          : [];
+
+    for (const msgId of messageIds) {
+      this.patchReceipt(msgId, status);
+    }
+  }
+
+  private patchReceipt(msgId: string, status: MessageStatus): void {
     const nextMap = new Map(this.messagesByConversation());
     for (const [conversationId, messages] of nextMap) {
-      if (!messages.some((message) => message.msgId === msgId)) continue;
-      nextMap.set(conversationId, messages.map((message) => message.msgId === msgId ? { ...message, status } : message));
+      if (!messages.some((message) => message.fromMe && message.msgId === msgId)) continue;
+      nextMap.set(conversationId, messages.map((message) => {
+        if (!message.fromMe || message.msgId !== msgId || this.isStatusDowngrade(message.status, status)) return message;
+        return { ...message, status };
+      }));
     }
     this.messagesByConversation.set(nextMap);
   }
@@ -195,6 +220,28 @@ export class WhatsappMessageStoreService {
   private mergeChats(current: Chat[], nextPage: Chat[]): Chat[] {
     const currentKeys = new Set(current.map((chat) => chat.id ?? chat.jid));
     return [...current, ...nextPage.filter((chat) => !currentKeys.has(chat.id ?? chat.jid))];
+  }
+
+  private normalizeStatus(status?: string): MessageStatus | undefined {
+    const normalized = status?.toLowerCase();
+    if (normalized === 'pending' || normalized === 'sent' || normalized === 'delivered' || normalized === 'read' || normalized === 'error') {
+      return normalized;
+    }
+    return undefined;
+  }
+
+  private isStatusDowngrade(current: MessageStatus | undefined, next: MessageStatus): boolean {
+    const rank: Record<MessageStatus, number> = {
+      pending: 0,
+      sent: 1,
+      delivered: 2,
+      read: 3,
+      error: 4
+    };
+
+    if (!current || next === 'error') return false;
+    if (current === 'error') return true;
+    return rank[next] < rank[current];
   }
 
   private getSendErrorMessage(error: unknown): string {
