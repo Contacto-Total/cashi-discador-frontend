@@ -198,11 +198,14 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    // /whatsapp ahora sirve la page nueva (app/whatsapp). El módulo viejo
+    // (features/whatsapp/.../main.component) queda huérfano a propósito.
     path: 'whatsapp',
-    loadComponent: () => import('./features/whatsapp/components/main/main.component').then(m => m.MainComponent),
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-page/whatsapp-page.component').then(m => m.WhatsappPageComponent),
     canActivate: [authGuard]
   },
   {
+    // Alias que ya usa el popup de notificaciones; apunta a la misma page nueva.
     path: 'wsp2',
     loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-page/whatsapp-page.component').then(m => m.WhatsappPageComponent),
     canActivate: [authGuard]
