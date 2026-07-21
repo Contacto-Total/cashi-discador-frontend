@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
 import { RealtimeService, WhatsAppEvent } from '../../../../core/services/whatsapp/realtime.service';
 
 interface WhatsAppNotification {
+  conversationId?: number;
   chat: string;
   chatTitle: string;
   text: string;
@@ -24,9 +26,11 @@ interface WhatsAppNotification {
 export class WhatsAppNotificationPopupComponent implements OnInit, OnDestroy {
   notification: WhatsAppNotification | null = null;
   private sub?: Subscription;
+  private closeTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
     private realtime: RealtimeService,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -34,17 +38,31 @@ export class WhatsAppNotificationPopupComponent implements OnInit, OnDestroy {
     this.sub = this.realtime.events$.subscribe(event => {
       if (event.type !== 'MESSAGE_NOTIFICATION') return;
       this.notification = this.toNotification(event);
+      this.scheduleAutoClose();
       this.cdr.markForCheck();
     });
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.clearAutoClose();
   }
 
   close(): void {
+    this.clearAutoClose();
     this.notification = null;
     this.cdr.markForCheck();
+  }
+
+  openChat(): void {
+    if (!this.notification) return;
+    this.router.navigate(['/wsp2'], {
+      queryParams: {
+        conversationId: this.notification.conversationId,
+        chat: this.notification.chat || undefined
+      }
+    });
+    this.close();
   }
 
   displayName(): string {
@@ -71,6 +89,7 @@ export class WhatsAppNotificationPopupComponent implements OnInit, OnDestroy {
   private toNotification(event: WhatsAppEvent): WhatsAppNotification {
     const payload = event.payload || {};
     return {
+      conversationId: payload.conversationId || event.conversationId,
       chat: payload.chat || event.chat || '',
       chatTitle: payload.chatTitle || payload.chat || event.chat || 'WhatsApp',
       text: payload.text || '',
@@ -78,6 +97,17 @@ export class WhatsAppNotificationPopupComponent implements OnInit, OnDestroy {
       hasMedia: !!payload.hasMedia,
       mediaKind: payload.mediaKind
     };
+  }
+
+  private scheduleAutoClose(): void {
+    this.clearAutoClose();
+    this.closeTimer = setTimeout(() => this.close(), 15000);
+  }
+
+  private clearAutoClose(): void {
+    if (!this.closeTimer) return;
+    clearTimeout(this.closeTimer);
+    this.closeTimer = undefined;
   }
 
   private formatPhone(jid: string): string {

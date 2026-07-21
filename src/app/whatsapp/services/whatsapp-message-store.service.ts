@@ -64,6 +64,23 @@ export class WhatsappMessageStoreService {
     this.loadChats(this.chatsPage() + 1, size, this.chatsQuery());
   }
 
+  selectChatByRoute(conversationId?: number, jid?: string): void {
+    const existing = this.findChat(conversationId, jid);
+    if (existing) {
+      this.selectChat(existing);
+      return;
+    }
+
+    this.api.getChats(0, 30, jid).subscribe({
+      next: (response) => {
+        const mapped = response.content.map(conversationToChat);
+        this.chats.set(this.mergeChats(this.chats(), mapped).sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0)));
+        const found = this.findChat(conversationId, jid);
+        if (found) this.selectChat(found);
+      }
+    });
+  }
+
   selectChat(chat: Chat | null): void {
     this.currentChat.set(chat);
     this.activeViewers.set([]);
@@ -334,6 +351,12 @@ export class WhatsappMessageStoreService {
   private mergeChats(current: Chat[], nextPage: Chat[]): Chat[] {
     const currentKeys = new Set(current.map((chat) => chat.id ?? chat.jid));
     return [...current, ...nextPage.filter((chat) => !currentKeys.has(chat.id ?? chat.jid))];
+  }
+
+  private findChat(conversationId?: number, jid?: string): Chat | undefined {
+    return this.chats().find((chat) =>
+      (conversationId != null && chat.id === conversationId) || (!!jid && chat.jid === jid)
+    );
   }
 
   private normalizeStatus(status?: string): MessageStatus | undefined {
