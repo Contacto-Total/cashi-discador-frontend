@@ -93,8 +93,8 @@ import { WhatsappMessageStoreService } from '../../../services';
                       {{ preview(chat) }}
                     </p>
                     @if ((chat.unreadCount || 0) > 0) {
-                      <span class="grid min-w-5 place-items-center rounded-full bg-emerald-400 px-1.5 text-xs font-bold text-slate-950">
-                        {{ chat.unreadCount }}
+                      <span class="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold leading-none text-white">
+                        {{ unreadBadge(chat) }}
                       </span>
                     }
                   </div>
@@ -174,6 +174,12 @@ export class ChatListWidgetComponent implements OnInit {
     return parts.length > 1
       ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
       : source.slice(0, 2).toUpperCase();
+  }
+
+  /** No-leídos con tope visual "+10" (como WhatsApp). */
+  unreadBadge(chat: Chat): string {
+    const count = chat.unreadCount || 0;
+    return count > 10 ? '+10' : String(count);
   }
 
   preview(chat: Chat): string {

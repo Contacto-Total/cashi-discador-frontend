@@ -12,9 +12,17 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
     <section class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
       @if (chat(); as selectedChat) {
         <header class="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
-          <div class="grid size-11 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-slate-950">
-            {{ initials(selectedChat) }}
-          </div>
+          @if (selectedChat.profilePictureUrl) {
+            <img
+              class="size-11 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+              [src]="selectedChat.profilePictureUrl"
+              [alt]="selectedChat.name"
+            />
+          } @else {
+            <div class="grid size-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 text-sm font-bold text-slate-950">
+              {{ initials(selectedChat) }}
+            </div>
+          }
           <div class="min-w-0 flex-1">
             <h2 class="truncate text-base font-semibold text-slate-950">{{ selectedChat.name }}</h2>
             <p class="truncate text-xs text-slate-500">{{ displayContact(selectedChat) }}</p>
@@ -49,7 +57,7 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
               <p class="mt-1 text-sm">Todavía no hay historial cargado para esta conversación.</p>
             </div>
           } @else {
-            <div class="space-y-3">
+            <div class="space-y-1.5">
               @for (message of messages(); track message.msgId) {
                 <article class="flex" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
                   <div [class]="bubbleClass(message)">
@@ -63,12 +71,12 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
                       <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
                     }
                     @if (message.text && !isSticker(message)) {
-                      <p class="whitespace-pre-wrap break-words text-sm leading-relaxed">{{ message.text }}</p>
+                      <p class="whitespace-pre-wrap break-words text-sm leading-snug">{{ message.text }}</p>
                     } @else if (!message.hasMedia) {
                       <p class="text-sm italic opacity-70">Mensaje sin texto</p>
                     }
-                    <div class="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-70">
-                      <time [dateTime]="toIso(message.timestamp)">{{ message.timestamp | date: 'HH:mm' }}</time>
+                    <div class="mt-0.5 flex items-center justify-end gap-1.5 text-[11px]">
+                      <time class="opacity-60" [dateTime]="toIso(message.timestamp)">{{ message.timestamp | date: 'HH:mm' }}</time>
                       @if (message.fromMe && message.status) {
                         <span
                           [class]="messageStatusClass(message.status)"
@@ -229,7 +237,7 @@ export class ChatWidgetComponent {
       return 'max-w-[78%] text-slate-900';
     }
 
-    const base = 'max-w-[78%] rounded-lg px-4 py-2 shadow-sm';
+    const base = 'max-w-[78%] rounded-lg px-3 py-1.5 shadow-sm';
     return message.fromMe
       ? `${base} bg-emerald-600 text-white rounded-br-sm`
       : `${base} bg-white text-slate-900 ring-1 ring-slate-200 rounded-bl-sm`;
@@ -316,9 +324,12 @@ export class ChatWidgetComponent {
   }
 
   messageStatusColor(status: Message['status']): string {
-    if (status === 'read') return '#7dd3fc';
-    if (status === 'error') return '#fecaca';
-    return '#e5e7eb';
+    // Sobre la burbuja verde (emerald-600): blanco para enviado/entregado y azul
+    // vivo para leído, así el doble check tiene contraste y se distingue del gris.
+    if (status === 'read') return '#38bdf8';
+    if (status === 'error') return '#fecdd3';
+    if (status === 'pending') return 'rgba(255,255,255,0.75)';
+    return 'rgba(255,255,255,0.95)';
   }
 
   messageStatusAria(status: Message['status']): string {
