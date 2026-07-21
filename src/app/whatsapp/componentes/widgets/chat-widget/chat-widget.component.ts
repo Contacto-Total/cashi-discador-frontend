@@ -1,8 +1,20 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { Chat, Message } from '../../../models';
-import { UserInfoService, WhatsappMessageStoreService } from '../../../services';
+import { UserInfoService, WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
 import { MessageInputWidgetComponent } from '../message-input-widget/message-input-widget.component';
+
+interface MessageViewer {
+  agentId: string;
+  name: string;
+  seenAt: string;
+}
+
+interface MessageSender {
+  name: string;
+  role?: string;
+  cartera?: string;
+}
 
 @Component({
   selector: 'app-whatsapp-chat-widget',
@@ -60,9 +72,9 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
             <div class="space-y-1.5">
               @for (message of messages(); track message.msgId) {
                 <article class="flex" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
-                  <div [class]="bubbleClass(message)">
+                  <div [class]="bubbleClass(message)" (click)="openMessageDetail(message)">
                     @if (isImage(message) && mediaUrl(message)) {
-                      <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message)">
+                      <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message); $event.stopPropagation()">
                         <img class="max-h-48 w-full object-cover" [src]="mediaUrl(message)" [alt]="message.media?.caption || message.text || 'Imagen'" />
                       </button>
                     } @else if (isSticker(message) && mediaUrl(message)) {
@@ -76,14 +88,26 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
                       <p class="text-sm italic opacity-70">Mensaje sin texto</p>
                     }
                     <div class="mt-0.5 flex items-center justify-end gap-1.5 text-[11px]">
-                      <time class="opacity-60" [dateTime]="toIso(message.timestamp)">{{ message.timestamp | date: 'HH:mm' }}</time>
+                      <time class="opacity-80" [dateTime]="toIso(message.timestamp)">{{ message.timestamp | date: 'HH:mm' }}</time>
                       @if (message.fromMe && message.status) {
-                        <span
-                          [class]="messageStatusClass(message.status)"
-                          [style.color]="messageStatusColor(message.status)"
-                          [attr.aria-label]="messageStatusAria(message.status)"
-                        >
-                          {{ messageStatusIcon(message.status) }}
+                        <span class="inline-flex items-center" [style.color]="messageStatusColor(message.status)" [attr.aria-label]="messageStatusAria(message.status)">
+                          @switch (message.status) {
+                            @case ('pending') {
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+                            }
+                            @case ('error') {
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12.01" y2="16.5"/></svg>
+                            }
+                            @case ('read') {
+                              <svg width="18" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6.5 17 16 6"/><path d="m8.5 14.5 1.5 1.5L22 5"/></svg>
+                            }
+                            @case ('delivered') {
+                              <svg width="18" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6.5 17 16 6"/><path d="m8.5 14.5 1.5 1.5L22 5"/></svg>
+                            }
+                            @default {
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9 17.5 20 6"/></svg>
+                            }
+                          }
                         </span>
                       }
                     </div>
@@ -151,34 +175,63 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
         </div>
       </div>
     }
-  `,
-  styles: [`
-    .message-status {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 1rem;
-      font-size: 0.75rem;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: -0.08em;
-    }
 
-    .status-pending,
-    .status-sent,
-    .status-delivered {
-      color: #d1d5db;
-    }
+    @if (detailMessage(); as detail) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" (click)="closeMessageDetail()">
+        <div class="w-full max-w-sm overflow-hidden rounded-xl bg-white shadow-2xl" (click)="$event.stopPropagation()">
+          <header class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+            <h3 class="text-sm font-semibold text-slate-950">Detalle del mensaje</h3>
+            <button
+              type="button"
+              class="rounded-md px-2 py-1 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              (click)="closeMessageDetail()"
+            >
+              Cerrar
+            </button>
+          </header>
 
-    .status-read {
-      color: #7dd3fc;
-    }
+          <div class="max-h-[70vh] overflow-y-auto px-5 py-4">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Enviado por</p>
+            <p class="mt-1 text-sm font-semibold text-slate-900">
+              {{ detailSender()?.name || detailSenderFallback(detail) }}
+            </p>
+            @if (detailSender()?.role) {
+              <p class="text-xs text-slate-500">{{ detailSender()?.role }}</p>
+            }
+            @if (detailSender()?.cartera) {
+              <p class="text-xs text-slate-500">Cartera: {{ detailSender()?.cartera }}</p>
+            }
+            <p class="mt-2 text-xs text-slate-500">{{ detail.timestamp | date: 'd MMM y, HH:mm' }}</p>
 
-    .status-error {
-      color: #dc2626;
-      letter-spacing: 0;
+            @if (!detail.fromMe) {
+              <hr class="my-4 border-slate-200" />
+
+              <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Visto por</p>
+              @if (detailLoadingViews()) {
+                <p class="mt-2 text-sm text-slate-500">Cargando…</p>
+              } @else if (!detailViews().length) {
+                <p class="mt-2 text-sm text-slate-500">Nadie ha visto este mensaje aún.</p>
+              } @else {
+                <ul class="mt-2 space-y-2">
+                  @for (viewer of detailViews(); track viewer.agentId) {
+                    <li class="flex items-center justify-between gap-3">
+                      <span class="flex min-w-0 items-center gap-2">
+                        <span class="grid size-7 shrink-0 place-items-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-700">
+                          {{ viewerInitials(viewer.name) }}
+                        </span>
+                        <span class="truncate text-sm text-slate-800">{{ viewer.name }}</span>
+                      </span>
+                      <time class="shrink-0 text-xs text-slate-400" [dateTime]="viewer.seenAt">{{ viewer.seenAt | date: 'd MMM, HH:mm' }}</time>
+                    </li>
+                  }
+                </ul>
+              }
+            }
+          </div>
+        </div>
+      </div>
     }
-  `]
+  `
 })
 export class ChatWidgetComponent {
   @ViewChild('messagesPanel') private messagesPanel?: ElementRef<HTMLElement>;
@@ -187,6 +240,12 @@ export class ChatWidgetComponent {
   readonly messages = computed(() => this.store.currentMessages());
   readonly viewerNames = signal(new Map<string, string>());
   readonly selectedImage = signal<Message | null>(null);
+
+  // Panel de detalle de un mensaje (quién lo envió + quiénes lo vieron).
+  readonly detailMessage = signal<Message | null>(null);
+  readonly detailSender = signal<MessageSender | null>(null);
+  readonly detailViews = signal<MessageViewer[]>([]);
+  readonly detailLoadingViews = signal(false);
   readonly viewersText = computed(() => this.truncateViewers(this.store.activeViewers()
     .map((viewerId) => this.viewerNames().get(viewerId) || viewerId)
     .join(', ')));
@@ -197,7 +256,8 @@ export class ChatWidgetComponent {
 
   constructor(
     readonly store: WhatsappMessageStoreService,
-    private readonly userInfo: UserInfoService
+    private readonly userInfo: UserInfoService,
+    private readonly api: WhatsappApiService
   ) {
     effect(() => {
       const chatId = this.chat()?.id;
@@ -237,7 +297,7 @@ export class ChatWidgetComponent {
       return 'max-w-[78%] text-slate-900';
     }
 
-    const base = 'max-w-[78%] rounded-lg px-3 py-1.5 shadow-sm';
+    const base = 'max-w-[78%] cursor-pointer rounded-lg px-3 py-1.5 shadow-sm transition hover:brightness-95';
     return message.fromMe
       ? `${base} bg-emerald-600 text-white rounded-br-sm`
       : `${base} bg-white text-slate-900 ring-1 ring-slate-200 rounded-bl-sm`;
@@ -262,6 +322,58 @@ export class ChatWidgetComponent {
 
   closeImageViewer(): void {
     this.selectedImage.set(null);
+  }
+
+  openMessageDetail(message: Message): void {
+    this.detailMessage.set(message);
+    this.detailSender.set(null);
+    this.detailViews.set([]);
+    this.detailLoadingViews.set(false);
+
+    // Quién lo envió: resolver el nombre del agente (mismo servicio que "viendo
+    // actualmente"). sentByAgentId solo viene en salientes despachados por outbox.
+    const agentId = Number(message.sentByAgentId);
+    if (message.sentByAgentId && Number.isFinite(agentId)) {
+      this.userInfo.getUserInfoView(agentId).subscribe({
+        next: (user) => this.detailSender.set({
+          name: user.displayName,
+          role: user.roles?.[0],
+          cartera: user.asignaciones?.[0]?.nombreCartera
+        }),
+        error: () => this.detailSender.set({ name: `Agente ${message.sentByAgentId}` })
+      });
+    }
+
+    // "Visto por" (asesores internos) solo se registra sobre mensajes ENTRANTES.
+    // En salientes únicamente importa quién lo envió, así que ni consultamos.
+    if (message.fromMe) return;
+
+    // Quiénes lo vieron: endpoint existente; los IDs se resuelven a nombres.
+    this.detailLoadingViews.set(true);
+    this.api.getMessageViews(message.msgId).subscribe({
+      next: (views) => {
+        this.detailViews.set(views.map((view) => ({ agentId: view.agentId, name: view.agentId, seenAt: view.seenAt })));
+        this.detailLoadingViews.set(false);
+        for (const view of views) {
+          const id = Number(view.agentId);
+          if (!Number.isFinite(id)) continue;
+          this.userInfo.getUserInfoView(id).subscribe({
+            next: (user) => this.detailViews.update((list) =>
+              list.map((item) => item.agentId === view.agentId ? { ...item, name: user.displayName } : item))
+          });
+        }
+      },
+      error: () => this.detailLoadingViews.set(false)
+    });
+  }
+
+  closeMessageDetail(): void {
+    this.detailMessage.set(null);
+  }
+
+  detailSenderFallback(message: Message): string {
+    if (message.sentByAgentId) return `Agente ${message.sentByAgentId}`;
+    return message.fromMe ? 'Tú / sistema' : (this.chat()?.name || 'Contacto');
   }
 
   async copyImage(message: Message): Promise<void> {
@@ -311,16 +423,11 @@ export class ChatWidgetComponent {
     return 'Adjunto';
   }
 
-  messageStatusIcon(status: Message['status']): string {
-    if (status === 'pending') return '◷';
-    if (status === 'sent') return '✓';
-    if (status === 'delivered' || status === 'read') return '✓✓';
-    if (status === 'error') return '!';
-    return '';
-  }
-
-  messageStatusClass(status: Message['status']): string {
-    return `message-status status-${status || 'sent'}`;
+  viewerInitials(name: string): string {
+    const parts = (name || '').split(/\s+/).filter(Boolean);
+    return parts.length > 1
+      ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+      : (name || '?').slice(0, 2).toUpperCase();
   }
 
   messageStatusColor(status: Message['status']): string {
