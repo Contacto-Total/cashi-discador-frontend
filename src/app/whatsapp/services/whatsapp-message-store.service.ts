@@ -1,6 +1,6 @@
 import { computed, Injectable, signal } from '@angular/core';
 import { finalize, Subscription } from 'rxjs';
-import { Chat, conversationToChat, Message, MessageStatus, SendMessageRequest, TypedWhatsAppEvent } from '../models';
+import { Chat, conversationToChat, Message, MessageStatus, OutboundFailedPayload, SendMessageRequest, TypedWhatsAppEvent } from '../models';
 import { WhatsappApiService } from './whatsapp-api.service';
 import { WhatsappRealtimeService } from './whatsapp-realtime.service';
 
@@ -9,6 +9,14 @@ export class WhatsappMessageStoreService {
   private readonly messagesByConversation = signal(new Map<number, Message[]>());
   private readonly hasMoreByConversation = signal(new Map<number, boolean>());
   private realtimeSubscription?: Subscription;
+
+  // Receipts que llegaron antes que su mensaje (carrera eco OUTGOING / receipt):
+  // se guardan por msgId y se aplican cuando el mensaje entra al store.
+  private readonly pendingReceipts = new Map<string, MessageStatus>();
+  // outboundId (respuesta de POST /send) → temporal optimista, para empatar un
+  // OUTBOUND_FAILED con el mensaje exacto que lo originó.
+  private readonly tempByOutboundId = new Map<number, { conversationId: number; tempMsgId: string }>();
+  private tempCounter = 0;
 
   readonly chats = signal<Chat[]>([]);
   readonly currentChat = signal<Chat | null>(null);
@@ -97,9 +105,48 @@ export class WhatsappMessageStoreService {
   sendMessage(request: SendMessageRequest): void {
     this.sendingMessage.set(true);
     this.sendMessageError.set(null);
+
+    // Burbuja optimista: aparece al instante en 'pending'. El eco OUTGOING la
+    // reconcilia con el msgId real (ver upsertMessage) y desde ahí los receipts
+    // la actualizan en vivo.
+    const tempMsgId = this.insertOptimisticMessage(request);
+
     this.api.sendMessage(request).pipe(finalize(() => this.sendingMessage.set(false))).subscribe({
-      error: (error: unknown) => this.sendMessageError.set(this.getSendErrorMessage(error))
+      next: (response) => {
+        if (tempMsgId && response?.id != null) {
+          this.tempByOutboundId.set(response.id, { conversationId: request.conversationId, tempMsgId });
+        }
+      },
+      error: (error: unknown) => {
+        this.sendMessageError.set(this.getSendErrorMessage(error));
+        if (tempMsgId) this.markMessageError(request.conversationId, tempMsgId);
+      }
     });
+  }
+
+  private insertOptimisticMessage(request: SendMessageRequest): string | undefined {
+    if (!request.conversationId) return undefined;
+    const tempMsgId = `temp_${Date.now()}_${++this.tempCounter}`;
+    const optimistic: Message = {
+      msgId: tempMsgId,
+      chat: this.currentChat()?.jid || '',
+      conversationId: request.conversationId,
+      text: request.body || '',
+      fromMe: true,
+      timestamp: Date.now(),
+      hasMedia: request.type === 'MEDIA',
+      status: 'pending',
+      quotedMessageId: request.quotedMessageId
+    };
+    const current = this.messagesByConversation().get(request.conversationId) || [];
+    this.setMessages(request.conversationId, [...current, optimistic]);
+    return tempMsgId;
+  }
+
+  private markMessageError(conversationId: number, msgId: string): void {
+    const current = this.messagesByConversation().get(conversationId);
+    if (!current) return;
+    this.setMessages(conversationId, current.map((message) => message.msgId === msgId ? { ...message, status: 'error' } : message));
   }
 
   connectRealtime(token?: string): void {
@@ -124,6 +171,9 @@ export class WhatsappMessageStoreService {
       case 'RECEIPT':
         this.patchReceiptEvent(event.payload);
         break;
+      case 'OUTBOUND_FAILED':
+        this.patchOutboundFailed(event.payload);
+        break;
       case 'CHAT_UPDATE':
         this.upsertChat(conversationToChat(event.payload));
         break;
@@ -142,9 +192,60 @@ export class WhatsappMessageStoreService {
       status: this.normalizeStatus(message.status) || message.status
     };
     const current = this.messagesByConversation().get(message.conversationId) || [];
-    const index = current.findIndex((item) => item.msgId === normalizedMessage.msgId || String(item.id) === normalizedMessage.msgId);
-    const next = index === -1 ? [...current, normalizedMessage] : current.map((item, i) => i === index ? { ...item, ...normalizedMessage } : item);
+
+    let index = current.findIndex((item) => item.msgId === normalizedMessage.msgId || String(item.id) === normalizedMessage.msgId);
+
+    // Reconciliar la burbuja optimista: el eco OUTGOING trae el msgId real; si aún
+    // existe el temporal pendiente con el mismo texto, se reemplaza en su lugar
+    // para que los RECEIPT (que llegan con el msgId real) lo encuentren.
+    if (index === -1 && normalizedMessage.fromMe) {
+      index = current.findIndex((item) =>
+        item.msgId.startsWith('temp_') &&
+        item.fromMe &&
+        (item.status === 'pending' || item.status === 'sent') &&
+        item.text === normalizedMessage.text
+      );
+    }
+
+    let next = index === -1
+      ? [...current, normalizedMessage]
+      : current.map((item, i) => i === index ? { ...item, ...normalizedMessage } : item);
+
+    // Aplicar un receipt que llegó antes que el mensaje (carrera eco/receipt).
+    const buffered = this.pendingReceipts.get(normalizedMessage.msgId);
+    if (buffered) {
+      this.pendingReceipts.delete(normalizedMessage.msgId);
+      next = next.map((item) =>
+        item.msgId === normalizedMessage.msgId && item.fromMe && !this.isStatusDowngrade(item.status, buffered)
+          ? { ...item, status: buffered }
+          : item
+      );
+    }
+
     this.setMessages(message.conversationId, next.sort((a, b) => a.timestamp - b.timestamp));
+  }
+
+  private patchOutboundFailed(payload: OutboundFailedPayload): void {
+    this.sendMessageError.set(payload.error || 'No se pudo enviar el mensaje.');
+
+    const conversationId = payload.conversationId;
+    if (!conversationId) return;
+    const current = this.messagesByConversation().get(conversationId);
+    if (!current) return;
+
+    // Correlación preferente por outboundId; si no, por texto del temporal pendiente.
+    const targetTempId = payload.outboundId != null ? this.tempByOutboundId.get(payload.outboundId)?.tempMsgId : undefined;
+    const next = current.map((message) => {
+      const isTarget = targetTempId
+        ? message.msgId === targetTempId
+        : message.msgId.startsWith('temp_') && message.fromMe
+          && (message.status === 'pending' || message.status === 'sent')
+          && (payload.text == null || message.text === payload.text);
+      return isTarget ? { ...message, status: 'error' as MessageStatus } : message;
+    });
+
+    this.setMessages(conversationId, next);
+    if (payload.outboundId != null) this.tempByOutboundId.delete(payload.outboundId);
   }
 
   private patchReceiptEvent(payload: unknown): void {
@@ -167,14 +268,27 @@ export class WhatsappMessageStoreService {
 
   private patchReceipt(msgId: string, status: MessageStatus): void {
     const nextMap = new Map(this.messagesByConversation());
+    let matched = false;
     for (const [conversationId, messages] of nextMap) {
       if (!messages.some((message) => message.fromMe && message.msgId === msgId)) continue;
+      matched = true;
       nextMap.set(conversationId, messages.map((message) => {
         if (!message.fromMe || message.msgId !== msgId || this.isStatusDowngrade(message.status, status)) return message;
         return { ...message, status };
       }));
     }
-    this.messagesByConversation.set(nextMap);
+
+    if (matched) {
+      this.messagesByConversation.set(nextMap);
+      return;
+    }
+
+    // Receipt adelantado (llegó antes que el eco OUTGOING): se guarda y se aplica
+    // cuando el mensaje con ese msgId entre al store (upsertMessage).
+    const buffered = this.pendingReceipts.get(msgId);
+    if (!buffered || !this.isStatusDowngrade(buffered, status)) {
+      this.pendingReceipts.set(msgId, status);
+    }
   }
 
   private patchChatFromMessage(message: Message): void {

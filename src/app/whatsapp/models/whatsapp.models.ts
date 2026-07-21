@@ -17,7 +17,8 @@ export type WhatsAppEventType =
   | 'CHAT_UPDATE'
   | 'VIEWERS'
   | 'STATUS'
-  | 'MESSAGE_NOTIFICATION';
+  | 'MESSAGE_NOTIFICATION'
+  | 'OUTBOUND_FAILED';
 
 export interface MediaInfo {
   mediaId?: string;
@@ -135,6 +136,16 @@ export interface MessageNotification {
   mediaKind?: string;
 }
 
+export interface OutboundFailedPayload {
+  outboundId?: number;
+  conversationId?: number;
+  chat: string;
+  text?: string;
+  type?: OutboundType;
+  status: 'error';
+  error: string;
+}
+
 export interface AccountStatusEvent {
   instanciaId: string;
   status: string;
@@ -150,6 +161,7 @@ export interface WhatsAppEventPayloadMap {
   VIEWERS: ViewerResponse;
   STATUS: AccountStatusEvent;
   MESSAGE_NOTIFICATION: MessageNotification;
+  OUTBOUND_FAILED: OutboundFailedPayload;
 }
 
 export interface WhatsAppEvent<T = unknown> {
