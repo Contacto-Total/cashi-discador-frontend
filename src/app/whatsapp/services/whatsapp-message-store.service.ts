@@ -119,6 +119,7 @@ export class WhatsappMessageStoreService {
       case 'OUTGOING':
         this.upsertMessage(event.payload);
         this.patchChatFromMessage(event.payload);
+        this.markCurrentChatRead(event.payload);
         break;
       case 'RECEIPT':
         this.patchReceipt(event.payload.msgId, event.payload.status);
@@ -157,8 +158,13 @@ export class WhatsappMessageStoreService {
       lastMsgText: message.text,
       lastMsgTs: message.timestamp,
       lastMsgFromMe: message.fromMe,
-      unreadCount: message.fromMe ? chat.unreadCount : (chat.unreadCount || 0) + 1
+      unreadCount: message.fromMe || this.currentChat()?.id === message.conversationId ? 0 : (chat.unreadCount || 0) + 1
     } : chat).sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0)));
+  }
+
+  private markCurrentChatRead(message: Message): void {
+    if (message.fromMe || !message.conversationId || this.currentChat()?.id !== message.conversationId) return;
+    this.api.markRead(message.conversationId).subscribe();
   }
 
   private upsertChat(chat: Chat): void {

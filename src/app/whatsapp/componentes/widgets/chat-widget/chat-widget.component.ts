@@ -155,11 +155,11 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
     .status-pending,
     .status-sent,
     .status-delivered {
-      color: #64748b;
+      color: #d1d5db;
     }
 
     .status-read {
-      color: #2563eb;
+      color: #7dd3fc;
     }
 
     .status-error {
@@ -180,6 +180,7 @@ export class ChatWidgetComponent {
     .join(', ')));
 
   private lastChatId?: number;
+  private lastMessageKey = '';
   private pendingScrollToBottom = false;
 
   constructor(
@@ -188,14 +189,25 @@ export class ChatWidgetComponent {
   ) {
     effect(() => {
       const chatId = this.chat()?.id;
-      const messageCount = this.messages().length;
+      const messages = this.messages();
+      const messageCount = messages.length;
+      const lastMessage = messages[messageCount - 1];
+      const lastMessageKey = lastMessage ? `${chatId}:${lastMessage.msgId}:${lastMessage.timestamp}` : `${chatId}:empty`;
 
       if (chatId !== this.lastChatId) {
         this.lastChatId = chatId;
+        this.lastMessageKey = lastMessageKey;
         this.pendingScrollToBottom = !!chatId;
       }
 
       if (this.pendingScrollToBottom && messageCount > 0) {
+        this.scrollToBottom();
+        this.lastMessageKey = lastMessageKey;
+        return;
+      }
+
+      if (messageCount > 0 && lastMessageKey !== this.lastMessageKey) {
+        this.lastMessageKey = lastMessageKey;
         this.scrollToBottom();
       }
     });
