@@ -38,7 +38,7 @@ import { WhatsappMessageStoreService } from '../../../services';
         </label>
       </header>
 
-      <section class="min-h-0 flex-1 overflow-y-auto p-2">
+      <section class="min-h-0 flex-1 overflow-y-auto">
         @if (store.loadingChats() && !store.chats().length) {
           <div class="space-y-2 p-2">
             @for (item of skeletonItems; track item) {
@@ -52,7 +52,7 @@ import { WhatsappMessageStoreService } from '../../../services';
             <p class="mt-2 text-sm">No encontramos chats para mostrar con el filtro actual.</p>
           </div>
         } @else {
-          <div class="space-y-1">
+          <div>
             @for (chat of store.chats(); track trackChat(chat)) {
               <button
                 type="button"
@@ -78,7 +78,7 @@ import { WhatsappMessageStoreService } from '../../../services';
 
                 <div class="min-w-0 flex-1">
                   <div class="flex items-start justify-between gap-2">
-                    <p class="truncate text-sm font-semibold text-slate-950">{{ chat.name }}</p>
+                    <p class="truncate text-sm font-semibold text-slate-950">{{ chatDisplayName(chat) }}</p>
                     @if (chat.lastMsgTs) {
                       <time class="shrink-0 text-xs font-medium text-slate-500" [dateTime]="toIso(chat.lastMsgTs)">
                         {{ chat.lastMsgTs | date: 'HH:mm' }}
@@ -160,8 +160,15 @@ export class ChatListWidgetComponent implements OnInit {
   }
 
   chatButtonClass(chat: Chat): string {
-    const base = 'group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition';
-    return this.isSelected(chat) ? `${base} bg-emerald-100 hover:bg-emerald-100` : `${base} hover:bg-slate-100`;
+    const base = 'group flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition';
+    return this.isSelected(chat) ? `${base} bg-emerald-100 hover:bg-emerald-100` : `${base} hover:bg-slate-50`;
+  }
+
+  chatDisplayName(chat: Chat): string {
+    if (!chat.name || chat.name.includes('@lid') || chat.name.includes('@s.whatsapp.net')) {
+      return chat.contactPhone || chat.name || chat.jid;
+    }
+    return chat.name;
   }
 
   trackChat(chat: Chat): string | number {

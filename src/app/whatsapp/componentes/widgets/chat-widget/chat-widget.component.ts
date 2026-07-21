@@ -36,14 +36,14 @@ interface MessageSender {
             </div>
           }
           <div class="min-w-0 flex-1">
-            <h2 class="truncate text-base font-semibold text-slate-950">{{ selectedChat.name }}</h2>
+            <h2 class="truncate text-base font-semibold text-slate-950">{{ chatDisplayName(selectedChat) }}</h2>
             <p class="truncate text-xs text-slate-500">{{ displayContact(selectedChat) }}</p>
-            @if (viewersText()) {
-              <p class="mt-0.5 truncate text-xs font-medium text-emerald-700">
-                Viendo actualmente: {{ viewersText() }}
-              </p>
-            }
           </div>
+          @if (viewersText()) {
+            <p class="ml-auto max-w-[45%] truncate text-right text-xs font-medium text-emerald-700">
+              Viendo actualmente: {{ viewersText() }}
+            </p>
+          }
           @if (store.loadingMessages()) {
             <span class="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Cargando</span>
           }
@@ -421,8 +421,15 @@ export class ChatWidgetComponent {
     return chat.contactPhone || chat.jid.replace('@lid', '').replace('@s.whatsapp.net', '').replace('@g.us', '');
   }
 
+  chatDisplayName(chat: Chat): string {
+    if (!chat.name || chat.name.includes('@lid') || chat.name.includes('@s.whatsapp.net')) {
+      return chat.contactPhone || chat.name || chat.jid;
+    }
+    return chat.name;
+  }
+
   initials(chat: Chat): string {
-    const source = chat.name || chat.jid;
+    const source = this.chatDisplayName(chat);
     const parts = source.split(/\s+/).filter(Boolean);
     return parts.length > 1
       ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
