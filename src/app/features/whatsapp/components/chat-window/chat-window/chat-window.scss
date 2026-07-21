@@ -958,6 +958,14 @@
           &.status-read {
             color: #1d57d4;
           }
+
+          &.status-pending {
+            color: rgba(255, 255, 255, 0.55);
+          }
+
+          &.status-error {
+            color: #f15c6d;
+          }
         }
       }
     }

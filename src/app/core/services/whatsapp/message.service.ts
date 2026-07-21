@@ -132,6 +132,13 @@ export class MessageService {
           case 'RECEIPT':
             this.handleReceipt({ ...event.payload, chat: event.chat });
             break;
+          case 'OUTBOUND_FAILED':
+            this.handleOutboundFailed({ ...event.payload, chat: event.chat || event.payload?.chat });
+            break;
+          case 'MESSAGE_NOTIFICATION':
+            // El mensaje entrante ya llega por INCOMING; la notificación es un
+            // aviso liviano redundante para esta vista. Sin acción.
+            break;
           case 'CHAT_UPDATE':
             this.handleChatUpdate(event);
             break;
@@ -247,11 +254,24 @@ export class MessageService {
 
     // Si no existe y es OUTGOING, buscar mensaje temporal para reemplazar
     if (existingIndex === -1 && isFromMe) {
+      // Vía rápida: mismo texto dentro de una ventana corta (eco casi inmediato).
       existingIndex = messages.findIndex(m =>
         m.msgId.startsWith('temp_') &&
         m.text === message.text &&
         Math.abs(m.timestamp - message.timestamp) < 5000
       );
+
+      // Fallback: el eco OUTGOING puede tardar MUCHO más de 5s (cola de salida +
+      // rate-limit adaptivo por cuenta + ida/vuelta al Go). Sin este empate el
+      // temporal nunca toma el msgId real y los RECEIPT posteriores —que llegan
+      // con el msgId real— no encuentran a qué mensaje aplicarse.
+      if (existingIndex === -1) {
+        existingIndex = messages.findIndex(m =>
+          m.msgId.startsWith('temp_') &&
+          m.status === 'pending' &&
+          m.text === message.text
+        );
+      }
 
       if (existingIndex !== -1) {
         console.log(`🔄 Reemplazando mensaje temporal ${messages[existingIndex].msgId} con ${message.msgId}`);
@@ -295,6 +315,11 @@ export class MessageService {
     this.updateChatInList(chatId, message);
   }
 
+  /** Ranking de estados: nunca retroceder (un delivered no debe pisar un read). */
+  private static readonly STATUS_RANK: Record<string, number> = {
+    pending: 0, sent: 1, delivered: 2, read: 3, error: 99
+  };
+
   private handleReceipt(payload: any): void {
     if (!payload || !payload.chat) return;
 
@@ -302,7 +327,7 @@ export class MessageService {
     const messageIds = Array.isArray(payload.ids) ? payload.ids :
                       payload.msgId ? [payload.msgId] :
                       payload.id ? [payload.id] : [];
-    const status = payload.status || payload.receipt as Message['status'];
+    const status = (payload.status || payload.receipt) as Message['status'];
 
     if (!this.messagesMap.has(chatId)) return;
 
@@ -312,9 +337,15 @@ export class MessageService {
     messageIds.forEach((msgId: string) => {
       const message = messages.find(m => m.msgId === msgId);
       if (message && message.fromMe) {
-        message.status = status;
-        updated = true;
-        console.log(`✅ Estado actualizado: ${msgId} → ${status}`);
+        // Los receipts pueden llegar desordenados por SSE: solo avanzar el estado,
+        // nunca degradarlo (read no vuelve a delivered, delivered no vuelve a sent).
+        const cur = MessageService.STATUS_RANK[message.status ?? 'sent'] ?? 0;
+        const next = MessageService.STATUS_RANK[status ?? 'sent'] ?? 0;
+        if (next > cur) {
+          message.status = status;
+          updated = true;
+          console.log(`✅ Estado actualizado: ${msgId} → ${status}`);
+        }
       }
     });
 
@@ -323,6 +354,33 @@ export class MessageService {
       if (currentChat && currentChat.jid === chatId) {
         this.currentMessagesSubject.next([...messages]);
       }
+    }
+  }
+
+  /**
+   * Un envío murió en la outbox (sin msgId real). Marca como 'error' el temporal
+   * pendiente que lo originó, empatándolo por chat + texto. Si ya no hay burbuja
+   * optimista (otra pestaña/recarga), no hay nada que marcar.
+   */
+  private handleOutboundFailed(payload: any): void {
+    const chatId = payload?.chat;
+    if (!chatId || !this.messagesMap.has(chatId)) return;
+
+    const messages = this.messagesMap.get(chatId)!;
+    const idx = messages.findIndex(m =>
+      m.msgId.startsWith('temp_') &&
+      m.fromMe &&
+      (m.status === 'pending' || m.status === 'sent') &&
+      (payload.text == null || m.text === payload.text)
+    );
+    if (idx === -1) return;
+
+    messages[idx].status = 'error';
+    console.warn(`✖ Envío fallido marcado como error: ${messages[idx].msgId} (${payload.error ?? 'sin detalle'})`);
+
+    const currentChat = this.currentChatSubject.value;
+    if (currentChat && currentChat.jid === chatId) {
+      this.currentMessagesSubject.next([...messages]);
     }
   }
 

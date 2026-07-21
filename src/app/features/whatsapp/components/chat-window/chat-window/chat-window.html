@@ -221,6 +221,18 @@
           </span>
           <span class="message-time">{{ formatTime(message.timestamp) }}</span>
           <lucide-angular
+            *ngIf="message.fromMe && !message.isDeleted && message.status === 'pending'"
+            name="clock"
+            [size]="14"
+            class="message-status status-pending">
+          </lucide-angular>
+          <lucide-angular
+            *ngIf="message.fromMe && !message.isDeleted && message.status === 'error'"
+            name="alert-circle"
+            [size]="15"
+            class="message-status status-error">
+          </lucide-angular>
+          <lucide-angular
             *ngIf="message.fromMe && !message.isDeleted && (message.status === 'delivered' || message.status === 'read')"
             name="check-check"
             [size]="16"
