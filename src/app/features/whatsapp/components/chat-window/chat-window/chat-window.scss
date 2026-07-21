@@ -443,7 +443,7 @@
 
   .message-wrapper {
     display: flex;
-    margin-top: 12px; /* Con column-reverse, margin-top crea espacio entre mensajes */
+    margin-top: 6px; /* Con column-reverse, margin-top crea espacio entre mensajes */
     // Sin transiciones ni animaciones para máxima velocidad
     scroll-margin-top: 80px;
     scroll-margin-bottom: 80px;
@@ -505,7 +505,7 @@
 
     .message-bubble {
       max-width: 65%;
-      padding: 6px 7px 8px 9px;
+      padding: 4px 7px 5px 9px;
       position: relative;
 
       // Nombre del remitente en mensajes de grupo
@@ -930,7 +930,7 @@
         word-wrap: break-word;
         white-space: pre-wrap;
         font-size: 14.2px;
-        line-height: 19px;
+        line-height: 18px;
         margin: 0;
         padding-right: 50px;
       }
@@ -940,7 +940,7 @@
         align-items: center;
         justify-content: flex-end;
         gap: 3px;
-        margin-top: 4px;
+        margin-top: 1px;
         float: right;
 
         .message-time {
@@ -956,7 +956,7 @@
           color: rgba(255, 255, 255, 0.7);
 
           &.status-read {
-            color: #1d57d4;
+            color: #53bdeb;
           }
 
           &.status-pending {
