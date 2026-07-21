@@ -8,8 +8,8 @@ import { WhatsappMessageStoreService } from '../../../services';
   standalone: true,
   imports: [ChatListWidgetComponent, ChatWidgetComponent],
   template: `
-    <main class="h-screen overflow-hidden bg-slate-100 p-2 text-slate-950 md:p-3">
-      <section class="mx-auto grid h-full max-w-[1500px] grid-cols-1 gap-2 lg:grid-cols-[380px_1fr]">
+    <main class="h-screen overflow-hidden bg-slate-100 text-slate-950">
+      <section class="grid h-full grid-cols-1 lg:grid-cols-[380px_1fr]">
         <app-whatsapp-chat-list-widget />
         <app-whatsapp-chat-widget class="hidden h-full min-h-0 lg:block" />
       </section>

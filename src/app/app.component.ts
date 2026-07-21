@@ -28,6 +28,7 @@ import { GestionLockService } from './core/services/gestion-lock.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
 import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
+import { WhatsAppNotificationPopupComponent } from './features/whatsapp/components/notification-popup/whatsapp-notification-popup.component';
 
 @Component({
   selector: 'app-root',
@@ -42,7 +43,8 @@ import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
     AgentTimeAlertOverlayComponent,
     SupervisionPanelComponent,
     PeripheralStatusBannerComponent,
-    ToastNotificationComponent
+    ToastNotificationComponent,
+    WhatsAppNotificationPopupComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],

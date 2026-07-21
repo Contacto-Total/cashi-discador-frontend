@@ -9,7 +9,7 @@ import { WhatsappMessageStoreService } from '../../../services';
   standalone: true,
   imports: [DatePipe, FormsModule],
   template: `
-    <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-950 shadow-lg">
+    <aside class="flex h-full min-h-0 flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-950">
       <header class="border-b border-slate-200 p-3">
         <div class="flex items-center justify-between gap-3">
           <div>

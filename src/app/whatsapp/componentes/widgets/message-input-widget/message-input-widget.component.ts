@@ -25,7 +25,7 @@ import { WhatsappMessageStoreService } from '../../../services';
         <label class="min-w-0 flex-1">
           <span class="sr-only">Mensaje</span>
           <textarea
-            class="max-h-32 min-h-11 w-full resize-none rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
+            class="max-h-32 min-h-11 w-full resize-none rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm leading-tight text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
             rows="1"
             placeholder="Escribe un mensaje"
             [disabled]="!canSend() || store.sendingMessage()"
@@ -38,7 +38,7 @@ import { WhatsappMessageStoreService } from '../../../services';
 
         <button
           type="submit"
-          class="h-11 rounded-lg bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+          class="h-11 shrink-0 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
           [disabled]="!canSubmit()"
         >
           @if (store.sendingMessage()) {

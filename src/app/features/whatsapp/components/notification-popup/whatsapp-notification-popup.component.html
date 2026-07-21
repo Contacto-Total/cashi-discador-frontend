@@ -1,0 +1,15 @@
+<div class="whatsapp-notification" *ngIf="notification">
+  <div class="notification-avatar">
+    <img *ngIf="notification.profilePictureUrl" [src]="notification.profilePictureUrl" alt="Contacto">
+    <lucide-angular *ngIf="!notification.profilePictureUrl" name="user" [size]="24"></lucide-angular>
+  </div>
+
+  <div class="notification-content">
+    <div class="notification-title">{{ displayName() }}</div>
+    <div class="notification-preview">{{ preview() }}</div>
+  </div>
+
+  <button type="button" class="notification-close" (click)="close()" title="Cerrar">
+    <lucide-angular name="x" [size]="16"></lucide-angular>
+  </button>
+</div>

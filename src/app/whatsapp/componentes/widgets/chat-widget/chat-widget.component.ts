@@ -21,7 +21,7 @@ interface MessageSender {
   standalone: true,
   imports: [DatePipe, MessageInputWidgetComponent],
   template: `
-    <section class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+    <section class="flex h-full min-h-0 flex-col overflow-hidden bg-white">
       @if (chat(); as selectedChat) {
         <header class="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
           @if (selectedChat.profilePictureUrl) {
@@ -49,7 +49,7 @@ interface MessageSender {
           }
         </header>
 
-        <div #messagesPanel class="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-5 py-4">
+        <div #messagesPanel class="chat-bg min-h-0 flex-1 overflow-y-auto px-5 py-4">
           @if (store.hasMore()) {
             <div class="mb-4 flex justify-center">
               <button
@@ -99,13 +99,13 @@ interface MessageSender {
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12.01" y2="16.5"/></svg>
                             }
                             @case ('read') {
-                              <svg width="18" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6.5 17 16 6"/><path d="m8.5 14.5 1.5 1.5L22 5"/></svg>
+                              <svg width="18" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l3.5 3.5L11 5"/><path d="M12 12l3.5 3.5L21 5"/></svg>
                             }
                             @case ('delivered') {
-                              <svg width="18" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12.5 6.5 17 16 6"/><path d="m8.5 14.5 1.5 1.5L22 5"/></svg>
+                              <svg width="18" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l3.5 3.5L11 5"/><path d="M12 12l3.5 3.5L21 5"/></svg>
                             }
                             @default {
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9 17.5 20 6"/></svg>
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-11"/></svg>
                             }
                           }
                         </span>
@@ -177,20 +177,21 @@ interface MessageSender {
     }
 
     @if (detailMessage(); as detail) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" (click)="closeMessageDetail()">
-        <div class="w-full max-w-sm overflow-hidden rounded-xl bg-white shadow-2xl" (click)="$event.stopPropagation()">
-          <header class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+      <div class="fixed inset-0 z-50 flex justify-end bg-slate-950/50" (click)="closeMessageDetail()">
+        <aside class="detail-panel flex h-full w-full max-w-sm flex-col bg-white shadow-2xl" (click)="$event.stopPropagation()">
+          <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <h3 class="text-sm font-semibold text-slate-950">Detalle del mensaje</h3>
             <button
               type="button"
-              class="rounded-md px-2 py-1 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              class="grid size-8 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              aria-label="Cerrar"
               (click)="closeMessageDetail()"
             >
-              Cerrar
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </header>
 
-          <div class="max-h-[70vh] overflow-y-auto px-5 py-4">
+          <div class="flex-1 overflow-y-auto px-5 py-4">
             <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Enviado por</p>
             <p class="mt-1 text-sm font-semibold text-slate-900">
               {{ detailSender()?.name || detailSenderFallback(detail) }}
@@ -228,10 +229,24 @@ interface MessageSender {
               }
             }
           </div>
-        </div>
+        </aside>
       </div>
     }
-  `
+  `,
+  styles: [`
+    .detail-panel { animation: detail-slide-in 0.22s ease-out; }
+    @keyframes detail-slide-in {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    /* Fondo estilo WhatsApp Web: beige + patrón de doodles sutil (SVG inline, sin asset). */
+    .chat-bg {
+      background-color: #efeae2;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Cg fill='none' stroke='%23b3a996' stroke-opacity='0.4' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 20q7-8 15 0'/%3E%3Ccircle cx='66' cy='24' r='5'/%3E%3Cpath d='M36 52l5 5 7-11'/%3E%3Cpath d='M74 66q-6 8-13 3'/%3E%3Crect x='16' y='64' width='10' height='10' rx='3'/%3E%3Cpath d='M50 74h12'/%3E%3Cpath d='M28 40c3-3 8-1 7 4'/%3E%3C/g%3E%3C/svg%3E");
+      background-size: 160px 160px;
+    }
+  `]
 })
 export class ChatWidgetComponent {
   @ViewChild('messagesPanel') private messagesPanel?: ElementRef<HTMLElement>;
