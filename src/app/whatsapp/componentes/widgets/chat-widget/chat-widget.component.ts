@@ -70,7 +70,9 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
                     <div class="mt-1 flex items-center justify-end gap-2 text-[11px] opacity-70">
                       <time [dateTime]="toIso(message.timestamp)">{{ message.timestamp | date: 'HH:mm' }}</time>
                       @if (message.fromMe && message.status) {
-                        <span>{{ statusLabel(message.status) }}</span>
+                        <span [class]="messageStatusClass(message.status)" [attr.aria-label]="messageStatusAria(message.status)">
+                          {{ messageStatusIcon(message.status) }}
+                        </span>
                       }
                     </div>
                   </div>
@@ -137,7 +139,34 @@ import { MessageInputWidgetComponent } from '../message-input-widget/message-inp
         </div>
       </div>
     }
-  `
+  `,
+  styles: [`
+    .message-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.08em;
+    }
+
+    .status-pending,
+    .status-sent,
+    .status-delivered {
+      color: #64748b;
+    }
+
+    .status-read {
+      color: #2563eb;
+    }
+
+    .status-error {
+      color: #dc2626;
+      letter-spacing: 0;
+    }
+  `]
 })
 export class ChatWidgetComponent {
   @ViewChild('messagesPanel') private messagesPanel?: ElementRef<HTMLElement>;
@@ -258,12 +287,24 @@ export class ChatWidgetComponent {
     return 'Adjunto';
   }
 
-  statusLabel(status: Message['status']): string {
-    if (status === 'pending') return 'Pendiente';
-    if (status === 'sent') return 'Enviado';
-    if (status === 'delivered') return 'Entregado';
-    if (status === 'read') return 'Leído';
-    if (status === 'error') return 'Error';
+  messageStatusIcon(status: Message['status']): string {
+    if (status === 'pending') return '◷';
+    if (status === 'sent') return '✓';
+    if (status === 'delivered' || status === 'read') return '✓✓';
+    if (status === 'error') return '!';
+    return '';
+  }
+
+  messageStatusClass(status: Message['status']): string {
+    return `message-status status-${status || 'sent'}`;
+  }
+
+  messageStatusAria(status: Message['status']): string {
+    if (status === 'pending') return 'pendiente';
+    if (status === 'sent') return 'enviado';
+    if (status === 'delivered') return 'entregado';
+    if (status === 'read') return 'leído';
+    if (status === 'error') return 'error';
     return '';
   }
 
