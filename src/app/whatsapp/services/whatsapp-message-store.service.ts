@@ -25,6 +25,7 @@ export class WhatsappMessageStoreService {
   readonly sendingMessage = signal(false);
   readonly sendMessageError = signal<string | null>(null);
   readonly activeViewers = signal<string[]>([]);
+  readonly replyingTo = signal<Message | null>(null);
   readonly chatsPage = signal(0);
   readonly chatsTotalPages = signal(0);
   readonly chatsQuery = signal<string | undefined>(undefined);
@@ -81,9 +82,14 @@ export class WhatsappMessageStoreService {
     });
   }
 
+  setReplyingTo(message: Message | null): void {
+    this.replyingTo.set(message);
+  }
+
   selectChat(chat: Chat | null): void {
     this.currentChat.set(chat);
     this.activeViewers.set([]);
+    this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
     if (!chat?.id) return;
 
     // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
@@ -152,6 +158,11 @@ export class WhatsappMessageStoreService {
   private insertOptimisticMessage(request: SendMessageRequest): string | undefined {
     if (!request.conversationId) return undefined;
     const tempMsgId = `temp_${Date.now()}_${++this.tempCounter}`;
+    // Cita optimista: resolver el mensaje referenciado para mostrar el bloque de
+    // respuesta al instante (el eco OUTGOING traerá los mismos campos del backend).
+    const quoted = request.quotedMessageId
+      ? (this.messagesByConversation().get(request.conversationId) || []).find((m) => m.msgId === request.quotedMessageId)
+      : undefined;
     const optimistic: Message = {
       msgId: tempMsgId,
       chat: this.currentChat()?.jid || '',
@@ -161,7 +172,10 @@ export class WhatsappMessageStoreService {
       timestamp: Date.now(),
       hasMedia: request.type === 'MEDIA',
       status: 'pending',
-      quotedMessageId: request.quotedMessageId
+      quotedMessageId: request.quotedMessageId,
+      quotedText: quoted?.text,
+      quotedSender: quoted ? (quoted.fromMe ? 'Tú' : (quoted.chatTitle || undefined)) : undefined,
+      quotedFromMe: quoted?.fromMe
     };
     const current = this.messagesByConversation().get(request.conversationId) || [];
     this.setMessages(request.conversationId, [...current, optimistic]);

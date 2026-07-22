@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
+import { environment } from '../../../../../environments/environment';
 import { Chat, Message } from '../../../models';
 import { UserInfoService, WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
 import { MessageInputWidgetComponent } from '../message-input-widget/message-input-widget.component';
@@ -71,16 +72,44 @@ interface MessageSender {
           } @else {
             <div class="space-y-1.5">
               @for (message of messages(); track message.msgId) {
-                <article class="flex" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
+                <article class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
+                  @if (message.fromMe) {
+                    <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                    </button>
+                  }
                   <div [class]="bubbleClass(message)" (click)="openMessageDetail(message)">
-                    @if (isImage(message) && mediaUrl(message)) {
-                      <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message); $event.stopPropagation()">
-                        <img class="max-h-48 w-full object-cover" [src]="mediaUrl(message)" [alt]="message.media?.caption || message.text || 'Imagen'" />
-                      </button>
-                    } @else if (isSticker(message) && mediaUrl(message)) {
-                      <img class="max-h-12 max-w-12 object-contain" [src]="mediaUrl(message)" [alt]="message.media?.caption || 'Sticker'" />
-                    } @else if (message.hasMedia) {
-                      <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
+                    @if (message.quotedMessageId || message.quotedText) {
+                      <div class="mb-1 overflow-hidden rounded border-l-2 px-2 py-1 text-xs" [class]="message.fromMe ? 'border-white/70 bg-white/15' : 'border-emerald-400 bg-black/5'">
+                        <p class="truncate font-semibold" [class]="message.fromMe ? 'text-white' : 'text-emerald-700'">{{ message.quotedFromMe ? 'Tú' : (message.quotedSender || 'Mensaje') }}</p>
+                        <p class="truncate" [class]="message.fromMe ? 'text-white/80' : 'text-slate-600'">{{ message.quotedText || 'Archivo adjunto' }}</p>
+                      </div>
+                    }
+                    @if (message.hasMedia) {
+                      @if (mediaError(message.msgId)) {
+                        <button type="button" class="mb-1 flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50" (click)="retryMedia(message.msgId); $event.stopPropagation()">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                          No se pudo cargar {{ mediaLabel(message) }} · Reintentar
+                        </button>
+                      } @else if (isImage(message) && hasMediaSrc(message)) {
+                        <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message); $event.stopPropagation()">
+                          <img class="max-h-48 w-full object-cover" [src]="mediaSrc(message)" [alt]="message.media?.caption || message.text || 'Imagen'" (error)="onMediaError(message.msgId)" />
+                        </button>
+                      } @else if (isSticker(message) && hasMediaSrc(message)) {
+                        <img class="max-h-28 max-w-28 object-contain" [src]="mediaSrc(message)" [alt]="message.media?.caption || 'Sticker'" (error)="onMediaError(message.msgId)" />
+                      } @else if (isVideo(message) && hasMediaSrc(message)) {
+                        <video class="max-h-56 max-w-[220px] rounded-lg" controls preload="metadata" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></video>
+                      } @else if (isAudio(message) && hasMediaSrc(message)) {
+                        <audio class="w-[240px] max-w-full" controls preload="none" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></audio>
+                      } @else if (hasMediaSrc(message)) {
+                        <a class="mb-1 flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50" [href]="mediaSrc(message, true)" target="_blank" rel="noopener" (click)="$event.stopPropagation()">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                          <span class="truncate">{{ message.media?.fileName || mediaLabel(message) }}</span>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        </a>
+                      } @else {
+                        <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
+                      }
                     }
                     @if (message.text && !isSticker(message)) {
                       <p class="whitespace-pre-wrap break-words text-sm leading-snug">{{ message.text }}</p>
@@ -112,6 +141,11 @@ interface MessageSender {
                       }
                     </div>
                   </div>
+                  @if (!message.fromMe) {
+                    <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                    </button>
+                  }
                 </article>
               }
             </div>
@@ -151,7 +185,7 @@ interface MessageSender {
         <div class="flex min-h-0 flex-1 items-center justify-center py-4">
           <img
             class="max-h-full max-w-full object-contain"
-            [src]="mediaUrl(imageMessage)"
+            [src]="mediaSrc(imageMessage)"
             [alt]="imageMessage.media?.caption || imageMessage.text || 'Imagen'"
             (click)="$event.stopPropagation()"
           />
@@ -256,6 +290,10 @@ export class ChatWidgetComponent {
   readonly viewerNames = signal(new Map<string, string>());
   readonly selectedImage = signal<Message | null>(null);
 
+  // Media que falló al cargar (por msgId) + contador de reintentos (cache-bust).
+  readonly mediaErrors = signal(new Set<string>());
+  private readonly mediaRetry = new Map<string, number>();
+
   // Panel de detalle de un mensaje (quién lo envió + quiénes lo vieron).
   readonly detailMessage = signal<Message | null>(null);
   readonly detailSender = signal<MessageSender | null>(null);
@@ -326,12 +364,48 @@ export class ChatWidgetComponent {
     return message.media?.kind === 'sticker';
   }
 
-  mediaUrl(message: Message): string {
-    return message.media?.url || message.media?.mediaId || '';
+  /** URL del proxy de media del backend (alcanzable por gateway). */
+  mediaSrc(message: Message, download = false): string {
+    const base = `${environment.apiUrl}/v2/whatsapp/media/${encodeURIComponent(message.msgId)}`;
+    const params: string[] = [];
+    if (download) params.push('download=true');
+    const retry = this.mediaRetry.get(message.msgId);
+    if (retry) params.push('r=' + retry);
+    return params.length ? `${base}?${params.join('&')}` : base;
+  }
+
+  /** Hay media servible (temporales optimistas aún no tienen bytes en el Go). */
+  hasMediaSrc(message: Message): boolean {
+    return !!message.hasMedia && !message.msgId.startsWith('temp_');
+  }
+
+  isAudio(message: Message): boolean {
+    return message.media?.kind === 'audio' || !!message.media?.mime?.startsWith('audio/');
+  }
+
+  isVideo(message: Message): boolean {
+    return message.media?.kind === 'video' || !!message.media?.mime?.startsWith('video/');
+  }
+
+  mediaError(msgId: string): boolean {
+    return this.mediaErrors().has(msgId);
+  }
+
+  onMediaError(msgId: string): void {
+    this.mediaErrors.update((set) => new Set(set).add(msgId));
+  }
+
+  retryMedia(msgId: string): void {
+    this.mediaRetry.set(msgId, (this.mediaRetry.get(msgId) || 0) + 1);
+    this.mediaErrors.update((set) => {
+      const next = new Set(set);
+      next.delete(msgId);
+      return next;
+    });
   }
 
   openImageViewer(message: Message): void {
-    if (!this.mediaUrl(message)) return;
+    if (!this.hasMediaSrc(message) || !this.isImage(message)) return;
     this.selectedImage.set(message);
   }
 
@@ -386,13 +460,17 @@ export class ChatWidgetComponent {
     this.detailMessage.set(null);
   }
 
+  reply(message: Message): void {
+    this.store.setReplyingTo(message);
+  }
+
   detailSenderFallback(message: Message): string {
     if (message.sentByAgentId) return `Agente ${message.sentByAgentId}`;
     return message.fromMe ? 'Tú / sistema' : (this.chat()?.name || 'Contacto');
   }
 
   async copyImage(message: Message): Promise<void> {
-    const url = this.mediaUrl(message);
+    const url = this.mediaSrc(message);
     if (!url) return;
 
     try {
@@ -405,7 +483,7 @@ export class ChatWidgetComponent {
   }
 
   downloadImage(message: Message): void {
-    const url = this.mediaUrl(message);
+    const url = this.mediaSrc(message, true);
     if (!url) return;
 
     const link = document.createElement('a');

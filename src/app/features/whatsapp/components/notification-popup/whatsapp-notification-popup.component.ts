@@ -56,12 +56,12 @@ export class WhatsAppNotificationPopupComponent implements OnInit, OnDestroy {
 
   openChat(): void {
     if (!this.notification) return;
-    this.router.navigate(['/wsp2'], {
-      queryParams: {
-        conversationId: this.notification.conversationId,
-        chat: this.notification.chat || undefined
-      }
-    });
+    // Abrir en una pestaña NUEVA para no cortar el flujo de trabajo actual del
+    // agente (antes navegaba en la misma pestaña con router.navigate).
+    const params = new URLSearchParams();
+    params.set('conversationId', String(this.notification.conversationId));
+    if (this.notification.chat) params.set('chat', this.notification.chat);
+    window.open(`/wsp2?${params.toString()}`, '_blank', 'noopener');
     this.close();
   }
 

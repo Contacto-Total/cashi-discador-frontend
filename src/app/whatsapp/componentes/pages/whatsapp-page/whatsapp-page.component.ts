@@ -11,7 +11,7 @@ import { WhatsappMessageStoreService } from '../../../services';
   imports: [ChatListWidgetComponent, ChatWidgetComponent],
   template: `
     <main class="h-screen overflow-hidden bg-slate-100 text-slate-950">
-      <section class="grid h-full grid-cols-1 lg:grid-cols-[380px_1fr]">
+      <section class="grid h-full grid-cols-1 lg:grid-cols-[minmax(0,20%)_minmax(0,1fr)]">
         <app-whatsapp-chat-list-widget />
         <app-whatsapp-chat-widget class="hidden h-full min-h-0 lg:block" />
       </section>
