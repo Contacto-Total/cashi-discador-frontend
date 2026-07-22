@@ -25,6 +25,11 @@ export class WhatsappApiService {
     return this.http.get<PageResponse<Conversation>>(`${this.apiBase}/chats`, { params });
   }
 
+  /** Una conversación por id (abrir un chat por URL/notificación). */
+  getChat(conversationId: number): Observable<Conversation> {
+    return this.http.get<Conversation>(`${this.apiBase}/chats/${conversationId}`);
+  }
+
   getMessages(conversationId: number, limit = 60, before?: number): Observable<MessagePageResponse> {
     let params = new HttpParams().set('limit', limit);
     if (before) params = params.set('before', before);

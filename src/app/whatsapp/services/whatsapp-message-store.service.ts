@@ -72,14 +72,33 @@ export class WhatsappMessageStoreService {
       return;
     }
 
-    this.api.getChats(0, 30, jid).subscribe({
-      next: (response) => {
-        const mapped = response.content.map(conversationToChat);
-        this.chats.set(this.mergeChats(this.chats(), mapped).sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0)));
-        const found = this.findChat(conversationId, jid);
-        if (found) this.selectChat(found);
-      }
-    });
+    // Con conversationId: traerla por id (el search del back NO matchea el jid).
+    // La agregamos a la lista y la abrimos; los mensajes cargan por id igual.
+    if (conversationId) {
+      this.api.getChat(conversationId).subscribe({
+        next: (conv) => {
+          const chat = conversationToChat(conv);
+          this.upsertChat(chat);
+          this.selectChat(chat);
+        },
+        error: () => {
+          if (jid) this.selectChat({ id: conversationId, jid, name: jid });
+        }
+      });
+      return;
+    }
+
+    // Sin id, best-effort por jid (búsqueda por nombre/número).
+    if (jid) {
+      this.api.getChats(0, 30, jid).subscribe({
+        next: (response) => {
+          const mapped = response.content.map(conversationToChat);
+          this.chats.set(this.mergeChats(this.chats(), mapped).sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0)));
+          const found = this.findChat(undefined, jid);
+          if (found) this.selectChat(found);
+        }
+      });
+    }
   }
 
   setReplyingTo(message: Message | null): void {
