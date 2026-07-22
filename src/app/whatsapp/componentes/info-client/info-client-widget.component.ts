@@ -25,8 +25,62 @@ type SearchMode = 'telefono' | 'documento';
         <p class="mt-8 text-center text-sm text-slate-400">Sin chat seleccionado.</p>
       } @else if (loading()) {
         <p class="mt-8 text-center text-sm text-slate-500">Buscando cliente…</p>
+      } @else if (selectedClient(); as sel) {
+        <!-- ===== Opciones del cliente ===== -->
+        <div class="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
+          <button
+            type="button"
+            class="grid size-7 shrink-0 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            aria-label="Volver"
+            (click)="closeInfo()"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="min-w-0">
+            <p class="truncate text-sm font-semibold text-slate-900">{{ clientName(sel.clientData) }}</p>
+            <p class="truncate text-xs text-slate-500">Doc: {{ sel.clientData.documento }}</p>
+          </div>
+        </div>
+
+        <div class="min-h-0 flex-1 overflow-y-auto p-3">
+          <!-- ¿Tiene carta? -->
+          <div class="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+            <span class="text-sm font-medium text-slate-700">¿Tiene carta?</span>
+            <span
+              class="rounded-full px-2.5 py-0.5 text-xs font-bold"
+              [class]="hasCarta() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
+            >{{ hasCarta() ? 'Sí' : 'No' }}</span>
+          </div>
+
+          <!-- Opciones (sin función por ahora) -->
+          <div class="space-y-2">
+            @for (opt of options; track opt.key) {
+              <button
+                type="button"
+                class="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-800"
+                (click)="runOption(opt.key)"
+              >
+                <span class="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500">
+                  @switch (opt.key) {
+                    @case ('compromiso-pago') {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                    }
+                    @case ('deuda-ofertas') {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    }
+                    @default {
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                    }
+                  }
+                </span>
+                <span class="min-w-0 flex-1">{{ opt.label }}</span>
+                <svg class="shrink-0 text-slate-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            }
+          </div>
+        </div>
       } @else {
-        <!-- Búsqueda arriba -->
+        <!-- ===== Búsqueda + lista ===== -->
         <div class="border-b border-slate-200 px-3 py-2.5">
           @if (manualOpen() || !results().length) {
             <div class="flex gap-1 rounded-full bg-slate-100 p-0.5 text-xs font-medium">
@@ -42,7 +96,7 @@ type SearchMode = 'telefono' | 'documento';
             <form class="mt-2 flex gap-2" (ngSubmit)="runManualSearch()">
               <input
                 class="min-w-0 flex-1 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-                [type]="'search'"
+                type="search"
                 [placeholder]="placeholder()"
                 [ngModel]="query()"
                 name="clientQuery"
@@ -68,7 +122,6 @@ type SearchMode = 'telefono' | 'documento';
           }
         </div>
 
-        <!-- Resultados compactos -->
         <div class="min-h-0 flex-1 overflow-y-auto">
           @if (results().length) {
             <ul class="divide-y divide-slate-100">
@@ -117,9 +170,20 @@ export class InfoClientWidgetComponent {
   readonly searching = signal(false);
   readonly error = signal<string | null>(null);
 
+  readonly selectedClient = signal<GlobalSearchResult | null>(null);
+  readonly hasCarta = signal(false);
+
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
     { value: 'documento', label: 'Documento' }
+  ];
+
+  /** Opciones del cliente. Sin función aún (lógica futura). */
+  readonly options: { key: string; label: string }[] = [
+    { key: 'carta-no-adeudo', label: 'Obtener carta no adeudo' },
+    { key: 'compromiso-pago', label: 'Obtener compromiso de pago' },
+    { key: 'carta-cesion', label: 'Obtener carta de cesión' },
+    { key: 'deuda-ofertas', label: 'Ver deuda y ofertas' }
   ];
 
   readonly placeholder = computed(() =>
@@ -143,6 +207,7 @@ export class InfoClientWidgetComponent {
       this.query.set('');
       this.manualOpen.set(false);
       this.mode.set('telefono');
+      this.selectedClient.set(null);
       if (!chat) return;
 
       const phone = this.acl.phoneKey(chat.contactPhone);
@@ -152,6 +217,20 @@ export class InfoClientWidgetComponent {
       }
       this.autoSearchByPhone(phone, key);
     });
+  }
+
+  openInfo(result: GlobalSearchResult): void {
+    this.selectedClient.set(result);
+    this.refreshHasCarta(result);
+  }
+
+  closeInfo(): void {
+    this.selectedClient.set(null);
+  }
+
+  /** Acción de cada opción. Sin función aún (lógica futura). */
+  runOption(_key: string): void {
+    // TODO: implementar carta no adeudo / compromiso de pago / carta de cesión / deuda y ofertas.
   }
 
   setMode(mode: SearchMode): void {
@@ -181,11 +260,6 @@ export class InfoClientWidgetComponent {
     });
   }
 
-  /** Botón "Información" por cliente. Sin función aún (lógica futura). */
-  openInfo(_result: GlobalSearchResult): void {
-    // TODO: acción de información del cliente.
-  }
-
   clientName(c: DynamicClient): string {
     if (c.nombre?.trim()) return c.nombre;
     const parts = [c.nombres, c.apellidos].map((p) => p?.trim()).filter(Boolean);
@@ -200,6 +274,14 @@ export class InfoClientWidgetComponent {
 
   trackResult(r: GlobalSearchResult): string {
     return `${r.clientData?.documento}-${r.subPortfolioId}`;
+  }
+
+  /**
+   * ¿El cliente tiene carta? Fallback: No. Cuando exista el endpoint, se consulta
+   * aquí (por documento/contexto) y se hace this.hasCarta.set(...).
+   */
+  private refreshHasCarta(_result: GlobalSearchResult): void {
+    this.hasCarta.set(false);
   }
 
   private autoSearchByPhone(phone: string, key: string | number | undefined): void {
