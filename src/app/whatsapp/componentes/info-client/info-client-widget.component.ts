@@ -122,31 +122,25 @@ type SearchMode = 'telefono' | 'documento';
           }
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="min-h-0 flex-1 overflow-y-auto bg-white">
           @if (results().length) {
             <ul class="divide-y divide-slate-100">
               @for (r of results(); track trackResult(r)) {
-                <li class="px-3 py-2.5">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="min-w-0 truncate text-sm font-semibold text-slate-900">{{ clientName(r.clientData) }}</p>
-                    <button
-                      type="button"
-                      class="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                      (click)="openInfo(r)"
-                    >Información</button>
-                  </div>
-                  <div class="mt-1 space-y-0.5 text-xs leading-tight">
-                    <p class="text-slate-700"><span class="text-slate-400">Doc:</span> {{ r.clientData.documento }}</p>
-                    @if (phones(r.clientData).length) {
-                      <p class="text-slate-700"><span class="text-slate-400">Tel:</span> {{ phones(r.clientData).join(', ') }}</p>
-                    }
-                    @if (r.clientData.deuda_capital != null) {
-                      <p class="text-slate-700"><span class="text-slate-400">Deuda:</span> {{ r.clientData.deuda_capital }}</p>
-                    }
+                <li
+                  class="cursor-pointer px-4 py-3 transition hover:bg-emerald-50/70"
+                  role="button"
+                  tabindex="0"
+                  (click)="openInfo(r)"
+                  (keyup.enter)="openInfo(r)"
+                >
+                  <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ r.nombreCartera }} · {{ r.nombreSubcartera }}</p>
+                  <p class="mt-1 truncate text-sm font-bold leading-5 text-slate-950" [title]="clientName(r.clientData)">{{ clientName(r.clientData) }}</p>
+                  <div class="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+                    <span>Doc: {{ r.clientData.documento }}</span>
                     @if (r.clientData.dias_mora != null) {
-                      <p class="text-slate-700"><span class="text-slate-400">Días mora:</span> {{ r.clientData.dias_mora }}</p>
+                      <span class="text-slate-300">•</span>
+                      <span>Mora: {{ r.clientData.dias_mora }} días</span>
                     }
-                    <p class="truncate text-slate-400">{{ r.nombreCartera }} · {{ r.nombreSubcartera }}</p>
                   </div>
                 </li>
               }

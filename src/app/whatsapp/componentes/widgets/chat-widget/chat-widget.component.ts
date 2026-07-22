@@ -100,13 +100,33 @@ interface MessageSender {
                       } @else if (isVideo(message) && hasMediaSrc(message)) {
                         <video class="max-h-56 max-w-[220px] rounded-lg" controls preload="metadata" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></video>
                       } @else if (isAudio(message) && hasMediaSrc(message)) {
-                        <audio class="w-[240px] max-w-full" controls preload="none" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></audio>
+                        <div class="mb-1 w-[280px] max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm" (click)="$event.stopPropagation()">
+                          <div class="flex items-center gap-3 px-3 py-2.5">
+                            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                            </span>
+                            <div class="min-w-0 flex-1">
+                              <p class="truncate text-xs font-bold text-slate-800">Mensaje de voz</p>
+                              <p class="text-[11px] text-slate-400">Audio de WhatsApp</p>
+                            </div>
+                          </div>
+                          <div class="border-t border-slate-100 px-2.5 py-2">
+                            <audio class="whatsapp-audio w-full" controls preload="none" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></audio>
+                          </div>
+                        </div>
                       } @else if (hasMediaSrc(message)) {
-                        <a class="mb-1 flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50" [href]="mediaSrc(message, true)" target="_blank" rel="noopener" (click)="$event.stopPropagation()">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-                          <span class="truncate">{{ message.media?.fileName || mediaLabel(message) }}</span>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                        </a>
+                        <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" (click)="downloadMedia(message); $event.stopPropagation()">
+                          <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-emerald-700">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                          </span>
+                          <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-bold">{{ message.media?.fileName || mediaLabel(message) }}</span>
+                            <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ documentMeta(message) }}</span>
+                          </span>
+                          <span class="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                          </span>
+                        </button>
                       } @else {
                         <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
                       }
@@ -280,6 +300,15 @@ interface MessageSender {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Cg fill='none' stroke='%23b3a996' stroke-opacity='0.4' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 20q7-8 15 0'/%3E%3Ccircle cx='66' cy='24' r='5'/%3E%3Cpath d='M36 52l5 5 7-11'/%3E%3Cpath d='M74 66q-6 8-13 3'/%3E%3Crect x='16' y='64' width='10' height='10' rx='3'/%3E%3Cpath d='M50 74h12'/%3E%3Cpath d='M28 40c3-3 8-1 7 4'/%3E%3C/g%3E%3C/svg%3E");
       background-size: 160px 160px;
     }
+
+    .whatsapp-audio {
+      height: 34px;
+      filter: saturate(0.85);
+    }
+
+    .whatsapp-audio::-webkit-media-controls-panel {
+      background-color: #f8fafc;
+    }
   `]
 })
 export class ChatWidgetComponent {
@@ -346,7 +375,7 @@ export class ChatWidgetComponent {
   }
 
   bubbleClass(message: Message): string {
-    if (this.isImage(message) || this.isSticker(message)) {
+    if (this.isImage(message) || this.isSticker(message) || this.isAudio(message) || this.isDocumentLike(message)) {
       return 'max-w-[78%] text-slate-900';
     }
 
@@ -385,6 +414,10 @@ export class ChatWidgetComponent {
 
   isVideo(message: Message): boolean {
     return message.media?.kind === 'video' || !!message.media?.mime?.startsWith('video/');
+  }
+
+  isDocumentLike(message: Message): boolean {
+    return !!message.hasMedia && !this.isImage(message) && !this.isSticker(message) && !this.isAudio(message) && !this.isVideo(message);
   }
 
   mediaError(msgId: string): boolean {
@@ -483,16 +516,50 @@ export class ChatWidgetComponent {
   }
 
   downloadImage(message: Message): void {
-    const url = this.mediaSrc(message, true);
-    if (!url) return;
+    this.downloadMedia(message);
+  }
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = message.media?.fileName || `whatsapp-image-${message.msgId}.jpg`;
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  /**
+   * Descarga robusta: baja el blob (que trae el Content-Type real del backend/Go) y
+   * arma el nombre con extensión derivada de ese tipo. Así no baja como "archivo"
+   * sin extensión aunque la BD no tenga mime/kind.
+   */
+  async downloadMedia(message: Message): Promise<void> {
+    try {
+      const resp = await fetch(this.mediaSrc(message, true));
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = this.downloadName(message, blob.type);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(this.mediaSrc(message, true), '_blank');
+    }
+  }
+
+  private downloadName(message: Message, mimeFromBlob: string): string {
+    const raw = message.media?.fileName;
+    if (raw && /\.[^.]{1,6}$/.test(raw)) return raw; // ya tiene extensión
+    const ext = this.extFromMime(mimeFromBlob) || this.extFromMime(message.media?.mime);
+    const base = raw ? raw.replace(/\.[^.]+$/, '') : `whatsapp-${message.msgId}`;
+    return base + ext;
+  }
+
+  private extFromMime(mime?: string): string {
+    if (!mime) return '';
+    const base = mime.split(';')[0].trim().toLowerCase();
+    const map: Record<string, string> = {
+      'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
+      'video/mp4': '.mp4', 'video/3gpp': '.3gp',
+      'audio/ogg': '.ogg', 'audio/mpeg': '.mp3', 'audio/mp4': '.m4a', 'audio/aac': '.m4a',
+      'audio/amr': '.amr', 'audio/webm': '.webm',
+      'application/pdf': '.pdf', 'application/zip': '.zip', 'text/plain': '.txt'
+    };
+    return map[base] || '';
   }
 
   displayContact(chat: Chat): string {
@@ -521,6 +588,27 @@ export class ChatWidgetComponent {
     if (kind === 'audio') return 'Audio';
     if (kind === 'document') return 'Documento';
     return 'Adjunto';
+  }
+
+  documentMeta(message: Message): string {
+    const parts = [message.media?.mime || this.mediaTypeLabel(message)];
+    const size = this.formatBytes(message.media?.fileLength);
+    if (size) parts.push(size);
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  mediaTypeLabel(message: Message): string {
+    if (message.media?.mime?.includes('pdf')) return 'PDF';
+    if (message.media?.mime?.includes('word')) return 'Word';
+    if (message.media?.mime?.includes('excel') || message.media?.mime?.includes('sheet')) return 'Excel';
+    return this.mediaLabel(message);
+  }
+
+  private formatBytes(bytes?: number): string {
+    if (!bytes || bytes <= 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   viewerInitials(name: string): string {
