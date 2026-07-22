@@ -122,32 +122,24 @@ type SearchMode = 'telefono' | 'documento';
           }
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto bg-slate-50/70 p-2.5">
+        <div class="min-h-0 flex-1 overflow-y-auto bg-white">
           @if (results().length) {
-            <ul class="space-y-2">
+            <ul class="divide-y divide-slate-100">
               @for (r of results(); track trackResult(r)) {
-                <li class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                      <p class="truncate text-sm font-bold leading-5 text-slate-950" [title]="clientName(r.clientData)">{{ clientName(r.clientData) }}</p>
-                      <p class="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">{{ r.nombreCartera }} · {{ r.nombreSubcartera }}</p>
-                    </div>
-                    <button
-                      type="button"
-                      class="shrink-0 rounded-lg border border-emerald-200 bg-white px-3 py-1.5 text-[11px] font-bold text-emerald-700 shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 hover:shadow"
-                      (click)="openInfo(r)"
-                    >Información</button>
-                  </div>
-                  <div class="mt-3 flex flex-wrap gap-1.5 text-[11px] font-medium">
-                    <span class="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">Doc: {{ r.clientData.documento }}</span>
-                    @if (phones(r.clientData).length) {
-                      <span class="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">Tel: {{ phones(r.clientData)[0] }}</span>
-                    }
-                    @if (r.clientData.deuda_capital != null) {
-                      <span class="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">Deuda: {{ r.clientData.deuda_capital }}</span>
-                    }
+                <li
+                  class="cursor-pointer px-4 py-3 transition hover:bg-emerald-50/70"
+                  role="button"
+                  tabindex="0"
+                  (click)="openInfo(r)"
+                  (keyup.enter)="openInfo(r)"
+                >
+                  <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ r.nombreCartera }} · {{ r.nombreSubcartera }}</p>
+                  <p class="mt-1 truncate text-sm font-bold leading-5 text-slate-950" [title]="clientName(r.clientData)">{{ clientName(r.clientData) }}</p>
+                  <div class="mt-1.5 flex items-center gap-2 text-xs text-slate-500">
+                    <span>Doc: {{ r.clientData.documento }}</span>
                     @if (r.clientData.dias_mora != null) {
-                      <span class="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">Mora: {{ r.clientData.dias_mora }} días</span>
+                      <span class="text-slate-300">•</span>
+                      <span>Mora: {{ r.clientData.dias_mora }} días</span>
                     }
                   </div>
                 </li>
