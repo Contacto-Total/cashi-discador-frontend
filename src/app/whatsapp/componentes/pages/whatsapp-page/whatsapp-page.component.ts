@@ -3,17 +3,19 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ChatListWidgetComponent } from '../../widgets/chat-list-widget/chat-list-widget.component';
 import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.component';
+import { InfoClientWidgetComponent } from '../../info-client/info-client-widget.component';
 import { WhatsappMessageStoreService } from '../../../services';
 
 @Component({
   selector: 'app-whatsapp-page',
   standalone: true,
-  imports: [ChatListWidgetComponent, ChatWidgetComponent],
+  imports: [ChatListWidgetComponent, ChatWidgetComponent, InfoClientWidgetComponent],
   template: `
     <main class="h-screen overflow-hidden bg-slate-100 text-slate-950">
-      <section class="grid h-full grid-cols-1 sm:grid-cols-[minmax(320px,30%)_minmax(0,1fr)]">
+      <section class="grid h-full grid-cols-1 sm:grid-cols-[minmax(300px,30%)_minmax(0,1fr)] lg:grid-cols-[minmax(280px,22%)_minmax(0,1fr)_minmax(300px,24%)]">
         <app-whatsapp-chat-list-widget />
         <app-whatsapp-chat-widget class="hidden h-full min-h-0 sm:block" />
+        <app-whatsapp-info-client-widget class="hidden h-full min-h-0 lg:block" />
       </section>
     </main>
   `
