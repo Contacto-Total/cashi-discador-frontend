@@ -375,7 +375,7 @@ export class ChatWidgetComponent {
   }
 
   bubbleClass(message: Message): string {
-    if (this.isImage(message) || this.isSticker(message)) {
+    if (this.isImage(message) || this.isSticker(message) || this.isAudio(message) || this.isDocumentLike(message)) {
       return 'max-w-[78%] text-slate-900';
     }
 
@@ -414,6 +414,10 @@ export class ChatWidgetComponent {
 
   isVideo(message: Message): boolean {
     return message.media?.kind === 'video' || !!message.media?.mime?.startsWith('video/');
+  }
+
+  isDocumentLike(message: Message): boolean {
+    return !!message.hasMedia && !this.isImage(message) && !this.isSticker(message) && !this.isAudio(message) && !this.isVideo(message);
   }
 
   mediaError(msgId: string): boolean {
