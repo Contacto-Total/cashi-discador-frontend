@@ -444,6 +444,12 @@ export const routes: Routes = [
   },
 
   {
+    path: 'bot-voz',
+    loadComponent: () => import('./features/bot-voz/bot-voz.component').then(m => m.BotVozComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
+  {
     path: '',
     redirectTo: '/login',
     pathMatch: 'full'
