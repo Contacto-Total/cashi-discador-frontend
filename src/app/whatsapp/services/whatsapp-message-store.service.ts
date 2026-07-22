@@ -86,10 +86,18 @@ export class WhatsappMessageStoreService {
     this.activeViewers.set([]);
     if (!chat?.id) return;
 
+    // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
+    // de no-leídos hay que bajarlo en la vista al instante o queda "pegado".
+    this.clearUnread(chat.id);
     this.loadMessages(chat.id);
     this.api.getViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
     this.api.joinViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
     this.api.markRead(chat.id).subscribe();
+  }
+
+  private clearUnread(conversationId: number): void {
+    this.chats.update((chats) =>
+      chats.map((chat) => chat.id === conversationId && chat.unreadCount ? { ...chat, unreadCount: 0 } : chat));
   }
 
   loadMessages(conversationId: number, before?: number): void {
@@ -157,6 +165,9 @@ export class WhatsappMessageStoreService {
     };
     const current = this.messagesByConversation().get(request.conversationId) || [];
     this.setMessages(request.conversationId, [...current, optimistic]);
+    // Refleja el envío en la lista al instante (preview + subir el chat), sin
+    // esperar el eco OUTGOING.
+    this.patchChatFromMessage(optimistic);
     return tempMsgId;
   }
 
