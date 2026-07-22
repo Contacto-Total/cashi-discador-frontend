@@ -3,6 +3,14 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+/** Asesor en el contexto de una campaña. estado null = pertenece a la subcartera pero no asignado. */
+export interface CampanaAsesor {
+  idUsuario: number;
+  nombre: string;
+  extension?: string;
+  estado: 'ACTIVO' | 'INACTIVO' | null;
+}
+
 export interface Campaign {
   id?: number;
   name: string;
@@ -224,6 +232,28 @@ export class CampaignAdminService {
    */
   deleteCampaign(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
+  }
+
+  // ===== Asesores de campaña =====
+
+  /** Agentes de la subcartera de una campaña, con su estado en ella (edición). */
+  getAsesoresByCampaign(id: number): Observable<CampanaAsesor[]> {
+    return this.http.get<CampanaAsesor[]>(`${this.apiUrl}/${id}/asesores`, { headers: this.getHeaders() });
+  }
+
+  /** Agentes de una subcartera, sin contexto de campaña (creación). */
+  getAsesoresBySubcartera(subPortfolioId: number): Observable<CampanaAsesor[]> {
+    return this.http.get<CampanaAsesor[]>(`${this.apiUrl}/subcartera/${subPortfolioId}/asesores`, { headers: this.getHeaders() });
+  }
+
+  /** Fija el conjunto de asesores ACTIVO de la campaña (multiselect). */
+  setAsesores(id: number, idsUsuarios: number[]): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${id}/asesores`, { idsUsuarios }, { headers: this.getHeaders() });
+  }
+
+  /** Cambia el estado de un asesor concreto en la campaña. */
+  cambiarEstadoAsesor(id: number, idUsuario: number, estado: 'ACTIVO' | 'INACTIVO'): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/asesores/${idUsuario}`, { estado }, { headers: this.getHeaders() });
   }
 
   /**

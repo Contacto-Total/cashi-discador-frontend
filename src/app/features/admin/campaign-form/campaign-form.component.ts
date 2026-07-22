@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, CampanaAsesor } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -131,6 +131,11 @@ export class CampaignFormComponent implements OnInit {
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
 
+  // Asesores de la campaña (multiselect). Vacío = todos los de la subcartera.
+  asesoresDisponibles: CampanaAsesor[] = [];
+  selectedAsesores: number[] = [];
+  loadingAsesores = false;
+
   // Modal de preview/confirmación
   showPreviewModal: boolean = false;
   previewLoading: boolean = false;
@@ -206,9 +211,60 @@ export class CampaignFormComponent implements OnInit {
   onSubPortfolioChange(): void {
     this.filterableFields = [];
     this.selectedRangosAntiguedad = [];
+    this.asesoresDisponibles = [];
+    this.selectedAsesores = [];
     if (this.selectedSubPortfolioId > 0) {
       this.loadFilterableFields(this.selectedSubPortfolioId);
+      this.loadAsesoresSubcartera(this.selectedSubPortfolioId);
     }
+  }
+
+  /** Carga los agentes de la subcartera para el selector (modo creación). */
+  loadAsesoresSubcartera(subcarteraId: number): void {
+    this.loadingAsesores = true;
+    this.campaignService.getAsesoresBySubcartera(subcarteraId).subscribe({
+      next: (asesores) => {
+        this.asesoresDisponibles = asesores;
+        this.loadingAsesores = false;
+      },
+      error: (err) => {
+        console.error('Error cargando asesores de subcartera:', err);
+        this.asesoresDisponibles = [];
+        this.loadingAsesores = false;
+      }
+    });
+  }
+
+  /** Carga los agentes de la subcartera anotados con su estado en la campaña (modo edición). */
+  loadAsesoresCampana(campaignId: number): void {
+    this.loadingAsesores = true;
+    this.campaignService.getAsesoresByCampaign(campaignId).subscribe({
+      next: (asesores) => {
+        this.asesoresDisponibles = asesores;
+        this.selectedAsesores = asesores
+          .filter(a => a.estado === 'ACTIVO')
+          .map(a => a.idUsuario);
+        this.loadingAsesores = false;
+      },
+      error: (err) => {
+        console.error('Error cargando asesores de campaña:', err);
+        this.asesoresDisponibles = [];
+        this.loadingAsesores = false;
+      }
+    });
+  }
+
+  toggleAsesor(idUsuario: number): void {
+    const index = this.selectedAsesores.indexOf(idUsuario);
+    if (index >= 0) {
+      this.selectedAsesores.splice(index, 1);
+    } else {
+      this.selectedAsesores.push(idUsuario);
+    }
+  }
+
+  isAsesorSelected(idUsuario: number): boolean {
+    return this.selectedAsesores.includes(idUsuario);
   }
 
   toggleRangoAntiguedad(valor: string): void {
@@ -571,6 +627,7 @@ export class CampaignFormComponent implements OnInit {
               }
               if (campaign.id) {
                 this.loadCampaignFilters(campaign.id);
+                this.loadAsesoresCampana(campaign.id);
               }
 
               // Restaurar selección de rangos de antigüedad
@@ -878,6 +935,19 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private saveFiltersAndNavigate(campaignId: number, exportExcel: boolean = false): void {
+    // Primero persistir los asesores de la campaña; si viola una regla (p.ej. dejar
+    // la campaña sin asesores activos en edición), se detiene y se muestra el error.
+    this.campaignService.setAsesores(campaignId, this.selectedAsesores).subscribe({
+      next: () => this.persistFiltersAndNavigate(campaignId, exportExcel),
+      error: (err) => {
+        console.error('Error guardando asesores:', err);
+        this.error = err?.error?.message || 'Error al guardar los asesores de la campaña';
+        this.loading = false;
+      }
+    });
+  }
+
+  private persistFiltersAndNavigate(campaignId: number, exportExcel: boolean = false): void {
     // SIEMPRE llamar a saveCampaignFilters (incluso con array vacío)
     // En modo EDICIÓN (exportExcel=false), pasamos skipImport=true para no re-importar contactos
     // En modo CREAR (exportExcel=true), pasamos skipImport=false para importar contactos
