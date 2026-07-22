@@ -553,7 +553,7 @@ export class ChatWidgetComponent {
   }
 
   documentMeta(message: Message): string {
-    const parts = [message.media?.mime || mediaTypeLabel(message)];
+    const parts = [message.media?.mime || this.mediaTypeLabel(message)];
     const size = this.formatBytes(message.media?.fileLength);
     if (size) parts.push(size);
     return parts.filter(Boolean).join(' · ');
