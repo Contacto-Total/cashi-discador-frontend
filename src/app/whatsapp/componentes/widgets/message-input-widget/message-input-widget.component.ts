@@ -3,8 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { Chat } from '../../../models';
 import { WhatsappMessageStoreService } from '../../../services';
 
-/** Tope de tamaño: el media viaja como data-URI base64 por /send (evita cuerpos gigantes). */
-const MAX_MEDIA_BYTES = 12 * 1024 * 1024;
+/** Tope de tamaño del adjunto (se sube por multipart; el back lo guarda en disco). */
+const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
 
 @Component({
   selector: 'app-whatsapp-message-input-widget',
@@ -166,14 +166,9 @@ export class MessageInputWidgetComponent {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onerror = () => this.attachError.set('No se pudo leer el archivo.');
-    reader.onload = () => {
-      // data:<mime>;base64,<...> — el backend/Go lo entienden directo.
-      this.store.sendMedia(chat.id!, reader.result as string, this.text().trim() || undefined);
-      this.text.set('');
-    };
-    reader.readAsDataURL(file);
+    // Sube por multipart y envía la ref (el back guarda el binario en disco).
+    this.store.sendMediaFile(chat.id, file, this.text().trim() || undefined);
+    this.text.set('');
   }
 
   // ---- Grabar audio ----
@@ -206,10 +201,10 @@ export class MessageInputWidgetComponent {
       recorder.onstop = () => {
         this.releaseStream();
         if (!sendIt || !chat?.id || !this.audioChunks.length) return;
-        const blob = new Blob(this.audioChunks, { type: this.audioChunks[0]?.type || 'audio/webm' });
-        const reader = new FileReader();
-        reader.onload = () => this.store.sendMedia(chat.id!, reader.result as string, this.text().trim() || undefined);
-        reader.readAsDataURL(blob);
+        const type = this.audioChunks[0]?.type || 'audio/webm';
+        const ext = type.includes('ogg') ? 'ogg' : 'webm';
+        const file = new File([new Blob(this.audioChunks, { type })], `audio-${Date.now()}.${ext}`, { type });
+        this.store.sendMediaFile(chat.id, file, this.text().trim() || undefined);
         this.text.set('');
       };
       recorder.stop();

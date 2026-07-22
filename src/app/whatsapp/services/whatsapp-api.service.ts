@@ -50,6 +50,13 @@ export class WhatsappApiService {
     return this.http.post<SendMessageResponse>(`${this.apiBase}/send`, request);
   }
 
+  /** Sube un adjunto saliente (multipart) y devuelve la ref corta para /send. */
+  uploadMedia(file: File): Observable<{ ref: string; fileName?: string; mime?: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<{ ref: string; fileName?: string; mime?: string }>(`${this.apiBase}/media/upload`, form);
+  }
+
   getMessageViews(msgId: string): Observable<MessageAgentView[]> {
     return this.http.get<MessageAgentView[]>(`${this.apiBase}/messages/${encodeURIComponent(msgId)}/views`);
   }

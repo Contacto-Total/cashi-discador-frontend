@@ -23,6 +23,7 @@ export class WhatsappMessageStoreService {
   readonly loadingChats = signal(false);
   readonly loadingMessages = signal(false);
   readonly sendingMessage = signal(false);
+  readonly uploadingMedia = signal(false);
   readonly sendMessageError = signal<string | null>(null);
   readonly activeViewers = signal<string[]>([]);
   readonly replyingTo = signal<Message | null>(null);
@@ -150,6 +151,16 @@ export class WhatsappMessageStoreService {
 
   sendMedia(conversationId: number, mediaRef: string, body?: string): void {
     this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef });
+  }
+
+  /** Sube el archivo al backend (multipart) y luego lo envía con su ref corta. */
+  sendMediaFile(conversationId: number, file: File, caption?: string): void {
+    this.sendMessageError.set(null);
+    this.uploadingMedia.set(true);
+    this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
+      next: ({ ref }) => this.sendMedia(conversationId, ref, caption),
+      error: () => this.sendMessageError.set('No se pudo subir el archivo.')
+    });
   }
 
   sendMessage(request: SendMessageRequest): void {
