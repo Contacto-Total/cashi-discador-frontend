@@ -115,7 +115,7 @@ interface MessageSender {
                           </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
-                        <a class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" [href]="mediaSrc(message, true)" target="_blank" rel="noopener" (click)="$event.stopPropagation()">
+                        <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" (click)="downloadMedia(message); $event.stopPropagation()">
                           <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-emerald-700">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
                           </span>
@@ -126,7 +126,7 @@ interface MessageSender {
                           <span class="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                           </span>
-                        </a>
+                        </button>
                       } @else {
                         <p class="mb-1 text-xs font-semibold opacity-80">{{ mediaLabel(message) }}</p>
                       }
@@ -516,16 +516,50 @@ export class ChatWidgetComponent {
   }
 
   downloadImage(message: Message): void {
-    const url = this.mediaSrc(message, true);
-    if (!url) return;
+    this.downloadMedia(message);
+  }
 
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = message.media?.fileName || `whatsapp-image-${message.msgId}.jpg`;
-    link.rel = 'noopener';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+  /**
+   * Descarga robusta: baja el blob (que trae el Content-Type real del backend/Go) y
+   * arma el nombre con extensión derivada de ese tipo. Así no baja como "archivo"
+   * sin extensión aunque la BD no tenga mime/kind.
+   */
+  async downloadMedia(message: Message): Promise<void> {
+    try {
+      const resp = await fetch(this.mediaSrc(message, true));
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = this.downloadName(message, blob.type);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(this.mediaSrc(message, true), '_blank');
+    }
+  }
+
+  private downloadName(message: Message, mimeFromBlob: string): string {
+    const raw = message.media?.fileName;
+    if (raw && /\.[^.]{1,6}$/.test(raw)) return raw; // ya tiene extensión
+    const ext = this.extFromMime(mimeFromBlob) || this.extFromMime(message.media?.mime);
+    const base = raw ? raw.replace(/\.[^.]+$/, '') : `whatsapp-${message.msgId}`;
+    return base + ext;
+  }
+
+  private extFromMime(mime?: string): string {
+    if (!mime) return '';
+    const base = mime.split(';')[0].trim().toLowerCase();
+    const map: Record<string, string> = {
+      'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
+      'video/mp4': '.mp4', 'video/3gpp': '.3gp',
+      'audio/ogg': '.ogg', 'audio/mpeg': '.mp3', 'audio/mp4': '.m4a', 'audio/aac': '.m4a',
+      'audio/amr': '.amr', 'audio/webm': '.webm',
+      'application/pdf': '.pdf', 'application/zip': '.zip', 'text/plain': '.txt'
+    };
+    return map[base] || '';
   }
 
   displayContact(chat: Chat): string {
