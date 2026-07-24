@@ -1,14 +1,19 @@
 <div class="grupos-page">
-  <!-- Encabezado -->
-  <div class="page-header">
-    <button class="btn-back" (click)="volver()">
-      <lucide-angular name="arrow-left" [size]="18"></lucide-angular>
-      Volver
-    </button>
-    <div class="page-title">
-      <h1><lucide-angular name="users" [size]="24"></lucide-angular> Administrar grupos de campaña</h1>
-      <p>Crea, edita y elimina los grupos de asesores por subcartera.</p>
+  <!-- Encabezado (estilo Nueva Campaña) -->
+  <div class="gc-header">
+    <div class="gc-header-left">
+      <div class="gc-icon-box">
+        <lucide-angular name="users" [size]="22"></lucide-angular>
+      </div>
+      <div class="gc-header-text">
+        <h1>Administrar grupos de campaña</h1>
+        <p>Crea, edita y elimina los grupos de asesores por subcartera.</p>
+      </div>
     </div>
+    <button class="btn-back" (click)="volver()">
+      <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
+      <span>Volver</span>
+    </button>
   </div>
 
   <!-- Selección de subcartera -->

@@ -58,7 +58,7 @@ export class GruposCampanaComponent implements OnInit {
 
   loadTenants(): void {
     this.tenantService.getAllTenants().subscribe({
-      next: (t) => { this.tenants = t.filter(x => x.isActive); },
+      next: (t) => { this.tenants = t; },
       error: (e) => console.error('Error cargando proveedores:', e)
     });
   }
@@ -71,7 +71,7 @@ export class GruposCampanaComponent implements OnInit {
     this.resetVista();
     if (this.selectedTenantId > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
-        next: (p) => { this.portfolios = p.filter(x => x.isActive); },
+        next: (p) => { this.portfolios = p; },
         error: (e) => console.error('Error cargando carteras:', e)
       });
     }
@@ -83,7 +83,7 @@ export class GruposCampanaComponent implements OnInit {
     this.resetVista();
     if (this.selectedPortfolioId > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
-        next: (sp) => { this.subPortfolios = sp.filter(x => x.isActive); },
+        next: (sp) => { this.subPortfolios = sp; },
         error: (e) => console.error('Error cargando subcarteras:', e)
       });
     }
