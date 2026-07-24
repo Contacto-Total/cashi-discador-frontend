@@ -35,6 +35,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    path: 'admin/campaigns/grupos',
+    loadComponent: () => import('./features/admin/grupos-campana/grupos-campana.component').then(m => m.GruposCampanaComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
     path: 'admin/campaigns/:id/edit',
     loadComponent: () => import('./features/admin/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
     canActivate: [authGuard]
