@@ -1,0 +1,136 @@
+<div class="grupos-page">
+  <!-- Encabezado (estilo Nueva Campaña) -->
+  <div class="gc-header">
+    <div class="gc-header-left">
+      <div class="gc-icon-box">
+        <lucide-angular name="users" [size]="22"></lucide-angular>
+      </div>
+      <div class="gc-header-text">
+        <h1>Administrar grupos de campaña</h1>
+        <p>Crea, edita y elimina los grupos de asesores por subcartera.</p>
+      </div>
+    </div>
+    <button class="btn-back" (click)="volver()">
+      <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
+      <span>Volver</span>
+    </button>
+  </div>
+
+  <!-- Selección de subcartera -->
+  <div class="card">
+    <h2><lucide-angular name="folder-tree" [size]="20"></lucide-angular> Subcartera</h2>
+    <div class="selectores">
+      <div class="form-group">
+        <label>Proveedor</label>
+        <select class="form-select" [(ngModel)]="selectedTenantId" (ngModelChange)="onTenantChange()">
+          <option [ngValue]="0">Seleccione...</option>
+          <option *ngFor="let t of tenants" [ngValue]="t.id">{{ t.tenantCode }} - {{ t.tenantName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Cartera</label>
+        <select class="form-select" [(ngModel)]="selectedPortfolioId" (ngModelChange)="onPortfolioChange()"
+                [disabled]="selectedTenantId === 0">
+          <option [ngValue]="0">Seleccione...</option>
+          <option *ngFor="let p of portfolios" [ngValue]="p.id">{{ p.portfolioCode }} - {{ p.portfolioName }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Subcartera</label>
+        <select class="form-select" [(ngModel)]="selectedSubPortfolioId" (ngModelChange)="onSubcarteraChange()"
+                [disabled]="selectedPortfolioId === 0">
+          <option [ngValue]="0">Seleccione...</option>
+          <option *ngFor="let sp of subPortfolios" [ngValue]="sp.id">{{ sp.subPortfolioCode }} - {{ sp.subPortfolioName }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint" *ngIf="selectedSubPortfolioId === 0">
+    Selecciona una subcartera para ver y gestionar sus grupos.
+  </p>
+
+  <ng-container *ngIf="selectedSubPortfolioId > 0">
+    <!-- Grupos existentes -->
+    <div class="card">
+      <h2><lucide-angular name="list" [size]="20"></lucide-angular> Grupos especiales</h2>
+      <p class="muted" *ngIf="loadingGrupos">Cargando grupos...</p>
+      <p class="muted" *ngIf="!loadingGrupos && gruposEspeciales.length === 0">
+        Aún no hay grupos especiales en esta subcartera. Crea uno abajo.
+      </p>
+      <div class="grupo-row" *ngFor="let g of gruposEspeciales">
+        <div class="grupo-info">
+          <span class="grupo-nombre">{{ g.nombre }}</span>
+          <small class="muted">{{ g.totalMiembros }} asesor(es)</small>
+        </div>
+        <div class="grupo-acciones">
+          <button type="button" class="btn-editar" (click)="editarGrupo(g)">Editar</button>
+          <button type="button" class="btn-icono btn-eliminar" (click)="eliminarGrupoUI(g)" title="Eliminar grupo">
+            <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crear / editar -->
+    <div class="card">
+      <h2>
+        <lucide-angular name="plus" [size]="20"></lucide-angular>
+        {{ grupoFormId ? 'Editar grupo' : 'Nuevo grupo' }}
+      </h2>
+
+      <div class="form-group">
+        <label for="grupoNombre">Nombre del grupo</label>
+        <input id="grupoNombre" type="text" class="form-select" name="grupoFormNombre"
+               [(ngModel)]="grupoFormNombre" placeholder="Ej: Turno tarde">
+      </div>
+
+      <label>Asesores del grupo — arrastra entre las columnas</label>
+      <p class="muted" *ngIf="loadingAsesores">Cargando asesores...</p>
+      <p class="muted" *ngIf="!loadingAsesores && asesoresSubcartera.length === 0">
+        No hay asesores en esta subcartera.
+      </p>
+
+      <div class="dnd-cols" *ngIf="asesoresSubcartera.length > 0">
+        <div class="dnd-col">
+          <div class="dnd-col-title">Disponibles ({{ dndDisponibles.length }})</div>
+          <div cdkDropList #listaDisp="cdkDropList"
+               [cdkDropListData]="dndDisponibles"
+               [cdkDropListConnectedTo]="[listaSel]"
+               (cdkDropListDropped)="onDropAsesor($event)"
+               class="dnd-list">
+            <div class="dnd-item" *ngFor="let a of dndDisponibles" cdkDrag>
+              {{ a.nombre }}
+              <small class="muted">{{ a.extension ? 'Anexo ' + a.extension : 'Sin anexo' }}</small>
+            </div>
+            <p *ngIf="dndDisponibles.length === 0" class="dnd-empty">— sin asesores —</p>
+          </div>
+        </div>
+
+        <div class="dnd-col">
+          <div class="dnd-col-title">En el grupo ({{ dndSeleccionados.length }})</div>
+          <div cdkDropList #listaSel="cdkDropList"
+               [cdkDropListData]="dndSeleccionados"
+               [cdkDropListConnectedTo]="[listaDisp]"
+               (cdkDropListDropped)="onDropAsesor($event)"
+               class="dnd-list dnd-list-target">
+            <div class="dnd-item" *ngFor="let a of dndSeleccionados" cdkDrag>
+              {{ a.nombre }}
+              <small class="muted">{{ a.extension ? 'Anexo ' + a.extension : 'Sin anexo' }}</small>
+            </div>
+            <p *ngIf="dndSeleccionados.length === 0" class="dnd-empty">Arrastra asesores aquí</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="error" *ngIf="grupoError">{{ grupoError }}</p>
+
+      <div class="form-actions">
+        <button type="button" class="btn-cancelar" *ngIf="grupoFormId" (click)="resetForm()">Cancelar edición</button>
+        <button type="button" class="btn-guardar" (click)="guardarGrupo()" [disabled]="savingGrupo">
+          {{ savingGrupo ? 'Guardando...' : (grupoFormId ? 'Guardar cambios' : 'Crear grupo') }}
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</div>

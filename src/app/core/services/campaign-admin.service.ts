@@ -3,6 +3,23 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+/** Asesor (id + nombre + anexo) para miembros de un grupo o el selector. */
+export interface AsesorMiembro {
+  idUsuario: number;
+  nombre: string;
+  extension?: string;
+}
+
+/** Grupo de asesores de una subcartera (default o especial). */
+export interface GrupoAsesor {
+  id: number;
+  nombre: string;
+  idSubcartera: number;
+  esDefault: boolean;
+  totalMiembros: number;
+  miembros?: AsesorMiembro[];
+}
+
 export interface Campaign {
   id?: number;
   name: string;
@@ -24,6 +41,9 @@ export interface Campaign {
   tenantId?: number;
   portfolioId?: number;
   subPortfolioId?: number;
+
+  // Grupo dirigido: null/undefined = todos los asesores de la subcartera
+  idGrupoAsesores?: number | null;
 
   // Tipo de filtro de estado para rangos por tipo de contacto
   tipoFiltroEstado?: 'ULTIMO_ESTADO' | 'MEJOR_ESTADO_MES' | 'MEJOR_ESTADO_HISTORICO';
@@ -224,6 +244,34 @@ export class CampaignAdminService {
    */
   deleteCampaign(id: number): Observable<any> {
     return this.http.delete(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
+  }
+
+  // ===== Grupos de asesores (montados bajo /campaigns/grupos por el gateway) =====
+
+  /** Grupos especiales de una subcartera (para el selector y la gestión). */
+  getGruposBySubcartera(idSubcartera: number): Observable<GrupoAsesor[]> {
+    return this.http.get<GrupoAsesor[]>(`${this.apiUrl}/grupos/subcartera/${idSubcartera}`, { headers: this.getHeaders() });
+  }
+
+  /** Agentes de una subcartera (para elegir miembros de un grupo). */
+  getAsesoresSubcartera(idSubcartera: number): Observable<AsesorMiembro[]> {
+    return this.http.get<AsesorMiembro[]>(`${this.apiUrl}/grupos/subcartera/${idSubcartera}/asesores`, { headers: this.getHeaders() });
+  }
+
+  getGrupo(id: number): Observable<GrupoAsesor> {
+    return this.http.get<GrupoAsesor>(`${this.apiUrl}/grupos/${id}`, { headers: this.getHeaders() });
+  }
+
+  crearGrupo(req: { nombre: string; idSubcartera: number; idsUsuarios: number[] }): Observable<GrupoAsesor> {
+    return this.http.post<GrupoAsesor>(`${this.apiUrl}/grupos`, req, { headers: this.getHeaders() });
+  }
+
+  actualizarGrupo(id: number, req: { nombre?: string; idsUsuarios: number[] }): Observable<GrupoAsesor> {
+    return this.http.put<GrupoAsesor>(`${this.apiUrl}/grupos/${id}`, req, { headers: this.getHeaders() });
+  }
+
+  eliminarGrupo(id: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/grupos/${id}`, { headers: this.getHeaders() });
   }
 
   /**

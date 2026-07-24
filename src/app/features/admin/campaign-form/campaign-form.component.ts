@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -23,6 +23,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_FORMATS } from '@angular/material/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
+import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
 export const MY_DATE_FORMATS = {
   parse: {
@@ -44,7 +45,8 @@ export const MY_DATE_FORMATS = {
     MatFormFieldModule,
     MatInputModule,
     MatNativeDateModule,
-    AppNumberPipe
+    AppNumberPipe,
+    DragDropModule
   ],
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.css'],
@@ -131,6 +133,24 @@ export class CampaignFormComponent implements OnInit {
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
 
+  // Grupo dirigido de la campaña. null = todos los asesores de la subcartera.
+  grupos: GrupoAsesor[] = [];
+  selectedGrupoId: number | null = null;
+  loadingGrupos = false;
+
+  // Gestión de grupos (modal)
+  showGruposModal = false;
+  asesoresSubcartera: AsesorMiembro[] = [];
+  loadingAsesoresGrupo = false;
+  grupoFormId: number | null = null;   // null = creando, != null = editando
+  grupoFormNombre = '';
+  grupoFormAsesores: number[] = [];    // ids seleccionados (fuente de verdad que se persiste)
+  savingGrupo = false;
+  grupoError: string | null = null;
+  // Listas para drag & drop (misma data; grupoFormAsesores se deriva de dndSeleccionados)
+  dndDisponibles: AsesorMiembro[] = [];
+  dndSeleccionados: AsesorMiembro[] = [];
+
   // Modal de preview/confirmación
   showPreviewModal: boolean = false;
   previewLoading: boolean = false;
@@ -206,9 +226,158 @@ export class CampaignFormComponent implements OnInit {
   onSubPortfolioChange(): void {
     this.filterableFields = [];
     this.selectedRangosAntiguedad = [];
+    this.grupos = [];
+    this.selectedGrupoId = null;
     if (this.selectedSubPortfolioId > 0) {
       this.loadFilterableFields(this.selectedSubPortfolioId);
+      this.loadGrupos(this.selectedSubPortfolioId);
     }
+  }
+
+  /** Grupo actualmente seleccionado (para mostrar sus miembros). */
+  get selectedGrupo(): GrupoAsesor | undefined {
+    return this.selectedGrupoId != null
+      ? this.grupos.find(g => g.id === this.selectedGrupoId)
+      : undefined;
+  }
+
+  // ===== Gestión de grupos (crear/editar/eliminar) =====
+
+  /** Solo los grupos especiales (el default no se gestiona). */
+  get gruposEspeciales(): GrupoAsesor[] {
+    return this.grupos.filter(g => !g.esDefault);
+  }
+
+  abrirGestionGrupos(): void {
+    if (!this.selectedSubPortfolioId || this.selectedSubPortfolioId <= 0) {
+      return;
+    }
+    this.resetGrupoForm();
+    this.loadingAsesoresGrupo = true;
+    this.campaignService.getAsesoresSubcartera(this.selectedSubPortfolioId).subscribe({
+      next: (asesores) => { this.asesoresSubcartera = asesores; this.prepararDnd(); this.loadingAsesoresGrupo = false; },
+      error: () => { this.asesoresSubcartera = []; this.prepararDnd(); this.loadingAsesoresGrupo = false; }
+    });
+    this.showGruposModal = true;
+  }
+
+  /** Reparte los asesores de la subcartera en "disponibles" vs "en el grupo" según grupoFormAsesores. */
+  prepararDnd(): void {
+    const sel = new Set(this.grupoFormAsesores);
+    this.dndSeleccionados = this.asesoresSubcartera.filter(a => sel.has(a.idUsuario));
+    this.dndDisponibles = this.asesoresSubcartera.filter(a => !sel.has(a.idUsuario));
+  }
+
+  /** Drop entre listas (o reordenar dentro de una). Sincroniza grupoFormAsesores. */
+  onDropAsesor(event: CdkDragDrop<AsesorMiembro[]>): void {
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
+    }
+    this.grupoFormAsesores = this.dndSeleccionados.map(a => a.idUsuario);
+  }
+
+  cerrarGestionGrupos(): void {
+    this.showGruposModal = false;
+    // refrescar el dropdown conservando la selección actual
+    if (this.selectedSubPortfolioId > 0) {
+      this.loadGrupos(this.selectedSubPortfolioId, this.selectedGrupoId ?? undefined);
+    }
+  }
+
+  resetGrupoForm(): void {
+    this.grupoFormId = null;
+    this.grupoFormNombre = '';
+    this.grupoFormAsesores = [];
+    this.grupoError = null;
+    this.prepararDnd();
+  }
+
+  editarGrupo(g: GrupoAsesor): void {
+    this.grupoFormId = g.id;
+    this.grupoFormNombre = g.nombre;
+    this.grupoFormAsesores = (g.miembros || []).map(m => m.idUsuario);
+    this.grupoError = null;
+    this.prepararDnd();
+  }
+
+  toggleGrupoAsesor(idUsuario: number): void {
+    const i = this.grupoFormAsesores.indexOf(idUsuario);
+    if (i >= 0) { this.grupoFormAsesores.splice(i, 1); }
+    else { this.grupoFormAsesores.push(idUsuario); }
+  }
+
+  isGrupoAsesorSel(idUsuario: number): boolean {
+    return this.grupoFormAsesores.includes(idUsuario);
+  }
+
+  private recargarGrupos(): void {
+    if (this.selectedSubPortfolioId > 0) {
+      this.campaignService.getGruposBySubcartera(this.selectedSubPortfolioId)
+        .subscribe(gs => this.grupos = gs);
+    }
+  }
+
+  guardarGrupo(): void {
+    const nombre = (this.grupoFormNombre || '').trim();
+    if (!nombre) { this.grupoError = 'El nombre del grupo es obligatorio'; return; }
+    if (this.grupoFormAsesores.length === 0) { this.grupoError = 'Seleccione al menos un asesor'; return; }
+
+    this.savingGrupo = true;
+    this.grupoError = null;
+    const onOk = () => { this.savingGrupo = false; this.resetGrupoForm(); this.recargarGrupos(); };
+    const onErr = (err: any) => {
+      this.savingGrupo = false;
+      this.grupoError = err?.error?.message || 'No se pudo guardar el grupo';
+    };
+
+    if (this.grupoFormId) {
+      this.campaignService.actualizarGrupo(this.grupoFormId, { nombre, idsUsuarios: this.grupoFormAsesores })
+        .subscribe({ next: onOk, error: onErr });
+    } else {
+      this.campaignService.crearGrupo({ nombre, idSubcartera: this.selectedSubPortfolioId, idsUsuarios: this.grupoFormAsesores })
+        .subscribe({ next: onOk, error: onErr });
+    }
+  }
+
+  eliminarGrupoUI(g: GrupoAsesor): void {
+    if (!window.confirm(`¿Eliminar el grupo "${g.nombre}"?`)) { return; }
+    this.campaignService.eliminarGrupo(g.id).subscribe({
+      next: () => {
+        if (this.grupoFormId === g.id) { this.resetGrupoForm(); }
+        if (this.selectedGrupoId === g.id) {
+          const def = this.grupos.find(x => x.esDefault);
+          this.selectedGrupoId = def ? def.id : null;
+        }
+        this.recargarGrupos();
+      },
+      error: (err) => { this.grupoError = err?.error?.message || 'No se pudo eliminar el grupo'; }
+    });
+  }
+
+  /**
+   * Carga los grupos de la subcartera (default + especiales) y preselecciona:
+   * - en edición: el grupo de la campaña (preferId);
+   * - en creación (preferId no provisto): el grupo por defecto.
+   */
+  loadGrupos(subcarteraId: number, preferId?: number | null): void {
+    this.loadingGrupos = true;
+    this.campaignService.getGruposBySubcartera(subcarteraId).subscribe({
+      next: (grupos) => {
+        this.grupos = grupos;
+        const def = grupos.find(g => g.esDefault);
+        this.selectedGrupoId = (preferId != null)
+          ? preferId
+          : (def ? def.id : null);
+        this.loadingGrupos = false;
+      },
+      error: (err) => {
+        console.error('Error cargando grupos de subcartera:', err);
+        this.grupos = [];
+        this.loadingGrupos = false;
+      }
+    });
   }
 
   toggleRangoAntiguedad(valor: string): void {
@@ -565,9 +734,11 @@ export class CampaignFormComponent implements OnInit {
                 selectedSubPortfolioId: this.selectedSubPortfolioId
               });
 
-              // Cargar campos filtrables y filtros existentes
+              // Cargar campos filtrables, grupos y filtros existentes.
+              // El grupo de la campaña se preselecciona dentro de loadGrupos.
               if (campaign.subPortfolioId) {
                 this.loadFilterableFields(campaign.subPortfolioId);
+                this.loadGrupos(campaign.subPortfolioId, campaign.idGrupoAsesores ?? undefined);
               }
               if (campaign.id) {
                 this.loadCampaignFilters(campaign.id);
@@ -637,6 +808,9 @@ export class CampaignFormComponent implements OnInit {
     this.campaign.filtroTipoTelefono = this.selectedTiposTelefono.length > 0
       ? this.selectedTiposTelefono.join(',')
       : undefined;
+
+    // Grupo dirigido (null = todos los asesores de la subcartera)
+    this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
 
     this.error = null;
 
@@ -878,6 +1052,8 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private saveFiltersAndNavigate(campaignId: number, exportExcel: boolean = false): void {
+    // El grupo dirigido se guarda como parte de la campaña (campaign.idGrupoAsesores),
+    // no requiere una llamada aparte. Aquí solo persistimos los filtros.
     // SIEMPRE llamar a saveCampaignFilters (incluso con array vacío)
     // En modo EDICIÓN (exportExcel=false), pasamos skipImport=true para no re-importar contactos
     // En modo CREAR (exportExcel=true), pasamos skipImport=false para importar contactos

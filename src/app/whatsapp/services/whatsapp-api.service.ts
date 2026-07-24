@@ -25,6 +25,11 @@ export class WhatsappApiService {
     return this.http.get<PageResponse<Conversation>>(`${this.apiBase}/chats`, { params });
   }
 
+  /** Una conversación por id (abrir un chat por URL/notificación). */
+  getChat(conversationId: number): Observable<Conversation> {
+    return this.http.get<Conversation>(`${this.apiBase}/chats/${conversationId}`);
+  }
+
   getMessages(conversationId: number, limit = 60, before?: number): Observable<MessagePageResponse> {
     let params = new HttpParams().set('limit', limit);
     if (before) params = params.set('before', before);
@@ -43,6 +48,13 @@ export class WhatsappApiService {
 
   sendMessage(request: SendMessageRequest): Observable<SendMessageResponse> {
     return this.http.post<SendMessageResponse>(`${this.apiBase}/send`, request);
+  }
+
+  /** Sube un adjunto saliente (multipart) y devuelve la ref corta para /send. */
+  uploadMedia(file: File): Observable<{ ref: string; fileName?: string; mime?: string }> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<{ ref: string; fileName?: string; mime?: string }>(`${this.apiBase}/media/upload`, form);
   }
 
   getMessageViews(msgId: string): Observable<MessageAgentView[]> {
