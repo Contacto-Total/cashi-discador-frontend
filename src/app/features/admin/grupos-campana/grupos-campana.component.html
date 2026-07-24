@@ -126,8 +126,12 @@
       <p class="error" *ngIf="grupoError">{{ grupoError }}</p>
 
       <div class="form-actions">
-        <button type="button" class="btn-cancelar" *ngIf="grupoFormId" (click)="resetForm()">Cancelar edición</button>
+        <button type="button" class="btn-cancelar" *ngIf="grupoFormId" (click)="resetForm()">
+          <lucide-angular name="x" [size]="16"></lucide-angular>
+          Cancelar edición
+        </button>
         <button type="button" class="btn-guardar" (click)="guardarGrupo()" [disabled]="savingGrupo">
+          <lucide-angular [name]="grupoFormId ? 'save' : 'plus'" [size]="16"></lucide-angular>
           {{ savingGrupo ? 'Guardando...' : (grupoFormId ? 'Guardar cambios' : 'Crear grupo') }}
         </button>
       </div>

@@ -132,41 +132,50 @@
 .btn-eliminar { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 .btn-eliminar:hover { background: #fee2e2; }
 
-/* Acciones del form */
+/* Footer de acciones (barra a lo ancho de la tarjeta, estilo crear campaña) */
 .form-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: flex-end;
-  margin-top: 16px;
+  align-items: center;
+  margin: 20px -20px -20px;      /* se extiende a los bordes de la .card (padding 20px) */
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
-.btn-guardar {
-  background: #2563eb;
-  color: #ffffff;
-  border: none;
+.btn-guardar,
+.btn-cancelar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
   border-radius: 8px;
-  padding: 10px 20px;
   font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
 }
-.btn-guardar:hover:not(:disabled) { background: #1d4ed8; }
+.btn-guardar {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border: none;
+}
+.btn-guardar:hover:not(:disabled) { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
 .btn-guardar:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-cancelar {
   background: #ffffff;
   color: #334155;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 10px 20px;
-  cursor: pointer;
 }
 .btn-cancelar:hover { background: #f1f5f9; }
 
 /* Drag & drop */
-.dnd-cols { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
-.dnd-col { flex: 1 1 240px; min-width: 220px; }
+.dnd-cols { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; align-items: stretch; }
+.dnd-col { flex: 1 1 240px; min-width: 220px; display: flex; flex-direction: column; }
 .dnd-col-title { font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; color: #334155; }
 .dnd-list {
-  min-height: 140px;
-  max-height: 360px;
+  height: 300px;            /* ~5 items visibles; el resto con scroll. Ambas columnas igual alto */
   overflow-y: auto;
   border: 1px dashed #cbd5e1;
   border-radius: 8px;
