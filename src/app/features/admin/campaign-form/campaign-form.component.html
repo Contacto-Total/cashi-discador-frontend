@@ -320,6 +320,10 @@
         <small style="display:block; margin-top:6px; opacity:0.7;">
           {{ loadingGrupos ? 'Cargando grupos...' : '' }}
         </small>
+        <button type="button" class="btn-add-filter" style="margin-top:10px;" (click)="abrirGestionGrupos()">
+          <lucide-angular name="users" [size]="16"></lucide-angular>
+          Gestionar grupos
+        </button>
       </div>
 
       <!-- Asesores del grupo elegido -->
@@ -751,6 +755,108 @@
         <lucide-angular name="check-circle" [size]="16"></lucide-angular>
         Confirmar y Crear Campaña
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Gestión de grupos de asesores -->
+<div class="preview-modal-overlay" *ngIf="showGruposModal" (click)="cerrarGestionGrupos()">
+  <div class="preview-modal" (click)="$event.stopPropagation()">
+    <div class="preview-modal-header">
+      <h2>
+        <lucide-angular name="users" [size]="20"></lucide-angular>
+        Gestión de grupos de asesores
+      </h2>
+      <button class="btn-close-modal" (click)="cerrarGestionGrupos()">
+        <lucide-angular name="x" [size]="20"></lucide-angular>
+      </button>
+    </div>
+
+    <div class="preview-modal-body">
+      <!-- Grupos existentes -->
+      <div class="form-section full-width">
+        <h2><lucide-angular name="list" [size]="18"></lucide-angular> Grupos especiales</h2>
+        <p class="section-description" *ngIf="gruposEspeciales.length === 0" style="opacity:0.7;">
+          Aún no hay grupos especiales en esta subcartera. Crea uno abajo.
+        </p>
+        <div *ngFor="let g of gruposEspeciales" class="rango-checkbox-label"
+             style="justify-content:space-between; cursor:default;">
+          <span class="rango-checkbox-text">{{ g.nombre }}
+            <small style="display:block; opacity:0.7; font-weight:normal;">{{ g.totalMiembros }} asesor(es)</small>
+          </span>
+          <span style="display:flex; gap:8px;">
+            <button type="button" class="btn-add-filter" (click)="editarGrupo(g)">Editar</button>
+            <button type="button" class="btn-remove-filter" (click)="eliminarGrupoUI(g)">Eliminar</button>
+          </span>
+        </div>
+      </div>
+
+      <!-- Crear / editar -->
+      <div class="form-section full-width">
+        <h2>
+          <lucide-angular name="plus" [size]="18"></lucide-angular>
+          {{ grupoFormId ? 'Editar grupo' : 'Nuevo grupo' }}
+        </h2>
+
+        <div class="form-group">
+          <label for="grupoNombre">Nombre del grupo</label>
+          <input id="grupoNombre" type="text" class="form-select" name="grupoFormNombre"
+                 [(ngModel)]="grupoFormNombre" placeholder="Ej: Turno tarde">
+        </div>
+
+        <label>Asesores del grupo — arrastra entre las columnas</label>
+        <p class="section-description" *ngIf="loadingAsesoresGrupo" style="opacity:0.7;">Cargando asesores...</p>
+        <p class="section-description" *ngIf="!loadingAsesoresGrupo && asesoresSubcartera.length === 0" style="opacity:0.7;">
+          No hay asesores en esta subcartera.
+        </p>
+
+        <div class="dnd-cols" *ngIf="asesoresSubcartera.length > 0">
+          <div class="dnd-col">
+            <div class="dnd-col-title">Disponibles ({{ dndDisponibles.length }})</div>
+            <div cdkDropList #listaDisp="cdkDropList"
+                 [cdkDropListData]="dndDisponibles"
+                 [cdkDropListConnectedTo]="[listaSel]"
+                 (cdkDropListDropped)="onDropAsesor($event)"
+                 class="dnd-list">
+              <div class="dnd-item" *ngFor="let a of dndDisponibles" cdkDrag>
+                {{ a.nombre }}
+                <small style="display:block; opacity:0.7;">{{ a.extension ? 'Anexo ' + a.extension : 'Sin anexo' }}</small>
+              </div>
+              <p *ngIf="dndDisponibles.length === 0" class="dnd-empty">— sin asesores —</p>
+            </div>
+          </div>
+
+          <div class="dnd-col">
+            <div class="dnd-col-title">En el grupo ({{ dndSeleccionados.length }})</div>
+            <div cdkDropList #listaSel="cdkDropList"
+                 [cdkDropListData]="dndSeleccionados"
+                 [cdkDropListConnectedTo]="[listaDisp]"
+                 (cdkDropListDropped)="onDropAsesor($event)"
+                 class="dnd-list dnd-list-target">
+              <div class="dnd-item" *ngFor="let a of dndSeleccionados" cdkDrag>
+                {{ a.nombre }}
+                <small style="display:block; opacity:0.7;">{{ a.extension ? 'Anexo ' + a.extension : 'Sin anexo' }}</small>
+              </div>
+              <p *ngIf="dndSeleccionados.length === 0" class="dnd-empty">Arrastra asesores aquí</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="rango-selected-count" *ngIf="grupoFormAsesores.length > 0">
+          <lucide-angular name="check-circle" [size]="16"></lucide-angular>
+          <span>{{ grupoFormAsesores.length }} asesor(es) seleccionado(s)</span>
+        </div>
+
+        <p *ngIf="grupoError" style="color:#dc2626; margin-top:8px;">{{ grupoError }}</p>
+      </div>
+    </div>
+
+    <div class="preview-modal-footer">
+      <button class="btn-cancel" *ngIf="grupoFormId" (click)="resetGrupoForm()">Cancelar edición</button>
+      <button class="btn-confirm" (click)="guardarGrupo()" [disabled]="savingGrupo">
+        {{ savingGrupo ? 'Guardando...' : (grupoFormId ? 'Guardar cambios' : 'Crear grupo') }}
+      </button>
+      <button class="btn-cancel" (click)="cerrarGestionGrupos()">Cerrar</button>
     </div>
   </div>
 </div>
