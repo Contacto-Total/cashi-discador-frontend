@@ -784,9 +784,11 @@
           <span class="rango-checkbox-text">{{ g.nombre }}
             <small style="display:block; opacity:0.7; font-weight:normal;">{{ g.totalMiembros }} asesor(es)</small>
           </span>
-          <span style="display:flex; gap:8px;">
+          <span style="display:flex; gap:8px; align-items:center;">
             <button type="button" class="btn-add-filter" (click)="editarGrupo(g)">Editar</button>
-            <button type="button" class="btn-remove-filter" (click)="eliminarGrupoUI(g)">Eliminar</button>
+            <button type="button" class="btn-grupo-accion btn-grupo-eliminar" (click)="eliminarGrupoUI(g)" title="Eliminar grupo">
+              <lucide-angular name="trash-2" [size]="18"></lucide-angular>
+            </button>
           </span>
         </div>
       </div>
