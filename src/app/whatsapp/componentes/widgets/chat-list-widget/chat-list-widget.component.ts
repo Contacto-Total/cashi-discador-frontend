@@ -9,7 +9,7 @@ import { WhatsappMessageStoreService } from '../../../services';
   standalone: true,
   imports: [DatePipe, FormsModule],
   template: `
-    <aside class="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-950 shadow-lg">
+    <aside class="flex h-full min-h-0 flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-950">
       <header class="border-b border-slate-200 p-3">
         <div class="flex items-center justify-between gap-3">
           <div>
@@ -18,27 +18,29 @@ import { WhatsappMessageStoreService } from '../../../services';
           </div>
           <button
             type="button"
-            class="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
+            class="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
             [disabled]="store.loadingChats()"
             (click)="reload()"
+            title="Actualizar"
+            aria-label="Actualizar"
           >
-            Actualizar
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="store.loadingChats()"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
           </button>
         </div>
 
-        <label class="mt-4 block">
+        <label class="mt-3 block">
           <span class="sr-only">Buscar chat</span>
           <input
-            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            class="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             type="search"
-            placeholder="Buscar por nombre, teléfono o mensaje"
+            placeholder="Buscar chat"
             [ngModel]="query()"
             (ngModelChange)="search($event)"
           />
         </label>
       </header>
 
-      <section class="min-h-0 flex-1 overflow-y-auto p-2">
+      <section class="min-h-0 flex-1 overflow-y-auto">
         @if (store.loadingChats() && !store.chats().length) {
           <div class="space-y-2 p-2">
             @for (item of skeletonItems; track item) {
@@ -52,7 +54,7 @@ import { WhatsappMessageStoreService } from '../../../services';
             <p class="mt-2 text-sm">No encontramos chats para mostrar con el filtro actual.</p>
           </div>
         } @else {
-          <div class="space-y-1">
+          <div>
             @for (chat of store.chats(); track trackChat(chat)) {
               <button
                 type="button"
@@ -78,7 +80,7 @@ import { WhatsappMessageStoreService } from '../../../services';
 
                 <div class="min-w-0 flex-1">
                   <div class="flex items-start justify-between gap-2">
-                    <p class="truncate text-sm font-semibold text-slate-950">{{ chat.name }}</p>
+                    <p class="truncate text-sm font-semibold text-slate-950">{{ chatDisplayName(chat) }}</p>
                     @if (chat.lastMsgTs) {
                       <time class="shrink-0 text-xs font-medium text-slate-500" [dateTime]="toIso(chat.lastMsgTs)">
                         {{ chat.lastMsgTs | date: 'HH:mm' }}
@@ -93,8 +95,8 @@ import { WhatsappMessageStoreService } from '../../../services';
                       {{ preview(chat) }}
                     </p>
                     @if ((chat.unreadCount || 0) > 0) {
-                      <span class="grid min-w-5 place-items-center rounded-full bg-emerald-400 px-1.5 text-xs font-bold text-slate-950">
-                        {{ chat.unreadCount }}
+                      <span class="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold leading-none text-white">
+                        {{ unreadBadge(chat) }}
                       </span>
                     }
                   </div>
@@ -160,8 +162,15 @@ export class ChatListWidgetComponent implements OnInit {
   }
 
   chatButtonClass(chat: Chat): string {
-    const base = 'group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition';
-    return this.isSelected(chat) ? `${base} bg-emerald-100 hover:bg-emerald-100` : `${base} hover:bg-slate-100`;
+    const base = 'group flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left transition';
+    return this.isSelected(chat) ? `${base} bg-emerald-100 hover:bg-emerald-100` : `${base} hover:bg-slate-50`;
+  }
+
+  chatDisplayName(chat: Chat): string {
+    if (!chat.name || chat.name.includes('@lid') || chat.name.includes('@s.whatsapp.net')) {
+      return chat.contactPhone || chat.name || chat.jid;
+    }
+    return chat.name;
   }
 
   trackChat(chat: Chat): string | number {
@@ -174,6 +183,12 @@ export class ChatListWidgetComponent implements OnInit {
     return parts.length > 1
       ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
       : source.slice(0, 2).toUpperCase();
+  }
+
+  /** No-leídos con tope visual "+10" (como WhatsApp). */
+  unreadBadge(chat: Chat): string {
+    const count = chat.unreadCount || 0;
+    return count > 10 ? '+10' : String(count);
   }
 
   preview(chat: Chat): string {

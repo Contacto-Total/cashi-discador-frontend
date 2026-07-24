@@ -207,6 +207,8 @@
   </div>
 </div>
 
+<app-whatsapp-notification-popup *ngIf="!isLoginPage() && authService.isAuthenticated()"></app-whatsapp-notification-popup>
+
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">
   <router-outlet></router-outlet>
 </div>

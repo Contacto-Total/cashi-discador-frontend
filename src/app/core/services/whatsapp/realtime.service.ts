@@ -4,7 +4,8 @@ import { AuthService } from '../auth.service';
 import { environment } from '../../../../environments/environment';
 
 export type WhatsAppEventType =
-  | 'INCOMING' | 'OUTGOING' | 'RECEIPT' | 'CHAT_UPDATE' | 'VIEWERS' | 'STATUS';
+  | 'INCOMING' | 'OUTGOING' | 'RECEIPT' | 'CHAT_UPDATE' | 'VIEWERS' | 'STATUS'
+  | 'MESSAGE_NOTIFICATION' | 'OUTBOUND_FAILED';
 
 export interface WhatsAppEvent {
   type: WhatsAppEventType | string;

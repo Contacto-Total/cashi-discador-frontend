@@ -206,6 +206,11 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
       this.checkIfNewChat();
 
+      // OnPush: toda emisión (incluidos los RECEIPT que solo cambian el estado
+      // de un mensaje sin variar el largo del array) debe forzar repintado. Sin
+      // esto las palomitas no se actualizaban hasta cambiar de chat y volver.
+      this.cdr.markForCheck();
+
       if (isNewChatLoad) {
         // Primera carga con mensajes: mostrar spinner brevemente y luego revelar
         this.messagesLoading = true;
