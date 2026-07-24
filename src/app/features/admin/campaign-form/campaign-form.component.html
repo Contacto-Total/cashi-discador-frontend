@@ -294,43 +294,51 @@
       </div>
     </div>
 
-    <!-- SECCIÓN: Asesores de la campaña -->
+    <!-- SECCIÓN: Grupo de asesores -->
     <div class="form-section full-width" *ngIf="selectedSubPortfolioId > 0">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
-        Asesores de la Campaña
+        Grupo de Asesores
       </h2>
       <p class="section-description">
-        Seleccione los asesores a los que se dirigirán las llamadas. Si no selecciona ninguno,
-        la campaña la trabajarán todos los asesores de la subcartera.
+        Elija el grupo de asesores que trabajará esta campaña. El grupo por defecto son
+        todos los asesores de la subcartera. Para dirigirla a un subconjunto, cree un grupo
+        especial y selecciónelo aquí.
       </p>
 
-      <div class="rango-antiguedad-grid" *ngIf="asesoresDisponibles.length > 0; else sinAsesores">
-        <label
-          *ngFor="let asesor of asesoresDisponibles"
-          class="rango-checkbox-label"
-          [class.selected]="isAsesorSelected(asesor.idUsuario)">
-          <input
-            type="checkbox"
-            [checked]="isAsesorSelected(asesor.idUsuario)"
-            (change)="toggleAsesor(asesor.idUsuario)">
-          <span class="rango-checkbox-text">{{ asesor.nombre }}
-            <small style="display:block; opacity:0.7; font-weight:normal;">
-              {{ asesor.extension ? 'Anexo ' + asesor.extension : 'Sin anexo' }}
-            </small>
-          </span>
-        </label>
+      <div class="form-group">
+        <label for="grupoAsesores">Grupo dirigido</label>
+        <select
+          id="grupoAsesores"
+          name="grupoAsesores"
+          [(ngModel)]="selectedGrupoId"
+          class="form-select">
+          <option *ngFor="let g of grupos" [ngValue]="g.id">
+            {{ g.nombre }}{{ g.esDefault ? ' — por defecto (todos)' : '' }} ({{ g.totalMiembros }} asesor(es))
+          </option>
+        </select>
+        <small style="display:block; margin-top:6px; opacity:0.7;">
+          {{ loadingGrupos ? 'Cargando grupos...' : '' }}
+        </small>
       </div>
 
-      <ng-template #sinAsesores>
-        <p class="section-description" style="opacity:0.7;">
-          {{ loadingAsesores ? 'Cargando asesores...' : 'No hay asesores en esta subcartera.' }}
-        </p>
-      </ng-template>
-
-      <div class="rango-selected-count" *ngIf="selectedAsesores.length > 0">
-        <lucide-angular name="check-circle" [size]="16"></lucide-angular>
-        <span>{{ selectedAsesores.length }} asesor(es) seleccionado(s)</span>
+      <!-- Asesores del grupo elegido -->
+      <div class="form-group" *ngIf="selectedGrupo as g">
+        <label>
+          Asesores del grupo «{{ g.nombre }}»{{ g.esDefault ? ' (por defecto)' : '' }} ({{ g.totalMiembros }})
+        </label>
+        <div class="rango-antiguedad-grid" *ngIf="g.miembros && g.miembros.length > 0; else grupoVacio">
+          <div *ngFor="let m of g.miembros" class="rango-checkbox-label" style="cursor:default;">
+            <span class="rango-checkbox-text">{{ m.nombre }}
+              <small style="display:block; opacity:0.7; font-weight:normal;">
+                {{ m.extension ? 'Anexo ' + m.extension : 'Sin anexo' }}
+              </small>
+            </span>
+          </div>
+        </div>
+        <ng-template #grupoVacio>
+          <p class="section-description" style="opacity:0.7;">Este grupo no tiene asesores.</p>
+        </ng-template>
       </div>
     </div>
 
