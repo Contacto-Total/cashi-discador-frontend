@@ -53,10 +53,10 @@
   <ng-container *ngIf="selectedSubPortfolioId > 0">
     <!-- Grupos existentes -->
     <div class="card">
-      <h2><lucide-angular name="list" [size]="20"></lucide-angular> Grupos especiales</h2>
+      <h2><lucide-angular name="list" [size]="20"></lucide-angular> Grupos personalizados</h2>
       <p class="muted" *ngIf="loadingGrupos">Cargando grupos...</p>
       <p class="muted" *ngIf="!loadingGrupos && gruposEspeciales.length === 0">
-        Aún no hay grupos especiales en esta subcartera. Crea uno abajo.
+        Aún no hay grupos personalizados en esta subcartera. Crea uno abajo.
       </p>
       <div class="grupo-row" *ngFor="let g of gruposEspeciales">
         <div class="grupo-info">
