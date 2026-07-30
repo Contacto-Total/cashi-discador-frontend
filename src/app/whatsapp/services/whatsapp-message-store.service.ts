@@ -162,6 +162,7 @@ export class WhatsappMessageStoreService {
 
   /** Sube el archivo al backend (multipart) y luego lo envía con su ref corta. */
   sendMediaFile(conversationId: number, file: File, caption?: string): void {
+    if (this.uploadingMedia() || this.sendingMessage()) return;
     this.sendMessageError.set(null);
     this.uploadingMedia.set(true);
     this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
