@@ -8,8 +8,8 @@
   padding: 28px clamp(16px, 3vw, 34px) 38px;
   color: var(--text-primary);
   background:
-    radial-gradient(circle at 88% -10%, rgba(20, 184, 166, .18), transparent 34%),
-    linear-gradient(135deg, rgba(15, 118, 110, .08), transparent 36%),
+    radial-gradient(circle at 88% -10%, rgba(20, 184, 166, .14), transparent 34%),
+    linear-gradient(135deg, rgba(15, 118, 110, .05), transparent 36%),
     var(--bg-primary);
 }
 
@@ -26,6 +26,12 @@
   gap: 24px;
   align-items: end;
   margin-bottom: 24px;
+  padding: 24px 26px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--bg-secondary) 74%, transparent);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, .06);
+  backdrop-filter: blur(14px);
 }
 
 .header-copy {
@@ -87,15 +93,15 @@ p {
 .summary-card {
   min-width: 106px;
   padding: 14px 16px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(148, 163, 184, .18);
   border-radius: 18px;
-  background: color-mix(in srgb, var(--bg-secondary) 86%, transparent);
-  box-shadow: 0 16px 34px rgba(15, 23, 42, .07);
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 12px 28px rgba(15, 23, 42, .05);
 }
 
 .summary-card.primary {
-  border-color: rgba(20, 184, 166, .35);
-  background: linear-gradient(145deg, rgba(20, 184, 166, .16), color-mix(in srgb, var(--bg-secondary) 88%, transparent));
+  border-color: rgba(20, 184, 166, .28);
+  background: linear-gradient(145deg, rgba(20, 184, 166, .12), color-mix(in srgb, var(--bg-secondary) 78%, transparent));
 }
 
 .summary-number {
@@ -123,10 +129,11 @@ p {
 
 .service-list-panel,
 .detail-panel {
-  border: 1px solid var(--border-color);
-  border-radius: 24px;
-  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
-  box-shadow: 0 22px 48px rgba(15, 23, 42, .08);
+  border: 1px solid rgba(148, 163, 184, .18);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--bg-secondary) 78%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 22px 50px rgba(15, 23, 42, .055);
+  backdrop-filter: blur(12px);
 }
 
 .service-list-panel {
@@ -185,7 +192,7 @@ p {
 .service-mini-stats span {
   padding: 6px 9px;
   border-radius: 999px;
-  background: var(--bg-tertiary);
+  background: rgba(148, 163, 184, .11);
 }
 
 .service-list {
@@ -214,13 +221,14 @@ p {
 }
 
 .service-card:hover {
-  background: var(--bg-tertiary);
+  background: rgba(148, 163, 184, .1);
   transform: translateY(-1px);
 }
 
 .service-card.selected {
-  border-color: rgba(20, 184, 166, .35);
-  background: rgba(20, 184, 166, .11);
+  border-color: rgba(20, 184, 166, .28);
+  background: linear-gradient(135deg, rgba(20, 184, 166, .14), rgba(20, 184, 166, .07));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 24px rgba(15, 118, 110, .08);
 }
 
 .service-icon {
@@ -229,23 +237,23 @@ p {
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: rgba(100, 116, 139, .12);
+  background: rgba(100, 116, 139, .1);
   color: #64748b;
 }
 
 .service-icon.connected {
-  background: rgba(20, 184, 166, .14);
+  background: rgba(20, 184, 166, .12);
   color: #0f9d8a;
 }
 
 .service-icon.waiting-qr {
-  background: rgba(217, 119, 6, .13);
+  background: rgba(217, 119, 6, .11);
   color: #d97706;
 }
 
 .service-icon.banned,
 .service-icon.unreachable {
-  background: rgba(220, 38, 38, .12);
+  background: rgba(220, 38, 38, .1);
   color: #dc2626;
 }
 
@@ -294,14 +302,14 @@ p {
 .service-active {
   padding: 5px 7px;
   border-radius: 999px;
-  background: rgba(100, 116, 139, .13);
+  background: rgba(100, 116, 139, .11);
   color: #64748b;
   font-size: 10px;
   font-weight: 900;
 }
 
 .service-active.enabled {
-  background: rgba(20, 184, 166, .14);
+  background: rgba(20, 184, 166, .12);
   color: #0f9d8a;
 }
 
@@ -326,7 +334,7 @@ p {
 }
 
 .detail-topline {
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(148, 163, 184, .14);
 }
 
 .detail-content {
@@ -346,15 +354,15 @@ p {
 }
 
 .qr-muted {
-  border-right: 1px solid var(--border-color);
-  background: linear-gradient(180deg, rgba(20, 184, 166, .08), transparent);
+  border-right: 1px solid rgba(148, 163, 184, .14);
+  background: linear-gradient(180deg, rgba(20, 184, 166, .055), transparent);
 }
 
 .qr-frame {
   padding: 14px;
   border-radius: 22px;
   background: #fff;
-  box-shadow: 0 18px 38px rgba(15, 23, 42, .16);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, .12);
 }
 
 .qr-frame img {
@@ -424,9 +432,9 @@ p {
   gap: 12px;
   margin-top: 26px;
   padding: 12px 14px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(148, 163, 184, .16);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--bg-secondary) 78%, transparent);
+  background: rgba(148, 163, 184, .07);
   text-align: left;
 }
 
@@ -493,9 +501,9 @@ label input:not(.toggle):focus {
   gap: 18px;
   margin-top: 4px;
   padding: 14px;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(148, 163, 184, .16);
   border-radius: 14px;
-  background: var(--bg-tertiary);
+  background: rgba(148, 163, 184, .08);
 }
 
 .toggle-row span {
@@ -597,14 +605,14 @@ label input:not(.toggle):focus {
 
 .empty-state {
   min-height: 330px;
-  border: 1px dashed var(--border-color);
+  border: 1px dashed rgba(148, 163, 184, .26);
   border-radius: 22px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: color-mix(in srgb, var(--bg-secondary) 68%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 70%, transparent);
   color: var(--text-tertiary);
   text-align: center;
 }
