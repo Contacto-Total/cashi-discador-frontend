@@ -25,6 +25,7 @@ export class WhatsappMessageStoreService {
   readonly sendingMessage = signal(false);
   readonly uploadingMedia = signal(false);
   readonly sendMessageError = signal<string | null>(null);
+  readonly pendingAttachment = signal<File | null>(null);
   readonly activeViewers = signal<string[]>([]);
   readonly replyingTo = signal<Message | null>(null);
   readonly chatsPage = signal(0);
@@ -117,6 +118,7 @@ export class WhatsappMessageStoreService {
     this.currentChat.set(chat);
     this.activeViewers.set([]);
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
+    this.pendingAttachment.set(null);
     if (!chat?.id) return;
 
     // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
@@ -333,6 +335,26 @@ export class WhatsappMessageStoreService {
 
     this.setMessages(conversationId, next);
     if (payload.outboundId != null) this.tempByOutboundId.delete(payload.outboundId);
+  }
+
+  setPendingAttachment(file: File | null): void {
+    this.pendingAttachment.set(file);
+    this.sendMessageError.set(null);
+  }
+
+  sendPendingAttachment(conversationId: number, caption?: string): void {
+    const file = this.pendingAttachment();
+    if (!file || this.uploadingMedia() || this.sendingMessage()) return;
+
+    this.sendMessageError.set(null);
+    this.uploadingMedia.set(true);
+    this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
+      next: ({ ref, fileName, mime }) => {
+        this.pendingAttachment.set(null);
+        this.sendMedia(conversationId, ref, caption, fileName || file.name, mime || file.type);
+      },
+      error: () => this.sendMessageError.set('No se pudo subir el archivo.')
+    });
   }
 
   removeFailedMessage(message: Message): void {

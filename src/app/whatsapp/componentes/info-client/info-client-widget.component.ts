@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { WhatsappMessageStoreService } from '../../services';
 import { ClientInfoAclService, DynamicClient, GlobalSearchResult } from './client-info-acl.service';
+import { CartaCesionService } from '../../../core/services/carta-cesion.service';
 
 type SearchMode = 'telefono' | 'documento';
 
@@ -44,15 +45,22 @@ type SearchMode = 'telefono' | 'documento';
 
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
           <!-- ¿Tiene carta? -->
-          <div class="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+           <div class="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
             <span class="text-sm font-medium text-slate-700">¿Tiene carta?</span>
             <span
               class="rounded-full px-2.5 py-0.5 text-xs font-bold"
               [class]="hasCarta() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
             >{{ hasCarta() ? 'Sí' : 'No' }}</span>
-          </div>
+           </div>
 
-          <!-- Opciones (sin función por ahora) -->
+           @if (cartaLoading()) {
+             <p class="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">Buscando carta de cesión…</p>
+           }
+           @if (cartaError()) {
+             <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ cartaError() }}</p>
+           }
+
+           <!-- Opciones (sin función por ahora) -->
           <div class="space-y-2">
             @for (opt of options; track opt.key) {
               <button
@@ -166,6 +174,8 @@ export class InfoClientWidgetComponent {
 
   readonly selectedClient = signal<GlobalSearchResult | null>(null);
   readonly hasCarta = signal(false);
+  readonly cartaLoading = signal(false);
+  readonly cartaError = signal<string | null>(null);
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -174,7 +184,6 @@ export class InfoClientWidgetComponent {
 
   /** Opciones del cliente. Sin función aún (lógica futura). */
   readonly options: { key: string; label: string }[] = [
-    { key: 'carta-no-adeudo', label: 'Obtener carta no adeudo' },
     { key: 'compromiso-pago', label: 'Obtener compromiso de pago' },
     { key: 'carta-cesion', label: 'Obtener carta de cesión' },
     { key: 'deuda-ofertas', label: 'Ver deuda y ofertas' }
@@ -187,7 +196,8 @@ export class InfoClientWidgetComponent {
 
   constructor(
     private readonly store: WhatsappMessageStoreService,
-    private readonly acl: ClientInfoAclService
+    private readonly acl: ClientInfoAclService,
+    private readonly cartaCesion: CartaCesionService
   ) {
     // Al entrar a un chat, buscamos por el número del chat (últimos 9 dígitos).
     effect(() => {
@@ -222,9 +232,28 @@ export class InfoClientWidgetComponent {
     this.selectedClient.set(null);
   }
 
-  /** Acción de cada opción. Sin función aún (lógica futura). */
-  runOption(_key: string): void {
-    // TODO: implementar carta no adeudo / compromiso de pago / carta de cesión / deuda y ofertas.
+  runOption(key: string): void {
+    if (key !== 'carta-cesion') return;
+    const result = this.selectedClient();
+    const dni = result?.clientData.documento?.trim();
+    if (!dni) return;
+
+    this.cartaLoading.set(true);
+    this.cartaError.set(null);
+    this.cartaCesion.searchByDni(dni).subscribe({
+      next: (response) => {
+        this.hasCarta.set(true);
+        this.cartaCesion.downloadPdf(response.filename).pipe(finalize(() => this.cartaLoading.set(false))).subscribe({
+          next: (blob) => this.store.setPendingAttachment(new File([blob], response.filename, { type: 'application/pdf' })),
+          error: () => this.cartaError.set('No se pudo cargar el PDF de la carta de cesión.')
+        });
+      },
+      error: (error) => {
+        this.cartaLoading.set(false);
+        this.hasCarta.set(false);
+        this.cartaError.set(error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.');
+      }
+    });
   }
 
   setMode(mode: SearchMode): void {
@@ -276,6 +305,7 @@ export class InfoClientWidgetComponent {
    */
   private refreshHasCarta(_result: GlobalSearchResult): void {
     this.hasCarta.set(false);
+    this.cartaError.set(null);
   }
 
   private autoSearchByPhone(phone: string, key: string | number | undefined): void {

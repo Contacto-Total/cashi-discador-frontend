@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, computed, signal } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { Chat } from '../../../models';
 import { WhatsappMessageStoreService } from '../../../services';
+import { PdfPreviewWidgetComponent } from '../pdf-preview-widget/pdf-preview-widget.component';
 
 /** Tope de tamaño del adjunto (se sube por multipart; el back lo guarda en disco). */
 const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
@@ -9,7 +10,7 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
 @Component({
   selector: 'app-whatsapp-message-input-widget',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, PdfPreviewWidgetComponent],
   template: `
     <div class="space-y-2">
       @if (windowWarning()) {
@@ -28,6 +29,15 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
         <p class="rounded-md bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-200">
           {{ attachError() }}
         </p>
+      }
+
+      @if (pendingFile(); as file) {
+        <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-rose-100 text-xs font-bold text-rose-700">{{ file.type === 'application/pdf' ? 'PDF' : 'FILE' }}</span>
+          <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-slate-800">{{ file.name }}</p><p class="text-xs text-slate-500">Archivo preparado para enviar</p></div>
+          @if (isPdf(file)) { <button type="button" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100" (click)="previewOpen = true">Vista previa</button> }
+          <button type="button" class="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-slate-200" aria-label="Quitar archivo" (click)="removePending()">×</button>
+        </div>
       }
 
       @if (store.replyingTo(); as reply) {
@@ -88,11 +98,11 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
             ></textarea>
           </label>
 
-          @if (text().trim()) {
+           @if (text().trim() || pendingFile()) {
             <button
               type="submit"
               class="h-11 shrink-0 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-              [disabled]="!canSubmit()"
+               [disabled]="!canSubmit()"
             >
               @if (store.sendingMessage()) { Enviando } @else { Enviar }
             </button>
@@ -110,6 +120,7 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
         </form>
       }
     </div>
+    <app-whatsapp-pdf-preview-widget [open]="previewOpen" [fileUrl]="pdfUrl()" [fileName]="pendingFile()?.name || 'Documento PDF'" (closed)="previewOpen = false" />
   `
 })
 export class MessageInputWidgetComponent {
@@ -121,7 +132,13 @@ export class MessageInputWidgetComponent {
   readonly recordingSeconds = signal(0);
   readonly chat = computed(() => this.store.currentChat());
   readonly canSend = computed(() => this.canSendToChat(this.chat()));
-  readonly canSubmit = computed(() => this.canSend() && !!this.text().trim() && !this.store.sendingMessage());
+  readonly canSubmit = computed(() => this.canSend() && (!!this.text().trim() || !!this.pendingFile()) && !this.store.sendingMessage() && !this.store.uploadingMedia());
+  readonly pendingFile = computed(() => this.store.pendingAttachment());
+  readonly pdfUrl = computed(() => {
+    const file = this.pendingFile();
+    return file && this.isPdf(file) ? URL.createObjectURL(file) : null;
+  });
+  previewOpen = false;
   readonly windowWarning = computed(() => this.getWindowWarning(this.chat()));
 
   private mediaRecorder?: MediaRecorder;
@@ -134,9 +151,14 @@ export class MessageInputWidgetComponent {
   send(): void {
     const chat = this.chat();
     const body = this.text().trim();
-    if (!chat?.id || !body || !this.canSubmit()) return;
+    if (!chat?.id || !this.canSubmit()) return;
 
-    this.store.sendText(chat.id, body, this.store.replyingTo()?.msgId);
+    if (this.pendingFile()) {
+      this.store.sendPendingAttachment(chat.id, body || undefined);
+    } else {
+      if (!body) return;
+      this.store.sendText(chat.id, body, this.store.replyingTo()?.msgId);
+    }
     this.store.setReplyingTo(null);
     this.text.set('');
   }
@@ -167,9 +189,12 @@ export class MessageInputWidgetComponent {
     }
 
     // Sube por multipart y envía la ref (el back guarda el binario en disco).
-    this.store.sendMediaFile(chat.id, file, this.text().trim() || undefined);
-    this.text.set('');
+    this.store.setPendingAttachment(file);
   }
+
+  removePending(): void { this.previewOpen = false; this.store.setPendingAttachment(null); }
+
+  isPdf(file: File): boolean { return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'); }
 
   // ---- Grabar audio ----
   async startRecording(): Promise<void> {
