@@ -1,13 +1,24 @@
-<main class="whatsapp-dashboard min-h-screen bg-[var(--bg-primary)] px-4 py-5 text-[var(--text-primary)] md:px-6 md:py-7">
-  <header class="dashboard-header mx-auto mb-6 flex max-w-[1420px] items-end justify-between gap-5">
-    <div>
+<main class="whatsapp-dashboard">
+  <header class="dashboard-header">
+    <div class="header-copy">
       <div class="eyebrow"><span class="eyebrow-dot"></span> Centro de canales</div>
       <h1>Servicios WhatsApp</h1>
-      <p>Conecta cada número y asígnalo a su ámbito operativo.</p>
+      <p>Supervisa el estado de las instancias Go, vincula números y controla qué cartera atiende cada servicio.</p>
     </div>
-    <div class="header-summary">
-      <span class="summary-number">{{ accounts.length }}</span>
-      <span>servicios registrados</span>
+
+    <div class="header-summary" aria-label="Resumen de servicios WhatsApp">
+      <div class="summary-card primary">
+        <span class="summary-number">{{ accounts.length }}</span>
+        <span>Servicios</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-number">{{ connectedAccounts }}</span>
+        <span>Conectados</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-number">{{ activeAccounts }}</span>
+        <span>Activos</span>
+      </div>
     </div>
   </header>
 
@@ -29,34 +40,47 @@
     </section>
   } @else {
     <section class="dashboard-grid">
-      <div class="service-list-panel rounded-none border-0 bg-transparent shadow-none">
+      <div class="service-list-panel">
         <div class="panel-heading">
           <div>
             <span class="panel-kicker">Inventario</span>
             <h2>Instancias Go</h2>
           </div>
-          <span class="live-indicator"><span></span> En vivo</span>
+          <span class="live-indicator"><span></span> Actualizando</span>
         </div>
 
-        <div class="service-list px-0">
+        <div class="service-mini-stats">
+          <span>{{ linkedAccounts }} vinculados</span>
+          <span>{{ waitingQrAccounts }} esperando QR</span>
+        </div>
+
+        <div class="service-list">
           @for (account of accounts; track account.id) {
             <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
-              <span class="service-icon"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
+              <span class="service-icon" [ngClass]="statusClass(account.status)"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
               <span class="service-copy">
-                <strong>{{ account.instanciaId }}</strong>
-                <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }} <span class="service-inline-status" [ngClass]="statusClass(account.status)">· {{ statusLabel(account.status) }}</span></small>
+                <span class="service-title-row">
+                  <strong>{{ account.instanciaId }}</strong>
+                  <span class="service-inline-status" [ngClass]="statusClass(account.status)">{{ statusLabel(account.status) }}</span>
+                </span>
+                <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
+                @if (account.cartera || account.subcartera) {
+                  <span class="service-scope">{{ account.cartera || 'Sin cartera' }} · {{ account.subcartera || 'Sin subcartera' }}</span>
+                }
               </span>
+              <span class="service-active" [class.enabled]="account.active">{{ account.active ? 'On' : 'Off' }}</span>
             </button>
           }
         </div>
       </div>
 
       @if (selectedAccount; as account) {
-        <div class="detail-panel rounded-none border-0 bg-transparent shadow-none">
+        <div class="detail-panel">
           <div class="detail-topline">
             <div>
               <span class="panel-kicker">Servicio seleccionado</span>
               <h2>{{ account.instanciaId }}</h2>
+              <p>{{ account.jid || 'JID pendiente de sincronización' }}</p>
             </div>
             <span class="detail-status" [ngClass]="statusClass(account.status)">
               <span class="status-dot"></span>{{ statusLabel(account.status) }}
@@ -71,13 +95,25 @@
               } @else if (!isLinked(account)) {
                 <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando código QR...</span></div>
               } @else {
-                <div class="linked-number"><lucide-angular name="phone-call" [size]="24"></lucide-angular><strong>{{ account.phoneNumber || 'Número vinculado' }}</strong><span>Listo para configurar</span></div>
+                <div class="linked-number">
+                  <span class="linked-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
+                  <strong>{{ account.phoneNumber || 'Número vinculado' }}</strong>
+                  <span>Listo para operación</span>
+                </div>
+                <div class="account-meta">
+                  <span>Última conexión</span>
+                  <strong>{{ account.lastConnectedAt ? (account.lastConnectedAt | date:'short') : 'Sin registro' }}</strong>
+                </div>
               }
             </div>
 
             @if (isLinked(account)) {
             <form class="binding-form" (ngSubmit)="saveBinding()">
-              <div class="form-heading"><span class="panel-kicker">Ámbito de operación</span><p>Un servicio solo puede trabajar con una cartera.</p></div>
+              <div class="form-heading">
+                <span class="panel-kicker">Ámbito de operación</span>
+                <h3>Asignación operativa</h3>
+                <p>Un servicio solo puede trabajar con una cartera y subcartera.</p>
+              </div>
               <label>Tenant<input name="tenantId" [(ngModel)]="form.tenantId" placeholder="Ej. tenant-principal"></label>
               <label>Cartera<input name="cartera" [(ngModel)]="form.cartera" placeholder="Ej. cartera norte"></label>
               <label>Subcartera<input name="subcartera" [(ngModel)]="form.subcartera" placeholder="Ej. mora temprana"></label>

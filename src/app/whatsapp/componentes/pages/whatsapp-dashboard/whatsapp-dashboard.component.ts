@@ -76,6 +76,22 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     return this.accounts.find(account => account.id === this.selectedId);
   }
 
+  get linkedAccounts(): number {
+    return this.accounts.filter(account => this.isLinked(account)).length;
+  }
+
+  get activeAccounts(): number {
+    return this.accounts.filter(account => account.active === true).length;
+  }
+
+  get connectedAccounts(): number {
+    return this.accounts.filter(account => account.status === 'CONNECTED').length;
+  }
+
+  get waitingQrAccounts(): number {
+    return this.accounts.filter(account => account.status === 'WAITING_QR').length;
+  }
+
   selectAccount(account: WhatsappAccount): void {
     this.selectedId = account.id;
     this.syncForm(account);
@@ -99,7 +115,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   }
 
   statusClass(status: string): string {
-    return status.toLowerCase().replace('_', '-');
+    return status.toLowerCase().replace(/_/g, '-');
   }
 
   qrSource(account: WhatsappAccount): string {
