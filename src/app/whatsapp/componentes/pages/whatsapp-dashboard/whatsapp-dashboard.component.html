@@ -44,10 +44,7 @@
               <span class="service-icon"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
               <span class="service-copy">
                 <strong>{{ account.instanciaId }}</strong>
-                <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
-              </span>
-              <span class="service-status" [ngClass]="statusClass(account.status)">
-                <span class="status-dot"></span>{{ statusLabel(account.status) }}
+                <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }} <span class="service-inline-status" [ngClass]="statusClass(account.status)">· {{ statusLabel(account.status) }}</span></small>
               </span>
             </button>
           }
@@ -64,14 +61,6 @@
             <span class="detail-status" [ngClass]="statusClass(account.status)">
               <span class="status-dot"></span>{{ statusLabel(account.status) }}
             </span>
-          </div>
-
-          <div class="connection-banner" [class.connected]="isLinked(account)">
-            <span class="banner-icon"><lucide-angular [name]="isLinked(account) ? 'smartphone' : 'scan-line'" [size]="20"></lucide-angular></span>
-            <div>
-              <strong>{{ isLinked(account) ? 'Número vinculado' : 'Vincula este servicio' }}</strong>
-              <span>{{ isLinked(account) ? (account.phoneNumber || 'Número detectado') : 'Escanea el código QR con WhatsApp' }}</span>
-            </div>
           </div>
 
           <div class="detail-content">
