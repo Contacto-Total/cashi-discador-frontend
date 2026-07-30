@@ -3,7 +3,14 @@ import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { WhatsappMessageStoreService } from '../../services';
 import { ClientInfoAclService, DynamicClient, GlobalSearchResult } from './client-info-acl.service';
+
+// NOTA DE MANTENIMIENTO: estos servicios se reutilizan desde collection-management.
+// Si cambia su contrato, endpoint, validaciones o modelo de respuesta, actualizar tambien
+// este flujo de WhatsApp y su preparacion de adjuntos antes de modificarlo.
 import { CartaCesionService } from '../../../core/services/carta-cesion.service';
+import { CartaAcuerdoService } from '../../../core/services/carta-acuerdo.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { ManagementService } from '../../../collection-management/services/management.service';
 
 type SearchMode = 'telefono' | 'documento';
 
@@ -59,14 +66,21 @@ type SearchMode = 'telefono' | 'documento';
            @if (cartaError()) {
              <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ cartaError() }}</p>
            }
+           @if (agreementLoading()) {
+             <p class="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">Generando compromiso de pago…</p>
+           }
+           @if (agreementError()) {
+             <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ agreementError() }}</p>
+           }
 
            <!-- Opciones (sin función por ahora) -->
           <div class="space-y-2">
             @for (opt of options; track opt.key) {
               <button
-                type="button"
-                class="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-800"
-                (click)="runOption(opt.key)"
+                 type="button"
+                 class="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                 [disabled]="cartaLoading() || agreementLoading()"
+                 (click)="runOption(opt.key)"
               >
                 <span class="grid size-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500">
                   @switch (opt.key) {
@@ -176,6 +190,8 @@ export class InfoClientWidgetComponent {
   readonly hasCarta = signal(false);
   readonly cartaLoading = signal(false);
   readonly cartaError = signal<string | null>(null);
+  readonly agreementLoading = signal(false);
+  readonly agreementError = signal<string | null>(null);
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -197,7 +213,10 @@ export class InfoClientWidgetComponent {
   constructor(
     private readonly store: WhatsappMessageStoreService,
     private readonly acl: ClientInfoAclService,
-    private readonly cartaCesion: CartaCesionService
+    private readonly cartaCesion: CartaCesionService,
+    private readonly cartaAcuerdo: CartaAcuerdoService,
+    private readonly management: ManagementService,
+    private readonly auth: AuthService
   ) {
     // Al entrar a un chat, buscamos por el número del chat (últimos 9 dígitos).
     effect(() => {
@@ -233,6 +252,10 @@ export class InfoClientWidgetComponent {
   }
 
   runOption(key: string): void {
+    if (key === 'compromiso-pago') {
+      this.prepareAgreement();
+      return;
+    }
     if (key !== 'carta-cesion') return;
     const result = this.selectedClient();
     const dni = result?.clientData.documento?.trim();
@@ -252,6 +275,62 @@ export class InfoClientWidgetComponent {
         this.cartaLoading.set(false);
         this.hasCarta.set(false);
         this.cartaError.set(error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.');
+      }
+    });
+  }
+
+  private prepareAgreement(): void {
+    const result = this.selectedClient();
+    const documento = result?.clientData.documento?.trim();
+    const user = this.auth.getCurrentUser();
+    if (!documento) return;
+    if (!user?.id) {
+      this.agreementError.set('No se encontró el usuario autenticado.');
+      return;
+    }
+
+    this.agreementLoading.set(true);
+    this.agreementError.set(null);
+    this.management.getActiveSchedulesByDocumento(documento).subscribe({
+      next: (schedules) => {
+        const valid = (schedules || [])
+          .filter((schedule: any) => schedule.cuotasPendientes > 0 && !schedule.installments?.some((item: any) => item.status === 'EN_EVALUACION'))
+          .sort((a: any, b: any) => Number(b.id) - Number(a.id));
+        const schedule = valid[0];
+        if (!schedule) {
+          this.agreementLoading.set(false);
+          this.agreementError.set('Este cliente no tiene un compromiso de pago activo.');
+          return;
+        }
+
+        const subPortfolioId = result?.subPortfolioId;
+        if (!subPortfolioId) {
+          this.agreementLoading.set(false);
+          this.agreementError.set('El cliente no tiene subcartera configurada para generar el acuerdo.');
+          return;
+        }
+
+        this.cartaAcuerdo.tienePlantillaSubcartera(subPortfolioId).subscribe({
+          next: (hasTemplate) => {
+            if (!hasTemplate) {
+              this.agreementLoading.set(false);
+              this.agreementError.set('No hay una plantilla de acuerdo configurada para esta subcartera.');
+              return;
+            }
+            this.cartaAcuerdo.generarCarta(Number(schedule.id), Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
+              next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${documento}.pdf`, { type: 'application/pdf' })),
+              error: () => this.agreementError.set('No se pudo generar el compromiso de pago.')
+            });
+          },
+          error: () => {
+            this.agreementLoading.set(false);
+            this.agreementError.set('No se pudo validar la plantilla del acuerdo.');
+          }
+        });
+      },
+      error: () => {
+        this.agreementLoading.set(false);
+        this.agreementError.set('No se pudo consultar el compromiso de pago.');
       }
     });
   }
@@ -306,6 +385,7 @@ export class InfoClientWidgetComponent {
   private refreshHasCarta(_result: GlobalSearchResult): void {
     this.hasCarta.set(false);
     this.cartaError.set(null);
+    this.agreementError.set(null);
   }
 
   private autoSearchByPhone(phone: string, key: string | number | undefined): void {

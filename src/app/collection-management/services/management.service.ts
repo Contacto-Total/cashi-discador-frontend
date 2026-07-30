@@ -411,6 +411,9 @@ export class ManagementService {
   /**
    * Obtiene cronogramas de pago activos por documento del cliente.
    * Más robusto que buscar por ID.
+   *
+   * IMPORTANTE: este método tambien es reutilizado por WhatsApp para generar
+   * compromisos de pago. Si cambia su contrato o sus validaciones, actualizar WhatsApp.
    */
   getActiveSchedulesByDocumento(documento: string): Observable<PaymentSchedule[]> {
     console.log('[SCHEDULE] Fetching active schedules for documento:', documento);

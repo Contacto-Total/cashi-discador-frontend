@@ -43,6 +43,8 @@ export interface CartasPendientesResponse {
 @Injectable({
   providedIn: 'root'
 })
+// IMPORTANTE: este servicio tambien es reutilizado por el modulo WhatsApp.
+// Si cambia la generacion del PDF, sus validaciones o el contrato, actualizar WhatsApp.
 export class CartaAcuerdoService {
   private apiUrl = `${environment.apiUrl}/cartas`;
 
