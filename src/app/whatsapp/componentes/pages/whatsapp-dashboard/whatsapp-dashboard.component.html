@@ -18,12 +18,12 @@
     </section>
   } @else if (error) {
     <section class="empty-state error-state">
-      <lucide-angular name="triangle-alert" [size]="28"></lucide-angular>
+      <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
       <span>{{ error }}</span>
     </section>
   } @else if (accounts.length === 0) {
     <section class="empty-state">
-      <lucide-angular name="server-off" [size]="32"></lucide-angular>
+      <lucide-angular name="monitor" [size]="32"></lucide-angular>
       <h2>No hay servicios registrados</h2>
       <p>Inicia una instancia Go para que aparezca en este panel.</p>
     </section>
@@ -41,7 +41,7 @@
         <div class="service-list">
           @for (account of accounts; track account.id) {
             <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
-              <span class="service-icon"><lucide-angular name="radio-tower" [size]="19"></lucide-angular></span>
+              <span class="service-icon"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
               <span class="service-copy">
                 <strong>{{ account.instanciaId }}</strong>
                 <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
@@ -93,12 +93,12 @@
               <label>Cartera<input name="cartera" [(ngModel)]="form.cartera" placeholder="Ej. cartera norte"></label>
               <label>Subcartera<input name="subcartera" [(ngModel)]="form.subcartera" placeholder="Ej. mora temprana"></label>
               <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" type="checkbox" name="active" [(ngModel)]="form.active"></label>
-              <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link-2'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
+              <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
               @if (feedback) { <p class="feedback">{{ feedback }}</p> }
             </form>
             } @else {
               <div class="waiting-panel">
-                <lucide-angular name="link-2-off" [size]="24"></lucide-angular>
+                <lucide-angular name="unlink" [size]="24"></lucide-angular>
                 <strong>Asignación pendiente</strong>
                 <p>Primero vincula un número con el QR. Después podrás asignar el tenant, la cartera y la subcartera.</p>
               </div>
