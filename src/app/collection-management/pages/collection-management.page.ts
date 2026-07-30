@@ -1477,7 +1477,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         </div>
 
         <!-- SECCION DE HISTORIAL DE GESTIONES - Compacto -->
-        <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-44') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
+         <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-[7.7rem]') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>

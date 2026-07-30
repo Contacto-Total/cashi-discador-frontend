@@ -14,6 +14,12 @@ import { ManagementService } from '../../../collection-management/services/manag
 
 type SearchMode = 'telefono' | 'documento';
 
+interface OfferDisplay {
+  field: string;
+  label: string;
+  value: number;
+}
+
 @Component({
   selector: 'app-whatsapp-info-client-widget',
   standalone: true,
@@ -74,7 +80,7 @@ type SearchMode = 'telefono' | 'documento';
            }
 
            <!-- Opciones (sin función por ahora) -->
-          <div class="space-y-2">
+           <div class="space-y-2">
             @for (opt of options; track opt.key) {
               <button
                  type="button"
@@ -98,9 +104,35 @@ type SearchMode = 'telefono' | 'documento';
                 <span class="min-w-0 flex-1">{{ opt.label }}</span>
                 <svg class="shrink-0 text-slate-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
-            }
-          </div>
-        </div>
+             }
+           </div>
+
+           @if (showOffers()) {
+             <section class="mt-4 border-t border-slate-200 pt-3">
+               <div class="mb-2 rounded-lg bg-rose-50 px-3 py-2 text-center text-rose-700 ring-1 ring-rose-100">
+                 <p class="text-[10px] font-bold uppercase tracking-wide">Capital</p>
+                 <p class="text-lg font-black">{{ formatCurrency(capitalValue()) }}</p>
+                 <p class="text-xs font-semibold">{{ daysOverdue() }} días mora</p>
+               </div>
+               @if (offersLoading()) {
+                 <p class="py-4 text-center text-xs text-slate-500">Cargando ofertas…</p>
+               } @else if (offersError()) {
+                 <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ offersError() }}</p>
+               } @else if (offers().length) {
+                 <div class="space-y-1.5">
+                   @for (offer of offers(); track offer.field) {
+                     <div class="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-100">
+                       <span class="min-w-0 truncate font-medium text-slate-700">{{ offer.label }}</span>
+                       <span class="shrink-0 font-bold text-slate-900">{{ formatCurrency(offer.value) }}</span>
+                     </div>
+                   }
+                 </div>
+               } @else {
+                 <p class="py-4 text-center text-xs text-slate-500">No hay ofertas configuradas para este cliente.</p>
+               }
+             </section>
+           }
+         </div>
       } @else {
         <!-- ===== Búsqueda + lista ===== -->
         <div class="border-b border-slate-200 px-3 py-2.5">
@@ -192,6 +224,10 @@ export class InfoClientWidgetComponent {
   readonly cartaError = signal<string | null>(null);
   readonly agreementLoading = signal(false);
   readonly agreementError = signal<string | null>(null);
+  readonly showOffers = signal(false);
+  readonly offersLoading = signal(false);
+  readonly offersError = signal<string | null>(null);
+  readonly offers = signal<OfferDisplay[]>([]);
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -231,6 +267,9 @@ export class InfoClientWidgetComponent {
       this.manualOpen.set(false);
       this.mode.set('telefono');
       this.selectedClient.set(null);
+      this.showOffers.set(false);
+      this.offers.set([]);
+      this.offersError.set(null);
       if (!chat) return;
 
       const phone = this.acl.phoneKey(chat.contactPhone);
@@ -245,6 +284,9 @@ export class InfoClientWidgetComponent {
   openInfo(result: GlobalSearchResult): void {
     this.selectedClient.set(result);
     this.refreshHasCarta(result);
+    this.showOffers.set(false);
+    this.offers.set([]);
+    this.offersError.set(null);
   }
 
   closeInfo(): void {
@@ -254,6 +296,10 @@ export class InfoClientWidgetComponent {
   runOption(key: string): void {
     if (key === 'compromiso-pago') {
       this.prepareAgreement();
+      return;
+    }
+    if (key === 'deuda-ofertas') {
+      this.loadOffers();
       return;
     }
     if (key !== 'carta-cesion') return;
@@ -277,6 +323,65 @@ export class InfoClientWidgetComponent {
         this.cartaError.set(error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.');
       }
     });
+  }
+
+  private loadOffers(): void {
+    const result = this.selectedClient();
+    if (!result?.subPortfolioId) {
+      this.showOffers.set(true);
+      this.offersError.set('El cliente no tiene subcartera configurada para consultar ofertas.');
+      return;
+    }
+
+    this.showOffers.set(true);
+    this.offersLoading.set(true);
+    this.offersError.set(null);
+    this.offers.set([]);
+    this.management.getMontoCabeceras(result.subPortfolioId).pipe(finalize(() => this.offersLoading.set(false))).subscribe({
+      next: (headers) => {
+        const raw = result.clientData;
+        const offers = (headers || [])
+          .filter((header: any) => header.esVisibleMonto !== 0 && !this.isOfferExcluded(header.codigo))
+          .map((header: any) => {
+            const key = Object.keys(raw).find(rawKey => rawKey.toLowerCase() === String(header.codigo).toLowerCase());
+            const value = key ? Number(raw[key]) : Number.NaN;
+            return { field: String(header.codigo), label: header.nombre || this.formatFieldLabel(header.codigo), value };
+          })
+          .filter((offer: OfferDisplay) => Number.isFinite(offer.value));
+        this.offers.set(offers);
+      },
+      error: () => this.offersError.set('No se pudieron consultar las ofertas del cliente.')
+    });
+  }
+
+  capitalValue(): number {
+    return this.rawNumber(['capital', 'sld_capital_asig', 'sld_capital', 'saldo_capital']);
+  }
+
+  daysOverdue(): number {
+    return this.rawNumber(['dias_mora', 'dias_mora_asig']);
+  }
+
+  formatCurrency(value: number): string {
+    return `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  private rawNumber(keys: string[]): number {
+    const raw = this.selectedClient()?.clientData || {};
+    const key = Object.keys(raw).find(rawKey => keys.includes(rawKey.toLowerCase()));
+    const value = key ? Number(raw[key]) : 0;
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  private isOfferExcluded(field: string): boolean {
+    return new Set([
+      'documento', 'identity_code', 'num_cuenta_ori', 'num_cuenta', 'numero_cuenta', 'num_cuenta_pmcp',
+      'dias_mora', 'dias_mora_asig', 'periodo_castigo', 'rango_mora', 'rango_mora_asig', 'rango_mora_proy'
+    ]).has(String(field).toLowerCase());
+  }
+
+  private formatFieldLabel(field: string): string {
+    return String(field).replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
   }
 
   private prepareAgreement(): void {
