@@ -1400,12 +1400,12 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                  <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
                  <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
                  @if (clientHeaderFields().length > 0) {
-                    <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-left text-[10px] leading-tight text-red-600 dark:text-red-400">
+                    <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
                       @for (field of clientHeaderFields(); track field.field) {
-                        <div class="min-w-0" [class.col-span-2]="field.field === 'num_cuenta_ori' || field.field === 'num_cuenta_pmcp'">
+                        <div class="flex min-w-0 items-baseline justify-between gap-2">
                           <span class="whitespace-nowrap font-semibold uppercase">{{ field.label }}:</span>
-                          <span class="ml-1 break-all font-bold">{{ field.value }}</span>
-                       </div>
+                          <span class="min-w-0 truncate text-right font-bold" [title]="field.value">{{ field.value }}</span>
+                        </div>
                      }
                    </div>
                  }
