@@ -1,5 +1,5 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, WhatsappAccount } from '../../../models';
 import { WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
@@ -47,7 +47,7 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
            >
              <option [ngValue]="undefined">Todos los servicios activos</option>
              @for (account of serviceAccounts; track account.id) {
-               <option [ngValue]="account.id">{{ account.phoneNumber || account.instanciaId }} · Subcartera #{{ account.subcarteraId }}</option>
+               <option [ngValue]="account.id">{{ account.phoneNumber || account.instanciaId }} · {{ account.subcarteraName || ('Subcartera #' + account.subcarteraId) }}</option>
              }
            </select>
          </label>
@@ -96,13 +96,10 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
                      <p class="truncate text-sm font-semibold text-slate-950">{{ chatDisplayName(chat) }}</p>
                     @if (chat.lastMsgTs) {
                       <time class="shrink-0 text-xs font-medium text-slate-500" [dateTime]="toIso(chat.lastMsgTs)">
-                        {{ chat.lastMsgTs | date: 'HH:mm' }}
+                         {{ chatTime(chat) }}
                       </time>
                      }
                    </div>
-                   <p class="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                     {{ serviceLabel(chat) }} · {{ serviceScopeLabel(chat) }}
-                   </p>
                    <div class="mt-1 flex items-center justify-between gap-2">
                     <p class="truncate text-sm text-slate-600">
                       @if (chat.lastMsgFromMe) {
@@ -114,8 +111,11 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
                       <span class="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-emerald-500 px-1.5 text-[11px] font-bold leading-none text-white">
                         {{ unreadBadge(chat) }}
                       </span>
-                    }
-                  </div>
+                     }
+                   </div>
+                   <p class="mt-1 truncate text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                     {{ serviceLabel(chat) }} · {{ serviceScopeLabel(chat) }}
+                   </p>
                 </div>
               </button>
             }
@@ -231,10 +231,20 @@ export class ChatListWidgetComponent implements OnInit {
   }
 
   serviceScopeLabel(chat: Chat): string {
-    return chat.serviceSubcarteraId ? `Subcartera #${chat.serviceSubcarteraId}` : 'Subcartera pendiente';
+    return chat.serviceSubcarteraName || (chat.serviceSubcarteraId ? `Subcartera #${chat.serviceSubcarteraId}` : 'Subcartera pendiente');
   }
 
   toIso(timestamp: number): string {
     return new Date(timestamp).toISOString();
+  }
+
+  chatTime(chat: Chat): string {
+    if (!chat.lastMsgTs) return '';
+    const date = new Date(chat.lastMsgTs);
+    const now = new Date();
+    const sameDay = date.getFullYear() === now.getFullYear()
+      && date.getMonth() === now.getMonth()
+      && date.getDate() === now.getDate();
+    return formatDate(date, sameDay ? 'HH:mm' : 'dd/MM/yy', 'es-PE');
   }
 }

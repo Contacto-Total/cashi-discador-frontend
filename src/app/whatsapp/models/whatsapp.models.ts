@@ -37,6 +37,8 @@ export interface Conversation {
   servicePhoneNumber?: string;
   serviceCarteraId?: number;
   serviceSubcarteraId?: number;
+  serviceCarteraName?: string;
+  serviceSubcarteraName?: string;
   serviceActive?: boolean;
   contactJid: string;
   contactPhone?: string;
@@ -61,6 +63,8 @@ export interface Chat {
   servicePhoneNumber?: string;
   serviceCarteraId?: number;
   serviceSubcarteraId?: number;
+  serviceCarteraName?: string;
+  serviceSubcarteraName?: string;
   serviceActive?: boolean;
   contactPhone?: string;
   name: string;
@@ -182,6 +186,8 @@ export interface WhatsappAccount {
   tenantId?: number;
   carteraId?: number;
   subcarteraId?: number;
+  carteraName?: string;
+  subcarteraName?: string;
   qrData?: string;
   qrUpdatedAt?: string;
   lastSeenAt?: string;
@@ -219,6 +225,8 @@ export function conversationToChat(conversation: Conversation): Chat {
     servicePhoneNumber: conversation.servicePhoneNumber,
     serviceCarteraId: conversation.serviceCarteraId,
     serviceSubcarteraId: conversation.serviceSubcarteraId,
+    serviceCarteraName: conversation.serviceCarteraName,
+    serviceSubcarteraName: conversation.serviceSubcarteraName,
     serviceActive: conversation.serviceActive,
     contactPhone: conversation.contactPhone,
     name: conversation.name || conversation.contactPhone || conversation.contactJid,
