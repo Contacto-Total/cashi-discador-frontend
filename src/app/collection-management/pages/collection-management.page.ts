@@ -1394,12 +1394,21 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
               </div>
             }
 
-            <!-- Resumen Rápido Deuda -->
-            <div [class]="'p-2 ' + purchaseSummaryClass()">
+             <!-- Resumen Rápido Deuda -->
+             @if (clientHeaderFields().length > 0) {
+               <div class="grid grid-cols-2 gap-1 border-b border-slate-200 px-2 pb-2 text-[10px] dark:border-slate-700">
+                 @for (field of clientHeaderFields(); track field.field) {
+                   <div class="rounded bg-slate-50 px-2 py-1 dark:bg-slate-800/60">
+                     <div class="font-semibold uppercase text-slate-500 dark:text-slate-400">{{ field.label }}</div>
+                     <div class="truncate font-bold text-slate-800 dark:text-slate-100" [title]="field.value">{{ field.value }}</div>
+                   </div>
+                 }
+               </div>
+             }
+             <div [class]="'p-2 ' + purchaseSummaryClass()">
               <div class="text-center">
                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ getPrimaryAmountLabel() }}</div>
                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-                <div class="text-xs font-semibold" [ngClass]="purchaseAccentTextClass()">{{ clientDiasMora() }} días mora</div>
               </div>
             </div>
 
@@ -2646,6 +2655,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
 
+  // Campos fijos de cabecera. El resto de columnas queda disponible para ofertas/montos.
+  private readonly fixedHeaderLabels: Record<string, string> = {
+    documento: 'Documento',
+    num_cuenta_ori: 'Número de cuenta',
+    num_cuenta: 'Número de cuenta',
+    numero_cuenta: 'Número de cuenta',
+    dias_mora_asig: 'Días mora',
+    dias_mora: 'Días mora',
+    periodo_castigo: 'Período castigo'
+  };
+
+  clientHeaderFields = computed(() => {
+    const rawData = this.rawClientData();
+    const fields: { field: string; label: string; value: string }[] = [];
+    const usedLabels = new Set<string>();
+
+    for (const [field, label] of Object.entries(this.fixedHeaderLabels)) {
+      const rawKey = Object.keys(rawData).find(key => key.toLowerCase() === field);
+      const value = rawKey ? rawData[rawKey] : undefined;
+      if (value === undefined || value === null || String(value).trim() === '' || usedLabels.has(label)) continue;
+      fields.push({ field, label, value: String(value).trim() });
+      usedLabels.add(label);
+    }
+
+    return fields;
+  });
+
   // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
   // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
   clientAmountFields = computed(() => {
@@ -2662,6 +2698,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       for (const cabecera of cabeceras) {
         const lowerCodigo = cabecera.codigo.toLowerCase();
+        if (this.isFixedHeaderField(lowerCodigo)) continue;
         const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
         const formato = cabecera.formatoVisualizacion || 'MONEDA';
 
@@ -2702,7 +2739,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         const lowerKey = key.toLowerCase();
         if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
         if (lowerKey.startsWith('telefono_') || lowerKey.startsWith('telf_')) continue;
-        if (excludeFields.includes(lowerKey)) continue;
+        if (excludeFields.includes(lowerKey) || this.isFixedHeaderField(lowerKey)) continue;
 
         const numValue = typeof value === 'number' ? value : parseFloat(value);
         if (!isNaN(numValue) && numValue >= 0) {
@@ -2727,6 +2764,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
     return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
   });
+
+  private isFixedHeaderField(field: string): boolean {
+    return Object.prototype.hasOwnProperty.call(this.fixedHeaderLabels, field.toLowerCase());
+  }
 
   // Ocupación del cliente desde la tabla dinámica (ini_*).
   // Busca la columna exacta y, si no, cualquier columna que contenga "ocupacion".
