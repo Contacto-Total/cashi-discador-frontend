@@ -532,7 +532,7 @@ export class InfoClientWidgetComponent {
     return String(field).replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase());
   }
 
-  private prepareAgreement(): void {
+  prepareAgreement(): void {
     const result = this.selectedClient();
     const documento = result?.clientData.documento?.trim();
     const user = this.auth.getCurrentUser();
