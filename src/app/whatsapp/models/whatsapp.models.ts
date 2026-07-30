@@ -151,6 +151,29 @@ export interface AccountStatusEvent {
   status: string;
   jid?: string;
   phoneNumber?: string;
+  hasLinkedNumber?: boolean;
+  qr?: string;
+  active?: boolean;
+  tenantId?: string;
+  cartera?: string;
+  subcartera?: string;
+}
+
+export interface WhatsappAccount {
+  id: number;
+  instanciaId: string;
+  phoneNumber?: string;
+  hasLinkedNumber: boolean;
+  jid?: string;
+  status: string;
+  active: boolean;
+  tenantId?: string;
+  cartera?: string;
+  subcartera?: string;
+  qrData?: string;
+  qrUpdatedAt?: string;
+  lastSeenAt?: string;
+  lastConnectedAt?: string;
 }
 
 export interface WhatsAppEventPayloadMap {
