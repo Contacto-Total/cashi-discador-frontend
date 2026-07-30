@@ -59,14 +59,16 @@ interface OfferDisplay {
         </div>
 
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
-          <!-- ¿Tiene carta? -->
+           @if (!showOffers()) {
+           <!-- ¿Tiene carta? -->
            <div class="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
             <span class="text-sm font-medium text-slate-700">¿Tiene carta?</span>
             <span
               class="rounded-full px-2.5 py-0.5 text-xs font-bold"
               [class]="hasCarta() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
             >{{ hasCarta() ? 'Sí' : 'No' }}</span>
-           </div>
+            </div>
+           }
 
            @if (cartaLoading()) {
              <p class="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">Buscando carta de cesión…</p>
@@ -146,10 +148,25 @@ interface OfferDisplay {
                      </div>
                    }
                  </div>
-               } @else {
-                 <p class="py-4 text-center text-xs text-slate-500">No hay ofertas configuradas para este cliente.</p>
-               }
-             </section>
+                } @else {
+                  <p class="py-4 text-center text-xs text-slate-500">No hay ofertas configuradas para este cliente.</p>
+                }
+                @if (offers().length && !promiseInProcess()) {
+                  <app-payment-schedule
+                    class="mt-4 block"
+                    [availableAmounts]="scheduleAmounts()"
+                    [maxInstallments]="24"
+                    [transferFee]="20"
+                    (scheduleChange)="onScheduleChange($event)"
+                    (customAmountSelected)="customAmount.set($event)"
+                  />
+                  @if (scheduleConfig(); as config) {
+                    <button type="button" class="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">
+                      {{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}
+                    </button>
+                  }
+                }
+              </section>
            }
          </div>
       } @else {
@@ -215,19 +232,6 @@ interface OfferDisplay {
                       <span>Mora: {{ r.clientData.dias_mora }} días</span>
                     }
                   </div>
-                  <app-payment-schedule
-                    class="mt-4 block"
-                    [availableAmounts]="scheduleAmounts()"
-                    [maxInstallments]="24"
-                    [transferFee]="20"
-                    (scheduleChange)="onScheduleChange($event)"
-                    (customAmountSelected)="customAmount.set($event)"
-                  />
-                  @if (scheduleConfig(); as config) {
-                    <button type="button" class="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">
-                      {{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}
-                    </button>
-                  }
                 </li>
               }
             </ul>
@@ -345,6 +349,7 @@ export class InfoClientWidgetComponent {
     this.showOffers.set(false);
     this.promiseInProcess.set(false);
     this.scheduleConfig.set(null);
+    this.customAmount.set(false);
   }
 
   onScheduleChange(config: PaymentScheduleConfig | null): void {
