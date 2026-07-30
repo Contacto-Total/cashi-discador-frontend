@@ -367,7 +367,7 @@ export class InfoClientWidgetComponent {
   }
 
   private rawNumber(keys: string[]): number {
-    const raw = this.selectedClient()?.clientData || {};
+    const raw: Record<string, any> = this.selectedClient()?.clientData || {};
     const key = Object.keys(raw).find(rawKey => keys.includes(rawKey.toLowerCase()));
     const value = key ? Number(raw[key]) : 0;
     return Number.isFinite(value) ? value : 0;
