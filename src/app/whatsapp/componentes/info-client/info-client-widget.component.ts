@@ -10,7 +10,9 @@ import { ClientInfoAclService, DynamicClient, GlobalSearchResult } from './clien
 import { CartaCesionService } from '../../../core/services/carta-cesion.service';
 import { CartaAcuerdoService } from '../../../core/services/carta-acuerdo.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { ManagementService } from '../../../collection-management/services/management.service';
+import { ManagementService, PaymentScheduleRequest } from '../../../collection-management/services/management.service';
+import { PaymentScheduleComponent } from '../../../shared/components/payment-schedule/payment-schedule.component';
+import { PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 
 type SearchMode = 'telefono' | 'documento';
 
@@ -23,7 +25,7 @@ interface OfferDisplay {
 @Component({
   selector: 'app-whatsapp-info-client-widget',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, PaymentScheduleComponent],
   template: `
     <aside class="flex h-full min-h-0 flex-col overflow-hidden border-l border-slate-200 bg-white text-slate-950">
       <header class="border-b border-slate-200 px-4 py-3">
@@ -79,8 +81,9 @@ interface OfferDisplay {
              <p class="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ agreementError() }}</p>
            }
 
-           <!-- Opciones (sin función por ahora) -->
-           <div class="space-y-2">
+            @if (!showOffers()) {
+            <!-- Opciones del cliente -->
+            <div class="space-y-2">
             @for (opt of options; track opt.key) {
               <button
                  type="button"
@@ -105,21 +108,37 @@ interface OfferDisplay {
                 <svg class="shrink-0 text-slate-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
              }
-           </div>
+            </div>
+            } @else {
+              <div class="mb-3 flex items-center gap-2">
+                <button type="button" class="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-slate-100" aria-label="Volver a opciones" (click)="backToOptions()">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                </button>
+                <span class="text-sm font-semibold text-slate-800">Deuda y ofertas</span>
+              </div>
+            }
 
-           @if (showOffers()) {
+            @if (showOffers()) {
              <section class="mt-4 border-t border-slate-200 pt-3">
+               @if (!promiseInProcess()) {
                <div class="mb-2 rounded-lg bg-rose-50 px-3 py-2 text-center text-rose-700 ring-1 ring-rose-100">
                  <p class="text-[10px] font-bold uppercase tracking-wide">Capital</p>
                  <p class="text-lg font-black">{{ formatCurrency(capitalValue()) }}</p>
                  <p class="text-xs font-semibold">{{ daysOverdue() }} días mora</p>
                </div>
-               @if (offersLoading()) {
+               }
+               @if (promiseInProcess()) {
+                  <div class="rounded-lg bg-amber-50 px-3 py-3 text-center text-amber-800 ring-1 ring-amber-200">
+                    <p class="text-sm font-bold">Promesa en proceso</p>
+                    <p class="mt-1 text-xs">El cliente tiene una promesa pendiente o parcial.</p>
+                    <button type="button" class="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50" [disabled]="agreementLoading()" (click)="prepareAgreement()">Obtener compromiso de pago</button>
+                  </div>
+                } @else if (offersLoading()) {
                  <p class="py-4 text-center text-xs text-slate-500">Cargando ofertas…</p>
                } @else if (offersError()) {
                  <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ offersError() }}</p>
                } @else if (offers().length) {
-                 <div class="space-y-1.5">
+                  <div class="space-y-1.5">
                    @for (offer of offers(); track offer.field) {
                      <div class="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-100">
                        <span class="min-w-0 truncate font-medium text-slate-700">{{ offer.label }}</span>
@@ -196,6 +215,19 @@ interface OfferDisplay {
                       <span>Mora: {{ r.clientData.dias_mora }} días</span>
                     }
                   </div>
+                  <app-payment-schedule
+                    class="mt-4 block"
+                    [availableAmounts]="scheduleAmounts()"
+                    [maxInstallments]="24"
+                    [transferFee]="20"
+                    (scheduleChange)="onScheduleChange($event)"
+                    (customAmountSelected)="customAmount.set($event)"
+                  />
+                  @if (scheduleConfig(); as config) {
+                    <button type="button" class="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">
+                      {{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}
+                    </button>
+                  }
                 </li>
               }
             </ul>
@@ -228,6 +260,18 @@ export class InfoClientWidgetComponent {
   readonly offersLoading = signal(false);
   readonly offersError = signal<string | null>(null);
   readonly offers = signal<OfferDisplay[]>([]);
+  readonly promiseInProcess = signal(false);
+  readonly customAmount = signal(false);
+  readonly scheduleConfig = signal<PaymentScheduleConfig | null>(null);
+  readonly creatingPromise = signal(false);
+  readonly scheduleAmounts = computed(() => this.offers().map((offer) => ({
+    label: offer.label,
+    value: offer.value,
+    field: offer.field,
+    minCuotas: 1,
+    maxCuotas: 24,
+    generaCartaAcuerdo: true
+  })));
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -270,6 +314,8 @@ export class InfoClientWidgetComponent {
       this.showOffers.set(false);
       this.offers.set([]);
       this.offersError.set(null);
+      this.promiseInProcess.set(false);
+      this.scheduleConfig.set(null);
       if (!chat) return;
 
       const phone = this.acl.phoneKey(chat.contactPhone);
@@ -287,10 +333,22 @@ export class InfoClientWidgetComponent {
     this.showOffers.set(false);
     this.offers.set([]);
     this.offersError.set(null);
+    this.promiseInProcess.set(false);
+    this.scheduleConfig.set(null);
   }
 
   closeInfo(): void {
     this.selectedClient.set(null);
+  }
+
+  backToOptions(): void {
+    this.showOffers.set(false);
+    this.promiseInProcess.set(false);
+    this.scheduleConfig.set(null);
+  }
+
+  onScheduleChange(config: PaymentScheduleConfig | null): void {
+    this.scheduleConfig.set(config);
   }
 
   runOption(key: string): void {
@@ -337,7 +395,27 @@ export class InfoClientWidgetComponent {
     this.offersLoading.set(true);
     this.offersError.set(null);
     this.offers.set([]);
-    this.management.getMontoCabeceras(result.subPortfolioId).pipe(finalize(() => this.offersLoading.set(false))).subscribe({
+    this.promiseInProcess.set(false);
+    this.scheduleConfig.set(null);
+    this.customAmount.set(false);
+    const documento = result.clientData.documento?.trim();
+    this.management.getActiveSchedulesByDocumento(documento).subscribe({
+      next: (schedules) => {
+        const active = (schedules || []).some((schedule: any) => schedule.installments?.some((item: any) =>
+          item.status === 'PENDIENTE' || item.status === 'PARCIAL'));
+        if (active) {
+          this.promiseInProcess.set(true);
+          this.offersLoading.set(false);
+          return;
+        }
+        this.loadConfiguredOffers(result);
+      },
+      error: () => this.loadConfiguredOffers(result)
+    });
+  }
+
+  private loadConfiguredOffers(result: GlobalSearchResult): void {
+    this.management.getMontoCabeceras(result.subPortfolioId!).pipe(finalize(() => this.offersLoading.set(false))).subscribe({
       next: (headers) => {
         const raw = result.clientData;
         const offers = (headers || [])
@@ -352,6 +430,76 @@ export class InfoClientWidgetComponent {
       },
       error: () => this.offersError.set('No se pudieron consultar las ofertas del cliente.')
     });
+  }
+
+  createPromise(): void {
+    const result = this.selectedClient();
+    const config = this.scheduleConfig();
+    const chat = this.chat();
+    const user = this.auth.getCurrentUser();
+    const clientId = Number(result?.clientData.id);
+    if (!result || !config || !chat?.id || !clientId || !user?.id) {
+      this.agreementError.set('Faltan datos para generar la promesa de pago.');
+      return;
+    }
+
+    this.creatingPromise.set(true);
+    this.agreementError.set(null);
+    const request: PaymentScheduleRequest = {
+      idCliente: clientId,
+      nombreCliente: this.clientName(result.clientData),
+      documentoCliente: result.clientData.documento,
+      idAgente: Number(user.id),
+      idTenant: result.tenantId,
+      idCartera: result.portfolioId,
+      idSubcartera: result.subPortfolioId,
+      idTipificacion: Number(result.clientData['idTipificacion'] || result.clientData['id_tipificacion'] || 0),
+      metodoContacto: 'GESTION_MANUAL',
+      canalContacto: 'WHATSAPP',
+      campoMontoOrigen: config.campoMontoOrigen,
+      montoBase: config.montoBase,
+      porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
+      porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
+      porcentajeMaximoPromesa: config.porcentajeMaximoPromesa,
+      observaciones: this.customAmount() ? 'Excepción generada desde WhatsApp; requiere aprobación.' : 'Promesa generada desde WhatsApp.',
+      schedule: {
+        montoTotal: config.montoTotal,
+        numeroCuotas: config.numeroCuotas,
+        cuotas: config.cuotas,
+        generaCartaAcuerdo: !this.customAmount(),
+        porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
+        porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
+        porcentajeMaximoPromesa: config.porcentajeMaximoPromesa
+      }
+    };
+
+    this.management.createPaymentSchedule(request).pipe(finalize(() => this.creatingPromise.set(false))).subscribe({
+      next: (created: any) => {
+        const summary = this.buildPromiseSummary(config, this.customAmount());
+        this.store.sendText(chat.id!, summary);
+        if (this.customAmount()) {
+          this.agreementError.set('Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.');
+          return;
+        }
+
+        const managementId = Number(created?.id || created?.managementId || created?.data?.id);
+        if (!managementId) {
+          this.agreementError.set('La promesa se creó, pero no se pudo generar el acuerdo automáticamente.');
+          return;
+        }
+        this.agreementLoading.set(true);
+        this.cartaAcuerdo.generarCarta(managementId, Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
+          next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' })),
+          error: () => this.agreementError.set('La promesa se creó, pero no se pudo generar el acuerdo.')
+        });
+      },
+      error: () => this.agreementError.set('No se pudo crear la promesa de pago.')
+    });
+  }
+
+  private buildPromiseSummary(config: PaymentScheduleConfig, exception: boolean): string {
+    const rows = config.cuotas.map(cuota => `Cuota ${cuota.numeroCuota}: ${this.formatCurrency(cuota.monto)} - ${cuota.fechaPago}`).join('\n');
+    return `${exception ? 'Solicitud de promesa de pago' : 'Resumen de promesa de pago'}\nTotal: ${this.formatCurrency(config.montoTotal)}\n${rows}\n\n${exception ? 'La solicitud queda pendiente de aprobación.' : '¿Está de acuerdo? Responda SI o NO.'}`;
   }
 
   capitalValue(): number {

@@ -317,6 +317,7 @@ export class PaymentScheduleComponent implements OnInit {
   availableAmounts = input<AmountOption[]>([]);
   @Input() maxInstallments: number = 6;  // Default, será sobrescrito por la opción seleccionada
   @Input() minInstallments: number = 1;  // Default, será sobrescrito por la opción seleccionada
+  @Input() transferFee: number = 0;      // Cargo opcional aplicado al cálculo porcentual
   @Output() scheduleChange = new EventEmitter<PaymentScheduleConfig | null>();
   @Output() customAmountSelected = new EventEmitter<boolean>();
 
@@ -656,6 +657,8 @@ export class PaymentScheduleComponent implements OnInit {
       // Aumento: sumar porcentaje al base
       newAmount = base * (1 + percentage / 100);
     }
+
+    newAmount += this.transferFee;
 
     // Redondear a 2 decimales
     this.customAmountValue = Math.round(newAmount * 100) / 100;
