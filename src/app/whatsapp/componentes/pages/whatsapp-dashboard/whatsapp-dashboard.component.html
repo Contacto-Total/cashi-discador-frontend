@@ -1,5 +1,5 @@
-<main class="whatsapp-dashboard">
-  <header class="dashboard-header">
+<main class="whatsapp-dashboard min-h-screen bg-[var(--bg-primary)] px-4 py-5 text-[var(--text-primary)] md:px-6 md:py-7">
+  <header class="dashboard-header mx-auto mb-6 flex max-w-[1420px] items-end justify-between gap-5">
     <div>
       <div class="eyebrow"><span class="eyebrow-dot"></span> Centro de canales</div>
       <h1>Servicios WhatsApp</h1>
@@ -29,7 +29,7 @@
     </section>
   } @else {
     <section class="dashboard-grid">
-      <div class="service-list-panel">
+      <div class="service-list-panel rounded-none border-0 bg-transparent shadow-none">
         <div class="panel-heading">
           <div>
             <span class="panel-kicker">Inventario</span>
@@ -38,7 +38,7 @@
           <span class="live-indicator"><span></span> En vivo</span>
         </div>
 
-        <div class="service-list">
+        <div class="service-list px-0">
           @for (account of accounts; track account.id) {
             <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
               <span class="service-icon"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
@@ -52,7 +52,7 @@
       </div>
 
       @if (selectedAccount; as account) {
-        <div class="detail-panel">
+        <div class="detail-panel rounded-none border-0 bg-transparent shadow-none">
           <div class="detail-topline">
             <div>
               <span class="panel-kicker">Servicio seleccionado</span>
