@@ -294,8 +294,9 @@ export class InfoClientWidgetComponent {
     this.management.getActiveSchedulesByDocumento(documento).subscribe({
       next: (schedules) => {
         const valid = (schedules || [])
-          .filter((schedule: any) => schedule.cuotasPendientes > 0 && !schedule.installments?.some((item: any) => item.status === 'EN_EVALUACION'))
-          .sort((a: any, b: any) => Number(b.id) - Number(a.id));
+          .filter((schedule: any) => schedule.installments?.some((item: any) =>
+            item.status === 'PENDIENTE' || item.status === 'PARCIAL'))
+          .sort((a: any, b: any) => Number(a.id) - Number(b.id));
         const schedule = valid[0];
         if (!schedule) {
           this.agreementLoading.set(false);
