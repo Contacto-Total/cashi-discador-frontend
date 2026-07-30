@@ -451,7 +451,8 @@ export const routes: Routes = [
   {
     path: 'bot-voz',
     loadComponent: () => import('./features/bot-voz/bot-voz.component').then(m => m.BotVozComponent),
-    canActivate: [authGuard, adminOrSupervisorGuard]
+    // solo ADMIN: BotAdminController exige hasRole('ADMIN'), un supervisor entraria a la vista y recibiria 403 en los datos
+    canActivate: [authGuard, adminGuard]
   },
 
   {
