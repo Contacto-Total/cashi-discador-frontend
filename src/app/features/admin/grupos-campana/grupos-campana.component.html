@@ -53,10 +53,10 @@
   <ng-container *ngIf="selectedSubPortfolioId > 0">
     <!-- Grupos existentes -->
     <div class="card">
-      <h2><lucide-angular name="list" [size]="20"></lucide-angular> Grupos especiales</h2>
+      <h2><lucide-angular name="list" [size]="20"></lucide-angular> Grupos personalizados</h2>
       <p class="muted" *ngIf="loadingGrupos">Cargando grupos...</p>
       <p class="muted" *ngIf="!loadingGrupos && gruposEspeciales.length === 0">
-        Aún no hay grupos especiales en esta subcartera. Crea uno abajo.
+        Aún no hay grupos personalizados en esta subcartera. Crea uno abajo.
       </p>
       <div class="grupo-row" *ngFor="let g of gruposEspeciales">
         <div class="grupo-info">
@@ -126,8 +126,12 @@
       <p class="error" *ngIf="grupoError">{{ grupoError }}</p>
 
       <div class="form-actions">
-        <button type="button" class="btn-cancelar" *ngIf="grupoFormId" (click)="resetForm()">Cancelar edición</button>
+        <button type="button" class="btn-cancelar" *ngIf="grupoFormId" (click)="resetForm()">
+          <lucide-angular name="x" [size]="16"></lucide-angular>
+          Cancelar edición
+        </button>
         <button type="button" class="btn-guardar" (click)="guardarGrupo()" [disabled]="savingGrupo">
+          <lucide-angular [name]="grupoFormId ? 'save' : 'plus'" [size]="16"></lucide-angular>
           {{ savingGrupo ? 'Guardando...' : (grupoFormId ? 'Guardar cambios' : 'Crear grupo') }}
         </button>
       </div>
