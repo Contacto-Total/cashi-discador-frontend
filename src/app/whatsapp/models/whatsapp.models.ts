@@ -120,6 +120,8 @@ export interface SendMessageRequest {
   type: OutboundType;
   body?: string;
   mediaRef?: string;
+  mediaFileName?: string;
+  mediaMime?: string;
   quotedMessageId?: string;
 }
 

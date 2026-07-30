@@ -156,8 +156,8 @@ export class WhatsappMessageStoreService {
     this.sendMessage({ conversationId, type: 'TEXT', body, quotedMessageId });
   }
 
-  sendMedia(conversationId: number, mediaRef: string, body?: string): void {
-    this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef });
+  sendMedia(conversationId: number, mediaRef: string, body?: string, mediaFileName?: string, mediaMime?: string): void {
+    this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef, mediaFileName, mediaMime });
   }
 
   /** Sube el archivo al backend (multipart) y luego lo envía con su ref corta. */
@@ -166,7 +166,7 @@ export class WhatsappMessageStoreService {
     this.sendMessageError.set(null);
     this.uploadingMedia.set(true);
     this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
-      next: ({ ref }) => this.sendMedia(conversationId, ref, caption),
+      next: ({ ref, fileName, mime }) => this.sendMedia(conversationId, ref, caption, fileName, mime),
       error: () => this.sendMessageError.set('No se pudo subir el archivo.')
     });
   }
@@ -333,6 +333,14 @@ export class WhatsappMessageStoreService {
 
     this.setMessages(conversationId, next);
     if (payload.outboundId != null) this.tempByOutboundId.delete(payload.outboundId);
+  }
+
+  removeFailedMessage(message: Message): void {
+    if (message.status !== 'error' || !message.fromMe) return;
+    const conversationId = message.conversationId;
+    if (!conversationId) return;
+    const current = this.messagesByConversation().get(conversationId) || [];
+    this.setMessages(conversationId, current.filter(item => item.msgId !== message.msgId));
   }
 
   private patchReceiptEvent(payload: unknown): void {
