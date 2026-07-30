@@ -64,9 +64,6 @@
                   <span class="service-inline-status" [ngClass]="statusClass(account.status)">{{ statusLabel(account.status) }}</span>
                 </span>
                 <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
-                @if (account.cartera || account.subcartera) {
-                  <span class="service-scope">{{ carteraLabel(account) }} · {{ subcarteraLabel(account) }}</span>
-                }
               </span>
               <span class="service-active" [class.enabled]="account.active">{{ account.active ? 'On' : 'Off' }}</span>
             </button>

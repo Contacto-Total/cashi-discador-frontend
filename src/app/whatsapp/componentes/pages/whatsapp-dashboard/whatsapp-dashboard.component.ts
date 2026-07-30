@@ -162,19 +162,19 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   tenantLabel(account: WhatsappAccount): string {
     const tenantId = Number(account.tenantId) || 0;
     const tenant = this.tenants.find(item => item.id === tenantId);
-    return tenant ? `${tenant.tenantCode} - ${tenant.tenantName}` : (account.tenantId || 'Sin tenant');
+    return tenant ? `${tenant.tenantCode} - ${tenant.tenantName}` : (account.tenantId?.toString() || 'Sin tenant');
   }
 
   carteraLabel(account: WhatsappAccount): string {
-    const carteraId = Number(account.cartera) || 0;
+    const carteraId = Number(account.carteraId) || 0;
     const portfolio = this.portfolios.find(item => item.id === carteraId);
-    return portfolio ? `${portfolio.portfolioCode} - ${portfolio.portfolioName}` : (account.cartera || 'Sin cartera');
+    return portfolio ? `${portfolio.portfolioCode} - ${portfolio.portfolioName}` : (account.carteraId?.toString() || 'Sin cartera');
   }
 
   subcarteraLabel(account: WhatsappAccount): string {
-    const subcarteraId = Number(account.subcartera) || 0;
+    const subcarteraId = Number(account.subcarteraId) || 0;
     const subPortfolio = this.subPortfolios.find(item => item.id === subcarteraId);
-    return subPortfolio ? `${subPortfolio.subPortfolioCode} - ${subPortfolio.subPortfolioName}` : (account.subcartera || 'Sin subcartera');
+    return subPortfolio ? `${subPortfolio.subPortfolioCode} - ${subPortfolio.subPortfolioName}` : (account.subcarteraId?.toString() || 'Sin subcartera');
   }
 
   saveBinding(): void {
@@ -188,9 +188,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     this.feedback = '';
     this.subscriptions.add(
       this.whatsappApi.bindWhatsappAccount(account.id, {
-        tenantId: String(this.form.tenantId),
-        cartera: String(this.form.carteraId),
-        subcartera: String(this.form.subcarteraId),
+         tenantId: this.form.tenantId,
+         carteraId: this.form.carteraId,
+         subcarteraId: this.form.subcarteraId,
         active: this.form.active
       }).subscribe({
         next: updated => {
@@ -209,8 +209,8 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   private syncForm(account: WhatsappAccount): void {
     const tenantId = Number(account.tenantId) || 0;
-    const carteraId = Number(account.cartera) || 0;
-    const subcarteraId = Number(account.subcartera) || 0;
+    const carteraId = Number(account.carteraId) || 0;
+    const subcarteraId = Number(account.subcarteraId) || 0;
 
     this.form = {
       tenantId,
@@ -286,8 +286,8 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
       hasLinkedNumber: payload.hasLinkedNumber ?? current.hasLinkedNumber,
       active: payload.active ?? current.active,
       tenantId: payload.tenantId ?? current.tenantId,
-      cartera: payload.cartera ?? current.cartera,
-      subcartera: payload.subcartera ?? current.subcartera,
+      carteraId: payload.carteraId ?? current.carteraId,
+      subcarteraId: payload.subcarteraId ?? current.subcarteraId,
       qrData: payload.qr || undefined
     };
     this.accounts = this.accounts.map(account => account.id === updated.id ? updated : account);

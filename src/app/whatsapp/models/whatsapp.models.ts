@@ -154,9 +154,9 @@ export interface AccountStatusEvent {
   hasLinkedNumber?: boolean;
   qr?: string;
   active?: boolean;
-  tenantId?: string;
-  cartera?: string;
-  subcartera?: string;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
 }
 
 export interface WhatsappAccount {
@@ -167,9 +167,9 @@ export interface WhatsappAccount {
   jid?: string;
   status: string;
   active: boolean;
-  tenantId?: string;
-  cartera?: string;
-  subcartera?: string;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
   qrData?: string;
   qrUpdatedAt?: string;
   lastSeenAt?: string;

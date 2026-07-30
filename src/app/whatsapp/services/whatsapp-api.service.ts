@@ -25,9 +25,9 @@ export class WhatsappApiService {
   }
 
   bindWhatsappAccount(id: number, request: {
-    tenantId: string;
-    cartera: string;
-    subcartera: string;
+    tenantId: number;
+    carteraId: number;
+    subcarteraId: number;
     active: boolean;
   }): Observable<WhatsappAccount> {
     return this.http.put<WhatsappAccount>(`${this.apiBase}/accounts/${id}/binding`, request);
