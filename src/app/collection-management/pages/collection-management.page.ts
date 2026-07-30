@@ -1400,11 +1400,11 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
                  <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
                  <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
                  @if (clientHeaderFields().length > 0) {
-                   <div class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-left text-[10px] text-red-600 dark:text-red-400">
-                     @for (field of clientHeaderFields(); track field.field) {
-                       <div [class.col-span-2]="field.field === 'num_cuenta_ori' || field.field === 'num_cuenta_pmcp'">
-                         <span class="font-semibold uppercase">{{ field.label }}:</span>
-                         <span class="ml-1 font-bold">{{ field.value }}</span>
+                    <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-left text-[10px] leading-tight text-red-600 dark:text-red-400">
+                      @for (field of clientHeaderFields(); track field.field) {
+                        <div class="min-w-0" [class.col-span-2]="field.field === 'num_cuenta_ori' || field.field === 'num_cuenta_pmcp'">
+                          <span class="whitespace-nowrap font-semibold uppercase">{{ field.label }}:</span>
+                          <span class="ml-1 break-all font-bold">{{ field.value }}</span>
                        </div>
                      }
                    </div>
@@ -2664,7 +2664,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     num_cuenta_pmcp: 'Número de cuenta',
     dias_mora_asig: 'Días mora',
     dias_mora: 'Días mora',
-    periodo_castigo: 'Período castigo'
+    periodo_castigo: 'Período castigo',
+    rango_mora: 'Rango mora',
+    rango_mora_asig: 'Rango mora',
+    rango_mora_proy: 'Rango mora'
   };
 
   clientHeaderFields = computed(() => {
