@@ -1395,22 +1395,22 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
             }
 
              <!-- Resumen Rápido Deuda -->
-             @if (clientHeaderFields().length > 0) {
-               <div class="grid grid-cols-2 gap-1 border-b border-slate-200 px-2 pb-2 text-[10px] dark:border-slate-700">
-                 @for (field of clientHeaderFields(); track field.field) {
-                   <div class="rounded bg-slate-50 px-2 py-1 dark:bg-slate-800/60">
-                     <div class="font-semibold uppercase text-slate-500 dark:text-slate-400">{{ field.label }}</div>
-                     <div class="truncate font-bold text-slate-800 dark:text-slate-100" [title]="field.value">{{ field.value }}</div>
+             <div [class]="'p-2 ' + purchaseSummaryClass()">
+               <div class="text-center">
+                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
+                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+                 @if (clientHeaderFields().length > 0) {
+                   <div class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-left text-[10px] text-red-600 dark:text-red-400">
+                     @for (field of clientHeaderFields(); track field.field) {
+                       <div [class.col-span-2]="field.field === 'num_cuenta_ori' || field.field === 'num_cuenta_pmcp'">
+                         <span class="font-semibold uppercase">{{ field.label }}:</span>
+                         <span class="ml-1 font-bold">{{ field.value }}</span>
+                       </div>
+                     }
                    </div>
                  }
                </div>
-             }
-             <div [class]="'p-2 ' + purchaseSummaryClass()">
-              <div class="text-center">
-                <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ getPrimaryAmountLabel() }}</div>
-                <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              </div>
-            </div>
+             </div>
 
             <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
             <div class="p-2 flex-1 overflow-y-auto">
@@ -2661,6 +2661,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     num_cuenta_ori: 'Número de cuenta',
     num_cuenta: 'Número de cuenta',
     numero_cuenta: 'Número de cuenta',
+    num_cuenta_pmcp: 'Número de cuenta',
     dias_mora_asig: 'Días mora',
     dias_mora: 'Días mora',
     periodo_castigo: 'Período castigo'
@@ -2674,7 +2675,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     for (const [field, label] of Object.entries(this.fixedHeaderLabels)) {
       const rawKey = Object.keys(rawData).find(key => key.toLowerCase() === field);
       const value = rawKey ? rawData[rawKey] : undefined;
-      if (value === undefined || value === null || String(value).trim() === '' || usedLabels.has(label)) continue;
+      if (field === 'documento' || value === undefined || value === null || String(value).trim() === '' || usedLabels.has(label)) continue;
       fields.push({ field, label, value: String(value).trim() });
       usedLabels.add(label);
     }
@@ -2729,7 +2730,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       // Fallback: si no hay cabeceras, usar lógica anterior pero con exclusiones estrictas
       const excludeFields = [
         'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
-        'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
+         'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
         'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
         'telefono_celular', 'telefono_domicilio', 'telefono_laboral',
         'telf_referencia_1', 'telf_referencia_2'
@@ -5395,6 +5396,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   getPrimaryAmountValue(): number {
     const fields = this.clientAmountFields();
     if (fields.length > 0) {
+      const capitalField = fields.find(f => f.label.trim().toLowerCase() === 'capital')
+        || fields.find(f => f.field.toLowerCase().includes('capital') && !f.field.toLowerCase().includes('tarj'));
+      if (capitalField) return capitalField.value;
       // Buscar campo que contenga "total" en el nombre
       const totalField = fields.find(f =>
         f.label.toLowerCase().includes('total') ||
