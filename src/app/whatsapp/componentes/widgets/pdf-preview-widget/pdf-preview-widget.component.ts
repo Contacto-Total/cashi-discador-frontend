@@ -1,11 +1,12 @@
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-whatsapp-pdf-preview-widget',
   standalone: true,
   template: `
     @if (open) {
-      <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Vista previa del PDF">
+      <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Vista previa del PDF">
         <section class="flex h-[min(92vh,900px)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
           <header class="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
             <div class="min-w-0 flex-1">
@@ -39,7 +40,13 @@ export class PdfPreviewWidgetComponent {
   readonly page = signal(1);
   protected readonly Math = Math;
 
-  pdfPageUrl(): string | null { return this.fileUrl ? `${this.fileUrl}#page=${this.page()}` : null; }
+  constructor(private readonly sanitizer: DomSanitizer) {}
+
+  pdfPageUrl(): SafeResourceUrl | null {
+    return this.fileUrl
+      ? this.sanitizer.bypassSecurityTrustResourceUrl(`${this.fileUrl}#page=${this.page()}`)
+      : null;
+  }
 
   zoomOut(): void { this.zoom.update(value => Math.max(0.7, value - 0.1)); }
   zoomIn(): void { this.zoom.update(value => Math.min(1.5, value + 0.1)); }
