@@ -1,8 +1,8 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Chat } from '../../../models';
-import { WhatsappMessageStoreService } from '../../../services';
+import { Chat, WhatsappAccount } from '../../../models';
+import { WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
 
 @Component({
   selector: 'app-whatsapp-chat-list-widget',
@@ -28,7 +28,7 @@ import { WhatsappMessageStoreService } from '../../../services';
           </button>
         </div>
 
-        <label class="mt-3 block">
+         <label class="mt-3 block">
           <span class="sr-only">Buscar chat</span>
           <input
             class="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
@@ -37,7 +37,20 @@ import { WhatsappMessageStoreService } from '../../../services';
             [ngModel]="query()"
             (ngModelChange)="search($event)"
           />
-        </label>
+         </label>
+         <label class="mt-2 block">
+           <span class="sr-only">Filtrar por servicio WhatsApp</span>
+           <select
+             class="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-xs text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+             [ngModel]="accountFilter()"
+             (ngModelChange)="filterByAccount($event)"
+           >
+             <option [ngValue]="undefined">Todos los servicios activos</option>
+             @for (account of serviceAccounts; track account.id) {
+               <option [ngValue]="account.id">{{ account.phoneNumber || account.instanciaId }} · Subcartera #{{ account.subcarteraId }}</option>
+             }
+           </select>
+         </label>
       </header>
 
       <section class="min-h-0 flex-1 overflow-y-auto">
@@ -79,15 +92,18 @@ import { WhatsappMessageStoreService } from '../../../services';
                 </div>
 
                 <div class="min-w-0 flex-1">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="truncate text-sm font-semibold text-slate-950">{{ chatDisplayName(chat) }}</p>
+                   <div class="flex items-start justify-between gap-2">
+                     <p class="truncate text-sm font-semibold text-slate-950">{{ chatDisplayName(chat) }}</p>
                     @if (chat.lastMsgTs) {
                       <time class="shrink-0 text-xs font-medium text-slate-500" [dateTime]="toIso(chat.lastMsgTs)">
                         {{ chat.lastMsgTs | date: 'HH:mm' }}
                       </time>
-                    }
-                  </div>
-                  <div class="mt-1 flex items-center justify-between gap-2">
+                     }
+                   </div>
+                   <p class="mt-0.5 truncate text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+                     {{ serviceLabel(chat) }} · {{ serviceScopeLabel(chat) }}
+                   </p>
+                   <div class="mt-1 flex items-center justify-between gap-2">
                     <p class="truncate text-sm text-slate-600">
                       @if (chat.lastMsgFromMe) {
                         <span class="font-medium text-emerald-700">Tú: </span>
@@ -128,15 +144,23 @@ import { WhatsappMessageStoreService } from '../../../services';
 })
 export class ChatListWidgetComponent implements OnInit {
   readonly query = signal('');
+  readonly accountFilter = signal<number | undefined>(undefined);
+  serviceAccounts: WhatsappAccount[] = [];
   readonly skeletonItems = [1, 2, 3, 4, 5];
   readonly selectedChat = computed(() => this.store.currentChat());
 
   private searchTimer?: ReturnType<typeof setTimeout>;
 
-  constructor(readonly store: WhatsappMessageStoreService) {}
+  constructor(
+    readonly store: WhatsappMessageStoreService,
+    private readonly whatsappApi: WhatsappApiService
+  ) {}
 
   ngOnInit(): void {
     if (!this.store.chats().length) this.store.loadChats();
+    this.whatsappApi.getWhatsappAccounts().subscribe({
+      next: accounts => this.serviceAccounts = accounts.filter(account => account.active === true)
+    });
   }
 
   search(value: string): void {
@@ -144,12 +168,18 @@ export class ChatListWidgetComponent implements OnInit {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => {
       const q = value.trim() || undefined;
-      this.store.loadChats(0, 30, q);
+       this.store.loadChats(0, 30, q, this.accountFilter());
     }, 250);
   }
 
   reload(): void {
-    this.store.loadChats(0, 30, this.query().trim() || undefined);
+    this.store.loadChats(0, 30, this.query().trim() || undefined, this.accountFilter());
+  }
+
+  filterByAccount(value: number | string | undefined): void {
+    const accountId = value === undefined || value === '' ? undefined : Number(value);
+    this.accountFilter.set(accountId);
+    this.store.setAccountFilter(accountId);
   }
 
   selectChat(chat: Chat): void {
@@ -194,6 +224,14 @@ export class ChatListWidgetComponent implements OnInit {
   preview(chat: Chat): string {
     if (chat.lastMsgText?.trim()) return chat.lastMsgText;
     return chat.lastMsgTs ? 'Mensaje multimedia' : 'Sin mensajes recientes';
+  }
+
+  serviceLabel(chat: Chat): string {
+    return chat.servicePhoneNumber || chat.serviceInstanciaId || 'Servicio sin identificar';
+  }
+
+  serviceScopeLabel(chat: Chat): string {
+    return chat.serviceSubcarteraId ? `Subcartera #${chat.serviceSubcarteraId}` : 'Subcartera pendiente';
   }
 
   toIso(timestamp: number): string {

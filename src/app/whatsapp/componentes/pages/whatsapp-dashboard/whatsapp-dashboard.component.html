@@ -138,7 +138,7 @@
                   }
                 </select>
               </label>
-              <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" type="checkbox" name="active" [(ngModel)]="form.active"></label>
+              <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" type="checkbox" name="active" [(ngModel)]="form.active" (ngModelChange)="onActiveChange($event)" [disabled]="activationSaving || saving"></label>
               <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
               @if (feedback) { <p class="feedback">{{ feedback }}</p> }
             </form>

@@ -30,6 +30,7 @@ export class WhatsappMessageStoreService {
   readonly chatsPage = signal(0);
   readonly chatsTotalPages = signal(0);
   readonly chatsQuery = signal<string | undefined>(undefined);
+  readonly chatsAccountId = signal<number | undefined>(undefined);
 
   readonly currentMessages = computed(() => {
     const conversationId = this.currentChat()?.id;
@@ -48,13 +49,14 @@ export class WhatsappMessageStoreService {
     private readonly realtime: WhatsappRealtimeService
   ) {}
 
-  loadChats(page = 0, size = 30, q?: string): void {
+  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId()): void {
     this.loadingChats.set(true);
     this.api.getChats(page, size, q).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
       next: (response) => {
         this.chatsPage.set(response.number);
         this.chatsTotalPages.set(response.totalPages);
         this.chatsQuery.set(q);
+        this.chatsAccountId.set(accountId);
         const mapped = response.content.map(conversationToChat);
         this.chats.set(page === 0 ? mapped : this.mergeChats(this.chats(), mapped));
       }
@@ -64,6 +66,11 @@ export class WhatsappMessageStoreService {
   loadNextChatsPage(size = 30): void {
     if (this.loadingChats() || !this.hasMoreChats()) return;
     this.loadChats(this.chatsPage() + 1, size, this.chatsQuery());
+  }
+
+  setAccountFilter(accountId: number | undefined): void {
+    this.chatsAccountId.set(accountId);
+    this.loadChats(0, 30, this.chatsQuery(), accountId);
   }
 
   selectChatByRoute(conversationId?: number, jid?: string): void {
@@ -246,6 +253,13 @@ export class WhatsappMessageStoreService {
       case 'OUTBOUND_FAILED':
         this.patchOutboundFailed(event.payload);
         break;
+      case 'STATUS':
+        if (event.payload.active === false) {
+          this.chats.update(chats => chats.filter(chat =>
+            chat.accountId !== event.payload.accountId &&
+            chat.serviceInstanciaId !== event.payload.instanciaId));
+        }
+        break;
       case 'CHAT_UPDATE':
         this.upsertChat(conversationToChat(event.payload));
         break;
@@ -380,6 +394,9 @@ export class WhatsappMessageStoreService {
 
   private upsertChat(chat: Chat): void {
     this.chats.update((chats) => {
+      if (chat.serviceActive === false) {
+        return chats.filter((item) => item.id !== chat.id && item.jid !== chat.jid);
+      }
       const exists = chats.some((item) => item.id === chat.id || item.jid === chat.jid);
       return (exists ? chats.map((item) => item.id === chat.id || item.jid === chat.jid ? { ...item, ...chat } : item) : [chat, ...chats])
         .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));

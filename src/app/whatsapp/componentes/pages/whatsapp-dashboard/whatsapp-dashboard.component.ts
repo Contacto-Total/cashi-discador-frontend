@@ -26,6 +26,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   selectedId: number | null = null;
   loading = true;
   saving = false;
+  activationSaving = false;
   loadingTenants = false;
   loadingPortfolios = false;
   loadingSubPortfolios = false;
@@ -205,6 +206,30 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  onActiveChange(active: boolean): void {
+    const account = this.selectedAccount;
+    if (!account || this.form.tenantId <= 0 || this.form.carteraId <= 0 || this.form.subcarteraId <= 0) {
+      this.form.active = false;
+      this.feedback = 'Primero guarda tenant, cartera y subcartera.';
+      return;
+    }
+
+    this.activationSaving = true;
+    this.whatsappApi.setWhatsappAccountActive(account.id, active).subscribe({
+      next: updated => {
+        this.accounts = this.accounts.map(item => item.id === updated.id ? updated : item);
+        this.form.active = updated.active === true;
+        this.feedback = updated.active ? 'Servicio habilitado.' : 'Servicio deshabilitado.';
+        this.activationSaving = false;
+      },
+      error: () => {
+        this.form.active = !active;
+        this.feedback = 'No se pudo cambiar la habilitación del servicio.';
+        this.activationSaving = false;
+      }
+    });
   }
 
   private syncForm(account: WhatsappAccount): void {

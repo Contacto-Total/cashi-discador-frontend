@@ -232,13 +232,14 @@ export class MessageInputWidgetComponent {
   }
 
   private canSendToChat(chat: Chat | null): boolean {
-    if (!chat?.id || chat.blocked) return false;
+    if (!chat?.id || chat.blocked || chat.serviceActive === false) return false;
     if (!chat.windowExpiresAt) return true;
     return new Date(chat.windowExpiresAt).getTime() > Date.now();
   }
 
   private getWindowWarning(chat: Chat | null): string {
     if (!chat) return '';
+    if (chat.serviceActive === false) return 'El servicio WhatsApp de esta conversación está deshabilitado.';
     if (chat.blocked) return '24 h expirado.';
     if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '24 h expirado.';
     return '';

@@ -33,6 +33,11 @@ export interface MediaInfo {
 export interface Conversation {
   id: number;
   accountId?: number;
+  serviceInstanciaId?: string;
+  servicePhoneNumber?: string;
+  serviceCarteraId?: number;
+  serviceSubcarteraId?: number;
+  serviceActive?: boolean;
   contactJid: string;
   contactPhone?: string;
   name?: string;
@@ -51,6 +56,12 @@ export interface Conversation {
 export interface Chat {
   id?: number;
   jid: string;
+  accountId?: number;
+  serviceInstanciaId?: string;
+  servicePhoneNumber?: string;
+  serviceCarteraId?: number;
+  serviceSubcarteraId?: number;
+  serviceActive?: boolean;
   contactPhone?: string;
   name: string;
   lastMsgText?: string;
@@ -147,6 +158,7 @@ export interface OutboundFailedPayload {
 }
 
 export interface AccountStatusEvent {
+  accountId?: number;
   instanciaId: string;
   status: string;
   jid?: string;
@@ -202,6 +214,12 @@ export function conversationToChat(conversation: Conversation): Chat {
   return {
     id: conversation.id,
     jid: conversation.contactJid,
+    accountId: conversation.accountId,
+    serviceInstanciaId: conversation.serviceInstanciaId,
+    servicePhoneNumber: conversation.servicePhoneNumber,
+    serviceCarteraId: conversation.serviceCarteraId,
+    serviceSubcarteraId: conversation.serviceSubcarteraId,
+    serviceActive: conversation.serviceActive,
     contactPhone: conversation.contactPhone,
     name: conversation.name || conversation.contactPhone || conversation.contactJid,
     lastMsgText: conversation.lastMsgText,
