@@ -11,7 +11,6 @@ import { CartaCesionService } from '../../../core/services/carta-cesion.service'
 import { CartaAcuerdoService } from '../../../core/services/carta-acuerdo.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ManagementService, PaymentScheduleRequest } from '../../../collection-management/services/management.service';
-import { PaymentScheduleComponent } from '../../../shared/components/payment-schedule/payment-schedule.component';
 import { PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
 
 type SearchMode = 'telefono' | 'documento';
@@ -22,10 +21,16 @@ interface OfferDisplay {
   value: number;
 }
 
+interface InstallmentEditor {
+  numeroCuota: number;
+  monto: number;
+  fechaPago: string;
+}
+
 @Component({
   selector: 'app-whatsapp-info-client-widget',
   standalone: true,
-  imports: [FormsModule, PaymentScheduleComponent],
+  imports: [FormsModule],
   template: `
     <aside class="flex h-full min-h-0 flex-col overflow-hidden border-l border-slate-200 bg-white text-slate-950">
       <header class="border-b border-slate-200 px-4 py-3">
@@ -152,18 +157,45 @@ interface OfferDisplay {
                   <p class="py-4 text-center text-xs text-slate-500">No hay ofertas configuradas para este cliente.</p>
                 }
                 @if (offers().length && !promiseInProcess()) {
-                  <app-payment-schedule
-                    class="mt-4 block"
-                    [availableAmounts]="scheduleAmounts()"
-                    [maxInstallments]="24"
-                    [transferFee]="20"
-                    (scheduleChange)="onScheduleChange($event)"
-                    (customAmountSelected)="customAmount.set($event)"
-                  />
-                  @if (scheduleConfig(); as config) {
-                    <button type="button" class="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">
-                      {{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}
-                    </button>
+                  <div class="mt-4 space-y-2">
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Ofertas disponibles</p>
+                    @for (offer of offers(); track offer.field) {
+                      <button type="button" class="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition" [class]="selectedOffer()?.field === offer.field ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-300'" (click)="selectOffer(offer)">
+                        <span class="truncate font-medium">{{ offer.label }}</span>
+                        <span class="shrink-0 font-bold">{{ formatCurrency(offer.value) }}</span>
+                      </button>
+                    }
+                  </div>
+                  @if (selectedOffer(); as offer) {
+                    <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+                      <p class="text-xs font-bold text-slate-800">{{ offer.label }} · {{ formatCurrency(offer.value) }}</p>
+                      <div class="mt-2 flex items-center gap-2">
+                        <label class="text-[10px] font-semibold text-slate-500">Descuento %</label>
+                        <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="discountPercent() ?? ''" (ngModelChange)="setDiscount($event)" />
+                        @if (discountPercent() !== null) { <span class="text-[10px] text-slate-500">+ S/ 20 transferencia</span> }
+                      </div>
+                      <p class="mt-2 text-right text-sm font-black text-emerald-700">Total: {{ formatCurrency(calculatedPromiseAmount()) }}</p>
+                      <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                        <span class="text-xs font-semibold text-slate-600">Número de cuotas</span>
+                        <div class="flex items-center gap-1">
+                          <button type="button" class="grid size-7 place-items-center rounded border border-slate-300 text-sm" [disabled]="installmentCount() <= 1" (click)="changeInstallmentCount(-1)">−</button>
+                          <input type="number" min="1" max="20" class="w-14 rounded border border-slate-300 px-1 py-1 text-center text-xs font-bold" [ngModel]="installmentCount()" (ngModelChange)="setInstallmentCount($event)" />
+                          <button type="button" class="grid size-7 place-items-center rounded border border-slate-300 text-sm" [disabled]="installmentCount() >= 20" (click)="changeInstallmentCount(1)">+</button>
+                        </div>
+                      </div>
+                      <div class="mt-2 space-y-1.5">
+                        @for (installment of installments(); track installment.numeroCuota) {
+                          <div class="flex items-center gap-2 rounded bg-slate-50 px-2 py-1.5">
+                            <span class="w-9 text-[10px] font-bold text-slate-500">C{{ installment.numeroCuota }}</span>
+                            <input type="number" min="0" step="0.01" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs" [ngModel]="installment.monto" (ngModelChange)="updateInstallment(installment.numeroCuota, 'monto', $event)" />
+                            <input type="date" class="w-[125px] rounded border border-slate-300 px-1 py-1 text-[10px]" [ngModel]="installment.fechaPago" (ngModelChange)="updateInstallment(installment.numeroCuota, 'fechaPago', $event)" />
+                          </div>
+                        }
+                      </div>
+                      @if (scheduleConfig()) {
+                        <button type="button" class="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">{{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}</button>
+                      }
+                    </div>
                   }
                 }
               </section>
@@ -268,14 +300,10 @@ export class InfoClientWidgetComponent {
   readonly customAmount = signal(false);
   readonly scheduleConfig = signal<PaymentScheduleConfig | null>(null);
   readonly creatingPromise = signal(false);
-  readonly scheduleAmounts = computed(() => this.offers().map((offer) => ({
-    label: offer.label,
-    value: offer.value,
-    field: offer.field,
-    minCuotas: 1,
-    maxCuotas: 24,
-    generaCartaAcuerdo: true
-  })));
+  readonly selectedOffer = signal<OfferDisplay | null>(null);
+  readonly discountPercent = signal<number | null>(null);
+  readonly installmentCount = signal(1);
+  readonly installments = signal<InstallmentEditor[]>([]);
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -320,6 +348,8 @@ export class InfoClientWidgetComponent {
       this.offersError.set(null);
       this.promiseInProcess.set(false);
       this.scheduleConfig.set(null);
+      this.selectedOffer.set(null);
+      this.installments.set([]);
       if (!chat) return;
 
       const phone = this.acl.phoneKey(chat.contactPhone);
@@ -339,6 +369,8 @@ export class InfoClientWidgetComponent {
     this.offersError.set(null);
     this.promiseInProcess.set(false);
     this.scheduleConfig.set(null);
+    this.selectedOffer.set(null);
+    this.installments.set([]);
   }
 
   closeInfo(): void {
@@ -350,10 +382,8 @@ export class InfoClientWidgetComponent {
     this.promiseInProcess.set(false);
     this.scheduleConfig.set(null);
     this.customAmount.set(false);
-  }
-
-  onScheduleChange(config: PaymentScheduleConfig | null): void {
-    this.scheduleConfig.set(config);
+    this.selectedOffer.set(null);
+    this.installments.set([]);
   }
 
   runOption(key: string): void {
@@ -434,6 +464,78 @@ export class InfoClientWidgetComponent {
         this.offers.set(offers);
       },
       error: () => this.offersError.set('No se pudieron consultar las ofertas del cliente.')
+    });
+  }
+
+  selectOffer(offer: OfferDisplay): void {
+    this.selectedOffer.set(offer);
+    this.discountPercent.set(null);
+    this.customAmount.set(false);
+    this.installmentCount.set(1);
+    this.rebuildInstallments();
+  }
+
+  setDiscount(value: number | string): void {
+    const numeric = Number(value);
+    this.discountPercent.set(Number.isFinite(numeric) && numeric >= 0 ? Math.min(100, numeric) : null);
+    this.customAmount.set(this.discountPercent() !== null);
+    this.rebuildInstallments();
+  }
+
+  calculatedPromiseAmount(): number {
+    const offer = this.selectedOffer();
+    const discount = this.discountPercent();
+    if (!offer) return 0;
+    return discount === null ? offer.value : Math.round((offer.value * (1 - discount / 100) + 20) * 100) / 100;
+  }
+
+  setInstallmentCount(value: number | string): void {
+    const count = Math.max(1, Math.min(20, Math.floor(Number(value) || 1)));
+    this.installmentCount.set(count);
+    this.rebuildInstallments();
+  }
+
+  changeInstallmentCount(delta: number): void {
+    this.setInstallmentCount(this.installmentCount() + delta);
+  }
+
+  updateInstallment(numeroCuota: number, field: 'monto' | 'fechaPago', value: number | string): void {
+    this.installments.update(items => items.map(item => item.numeroCuota === numeroCuota
+      ? { ...item, [field]: field === 'monto' ? Number(value) || 0 : String(value) }
+      : item));
+    this.refreshScheduleConfig();
+  }
+
+  private rebuildInstallments(): void {
+    const count = this.installmentCount();
+    const amount = this.calculatedPromiseAmount();
+    const perInstallment = Math.round((amount / count) * 100) / 100;
+    const today = new Date();
+    this.installments.set(Array.from({ length: count }, (_, index) => {
+      const dueDate = new Date(today);
+      dueDate.setDate(today.getDate() + ((index + 1) * 30));
+      return {
+        numeroCuota: index + 1,
+        monto: index === count - 1 ? Math.round((amount - (perInstallment * (count - 1))) * 100) / 100 : perInstallment,
+        fechaPago: dueDate.toISOString().slice(0, 10)
+      };
+    }));
+    this.refreshScheduleConfig();
+  }
+
+  private refreshScheduleConfig(): void {
+    const offer = this.selectedOffer();
+    if (!offer || !this.installments().length) {
+      this.scheduleConfig.set(null);
+      return;
+    }
+    this.scheduleConfig.set({
+      montoTotal: this.installments().reduce((sum, item) => sum + item.monto, 0),
+      numeroCuotas: this.installments().length,
+      cuotas: this.installments(),
+      campoMontoOrigen: offer.field,
+      montoBase: offer.value,
+      generaCartaAcuerdo: !this.customAmount()
     });
   }
 
