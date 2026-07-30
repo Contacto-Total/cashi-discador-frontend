@@ -65,7 +65,7 @@
                 </span>
                 <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
                 @if (account.cartera || account.subcartera) {
-                  <span class="service-scope">{{ account.cartera || 'Sin cartera' }} · {{ account.subcartera || 'Sin subcartera' }}</span>
+                  <span class="service-scope">{{ carteraLabel(account) }} · {{ subcarteraLabel(account) }}</span>
                 }
               </span>
               <span class="service-active" [class.enabled]="account.active">{{ account.active ? 'On' : 'Off' }}</span>
@@ -114,9 +114,33 @@
                 <h3>Asignación operativa</h3>
                 <p>Un servicio solo puede trabajar con una cartera y subcartera.</p>
               </div>
-              <label>Tenant<input name="tenantId" [(ngModel)]="form.tenantId" placeholder="Ej. tenant-principal"></label>
-              <label>Cartera<input name="cartera" [(ngModel)]="form.cartera" placeholder="Ej. cartera norte"></label>
-              <label>Subcartera<input name="subcartera" [(ngModel)]="form.subcartera" placeholder="Ej. mora temprana"></label>
+              <label>
+                Tenant
+                <select name="tenantId" [(ngModel)]="form.tenantId" (ngModelChange)="onTenantChange($event)" [disabled]="loadingTenants">
+                  <option [ngValue]="0">{{ loadingTenants ? 'Cargando tenants...' : 'Seleccionar tenant' }}</option>
+                  @for (tenant of tenants; track tenant.id) {
+                    <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Cartera
+                <select name="cartera" [(ngModel)]="form.carteraId" (ngModelChange)="onPortfolioChange($event)" [disabled]="form.tenantId === 0 || loadingPortfolios">
+                  <option [ngValue]="0">{{ loadingPortfolios ? 'Cargando carteras...' : 'Seleccionar cartera' }}</option>
+                  @for (portfolio of portfolios; track portfolio.id) {
+                    <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Subcartera
+                <select name="subcartera" [(ngModel)]="form.subcarteraId" (ngModelChange)="onSubPortfolioChange($event)" [disabled]="form.carteraId === 0 || loadingSubPortfolios">
+                  <option [ngValue]="0">{{ loadingSubPortfolios ? 'Cargando subcarteras...' : 'Seleccionar subcartera' }}</option>
+                  @for (subPortfolio of subPortfolios; track subPortfolio.id) {
+                    <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                  }
+                </select>
+              </label>
               <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" type="checkbox" name="active" [(ngModel)]="form.active"></label>
               <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
               @if (feedback) { <p class="feedback">{{ feedback }}</p> }

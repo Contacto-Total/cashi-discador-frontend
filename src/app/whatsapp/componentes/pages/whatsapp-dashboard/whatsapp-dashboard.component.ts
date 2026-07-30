@@ -6,6 +6,10 @@ import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { WhatsappApiService } from '../../../services/whatsapp-api.service';
 import { AccountStatusEvent, WhatsappAccount } from '../../../models';
 import { WhatsappRealtimeService } from '../../../services/whatsapp-realtime.service';
+import { TenantService } from '../../../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../../../maintenance/services/portfolio.service';
+import { Tenant } from '../../../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../../../maintenance/models/portfolio.model';
 
 @Component({
   selector: 'app-whatsapp-dashboard',
@@ -16,16 +20,22 @@ import { WhatsappRealtimeService } from '../../../services/whatsapp-realtime.ser
 })
 export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   accounts: WhatsappAccount[] = [];
+  tenants: Tenant[] = [];
+  portfolios: Portfolio[] = [];
+  subPortfolios: SubPortfolio[] = [];
   selectedId: number | null = null;
   loading = true;
   saving = false;
+  loadingTenants = false;
+  loadingPortfolios = false;
+  loadingSubPortfolios = false;
   error = '';
   feedback = '';
 
   form = {
-    tenantId: '',
-    cartera: '',
-    subcartera: '',
+    tenantId: 0,
+    carteraId: 0,
+    subcarteraId: 0,
     active: false
   };
 
@@ -33,10 +43,14 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly whatsappApi: WhatsappApiService,
-    private readonly realtime: WhatsappRealtimeService
+    private readonly realtime: WhatsappRealtimeService,
+    private readonly tenantService: TenantService,
+    private readonly portfolioService: PortfolioService
   ) {}
 
   ngOnInit(): void {
+    this.loadTenants();
+
     this.subscriptions.add(
       interval(15000).pipe(
         startWith(0),
@@ -98,6 +112,29 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     this.feedback = '';
   }
 
+  onTenantChange(tenantId: number): void {
+    this.form.tenantId = Number(tenantId) || 0;
+    this.form.carteraId = 0;
+    this.form.subcarteraId = 0;
+    this.portfolios = [];
+    this.subPortfolios = [];
+    this.feedback = '';
+    if (this.form.tenantId > 0) this.loadPortfolios(this.form.tenantId);
+  }
+
+  onPortfolioChange(portfolioId: number): void {
+    this.form.carteraId = Number(portfolioId) || 0;
+    this.form.subcarteraId = 0;
+    this.subPortfolios = [];
+    this.feedback = '';
+    if (this.form.carteraId > 0) this.loadSubPortfolios(this.form.carteraId);
+  }
+
+  onSubPortfolioChange(subPortfolioId: number): void {
+    this.form.subcarteraId = Number(subPortfolioId) || 0;
+    this.feedback = '';
+  }
+
   isLinked(account: WhatsappAccount): boolean {
     return account.hasLinkedNumber === true || !!account.phoneNumber;
   }
@@ -122,9 +159,27 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     return account.qrData ? `data:image/png;base64,${account.qrData}` : '';
   }
 
+  tenantLabel(account: WhatsappAccount): string {
+    const tenantId = Number(account.tenantId) || 0;
+    const tenant = this.tenants.find(item => item.id === tenantId);
+    return tenant ? `${tenant.tenantCode} - ${tenant.tenantName}` : (account.tenantId || 'Sin tenant');
+  }
+
+  carteraLabel(account: WhatsappAccount): string {
+    const carteraId = Number(account.cartera) || 0;
+    const portfolio = this.portfolios.find(item => item.id === carteraId);
+    return portfolio ? `${portfolio.portfolioCode} - ${portfolio.portfolioName}` : (account.cartera || 'Sin cartera');
+  }
+
+  subcarteraLabel(account: WhatsappAccount): string {
+    const subcarteraId = Number(account.subcartera) || 0;
+    const subPortfolio = this.subPortfolios.find(item => item.id === subcarteraId);
+    return subPortfolio ? `${subPortfolio.subPortfolioCode} - ${subPortfolio.subPortfolioName}` : (account.subcartera || 'Sin subcartera');
+  }
+
   saveBinding(): void {
     const account = this.selectedAccount;
-    if (!account || !this.form.tenantId.trim() || !this.form.cartera.trim() || !this.form.subcartera.trim()) {
+    if (!account || this.form.tenantId <= 0 || this.form.carteraId <= 0 || this.form.subcarteraId <= 0) {
       this.feedback = 'Completa tenant, cartera y subcartera para guardar el enlace.';
       return;
     }
@@ -133,9 +188,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     this.feedback = '';
     this.subscriptions.add(
       this.whatsappApi.bindWhatsappAccount(account.id, {
-        tenantId: this.form.tenantId.trim(),
-        cartera: this.form.cartera.trim(),
-        subcartera: this.form.subcartera.trim(),
+        tenantId: String(this.form.tenantId),
+        cartera: String(this.form.carteraId),
+        subcartera: String(this.form.subcarteraId),
         active: this.form.active
       }).subscribe({
         next: updated => {
@@ -153,12 +208,70 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   }
 
   private syncForm(account: WhatsappAccount): void {
+    const tenantId = Number(account.tenantId) || 0;
+    const carteraId = Number(account.cartera) || 0;
+    const subcarteraId = Number(account.subcartera) || 0;
+
     this.form = {
-      tenantId: account.tenantId || '',
-      cartera: account.cartera || '',
-      subcartera: account.subcartera || '',
+      tenantId,
+      carteraId,
+      subcarteraId,
       active: account.active === true
     };
+
+    if (tenantId > 0) this.loadPortfolios(tenantId, carteraId, subcarteraId);
+  }
+
+  private loadTenants(): void {
+    this.loadingTenants = true;
+    this.subscriptions.add(
+      this.tenantService.getAllTenants().subscribe({
+        next: tenants => {
+          this.tenants = tenants;
+          this.loadingTenants = false;
+        },
+        error: () => {
+          this.loadingTenants = false;
+          this.feedback = 'No se pudieron cargar los tenants.';
+        }
+      })
+    );
+  }
+
+  private loadPortfolios(tenantId: number, carteraId = 0, subcarteraId = 0): void {
+    if (this.loadingPortfolios) return;
+    this.loadingPortfolios = true;
+    this.subscriptions.add(
+      this.portfolioService.getPortfoliosByTenant(tenantId).subscribe({
+        next: portfolios => {
+          this.portfolios = portfolios;
+          this.loadingPortfolios = false;
+          if (carteraId > 0) this.loadSubPortfolios(carteraId, subcarteraId);
+        },
+        error: () => {
+          this.loadingPortfolios = false;
+          this.feedback = 'No se pudieron cargar las carteras.';
+        }
+      })
+    );
+  }
+
+  private loadSubPortfolios(portfolioId: number, subcarteraId = 0): void {
+    if (this.loadingSubPortfolios) return;
+    this.loadingSubPortfolios = true;
+    this.subscriptions.add(
+      this.portfolioService.getSubPortfoliosByPortfolio(portfolioId).subscribe({
+        next: subPortfolios => {
+          this.subPortfolios = subPortfolios;
+          this.loadingSubPortfolios = false;
+          if (subcarteraId > 0) this.form.subcarteraId = subcarteraId;
+        },
+        error: () => {
+          this.loadingSubPortfolios = false;
+          this.feedback = 'No se pudieron cargar las subcarteras.';
+        }
+      })
+    );
   }
 
   private applyStatusEvent(payload: AccountStatusEvent): void {

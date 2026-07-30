@@ -477,7 +477,8 @@ label {
   font-weight: 800;
 }
 
-label input:not(.toggle) {
+label input:not(.toggle),
+label select {
   width: 100%;
   padding: 12px 13px;
   border: 1px solid var(--input-border);
@@ -489,7 +490,17 @@ label input:not(.toggle) {
   font-weight: 500;
 }
 
-label input:not(.toggle):focus {
+label select {
+  cursor: pointer;
+}
+
+label select:disabled {
+  cursor: not-allowed;
+  opacity: .68;
+}
+
+label input:not(.toggle):focus,
+label select:focus {
   border-color: #14b8a6;
   box-shadow: 0 0 0 3px rgba(20, 184, 166, .12);
 }
