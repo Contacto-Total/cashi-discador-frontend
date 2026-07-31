@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -13,7 +13,7 @@ import {
   templateUrl: './bot-voz.component.html',
   styleUrls: ['./bot-voz.component.css'],
 })
-export class BotVozComponent implements OnInit {
+export class BotVozComponent implements OnInit, OnDestroy {
   activeTab: 'config' | 'perfiles' | 'cola' | 'llamadas' = 'config';
 
   config?: BotConfig;
@@ -26,11 +26,28 @@ export class BotVozComponent implements OnInit {
   armando = false;
   mensaje = '';
 
+  /** Refresco de las vistas de monitoreo. Las filas cambian de estado mientras
+   *  el bot disca y sin esto la pantalla se queda en la foto de cuando entraste. */
+  private readonly REFRESCO_MS = 5000;
+  private refresco?: ReturnType<typeof setInterval>;
+
   constructor(private svc: BotVozService) {}
 
   ngOnInit(): void {
     this.cargarConfig();
     this.cargarPerfiles();
+    this.refresco = setInterval(() => this.refrescarTabActiva(), this.REFRESCO_MS);
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.refresco);
+  }
+
+  /** Solo la pestaña visible: config y perfiles los edita el usuario y
+   *  recargarlos le pisaria lo que esta escribiendo. */
+  private refrescarTabActiva(): void {
+    if (this.activeTab === 'cola') this.cargarCola(true);
+    if (this.activeTab === 'llamadas') this.cargarSesiones();
   }
 
   switchTab(t: 'config' | 'perfiles' | 'cola' | 'llamadas'): void {
@@ -77,8 +94,9 @@ export class BotVozComponent implements OnInit {
       error: () => { this.armando = false; this.flash('Error al armar la cola', true); },
     });
   }
-  cargarCola(): void {
-    this.loadingCola = true;
+  /** silencioso: sin spinner, para que el refresco automatico no parpadee. */
+  cargarCola(silencioso = false): void {
+    this.loadingCola = !silencioso;
     this.svc.getCola().subscribe({ next: (c) => { this.cola = c; this.loadingCola = false; }, error: () => (this.loadingCola = false) });
     this.svc.getDescartes().subscribe((d) => (this.descartes = d));
   }
