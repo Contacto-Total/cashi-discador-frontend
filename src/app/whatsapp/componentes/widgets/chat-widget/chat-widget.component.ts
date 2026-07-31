@@ -2,7 +2,6 @@ import { DatePipe } from '@angular/common';
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { environment } from '../../../../../environments/environment';
-import { AuthService } from '../../../../core/services/auth.service';
 import { Chat, Message } from '../../../models';
 import { UserInfoService, WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
 import { MessageInputWidgetComponent } from '../message-input-widget/message-input-widget.component';
@@ -352,8 +351,7 @@ export class ChatWidgetComponent {
   constructor(
     readonly store: WhatsappMessageStoreService,
     private readonly userInfo: UserInfoService,
-    private readonly api: WhatsappApiService,
-    private readonly auth: AuthService
+    private readonly api: WhatsappApiService
   ) {
     effect(() => {
       const chatId = this.chat()?.id;
@@ -535,14 +533,6 @@ export class ChatWidgetComponent {
         }),
         error: () => this.detailSender.set({ name: `Agente ${message.sentByAgentId}` })
       });
-    } else if (message.fromMe) {
-      const currentUser = this.auth.getCurrentUser();
-      if (currentUser) {
-        this.detailSender.set({
-          name: `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username,
-          role: currentUser.role
-        });
-      }
     }
 
     // "Visto por" (asesores internos) solo se registra sobre mensajes ENTRANTES.
@@ -583,10 +573,6 @@ export class ChatWidgetComponent {
 
   detailSenderFallback(message: Message): string {
     if (message.sentByAgentId) return `Agente ${message.sentByAgentId}`;
-    if (message.fromMe) {
-      const user = this.auth.getCurrentUser();
-      if (user) return `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username;
-    }
     return message.fromMe ? 'Tú / sistema' : (this.chat()?.name || 'Contacto');
   }
 
