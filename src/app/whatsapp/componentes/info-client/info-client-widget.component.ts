@@ -27,6 +27,8 @@ interface InstallmentEditor {
   fechaPago: string;
 }
 
+const PROMISE_TIPIFICATION_ID = 5;
+
 @Component({
   selector: 'app-whatsapp-info-client-widget',
   standalone: true,
@@ -573,7 +575,8 @@ export class InfoClientWidgetComponent {
       idTenant: result.tenantId,
       idCartera: result.portfolioId,
       idSubcartera: result.subPortfolioId,
-      idTipificacion: Number(result.clientData['idTipificacion'] || result.clientData['id_tipificacion'] || 0),
+      // PP / PROMESA DE PAGO. El backend calcula las rutas de tipificación.
+      idTipificacion: PROMISE_TIPIFICATION_ID,
       metodoContacto: 'GESTION_MANUAL',
       canalContacto: 'WHATSAPP',
       campoMontoOrigen: config.campoMontoOrigen,
