@@ -740,6 +740,8 @@ export class InfoClientWidgetComponent {
   }
 
   clientName(c: DynamicClient): string {
+    const completeName = c['nombre_completo'] || c['nombreCompleto'] || c['fullName'];
+    if (typeof completeName === 'string' && completeName.trim()) return completeName.trim();
     if (c.nombre?.trim()) return c.nombre;
     const parts = [c.nombres, c.apellidos].map((p) => p?.trim()).filter(Boolean);
     return parts.length ? parts.join(' ') : 'Sin nombre';
