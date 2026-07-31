@@ -259,7 +259,7 @@ interface MessageSender {
     </section>
 
     @if (selectedImage(); as imageMessage) {
-      <div class="fixed inset-0 z-50 flex flex-col bg-slate-950/95 p-4 text-white" (click)="closeImageViewer()">
+      <div class="fixed inset-0 z-[9999] flex flex-col bg-slate-950/95 p-4 text-white" (click)="closeImageViewer()">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold">{{ imageMessage.media?.fileName || 'Imagen' }}</p>
