@@ -463,7 +463,7 @@ export class InfoClientWidgetComponent {
             const value = key ? Number(raw[key]) : Number.NaN;
             return { field: String(header.codigo), label: header.nombre || this.formatFieldLabel(header.codigo), value };
           })
-          .filter((offer: OfferDisplay) => Number.isFinite(offer.value));
+          .filter((offer: OfferDisplay) => Number.isFinite(offer.value) && offer.value > 0);
         this.offers.set(offers);
       },
       error: () => this.offersError.set('No se pudieron consultar las ofertas del cliente.')
