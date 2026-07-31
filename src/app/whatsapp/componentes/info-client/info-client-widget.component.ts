@@ -457,6 +457,7 @@ export class InfoClientWidgetComponent {
   }
 
   runOption(key: string): void {
+    this.promiseResult.set(null);
     if (key === 'compromiso-pago') {
       this.prepareAgreement();
       return;
@@ -476,14 +477,29 @@ export class InfoClientWidgetComponent {
       next: (response) => {
         this.hasCarta.set(true);
         this.cartaCesion.downloadPdf(response.filename).pipe(finalize(() => this.cartaLoading.set(false))).subscribe({
-          next: (blob) => this.store.setPendingAttachment(new File([blob], response.filename, { type: 'application/pdf' })),
-          error: () => this.cartaError.set('No se pudo cargar el PDF de la carta de cesión.')
+          next: (blob) => {
+            this.store.setPendingAttachment(new File([blob], response.filename, { type: 'application/pdf' }));
+            this.promiseResult.set({
+              kind: 'success',
+              title: 'Carta de cesión lista',
+              message: 'La carta de cesión está lista para adjuntarse al mensaje.'
+            });
+          },
+          error: () => this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo cargar la carta de cesión.',
+            message: 'No se pudo cargar el PDF de la carta de cesión.'
+          })
         });
       },
       error: (error) => {
         this.cartaLoading.set(false);
         this.hasCarta.set(false);
-        this.cartaError.set(error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.');
+        this.promiseResult.set({
+          kind: 'error',
+          title: error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.',
+          message: error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.'
+        });
       }
     });
   }
@@ -585,9 +601,29 @@ export class InfoClientWidgetComponent {
   }
 
   updateInstallment(numeroCuota: number, field: 'monto' | 'fechaPago', value: number | string): void {
-    this.installments.update(items => items.map(item => item.numeroCuota === numeroCuota
-      ? { ...item, [field]: field === 'monto' ? Number(value) || 0 : String(value) }
-      : item));
+    if (field === 'fechaPago') {
+      this.installments.update(items => items.map(item => item.numeroCuota === numeroCuota
+        ? { ...item, fechaPago: String(value) }
+        : item));
+    } else {
+      const totalCents = Math.round(this.calculatedPromiseAmount() * 100);
+      this.installments.update(items => {
+        const edited = Math.max(0, Math.round((Number(value) || 0) * 100));
+        const lastNumber = items[items.length - 1]?.numeroCuota;
+        const fixedCents = items
+          .filter(item => item.numeroCuota !== numeroCuota && item.numeroCuota !== lastNumber)
+          .reduce((sum, item) => sum + Math.round(item.monto * 100), 0);
+        const maxEdited = Math.max(0, totalCents - fixedCents);
+        const editedCents = numeroCuota === lastNumber ? maxEdited : Math.min(edited, maxEdited);
+        const lastCents = Math.max(0, totalCents - fixedCents - editedCents);
+
+        return items.map(item => {
+          if (item.numeroCuota === numeroCuota) return { ...item, monto: editedCents / 100 };
+          if (item.numeroCuota === lastNumber) return { ...item, monto: lastCents / 100 };
+          return item;
+        });
+      });
+    }
     this.refreshScheduleConfig();
     this.persistOfferDraft();
   }
@@ -616,7 +652,7 @@ export class InfoClientWidgetComponent {
       return;
     }
     this.scheduleConfig.set({
-      montoTotal: this.installments().reduce((sum, item) => sum + item.monto, 0),
+      montoTotal: this.calculatedPromiseAmount(),
       numeroCuotas: this.installments().length,
       cuotas: this.installments(),
       campoMontoOrigen: offer.field,
@@ -697,9 +733,10 @@ export class InfoClientWidgetComponent {
       this.selectedOffer.set(offer);
       this.discountPercent.set(draft.discount);
       this.transferFee.set(draft.transferFee);
-      this.installmentCount.set(Math.max(1, Math.min(20, draft.installmentCount)));
-      this.installments.set(draft.installments);
-      this.customAmount.set(draft.discount > 0 || draft.transferFee > 0);
+       this.installmentCount.set(Math.max(1, Math.min(20, draft.installmentCount)));
+       this.installments.set(draft.installments);
+       this.normalizeInstallments();
+       this.customAmount.set(draft.discount > 0 || draft.transferFee > 0);
       this.refreshScheduleConfig();
       this.offerSent.set(true);
     } catch {
@@ -709,6 +746,19 @@ export class InfoClientWidgetComponent {
 
   private clearStoredOfferDraft(): void {
     localStorage.removeItem(this.offerStorageKey);
+  }
+
+  private normalizeInstallments(): void {
+    const totalCents = Math.round(this.calculatedPromiseAmount() * 100);
+    this.installments.update(items => {
+      let remaining = totalCents;
+      return items.map((item, index) => {
+        if (index === items.length - 1) return { ...item, monto: remaining / 100 };
+        const amount = Math.min(Math.max(0, Math.round(item.monto * 100)), remaining);
+        remaining -= amount;
+        return { ...item, monto: amount / 100 };
+      });
+    });
   }
 
   createPromise(): void {
@@ -842,7 +892,11 @@ export class InfoClientWidgetComponent {
     const user = this.auth.getCurrentUser();
     if (!documento) return;
     if (!user?.id) {
-      this.agreementError.set('No se encontró el usuario autenticado.');
+      this.promiseResult.set({
+        kind: 'error',
+        title: 'No se pudo generar el compromiso de pago.',
+        message: 'No se encontró el usuario autenticado.'
+      });
       return;
     }
 
@@ -857,14 +911,22 @@ export class InfoClientWidgetComponent {
         const schedule = valid[0];
         if (!schedule) {
           this.agreementLoading.set(false);
-          this.agreementError.set('Este cliente no tiene un compromiso de pago activo.');
+          this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo generar el compromiso de pago.',
+            message: 'Este cliente no tiene un compromiso de pago activo.'
+          });
           return;
         }
 
         const subPortfolioId = result?.subPortfolioId;
         if (!subPortfolioId) {
           this.agreementLoading.set(false);
-          this.agreementError.set('El cliente no tiene subcartera configurada para generar el acuerdo.');
+          this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo generar el compromiso de pago.',
+            message: 'El cliente no tiene subcartera configurada para generar el acuerdo.'
+          });
           return;
         }
 
@@ -872,23 +934,46 @@ export class InfoClientWidgetComponent {
           next: (hasTemplate) => {
             if (!hasTemplate) {
               this.agreementLoading.set(false);
-              this.agreementError.set('No hay una plantilla de acuerdo configurada para esta subcartera.');
+              this.promiseResult.set({
+                kind: 'error',
+                title: 'No se pudo generar el compromiso de pago.',
+                message: 'No hay una plantilla de acuerdo configurada para esta subcartera.'
+              });
               return;
             }
             this.cartaAcuerdo.generarCarta(Number(schedule.id), Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
-              next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${documento}.pdf`, { type: 'application/pdf' })),
-              error: () => this.agreementError.set('No se pudo generar el compromiso de pago.')
+              next: (blob) => {
+                this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${documento}.pdf`, { type: 'application/pdf' }));
+                this.promiseResult.set({
+                  kind: 'success',
+                  title: 'Compromiso de pago listo',
+                  message: 'El compromiso de pago está listo para adjuntarse al mensaje.'
+                });
+              },
+              error: () => this.promiseResult.set({
+                kind: 'error',
+                title: 'No se pudo generar el compromiso de pago.',
+                message: 'No se pudo generar el compromiso de pago.'
+              })
             });
           },
           error: () => {
             this.agreementLoading.set(false);
-            this.agreementError.set('No se pudo validar la plantilla del acuerdo.');
+            this.promiseResult.set({
+              kind: 'error',
+              title: 'No se pudo generar el compromiso de pago.',
+              message: 'No se pudo validar la plantilla del acuerdo.'
+            });
           }
         });
       },
       error: () => {
         this.agreementLoading.set(false);
-        this.agreementError.set('No se pudo consultar el compromiso de pago.');
+        this.promiseResult.set({
+          kind: 'error',
+          title: 'No se pudo generar el compromiso de pago.',
+          message: 'No se pudo consultar el compromiso de pago.'
+        });
       }
     });
   }
