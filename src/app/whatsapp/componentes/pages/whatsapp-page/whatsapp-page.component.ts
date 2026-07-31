@@ -11,11 +11,11 @@ import { WhatsappMessageStoreService } from '../../../services';
   standalone: true,
   imports: [ChatListWidgetComponent, ChatWidgetComponent, InfoClientWidgetComponent],
   template: `
-    <main class="h-screen overflow-hidden bg-slate-100 text-slate-950">
-      <section class="grid h-full grid-cols-1 sm:grid-cols-[minmax(300px,30%)_minmax(0,1fr)] lg:grid-cols-[minmax(280px,22%)_minmax(0,1fr)_minmax(300px,24%)]">
-        <app-whatsapp-chat-list-widget />
-        <app-whatsapp-chat-widget class="hidden h-full min-h-0 sm:block" />
-        <app-whatsapp-info-client-widget class="hidden h-full min-h-0 lg:block" />
+    <main class="h-screen min-h-0 overflow-hidden bg-slate-100 text-slate-950">
+      <section class="grid h-full min-h-0 grid-cols-1 sm:grid-cols-[minmax(300px,30%)_minmax(0,1fr)] lg:grid-cols-[minmax(280px,22%)_minmax(0,1fr)_minmax(300px,24%)]">
+        <app-whatsapp-chat-list-widget class="min-h-0 min-w-0" />
+        <app-whatsapp-chat-widget class="hidden h-full min-h-0 min-w-0 sm:block" />
+        <app-whatsapp-info-client-widget class="hidden h-full min-h-0 min-w-0 lg:block" />
       </section>
     </main>
   `

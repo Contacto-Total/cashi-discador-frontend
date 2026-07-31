@@ -1394,14 +1394,23 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
               </div>
             }
 
-            <!-- Resumen Rápido Deuda -->
-            <div [class]="'p-2 ' + purchaseSummaryClass()">
-              <div class="text-center">
-                <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ getPrimaryAmountLabel() }}</div>
-                <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-                <div class="text-xs font-semibold" [ngClass]="purchaseAccentTextClass()">{{ clientDiasMora() }} días mora</div>
-              </div>
-            </div>
+             <!-- Resumen Rápido Deuda -->
+             <div [class]="'p-2 ' + purchaseSummaryClass()">
+               <div class="text-center">
+                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
+                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+                 @if (clientHeaderFields().length > 0) {
+                    <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
+                      @for (field of clientHeaderFields(); track field.field) {
+                        <div class="flex min-w-0 items-baseline justify-between gap-2">
+                          <span class="whitespace-nowrap font-semibold uppercase">{{ field.label }}:</span>
+                          <span class="min-w-0 truncate text-right font-bold" [title]="field.value">{{ field.value }}</span>
+                        </div>
+                     }
+                   </div>
+                 }
+               </div>
+             </div>
 
             <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
             <div class="p-2 flex-1 overflow-y-auto">
@@ -1468,7 +1477,7 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
         </div>
 
         <!-- SECCION DE HISTORIAL DE GESTIONES - Compacto -->
-        <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-44') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
+         <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-[7.7rem]') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
@@ -2646,6 +2655,37 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
 
+  // Campos fijos de cabecera. El resto de columnas queda disponible para ofertas/montos.
+  private readonly fixedHeaderLabels: Record<string, string> = {
+    documento: 'Documento',
+    num_cuenta_ori: 'Número de cuenta',
+    num_cuenta: 'Número de cuenta',
+    numero_cuenta: 'Número de cuenta',
+    num_cuenta_pmcp: 'Número de cuenta',
+    dias_mora_asig: 'Días mora',
+    dias_mora: 'Días mora',
+    periodo_castigo: 'Período castigo',
+    rango_mora: 'Rango mora',
+    rango_mora_asig: 'Rango mora',
+    rango_mora_proy: 'Rango mora'
+  };
+
+  clientHeaderFields = computed(() => {
+    const rawData = this.rawClientData();
+    const fields: { field: string; label: string; value: string }[] = [];
+    const usedLabels = new Set<string>();
+
+    for (const [field, label] of Object.entries(this.fixedHeaderLabels)) {
+      const rawKey = Object.keys(rawData).find(key => key.toLowerCase() === field);
+      const value = rawKey ? rawData[rawKey] : undefined;
+      if (field === 'documento' || value === undefined || value === null || String(value).trim() === '' || usedLabels.has(label)) continue;
+      fields.push({ field, label, value: String(value).trim() });
+      usedLabels.add(label);
+    }
+
+    return fields;
+  });
+
   // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
   // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
   clientAmountFields = computed(() => {
@@ -2662,6 +2702,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       for (const cabecera of cabeceras) {
         const lowerCodigo = cabecera.codigo.toLowerCase();
+        if (this.isFixedHeaderField(lowerCodigo)) continue;
         const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
         const formato = cabecera.formatoVisualizacion || 'MONEDA';
 
@@ -2692,7 +2733,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       // Fallback: si no hay cabeceras, usar lógica anterior pero con exclusiones estrictas
       const excludeFields = [
         'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
-        'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
+         'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
         'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
         'telefono_celular', 'telefono_domicilio', 'telefono_laboral',
         'telf_referencia_1', 'telf_referencia_2'
@@ -2702,7 +2743,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         const lowerKey = key.toLowerCase();
         if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
         if (lowerKey.startsWith('telefono_') || lowerKey.startsWith('telf_')) continue;
-        if (excludeFields.includes(lowerKey)) continue;
+        if (excludeFields.includes(lowerKey) || this.isFixedHeaderField(lowerKey)) continue;
 
         const numValue = typeof value === 'number' ? value : parseFloat(value);
         if (!isNaN(numValue) && numValue >= 0) {
@@ -2727,6 +2768,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
     return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
   });
+
+  private isFixedHeaderField(field: string): boolean {
+    return Object.prototype.hasOwnProperty.call(this.fixedHeaderLabels, field.toLowerCase());
+  }
 
   // Ocupación del cliente desde la tabla dinámica (ini_*).
   // Busca la columna exacta y, si no, cualquier columna que contenga "ocupacion".
@@ -5354,6 +5399,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   getPrimaryAmountValue(): number {
     const fields = this.clientAmountFields();
     if (fields.length > 0) {
+      const capitalField = fields.find(f => f.label.trim().toLowerCase() === 'capital')
+        || fields.find(f => f.field.toLowerCase().includes('capital') && !f.field.toLowerCase().includes('tarj'));
+      if (capitalField) return capitalField.value;
       // Buscar campo que contenga "total" en el nombre
       const totalField = fields.find(f =>
         f.label.toLowerCase().includes('total') ||

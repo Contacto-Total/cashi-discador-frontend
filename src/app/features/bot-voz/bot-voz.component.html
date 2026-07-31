@@ -9,7 +9,7 @@
     </div>
     <div class="estado-bot" *ngIf="config">
       <span class="dot" [class.on]="config.activo"></span>
-      {{ config.activo ? 'Activo — discando' : 'Detenido' }}
+      {{ estadoBot }}
     </div>
   </div>
 

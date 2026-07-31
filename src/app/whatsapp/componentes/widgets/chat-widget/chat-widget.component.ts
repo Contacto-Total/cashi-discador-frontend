@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
+import { LucideAngularModule } from 'lucide-angular';
 import { environment } from '../../../../../environments/environment';
 import { Chat, Message } from '../../../models';
 import { UserInfoService, WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
@@ -20,7 +21,7 @@ interface MessageSender {
 @Component({
   selector: 'app-whatsapp-chat-widget',
   standalone: true,
-  imports: [DatePipe, MessageInputWidgetComponent],
+  imports: [DatePipe, LucideAngularModule, MessageInputWidgetComponent],
   template: `
     <section class="flex h-full min-h-0 flex-col overflow-hidden bg-white">
       @if (chat(); as selectedChat) {
@@ -107,21 +108,43 @@ interface MessageSender {
                             </span>
                             <div class="min-w-0 flex-1">
                               <p class="truncate text-xs font-bold text-slate-800">Mensaje de voz</p>
-                              <p class="text-[11px] text-slate-400">Audio de WhatsApp</p>
+                              <p class="text-[11px] text-slate-400">Audio de WhatsApp · {{ audioDuration(message) }}</p>
                             </div>
                           </div>
-                          <div class="border-t border-slate-100 px-2.5 py-2">
-                            <audio class="whatsapp-audio w-full" controls preload="none" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></audio>
-                          </div>
+                            <div class="border-t border-slate-100 px-2.5 py-2">
+                              <div
+                                class="audio-waveform"
+                                role="slider"
+                                tabindex="0"
+                                [attr.aria-label]="'Avance del audio ' + audioDuration(message)"
+                                [attr.aria-valuenow]="audioProgress(message) * 100"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                                (pointerdown)="startAudioSeek(message.msgId, $event, audioElement)"
+                                 (pointermove)="moveAudioSeek(message.msgId, $event, audioElement)"
+                                 (pointerup)="endAudioSeek(message.msgId, $event)"
+                                 (pointercancel)="endAudioSeek(message.msgId, $event)"
+                                 (keydown)="audioSeekKeydown(message.msgId, $event, audioElement)"
+                              >
+                                @for (bar of waveform(message); track $index) {
+                                  <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
+                                }
+                              </div>
+                              <audio #audioElement class="whatsapp-audio w-full" controls preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (error)="onMediaError(message.msgId)"></audio>
+                              <button type="button" class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Descargar
+                              </button>
+                            </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
                         <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" (click)="downloadMedia(message); $event.stopPropagation()">
-                          <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-emerald-700">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-                          </span>
+                           <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100" [style.color]="fileIconColor(message)">
+                             <lucide-angular [name]="fileIcon(message)" [size]="22"></lucide-angular>
+                           </span>
                           <span class="min-w-0 flex-1">
                             <span class="block truncate text-sm font-bold">{{ message.media?.fileName || mediaLabel(message) }}</span>
-                            <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ documentMeta(message) }}</span>
+                             <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ documentMeta(message) }}</span>
                           </span>
                           <span class="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
                             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -145,7 +168,9 @@ interface MessageSender {
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
                             }
                             @case ('error') {
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7.5" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12.01" y2="16.5"/></svg>
+                              <button type="button" title="Eliminar envío fallido" aria-label="Eliminar envío fallido" class="rounded-full p-0.5 hover:bg-white/20" (click)="removeFailedMessage(message); $event.stopPropagation()">
+                                <lucide-angular name="trash-2" [size]="14"></lucide-angular>
+                              </button>
                             }
                             @case ('read') {
                               <svg width="18" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12l3.5 3.5L11 5"/><path d="M12 12l3.5 3.5L21 5"/></svg>
@@ -309,6 +334,10 @@ interface MessageSender {
     .whatsapp-audio::-webkit-media-controls-panel {
       background-color: #f8fafc;
     }
+     .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; margin-bottom: 6px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
+     .audio-waveform:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px #6ee7b7; }
+     .audio-waveform span { flex: 1; min-width: 2px; max-width: 4px; border-radius: 999px; background: #cbd5e1; opacity: .85; transition: background-color .1s ease; }
+     .audio-waveform span.audio-waveform-played { background: #10b981; }
   `]
 })
 export class ChatWidgetComponent {
@@ -322,6 +351,10 @@ export class ChatWidgetComponent {
   // Media que falló al cargar (por msgId) + contador de reintentos (cache-bust).
   readonly mediaErrors = signal(new Set<string>());
   private readonly mediaRetry = new Map<string, number>();
+  readonly audioDurations = signal(new Map<string, number>());
+  readonly audioWaveforms = signal(new Map<string, number[]>());
+  readonly audioProgresses = signal(new Map<string, number>());
+  private readonly seekingAudio = new Set<string>();
 
   // Panel de detalle de un mensaje (quién lo envió + quiénes lo vieron).
   readonly detailMessage = signal<Message | null>(null);
@@ -412,6 +445,119 @@ export class ChatWidgetComponent {
     return message.media?.kind === 'audio' || !!message.media?.mime?.startsWith('audio/');
   }
 
+  audioMetadata(msgId: string, event: Event): void {
+    const audio = event.target as HTMLAudioElement;
+    audio.volume = 1;
+    const duration = audio.duration;
+    if (!Number.isFinite(duration)) return;
+    this.audioDurations.update((items) => new Map(items).set(msgId, duration));
+    if (!this.audioWaveforms().has(msgId)) void this.loadWaveform(msgId);
+  }
+
+  audioTimeUpdate(msgId: string, event: Event): void {
+    const audio = event.target as HTMLAudioElement;
+    if (!Number.isFinite(audio.duration) || this.seekingAudio.has(msgId)) return;
+    this.audioProgresses.update((items) => new Map(items).set(msgId, audio.currentTime / audio.duration));
+  }
+
+  audioProgress(message: Message): number {
+    return this.audioProgresses().get(message.msgId) || 0;
+  }
+
+  isWaveformBarPlayed(message: Message, index: number): boolean {
+    return index / this.waveform(message).length <= this.audioProgress(message);
+  }
+
+  startAudioSeek(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
+    this.seekingAudio.add(msgId);
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.updateAudioPosition(msgId, event, audio);
+  }
+
+  moveAudioSeek(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
+    if (this.seekingAudio.has(msgId)) this.updateAudioPosition(msgId, event, audio);
+  }
+
+  endAudioSeek(msgId: string, event: PointerEvent): void {
+    if (!this.seekingAudio.has(msgId)) return;
+    this.seekingAudio.delete(msgId);
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+  }
+
+  audioSeekKeydown(msgId: string, event: KeyboardEvent, audio: HTMLAudioElement): void {
+    if (!Number.isFinite(audio.duration)) return;
+    const step = 5 / audio.duration;
+    let progress = this.audioProgresses().get(msgId) || 0;
+    if (event.key === 'ArrowLeft') progress -= step;
+    else if (event.key === 'ArrowRight') progress += step;
+    else if (event.key === 'Home') progress = 0;
+    else if (event.key === 'End') progress = 1;
+    else return;
+    event.preventDefault();
+    progress = Math.max(0, Math.min(1, progress));
+    audio.currentTime = progress * audio.duration;
+    this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+  }
+
+  private updateAudioPosition(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
+    if (!Number.isFinite(audio.duration)) return;
+    const waveform = event.currentTarget as HTMLElement;
+    const bounds = waveform.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+    audio.currentTime = progress * audio.duration;
+    this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+  }
+
+  audioDuration(message: Message): string {
+    const duration = this.audioDurations().get(message.msgId);
+    return duration ? this.formatDuration(duration) : '0:00';
+  }
+
+  waveform(message: Message): number[] {
+    return this.audioWaveforms().get(message.msgId) || Array.from({ length: 48 }, () => 0.08);
+  }
+
+  barHeight(value: number): number {
+    return Math.max(8, value * 100);
+  }
+
+  private async loadWaveform(msgId: string): Promise<void> {
+    try {
+      const response = await fetch(this.mediaSrc({ msgId, hasMedia: true } as Message));
+      const buffer = await response.arrayBuffer();
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const context = new AudioContextClass();
+      const audio = await context.decodeAudioData(buffer);
+      const bars = 48;
+      const values: number[] = [];
+      const block = Math.max(1, Math.floor(audio.length / bars));
+      for (let index = 0; index < bars; index++) {
+        let sum = 0;
+        let count = 0;
+        const start = index * block;
+        const end = Math.min(audio.length, start + block);
+        for (let channel = 0; channel < audio.numberOfChannels; channel++) {
+          const samples = audio.getChannelData(channel);
+          for (let sample = start; sample < end; sample += Math.max(1, Math.floor(block / 80))) {
+            sum += samples[sample] * samples[sample];
+            count++;
+          }
+        }
+        values.push(count ? Math.min(1, Math.sqrt(sum / count) * 3.5) : 0.08);
+      }
+      await context.close();
+      this.audioWaveforms.update((items) => new Map(items).set(msgId, values));
+    } catch {
+      // El reproductor nativo continúa funcionando aunque no se pueda analizar el audio.
+    }
+  }
+
+  private formatDuration(seconds: number): string {
+    const total = Math.max(0, Math.round(seconds));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  }
+
   isVideo(message: Message): boolean {
     return message.media?.kind === 'video' || !!message.media?.mime?.startsWith('video/');
   }
@@ -497,6 +643,11 @@ export class ChatWidgetComponent {
     this.store.setReplyingTo(message);
   }
 
+  removeFailedMessage(message: Message): void {
+    if (!message.fromMe || message.status !== 'error') return;
+    this.store.removeFailedMessage(message);
+  }
+
   detailSenderFallback(message: Message): string {
     if (message.sentByAgentId) return `Agente ${message.sentByAgentId}`;
     return message.fromMe ? 'Tú / sistema' : (this.chat()?.name || 'Contacto');
@@ -557,7 +708,9 @@ export class ChatWidgetComponent {
       'video/mp4': '.mp4', 'video/3gpp': '.3gp',
       'audio/ogg': '.ogg', 'audio/mpeg': '.mp3', 'audio/mp4': '.m4a', 'audio/aac': '.m4a',
       'audio/amr': '.amr', 'audio/webm': '.webm',
-      'application/pdf': '.pdf', 'application/zip': '.zip', 'text/plain': '.txt'
+      'application/pdf': '.pdf', 'application/zip': '.zip', 'text/plain': '.txt', 'text/csv': '.csv',
+      'application/msword': '.doc', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+      'application/vnd.ms-excel': '.xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx'
     };
     return map[base] || '';
   }
@@ -591,10 +744,34 @@ export class ChatWidgetComponent {
   }
 
   documentMeta(message: Message): string {
-    const parts = [message.media?.mime || this.mediaTypeLabel(message)];
+    const parts = [this.fileExtension(message)];
     const size = this.formatBytes(message.media?.fileLength);
     if (size) parts.push(size);
     return parts.filter(Boolean).join(' · ');
+  }
+
+  fileIcon(message: Message): string {
+    const extension = this.fileExtension(message);
+    if (extension === '.zip') return 'file-archive';
+    if (['.xls', '.xlsx', '.csv'].includes(extension)) return 'file-spreadsheet';
+    return 'file-text';
+  }
+
+  fileIconColor(message: Message): string {
+    const extension = this.fileExtension(message);
+    if (extension === '.zip') return '#d97706';
+    if (['.xls', '.xlsx', '.csv'].includes(extension)) return '#16a34a';
+    if (['.doc', '.docx'].includes(extension)) return '#2563eb';
+    if (extension === '.pdf') return '#dc2626';
+    return '#64748b';
+  }
+
+  private fileExtension(message: Message): string {
+    const fileName = message.media?.fileName || '';
+    const match = fileName.match(/(\.[^.\s]{1,8})$/);
+    if (match) return match[1].toLowerCase();
+    const mimeExtension = this.extFromMime(message.media?.mime);
+    return mimeExtension || '.bin';
   }
 
   mediaTypeLabel(message: Message): string {

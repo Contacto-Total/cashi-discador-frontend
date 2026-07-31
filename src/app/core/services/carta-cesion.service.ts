@@ -12,6 +12,8 @@ export interface CartaCesionResponse {
 @Injectable({
   providedIn: 'root'
 })
+// IMPORTANTE: este servicio tambien es reutilizado por el modulo WhatsApp.
+// Si cambia su contrato, endpoints o respuesta, actualizar el flujo de adjuntos de WhatsApp.
 export class CartaCesionService {
   private apiUrl = `${environment.webServiceUrl}/cartas-cesion`;
 

@@ -33,6 +33,13 @@ export interface MediaInfo {
 export interface Conversation {
   id: number;
   accountId?: number;
+  serviceInstanciaId?: string;
+  servicePhoneNumber?: string;
+  serviceCarteraId?: number;
+  serviceSubcarteraId?: number;
+  serviceCarteraName?: string;
+  serviceSubcarteraName?: string;
+  serviceActive?: boolean;
   contactJid: string;
   contactPhone?: string;
   name?: string;
@@ -51,6 +58,14 @@ export interface Conversation {
 export interface Chat {
   id?: number;
   jid: string;
+  accountId?: number;
+  serviceInstanciaId?: string;
+  servicePhoneNumber?: string;
+  serviceCarteraId?: number;
+  serviceSubcarteraId?: number;
+  serviceCarteraName?: string;
+  serviceSubcarteraName?: string;
+  serviceActive?: boolean;
   contactPhone?: string;
   name: string;
   lastMsgText?: string;
@@ -105,6 +120,8 @@ export interface SendMessageRequest {
   type: OutboundType;
   body?: string;
   mediaRef?: string;
+  mediaFileName?: string;
+  mediaMime?: string;
   quotedMessageId?: string;
 }
 
@@ -147,10 +164,36 @@ export interface OutboundFailedPayload {
 }
 
 export interface AccountStatusEvent {
+  accountId?: number;
   instanciaId: string;
   status: string;
   jid?: string;
   phoneNumber?: string;
+  hasLinkedNumber?: boolean;
+  qr?: string;
+  active?: boolean;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
+}
+
+export interface WhatsappAccount {
+  id: number;
+  instanciaId: string;
+  phoneNumber?: string;
+  hasLinkedNumber: boolean;
+  jid?: string;
+  status: string;
+  active: boolean;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
+  carteraName?: string;
+  subcarteraName?: string;
+  qrData?: string;
+  qrUpdatedAt?: string;
+  lastSeenAt?: string;
+  lastConnectedAt?: string;
 }
 
 export interface WhatsAppEventPayloadMap {
@@ -179,6 +222,14 @@ export function conversationToChat(conversation: Conversation): Chat {
   return {
     id: conversation.id,
     jid: conversation.contactJid,
+    accountId: conversation.accountId,
+    serviceInstanciaId: conversation.serviceInstanciaId,
+    servicePhoneNumber: conversation.servicePhoneNumber,
+    serviceCarteraId: conversation.serviceCarteraId,
+    serviceSubcarteraId: conversation.serviceSubcarteraId,
+    serviceCarteraName: conversation.serviceCarteraName,
+    serviceSubcarteraName: conversation.serviceSubcarteraName,
+    serviceActive: conversation.serviceActive,
     contactPhone: conversation.contactPhone,
     name: conversation.name || conversation.contactPhone || conversation.contactJid,
     lastMsgText: conversation.lastMsgText,

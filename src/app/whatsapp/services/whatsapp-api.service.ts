@@ -10,7 +10,8 @@ import {
   PageResponse,
   SendMessageRequest,
   SendMessageResponse,
-  ViewerResponse
+  ViewerResponse,
+  WhatsappAccount
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -19,9 +20,27 @@ export class WhatsappApiService {
 
   constructor(private readonly http: HttpClient) {}
 
-  getChats(page = 0, size = 30, q?: string): Observable<PageResponse<Conversation>> {
+  getWhatsappAccounts(): Observable<WhatsappAccount[]> {
+    return this.http.get<WhatsappAccount[]>(`${this.apiBase}/accounts`);
+  }
+
+  bindWhatsappAccount(id: number, request: {
+    tenantId: number;
+    carteraId: number;
+    subcarteraId: number;
+    active: boolean;
+  }): Observable<WhatsappAccount> {
+    return this.http.put<WhatsappAccount>(`${this.apiBase}/accounts/${id}/binding`, request);
+  }
+
+  setWhatsappAccountActive(id: number, active: boolean): Observable<WhatsappAccount> {
+    return this.http.patch<WhatsappAccount>(`${this.apiBase}/accounts/${id}/active`, { active });
+  }
+
+  getChats(page = 0, size = 30, q?: string, accountId?: number): Observable<PageResponse<Conversation>> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (q) params = params.set('q', q);
+    if (accountId) params = params.set('accountId', accountId);
     return this.http.get<PageResponse<Conversation>>(`${this.apiBase}/chats`, { params });
   }
 

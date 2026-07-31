@@ -25,11 +25,13 @@ export class WhatsappMessageStoreService {
   readonly sendingMessage = signal(false);
   readonly uploadingMedia = signal(false);
   readonly sendMessageError = signal<string | null>(null);
+  readonly pendingAttachment = signal<File | null>(null);
   readonly activeViewers = signal<string[]>([]);
   readonly replyingTo = signal<Message | null>(null);
   readonly chatsPage = signal(0);
   readonly chatsTotalPages = signal(0);
   readonly chatsQuery = signal<string | undefined>(undefined);
+  readonly chatsAccountId = signal<number | undefined>(undefined);
 
   readonly currentMessages = computed(() => {
     const conversationId = this.currentChat()?.id;
@@ -48,13 +50,14 @@ export class WhatsappMessageStoreService {
     private readonly realtime: WhatsappRealtimeService
   ) {}
 
-  loadChats(page = 0, size = 30, q?: string): void {
+  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId()): void {
     this.loadingChats.set(true);
     this.api.getChats(page, size, q).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
       next: (response) => {
         this.chatsPage.set(response.number);
         this.chatsTotalPages.set(response.totalPages);
         this.chatsQuery.set(q);
+        this.chatsAccountId.set(accountId);
         const mapped = response.content.map(conversationToChat);
         this.chats.set(page === 0 ? mapped : this.mergeChats(this.chats(), mapped));
       }
@@ -64,6 +67,11 @@ export class WhatsappMessageStoreService {
   loadNextChatsPage(size = 30): void {
     if (this.loadingChats() || !this.hasMoreChats()) return;
     this.loadChats(this.chatsPage() + 1, size, this.chatsQuery());
+  }
+
+  setAccountFilter(accountId: number | undefined): void {
+    this.chatsAccountId.set(accountId);
+    this.loadChats(0, 30, this.chatsQuery(), accountId);
   }
 
   selectChatByRoute(conversationId?: number, jid?: string): void {
@@ -110,6 +118,7 @@ export class WhatsappMessageStoreService {
     this.currentChat.set(chat);
     this.activeViewers.set([]);
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
+    this.pendingAttachment.set(null);
     if (!chat?.id) return;
 
     // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
@@ -149,16 +158,17 @@ export class WhatsappMessageStoreService {
     this.sendMessage({ conversationId, type: 'TEXT', body, quotedMessageId });
   }
 
-  sendMedia(conversationId: number, mediaRef: string, body?: string): void {
-    this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef });
+  sendMedia(conversationId: number, mediaRef: string, body?: string, mediaFileName?: string, mediaMime?: string): void {
+    this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef, mediaFileName, mediaMime });
   }
 
   /** Sube el archivo al backend (multipart) y luego lo envía con su ref corta. */
   sendMediaFile(conversationId: number, file: File, caption?: string): void {
+    if (this.uploadingMedia() || this.sendingMessage()) return;
     this.sendMessageError.set(null);
     this.uploadingMedia.set(true);
     this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
-      next: ({ ref }) => this.sendMedia(conversationId, ref, caption),
+      next: ({ ref, fileName, mime }) => this.sendMedia(conversationId, ref, caption, fileName, mime),
       error: () => this.sendMessageError.set('No se pudo subir el archivo.')
     });
   }
@@ -246,6 +256,13 @@ export class WhatsappMessageStoreService {
       case 'OUTBOUND_FAILED':
         this.patchOutboundFailed(event.payload);
         break;
+      case 'STATUS':
+        if (event.payload.active === false) {
+          this.chats.update(chats => chats.filter(chat =>
+            chat.accountId !== event.payload.accountId &&
+            chat.serviceInstanciaId !== event.payload.instanciaId));
+        }
+        break;
       case 'CHAT_UPDATE':
         this.upsertChat(conversationToChat(event.payload));
         break;
@@ -320,6 +337,34 @@ export class WhatsappMessageStoreService {
     if (payload.outboundId != null) this.tempByOutboundId.delete(payload.outboundId);
   }
 
+  setPendingAttachment(file: File | null): void {
+    this.pendingAttachment.set(file);
+    this.sendMessageError.set(null);
+  }
+
+  sendPendingAttachment(conversationId: number, caption?: string): void {
+    const file = this.pendingAttachment();
+    if (!file || this.uploadingMedia() || this.sendingMessage()) return;
+
+    this.sendMessageError.set(null);
+    this.uploadingMedia.set(true);
+    this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
+      next: ({ ref, fileName, mime }) => {
+        this.pendingAttachment.set(null);
+        this.sendMedia(conversationId, ref, caption, fileName || file.name, mime || file.type);
+      },
+      error: () => this.sendMessageError.set('No se pudo subir el archivo.')
+    });
+  }
+
+  removeFailedMessage(message: Message): void {
+    if (message.status !== 'error' || !message.fromMe) return;
+    const conversationId = message.conversationId;
+    if (!conversationId) return;
+    const current = this.messagesByConversation().get(conversationId) || [];
+    this.setMessages(conversationId, current.filter(item => item.msgId !== message.msgId));
+  }
+
   private patchReceiptEvent(payload: unknown): void {
     const receipt = payload as { msgId?: string; id?: string; ids?: string[]; status?: string; receipt?: string };
     const status = this.normalizeStatus(receipt.status || receipt.receipt);
@@ -380,6 +425,9 @@ export class WhatsappMessageStoreService {
 
   private upsertChat(chat: Chat): void {
     this.chats.update((chats) => {
+      if (chat.serviceActive === false) {
+        return chats.filter((item) => item.id !== chat.id && item.jid !== chat.jid);
+      }
       const exists = chats.some((item) => item.id === chat.id || item.jid === chat.jid);
       return (exists ? chats.map((item) => item.id === chat.id || item.jid === chat.jid ? { ...item, ...chat } : item) : [chat, ...chats])
         .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));

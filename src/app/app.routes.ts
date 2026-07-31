@@ -203,6 +203,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'whatsapp/dashboard',
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-dashboard/whatsapp-dashboard.component').then(m => m.WhatsappDashboardComponent),
+    canActivate: [authGuard]
+  },
+  {
     // /whatsapp ahora sirve la page nueva (app/whatsapp). El módulo viejo
     // (features/whatsapp/.../main.component) queda huérfano a propósito.
     path: 'whatsapp',
@@ -451,7 +456,8 @@ export const routes: Routes = [
   {
     path: 'bot-voz',
     loadComponent: () => import('./features/bot-voz/bot-voz.component').then(m => m.BotVozComponent),
-    canActivate: [authGuard, adminOrSupervisorGuard]
+    // solo ADMIN: BotAdminController exige hasRole('ADMIN'), un supervisor entraria a la vista y recibiria 403 en los datos
+    canActivate: [authGuard, adminGuard]
   },
 
   {
