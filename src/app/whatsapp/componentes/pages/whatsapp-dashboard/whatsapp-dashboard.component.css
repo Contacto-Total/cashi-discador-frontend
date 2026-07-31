@@ -561,7 +561,15 @@ label select:focus {
   background: #0f9d8a;
 }
 
+.toggle.enabled {
+  background: #0f9d8a;
+}
+
 .toggle:checked::after {
+  transform: translateX(20px);
+}
+
+.toggle.enabled::after {
   transform: translateX(20px);
 }
 
