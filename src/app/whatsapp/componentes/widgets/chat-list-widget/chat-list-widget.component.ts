@@ -53,7 +53,7 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
          </label>
       </header>
 
-      <section class="min-h-0 flex-1 overflow-y-auto">
+       <section class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         @if (store.loadingChats() && !store.chats().length) {
           <div class="space-y-2 p-2">
             @for (item of skeletonItems; track item) {
