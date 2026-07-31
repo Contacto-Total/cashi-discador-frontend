@@ -112,25 +112,41 @@ interface MessageSender {
                             </div>
                           </div>
                             <div class="border-t border-slate-100 px-2.5 py-2">
-                              <div
-                                class="audio-waveform"
-                                role="slider"
-                                tabindex="0"
-                                [attr.aria-label]="'Avance del audio ' + audioDuration(message)"
-                                [attr.aria-valuenow]="audioProgress(message) * 100"
-                                aria-valuemin="0"
-                                aria-valuemax="100"
-                                (pointerdown)="startAudioSeek(message.msgId, $event, audioElement)"
-                                 (pointermove)="moveAudioSeek(message.msgId, $event, audioElement)"
-                                 (pointerup)="endAudioSeek(message.msgId, $event)"
-                                 (pointercancel)="endAudioSeek(message.msgId, $event)"
-                                 (keydown)="audioSeekKeydown(message.msgId, $event, audioElement)"
-                              >
-                                @for (bar of waveform(message); track $index) {
-                                  <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
-                                }
+                              <div class="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  class="grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-emerald-100 hover:text-emerald-700"
+                                  [attr.aria-label]="audioPlaying(message) ? 'Pausar audio' : 'Reproducir audio'"
+                                  [attr.aria-pressed]="audioPlaying(message)"
+                                  (click)="toggleAudio(message.msgId, audioElement); $event.stopPropagation()"
+                                >
+                                  @if (audioPlaying(message)) {
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                                  } @else {
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>
+                                  }
+                                </button>
+                                <div
+                                  class="audio-waveform flex-1"
+                                  role="slider"
+                                  tabindex="0"
+                                  [attr.aria-label]="'Avance del audio ' + audioDuration(message)"
+                                  [attr.aria-valuenow]="audioProgress(message) * 100"
+                                  aria-valuemin="0"
+                                  aria-valuemax="100"
+                                  (pointerdown)="startAudioSeek(message.msgId, $event, audioElement)"
+                                  (pointermove)="moveAudioSeek(message.msgId, $event, audioElement)"
+                                  (pointerup)="endAudioSeek(message.msgId, $event)"
+                                  (pointercancel)="endAudioSeek(message.msgId, $event)"
+                                  (keydown)="audioSeekKeydown(message.msgId, $event, audioElement)"
+                                >
+                                  @for (bar of waveform(message); track $index) {
+                                    <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
+                                  }
+                                </div>
+                                <span class="shrink-0 text-[11px] tabular-nums text-slate-500">{{ audioCurrentTime(message) }} / {{ audioDuration(message) }}</span>
                               </div>
-                              <audio #audioElement class="whatsapp-audio w-full" controls preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (error)="onMediaError(message.msgId)"></audio>
+                              <audio #audioElement class="whatsapp-audio" preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (play)="audioPlayState(message.msgId, true)" (pause)="audioPlayState(message.msgId, false)" (ended)="audioEnded(message.msgId)" (error)="onMediaError(message.msgId)"></audio>
                               <button type="button" class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 Descargar
@@ -326,15 +342,8 @@ interface MessageSender {
       background-size: 160px 160px;
     }
 
-    .whatsapp-audio {
-      height: 34px;
-      filter: saturate(0.85);
-    }
-
-    .whatsapp-audio::-webkit-media-controls-panel {
-      background-color: #f8fafc;
-    }
-     .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; margin-bottom: 6px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
+     .whatsapp-audio { display: none; }
+     .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
      .audio-waveform:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px #6ee7b7; }
      .audio-waveform span { flex: 1; min-width: 2px; max-width: 4px; border-radius: 999px; background: #cbd5e1; opacity: .85; transition: background-color .1s ease; }
      .audio-waveform span.audio-waveform-played { background: #10b981; }
@@ -354,6 +363,8 @@ export class ChatWidgetComponent {
   readonly audioDurations = signal(new Map<string, number>());
   readonly audioWaveforms = signal(new Map<string, number[]>());
   readonly audioProgresses = signal(new Map<string, number>());
+  readonly audioCurrentTimes = signal(new Map<string, number>());
+  readonly audioPlayingStates = signal(new Map<string, boolean>());
   private readonly seekingAudio = new Set<string>();
 
   // Panel de detalle de un mensaje (quién lo envió + quiénes lo vieron).
@@ -458,6 +469,32 @@ export class ChatWidgetComponent {
     const audio = event.target as HTMLAudioElement;
     if (!Number.isFinite(audio.duration) || this.seekingAudio.has(msgId)) return;
     this.audioProgresses.update((items) => new Map(items).set(msgId, audio.currentTime / audio.duration));
+    this.audioCurrentTimes.update((items) => new Map(items).set(msgId, audio.currentTime));
+  }
+
+  async toggleAudio(msgId: string, audio: HTMLAudioElement): Promise<void> {
+    if (audio.paused) {
+      await audio.play();
+    } else {
+      audio.pause();
+    }
+  }
+
+  audioPlayState(msgId: string, playing: boolean): void {
+    this.audioPlayingStates.update((items) => new Map(items).set(msgId, playing));
+  }
+
+  audioEnded(msgId: string): void {
+    this.audioPlayState(msgId, false);
+    this.audioProgresses.update((items) => new Map(items).set(msgId, 1));
+  }
+
+  audioPlaying(message: Message): boolean {
+    return this.audioPlayingStates().get(message.msgId) || false;
+  }
+
+  audioCurrentTime(message: Message): string {
+    return this.formatDuration(this.audioCurrentTimes().get(message.msgId) || 0);
   }
 
   audioProgress(message: Message): number {
@@ -497,6 +534,7 @@ export class ChatWidgetComponent {
     progress = Math.max(0, Math.min(1, progress));
     audio.currentTime = progress * audio.duration;
     this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+    this.audioCurrentTimes.update((items) => new Map(items).set(msgId, audio.currentTime));
   }
 
   private updateAudioPosition(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
@@ -506,6 +544,7 @@ export class ChatWidgetComponent {
     const progress = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     audio.currentTime = progress * audio.duration;
     this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+    this.audioCurrentTimes.update((items) => new Map(items).set(msgId, audio.currentTime));
   }
 
   audioDuration(message: Message): string {
