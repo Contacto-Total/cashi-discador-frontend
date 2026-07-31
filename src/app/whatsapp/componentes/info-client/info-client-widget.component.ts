@@ -144,16 +144,7 @@ interface InstallmentEditor {
                  <p class="py-4 text-center text-xs text-slate-500">Cargando ofertas…</p>
                } @else if (offersError()) {
                  <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{{ offersError() }}</p>
-               } @else if (offers().length) {
-                  <div class="space-y-1.5">
-                   @for (offer of offers(); track offer.field) {
-                     <div class="flex items-center justify-between gap-3 rounded bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-100">
-                       <span class="min-w-0 truncate font-medium text-slate-700">{{ offer.label }}</span>
-                       <span class="shrink-0 font-bold text-slate-900">{{ formatCurrency(offer.value) }}</span>
-                     </div>
-                   }
-                 </div>
-                } @else {
+                } @else if (!offers().length) {
                   <p class="py-4 text-center text-xs text-slate-500">No hay ofertas configuradas para este cliente.</p>
                 }
                 @if (offers().length && !promiseInProcess()) {
@@ -169,10 +160,14 @@ interface InstallmentEditor {
                   @if (selectedOffer(); as offer) {
                     <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
                       <p class="text-xs font-bold text-slate-800">{{ offer.label }} · {{ formatCurrency(offer.value) }}</p>
-                      <div class="mt-2 flex items-center gap-2">
-                        <label class="text-[10px] font-semibold text-slate-500">Descuento %</label>
-                        <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="discountPercent() ?? ''" (ngModelChange)="setDiscount($event)" />
-                        @if (discountPercent() !== null) { <span class="text-[10px] text-slate-500">+ S/ 20 transferencia</span> }
+                      <div class="mt-2 space-y-1.5">
+                        <div class="flex items-center justify-between gap-3">
+                          <label class="text-[10px] font-semibold text-slate-500">Descuento %</label>
+                          <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="discountPercent() ?? ''" (ngModelChange)="setDiscount($event)" />
+                        </div>
+                        @if (discountPercent() !== null) {
+                          <div class="text-right text-[10px] font-medium text-slate-500">Transferencia: + S/ 20.00</div>
+                        }
                       </div>
                       <p class="mt-2 text-right text-sm font-black text-emerald-700">Total: {{ formatCurrency(calculatedPromiseAmount()) }}</p>
                       <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
@@ -185,10 +180,16 @@ interface InstallmentEditor {
                       </div>
                       <div class="mt-2 space-y-1.5">
                         @for (installment of installments(); track installment.numeroCuota) {
-                          <div class="flex items-center gap-2 rounded bg-slate-50 px-2 py-1.5">
-                            <span class="w-9 text-[10px] font-bold text-slate-500">C{{ installment.numeroCuota }}</span>
-                            <input type="number" min="0" step="0.01" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs" [ngModel]="installment.monto" (ngModelChange)="updateInstallment(installment.numeroCuota, 'monto', $event)" />
-                            <input type="date" class="w-[125px] rounded border border-slate-300 px-1 py-1 text-[10px]" [ngModel]="installment.fechaPago" (ngModelChange)="updateInstallment(installment.numeroCuota, 'fechaPago', $event)" />
+                          <div class="rounded bg-slate-50 px-2 py-2">
+                            <div class="mb-1 text-[10px] font-bold text-slate-500">Cuota {{ installment.numeroCuota }}</div>
+                            <div class="flex items-center gap-2">
+                              <label class="w-12 text-[10px] text-slate-500">Monto</label>
+                              <input type="number" min="0" step="0.01" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs" [ngModel]="installment.monto" (ngModelChange)="updateInstallment(installment.numeroCuota, 'monto', $event)" />
+                            </div>
+                            <div class="mt-1.5 flex items-center gap-2">
+                              <label class="w-12 text-[10px] text-slate-500">Fecha</label>
+                              <input type="date" class="min-w-0 flex-1 rounded border border-slate-300 px-1 py-1 text-[10px]" [ngModel]="installment.fechaPago" (ngModelChange)="updateInstallment(installment.numeroCuota, 'fechaPago', $event)" />
+                            </div>
                           </div>
                         }
                       </div>
