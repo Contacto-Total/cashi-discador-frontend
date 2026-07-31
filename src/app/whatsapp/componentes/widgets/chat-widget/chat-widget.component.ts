@@ -111,14 +111,31 @@ interface MessageSender {
                               <p class="text-[11px] text-slate-400">Audio de WhatsApp · {{ audioDuration(message) }}</p>
                             </div>
                           </div>
-                           <div class="border-t border-slate-100 px-2.5 py-2">
-                             <div class="audio-waveform" aria-hidden="true">
-                               @for (bar of waveform(message); track $index) {
-                                 <span [style.height.%]="barHeight(bar)"></span>
-                               }
-                             </div>
-                             <audio class="whatsapp-audio w-full" controls preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (error)="onMediaError(message.msgId)"></audio>
-                           </div>
+                            <div class="border-t border-slate-100 px-2.5 py-2">
+                              <div
+                                class="audio-waveform"
+                                role="slider"
+                                tabindex="0"
+                                [attr.aria-label]="'Avance del audio ' + audioDuration(message)"
+                                [attr.aria-valuenow]="audioProgress(message) * 100"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                                (pointerdown)="startAudioSeek(message.msgId, $event, audioElement)"
+                                 (pointermove)="moveAudioSeek(message.msgId, $event, audioElement)"
+                                 (pointerup)="endAudioSeek(message.msgId, $event)"
+                                 (pointercancel)="endAudioSeek(message.msgId, $event)"
+                                 (keydown)="audioSeekKeydown(message.msgId, $event, audioElement)"
+                              >
+                                @for (bar of waveform(message); track $index) {
+                                  <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
+                                }
+                              </div>
+                              <audio #audioElement class="whatsapp-audio w-full" controls preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (error)="onMediaError(message.msgId)"></audio>
+                              <button type="button" class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                Descargar
+                              </button>
+                            </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
                         <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" (click)="downloadMedia(message); $event.stopPropagation()">
@@ -317,8 +334,10 @@ interface MessageSender {
     .whatsapp-audio::-webkit-media-controls-panel {
       background-color: #f8fafc;
     }
-    .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; margin-bottom: 6px; }
-    .audio-waveform span { flex: 1; min-width: 2px; max-width: 4px; border-radius: 999px; background: #10b981; opacity: .7; }
+     .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; margin-bottom: 6px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
+     .audio-waveform:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px #6ee7b7; }
+     .audio-waveform span { flex: 1; min-width: 2px; max-width: 4px; border-radius: 999px; background: #cbd5e1; opacity: .85; transition: background-color .1s ease; }
+     .audio-waveform span.audio-waveform-played { background: #10b981; }
   `]
 })
 export class ChatWidgetComponent {
@@ -334,6 +353,8 @@ export class ChatWidgetComponent {
   private readonly mediaRetry = new Map<string, number>();
   readonly audioDurations = signal(new Map<string, number>());
   readonly audioWaveforms = signal(new Map<string, number[]>());
+  readonly audioProgresses = signal(new Map<string, number>());
+  private readonly seekingAudio = new Set<string>();
 
   // Panel de detalle de un mensaje (quién lo envió + quiénes lo vieron).
   readonly detailMessage = signal<Message | null>(null);
@@ -425,10 +446,66 @@ export class ChatWidgetComponent {
   }
 
   audioMetadata(msgId: string, event: Event): void {
-    const duration = (event.target as HTMLAudioElement).duration;
+    const audio = event.target as HTMLAudioElement;
+    audio.volume = 1;
+    const duration = audio.duration;
     if (!Number.isFinite(duration)) return;
     this.audioDurations.update((items) => new Map(items).set(msgId, duration));
     if (!this.audioWaveforms().has(msgId)) void this.loadWaveform(msgId);
+  }
+
+  audioTimeUpdate(msgId: string, event: Event): void {
+    const audio = event.target as HTMLAudioElement;
+    if (!Number.isFinite(audio.duration) || this.seekingAudio.has(msgId)) return;
+    this.audioProgresses.update((items) => new Map(items).set(msgId, audio.currentTime / audio.duration));
+  }
+
+  audioProgress(message: Message): number {
+    return this.audioProgresses().get(message.msgId) || 0;
+  }
+
+  isWaveformBarPlayed(message: Message, index: number): boolean {
+    return index / this.waveform(message).length <= this.audioProgress(message);
+  }
+
+  startAudioSeek(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
+    this.seekingAudio.add(msgId);
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.updateAudioPosition(msgId, event, audio);
+  }
+
+  moveAudioSeek(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
+    if (this.seekingAudio.has(msgId)) this.updateAudioPosition(msgId, event, audio);
+  }
+
+  endAudioSeek(msgId: string, event: PointerEvent): void {
+    if (!this.seekingAudio.has(msgId)) return;
+    this.seekingAudio.delete(msgId);
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+  }
+
+  audioSeekKeydown(msgId: string, event: KeyboardEvent, audio: HTMLAudioElement): void {
+    if (!Number.isFinite(audio.duration)) return;
+    const step = 5 / audio.duration;
+    let progress = this.audioProgresses().get(msgId) || 0;
+    if (event.key === 'ArrowLeft') progress -= step;
+    else if (event.key === 'ArrowRight') progress += step;
+    else if (event.key === 'Home') progress = 0;
+    else if (event.key === 'End') progress = 1;
+    else return;
+    event.preventDefault();
+    progress = Math.max(0, Math.min(1, progress));
+    audio.currentTime = progress * audio.duration;
+    this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+  }
+
+  private updateAudioPosition(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
+    if (!Number.isFinite(audio.duration)) return;
+    const waveform = event.currentTarget as HTMLElement;
+    const bounds = waveform.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+    audio.currentTime = progress * audio.duration;
+    this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
   }
 
   audioDuration(message: Message): string {
