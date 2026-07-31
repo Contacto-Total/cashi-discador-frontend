@@ -15,6 +15,13 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
 
 type SearchMode = 'telefono' | 'documento';
 
+type PromiseResult = {
+  kind: 'success' | 'error';
+  title: string;
+  message: string;
+  detail?: string;
+};
+
 interface OfferDisplay {
   field: string;
   label: string;
@@ -58,9 +65,28 @@ const PROMISE_TIPIFICATION_ID = 5;
 
       @if (!chat()) {
         <p class="mt-8 text-center text-sm text-slate-400">Sin chat seleccionado.</p>
-      } @else if (loading()) {
-        <p class="mt-8 text-center text-sm text-slate-500">Buscando cliente…</p>
-      } @else if (selectedClient(); as sel) {
+       } @else if (loading()) {
+         <p class="mt-8 text-center text-sm text-slate-500">Buscando cliente…</p>
+       } @else if (promiseResult(); as result) {
+         <div class="flex min-h-0 flex-1 flex-col items-center justify-center px-5 py-8 text-center">
+           <div class="grid size-16 place-items-center rounded-full" [class]="result.kind === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
+             @if (result.kind === 'success') {
+               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+             } @else {
+               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+             }
+           </div>
+           <h3 class="mt-5 text-base font-bold text-slate-900">{{ result.title }}</h3>
+           <p class="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">{{ result.message }}</p>
+           @if (result.detail) {
+             <p class="mt-3 max-w-xs rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-800 ring-1 ring-amber-100">{{ result.detail }}</p>
+           }
+           <button type="button" class="mt-7 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50" (click)="backFromPromiseResult()">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+             Atrás
+           </button>
+         </div>
+       } @else if (selectedClient(); as sel) {
         <!-- ===== Opciones del cliente ===== -->
         <div class="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
           <button
@@ -320,6 +346,7 @@ export class InfoClientWidgetComponent {
   readonly cartaError = signal<string | null>(null);
   readonly agreementLoading = signal(false);
   readonly agreementError = signal<string | null>(null);
+  readonly promiseResult = signal<PromiseResult | null>(null);
   readonly showOffers = signal(false);
   readonly offersLoading = signal(false);
   readonly offersError = signal<string | null>(null);
@@ -374,8 +401,9 @@ export class InfoClientWidgetComponent {
       this.query.set('');
       this.manualOpen.set(false);
       this.mode.set('telefono');
-      this.selectedClient.set(null);
-      this.showOffers.set(false);
+       this.selectedClient.set(null);
+       this.promiseResult.set(null);
+       this.showOffers.set(false);
       this.offers.set([]);
       this.offersError.set(null);
       this.promiseInProcess.set(false);
@@ -396,6 +424,7 @@ export class InfoClientWidgetComponent {
 
   openInfo(result: GlobalSearchResult): void {
     this.selectedClient.set(result);
+    this.promiseResult.set(null);
     this.refreshHasCarta(result);
     this.showOffers.set(false);
     this.offers.set([]);
@@ -419,6 +448,12 @@ export class InfoClientWidgetComponent {
     this.selectedOffer.set(null);
     this.installments.set([]);
     this.offerSent.set(false);
+  }
+
+  backFromPromiseResult(): void {
+    this.promiseResult.set(null);
+    this.agreementError.set(null);
+    this.backToOptions();
   }
 
   runOption(key: string): void {
@@ -683,7 +718,12 @@ export class InfoClientWidgetComponent {
     const user = this.auth.getCurrentUser();
     const clientId = Number(result?.clientData.id);
     if (!result || !config || !chat?.id || !clientId || !user?.id) {
-      this.agreementError.set('Faltan datos para generar la promesa de pago.');
+      this.promiseResult.set({
+        kind: 'error',
+        title: 'No se pudo crear la promesa de pago.',
+        message: 'Faltan datos para generar la promesa de pago.',
+        detail: 'Verifica si el cliente tiene una excepción pendiente antes de volver a intentarlo.'
+      });
       return;
     }
 
@@ -723,22 +763,41 @@ export class InfoClientWidgetComponent {
         this.clearStoredOfferDraft();
         this.offerSent.set(false);
         if (this.customAmount()) {
-          this.agreementError.set('Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.');
+          this.promiseResult.set({
+            kind: 'success',
+            title: 'Promesa enviada a evaluación',
+            message: 'Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.'
+          });
           return;
         }
 
         const managementId = Number(created?.id || created?.managementId || created?.data?.id);
         if (!managementId) {
-          this.agreementError.set('La promesa se creó, pero no se pudo generar el acuerdo automáticamente.');
+          this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo completar la promesa',
+            message: 'La promesa se creó, pero no se pudo generar el acuerdo automáticamente.',
+            detail: 'Verifica si el cliente tiene una excepción pendiente antes de volver a intentarlo.'
+          });
           return;
         }
         this.agreementLoading.set(true);
         this.cartaAcuerdo.generarCarta(managementId, Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
           next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' })),
-          error: () => this.agreementError.set('La promesa se creó, pero no se pudo generar el acuerdo.')
+          error: () => this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo generar el acuerdo',
+            message: 'La promesa se creó, pero no se pudo generar el acuerdo.',
+            detail: 'Verifica si el cliente tiene una excepción pendiente.'
+          })
         });
       },
-      error: () => this.agreementError.set('No se pudo crear la promesa de pago.')
+      error: () => this.promiseResult.set({
+        kind: 'error',
+        title: 'No se pudo crear la promesa de pago.',
+        message: 'No fue posible registrar la promesa para este cliente.',
+        detail: 'Verifica si el cliente tiene una excepción pendiente antes de volver a intentarlo.'
+      })
     });
   }
 
