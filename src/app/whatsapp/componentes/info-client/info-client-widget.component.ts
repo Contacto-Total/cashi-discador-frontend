@@ -27,6 +27,18 @@ interface InstallmentEditor {
   fechaPago: string;
 }
 
+interface StoredOfferDraft {
+  chatKey: string;
+  documento: string;
+  subPortfolioId: number;
+  offerField: string;
+  discount: number;
+  transferFee: number;
+  installmentCount: number;
+  installments: InstallmentEditor[];
+  expiresAt: number;
+}
+
 const PROMISE_TIPIFICATION_ID = 5;
 
 @Component({
@@ -159,8 +171,9 @@ const PROMISE_TIPIFICATION_ID = 5;
                       </button>
                     }
                   </div>
-                  @if (selectedOffer(); as offer) {
-                    <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
+                   @if (selectedOffer(); as offer) {
+                     @if (!offerSent()) {
+                     <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
                       <p class="text-xs font-bold text-slate-800">{{ offer.label }} · {{ formatCurrency(offer.value) }}</p>
                       <div class="mt-2 space-y-1.5">
                         <div class="flex items-center justify-between gap-3">
@@ -197,10 +210,21 @@ const PROMISE_TIPIFICATION_ID = 5;
                         }
                       </div>
                       @if (scheduleConfig()) {
-                        <button type="button" class="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">{{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}</button>
-                      }
-                    </div>
-                  }
+                         <button type="button" class="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="offering()" (click)="sendOffer()">{{ offering() ? 'Enviando oferta...' : 'Ofertar' }}</button>
+                       }
+                     </div>
+                     } @else {
+                       <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                         <p class="text-xs font-bold text-emerald-800">Oferta enviada al cliente</p>
+                         <p class="mt-1 text-xs text-emerald-700">{{ formatCurrency(calculatedPromiseAmount()) }} en {{ installmentCount() }} cuota{{ installmentCount() === 1 ? '' : 's' }}.</p>
+                         <div class="mt-3 grid grid-cols-2 gap-2">
+                           <button type="button" class="rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" (click)="editSentOffer()">Cambiar</button>
+                           <button type="button" class="rounded-lg border border-rose-200 bg-white px-2 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50" (click)="cancelSentOffer()">Cancelar</button>
+                         </div>
+                         <button type="button" class="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">{{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}</button>
+                       </div>
+                     }
+                   }
                 }
               </section>
            }
@@ -304,6 +328,8 @@ export class InfoClientWidgetComponent {
   readonly customAmount = signal(false);
   readonly scheduleConfig = signal<PaymentScheduleConfig | null>(null);
   readonly creatingPromise = signal(false);
+  readonly offering = signal(false);
+  readonly offerSent = signal(false);
   readonly selectedOffer = signal<OfferDisplay | null>(null);
   readonly discountPercent = signal<number>(0);
   readonly transferFee = signal<number>(0);
@@ -326,6 +352,7 @@ export class InfoClientWidgetComponent {
     this.mode() === 'documento' ? 'DNI / documento' : 'Número de teléfono');
 
   private lastChatKey?: string | number;
+  private readonly offerStorageKey = 'whatsapp-offer-draft-v1';
 
   constructor(
     private readonly store: WhatsappMessageStoreService,
@@ -355,6 +382,7 @@ export class InfoClientWidgetComponent {
       this.scheduleConfig.set(null);
       this.selectedOffer.set(null);
       this.installments.set([]);
+      this.offerSent.set(false);
       if (!chat) return;
 
       const phone = this.acl.phoneKey(chat.contactPhone);
@@ -376,6 +404,7 @@ export class InfoClientWidgetComponent {
     this.scheduleConfig.set(null);
     this.selectedOffer.set(null);
     this.installments.set([]);
+    this.offerSent.set(false);
   }
 
   closeInfo(): void {
@@ -389,6 +418,7 @@ export class InfoClientWidgetComponent {
     this.customAmount.set(false);
     this.selectedOffer.set(null);
     this.installments.set([]);
+    this.offerSent.set(false);
   }
 
   runOption(key: string): void {
@@ -468,7 +498,8 @@ export class InfoClientWidgetComponent {
             return { field: String(header.codigo), label: header.nombre || this.formatFieldLabel(header.codigo), value };
           })
           .filter((offer: OfferDisplay) => Number.isFinite(offer.value) && offer.value > 0);
-        this.offers.set(offers);
+    this.offers.set(offers);
+        this.restoreOfferDraft(result);
       },
       error: () => this.offersError.set('No se pudieron consultar las ofertas del cliente.')
     });
@@ -481,6 +512,7 @@ export class InfoClientWidgetComponent {
     this.customAmount.set(false);
     this.installmentCount.set(1);
     this.rebuildInstallments();
+    this.persistOfferDraft();
   }
 
   setDiscount(value: number | string): void {
@@ -488,6 +520,7 @@ export class InfoClientWidgetComponent {
     this.discountPercent.set(Number.isFinite(numeric) && numeric >= 0 ? Math.min(100, numeric) : 0);
     this.customAmount.set(this.discountPercent() > 0 || this.transferFee() > 0);
     this.rebuildInstallments();
+    this.persistOfferDraft();
   }
 
   setTransferFee(value: number | string): void {
@@ -495,6 +528,7 @@ export class InfoClientWidgetComponent {
     this.transferFee.set(Number.isFinite(numeric) && numeric >= 0 ? Math.min(20, numeric) : 0);
     this.customAmount.set(this.discountPercent() > 0 || this.transferFee() > 0);
     this.rebuildInstallments();
+    this.persistOfferDraft();
   }
 
   calculatedPromiseAmount(): number {
@@ -508,6 +542,7 @@ export class InfoClientWidgetComponent {
     const count = Math.max(1, Math.min(20, Math.floor(Number(value) || 1)));
     this.installmentCount.set(count);
     this.rebuildInstallments();
+    this.persistOfferDraft();
   }
 
   changeInstallmentCount(delta: number): void {
@@ -519,6 +554,7 @@ export class InfoClientWidgetComponent {
       ? { ...item, [field]: field === 'monto' ? Number(value) || 0 : String(value) }
       : item));
     this.refreshScheduleConfig();
+    this.persistOfferDraft();
   }
 
   private rebuildInstallments(): void {
@@ -552,6 +588,92 @@ export class InfoClientWidgetComponent {
       montoBase: offer.value,
       generaCartaAcuerdo: !this.customAmount()
     });
+  }
+
+  sendOffer(): void {
+    const chat = this.chat();
+    const result = this.selectedClient();
+    const config = this.scheduleConfig();
+    if (!chat?.id || !result || !config || this.offering()) return;
+
+    this.offering.set(true);
+    this.store.sendText(chat.id, this.buildOfferSummary(config));
+    this.offerSent.set(true);
+    this.persistOfferDraft();
+    this.offering.set(false);
+  }
+
+  editSentOffer(): void {
+    this.offerSent.set(false);
+    this.persistOfferDraft();
+  }
+
+  cancelSentOffer(): void {
+    this.offerSent.set(false);
+    this.selectedOffer.set(null);
+    this.scheduleConfig.set(null);
+    this.installments.set([]);
+    this.discountPercent.set(0);
+    this.transferFee.set(0);
+    this.customAmount.set(false);
+    this.clearStoredOfferDraft();
+  }
+
+  private buildOfferSummary(config: PaymentScheduleConfig): string {
+    const rows = config.cuotas.map(cuota => `Cuota ${cuota.numeroCuota}: ${this.formatCurrency(cuota.monto)} - ${cuota.fechaPago}`).join('\n');
+    return `Oferta de pago\nTotal: ${this.formatCurrency(config.montoTotal)}\n${rows}\n\n¿Está de acuerdo? Responda SI o NO.`;
+  }
+
+  private persistOfferDraft(): void {
+    const chat = this.chat();
+    const result = this.selectedClient();
+    const offer = this.selectedOffer();
+    if (!chat || !result || !offer || !this.installments().length) return;
+    const draft: StoredOfferDraft = {
+      chatKey: String(chat.id ?? chat.jid),
+      documento: result.clientData.documento,
+      subPortfolioId: result.subPortfolioId,
+      offerField: offer.field,
+      discount: this.discountPercent(),
+      transferFee: this.transferFee(),
+      installmentCount: this.installmentCount(),
+      installments: this.installments(),
+      expiresAt: Date.now() + 10 * 60 * 1000
+    };
+    localStorage.setItem(this.offerStorageKey, JSON.stringify(draft));
+  }
+
+  private restoreOfferDraft(result: GlobalSearchResult): void {
+    try {
+      const raw = localStorage.getItem(this.offerStorageKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw) as StoredOfferDraft;
+      const chat = this.chat();
+      const matches = chat && draft.chatKey === String(chat.id ?? chat.jid)
+        && draft.documento === result.clientData.documento
+        && draft.subPortfolioId === result.subPortfolioId
+        && draft.expiresAt > Date.now();
+      if (!matches) {
+        if (draft.expiresAt <= Date.now()) this.clearStoredOfferDraft();
+        return;
+      }
+      const offer = this.offers().find(item => item.field === draft.offerField);
+      if (!offer) return;
+      this.selectedOffer.set(offer);
+      this.discountPercent.set(draft.discount);
+      this.transferFee.set(draft.transferFee);
+      this.installmentCount.set(Math.max(1, Math.min(20, draft.installmentCount)));
+      this.installments.set(draft.installments);
+      this.customAmount.set(draft.discount > 0 || draft.transferFee > 0);
+      this.refreshScheduleConfig();
+      this.offerSent.set(true);
+    } catch {
+      this.clearStoredOfferDraft();
+    }
+  }
+
+  private clearStoredOfferDraft(): void {
+    localStorage.removeItem(this.offerStorageKey);
   }
 
   createPromise(): void {
@@ -598,8 +720,8 @@ export class InfoClientWidgetComponent {
 
     this.management.createPaymentSchedule(request).pipe(finalize(() => this.creatingPromise.set(false))).subscribe({
       next: (created: any) => {
-        const summary = this.buildPromiseSummary(config, this.customAmount());
-        this.store.sendText(chat.id!, summary);
+        this.clearStoredOfferDraft();
+        this.offerSent.set(false);
         if (this.customAmount()) {
           this.agreementError.set('Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.');
           return;
