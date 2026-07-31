@@ -36,18 +36,33 @@ export class BotVozComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.cargarConfig();
     this.cargarPerfiles();
-    this.refresco = setInterval(() => this.refrescarTabActiva(), this.REFRESCO_MS);
+    this.cargarCola(true);   // alimenta el indicador de estado de la cabecera
+    this.refresco = setInterval(() => this.refrescar(), this.REFRESCO_MS);
   }
 
   ngOnDestroy(): void {
     clearInterval(this.refresco);
   }
 
-  /** Solo la pestaña visible: config y perfiles los edita el usuario y
-   *  recargarlos le pisaria lo que esta escribiendo. */
-  private refrescarTabActiva(): void {
-    if (this.activeTab === 'cola') this.cargarCola(true);
+  /** La cola se refresca siempre porque de ella sale el estado de la cabecera.
+   *  Config y perfiles no: recargarlos pisaria lo que el usuario esta editando. */
+  private refrescar(): void {
+    this.cargarCola(true);
     if (this.activeTab === 'llamadas') this.cargarSesiones();
+  }
+
+  /**
+   * Estado real del bot. `config.activo` es solo el kill-switch: sigue en true
+   * cuando la cola ya se termino, porque nada lo apaga solo. Sin mirar la cola,
+   * la cabecera decia "discando" indefinidamente.
+   */
+  get estadoBot(): string {
+    if (!this.config?.activo) return 'Detenido';
+    const enLlamada = this.contar('EN_LLAMADA');
+    if (enLlamada > 0) return `Discando — ${enLlamada} en llamada`;
+    const pendientes = this.contar('PENDIENTE');
+    if (pendientes > 0) return `Activo — ${pendientes} en cola`;
+    return this.cola.length ? 'Activo — cola terminada' : 'Activo — sin cola';
   }
 
   switchTab(t: 'config' | 'perfiles' | 'cola' | 'llamadas'): void {
