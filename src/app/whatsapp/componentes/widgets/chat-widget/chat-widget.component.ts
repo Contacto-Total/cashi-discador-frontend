@@ -76,11 +76,16 @@ interface MessageSender {
               @for (message of messages(); track message.msgId) {
                 <article [id]="messageElementId(message.msgId)" class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
                   @if (message.fromMe) {
-                    <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                    </button>
+                    <div class="flex shrink-0 flex-col items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="7" r=".7" fill="currentColor"/></svg>
+                      </button>
+                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      </button>
+                    </div>
                   }
-                  <div [class]="bubbleClass(message)" (click)="openMessageDetail(message)">
+                  <div [class]="bubbleClass(message)">
                     @if (message.quotedMessageId || message.quotedText) {
                       <div class="mb-1 overflow-hidden rounded border-l-2 px-2 py-1 text-xs" [class]="message.fromMe ? 'border-white/70 bg-white/15' : 'border-emerald-400 bg-black/5'">
                         <p class="truncate font-semibold" [class]="message.fromMe ? 'text-white' : 'text-emerald-700'">{{ message.quotedFromMe ? 'Tú' : (message.quotedSender || 'Mensaje') }}</p>
@@ -206,9 +211,14 @@ interface MessageSender {
                     </div>
                   </div>
                   @if (!message.fromMe) {
-                    <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                    </button>
+                    <div class="flex shrink-0 flex-col items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="7" r=".7" fill="currentColor"/></svg>
+                      </button>
+                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      </button>
+                    </div>
                   }
                 </article>
               }
@@ -217,10 +227,10 @@ interface MessageSender {
 
           </div>
 
-          @if (messages().length) {
+          @if (messages().length && !isViewingBottom) {
             <button
               type="button"
-              class="absolute bottom-4 right-4 grid size-10 place-items-center rounded-full border border-slate-200 shadow-md transition hover:scale-105"
+              class="absolute bottom-3 right-3 grid size-8 place-items-center rounded-full border border-slate-200 shadow-md transition hover:scale-105"
               [class.bg-emerald-500]="hasUnreadMessages()"
               [class.text-white]="hasUnreadMessages()"
               [class.bg-white]="!hasUnreadMessages()"
@@ -228,7 +238,7 @@ interface MessageSender {
               [attr.aria-label]="hasUnreadMessages() ? 'Ir al mensaje nuevo' : 'Ir al final del chat'"
               (click)="jumpToMessages()"
             >
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
               @if (hasUnreadMessages()) {
                 <span class="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{{ unreadMessages() }}</span>
               }
@@ -295,7 +305,7 @@ interface MessageSender {
     }
 
     @if (detailMessage(); as detail) {
-      <div class="fixed inset-0 z-50 flex justify-end bg-slate-950/50" (click)="closeMessageDetail()">
+      <div class="fixed inset-0 z-[9999] flex justify-end bg-slate-950/50" (click)="closeMessageDetail()">
         <aside class="detail-panel flex h-full w-full max-w-sm flex-col bg-white shadow-2xl" (click)="$event.stopPropagation()">
           <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <h3 class="text-sm font-semibold text-slate-950">Detalle del mensaje</h3>
@@ -404,7 +414,7 @@ export class ChatWidgetComponent {
   private pendingScrollToBottom = false;
   readonly unreadMessages = signal(0);
   private firstUnreadMessageId?: string;
-  private isViewingBottom = true;
+  isViewingBottom = true;
 
   constructor(
     readonly store: WhatsappMessageStoreService,
