@@ -51,7 +51,7 @@ interface MessageSender {
           }
         </header>
 
-        <div #messagesPanel class="chat-bg min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div #messagesPanel class="chat-bg relative min-h-0 flex-1 overflow-y-auto px-5 py-4" (scroll)="onMessagesScroll()">
           @if (store.hasMore()) {
             <div class="mb-4 flex justify-center">
               <button
@@ -73,7 +73,7 @@ interface MessageSender {
           } @else {
             <div class="space-y-1.5">
               @for (message of messages(); track message.msgId) {
-                <article class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
+                <article [id]="messageElementId(message.msgId)" class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
                   @if (message.fromMe) {
                     <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
@@ -210,6 +210,24 @@ interface MessageSender {
                 </article>
               }
             </div>
+          }
+
+          @if (messages().length) {
+            <button
+              type="button"
+              class="absolute bottom-4 right-4 grid size-10 place-items-center rounded-full border border-slate-200 shadow-md transition hover:scale-105"
+              [class.bg-emerald-500]="hasUnreadMessages()"
+              [class.text-white]="hasUnreadMessages()"
+              [class.bg-white]="!hasUnreadMessages()"
+              [class.text-slate-700]="!hasUnreadMessages()"
+              [attr.aria-label]="hasUnreadMessages() ? 'Ir al mensaje nuevo' : 'Ir al final del chat'"
+              (click)="jumpToMessages()"
+            >
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+              @if (hasUnreadMessages()) {
+                <span class="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{{ unreadMessages() }}</span>
+              }
+            </button>
           }
         </div>
 
