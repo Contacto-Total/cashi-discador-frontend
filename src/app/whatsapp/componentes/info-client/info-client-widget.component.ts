@@ -455,7 +455,9 @@ export class InfoClientWidgetComponent {
       next: (headers) => {
         const raw = result.clientData;
         const offers = (headers || [])
-          .filter((header: any) => header.esVisibleMonto !== 0 && !this.isOfferExcluded(header.codigo))
+          .filter((header: any) =>
+            (header.esVisibleMonto === 1 || header.esVisibleMonto === undefined || header.esVisibleMonto === null) &&
+            !this.isOfferExcluded(header.codigo))
           .map((header: any) => {
             const key = Object.keys(raw).find(rawKey => rawKey.toLowerCase() === String(header.codigo).toLowerCase());
             const value = key ? Number(raw[key]) : Number.NaN;
