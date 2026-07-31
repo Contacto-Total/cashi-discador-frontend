@@ -163,11 +163,12 @@ interface InstallmentEditor {
                       <div class="mt-2 space-y-1.5">
                         <div class="flex items-center justify-between gap-3">
                           <label class="text-[10px] font-semibold text-slate-500">Descuento %</label>
-                          <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="discountPercent() ?? ''" (ngModelChange)="setDiscount($event)" />
+                          <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="discountPercent()" (ngModelChange)="setDiscount($event)" />
                         </div>
-                        @if (discountPercent() !== null) {
-                          <div class="text-right text-[10px] font-medium text-slate-500">Transferencia: + S/ 20.00</div>
-                        }
+                        <div class="flex items-center justify-between gap-3">
+                          <label class="text-[10px] font-semibold text-slate-500">Transferencia S/</label>
+                          <input type="number" min="0" max="20" step="0.01" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="transferFee()" (ngModelChange)="setTransferFee($event)" />
+                        </div>
                       </div>
                       <p class="mt-2 text-right text-sm font-black text-emerald-700">Total: {{ formatCurrency(calculatedPromiseAmount()) }}</p>
                       <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
@@ -302,7 +303,8 @@ export class InfoClientWidgetComponent {
   readonly scheduleConfig = signal<PaymentScheduleConfig | null>(null);
   readonly creatingPromise = signal(false);
   readonly selectedOffer = signal<OfferDisplay | null>(null);
-  readonly discountPercent = signal<number | null>(null);
+  readonly discountPercent = signal<number>(0);
+  readonly transferFee = signal<number>(0);
   readonly installmentCount = signal(1);
   readonly installments = signal<InstallmentEditor[]>([]);
 
@@ -472,7 +474,8 @@ export class InfoClientWidgetComponent {
 
   selectOffer(offer: OfferDisplay): void {
     this.selectedOffer.set(offer);
-    this.discountPercent.set(null);
+    this.discountPercent.set(0);
+    this.transferFee.set(0);
     this.customAmount.set(false);
     this.installmentCount.set(1);
     this.rebuildInstallments();
@@ -480,8 +483,15 @@ export class InfoClientWidgetComponent {
 
   setDiscount(value: number | string): void {
     const numeric = Number(value);
-    this.discountPercent.set(Number.isFinite(numeric) && numeric >= 0 ? Math.min(100, numeric) : null);
-    this.customAmount.set(this.discountPercent() !== null);
+    this.discountPercent.set(Number.isFinite(numeric) && numeric >= 0 ? Math.min(100, numeric) : 0);
+    this.customAmount.set(this.discountPercent() > 0 || this.transferFee() > 0);
+    this.rebuildInstallments();
+  }
+
+  setTransferFee(value: number | string): void {
+    const numeric = Number(value);
+    this.transferFee.set(Number.isFinite(numeric) && numeric >= 0 ? Math.min(20, numeric) : 0);
+    this.customAmount.set(this.discountPercent() > 0 || this.transferFee() > 0);
     this.rebuildInstallments();
   }
 
@@ -489,7 +499,7 @@ export class InfoClientWidgetComponent {
     const offer = this.selectedOffer();
     const discount = this.discountPercent();
     if (!offer) return 0;
-    return discount === null ? offer.value : Math.round((offer.value * (1 - discount / 100) + 20) * 100) / 100;
+    return Math.round((offer.value * (1 - discount / 100) + this.transferFee()) * 100) / 100;
   }
 
   setInstallmentCount(value: number | string): void {
