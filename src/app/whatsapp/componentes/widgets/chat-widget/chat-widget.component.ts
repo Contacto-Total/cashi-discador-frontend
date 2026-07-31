@@ -51,7 +51,8 @@ interface MessageSender {
           }
         </header>
 
-        <div #messagesPanel class="chat-bg relative min-h-0 flex-1 overflow-y-auto px-5 py-4" (scroll)="onMessagesScroll()">
+        <div class="relative min-h-0 flex-1">
+          <div #messagesPanel class="chat-bg h-full overflow-y-auto px-5 py-4" (scroll)="onMessagesScroll()">
           @if (store.hasMore()) {
             <div class="mb-4 flex justify-center">
               <button
@@ -144,13 +145,15 @@ interface MessageSender {
                                     <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
                                   }
                                 </div>
-                                <span class="shrink-0 text-[11px] tabular-nums text-slate-500">{{ audioCurrentTime(message) }} / {{ audioDuration(message) }}</span>
                               </div>
                               <audio #audioElement class="whatsapp-audio" preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (play)="audioPlayState(message.msgId, true)" (pause)="audioPlayState(message.msgId, false)" (ended)="audioEnded(message.msgId)" (error)="onMediaError(message.msgId)"></audio>
-                              <button type="button" class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Descargar
-                              </button>
+                              <div class="mt-1 flex items-center justify-between gap-2">
+                                <button type="button" class="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                  Descargar
+                                </button>
+                                <span class="shrink-0 text-[11px] tabular-nums text-slate-500">{{ audioCurrentTime(message) }} / {{ audioDuration(message) }}</span>
+                              </div>
                             </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
@@ -211,6 +214,8 @@ interface MessageSender {
               }
             </div>
           }
+
+          </div>
 
           @if (messages().length) {
             <button
@@ -397,6 +402,9 @@ export class ChatWidgetComponent {
   private lastChatId?: number;
   private lastMessageKey = '';
   private pendingScrollToBottom = false;
+  readonly unreadMessages = signal(0);
+  private firstUnreadMessageId?: string;
+  private isViewingBottom = true;
 
   constructor(
     readonly store: WhatsappMessageStoreService,
@@ -414,6 +422,9 @@ export class ChatWidgetComponent {
         this.lastChatId = chatId;
         this.lastMessageKey = lastMessageKey;
         this.pendingScrollToBottom = !!chatId;
+        this.unreadMessages.set(0);
+        this.firstUnreadMessageId = undefined;
+        this.isViewingBottom = true;
       }
 
       if (this.pendingScrollToBottom && messageCount > 0) {
@@ -424,6 +435,11 @@ export class ChatWidgetComponent {
 
       if (messageCount > 0 && lastMessageKey !== this.lastMessageKey) {
         this.lastMessageKey = lastMessageKey;
+        if (!lastMessage.fromMe && !this.isViewingBottom) {
+          if (!this.firstUnreadMessageId) this.firstUnreadMessageId = lastMessage.msgId;
+          this.unreadMessages.update((count) => count + 1);
+          return;
+        }
         this.scrollToBottom();
       }
     });
@@ -874,6 +890,35 @@ export class ChatWidgetComponent {
     return new Date(timestamp).toISOString();
   }
 
+  messageElementId(msgId: string): string {
+    return `whatsapp-message-${msgId}`;
+  }
+
+  hasUnreadMessages(): boolean {
+    return this.unreadMessages() > 0;
+  }
+
+  onMessagesScroll(): void {
+    const element = this.messagesPanel?.nativeElement;
+    if (!element) return;
+    this.isViewingBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= 24;
+    if (this.isViewingBottom) {
+      this.unreadMessages.set(0);
+      this.firstUnreadMessageId = undefined;
+    }
+  }
+
+  jumpToMessages(): void {
+    const unreadId = this.firstUnreadMessageId;
+    if (unreadId) {
+      document.getElementById(this.messageElementId(unreadId))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.unreadMessages.set(0);
+      this.firstUnreadMessageId = undefined;
+      return;
+    }
+    this.scrollToBottom();
+  }
+
   private loadViewerName(viewerId: string): void {
     const idUsuario = Number(viewerId);
     if (!Number.isFinite(idUsuario)) {
@@ -903,6 +948,9 @@ export class ChatWidgetComponent {
         const element = this.messagesPanel?.nativeElement;
         if (!element) return;
         element.scrollTop = element.scrollHeight;
+        this.isViewingBottom = true;
+        this.unreadMessages.set(0);
+        this.firstUnreadMessageId = undefined;
         this.pendingScrollToBottom = false;
       });
     });
