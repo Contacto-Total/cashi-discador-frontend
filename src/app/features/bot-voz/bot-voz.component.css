@@ -202,14 +202,21 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .resumen-dias.alerta { color: #b45309; font-weight: 600; }
 
 .rango-horas { display: flex; align-items: center; gap: 0.5rem; }
-.rango-horas input[type="time"] {
-  min-height: 40px; padding: 0.5rem 0.6rem; width: 7.5rem;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 8px; background: var(--input-bg, #fff); color: var(--text-primary, #1e293b);
-  font-size: 0.875rem; font-family: inherit; font-variant-numeric: tabular-nums;
+/* Dos campos numericos en vez de <input type="time">: ese muestra AM/PM segun
+   el idioma del navegador y el formato no se puede forzar desde el HTML. */
+.hora-hm {
+  display: inline-flex; align-items: center; gap: 0.15rem; min-height: 40px;
+  padding: 0 0.5rem; border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px; background: var(--input-bg, #fff);
 }
-.rango-horas input[type="time"]:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-.rango-horas input[type="time"].invalido { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+.hora-hm:focus-within { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.hora-hm.invalido { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+.hora-hm input {
+  width: 2.6rem; border: none; background: none; padding: 0.5rem 0;
+  color: var(--text-primary, #1e293b); font-size: 0.875rem; font-family: inherit;
+  font-variant-numeric: tabular-nums; text-align: center;
+}
+.hora-hm input:focus { outline: none; }
 
 .punto-sin-guardar {
   width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;
