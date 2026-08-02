@@ -366,7 +366,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   private fijarConfig(c: BotConfig): void {
+    // El backend devuelve LocalTime con segundos ("11:00:00") y las opciones
+    // del select son "HH:MM". Sin recortar, ninguna opcion coincide con el
+    // valor del ngModel y los dos desplegables salen en blanco.
+    c.horaInicio = this.hhmm(c.horaInicio);
+    c.horaFin = this.hhmm(c.horaFin);
     this.config = c;
+    // La copia de referencia se toma ya normalizada: si no, el recorte de los
+    // segundos contaria como un cambio sin guardar apenas abres la pantalla.
     this.configGuardada = JSON.stringify(c);
   }
 
