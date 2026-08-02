@@ -141,6 +141,91 @@ export class BotVozComponent implements OnInit, OnDestroy {
     { nombre: 'Todos', codigos: 'L,M,X,J,V,S,D', resumen: 'Marca todos los días.' },
   ];
 
+  /**
+   * Ventana horaria recomendada por la Ley 29571 arts. 61-62 (llamadas a horas
+   * inoportunas). El MD la fija como default 08:00-20:00 L-S. No se bloquea
+   * fuera de rango — en QAS hace falta discar de noche — pero se avisa, que es
+   * lo que faltaba: hoy el panel dejaba poner 23:00 sin decir nada.
+   */
+  readonly HORA_LEGAL_DESDE = '08:00';
+  readonly HORA_LEGAL_HASTA = '20:00';
+
+  /** Opciones cada media hora: se elige de una lista, no se teclea. */
+  readonly HORAS = Array.from({ length: 48 }, (_, i) => {
+    const hh = String(Math.floor(i / 2)).padStart(2, '0');
+    const mm = i % 2 ? '30' : '00';
+    return { valor: `${hh}:${mm}:00`, etiqueta: `${hh}:${mm}` };
+  });
+
+  /** Si la BD trae una hora fuera de la rejilla de medias horas (08:15, puesta
+   *  por SQL), el select saldria en blanco y al guardar la borraria. Se agrega
+   *  como opcion extra en su sitio. */
+  private conValorActual(lista: { valor: string; etiqueta: string }[], actual?: string) {
+    const hm = this.hhmm(actual);
+    if (!hm || lista.some((h) => h.etiqueta === hm)) return lista;
+    return [...lista, { valor: actual!, etiqueta: hm }]
+      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta));
+  }
+
+  /** El inicio no puede ser la ultima opcion del dia: dejaria sin ninguna al fin. */
+  get horasInicio(): { valor: string; etiqueta: string }[] {
+    return this.conValorActual(this.HORAS.slice(0, -1), this.config?.horaInicio);
+  }
+
+  /** La hora de fin solo ofrece opciones posteriores al inicio: asi el rango
+   *  invalido no se puede ni elegir, en vez de avisarlo despues. */
+  get horasFin(): { valor: string; etiqueta: string }[] {
+    const desde = this.hhmm(this.config?.horaInicio);
+    const base = desde ? this.HORAS.filter((h) => h.etiqueta > desde) : this.HORAS;
+    return this.conValorActual(base, this.config?.horaFin);
+  }
+
+  readonly PRESETS_HORARIO = [
+    { nombre: 'Legal (08–20)', inicio: '08:00:00', fin: '20:00:00' },
+    { nombre: 'Mañana', inicio: '09:00:00', fin: '13:00:00' },
+    { nombre: 'Tarde', inicio: '14:00:00', fin: '20:00:00' },
+  ];
+
+  aplicarPresetHorario(p: { inicio: string; fin: string }): void {
+    if (!this.config) return;
+    this.config.horaInicio = p.inicio;
+    this.config.horaFin = p.fin;
+  }
+
+  presetHorarioActivo(p: { inicio: string; fin: string }): boolean {
+    return this.hhmm(this.config?.horaInicio) === this.hhmm(p.inicio)
+        && this.hhmm(this.config?.horaFin) === this.hhmm(p.fin);
+  }
+
+  /** "08:00:00" y "08:00" tienen que comparar igual: el backend devuelve con
+   *  segundos y el <input type="time"> escribe sin ellos. */
+  private hhmm(v?: string): string {
+    return (v ?? '').slice(0, 5);
+  }
+
+  get horarioInvalido(): boolean {
+    const i = this.hhmm(this.config?.horaInicio), f = this.hhmm(this.config?.horaFin);
+    return !!i && !!f && f <= i;
+  }
+
+  get horarioFueraDeLey(): boolean {
+    const i = this.hhmm(this.config?.horaInicio), f = this.hhmm(this.config?.horaFin);
+    if (!i || !f) return false;
+    return i < this.HORA_LEGAL_DESDE || f > this.HORA_LEGAL_HASTA;
+  }
+
+  get resumenHorario(): string {
+    const i = this.hhmm(this.config?.horaInicio), f = this.hhmm(this.config?.horaFin);
+    if (!i || !f) return '';
+    if (this.horarioInvalido) return 'La hora de fin debe ser posterior a la de inicio.';
+    const horas = (Number(f.slice(0, 2)) * 60 + Number(f.slice(3)) -
+                   Number(i.slice(0, 2)) * 60 - Number(i.slice(3))) / 60;
+    const texto = `Marca de ${i} a ${f} (${Number(horas.toFixed(1))} h por día).`;
+    return this.horarioFueraDeLey
+      ? `${texto} Fuera de la ventana recomendada por la Ley 29571 (${this.HORA_LEGAL_DESDE}–${this.HORA_LEGAL_HASTA}).`
+      : texto;
+  }
+
   private codigosActivos(): string[] {
     return (this.config?.diasSemana ?? '')
       .toUpperCase().split(',').map((d) => d.trim()).filter(Boolean);

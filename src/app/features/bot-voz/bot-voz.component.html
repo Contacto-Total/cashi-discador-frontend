@@ -84,13 +84,26 @@
             <option *ngFor="let p of perfiles" [ngValue]="p.id">{{ p.nombre }}</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Hora inicio</label>
-          <input type="time" [(ngModel)]="config.horaInicio" />
-        </div>
-        <div class="form-group">
-          <label>Hora fin</label>
-          <input type="time" [(ngModel)]="config.horaFin" />
+        <div class="form-group full-span">
+          <label>Horario de discado</label>
+          <div class="selector-dias">
+            <div class="rango-horas">
+              <select [(ngModel)]="config.horaInicio">
+                <option *ngFor="let h of horasInicio" [value]="h.valor">{{ h.etiqueta }}</option>
+              </select>
+              <span class="muted">a</span>
+              <select [(ngModel)]="config.horaFin" [class.invalido]="horarioInvalido">
+                <option *ngFor="let h of horasFin" [value]="h.valor">{{ h.etiqueta }}</option>
+              </select>
+            </div>
+            <div class="dias-presets">
+              <button type="button" *ngFor="let p of PRESETS_HORARIO"
+                      class="preset" [class.on]="presetHorarioActivo(p)"
+                      (click)="aplicarPresetHorario(p)">{{ p.nombre }}</button>
+            </div>
+          </div>
+          <p class="muted resumen-dias"
+             [class.alerta]="horarioFueraDeLey || horarioInvalido">{{ resumenHorario }}</p>
         </div>
         <div class="form-group full-span">
           <label>Días de la semana</label>
