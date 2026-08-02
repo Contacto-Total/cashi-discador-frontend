@@ -40,7 +40,13 @@
     <div class="control-card">
       <div>
         <h3>Discado de la cola</h3>
-        <p class="muted">Inicia o detén el bot. Con "Iniciar", el bot llama uno por uno a la cola del día.</p>
+        <p class="muted">
+          Mientras esté activo, el bot marca las filas pendientes de la cola del día,
+          hasta el tope de llamadas simultáneas.
+        </p>
+        <p class="progreso-cola" *ngIf="cola.length">
+          {{ marcadas }} de {{ cola.length }} filas marcadas hoy
+        </p>
       </div>
       <div class="control-buttons">
         <button [class.btn-danger]="config.activo" [class.btn-primary]="!config.activo"
@@ -50,9 +56,6 @@
           <lucide-angular [name]="iconoBotonDiscado" [size]="18"></lucide-angular>
           {{ textoBotonDiscado }}
         </button>
-        <span class="progreso-cola" *ngIf="cola.length">
-          {{ marcadas }} de {{ cola.length }} marcadas
-        </span>
       </div>
     </div>
 
@@ -88,12 +91,12 @@
           <label>Horario de discado</label>
           <div class="selector-dias">
             <div class="rango-horas">
-              <input type="time" step="60" [min]="HORA_LEGAL_DESDE"
+              <input type="time" step="60" [min]="HORA_LEGAL_DESDE" [max]="HORA_LEGAL_HASTA"
                      [ngModel]="config.horaInicio"
                      (ngModelChange)="alCambiarHora('horaInicio', $event)"
                      [class.invalido]="horarioInvalido" />
               <span class="muted">a</span>
-              <input type="time" step="60" [min]="HORA_LEGAL_DESDE"
+              <input type="time" step="60" [min]="HORA_LEGAL_DESDE" [max]="HORA_LEGAL_HASTA"
                      [ngModel]="config.horaFin"
                      (ngModelChange)="alCambiarHora('horaFin', $event)"
                      [class.invalido]="horarioInvalido" />

@@ -216,7 +216,7 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
 }
 
-.progreso-cola { font-size: 0.8rem; color: var(--text-secondary, #64748b); align-self: center; }
+.progreso-cola { font-size: 0.8rem; font-weight: 600; color: var(--text-primary, #1e293b); margin: 0.35rem 0 0; }
 .control-buttons { align-items: center; }
 
 /* Detalle de una llamada: panel lateral con la transcripcion. */

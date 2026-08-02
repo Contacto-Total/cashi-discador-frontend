@@ -153,23 +153,24 @@ export class BotVozComponent implements OnInit, OnDestroy {
   readonly HORA_LEGAL_HASTA = '20:00';
 
   /**
-   * Tope duro del inicio: nunca antes de las 08:00 (Ley 29571, llamadas a horas
-   * inoportunas). El `min` del input limita las flechas, pero se puede teclear
-   * igual, asi que ademas se corrige el valor aqui.
+   * Tope duro en los DOS extremos: 08:00-20:00 (Ley 29571, llamadas a horas
+   * inoportunas). Aplica siempre, con perfil MANUAL o AUTO — la ventana no
+   * depende del perfil, sale de bot_config.
    *
-   * Solo se topa el extremo inferior. El superior se deja libre a proposito:
-   * en QAS hace falta discar hasta las 23:00 para probar, y para eso ya esta el
-   * aviso ambar de `horarioFueraDeLey`.
+   * Los atributos min/max del input limitan las flechas pero se puede teclear
+   * fuera de rango igual, asi que el valor tambien se corrige aqui. Para discar
+   * fuera de horario en QAS hay que hacerlo por SQL, a proposito.
    */
   alCambiarHora(campo: 'horaInicio' | 'horaFin', valor: string | null): void {
     if (!this.config || !valor) return;
-    this.config[campo] = this.hhmm(valor) < this.HORA_LEGAL_DESDE
-      ? `${this.HORA_LEGAL_DESDE}:00`
-      : valor;
+    const hm = this.hhmm(valor);
+    if (hm < this.HORA_LEGAL_DESDE) this.config[campo] = `${this.HORA_LEGAL_DESDE}:00`;
+    else if (hm > this.HORA_LEGAL_HASTA) this.config[campo] = `${this.HORA_LEGAL_HASTA}:00`;
+    else this.config[campo] = valor;
   }
 
   readonly PRESETS_HORARIO = [
-    { nombre: 'Legal (08–20)', inicio: '08:00:00', fin: '20:00:00' },
+    { nombre: 'Todo el día', inicio: '08:00:00', fin: '20:00:00' },
     { nombre: 'Mañana', inicio: '09:00:00', fin: '13:00:00' },
     { nombre: 'Tarde', inicio: '14:00:00', fin: '20:00:00' },
   ];
