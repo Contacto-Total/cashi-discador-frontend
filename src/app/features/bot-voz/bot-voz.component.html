@@ -39,13 +39,23 @@
         <p class="muted">Inicia o detén el bot. Con "Iniciar", el bot llama uno por uno a la cola del día.</p>
       </div>
       <div class="control-buttons">
-        <button class="btn-primary" (click)="iniciar()" [disabled]="config.activo">
+        <button class="btn-primary" (click)="iniciar()"
+                [disabled]="config.activo || !!motivoNoIniciar"
+                [title]="motivoNoIniciar">
           <lucide-angular name="play" [size]="18"></lucide-angular> Iniciar
         </button>
         <button class="btn-danger" (click)="detener()" [disabled]="!config.activo">
           <lucide-angular name="square" [size]="18"></lucide-angular> Detener
         </button>
       </div>
+    </div>
+
+    <div class="aviso-no-guardado" *ngIf="motivoNoIniciar && !config.activo">
+      <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+      <span>{{ motivoNoIniciar }}</span>
+      <button class="btn-link" *ngIf="configSinGuardar" (click)="guardarConfig()">
+        Guardar ahora
+      </button>
     </div>
 
     <div class="form-card">
@@ -88,8 +98,9 @@
           </select>
         </div>
       </div>
-      <button class="btn-primary" (click)="guardarConfig()">
-        <lucide-angular name="save" [size]="18"></lucide-angular> Guardar configuración
+      <button class="btn-primary" [class.pendiente]="configSinGuardar" (click)="guardarConfig()">
+        <lucide-angular name="save" [size]="18"></lucide-angular>
+        {{ configSinGuardar ? 'Guardar cambios' : 'Guardar configuración' }}
       </button>
     </div>
   </section>

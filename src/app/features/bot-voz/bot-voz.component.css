@@ -23,6 +23,27 @@
   color: #16a34a; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem;
 }
 
+/* Aviso de por que "Iniciar" esta bloqueado: cambios sin guardar o cola vacia.
+   Mismo formato que .flash pero en ambar, porque no es un exito ni un error. */
+.aviso-no-guardado {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #b45309; padding: 0.75rem 1rem; border-radius: 8px;
+  margin-bottom: 1rem; font-size: 0.875rem;
+}
+.aviso-no-guardado .btn-link {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: #b45309; font-weight: 600; font-size: 0.875rem; text-decoration: underline;
+}
+.btn-primary.pendiente {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  animation: pulso-pendiente 2s ease-in-out infinite;
+}
+@keyframes pulso-pendiente {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+}
+
 /* Tabs */
 .tabs-container {
   display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
