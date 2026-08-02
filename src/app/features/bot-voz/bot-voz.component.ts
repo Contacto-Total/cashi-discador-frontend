@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
-  BotVozService, BotConfig, BotPerfil, BotContacto, BotSesion,
+  BotVozService, BotConfig, BotPerfil, BotContacto, BotSesion, BotTurno,
 } from './bot-voz.service';
 
 @Component({
@@ -30,6 +30,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  formulario tiene cambios sin guardar: en QAS se perdio un cambio del tope
    *  de simultaneas porque nadie noto que habia que darle a "Guardar". */
   private configGuardada = '';
+
+  /** Igual que configGuardada pero por perfil, indexado por id. */
+  private perfilesGuardados = new Map<number, string>();
 
   /** Refresco de las vistas de monitoreo. Las filas cambian de estado mientras
    *  el bot disca y sin esto la pantalla se queda en la foto de cuando entraste. */
@@ -83,10 +86,97 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.contar('PENDIENTE') + this.contar('EN_LLAMADA');
   }
 
+  /** Solo aplica antes de arrancar. El aviso de cambios sin guardar va aparte
+   *  porque ese importa siempre, tambien con el bot discando: editar la config
+   *  a media cola y no guardarla es justo cuando mas se pierde. */
   get motivoNoIniciar(): string {
     if (this.configSinGuardar) return 'Guarda la configuración antes de iniciar';
     if (!this.colaMarcable) return 'No hay cola que marcar: arma la cola del día primero';
     return '';
+  }
+
+  /** Cuantas filas de la cola ya se intentaron: distingue arrancar de reanudar. */
+  get colaYaIniciada(): boolean {
+    return this.cola.some((c) => (c.intentos ?? 0) > 0);
+  }
+
+  get marcadas(): number {
+    return this.cola.filter((c) => (c.intentos ?? 0) > 0).length;
+  }
+
+  /** Un solo boton que alterna. Con dos botones, uno siempre estaba gris y
+   *  "Iniciar" mentia cuando la cola ya iba por la mitad. */
+  get textoBotonDiscado(): string {
+    if (this.config?.activo) return 'Detener discado';
+    return this.colaYaIniciada ? 'Reanudar discado' : 'Iniciar discado';
+  }
+
+  get iconoBotonDiscado(): string {
+    return this.config?.activo ? 'square' : 'play';
+  }
+
+  alternarDiscado(): void {
+    if (this.config?.activo) this.detener();
+    else this.iniciar();
+  }
+
+  /**
+   * Los siete dias del selector, en la convencion L M X J V S D: la X de
+   * miercoles evita la M repetida de martes. Es lo que ya guarda la columna,
+   * asi que lo que se pinta y lo que se guarda son el mismo valor.
+   */
+  readonly DIAS = [
+    { codigo: 'L', nombre: 'Lunes' },
+    { codigo: 'M', nombre: 'Martes' },
+    { codigo: 'X', nombre: 'Miércoles' },
+    { codigo: 'J', nombre: 'Jueves' },
+    { codigo: 'V', nombre: 'Viernes' },
+    { codigo: 'S', nombre: 'Sábado' },
+    { codigo: 'D', nombre: 'Domingo' },
+  ];
+
+  readonly PRESETS_DIAS = [
+    { nombre: 'Lun a Vie', codigos: 'L,M,X,J,V', resumen: 'Marca de lunes a viernes.' },
+    { nombre: 'Lun a Sáb', codigos: 'L,M,X,J,V,S', resumen: 'Marca de lunes a sábado.' },
+    { nombre: 'Todos', codigos: 'L,M,X,J,V,S,D', resumen: 'Marca todos los días.' },
+  ];
+
+  private codigosActivos(): string[] {
+    return (this.config?.diasSemana ?? '')
+      .toUpperCase().split(',').map((d) => d.trim()).filter(Boolean);
+  }
+
+  diaActivo(codigo: string): boolean {
+    return this.codigosActivos().includes(codigo);
+  }
+
+  /** Reescribe el campo en el orden canonico, nunca en el orden de los clics. */
+  alternarDia(codigo: string): void {
+    if (!this.config) return;
+    const activos = new Set(this.codigosActivos());
+    activos.has(codigo) ? activos.delete(codigo) : activos.add(codigo);
+    this.config.diasSemana = this.DIAS
+      .filter((d) => activos.has(d.codigo)).map((d) => d.codigo).join(',');
+  }
+
+  aplicarPresetDias(codigos: string): void {
+    if (this.config) this.config.diasSemana = codigos;
+  }
+
+  presetActivo(codigos: string): boolean {
+    return this.config?.diasSemana === codigos;
+  }
+
+  /** Los cuadritos en una frase, para no tener que descifrarlos. */
+  get resumenDias(): string {
+    const activos = this.codigosActivos();
+    if (!activos.length) return 'No marca ningún día: el bot nunca saldrá a discar.';
+    const preset = this.PRESETS_DIAS.find((p) => this.presetActivo(p.codigos));
+    if (preset) return preset.resumen;
+    const nombres = this.DIAS.filter((d) => activos.includes(d.codigo))
+      .map((d) => d.nombre.toLowerCase());
+    if (nombres.length === 1) return `Marca solo los ${nombres[0]}.`;
+    return `Marca ${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}.`;
   }
 
   switchTab(t: 'config' | 'perfiles' | 'cola' | 'llamadas'): void {
@@ -150,10 +240,48 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Perfiles -----
   cargarPerfiles(): void {
-    this.svc.getPerfiles().subscribe((p) => (this.perfiles = p));
+    this.svc.getPerfiles().subscribe((p) => {
+      this.perfiles = p;
+      this.perfilesGuardados = new Map(p.map((x) => [x.id, JSON.stringify(x)]));
+    });
+  }
+  /** Mismo problema que la config: sin esto editas un perfil, no le das a
+   *  guardar y el cambio se pierde sin ningun aviso. */
+  perfilSinGuardar(p: BotPerfil): boolean {
+    const guardado = this.perfilesGuardados.get(p.id);
+    return guardado !== undefined && guardado !== JSON.stringify(p);
+  }
+  get hayPerfilesSinGuardar(): boolean {
+    return this.perfiles.some((p) => this.perfilSinGuardar(p));
   }
   guardarPerfil(p: BotPerfil): void {
-    this.svc.updatePerfil(p.id, p).subscribe({ next: () => this.flash(`Perfil ${p.nombre} guardado`), error: () => this.flash('Error al guardar perfil', true) });
+    this.svc.updatePerfil(p.id, p).subscribe({
+      next: (r) => {
+        Object.assign(p, r);
+        this.perfilesGuardados.set(p.id, JSON.stringify(p));
+        this.flash(`Perfil ${p.nombre} guardado`);
+      },
+      error: () => this.flash('Error al guardar perfil', true),
+    });
+  }
+
+  // ----- Detalle de una llamada -----
+  sesionAbierta?: BotSesion;
+  turnos: BotTurno[] = [];
+  cargandoTurnos = false;
+
+  abrirDetalle(s: BotSesion): void {
+    this.sesionAbierta = s;
+    this.turnos = [];
+    this.cargandoTurnos = true;
+    this.svc.getTurnos(s.id).subscribe({
+      next: (t) => { this.turnos = t; this.cargandoTurnos = false; },
+      error: () => { this.cargandoTurnos = false; this.flash('No se pudo cargar la transcripción', true); },
+    });
+  }
+  cerrarDetalle(): void {
+    this.sesionAbierta = undefined;
+    this.turnos = [];
   }
 
   // ----- Cola -----
