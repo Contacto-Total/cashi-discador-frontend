@@ -23,6 +23,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   sesiones: BotSesion[] = [];
 
   loadingCola = false;
+  errorCola = false;
+  errorSesiones = false;
   armando = false;
   mensaje = '';
 
@@ -150,34 +152,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
   readonly HORA_LEGAL_DESDE = '08:00';
   readonly HORA_LEGAL_HASTA = '20:00';
 
-  /** Opciones cada media hora: se elige de una lista, no se teclea. */
-  readonly HORAS = Array.from({ length: 48 }, (_, i) => {
-    const hh = String(Math.floor(i / 2)).padStart(2, '0');
-    const mm = i % 2 ? '30' : '00';
-    return { valor: `${hh}:${mm}:00`, etiqueta: `${hh}:${mm}` };
-  });
-
-  /** Si la BD trae una hora fuera de la rejilla de medias horas (08:15, puesta
-   *  por SQL), el select saldria en blanco y al guardar la borraria. Se agrega
-   *  como opcion extra en su sitio. */
-  private conValorActual(lista: { valor: string; etiqueta: string }[], actual?: string) {
-    const hm = this.hhmm(actual);
-    if (!hm || lista.some((h) => h.etiqueta === hm)) return lista;
-    return [...lista, { valor: actual!, etiqueta: hm }]
-      .sort((a, b) => a.etiqueta.localeCompare(b.etiqueta));
-  }
-
-  /** El inicio no puede ser la ultima opcion del dia: dejaria sin ninguna al fin. */
-  get horasInicio(): { valor: string; etiqueta: string }[] {
-    return this.conValorActual(this.HORAS.slice(0, -1), this.config?.horaInicio);
-  }
-
-  /** La hora de fin solo ofrece opciones posteriores al inicio: asi el rango
-   *  invalido no se puede ni elegir, en vez de avisarlo despues. */
-  get horasFin(): { valor: string; etiqueta: string }[] {
-    const desde = this.hhmm(this.config?.horaInicio);
-    const base = desde ? this.HORAS.filter((h) => h.etiqueta > desde) : this.HORAS;
-    return this.conValorActual(base, this.config?.horaFin);
+  /**
+   * Tope duro del inicio: nunca antes de las 08:00 (Ley 29571, llamadas a horas
+   * inoportunas). El `min` del input limita las flechas, pero se puede teclear
+   * igual, asi que ademas se corrige el valor aqui.
+   *
+   * Solo se topa el extremo inferior. El superior se deja libre a proposito:
+   * en QAS hace falta discar hasta las 23:00 para probar, y para eso ya esta el
+   * aviso ambar de `horarioFueraDeLey`.
+   */
+  alCambiarHora(campo: 'horaInicio' | 'horaFin', valor: string | null): void {
+    if (!this.config || !valor) return;
+    this.config[campo] = this.hhmm(valor) < this.HORA_LEGAL_DESDE
+      ? `${this.HORA_LEGAL_DESDE}:00`
+      : valor;
   }
 
   readonly PRESETS_HORARIO = [
@@ -262,6 +250,38 @@ export class BotVozComponent implements OnInit, OnDestroy {
       .map((d) => d.nombre.toLowerCase());
     if (nombres.length === 1) return `Marca solo los ${nombres[0]}.`;
     return `Marca ${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}.`;
+  }
+
+  // ----- Paginacion de las tablas -----
+  // Del lado del cliente: la cola son decenas de filas y las sesiones vienen
+  // topadas en 100 por el backend, asi que no hace falta paginar en servidor.
+  readonly TAM_PAGINA = 20;
+  paginaCola = 1;
+  paginaSesiones = 1;
+
+  /** El refresco cada 5 s puede achicar la lista (filas que salen de la cola).
+   *  Sin esto te quedarias en una pagina que ya no existe, viendo vacio. */
+  private pagina<T>(filas: T[], actual: number, fijar: (n: number) => void): T[] {
+    const total = Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
+    if (actual > total) { actual = total; fijar(total); }
+    const desde = (actual - 1) * this.TAM_PAGINA;
+    return filas.slice(desde, desde + this.TAM_PAGINA);
+  }
+
+  get colaPagina(): BotContacto[] {
+    return this.pagina(this.cola, this.paginaCola, (n) => (this.paginaCola = n));
+  }
+  get sesionesPagina(): BotSesion[] {
+    return this.pagina(this.sesiones, this.paginaSesiones, (n) => (this.paginaSesiones = n));
+  }
+  totalPaginas(filas: unknown[]): number {
+    return Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
+  }
+  irA(cual: 'cola' | 'sesiones', n: number): void {
+    const filas = cual === 'cola' ? this.cola : this.sesiones;
+    const destino = Math.min(Math.max(1, n), this.totalPaginas(filas));
+    if (cual === 'cola') this.paginaCola = destino;
+    else this.paginaSesiones = destino;
   }
 
   switchTab(t: 'config' | 'perfiles' | 'cola' | 'llamadas'): void {
@@ -380,8 +400,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** silencioso: sin spinner, para que el refresco automatico no parpadee. */
   cargarCola(silencioso = false): void {
     this.loadingCola = !silencioso;
-    this.svc.getCola().subscribe({ next: (c) => { this.cola = c; this.loadingCola = false; }, error: () => (this.loadingCola = false) });
-    this.svc.getDescartes().subscribe((d) => (this.descartes = d));
+    this.svc.getCola().subscribe({
+      next: (c) => { this.cola = c; this.errorCola = false; this.loadingCola = false; },
+      error: () => {
+        // Sin esto un 500 se veia igual que una cola vacia: la tabla mostraba
+        // "La cola esta vacia" mientras en la BD habia 4 filas.
+        this.errorCola = true;
+        this.loadingCola = false;
+        if (!silencioso) this.flash('No se pudo cargar la cola', true);
+      },
+    });
+    this.svc.getDescartes().subscribe({
+      next: (d) => (this.descartes = d),
+      error: () => (this.descartes = []),
+    });
   }
   contar(estado: string): number {
     return this.cola.filter((c) => c.estado === estado).length;
@@ -389,7 +421,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
-    this.svc.getSesiones().subscribe((s) => (this.sesiones = s));
+    this.svc.getSesiones().subscribe({
+      next: (s) => { this.sesiones = s; this.errorSesiones = false; },
+      error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
+    });
   }
 
   private flash(m: string, _error = false): void {

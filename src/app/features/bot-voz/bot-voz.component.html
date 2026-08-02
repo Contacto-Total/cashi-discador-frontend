@@ -88,13 +88,15 @@
           <label>Horario de discado</label>
           <div class="selector-dias">
             <div class="rango-horas">
-              <select [(ngModel)]="config.horaInicio">
-                <option *ngFor="let h of horasInicio" [value]="h.valor">{{ h.etiqueta }}</option>
-              </select>
+              <input type="time" step="60" [min]="HORA_LEGAL_DESDE"
+                     [ngModel]="config.horaInicio"
+                     (ngModelChange)="alCambiarHora('horaInicio', $event)"
+                     [class.invalido]="horarioInvalido" />
               <span class="muted">a</span>
-              <select [(ngModel)]="config.horaFin" [class.invalido]="horarioInvalido">
-                <option *ngFor="let h of horasFin" [value]="h.valor">{{ h.etiqueta }}</option>
-              </select>
+              <input type="time" step="60" [min]="HORA_LEGAL_DESDE"
+                     [ngModel]="config.horaFin"
+                     (ngModelChange)="alCambiarHora('horaFin', $event)"
+                     [class.invalido]="horarioInvalido" />
             </div>
             <div class="dias-presets">
               <button type="button" *ngFor="let p of PRESETS_HORARIO"
@@ -217,7 +219,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let c of cola">
+            <tr *ngFor="let c of colaPagina">
               <td>
                 <div class="celda-principal">{{ c.nombreCliente || ('Cliente ' + c.idCliente) }}</div>
                 <div class="celda-sub">{{ c.documento || '—' }}</div>
@@ -243,8 +245,20 @@
             </tr>
           </tbody>
         </table>
-        <div class="empty-state" *ngIf="!loadingCola && cola.length === 0">La cola está vacía. Usa "Armar cola del día".</div>
+        <div class="empty-state error" *ngIf="errorCola">
+          No se pudo cargar la cola. Hubo un error en el servidor — la cola puede tener filas aunque aquí no se vean.
+        </div>
+        <div class="empty-state" *ngIf="!errorCola && !loadingCola && cola.length === 0">La cola está vacía. Usa "Armar cola del día".</div>
       </div>
+        <div class="paginador" *ngIf="totalPaginas(cola) > 1">
+          <button class="btn-link" [disabled]="paginaCola === 1" (click)="irA('cola', paginaCola - 1)">
+            <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+          </button>
+          <span>Página {{ paginaCola }} de {{ totalPaginas(cola) }} · {{ cola.length }} filas</span>
+          <button class="btn-link" [disabled]="paginaCola === totalPaginas(cola)" (click)="irA('cola', paginaCola + 1)">
+            <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+          </button>
+        </div>
     </div>
 
     <div class="descartes" *ngIf="descartes.length">
@@ -267,7 +281,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let s of sesiones" class="fila-clicable" (click)="abrirDetalle(s)"
+            <tr *ngFor="let s of sesionesPagina" class="fila-clicable" (click)="abrirDetalle(s)"
                 title="Ver la transcripción de esta llamada">
               <td>{{ s.inicio | date:'dd/MM HH:mm' }}</td>
               <td>
@@ -287,8 +301,18 @@
             </tr>
           </tbody>
         </table>
-        <div class="empty-state" *ngIf="sesiones.length === 0">Aún no hay llamadas registradas.</div>
+        <div class="empty-state error" *ngIf="errorSesiones">No se pudieron cargar las llamadas.</div>
+        <div class="empty-state" *ngIf="!errorSesiones && sesiones.length === 0">Aún no hay llamadas registradas.</div>
       </div>
+        <div class="paginador" *ngIf="totalPaginas(sesiones) > 1">
+          <button class="btn-link" [disabled]="paginaSesiones === 1" (click)="irA('sesiones', paginaSesiones - 1)">
+            <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+          </button>
+          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesiones) }} · {{ sesiones.length }} filas</span>
+          <button class="btn-link" [disabled]="paginaSesiones === totalPaginas(sesiones)" (click)="irA('sesiones', paginaSesiones + 1)">
+            <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+          </button>
+        </div>
     </div>
   </section>
 
