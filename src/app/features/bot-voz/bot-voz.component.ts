@@ -153,44 +153,52 @@ export class BotVozComponent implements OnInit, OnDestroy {
   readonly HORA_LEGAL_HASTA = '20:00';
 
   /**
-   * Texto de los dos campos de hora mientras se escriben.
+   * Horas en punto de la ventana legal (08:00-20:00), sin minutos.
    *
-   * No se usa <input type="time">: ese dibuja el widget nativo, que muestra
-   * AM/PM y un campo de segundos segun el idioma del navegador, y eso no se
-   * puede forzar desde el HTML. Con un campo de texto el formato es HH:MM
-   * siempre, para cualquier usuario.
+   * Es un <select> y no un <input type="time"> porque ese dibuja el widget
+   * nativo, que muestra AM/PM segun el idioma del navegador y no se puede
+   * forzar desde el HTML (peticion abierta en el W3C desde 2022). Aqui el texto
+   * de cada opcion lo escribimos nosotros, asi que siempre es 24 h.
+   *
+   * Solo 13 opciones: el rango invalido no se puede ni elegir, con lo que la
+   * validacion de min/max deja de depender de que el usuario escriba bien.
    */
-  horaTxt: Record<'horaInicio' | 'horaFin', string> = { horaInicio: '', horaFin: '' };
-
-  private sincronizarHoras(): void {
-    this.horaTxt.horaInicio = this.hhmm(this.config?.horaInicio);
-    this.horaTxt.horaFin = this.hhmm(this.config?.horaFin);
+  private opcionesHora(desde: number, hasta: number): string[] {
+    return Array.from({ length: hasta - desde + 1 },
+                      (_, i) => `${String(desde + i).padStart(2, '0')}:00`);
   }
 
-  /**
-   * Al salir del campo se interpreta lo tecleado y se topa entre 08:00 y 20:00
-   * (Ley 29571, llamadas a horas inoportunas). Acepta "8", "830", "8:30" o
-   * "08:30"; lo que no se entiende vuelve al valor anterior.
-   *
-   * El tope se aplica sobre el total de minutos y no campo por campo, para que
-   * "20:30" caiga en 20:00 y no en un 20:30 invalido.
-   */
-  normalizarHora(campo: 'horaInicio' | 'horaFin'): void {
+  /** Si la BD trae una hora que no esta en la rejilla (11:30 o 23:00, puestas
+   *  por SQL), se agrega como opcion para que el select no salga en blanco y
+   *  al guardar no la borre. */
+  private conActual(lista: string[], actual?: string): string[] {
+    const hm = this.hhmm(actual);
+    return !hm || lista.includes(hm) ? lista : [...lista, hm].sort();
+  }
+
+  /** El inicio llega hasta una hora antes del tope: si no, el fin se queda sin
+   *  ninguna opcion posible. */
+  get horasInicio(): string[] {
+    const desde = Number(this.HORA_LEGAL_DESDE.slice(0, 2));
+    const hasta = Number(this.HORA_LEGAL_HASTA.slice(0, 2)) - 1;
+    return this.conActual(this.opcionesHora(desde, hasta), this.config?.horaInicio);
+  }
+
+  /** El fin solo ofrece horas posteriores al inicio: asi no se puede elegir un
+   *  rango invertido, en vez de avisarlo despues de haberlo guardado. */
+  get horasFin(): string[] {
+    const desde = Number(this.hhmm(this.config?.horaInicio).slice(0, 2) ||
+                         this.HORA_LEGAL_DESDE.slice(0, 2)) + 1;
+    const hasta = Number(this.HORA_LEGAL_HASTA.slice(0, 2));
+    return this.conActual(this.opcionesHora(Math.min(desde, hasta), hasta), this.config?.horaFin);
+  }
+
+  /** Al mover el inicio, el fin puede quedar antes: se corre al minimo valido. */
+  alCambiarInicio(): void {
     if (!this.config) return;
-    const digitos = (this.horaTxt[campo] || '').replace(/\D/g, '');
-    if (!digitos) { this.sincronizarHoras(); return; }
-
-    const h = Number(digitos.length <= 2 ? digitos : digitos.slice(0, -2));
-    const m = digitos.length <= 2 ? 0 : Number(digitos.slice(-2));
-    if (!Number.isFinite(h) || !Number.isFinite(m)) { this.sincronizarHoras(); return; }
-
-    const tope = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
-    const minutos = Math.min(tope(this.HORA_LEGAL_HASTA),
-                    Math.max(tope(this.HORA_LEGAL_DESDE), h * 60 + Math.min(59, m)));
-
-    const texto = `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
-    this.horaTxt[campo] = texto;
-    this.config[campo] = texto;   // sin segundos: el backend parsea LocalTime "08:00"
+    if (this.hhmm(this.config.horaFin) <= this.hhmm(this.config.horaInicio)) {
+      this.config.horaFin = this.horasFin[0];
+    }
   }
 
   readonly PRESETS_HORARIO = [
@@ -203,7 +211,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (!this.config) return;
     this.config.horaInicio = p.inicio;
     this.config.horaFin = p.fin;
-    this.sincronizarHoras();
   }
 
   presetHorarioActivo(p: { inicio: string; fin: string }): boolean {
@@ -325,6 +332,16 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
   guardarConfig(): void {
     if (!this.config) return;
+    // Antes se guardaba un horario invertido y el aviso recien salia despues,
+    // con la configuracion ya rota en la base.
+    if (this.horarioInvalido) {
+      this.flash('La hora de fin debe ser posterior a la de inicio', true);
+      return;
+    }
+    if (!this.config.diasSemana) {
+      this.flash('Selecciona al menos un día de la semana', true);
+      return;
+    }
     this.svc.updateConfig(this.config).subscribe({
       next: (c) => { this.fijarConfig(c); this.flash('Configuración guardada'); },
       error: () => this.flash('Error al guardar', true),
@@ -351,7 +368,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private fijarConfig(c: BotConfig): void {
     this.config = c;
     this.configGuardada = JSON.stringify(c);
-    this.sincronizarHoras();
   }
 
   /** Mueve solo `activo`, en el formulario y en la referencia guardada, para
