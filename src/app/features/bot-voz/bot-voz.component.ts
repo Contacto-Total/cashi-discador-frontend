@@ -153,37 +153,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
   readonly HORA_LEGAL_HASTA = '20:00';
 
   /**
-   * La hora se edita en dos campos numericos (HH y MM) y no con un
-   * <input type="time">: ese usa el widget nativo, que muestra AM/PM cuando el
-   * navegador esta en ingles. El formato no se puede forzar desde el HTML, asi
-   * que la unica manera de garantizar 24 h para todos es no usarlo.
-   */
-  horaParte(campo: 'horaInicio' | 'horaFin', parte: 'h' | 'm'): number {
-    const hm = this.hhmm(this.config?.[campo]);
-    if (!hm) return 0;
-    return Number(parte === 'h' ? hm.slice(0, 2) : hm.slice(3)) || 0;
-  }
-
-  /**
    * Tope duro en los DOS extremos: 08:00-20:00 (Ley 29571, llamadas a horas
    * inoportunas). Aplica siempre, con perfil MANUAL o AUTO — la ventana sale de
    * bot_config, no del perfil. Se corrige aqui y no solo con min/max, porque
    * esos limitan las flechas pero dejan teclear fuera de rango.
    */
-  fijarParte(campo: 'horaInicio' | 'horaFin', parte: 'h' | 'm', valor: unknown): void {
-    if (!this.config) return;
-    const n = Number(valor);
-    let h = this.horaParte(campo, 'h');
-    let m = this.horaParte(campo, 'm');
-    if (parte === 'h') h = Number.isFinite(n) ? Math.trunc(n) : h;
-    else m = Number.isFinite(n) ? Math.trunc(n) : m;
-
-    const minutos = Math.min(
-      Number(this.HORA_LEGAL_HASTA.slice(0, 2)) * 60,
-      Math.max(Number(this.HORA_LEGAL_DESDE.slice(0, 2)) * 60,
-               h * 60 + Math.min(59, Math.max(0, m))));
-    this.config[campo] =
-      `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}:00`;
+  alCambiarHora(campo: 'horaInicio' | 'horaFin', valor: string | null): void {
+    if (!this.config || !valor) return;
+    const hm = this.hhmm(valor);
+    if (hm < this.HORA_LEGAL_DESDE) this.config[campo] = `${this.HORA_LEGAL_DESDE}:00`;
+    else if (hm > this.HORA_LEGAL_HASTA) this.config[campo] = `${this.HORA_LEGAL_HASTA}:00`;
+    else this.config[campo] = valor;
   }
 
   readonly PRESETS_HORARIO = [

@@ -91,21 +91,15 @@
           <label>Horario de discado</label>
           <div class="selector-dias">
             <div class="rango-horas">
-              <span class="hora-hm" [class.invalido]="horarioInvalido">
-                <input type="number" min="8" max="20" [ngModel]="horaParte('horaInicio','h')"
-                       (ngModelChange)="fijarParte('horaInicio','h',$event)" aria-label="Hora de inicio" />
-                <span>:</span>
-                <input type="number" min="0" max="59" step="5" [ngModel]="horaParte('horaInicio','m')"
-                       (ngModelChange)="fijarParte('horaInicio','m',$event)" aria-label="Minuto de inicio" />
-              </span>
+              <input type="time" step="60" [min]="HORA_LEGAL_DESDE" [max]="HORA_LEGAL_HASTA"
+                     [ngModel]="config.horaInicio"
+                     (ngModelChange)="alCambiarHora('horaInicio', $event)"
+                     [class.invalido]="horarioInvalido" />
               <span class="muted">a</span>
-              <span class="hora-hm" [class.invalido]="horarioInvalido">
-                <input type="number" min="8" max="20" [ngModel]="horaParte('horaFin','h')"
-                       (ngModelChange)="fijarParte('horaFin','h',$event)" aria-label="Hora de fin" />
-                <span>:</span>
-                <input type="number" min="0" max="59" step="5" [ngModel]="horaParte('horaFin','m')"
-                       (ngModelChange)="fijarParte('horaFin','m',$event)" aria-label="Minuto de fin" />
-              </span>
+              <input type="time" step="60" [min]="HORA_LEGAL_DESDE" [max]="HORA_LEGAL_HASTA"
+                     [ngModel]="config.horaFin"
+                     (ngModelChange)="alCambiarHora('horaFin', $event)"
+                     [class.invalido]="horarioInvalido" />
             </div>
             <div class="dias-presets">
               <button type="button" *ngFor="let p of PRESETS_HORARIO"
