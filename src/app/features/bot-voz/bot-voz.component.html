@@ -91,15 +91,13 @@
           <label>Horario de discado</label>
           <div class="selector-dias">
             <div class="rango-horas">
-              <input type="time" step="60" [min]="HORA_LEGAL_DESDE" [max]="HORA_LEGAL_HASTA"
-                     [ngModel]="config.horaInicio"
-                     (ngModelChange)="alCambiarHora('horaInicio', $event)"
-                     [class.invalido]="horarioInvalido" />
+              <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM"
+                     [(ngModel)]="horaTxt.horaInicio" (blur)="normalizarHora('horaInicio')"
+                     [class.invalido]="horarioInvalido" aria-label="Hora de inicio" />
               <span class="muted">a</span>
-              <input type="time" step="60" [min]="HORA_LEGAL_DESDE" [max]="HORA_LEGAL_HASTA"
-                     [ngModel]="config.horaFin"
-                     (ngModelChange)="alCambiarHora('horaFin', $event)"
-                     [class.invalido]="horarioInvalido" />
+              <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM"
+                     [(ngModel)]="horaTxt.horaFin" (blur)="normalizarHora('horaFin')"
+                     [class.invalido]="horarioInvalido" aria-label="Hora de fin" />
             </div>
             <div class="dias-presets">
               <button type="button" *ngFor="let p of PRESETS_HORARIO"

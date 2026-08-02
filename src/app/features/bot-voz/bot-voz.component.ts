@@ -153,29 +153,57 @@ export class BotVozComponent implements OnInit, OnDestroy {
   readonly HORA_LEGAL_HASTA = '20:00';
 
   /**
-   * Tope duro en los DOS extremos: 08:00-20:00 (Ley 29571, llamadas a horas
-   * inoportunas). Aplica siempre, con perfil MANUAL o AUTO — la ventana sale de
-   * bot_config, no del perfil. Se corrige aqui y no solo con min/max, porque
-   * esos limitan las flechas pero dejan teclear fuera de rango.
+   * Texto de los dos campos de hora mientras se escriben.
+   *
+   * No se usa <input type="time">: ese dibuja el widget nativo, que muestra
+   * AM/PM y un campo de segundos segun el idioma del navegador, y eso no se
+   * puede forzar desde el HTML. Con un campo de texto el formato es HH:MM
+   * siempre, para cualquier usuario.
    */
-  alCambiarHora(campo: 'horaInicio' | 'horaFin', valor: string | null): void {
-    if (!this.config || !valor) return;
-    const hm = this.hhmm(valor);
-    if (hm < this.HORA_LEGAL_DESDE) this.config[campo] = `${this.HORA_LEGAL_DESDE}:00`;
-    else if (hm > this.HORA_LEGAL_HASTA) this.config[campo] = `${this.HORA_LEGAL_HASTA}:00`;
-    else this.config[campo] = valor;
+  horaTxt: Record<'horaInicio' | 'horaFin', string> = { horaInicio: '', horaFin: '' };
+
+  private sincronizarHoras(): void {
+    this.horaTxt.horaInicio = this.hhmm(this.config?.horaInicio);
+    this.horaTxt.horaFin = this.hhmm(this.config?.horaFin);
+  }
+
+  /**
+   * Al salir del campo se interpreta lo tecleado y se topa entre 08:00 y 20:00
+   * (Ley 29571, llamadas a horas inoportunas). Acepta "8", "830", "8:30" o
+   * "08:30"; lo que no se entiende vuelve al valor anterior.
+   *
+   * El tope se aplica sobre el total de minutos y no campo por campo, para que
+   * "20:30" caiga en 20:00 y no en un 20:30 invalido.
+   */
+  normalizarHora(campo: 'horaInicio' | 'horaFin'): void {
+    if (!this.config) return;
+    const digitos = (this.horaTxt[campo] || '').replace(/\D/g, '');
+    if (!digitos) { this.sincronizarHoras(); return; }
+
+    const h = Number(digitos.length <= 2 ? digitos : digitos.slice(0, -2));
+    const m = digitos.length <= 2 ? 0 : Number(digitos.slice(-2));
+    if (!Number.isFinite(h) || !Number.isFinite(m)) { this.sincronizarHoras(); return; }
+
+    const tope = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+    const minutos = Math.min(tope(this.HORA_LEGAL_HASTA),
+                    Math.max(tope(this.HORA_LEGAL_DESDE), h * 60 + Math.min(59, m)));
+
+    const texto = `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
+    this.horaTxt[campo] = texto;
+    this.config[campo] = texto;   // sin segundos: el backend parsea LocalTime "08:00"
   }
 
   readonly PRESETS_HORARIO = [
-    { nombre: 'Todo el día', inicio: '08:00:00', fin: '20:00:00' },
-    { nombre: 'Mañana', inicio: '09:00:00', fin: '13:00:00' },
-    { nombre: 'Tarde', inicio: '14:00:00', fin: '20:00:00' },
+    { nombre: 'Todo el día', inicio: '08:00', fin: '20:00' },
+    { nombre: 'Mañana', inicio: '08:00', fin: '12:00' },
+    { nombre: 'Tarde', inicio: '14:00', fin: '20:00' },
   ];
 
   aplicarPresetHorario(p: { inicio: string; fin: string }): void {
     if (!this.config) return;
     this.config.horaInicio = p.inicio;
     this.config.horaFin = p.fin;
+    this.sincronizarHoras();
   }
 
   presetHorarioActivo(p: { inicio: string; fin: string }): boolean {
@@ -323,6 +351,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private fijarConfig(c: BotConfig): void {
     this.config = c;
     this.configGuardada = JSON.stringify(c);
+    this.sincronizarHoras();
   }
 
   /** Mueve solo `activo`, en el formulario y en la referencia guardada, para
