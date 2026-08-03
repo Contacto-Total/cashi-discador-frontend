@@ -18,7 +18,9 @@
 
   <div class="flash" *ngIf="mensaje">{{ mensaje }}</div>
 
-  <div class="chips">
+  <!-- Con error los contadores mentirian: dirian "Total: 0" junto al aviso de
+       fallo, y eso es justo lo que hacia leer el error como "no hay nada". -->
+  <div class="chips" *ngIf="!error">
     <span class="chip">Total: {{ agendas.length }}</span>
     <span class="chip pend">Por atender: {{ contar('PENDIENTE') + contar('ASIGNADA') }}</span>
     <span class="chip done">Atendidas: {{ contar('ATENDIDA') }}</span>
@@ -27,11 +29,22 @@
   </div>
 
   <div class="empty-state error" *ngIf="error">
-    No se pudieron cargar las agendas. Puede haber llamadas programadas aunque aquí no se vean.
+    <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
+    <strong>No se pudo consultar la agenda</strong>
+    <p>{{ errorMotivo }}</p>
+    <p class="aclaracion">
+      Esto <b>no</b> quiere decir que no haya llamadas: quiere decir que no se pudo
+      preguntar. Puede haber llamadas programadas que ahora mismo no se ven.
+    </p>
+    <button class="btn-secondary" (click)="cargar()">
+      <lucide-angular name="refresh-cw" [size]="16"></lucide-angular> Reintentar
+    </button>
   </div>
 
   <div class="empty-state" *ngIf="!error && !cargando && agendas.length === 0">
-    No hay llamadas agendadas para este día.
+    <lucide-angular name="calendar-check" [size]="28"></lucide-angular>
+    <strong>No hay llamadas agendadas</strong>
+    <p>Ningún cliente pidió que le devolvieran la llamada este día.</p>
   </div>
 
   <!-- Próximas: lo que el asesor necesita ver primero -->

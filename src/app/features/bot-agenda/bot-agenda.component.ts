@@ -26,6 +26,8 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   seleccionada?: BotAgendaFila;
   cargando = false;
   error = false;
+  /** Por qué falló, para no dar el mismo mensaje a un 403 que a un servicio caído. */
+  errorMotivo = '';
   mensaje = '';
 
   /** Si el usuario puede ver las de todos. Se descubre probando el endpoint. */
@@ -59,15 +61,27 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
     this.cargando = !silencioso;
     const fuente = this.verTodas ? this.svc.todas(this.fecha) : this.svc.mias(this.fecha);
     fuente.subscribe({
-      next: (a) => { this.agendas = a; this.error = false; this.cargando = false; },
-      error: () => {
+      next: (a) => { this.agendas = a; this.error = false; this.errorMotivo = ''; this.cargando = false; },
+      error: (e) => {
         // Un fallo no puede verse igual que "no tienes agendas": eso ya nos pasó
         // con la cola del bot y se leyó como un bug.
         this.error = true;
+        this.errorMotivo = this.motivoDe(e?.status);
         this.cargando = false;
-        if (!silencioso) this.flash('No se pudieron cargar las agendas', true);
       },
     });
+  }
+
+  /**
+   * Traduce el código HTTP a algo accionable. Sin esto, un 404 del gateway y un
+   * 403 de permisos daban el mismo texto vago y no se sabía a quién avisar.
+   */
+  private motivoDe(status?: number): string {
+    if (status === 0) return 'No hay conexión con el servidor.';
+    if (status === 401) return 'Tu sesión caducó. Vuelve a entrar.';
+    if (status === 403) return 'Tu usuario no tiene permiso para ver esta agenda.';
+    if (status === 404) return 'El servicio de agenda no está publicado todavía.';
+    return 'El servidor respondió con un error' + (status ? ' (' + status + ')' : '') + '.';
   }
 
   alternarAlcance(): void {
