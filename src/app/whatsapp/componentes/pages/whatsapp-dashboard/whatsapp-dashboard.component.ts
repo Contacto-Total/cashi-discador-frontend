@@ -58,8 +58,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
         startWith(0),
         switchMap(() => this.whatsappApi.getWhatsappAccounts())
       ).subscribe({
-        next: accounts => {
-          this.accounts = accounts;
+         next: accounts => {
+           this.accounts = this.currentAccounts(accounts);
+           accounts = this.accounts;
           this.loading = false;
           this.error = '';
             if (this.selectedId === null && accounts.length > 0) {
@@ -360,8 +361,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   private refreshAccounts(): void {
     this.subscriptions.add(this.whatsappApi.getWhatsappAccounts().subscribe({
-      next: accounts => {
-        this.accounts = accounts;
+       next: accounts => {
+         this.accounts = this.currentAccounts(accounts);
+         accounts = this.accounts;
         this.loading = false;
         const selected = this.selectedId === null
           ? accounts[0]
@@ -371,5 +373,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
       },
       error: () => this.error = 'No se pudieron actualizar los servicios de WhatsApp.'
     }));
+  }
+
+  private currentAccounts(accounts: WhatsappAccount[]): WhatsappAccount[] {
+    return accounts.filter(account => account.currentAccount !== false);
   }
 }
