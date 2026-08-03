@@ -79,12 +79,19 @@
               <h2>{{ account.instanciaId }}</h2>
               <p>{{ account.jid || 'JID pendiente de sincronización' }}</p>
             </div>
-            <span class="detail-status" [ngClass]="statusClass(account.status)">
-              <span class="status-dot"></span>{{ statusLabel(account.status) }}
-            </span>
-          </div>
+             <span class="detail-status" [ngClass]="statusClass(account.status)">
+               <span class="status-dot"></span>{{ statusLabel(account.status) }}
+             </span>
+           </div>
 
-          <div class="detail-content">
+           <div class="detail-actions">
+             <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
+               <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
+               {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
+             </button>
+           </div>
+
+           <div class="detail-content">
             <div class="qr-column" [class.qr-muted]="isLinked(account)">
               @if (!isLinked(account) && account.qrData) {
                 <div class="qr-frame"><img [src]="qrSource(account)" alt="Código QR para vincular WhatsApp"></div>
@@ -148,9 +155,10 @@
                 <strong>Asignación pendiente</strong>
                 <p>Primero vincula un número con el QR. Después podrás asignar el tenant, la cartera y la subcartera.</p>
               </div>
-            }
-          </div>
-        </div>
+             }
+           </div>
+           @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
+         </div>
       }
     </section>
   }

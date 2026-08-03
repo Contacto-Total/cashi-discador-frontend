@@ -27,6 +27,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   loading = true;
   saving = false;
   activationSaving = false;
+  changingNumber = false;
   loadingTenants = false;
   loadingPortfolios = false;
   loadingSubPortfolios = false;
@@ -61,11 +62,13 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
           this.accounts = accounts;
           this.loading = false;
           this.error = '';
-          if (this.selectedId === null && accounts.length > 0) {
-            this.selectAccount(accounts[0]);
-          } else if (this.selectedId !== null) {
-            const current = accounts.find(account => account.id === this.selectedId);
-            if (current) this.syncForm(current);
+            if (this.selectedId === null && accounts.length > 0) {
+              this.selectAccount(accounts[0]);
+            } else if (this.selectedId !== null) {
+              const current = accounts.find(account => account.id === this.selectedId);
+              if (current) this.syncForm(current);
+              else if (accounts.length > 0) this.selectAccount(accounts[0]);
+              else this.selectedId = null;
           }
         },
         error: () => {
@@ -137,6 +140,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   }
 
   isLinked(account: WhatsappAccount): boolean {
+    if (account.status === 'WAITING_QR' || account.status === 'LOGGED_OUT') return false;
     return account.hasLinkedNumber === true || !!account.phoneNumber;
   }
 
@@ -232,6 +236,36 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  changeNumber(): void {
+    const account = this.selectedAccount;
+    if (!account || account.currentAccount === false || this.changingNumber) return;
+
+    const confirmed = window.confirm(
+      'Se eliminará la sesión de WhatsApp de este servicio y sus datos locales de Go. ' +
+      'Los historiales guardados en Spring no se borrarán. ¿Deseas continuar para vincular otro número?'
+    );
+    if (!confirmed) return;
+
+    this.changingNumber = true;
+    this.feedback = '';
+    this.subscriptions.add(
+      this.whatsappApi.cleanupWhatsappAccount(account.id).subscribe({
+        next: () => {
+          this.changingNumber = false;
+          this.feedback = 'Sesión eliminada. El servicio se reiniciará y quedará esperando un nuevo QR.';
+          this.accounts = this.accounts.map(item => item.id === account.id
+            ? { ...item, status: 'WAITING_QR', hasLinkedNumber: false, qrData: undefined }
+            : item);
+          this.syncForm(this.selectedAccount || account);
+        },
+        error: () => {
+          this.changingNumber = false;
+          this.feedback = 'No se pudo eliminar la sesión del servicio.';
+        }
+      })
+    );
+  }
+
   private syncForm(account: WhatsappAccount): void {
     const tenantId = Number(account.tenantId) || 0;
     const carteraId = Number(account.carteraId) || 0;
@@ -300,14 +334,21 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   }
 
   private applyStatusEvent(payload: AccountStatusEvent): void {
-    const index = this.accounts.findIndex(account => account.instanciaId === payload.instanciaId);
+    if (payload.accountId && !this.accounts.some(account => account.id === payload.accountId)) {
+      this.refreshAccounts();
+      return;
+    }
+
+    const index = payload.accountId
+      ? this.accounts.findIndex(account => account.id === payload.accountId)
+      : this.accounts.findIndex(account => account.instanciaId === payload.instanciaId);
     if (index < 0) return;
 
     const current = this.accounts[index];
     const updated: WhatsappAccount = {
       ...current,
       status: payload.status,
-      phoneNumber: payload.phoneNumber || current.phoneNumber,
+      phoneNumber: payload.phoneNumber || (payload.status === 'WAITING_QR' || payload.status === 'LOGGED_OUT' ? undefined : current.phoneNumber),
       hasLinkedNumber: payload.hasLinkedNumber ?? current.hasLinkedNumber,
       active: payload.active ?? current.active,
       tenantId: payload.tenantId ?? current.tenantId,
@@ -317,5 +358,20 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     };
     this.accounts = this.accounts.map(account => account.id === updated.id ? updated : account);
     if (this.selectedId === updated.id) this.syncForm(updated);
+  }
+
+  private refreshAccounts(): void {
+    this.subscriptions.add(this.whatsappApi.getWhatsappAccounts().subscribe({
+      next: accounts => {
+        this.accounts = accounts;
+        this.loading = false;
+        const selected = this.selectedId === null
+          ? accounts[0]
+          : accounts.find(account => account.id === this.selectedId) || accounts[0];
+        if (selected) this.selectAccount(selected);
+        else this.selectedId = null;
+      },
+      error: () => this.error = 'No se pudieron actualizar los servicios de WhatsApp.'
+    }));
   }
 }

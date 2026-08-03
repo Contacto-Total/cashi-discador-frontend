@@ -337,6 +337,45 @@ p {
   border-bottom: 1px solid rgba(148, 163, 184, .14);
 }
 
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 22px;
+  border-bottom: 1px solid rgba(148, 163, 184, .1);
+}
+
+.change-number-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 9px 12px;
+  border: 1px solid rgba(220, 38, 38, .2);
+  border-radius: 11px;
+  background: rgba(220, 38, 38, .06);
+  color: #b91c1c;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.change-number-button:hover {
+  background: rgba(220, 38, 38, .11);
+}
+
+.change-number-button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.detail-feedback {
+  margin: 0 22px 18px;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .detail-content {
   display: grid;
   grid-template-columns: minmax(260px, .82fr) minmax(310px, 1.18fr);

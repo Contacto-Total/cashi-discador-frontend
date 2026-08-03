@@ -37,6 +37,10 @@ export class WhatsappApiService {
     return this.http.patch<WhatsappAccount>(`${this.apiBase}/accounts/${id}/active`, { active });
   }
 
+  cleanupWhatsappAccount(id: number): Observable<void> {
+    return this.http.post<void>(`${this.apiBase}/accounts/${id}/cleanup`, {});
+  }
+
   getChats(page = 0, size = 30, q?: string, accountId?: number): Observable<PageResponse<Conversation>> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (q) params = params.set('q', q);
