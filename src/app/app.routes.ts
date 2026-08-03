@@ -454,6 +454,14 @@ export const routes: Routes = [
   },
 
   {
+    path: 'bot-agenda',
+    loadComponent: () => import('./features/bot-agenda/bot-agenda.component').then(m => m.BotAgendaComponent),
+    // sin adminGuard a proposito: el asesor tiene que ver SUS llamadas agendadas.
+    // El filtrado lo hace el backend (/mias resuelve por el usuario del token).
+    canActivate: [authGuard]
+  },
+
+  {
     path: 'bot-voz',
     loadComponent: () => import('./features/bot-voz/bot-voz.component').then(m => m.BotVozComponent),
     // solo ADMIN: BotAdminController exige hasRole('ADMIN'), un supervisor entraria a la vista y recibiria 403 en los datos

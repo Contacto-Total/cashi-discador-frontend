@@ -123,9 +123,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Los siete dias del selector, en la convencion L M X J V S D: la X de
-   * miercoles evita la M repetida de martes. Es lo que ya guarda la columna,
-   * asi que lo que se pinta y lo que se guarda son el mismo valor.
+   * Dias seleccionables, en la convencion L M X J V: la X de miercoles evita la M
+   * repetida de martes. Es lo que ya guarda la columna, asi que lo que se pinta y
+   * lo que se guarda son el mismo valor.
+   *
+   * Sabado y domingo NO estan: la Ley 29571 prohibe la cobranza en fin de semana
+   * (ver §10 del MD). Se quitan del selector en vez de dejarlos y avisar, porque
+   * un aviso se ignora y una opcion que no existe, no.
    */
   readonly DIAS = [
     { codigo: 'L', nombre: 'Lunes' },
@@ -133,21 +137,18 @@ export class BotVozComponent implements OnInit, OnDestroy {
     { codigo: 'X', nombre: 'Miércoles' },
     { codigo: 'J', nombre: 'Jueves' },
     { codigo: 'V', nombre: 'Viernes' },
-    { codigo: 'S', nombre: 'Sábado' },
-    { codigo: 'D', nombre: 'Domingo' },
   ];
 
   readonly PRESETS_DIAS = [
-    { nombre: 'Lun a Vie', codigos: 'L,M,X,J,V', resumen: 'Marca de lunes a viernes.' },
-    { nombre: 'Lun a Sáb', codigos: 'L,M,X,J,V,S', resumen: 'Marca de lunes a sábado.' },
-    { nombre: 'Todos', codigos: 'L,M,X,J,V,S,D', resumen: 'Marca todos los días.' },
+    { nombre: 'Toda la semana', codigos: 'L,M,X,J,V', resumen: 'Marca de lunes a viernes.' },
+    { nombre: 'Solo L-M-V', codigos: 'L,X,V', resumen: 'Marca lunes, miércoles y viernes.' },
   ];
 
   /**
    * Ventana horaria recomendada por la Ley 29571 arts. 61-62 (llamadas a horas
-   * inoportunas). El MD la fija como default 08:00-20:00 L-S. No se bloquea
-   * fuera de rango — en QAS hace falta discar de noche — pero se avisa, que es
-   * lo que faltaba: hoy el panel dejaba poner 23:00 sin decir nada.
+   * inoportunas). El MD la fija en 08:00-20:00 de lunes a viernes (§10). El
+   * desplegable solo ofrece horas de ese rango, asi que no se puede elegir una
+   * hora fuera de la ley: la validacion vive en las opciones que existen.
    */
   readonly HORA_LEGAL_DESDE = '08:00';
   readonly HORA_LEGAL_HASTA = '20:00';
@@ -338,6 +339,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
       this.flash('La hora de fin debe ser posterior a la de inicio', true);
       return;
     }
+    if (!this.config.diasSemana) {
+      this.flash('Selecciona al menos un día de la semana', true);
+      return;
+    }
+    // Sanea lo que pueda venir de la base: un "S" o "D" heredado seguiria
+    // haciendo discar en fin de semana y el selector ya no lo muestra, asi que
+    // nadie podria quitarlo desde aqui.
+    const validos = this.DIAS.map((d) => d.codigo);
+    this.config.diasSemana = this.codigosActivos()
+      .filter((c) => validos.includes(c))
+      .join(',');
     if (!this.config.diasSemana) {
       this.flash('Selecciona al menos un día de la semana', true);
       return;
