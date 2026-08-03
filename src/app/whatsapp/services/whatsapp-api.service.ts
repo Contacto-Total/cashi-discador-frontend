@@ -41,10 +41,11 @@ export class WhatsappApiService {
     return this.http.post<WhatsappAccount>(`${this.apiBase}/accounts/${id}/cleanup`, {});
   }
 
-  getChats(page = 0, size = 30, q?: string, accountId?: number): Observable<PageResponse<Conversation>> {
+  getChats(page = 0, size = 30, q?: string, accountId?: number, includeHistorical = false): Observable<PageResponse<Conversation>> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (q) params = params.set('q', q);
     if (accountId) params = params.set('accountId', accountId);
+    if (includeHistorical) params = params.set('includeHistorical', true);
     return this.http.get<PageResponse<Conversation>>(`${this.apiBase}/chats`, { params });
   }
 

@@ -205,7 +205,12 @@ export const routes: Routes = [
   {
     path: 'whatsapp/dashboard',
     loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-dashboard/whatsapp-dashboard.component').then(m => m.WhatsappDashboardComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'whatsapp/history',
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-history/whatsapp-history.component').then(m => m.WhatsappHistoryComponent),
+    canActivate: [authGuard, adminGuard]
   },
   {
     // /whatsapp ahora sirve la page nueva (app/whatsapp). El módulo viejo

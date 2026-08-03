@@ -159,7 +159,29 @@
            </div>
            @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
          </div>
-      }
-    </section>
-  }
+       }
+     </section>
+
+     <section class="instance-chat-panel">
+       <div class="instance-chat-heading">
+         <div>
+           <span class="panel-kicker">Vista rápida</span>
+           <h2>Chat de la instancia seleccionada</h2>
+           <p>{{ selectedAccount ? 'Conversaciones filtradas por la cuenta activa seleccionada.' : 'Selecciona una instancia para ver sus conversaciones.' }}</p>
+         </div>
+         <a class="history-link" routerLink="/whatsapp/history">
+           <lucide-angular name="archive" [size]="15"></lucide-angular>
+           Ver historial completo
+         </a>
+       </div>
+       @if (selectedAccount) {
+         <div class="instance-chat-grid">
+           <app-whatsapp-chat-list-widget></app-whatsapp-chat-list-widget>
+           <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
+         </div>
+       } @else {
+         <div class="instance-chat-empty">Selecciona una instancia para cargar sus chats.</div>
+       }
+     </section>
+   }
 </main>

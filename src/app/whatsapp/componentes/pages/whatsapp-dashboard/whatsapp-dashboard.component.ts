@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { RouterLink } from '@angular/router';
 import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { WhatsappApiService } from '../../../services/whatsapp-api.service';
 import { AccountStatusEvent, WhatsappAccount } from '../../../models';
@@ -10,11 +11,14 @@ import { TenantService } from '../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../../maintenance/models/portfolio.model';
+import { ChatListWidgetComponent } from '../../widgets/chat-list-widget/chat-list-widget.component';
+import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.component';
+import { WhatsappMessageStoreService } from '../../../services/whatsapp-message-store.service';
 
 @Component({
   selector: 'app-whatsapp-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, ChatListWidgetComponent, ChatWidgetComponent],
   templateUrl: './whatsapp-dashboard.component.html',
   styleUrls: ['./whatsapp-dashboard.component.css']
 })
@@ -46,6 +50,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   constructor(
     private readonly whatsappApi: WhatsappApiService,
     private readonly realtime: WhatsappRealtimeService,
+    private readonly messageStore: WhatsappMessageStoreService,
     private readonly tenantService: TenantService,
     private readonly portfolioService: PortfolioService
   ) {}
@@ -114,6 +119,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   selectAccount(account: WhatsappAccount): void {
     this.selectedId = account.id;
     this.syncForm(account);
+    this.messageStore.setAccountFilter(account.id, false);
     this.feedback = '';
   }
 

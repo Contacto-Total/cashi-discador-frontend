@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, computed, effect, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { environment } from '../../../../../environments/environment';
 import { Chat, Message } from '../../../models';
@@ -246,9 +246,11 @@ interface MessageSender {
           }
         </div>
 
-        <footer class="border-t border-slate-200 bg-white px-4 py-3">
-          <app-whatsapp-message-input-widget />
-        </footer>
+         @if (!readOnly) {
+           <footer class="border-t border-slate-200 bg-white px-4 py-3">
+             <app-whatsapp-message-input-widget />
+           </footer>
+         }
       } @else {
         <div class="flex h-full flex-col items-center justify-center bg-slate-50 p-8 text-center">
           <p class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">WhatsApp v2</p>
@@ -383,6 +385,7 @@ interface MessageSender {
   `]
 })
 export class ChatWidgetComponent {
+  @Input() readOnly = false;
   @ViewChild('messagesPanel') private messagesPanel?: ElementRef<HTMLElement>;
 
   readonly chat = computed(() => this.store.currentChat());

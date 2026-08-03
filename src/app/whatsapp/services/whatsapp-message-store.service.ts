@@ -32,6 +32,7 @@ export class WhatsappMessageStoreService {
   readonly chatsTotalPages = signal(0);
   readonly chatsQuery = signal<string | undefined>(undefined);
   readonly chatsAccountId = signal<number | undefined>(undefined);
+  readonly chatsIncludeHistorical = signal(false);
 
   readonly currentMessages = computed(() => {
     const conversationId = this.currentChat()?.id;
@@ -50,14 +51,15 @@ export class WhatsappMessageStoreService {
     private readonly realtime: WhatsappRealtimeService
   ) {}
 
-  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId()): void {
+  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId(), includeHistorical = this.chatsIncludeHistorical()): void {
     this.loadingChats.set(true);
-    this.api.getChats(page, size, q).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
+     this.api.getChats(page, size, q, accountId, includeHistorical).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
       next: (response) => {
         this.chatsPage.set(response.number);
         this.chatsTotalPages.set(response.totalPages);
         this.chatsQuery.set(q);
-        this.chatsAccountId.set(accountId);
+         this.chatsAccountId.set(accountId);
+         this.chatsIncludeHistorical.set(includeHistorical);
         const mapped = response.content.map(conversationToChat);
         this.chats.set(page === 0 ? mapped : this.mergeChats(this.chats(), mapped));
       }
@@ -66,12 +68,13 @@ export class WhatsappMessageStoreService {
 
   loadNextChatsPage(size = 30): void {
     if (this.loadingChats() || !this.hasMoreChats()) return;
-    this.loadChats(this.chatsPage() + 1, size, this.chatsQuery());
+     this.loadChats(this.chatsPage() + 1, size, this.chatsQuery(), this.chatsAccountId(), this.chatsIncludeHistorical());
   }
 
-  setAccountFilter(accountId: number | undefined): void {
+  setAccountFilter(accountId: number | undefined, includeHistorical = this.chatsIncludeHistorical()): void {
     this.chatsAccountId.set(accountId);
-    this.loadChats(0, 30, this.chatsQuery(), accountId);
+    this.chatsIncludeHistorical.set(includeHistorical);
+    this.loadChats(0, 30, this.chatsQuery(), accountId, includeHistorical);
   }
 
   selectChatByRoute(conversationId?: number, jid?: string): void {
