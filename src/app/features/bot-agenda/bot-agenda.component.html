@@ -25,6 +25,7 @@
     <span class="chip pend">Por atender: {{ contar('PENDIENTE') }}</span>
     <span class="chip done">Atendidas: {{ contar('ATENDIDA') }}</span>
     <span class="chip disc">No contestó: {{ contar('NO_CONTESTA') }}</span>
+    <span class="chip disc" *ngIf="contar('VENCIDA')">No se llamó: {{ contar('VENCIDA') }}</span>
   </div>
 
   <div class="empty-state error" *ngIf="error">
