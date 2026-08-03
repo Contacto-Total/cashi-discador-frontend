@@ -129,6 +129,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
       PENDIENTE: 'Pendiente',
       ATENDIDA: 'Atendida',
       NO_CONTESTA: 'No contestó',
+      VENCIDA: 'No se llamó',
       CANCELADA: 'Cancelada',
     } as Record<string, string>)[estado] ?? estado;
   }

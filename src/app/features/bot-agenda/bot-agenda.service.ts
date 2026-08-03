@@ -12,7 +12,7 @@ export interface BotAgendaFila {
   telefono?: string;
   motivo?: string;
   resumen?: string;
-  estado: string;          // PENDIENTE | ATENDIDA | NO_CONTESTA | CANCELADA
+  estado: string;          // PENDIENTE | ATENDIDA | NO_CONTESTA | VENCIDA | CANCELADA
   detalleCierre?: string;
   intentos?: number;
   idCuota?: number;
