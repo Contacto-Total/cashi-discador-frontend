@@ -40,6 +40,6 @@ import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.compo
       .history-header { align-items: start; flex-direction: column; }
       .history-shell { grid-template-columns: 1fr; height: 760px; }
     }
-  `
+  `]
 })
 export class WhatsappHistoryComponent {}
