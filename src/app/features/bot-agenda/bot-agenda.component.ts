@@ -7,6 +7,9 @@ import { BotAgendaService, BotAgendaFila } from './bot-agenda.service';
 /**
  * Llamadas que el bot dejó agendadas (F1f).
  *
+ * Es un REGISTRO, no un discador: el sistema no marca nada. Aquí el asesor ve con
+ * quién quedó el bot, a qué hora y por qué, y llama con su gestión normal.
+ *
  * Existe porque una notificación se pierde y una lista no: el asesor puede estar
  * en llamada cuando llega el aviso, o haber recargado la pantalla.
  *
@@ -36,7 +39,7 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   fecha = new Date().toISOString().slice(0, 10);
 
-  /** Las filas cambian de estado mientras el planificador trabaja. */
+  /** Refresco suave: otro asesor o el bot pueden añadir citas mientras miras. */
   private readonly REFRESCO_MS = 15000;
   private refresco?: ReturnType<typeof setInterval>;
 
@@ -95,11 +98,11 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
 
   /** Las que todavía van a ocurrir, que es lo que el asesor necesita ver arriba. */
   get proximas(): BotAgendaFila[] {
-    return this.agendas.filter((a) => a.estado === 'PENDIENTE' || a.estado === 'ASIGNADA');
+    return this.agendas.filter((a) => a.estado === 'PENDIENTE');
   }
 
   get cerradas(): BotAgendaFila[] {
-    return this.agendas.filter((a) => a.estado !== 'PENDIENTE' && a.estado !== 'ASIGNADA');
+    return this.agendas.filter((a) => a.estado !== 'PENDIENTE');
   }
 
   /** Minutos que faltan; negativo si ya pasó la hora. */
@@ -118,16 +121,14 @@ export class BotAgendaComponent implements OnInit, OnDestroy {
   /** Inminente: es la que el asesor tiene que tener presente ya. */
   esInminente(a: BotAgendaFila): boolean {
     const m = this.minutosPara(a);
-    return m <= 5 && m >= -30 && (a.estado === 'PENDIENTE' || a.estado === 'ASIGNADA');
+    return m <= 5 && a.estado === 'PENDIENTE';
   }
 
   etiquetaEstado(estado: string): string {
     return ({
       PENDIENTE: 'Pendiente',
-      ASIGNADA: 'Por marcar',
       ATENDIDA: 'Atendida',
       NO_CONTESTA: 'No contestó',
-      SIN_ASESOR: 'Sin asesor',
       CANCELADA: 'Cancelada',
     } as Record<string, string>)[estado] ?? estado;
   }
