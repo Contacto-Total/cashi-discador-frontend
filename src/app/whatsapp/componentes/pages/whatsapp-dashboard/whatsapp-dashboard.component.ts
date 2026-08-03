@@ -250,13 +250,11 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     this.feedback = '';
     this.subscriptions.add(
       this.whatsappApi.cleanupWhatsappAccount(account.id).subscribe({
-        next: () => {
+        next: updated => {
           this.changingNumber = false;
           this.feedback = 'Sesión eliminada. El servicio se reiniciará y quedará esperando un nuevo QR.';
-          this.accounts = this.accounts.map(item => item.id === account.id
-            ? { ...item, status: 'WAITING_QR', hasLinkedNumber: false, qrData: undefined }
-            : item);
-          this.syncForm(this.selectedAccount || account);
+          this.selectedId = updated.id;
+          this.refreshAccounts();
         },
         error: () => {
           this.changingNumber = false;
