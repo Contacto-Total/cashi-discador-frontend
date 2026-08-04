@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ChatListWidgetComponent } from '../../widgets/chat-list-widget/chat-list-widget.component';
 import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.component';
+import { WhatsappMessageStoreService } from '../../../services/whatsapp-message-store.service';
 
 @Component({
   selector: 'app-whatsapp-history',
@@ -42,4 +43,10 @@ import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.compo
     }
   `]
 })
-export class WhatsappHistoryComponent {}
+export class WhatsappHistoryComponent implements OnDestroy {
+  constructor(private readonly store: WhatsappMessageStoreService) {}
+
+  ngOnDestroy(): void {
+    this.store.stopViewingCurrentChat();
+  }
+}

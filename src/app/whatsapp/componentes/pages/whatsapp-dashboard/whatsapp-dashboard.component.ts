@@ -93,6 +93,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.messageStore.stopViewingCurrentChat();
     this.realtime.disconnect();
   }
 

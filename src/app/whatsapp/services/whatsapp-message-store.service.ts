@@ -9,6 +9,7 @@ export class WhatsappMessageStoreService {
   private readonly messagesByConversation = signal(new Map<number, Message[]>());
   private readonly hasMoreByConversation = signal(new Map<number, boolean>());
   private realtimeSubscription?: Subscription;
+  private viewerHeartbeat?: ReturnType<typeof setInterval>;
 
   // Receipts que llegaron antes que su mensaje (carrera eco OUTGOING / receipt):
   // se guardan por msgId y se aplican cuando el mensaje entra al store.
@@ -118,6 +119,11 @@ export class WhatsappMessageStoreService {
   }
 
   selectChat(chat: Chat | null): void {
+    const previous = this.currentChat();
+    if (previous?.id && previous.id !== chat?.id) {
+      this.api.leaveViewers(previous.id).subscribe();
+    }
+    this.stopViewerHeartbeat();
     this.currentChat.set(chat);
     this.activeViewers.set([]);
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
@@ -128,9 +134,40 @@ export class WhatsappMessageStoreService {
     // de no-leídos hay que bajarlo en la vista al instante o queda "pegado".
     this.clearUnread(chat.id);
     this.loadMessages(chat.id);
-    this.api.getViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
-    this.api.joinViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
-    this.api.markRead(chat.id).subscribe();
+     this.api.getViewers(chat.id).subscribe({
+       next: (response) => {
+         if (this.currentChat()?.id === chat.id) this.activeViewers.set(response.viewers);
+       }
+     });
+     this.api.joinViewers(chat.id).subscribe({
+       next: (response) => {
+         if (this.currentChat()?.id === chat.id) this.activeViewers.set(response.viewers);
+       }
+     });
+     this.viewerHeartbeat = setInterval(() => {
+       if (this.currentChat()?.id !== chat.id) return;
+       this.api.joinViewers(chat.id).subscribe({
+         next: (response) => {
+           if (this.currentChat()?.id === chat.id) this.activeViewers.set(response.viewers);
+         }
+       });
+     }, 30000);
+     this.api.markRead(chat.id).subscribe();
+   }
+
+  private stopViewerHeartbeat(): void {
+    if (this.viewerHeartbeat) {
+      clearInterval(this.viewerHeartbeat);
+      this.viewerHeartbeat = undefined;
+    }
+  }
+
+  stopViewingCurrentChat(): void {
+    const current = this.currentChat();
+    if (current?.id) this.api.leaveViewers(current.id).subscribe();
+    this.stopViewerHeartbeat();
+    this.activeViewers.set([]);
+    this.currentChat.set(null);
   }
 
   private clearUnread(conversationId: number): void {

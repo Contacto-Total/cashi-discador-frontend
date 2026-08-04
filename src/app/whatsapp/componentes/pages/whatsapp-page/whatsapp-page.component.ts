@@ -40,6 +40,7 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.store.stopViewingCurrentChat();
     this.store.disconnectRealtime();
   }
 }
