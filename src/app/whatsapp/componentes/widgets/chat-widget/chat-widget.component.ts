@@ -102,7 +102,7 @@ interface MessageSender {
                           No se pudo cargar {{ mediaLabel(message) }} · Reintentar
                         </button>
                       } @else if (isImage(message) && hasMediaSrc(message)) {
-                        <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message); $event.stopPropagation()">
+                           <button type="button" class="block max-w-[180px] overflow-hidden rounded-md" (click)="openImageViewer(message); $event.stopPropagation()">
                           <img class="max-h-48 w-full object-cover" [src]="mediaSrc(message)" [alt]="message.media?.caption || message.text || 'Imagen'" (error)="onMediaError(message.msgId)" />
                         </button>
                       } @else if (isSticker(message) && hasMediaSrc(message)) {
@@ -110,7 +110,7 @@ interface MessageSender {
                       } @else if (isVideo(message) && hasMediaSrc(message)) {
                         <video class="max-h-56 max-w-[220px] rounded-lg" controls preload="metadata" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></video>
                       } @else if (isAudio(message) && hasMediaSrc(message)) {
-                        <div class="mb-1 w-[280px] max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm" (click)="$event.stopPropagation()">
+                         <div class="mb-1 w-[280px] max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-sm" (click)="$event.stopPropagation()">
                           <div class="flex items-center gap-3 px-3 py-2.5">
                             <span class="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -165,7 +165,7 @@ interface MessageSender {
                             </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
-                        <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" (click)="downloadMedia(message); $event.stopPropagation()">
+                         <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-xl border border-slate-200 bg-[#d5eecf] px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-[#c7e8c0]" (click)="downloadMedia(message); $event.stopPropagation()">
                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100" [style.color]="fileIconColor(message)">
                              <lucide-angular [name]="fileIcon(message)" [size]="22"></lucide-angular>
                            </span>
@@ -479,7 +479,7 @@ export class ChatWidgetComponent {
   bubbleClass(message: Message): string {
     if (this.isImage(message) || this.isSticker(message) || this.isAudio(message) || this.isDocumentLike(message)) {
       return message.fromMe
-        ? 'max-w-[78%] rounded-lg rounded-br-sm bg-emerald-600 px-2 py-1.5 text-white shadow-sm transition hover:brightness-95'
+        ? 'max-w-[78%] rounded-md rounded-br-sm bg-[#d4efcd] px-1.5 py-1 text-slate-800 shadow-sm transition hover:brightness-95'
         : 'max-w-[78%] text-slate-900';
     }
 
