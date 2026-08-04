@@ -62,7 +62,7 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
         const currentStatus = status.estadoActual as AgentState;
         this.previousStatus = currentStatus;
         if (currentStatus !== AgentState.DISPONIBLE) return;
-        this.agentStatus.changeStatus(user.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+        this.agentStatus.changeStatus(user.id, { estado: AgentState.GESTION_MANUAL }).subscribe({
           next: () => this.statusChangedByWhatsapp = true
         });
       }
