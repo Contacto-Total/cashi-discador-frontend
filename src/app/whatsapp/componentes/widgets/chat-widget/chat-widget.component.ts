@@ -41,10 +41,15 @@ interface MessageSender {
             <h2 class="truncate text-base font-semibold text-slate-950">{{ chatDisplayName(selectedChat) }}</h2>
             <p class="truncate text-xs text-slate-500">{{ displayContact(selectedChat) }}</p>
           </div>
-          @if (viewersText()) {
-            <p class="ml-auto max-w-[45%] truncate text-right text-xs font-medium text-emerald-700">
-              Viendo actualmente: {{ viewersText() }}
-            </p>
+           @if (viewersText()) {
+             <div class="viewer-presence group relative ml-auto max-w-[45%]">
+               <p class="truncate text-right text-xs font-medium text-emerald-700">
+                 Viendo actualmente: {{ viewersText() }}
+               </p>
+               <span class="viewer-tooltip pointer-events-none absolute right-0 top-full z-20 mt-2 w-max max-w-72 rounded-lg bg-slate-900 px-3 py-2 text-left text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                 {{ viewersFullText() }}
+               </span>
+             </div>
           }
           @if (store.loadingMessages()) {
             <span class="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Cargando</span>
@@ -77,10 +82,10 @@ interface MessageSender {
                 <article [id]="messageElementId(message.msgId)" class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
                   @if (message.fromMe) {
                     <div class="flex shrink-0 flex-col items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
+                       <button type="button" class="message-action-button" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="7" r=".7" fill="currentColor"/></svg>
                       </button>
-                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                       <button type="button" class="message-action-button" title="Responder" (click)="reply(message); $event.stopPropagation()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
                       </button>
                     </div>
@@ -212,10 +217,10 @@ interface MessageSender {
                   </div>
                   @if (!message.fromMe) {
                     <div class="flex shrink-0 flex-col items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
+                       <button type="button" class="message-action-button" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="7" r=".7" fill="currentColor"/></svg>
                       </button>
-                      <button type="button" class="rounded-full p-1.5 text-slate-400 transition hover:bg-black/5 hover:text-slate-700" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                       <button type="button" class="message-action-button" title="Responder" (click)="reply(message); $event.stopPropagation()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
                       </button>
                     </div>
@@ -365,6 +370,9 @@ interface MessageSender {
   `,
   styles: [`
     .detail-panel { animation: detail-slide-in 0.22s ease-out; }
+    .message-action-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; color: #334155; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); transition: background-color .15s, color .15s, transform .15s; }
+    .message-action-button:hover { background: #f1f5f9; color: #0f172a; transform: translateY(-1px); }
+    .viewer-tooltip { white-space: normal; }
     @keyframes detail-slide-in {
       from { transform: translateX(100%); }
       to { transform: translateX(0); }
@@ -408,9 +416,13 @@ export class ChatWidgetComponent {
   readonly detailSender = signal<MessageSender | null>(null);
   readonly detailViews = signal<MessageViewer[]>([]);
   readonly detailLoadingViews = signal(false);
-  readonly viewersText = computed(() => this.truncateViewers(this.store.activeViewers()
+  readonly viewersFullText = computed(() => this.store.activeViewers()
     .map((viewerId) => this.viewerNames().get(viewerId) || viewerId)
-    .join(', ')));
+    .join(', '));
+  readonly viewersText = computed(() => {
+    const first = this.viewersFullText().split(',')[0]?.trim() || '';
+    return first.split(/\s+/)[0] || '';
+  });
 
   private lastChatId?: number;
   private lastMessageKey = '';
@@ -949,10 +961,6 @@ export class ChatWidgetComponent {
     const next = new Map(this.viewerNames());
     next.set(viewerId, name);
     this.viewerNames.set(next);
-  }
-
-  private truncateViewers(value: string): string {
-    return value.length > 90 ? `${value.slice(0, 90)}.....` : value;
   }
 
   private scrollToBottom(): void {

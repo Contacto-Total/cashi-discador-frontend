@@ -17,6 +17,7 @@ type SearchMode = 'telefono' | 'documento';
 
 type PromiseResult = {
   kind: 'success' | 'error';
+  icon?: 'check' | 'alert';
   title: string;
   message: string;
   detail?: string;
@@ -70,10 +71,10 @@ const PROMISE_TIPIFICATION_ID = 5;
        } @else if (promiseResult(); as result) {
          <div class="flex min-h-0 flex-1 flex-col items-center justify-center px-5 py-8 text-center">
            <div class="grid size-16 place-items-center rounded-full" [class]="result.kind === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
-             @if (result.kind === 'success') {
-               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+             @if (result.icon === 'alert' || result.kind === 'error') {
+               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 16h.01"/></svg>
              } @else {
-               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
              }
            </div>
            <h3 class="mt-5 text-base font-bold text-slate-900">{{ result.title }}</h3>
@@ -815,6 +816,7 @@ export class InfoClientWidgetComponent {
         if (this.customAmount()) {
           this.promiseResult.set({
             kind: 'success',
+            icon: 'alert',
             title: 'Promesa enviada a evaluación',
             message: 'Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.'
           });
