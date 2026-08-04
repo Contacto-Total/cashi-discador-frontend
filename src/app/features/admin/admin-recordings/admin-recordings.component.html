@@ -209,8 +209,8 @@
             </td>
             <td class="col-action">
               <button class="btn-audio" (click)="downloadReporte(recording)"
-                      [disabled]="!recording.tieneEvaluacion || downloadingReporteId === recording.id"
-                      [title]="recording.tieneEvaluacion ? 'Descargar reporte de evaluación' : 'Sin evaluación de calidad'">
+                      [disabled]="downloadingReporteId === recording.id"
+                      title="Descargar reporte de evaluación">
                 <lucide-angular [img]="downloadingReporteId === recording.id ? Loader : FileSpreadsheet"
                                 [size]="15"
                                 [class.spin]="downloadingReporteId === recording.id"></lucide-angular>

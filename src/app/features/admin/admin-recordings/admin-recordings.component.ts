@@ -378,6 +378,13 @@ export class AdminRecordingsComponent implements OnInit {
   }
 
   downloadReporte(recording: RecordingDTO): void {
+    // El boton queda siempre habilitado para que se vea clickeable como el de
+    // audio; si no hay evaluacion se avisa por toast en vez de bloquearlo.
+    if (!recording.tieneEvaluacion) {
+      this.toastService.error('Evaluación de calidad no disponible.');
+      return;
+    }
+
     this.downloadingReporteId = recording.id;
     this.recordingsService.downloadReporte(recording.id).subscribe({
       next: (data: Blob) => {
@@ -395,7 +402,7 @@ export class AdminRecordingsComponent implements OnInit {
       error: (err) => {
         console.error(err);
         this.downloadingReporteId = null;
-        this.toastService.error('Esta grabación todavía no tiene evaluación de calidad.');
+        this.toastService.error('Evaluación de calidad no disponible.');
       }
     });
   }
