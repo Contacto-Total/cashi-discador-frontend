@@ -27,7 +27,8 @@ export class WhatsappMessageStoreService {
   readonly sendingMessage = signal(false);
   readonly uploadingMedia = signal(false);
   readonly sendMessageError = signal<string | null>(null);
-  readonly pendingAttachment = signal<File | null>(null);
+  readonly pendingAttachments = signal<File[]>([]);
+  readonly pendingAttachment = computed(() => this.pendingAttachments()[0] || null);
   readonly activeViewers = signal<string[]>([]);
   readonly replyingTo = signal<Message | null>(null);
   readonly chatsPage = signal(0);
@@ -128,7 +129,7 @@ export class WhatsappMessageStoreService {
     this.currentChat.set(chat);
     this.activeViewers.set([]);
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
-    this.pendingAttachment.set(null);
+    this.pendingAttachments.set([]);
     if (!chat?.id) return;
     const conversationId = chat.id;
 
@@ -392,22 +393,50 @@ export class WhatsappMessageStoreService {
   }
 
   setPendingAttachment(file: File | null): void {
-    this.pendingAttachment.set(file);
+    this.pendingAttachments.set(file ? [file] : []);
     this.sendMessageError.set(null);
   }
 
+  addPendingAttachments(files: File[]): void {
+    if (!files.length) return;
+    this.pendingAttachments.update(current => [...current, ...files]);
+    this.sendMessageError.set(null);
+  }
+
+  removePendingAttachment(index: number): void {
+    this.pendingAttachments.update(files => files.filter((_, fileIndex) => fileIndex !== index));
+  }
+
   sendPendingAttachment(conversationId: number, caption?: string): void {
-    const file = this.pendingAttachment();
-    if (!file || this.uploadingMedia() || this.sendingMessage()) return;
+    const files = this.pendingAttachments();
+    if (!files.length || this.uploadingMedia() || this.sendingMessage()) return;
 
     this.sendMessageError.set(null);
+    this.uploadAndSendAttachments(conversationId, files, caption, 0);
+  }
+
+  private uploadAndSendAttachments(conversationId: number, files: File[], caption: string | undefined, index: number): void {
+    const file = files[index];
+    if (!file) {
+      this.pendingAttachments.set([]);
+      return;
+    }
+
     this.uploadingMedia.set(true);
-    this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
+    this.api.uploadMedia(file).subscribe({
       next: ({ ref, fileName, mime }) => {
-        this.pendingAttachment.set(null);
-        this.sendMedia(conversationId, ref, caption, fileName || file.name, mime || file.type);
+        this.pendingAttachments.update(current => current.filter(item => item !== file));
+        this.sendMedia(conversationId, ref, index === 0 ? caption : undefined, fileName || file.name, mime || file.type);
+        if (index + 1 < files.length) {
+          setTimeout(() => this.uploadAndSendAttachments(conversationId, files, caption, index + 1));
+        } else {
+          this.uploadingMedia.set(false);
+        }
       },
-      error: () => this.sendMessageError.set('No se pudo subir el archivo.')
+      error: () => {
+        this.uploadingMedia.set(false);
+        this.sendMessageError.set(`No se pudo subir ${file.name}.`);
+      }
     });
   }
 
