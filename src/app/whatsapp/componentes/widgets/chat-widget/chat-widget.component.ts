@@ -165,7 +165,7 @@ interface MessageSender {
                             </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
-                         <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-xl border border-slate-200 bg-[#d5eecf] px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-[#c7e8c0]" (click)="downloadMedia(message); $event.stopPropagation()">
+                         <button type="button" [class]="'mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-left text-slate-800 shadow-sm transition ' + (message.fromMe ? 'bg-[#d5eecf] hover:border-emerald-300 hover:bg-[#c7e8c0]' : 'bg-white/95 hover:border-slate-300 hover:bg-slate-50')" (click)="downloadMedia(message); $event.stopPropagation()">
                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100" [style.color]="fileIconColor(message)">
                              <lucide-angular [name]="fileIcon(message)" [size]="22"></lucide-angular>
                            </span>
