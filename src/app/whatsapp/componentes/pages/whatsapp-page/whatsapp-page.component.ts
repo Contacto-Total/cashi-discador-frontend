@@ -5,6 +5,9 @@ import { ChatListWidgetComponent } from '../../widgets/chat-list-widget/chat-lis
 import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.component';
 import { InfoClientWidgetComponent } from '../../info-client/info-client-widget.component';
 import { WhatsappMessageStoreService } from '../../../services';
+import { AuthService } from '../../../../core/services/auth.service';
+import { AgentStatusService } from '../../../../core/services/agent-status.service';
+import { AgentState } from '../../../../core/models/agent-status.model';
 
 @Component({
   selector: 'app-whatsapp-page',
@@ -22,13 +25,18 @@ import { WhatsappMessageStoreService } from '../../../services';
 })
 export class WhatsappPageComponent implements OnInit, OnDestroy {
   private routeSub?: Subscription;
+  private statusChangedByWhatsapp = false;
+  private previousStatus?: AgentState;
 
   constructor(
     private readonly store: WhatsappMessageStoreService,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly auth: AuthService,
+    private readonly agentStatus: AgentStatusService
   ) {}
 
   ngOnInit(): void {
+    this.setWhatsappAgentStatus();
     this.store.connectRealtime();
     this.routeSub = this.route.queryParamMap.subscribe((params) => {
       const rawConversationId = params.get('conversationId');
@@ -40,7 +48,32 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    this.restoreAgentStatus();
     this.store.stopViewingCurrentChat();
     this.store.disconnectRealtime();
+  }
+
+  private setWhatsappAgentStatus(): void {
+    const user = this.auth.getCurrentUser();
+    if (!user?.id) return;
+
+    this.agentStatus.getAgentStatus(user.id).subscribe({
+      next: status => {
+        this.previousStatus = status.estadoActual;
+        if (status.estadoActual !== AgentState.DISPONIBLE) return;
+        this.agentStatus.changeStatus(user.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+          next: () => this.statusChangedByWhatsapp = true
+        });
+      }
+    });
+  }
+
+  private restoreAgentStatus(): void {
+    const user = this.auth.getCurrentUser();
+    if (!user?.id || !this.statusChangedByWhatsapp) return;
+    this.agentStatus.changeStatus(user.id, {
+      estado: this.previousStatus || AgentState.DISPONIBLE
+    }).subscribe();
+    this.statusChangedByWhatsapp = false;
   }
 }

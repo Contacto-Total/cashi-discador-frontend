@@ -108,7 +108,7 @@ const PROMISE_TIPIFICATION_ID = 5;
            @if (!showOffers()) {
            <!-- ¿Tiene carta? -->
            <div class="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-            <span class="text-sm font-medium text-slate-700">¿Tiene carta?</span>
+             <span class="text-sm font-medium text-slate-700">¿Tiene carta de no adeudo?</span>
             <span
               class="rounded-full px-2.5 py-0.5 text-xs font-bold"
               [class]="hasCarta() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
