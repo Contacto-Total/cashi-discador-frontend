@@ -478,7 +478,9 @@ export class ChatWidgetComponent {
 
   bubbleClass(message: Message): string {
     if (this.isImage(message) || this.isSticker(message) || this.isAudio(message) || this.isDocumentLike(message)) {
-      return 'max-w-[78%] text-slate-900';
+      return message.fromMe
+        ? 'max-w-[78%] rounded-lg rounded-br-sm bg-emerald-600 px-2 py-1.5 text-white shadow-sm transition hover:brightness-95'
+        : 'max-w-[78%] text-slate-900';
     }
 
     const base = 'max-w-[78%] cursor-pointer rounded-lg px-3 py-1.5 shadow-sm transition hover:brightness-95';
