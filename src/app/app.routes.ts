@@ -441,6 +441,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // PLANTILLAS DE REPORTE SPEECH
+  // ========================================
+  {
+    path: 'plantillas-speech',
+    loadComponent: () => import('./features/plantillas-speech/plantillas-speech.component').then(m => m.PlantillasSpeechComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
+  // ========================================
   // CONVENIOS
   // ========================================
   {
