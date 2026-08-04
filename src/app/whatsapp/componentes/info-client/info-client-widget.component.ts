@@ -609,20 +609,32 @@ export class InfoClientWidgetComponent {
     } else {
       const totalCents = Math.round(this.calculatedPromiseAmount() * 100);
       this.installments.update(items => {
-        const edited = Math.max(0, Math.round((Number(value) || 0) * 100));
-        const lastNumber = items[items.length - 1]?.numeroCuota;
-        const fixedCents = items
-          .filter(item => item.numeroCuota !== numeroCuota && item.numeroCuota !== lastNumber)
-          .reduce((sum, item) => sum + Math.round(item.monto * 100), 0);
-        const maxEdited = Math.max(0, totalCents - fixedCents);
-        const editedCents = numeroCuota === lastNumber ? maxEdited : Math.min(edited, maxEdited);
-        const lastCents = Math.max(0, totalCents - fixedCents - editedCents);
+        const next = items.map(item => ({ ...item }));
+        const editedIndex = numeroCuota - 1;
+        const edited = next[editedIndex];
+        if (!edited) return next;
 
-        return items.map(item => {
-          if (item.numeroCuota === numeroCuota) return { ...item, monto: editedCents / 100 };
-          if (item.numeroCuota === lastNumber) return { ...item, monto: lastCents / 100 };
-          return item;
-        });
+        const minimumCents = 100;
+        const requestedCents = Math.max(minimumCents, Math.round((Number(value) || 0) * 100));
+        const previousCents = next
+          .slice(0, editedIndex)
+          .reduce((sum, item) => sum + Math.round(item.monto * 100), 0);
+        const followingCount = next.length - numeroCuota;
+        const maxEditedCents = totalCents - previousCents - (followingCount * minimumCents);
+        edited.monto = Math.max(minimumCents, Math.min(requestedCents, maxEditedCents)) / 100;
+
+        if (followingCount === 0) return next;
+
+        const editedAndPreviousCents = previousCents + Math.round(edited.monto * 100);
+        const remainingCents = Math.max(0, totalCents - editedAndPreviousCents);
+        const amountPerFollowing = Math.floor((remainingCents / followingCount));
+        const remainder = remainingCents - (amountPerFollowing * followingCount);
+
+        for (let index = editedIndex + 1; index < next.length; index++) {
+          const isLast = index === next.length - 1;
+          next[index].monto = (isLast ? amountPerFollowing + remainder : amountPerFollowing) / 100;
+        }
+        return next;
       });
     }
     this.refreshScheduleConfig();
