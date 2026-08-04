@@ -185,6 +185,7 @@
             </th>
             <th>Hora</th>
             <th class="col-action">Audio</th>
+            <th class="col-action">Reporte</th>
           </tr>
         </thead>
         <tbody>
@@ -204,6 +205,15 @@
                 <lucide-angular [img]="downloadingUuid === recording.uuidLlamada ? Loader : Volume2"
                                 [size]="15"
                                 [class.spin]="downloadingUuid === recording.uuidLlamada"></lucide-angular>
+              </button>
+            </td>
+            <td class="col-action">
+              <button class="btn-audio" (click)="downloadReporte(recording)"
+                      [disabled]="!recording.tieneEvaluacion || downloadingReporteId === recording.id"
+                      [title]="recording.tieneEvaluacion ? 'Descargar reporte de evaluación' : 'Sin evaluación de calidad'">
+                <lucide-angular [img]="downloadingReporteId === recording.id ? Loader : FileSpreadsheet"
+                                [size]="15"
+                                [class.spin]="downloadingReporteId === recording.id"></lucide-angular>
               </button>
             </td>
           </tr>

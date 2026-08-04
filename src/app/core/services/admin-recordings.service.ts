@@ -17,6 +17,8 @@ export interface RecordingDTO {
   estadoLlamada: string;
   resultado: string;
   tipificacion: string;
+  /** Si la grabación tiene evaluación de calidad: habilita el botón de reporte. */
+  tieneEvaluacion: boolean;
 }
 
 @Injectable({
@@ -63,6 +65,15 @@ export class AdminRecordingsService {
 
   downloadAudio(uuid: string): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/download/${uuid}`, { responseType: 'blob' });
+  }
+
+  /**
+   * Reporte de evaluación de calidad en XLSX.
+   * Usa `id` (marcador_llamadas.id) y no `uuidLlamada` porque el reporte cuelga
+   * de la gestión; el uuid identifica al audio.
+   */
+  downloadReporte(id: number): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/reporte/${id}`, { responseType: 'blob' });
   }
 
   downloadAudiosZip(uuids: string[]): Observable<Blob> {
