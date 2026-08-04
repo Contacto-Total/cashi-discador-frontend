@@ -42,13 +42,11 @@ interface MessageSender {
             <p class="truncate text-xs text-slate-500">{{ displayContact(selectedChat) }}</p>
           </div>
            @if (viewersText()) {
-             <div class="viewer-presence group relative ml-auto max-w-[45%]" [attr.title]="viewersFullText()">
-               <p class="truncate text-right text-xs font-medium text-emerald-700">
-                 Viendo actualmente: {{ viewersText() }}
+             <div class="viewer-presence ml-auto max-w-[45%]" [attr.title]="viewersFullText()">
+               <p class="flex items-center justify-end gap-1.5 truncate text-right text-xs font-medium text-emerald-700">
+                 <lucide-angular name="eye" [size]="14"></lucide-angular>
+                 <span class="truncate">{{ viewersText() }}</span>
                </p>
-               <span class="viewer-tooltip pointer-events-none absolute right-0 top-full z-20 mt-2 w-max max-w-72 rounded-lg bg-slate-900 px-3 py-2 text-left text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
-                 {{ viewersFullText() }}
-               </span>
              </div>
           }
           @if (store.loadingMessages()) {
@@ -372,7 +370,6 @@ interface MessageSender {
     .detail-panel { animation: detail-slide-in 0.22s ease-out; }
     .message-action-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; color: #334155; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); transition: background-color .15s, color .15s, transform .15s; }
     .message-action-button:hover { background: #f1f5f9; color: #0f172a; transform: translateY(-1px); }
-    .viewer-tooltip { white-space: normal; }
     @keyframes detail-slide-in {
       from { transform: translateX(100%); }
       to { transform: translateX(0); }
@@ -416,12 +413,14 @@ export class ChatWidgetComponent {
   readonly detailSender = signal<MessageSender | null>(null);
   readonly detailViews = signal<MessageViewer[]>([]);
   readonly detailLoadingViews = signal(false);
-  readonly viewersFullText = computed(() => this.store.activeViewers()
-    .map((viewerId) => this.viewerNames().get(viewerId) || viewerId)
-    .join(', '));
+  readonly viewerDisplayNames = computed(() => this.store.activeViewers()
+    .map((viewerId) => this.viewerNames().get(viewerId) || viewerId));
+  readonly viewersFullText = computed(() => this.viewerDisplayNames().join(', '));
   readonly viewersText = computed(() => {
-    const first = this.viewersFullText().split(',')[0]?.trim() || '';
-    return first.split(/\s+/)[0] || '';
+    const names = this.viewerDisplayNames();
+    const compact = names.join(', ');
+    if (names.length <= 2 && compact.length <= 42) return compact;
+    return names[0]?.split(/\s+/)[0] || '';
   });
 
   private lastChatId?: number;
