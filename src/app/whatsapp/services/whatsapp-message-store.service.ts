@@ -14,6 +14,7 @@ export class WhatsappMessageStoreService {
   // Receipts que llegaron antes que su mensaje (carrera eco OUTGOING / receipt):
   // se guardan por msgId y se aplican cuando el mensaje entra al store.
   private readonly pendingReceipts = new Map<string, MessageStatus>();
+  private readonly localMessageTimestamps = new Map<string, number>();
   // outboundId (respuesta de POST /send) → temporal optimista, para empatar un
   // OUTBOUND_FAILED con el mensaje exacto que lo originó.
   private readonly tempByOutboundId = new Map<number, { conversationId: number; tempMsgId: string }>();
@@ -258,6 +259,7 @@ export class WhatsappMessageStoreService {
       quotedSender: quoted ? (quoted.fromMe ? 'Tú' : (quoted.chatTitle || undefined)) : undefined,
       quotedFromMe: quoted?.fromMe
     };
+    this.localMessageTimestamps.set(tempMsgId, optimistic.timestamp);
     const current = this.messagesByConversation().get(request.conversationId) || [];
     this.setMessages(request.conversationId, [...current, optimistic]);
     // Refleja el envío en la lista al instante (preview + subir el chat), sin
@@ -339,7 +341,18 @@ export class WhatsappMessageStoreService {
 
     let next = index === -1
       ? [...current, normalizedMessage]
-      : current.map((item, i) => i === index ? { ...item, ...normalizedMessage } : item);
+      : current.map((item, i) => {
+        if (i !== index) return item;
+        // El eco del backend puede traer timestamp en otra unidad o anterior al
+        // timestamp local. La posición visual debe conservar el orden de envío.
+        const localTimestamp = this.localMessageTimestamps.get(normalizedMessage.msgId)
+          || (item.msgId.startsWith('temp_') ? item.timestamp : undefined);
+        if (localTimestamp && normalizedMessage.msgId !== item.msgId) {
+          this.localMessageTimestamps.set(normalizedMessage.msgId, localTimestamp);
+        }
+        const timestamp = localTimestamp || normalizedMessage.timestamp;
+        return { ...item, ...normalizedMessage, timestamp };
+      });
 
     // Aplicar un receipt que llegó antes que el mensaje (carrera eco/receipt).
     const buffered = this.pendingReceipts.get(normalizedMessage.msgId);
