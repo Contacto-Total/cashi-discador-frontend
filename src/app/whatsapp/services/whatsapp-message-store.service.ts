@@ -129,30 +129,31 @@ export class WhatsappMessageStoreService {
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
     this.pendingAttachment.set(null);
     if (!chat?.id) return;
+    const conversationId = chat.id;
 
     // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
     // de no-leídos hay que bajarlo en la vista al instante o queda "pegado".
-    this.clearUnread(chat.id);
-    this.loadMessages(chat.id);
-     this.api.getViewers(chat.id).subscribe({
+     this.clearUnread(conversationId);
+     this.loadMessages(conversationId);
+      this.api.getViewers(conversationId).subscribe({
        next: (response) => {
-         if (this.currentChat()?.id === chat.id) this.activeViewers.set(response.viewers);
+         if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
        }
      });
-     this.api.joinViewers(chat.id).subscribe({
+      this.api.joinViewers(conversationId).subscribe({
        next: (response) => {
-         if (this.currentChat()?.id === chat.id) this.activeViewers.set(response.viewers);
+         if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
        }
      });
-     this.viewerHeartbeat = setInterval(() => {
-       if (this.currentChat()?.id !== chat.id) return;
-       this.api.joinViewers(chat.id).subscribe({
+      this.viewerHeartbeat = setInterval(() => {
+       if (this.currentChat()?.id !== conversationId) return;
+       this.api.joinViewers(conversationId).subscribe({
          next: (response) => {
-           if (this.currentChat()?.id === chat.id) this.activeViewers.set(response.viewers);
+           if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
          }
        });
-     }, 30000);
-     this.api.markRead(chat.id).subscribe();
+      }, 30000);
+      this.api.markRead(conversationId).subscribe();
    }
 
   private stopViewerHeartbeat(): void {
