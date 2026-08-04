@@ -90,9 +90,9 @@ interface MessageSender {
                   }
                   <div [class]="bubbleClass(message)">
                     @if (message.quotedMessageId || message.quotedText) {
-                      <div class="mb-1 overflow-hidden rounded border-l-2 px-2 py-1 text-xs" [class]="message.fromMe ? 'border-white/70 bg-white/15' : 'border-emerald-400 bg-black/5'">
-                        <p class="truncate font-semibold" [class]="message.fromMe ? 'text-white' : 'text-emerald-700'">{{ message.quotedFromMe ? 'Tú' : (message.quotedSender || 'Mensaje') }}</p>
-                        <p class="truncate" [class]="message.fromMe ? 'text-white/80' : 'text-slate-600'">{{ message.quotedText || 'Archivo adjunto' }}</p>
+                       <div class="mb-1 overflow-hidden rounded border-l-2 px-2 py-1 text-xs" [class]="message.fromMe ? 'border-emerald-600 bg-emerald-100' : 'border-emerald-400 bg-black/5'">
+                         <p class="truncate font-semibold" [class]="message.fromMe ? 'text-emerald-800' : 'text-emerald-700'">{{ message.quotedFromMe ? 'Tú' : (message.quotedSender || 'Mensaje') }}</p>
+                         <p class="truncate text-slate-600">{{ message.quotedText || 'Archivo adjunto' }}</p>
                       </div>
                     }
                     @if (message.hasMedia) {
@@ -485,7 +485,7 @@ export class ChatWidgetComponent {
 
     const base = 'max-w-[78%] cursor-pointer rounded-lg px-3 py-1.5 shadow-sm transition hover:brightness-95';
     return message.fromMe
-      ? `${base} bg-emerald-600 text-white rounded-br-sm`
+      ? `${base} bg-[#d4efcd] text-slate-800 rounded-br-sm`
       : `${base} bg-white text-slate-900 ring-1 ring-slate-200 rounded-bl-sm`;
   }
 
@@ -895,12 +895,11 @@ export class ChatWidgetComponent {
   }
 
   messageStatusColor(status: Message['status']): string {
-    // Sobre la burbuja verde (emerald-600): blanco para enviado/entregado y azul
-    // vivo para leído, así el doble check tiene contraste y se distingue del gris.
-    if (status === 'read') return '#38bdf8';
-    if (status === 'error') return '#fecdd3';
-    if (status === 'pending') return 'rgba(255,255,255,0.75)';
-    return 'rgba(255,255,255,0.95)';
+    // Contraste sobre la burbuja verde claro estilo WhatsApp Web.
+    if (status === 'read') return '#0284c7';
+    if (status === 'error') return '#be123c';
+    if (status === 'pending') return '#64748b';
+    return '#475569';
   }
 
   messageStatusAria(status: Message['status']): string {
