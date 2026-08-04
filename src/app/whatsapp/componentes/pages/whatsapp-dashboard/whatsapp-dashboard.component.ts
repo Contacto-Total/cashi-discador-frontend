@@ -57,6 +57,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTenants();
+    this.messageStore.connectRealtime();
 
     this.subscriptions.add(
       interval(15000).pipe(
@@ -94,6 +95,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
     this.messageStore.stopViewingCurrentChat();
+    this.messageStore.disconnectRealtime();
     this.realtime.disconnect();
   }
 

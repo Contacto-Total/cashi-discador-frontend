@@ -42,7 +42,7 @@ interface MessageSender {
             <p class="truncate text-xs text-slate-500">{{ displayContact(selectedChat) }}</p>
           </div>
            @if (viewersText()) {
-             <div class="viewer-presence group relative ml-auto max-w-[45%]">
+             <div class="viewer-presence group relative ml-auto max-w-[45%]" [attr.title]="viewersFullText()">
                <p class="truncate text-right text-xs font-medium text-emerald-700">
                  Viendo actualmente: {{ viewersText() }}
                </p>
