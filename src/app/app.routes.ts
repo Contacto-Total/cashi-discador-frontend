@@ -205,7 +205,12 @@ export const routes: Routes = [
   {
     path: 'whatsapp/dashboard',
     loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-dashboard/whatsapp-dashboard.component').then(m => m.WhatsappDashboardComponent),
-    canActivate: [authGuard]
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'whatsapp/history',
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-history/whatsapp-history.component').then(m => m.WhatsappHistoryComponent),
+    canActivate: [authGuard, adminGuard]
   },
   {
     // /whatsapp ahora sirve la page nueva (app/whatsapp). El módulo viejo
@@ -436,6 +441,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // PLANTILLAS DE REPORTE SPEECH
+  // ========================================
+  {
+    path: 'plantillas-speech',
+    loadComponent: () => import('./features/plantillas-speech/plantillas-speech.component').then(m => m.PlantillasSpeechComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
+  // ========================================
   // CONVENIOS
   // ========================================
   {
@@ -450,6 +464,14 @@ export const routes: Routes = [
   {
     path: 'settings',
     loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
+    canActivate: [authGuard]
+  },
+
+  {
+    path: 'bot-agenda',
+    loadComponent: () => import('./features/bot-agenda/bot-agenda.component').then(m => m.BotAgendaComponent),
+    // sin adminGuard a proposito: el asesor tiene que ver SUS llamadas agendadas.
+    // El filtrado lo hace el backend (/mias resuelve por el usuario del token).
     canActivate: [authGuard]
   },
 

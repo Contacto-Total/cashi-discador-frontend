@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, signal } from '@angular/core';
 import { DatePipe, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chat, WhatsappAccount } from '../../../models';
@@ -38,7 +38,8 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
             (ngModelChange)="search($event)"
           />
          </label>
-         <label class="mt-2 block">
+           @if (!includeHistorical) {
+           <label class="mt-2 block">
            <span class="sr-only">Filtrar por servicio WhatsApp</span>
            <select
              class="w-full rounded-full border border-slate-300 bg-white px-4 py-2 text-xs text-slate-700 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
@@ -50,7 +51,8 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
                <option [ngValue]="account.id">{{ account.phoneNumber || account.instanciaId }} · {{ account.subcarteraName || ('Subcartera #' + account.subcarteraId) }}</option>
              }
            </select>
-         </label>
+           </label>
+           }
       </header>
 
        <section class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -143,6 +145,7 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
   `
 })
 export class ChatListWidgetComponent implements OnInit {
+  @Input() includeHistorical = false;
   readonly query = signal('');
   readonly accountFilter = signal<number | undefined>(undefined);
   serviceAccounts: WhatsappAccount[] = [];
@@ -157,9 +160,15 @@ export class ChatListWidgetComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    if (!this.store.chats().length) this.store.loadChats();
+    if (this.includeHistorical) {
+      this.store.setAccountFilter(undefined, true);
+    } else if (!this.store.chats().length) {
+      this.store.loadChats();
+    }
     this.whatsappApi.getWhatsappAccounts().subscribe({
-      next: accounts => this.serviceAccounts = accounts.filter(account => account.active === true)
+       next: accounts => this.serviceAccounts = this.includeHistorical
+         ? accounts
+         : accounts.filter(account => account.active === true)
     });
   }
 
@@ -168,18 +177,18 @@ export class ChatListWidgetComponent implements OnInit {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => {
       const q = value.trim() || undefined;
-       this.store.loadChats(0, 30, q, this.accountFilter());
+        this.store.loadChats(0, 30, q, this.accountFilter(), this.includeHistorical);
     }, 250);
   }
 
   reload(): void {
-    this.store.loadChats(0, 30, this.query().trim() || undefined, this.accountFilter());
+    this.store.loadChats(0, 30, this.query().trim() || undefined, this.accountFilter(), this.includeHistorical);
   }
 
   filterByAccount(value: number | string | undefined): void {
     const accountId = value === undefined || value === '' ? undefined : Number(value);
     this.accountFilter.set(accountId);
-    this.store.setAccountFilter(accountId);
+    this.store.setAccountFilter(accountId, this.includeHistorical);
   }
 
   selectChat(chat: Chat): void {

@@ -9,10 +9,12 @@ export class WhatsappMessageStoreService {
   private readonly messagesByConversation = signal(new Map<number, Message[]>());
   private readonly hasMoreByConversation = signal(new Map<number, boolean>());
   private realtimeSubscription?: Subscription;
+  private viewerHeartbeat?: ReturnType<typeof setInterval>;
 
   // Receipts que llegaron antes que su mensaje (carrera eco OUTGOING / receipt):
   // se guardan por msgId y se aplican cuando el mensaje entra al store.
   private readonly pendingReceipts = new Map<string, MessageStatus>();
+  private readonly localMessageTimestamps = new Map<string, number>();
   // outboundId (respuesta de POST /send) → temporal optimista, para empatar un
   // OUTBOUND_FAILED con el mensaje exacto que lo originó.
   private readonly tempByOutboundId = new Map<number, { conversationId: number; tempMsgId: string }>();
@@ -25,13 +27,15 @@ export class WhatsappMessageStoreService {
   readonly sendingMessage = signal(false);
   readonly uploadingMedia = signal(false);
   readonly sendMessageError = signal<string | null>(null);
-  readonly pendingAttachment = signal<File | null>(null);
+  readonly pendingAttachments = signal<File[]>([]);
+  readonly pendingAttachment = computed(() => this.pendingAttachments()[0] || null);
   readonly activeViewers = signal<string[]>([]);
   readonly replyingTo = signal<Message | null>(null);
   readonly chatsPage = signal(0);
   readonly chatsTotalPages = signal(0);
   readonly chatsQuery = signal<string | undefined>(undefined);
   readonly chatsAccountId = signal<number | undefined>(undefined);
+  readonly chatsIncludeHistorical = signal(false);
 
   readonly currentMessages = computed(() => {
     const conversationId = this.currentChat()?.id;
@@ -50,14 +54,15 @@ export class WhatsappMessageStoreService {
     private readonly realtime: WhatsappRealtimeService
   ) {}
 
-  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId()): void {
+  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId(), includeHistorical = this.chatsIncludeHistorical()): void {
     this.loadingChats.set(true);
-    this.api.getChats(page, size, q).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
+     this.api.getChats(page, size, q, accountId, includeHistorical).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
       next: (response) => {
         this.chatsPage.set(response.number);
         this.chatsTotalPages.set(response.totalPages);
         this.chatsQuery.set(q);
-        this.chatsAccountId.set(accountId);
+         this.chatsAccountId.set(accountId);
+         this.chatsIncludeHistorical.set(includeHistorical);
         const mapped = response.content.map(conversationToChat);
         this.chats.set(page === 0 ? mapped : this.mergeChats(this.chats(), mapped));
       }
@@ -66,12 +71,13 @@ export class WhatsappMessageStoreService {
 
   loadNextChatsPage(size = 30): void {
     if (this.loadingChats() || !this.hasMoreChats()) return;
-    this.loadChats(this.chatsPage() + 1, size, this.chatsQuery());
+     this.loadChats(this.chatsPage() + 1, size, this.chatsQuery(), this.chatsAccountId(), this.chatsIncludeHistorical());
   }
 
-  setAccountFilter(accountId: number | undefined): void {
+  setAccountFilter(accountId: number | undefined, includeHistorical = this.chatsIncludeHistorical()): void {
     this.chatsAccountId.set(accountId);
-    this.loadChats(0, 30, this.chatsQuery(), accountId);
+    this.chatsIncludeHistorical.set(includeHistorical);
+    this.loadChats(0, 30, this.chatsQuery(), accountId, includeHistorical);
   }
 
   selectChatByRoute(conversationId?: number, jid?: string): void {
@@ -115,19 +121,56 @@ export class WhatsappMessageStoreService {
   }
 
   selectChat(chat: Chat | null): void {
+    const previous = this.currentChat();
+    if (previous?.id && previous.id !== chat?.id) {
+      this.api.leaveViewers(previous.id).subscribe();
+    }
+    this.stopViewerHeartbeat();
     this.currentChat.set(chat);
     this.activeViewers.set([]);
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
-    this.pendingAttachment.set(null);
+    this.pendingAttachments.set([]);
     if (!chat?.id) return;
+    const conversationId = chat.id;
 
     // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
     // de no-leídos hay que bajarlo en la vista al instante o queda "pegado".
-    this.clearUnread(chat.id);
-    this.loadMessages(chat.id);
-    this.api.getViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
-    this.api.joinViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
-    this.api.markRead(chat.id).subscribe();
+     this.clearUnread(conversationId);
+     this.loadMessages(conversationId);
+      this.api.getViewers(conversationId).subscribe({
+       next: (response) => {
+         if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
+       }
+     });
+      this.api.joinViewers(conversationId).subscribe({
+       next: (response) => {
+         if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
+       }
+     });
+      this.viewerHeartbeat = setInterval(() => {
+       if (this.currentChat()?.id !== conversationId) return;
+       this.api.joinViewers(conversationId).subscribe({
+         next: (response) => {
+           if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
+         }
+       });
+      }, 30000);
+      this.api.markRead(conversationId).subscribe();
+   }
+
+  private stopViewerHeartbeat(): void {
+    if (this.viewerHeartbeat) {
+      clearInterval(this.viewerHeartbeat);
+      this.viewerHeartbeat = undefined;
+    }
+  }
+
+  stopViewingCurrentChat(): void {
+    const current = this.currentChat();
+    if (current?.id) this.api.leaveViewers(current.id).subscribe();
+    this.stopViewerHeartbeat();
+    this.activeViewers.set([]);
+    this.currentChat.set(null);
   }
 
   private clearUnread(conversationId: number): void {
@@ -217,6 +260,7 @@ export class WhatsappMessageStoreService {
       quotedSender: quoted ? (quoted.fromMe ? 'Tú' : (quoted.chatTitle || undefined)) : undefined,
       quotedFromMe: quoted?.fromMe
     };
+    this.localMessageTimestamps.set(tempMsgId, optimistic.timestamp);
     const current = this.messagesByConversation().get(request.conversationId) || [];
     this.setMessages(request.conversationId, [...current, optimistic]);
     // Refleja el envío en la lista al instante (preview + subir el chat), sin
@@ -298,7 +342,18 @@ export class WhatsappMessageStoreService {
 
     let next = index === -1
       ? [...current, normalizedMessage]
-      : current.map((item, i) => i === index ? { ...item, ...normalizedMessage } : item);
+      : current.map((item, i) => {
+        if (i !== index) return item;
+        // El eco del backend puede traer timestamp en otra unidad o anterior al
+        // timestamp local. La posición visual debe conservar el orden de envío.
+        const localTimestamp = this.localMessageTimestamps.get(normalizedMessage.msgId)
+          || (item.msgId.startsWith('temp_') ? item.timestamp : undefined);
+        if (localTimestamp && normalizedMessage.msgId !== item.msgId) {
+          this.localMessageTimestamps.set(normalizedMessage.msgId, localTimestamp);
+        }
+        const timestamp = localTimestamp || normalizedMessage.timestamp;
+        return { ...item, ...normalizedMessage, timestamp };
+      });
 
     // Aplicar un receipt que llegó antes que el mensaje (carrera eco/receipt).
     const buffered = this.pendingReceipts.get(normalizedMessage.msgId);
@@ -338,22 +393,50 @@ export class WhatsappMessageStoreService {
   }
 
   setPendingAttachment(file: File | null): void {
-    this.pendingAttachment.set(file);
+    this.pendingAttachments.set(file ? [file] : []);
     this.sendMessageError.set(null);
   }
 
+  addPendingAttachments(files: File[]): void {
+    if (!files.length) return;
+    this.pendingAttachments.update(current => [...current, ...files]);
+    this.sendMessageError.set(null);
+  }
+
+  removePendingAttachment(index: number): void {
+    this.pendingAttachments.update(files => files.filter((_, fileIndex) => fileIndex !== index));
+  }
+
   sendPendingAttachment(conversationId: number, caption?: string): void {
-    const file = this.pendingAttachment();
-    if (!file || this.uploadingMedia() || this.sendingMessage()) return;
+    const files = this.pendingAttachments();
+    if (!files.length || this.uploadingMedia() || this.sendingMessage()) return;
 
     this.sendMessageError.set(null);
+    this.uploadAndSendAttachments(conversationId, files, caption, 0);
+  }
+
+  private uploadAndSendAttachments(conversationId: number, files: File[], caption: string | undefined, index: number): void {
+    const file = files[index];
+    if (!file) {
+      this.pendingAttachments.set([]);
+      return;
+    }
+
     this.uploadingMedia.set(true);
-    this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
+    this.api.uploadMedia(file).subscribe({
       next: ({ ref, fileName, mime }) => {
-        this.pendingAttachment.set(null);
-        this.sendMedia(conversationId, ref, caption, fileName || file.name, mime || file.type);
+        this.pendingAttachments.update(current => current.filter(item => item !== file));
+        this.sendMedia(conversationId, ref, index === 0 ? caption : undefined, fileName || file.name, mime || file.type);
+        if (index + 1 < files.length) {
+          setTimeout(() => this.uploadAndSendAttachments(conversationId, files, caption, index + 1));
+        } else {
+          this.uploadingMedia.set(false);
+        }
       },
-      error: () => this.sendMessageError.set('No se pudo subir el archivo.')
+      error: () => {
+        this.uploadingMedia.set(false);
+        this.sendMessageError.set(`No se pudo subir ${file.name}.`);
+      }
     });
   }
 

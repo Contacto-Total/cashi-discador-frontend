@@ -79,12 +79,19 @@
               <h2>{{ account.instanciaId }}</h2>
               <p>{{ account.jid || 'JID pendiente de sincronización' }}</p>
             </div>
-            <span class="detail-status" [ngClass]="statusClass(account.status)">
-              <span class="status-dot"></span>{{ statusLabel(account.status) }}
-            </span>
-          </div>
+             <span class="detail-status" [ngClass]="statusClass(account.status)">
+               <span class="status-dot"></span>{{ statusLabel(account.status) }}
+             </span>
+           </div>
 
-          <div class="detail-content">
+           <div class="detail-actions">
+             <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
+               <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
+               {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
+             </button>
+           </div>
+
+           <div class="detail-content">
             <div class="qr-column" [class.qr-muted]="isLinked(account)">
               @if (!isLinked(account) && account.qrData) {
                 <div class="qr-frame"><img [src]="qrSource(account)" alt="Código QR para vincular WhatsApp"></div>
@@ -138,7 +145,7 @@
                   }
                 </select>
               </label>
-              <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" type="checkbox" name="active" [(ngModel)]="form.active" (ngModelChange)="onActiveChange($event)" [disabled]="activationSaving || saving"></label>
+               <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" [class.enabled]="form.active" type="checkbox" name="active" [(ngModel)]="form.active" (ngModelChange)="onActiveChange($event)" [disabled]="activationSaving || saving"></label>
               <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
               @if (feedback) { <p class="feedback">{{ feedback }}</p> }
             </form>
@@ -148,10 +155,33 @@
                 <strong>Asignación pendiente</strong>
                 <p>Primero vincula un número con el QR. Después podrás asignar el tenant, la cartera y la subcartera.</p>
               </div>
-            }
-          </div>
-        </div>
-      }
-    </section>
-  }
+             }
+           </div>
+           @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
+         </div>
+       }
+     </section>
+
+     <section class="instance-chat-panel">
+       <div class="instance-chat-heading">
+         <div>
+           <span class="panel-kicker">Vista rápida</span>
+           <h2>Chat de la instancia seleccionada</h2>
+           <p>{{ selectedAccount ? 'Conversaciones filtradas por la cuenta activa seleccionada.' : 'Selecciona una instancia para ver sus conversaciones.' }}</p>
+         </div>
+         <a class="history-link" routerLink="/whatsapp/history">
+           <lucide-angular name="archive" [size]="15"></lucide-angular>
+           Ver historial completo
+         </a>
+       </div>
+       @if (selectedAccount) {
+         <div class="instance-chat-grid">
+           <app-whatsapp-chat-list-widget></app-whatsapp-chat-list-widget>
+           <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
+         </div>
+       } @else {
+         <div class="instance-chat-empty">Selecciona una instancia para cargar sus chats.</div>
+       }
+     </section>
+   }
 </main>

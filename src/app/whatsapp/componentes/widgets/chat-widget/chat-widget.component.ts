@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
+import { Component, ElementRef, Input, ViewChild, computed, effect, signal } from '@angular/core';
 import { LucideAngularModule } from 'lucide-angular';
 import { environment } from '../../../../../environments/environment';
 import { Chat, Message } from '../../../models';
@@ -41,17 +41,21 @@ interface MessageSender {
             <h2 class="truncate text-base font-semibold text-slate-950">{{ chatDisplayName(selectedChat) }}</h2>
             <p class="truncate text-xs text-slate-500">{{ displayContact(selectedChat) }}</p>
           </div>
-          @if (viewersText()) {
-            <p class="ml-auto max-w-[45%] truncate text-right text-xs font-medium text-emerald-700">
-              Viendo actualmente: {{ viewersText() }}
-            </p>
+           @if (viewersText()) {
+             <div class="viewer-presence ml-auto max-w-[45%]" [attr.title]="viewersFullText()">
+               <p class="flex items-center justify-end gap-1.5 truncate text-right text-xs font-medium text-emerald-700">
+                 <lucide-angular name="eye" [size]="14"></lucide-angular>
+                 <span class="truncate">{{ viewersText() }}</span>
+               </p>
+             </div>
           }
           @if (store.loadingMessages()) {
             <span class="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">Cargando</span>
           }
         </header>
 
-        <div #messagesPanel class="chat-bg min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div class="relative min-h-0 flex-1">
+          <div #messagesPanel class="chat-bg h-full overflow-y-auto px-5 py-4" (scroll)="onMessagesScroll()">
           @if (store.hasMore()) {
             <div class="mb-4 flex justify-center">
               <button
@@ -73,17 +77,22 @@ interface MessageSender {
           } @else {
             <div class="space-y-1.5">
               @for (message of messages(); track message.msgId) {
-                <article class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
+                <article [id]="messageElementId(message.msgId)" class="group flex items-center gap-1" [class.justify-end]="message.fromMe" [class.justify-start]="!message.fromMe">
                   @if (message.fromMe) {
-                    <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                    </button>
+                    <div class="flex shrink-0 flex-col items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                       <button type="button" class="message-action-button" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="7" r=".7" fill="currentColor"/></svg>
+                      </button>
+                       <button type="button" class="message-action-button" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      </button>
+                    </div>
                   }
-                  <div [class]="bubbleClass(message)" (click)="openMessageDetail(message)">
+                  <div [class]="bubbleClass(message)">
                     @if (message.quotedMessageId || message.quotedText) {
-                      <div class="mb-1 overflow-hidden rounded border-l-2 px-2 py-1 text-xs" [class]="message.fromMe ? 'border-white/70 bg-white/15' : 'border-emerald-400 bg-black/5'">
-                        <p class="truncate font-semibold" [class]="message.fromMe ? 'text-white' : 'text-emerald-700'">{{ message.quotedFromMe ? 'Tú' : (message.quotedSender || 'Mensaje') }}</p>
-                        <p class="truncate" [class]="message.fromMe ? 'text-white/80' : 'text-slate-600'">{{ message.quotedText || 'Archivo adjunto' }}</p>
+                       <div class="mb-1 overflow-hidden rounded border-l-2 px-2 py-1 text-xs" [class]="message.fromMe ? 'border-emerald-600 bg-emerald-100' : 'border-emerald-400 bg-black/5'">
+                         <p class="truncate font-semibold" [class]="message.fromMe ? 'text-emerald-800' : 'text-emerald-700'">{{ message.quotedFromMe ? 'Tú' : (message.quotedSender || 'Mensaje') }}</p>
+                         <p class="truncate text-slate-600">{{ message.quotedText || 'Archivo adjunto' }}</p>
                       </div>
                     }
                     @if (message.hasMedia) {
@@ -93,7 +102,7 @@ interface MessageSender {
                           No se pudo cargar {{ mediaLabel(message) }} · Reintentar
                         </button>
                       } @else if (isImage(message) && hasMediaSrc(message)) {
-                        <button type="button" class="block max-w-[180px] overflow-hidden rounded-lg" (click)="openImageViewer(message); $event.stopPropagation()">
+                           <button type="button" class="block max-w-[180px] overflow-hidden rounded-md" (click)="openImageViewer(message); $event.stopPropagation()">
                           <img class="max-h-48 w-full object-cover" [src]="mediaSrc(message)" [alt]="message.media?.caption || message.text || 'Imagen'" (error)="onMediaError(message.msgId)" />
                         </button>
                       } @else if (isSticker(message) && hasMediaSrc(message)) {
@@ -101,7 +110,7 @@ interface MessageSender {
                       } @else if (isVideo(message) && hasMediaSrc(message)) {
                         <video class="max-h-56 max-w-[220px] rounded-lg" controls preload="metadata" [src]="mediaSrc(message)" (error)="onMediaError(message.msgId)"></video>
                       } @else if (isAudio(message) && hasMediaSrc(message)) {
-                        <div class="mb-1 w-[280px] max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm" (click)="$event.stopPropagation()">
+                         <div class="mb-1 w-[280px] max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white/95 shadow-sm" (click)="$event.stopPropagation()">
                           <div class="flex items-center gap-3 px-3 py-2.5">
                             <span class="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700">
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
@@ -112,33 +121,51 @@ interface MessageSender {
                             </div>
                           </div>
                             <div class="border-t border-slate-100 px-2.5 py-2">
-                              <div
-                                class="audio-waveform"
-                                role="slider"
-                                tabindex="0"
-                                [attr.aria-label]="'Avance del audio ' + audioDuration(message)"
-                                [attr.aria-valuenow]="audioProgress(message) * 100"
-                                aria-valuemin="0"
-                                aria-valuemax="100"
-                                (pointerdown)="startAudioSeek(message.msgId, $event, audioElement)"
-                                 (pointermove)="moveAudioSeek(message.msgId, $event, audioElement)"
-                                 (pointerup)="endAudioSeek(message.msgId, $event)"
-                                 (pointercancel)="endAudioSeek(message.msgId, $event)"
-                                 (keydown)="audioSeekKeydown(message.msgId, $event, audioElement)"
-                              >
-                                @for (bar of waveform(message); track $index) {
-                                  <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
-                                }
+                              <div class="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  class="grid size-9 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-emerald-100 hover:text-emerald-700"
+                                  [attr.aria-label]="audioPlaying(message) ? 'Pausar audio' : 'Reproducir audio'"
+                                  [attr.aria-pressed]="audioPlaying(message)"
+                                  (click)="toggleAudio(message.msgId, audioElement); $event.stopPropagation()"
+                                >
+                                  @if (audioPlaying(message)) {
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                                  } @else {
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 8 5.5Z"/></svg>
+                                  }
+                                </button>
+                                <div
+                                  class="audio-waveform flex-1"
+                                  role="slider"
+                                  tabindex="0"
+                                  [attr.aria-label]="'Avance del audio ' + audioDuration(message)"
+                                  [attr.aria-valuenow]="audioProgress(message) * 100"
+                                  aria-valuemin="0"
+                                  aria-valuemax="100"
+                                  (pointerdown)="startAudioSeek(message.msgId, $event, audioElement)"
+                                  (pointermove)="moveAudioSeek(message.msgId, $event, audioElement)"
+                                  (pointerup)="endAudioSeek(message.msgId, $event)"
+                                  (pointercancel)="endAudioSeek(message.msgId, $event)"
+                                  (keydown)="audioSeekKeydown(message.msgId, $event, audioElement)"
+                                >
+                                  @for (bar of waveform(message); track $index) {
+                                    <span [class.audio-waveform-played]="isWaveformBarPlayed(message, $index)" [style.height.%]="barHeight(bar)"></span>
+                                  }
+                                </div>
                               </div>
-                              <audio #audioElement class="whatsapp-audio w-full" controls preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (error)="onMediaError(message.msgId)"></audio>
-                              <button type="button" class="mt-1 flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                Descargar
-                              </button>
+                              <audio #audioElement class="whatsapp-audio" preload="metadata" [src]="mediaSrc(message)" (loadedmetadata)="audioMetadata(message.msgId, $event)" (timeupdate)="audioTimeUpdate(message.msgId, $event)" (play)="audioPlayState(message.msgId, true)" (pause)="audioPlayState(message.msgId, false)" (ended)="audioEnded(message.msgId)" (error)="onMediaError(message.msgId)"></audio>
+                              <div class="mt-1 flex items-center justify-between gap-2">
+                                <button type="button" class="flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900" title="Descargar audio" (click)="downloadMedia(message); $event.stopPropagation()">
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                  Descargar
+                                </button>
+                                <span class="shrink-0 text-[11px] tabular-nums text-slate-500">{{ audioCurrentTime(message) }} / {{ audioDuration(message) }}</span>
+                              </div>
                             </div>
                         </div>
                       } @else if (hasMediaSrc(message)) {
-                        <button type="button" class="mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-3 py-3 text-left text-slate-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50" (click)="downloadMedia(message); $event.stopPropagation()">
+                         <button type="button" [class]="'mb-1 flex w-[280px] max-w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-3 text-left text-slate-800 shadow-sm transition ' + (message.fromMe ? 'bg-[#d5eecf] hover:border-emerald-300 hover:bg-[#c7e8c0]' : 'bg-white/95 hover:border-slate-300 hover:bg-slate-50')" (click)="downloadMedia(message); $event.stopPropagation()">
                            <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100" [style.color]="fileIconColor(message)">
                              <lucide-angular [name]="fileIcon(message)" [size]="22"></lucide-angular>
                            </span>
@@ -187,19 +214,46 @@ interface MessageSender {
                     </div>
                   </div>
                   @if (!message.fromMe) {
-                    <button type="button" class="shrink-0 rounded-full p-1.5 text-slate-400 opacity-0 transition hover:bg-black/5 hover:text-slate-700 group-hover:opacity-100" title="Responder" (click)="reply(message); $event.stopPropagation()">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                    </button>
+                    <div class="flex shrink-0 flex-col items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                       <button type="button" class="message-action-button" title="Información del mensaje" aria-label="Información del mensaje" (click)="openMessageDetail(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="10" x2="12" y2="16"/><circle cx="12" cy="7" r=".7" fill="currentColor"/></svg>
+                      </button>
+                       <button type="button" class="message-action-button" title="Responder" (click)="reply(message); $event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                      </button>
+                    </div>
                   }
                 </article>
               }
             </div>
           }
+
+          </div>
+
+          @if (messages().length && !isViewingBottom) {
+            <button
+              type="button"
+              class="absolute bottom-3 right-3 grid size-8 place-items-center rounded-full border border-slate-200 shadow-md transition hover:scale-105"
+              [class.bg-emerald-500]="hasUnreadMessages()"
+              [class.text-white]="hasUnreadMessages()"
+              [class.bg-white]="!hasUnreadMessages()"
+              [class.text-slate-700]="!hasUnreadMessages()"
+              [attr.aria-label]="hasUnreadMessages() ? 'Ir al mensaje nuevo' : 'Ir al final del chat'"
+              (click)="jumpToMessages()"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              @if (hasUnreadMessages()) {
+                <span class="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">{{ unreadMessages() }}</span>
+              }
+            </button>
+          }
         </div>
 
-        <footer class="border-t border-slate-200 bg-white px-4 py-3">
-          <app-whatsapp-message-input-widget />
-        </footer>
+         @if (!readOnly) {
+           <footer class="border-t border-slate-200 bg-white px-4 py-3">
+             <app-whatsapp-message-input-widget />
+           </footer>
+         }
       } @else {
         <div class="flex h-full flex-col items-center justify-center bg-slate-50 p-8 text-center">
           <p class="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-600">WhatsApp v2</p>
@@ -210,7 +264,7 @@ interface MessageSender {
     </section>
 
     @if (selectedImage(); as imageMessage) {
-      <div class="fixed inset-0 z-50 flex flex-col bg-slate-950/95 p-4 text-white" (click)="closeImageViewer()">
+      <div class="fixed inset-0 z-[9999] flex flex-col bg-slate-950/95 p-4 text-white" (click)="closeImageViewer()">
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold">{{ imageMessage.media?.fileName || 'Imagen' }}</p>
@@ -256,7 +310,7 @@ interface MessageSender {
     }
 
     @if (detailMessage(); as detail) {
-      <div class="fixed inset-0 z-50 flex justify-end bg-slate-950/50" (click)="closeMessageDetail()">
+      <div class="fixed inset-0 z-[9999] flex justify-end bg-slate-950/50" (click)="closeMessageDetail()">
         <aside class="detail-panel flex h-full w-full max-w-sm flex-col bg-white shadow-2xl" (click)="$event.stopPropagation()">
           <header class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <h3 class="text-sm font-semibold text-slate-950">Detalle del mensaje</h3>
@@ -314,6 +368,8 @@ interface MessageSender {
   `,
   styles: [`
     .detail-panel { animation: detail-slide-in 0.22s ease-out; }
+    .message-action-button { display: grid; place-items: center; width: 28px; height: 28px; padding: 5px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; color: #334155; box-shadow: 0 1px 3px rgba(15, 23, 42, .12); transition: background-color .15s, color .15s, transform .15s; }
+    .message-action-button:hover { background: #f1f5f9; color: #0f172a; transform: translateY(-1px); }
     @keyframes detail-slide-in {
       from { transform: translateX(100%); }
       to { transform: translateX(0); }
@@ -326,21 +382,15 @@ interface MessageSender {
       background-size: 160px 160px;
     }
 
-    .whatsapp-audio {
-      height: 34px;
-      filter: saturate(0.85);
-    }
-
-    .whatsapp-audio::-webkit-media-controls-panel {
-      background-color: #f8fafc;
-    }
-     .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; margin-bottom: 6px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
+     .whatsapp-audio { display: none; }
+     .audio-waveform { display: flex; align-items: center; gap: 2px; height: 28px; cursor: pointer; touch-action: none; user-select: none; outline: none; }
      .audio-waveform:focus-visible { border-radius: 5px; box-shadow: 0 0 0 2px #6ee7b7; }
      .audio-waveform span { flex: 1; min-width: 2px; max-width: 4px; border-radius: 999px; background: #cbd5e1; opacity: .85; transition: background-color .1s ease; }
      .audio-waveform span.audio-waveform-played { background: #10b981; }
   `]
 })
 export class ChatWidgetComponent {
+  @Input() readOnly = false;
   @ViewChild('messagesPanel') private messagesPanel?: ElementRef<HTMLElement>;
 
   readonly chat = computed(() => this.store.currentChat());
@@ -354,6 +404,8 @@ export class ChatWidgetComponent {
   readonly audioDurations = signal(new Map<string, number>());
   readonly audioWaveforms = signal(new Map<string, number[]>());
   readonly audioProgresses = signal(new Map<string, number>());
+  readonly audioCurrentTimes = signal(new Map<string, number>());
+  readonly audioPlayingStates = signal(new Map<string, boolean>());
   private readonly seekingAudio = new Set<string>();
 
   // Panel de detalle de un mensaje (quién lo envió + quiénes lo vieron).
@@ -361,13 +413,22 @@ export class ChatWidgetComponent {
   readonly detailSender = signal<MessageSender | null>(null);
   readonly detailViews = signal<MessageViewer[]>([]);
   readonly detailLoadingViews = signal(false);
-  readonly viewersText = computed(() => this.truncateViewers(this.store.activeViewers()
-    .map((viewerId) => this.viewerNames().get(viewerId) || viewerId)
-    .join(', ')));
+  readonly viewerDisplayNames = computed(() => this.store.activeViewers()
+    .map((viewerId) => this.viewerNames().get(viewerId) || viewerId));
+  readonly viewersFullText = computed(() => this.viewerDisplayNames().join(', '));
+  readonly viewersText = computed(() => {
+    const names = this.viewerDisplayNames();
+    const compact = names.join(', ');
+    if (names.length <= 2 && compact.length <= 42) return compact;
+    return names[0]?.split(/\s+/)[0] || '';
+  });
 
   private lastChatId?: number;
   private lastMessageKey = '';
   private pendingScrollToBottom = false;
+  readonly unreadMessages = signal(0);
+  private firstUnreadMessageId?: string;
+  isViewingBottom = true;
 
   constructor(
     readonly store: WhatsappMessageStoreService,
@@ -385,6 +446,9 @@ export class ChatWidgetComponent {
         this.lastChatId = chatId;
         this.lastMessageKey = lastMessageKey;
         this.pendingScrollToBottom = !!chatId;
+        this.unreadMessages.set(0);
+        this.firstUnreadMessageId = undefined;
+        this.isViewingBottom = true;
       }
 
       if (this.pendingScrollToBottom && messageCount > 0) {
@@ -395,6 +459,11 @@ export class ChatWidgetComponent {
 
       if (messageCount > 0 && lastMessageKey !== this.lastMessageKey) {
         this.lastMessageKey = lastMessageKey;
+        if (!lastMessage.fromMe && !this.isViewingBottom) {
+          if (!this.firstUnreadMessageId) this.firstUnreadMessageId = lastMessage.msgId;
+          this.unreadMessages.update((count) => count + 1);
+          return;
+        }
         this.scrollToBottom();
       }
     });
@@ -409,12 +478,14 @@ export class ChatWidgetComponent {
 
   bubbleClass(message: Message): string {
     if (this.isImage(message) || this.isSticker(message) || this.isAudio(message) || this.isDocumentLike(message)) {
-      return 'max-w-[78%] text-slate-900';
+      return message.fromMe
+        ? 'max-w-[78%] rounded-md rounded-br-sm bg-[#d4efcd] px-1.5 py-1 text-slate-800 shadow-sm transition hover:brightness-95'
+        : 'max-w-[78%] text-slate-900';
     }
 
     const base = 'max-w-[78%] cursor-pointer rounded-lg px-3 py-1.5 shadow-sm transition hover:brightness-95';
     return message.fromMe
-      ? `${base} bg-emerald-600 text-white rounded-br-sm`
+      ? `${base} bg-[#d4efcd] text-slate-800 rounded-br-sm`
       : `${base} bg-white text-slate-900 ring-1 ring-slate-200 rounded-bl-sm`;
   }
 
@@ -458,6 +529,32 @@ export class ChatWidgetComponent {
     const audio = event.target as HTMLAudioElement;
     if (!Number.isFinite(audio.duration) || this.seekingAudio.has(msgId)) return;
     this.audioProgresses.update((items) => new Map(items).set(msgId, audio.currentTime / audio.duration));
+    this.audioCurrentTimes.update((items) => new Map(items).set(msgId, audio.currentTime));
+  }
+
+  async toggleAudio(msgId: string, audio: HTMLAudioElement): Promise<void> {
+    if (audio.paused) {
+      await audio.play();
+    } else {
+      audio.pause();
+    }
+  }
+
+  audioPlayState(msgId: string, playing: boolean): void {
+    this.audioPlayingStates.update((items) => new Map(items).set(msgId, playing));
+  }
+
+  audioEnded(msgId: string): void {
+    this.audioPlayState(msgId, false);
+    this.audioProgresses.update((items) => new Map(items).set(msgId, 1));
+  }
+
+  audioPlaying(message: Message): boolean {
+    return this.audioPlayingStates().get(message.msgId) || false;
+  }
+
+  audioCurrentTime(message: Message): string {
+    return this.formatDuration(this.audioCurrentTimes().get(message.msgId) || 0);
   }
 
   audioProgress(message: Message): number {
@@ -497,6 +594,7 @@ export class ChatWidgetComponent {
     progress = Math.max(0, Math.min(1, progress));
     audio.currentTime = progress * audio.duration;
     this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+    this.audioCurrentTimes.update((items) => new Map(items).set(msgId, audio.currentTime));
   }
 
   private updateAudioPosition(msgId: string, event: PointerEvent, audio: HTMLAudioElement): void {
@@ -506,6 +604,7 @@ export class ChatWidgetComponent {
     const progress = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
     audio.currentTime = progress * audio.duration;
     this.audioProgresses.update((items) => new Map(items).set(msgId, progress));
+    this.audioCurrentTimes.update((items) => new Map(items).set(msgId, audio.currentTime));
   }
 
   audioDuration(message: Message): string {
@@ -796,12 +895,11 @@ export class ChatWidgetComponent {
   }
 
   messageStatusColor(status: Message['status']): string {
-    // Sobre la burbuja verde (emerald-600): blanco para enviado/entregado y azul
-    // vivo para leído, así el doble check tiene contraste y se distingue del gris.
-    if (status === 'read') return '#38bdf8';
-    if (status === 'error') return '#fecdd3';
-    if (status === 'pending') return 'rgba(255,255,255,0.75)';
-    return 'rgba(255,255,255,0.95)';
+    // Contraste sobre la burbuja verde claro estilo WhatsApp Web.
+    if (status === 'read') return '#0284c7';
+    if (status === 'error') return '#be123c';
+    if (status === 'pending') return '#64748b';
+    return '#475569';
   }
 
   messageStatusAria(status: Message['status']): string {
@@ -815,6 +913,35 @@ export class ChatWidgetComponent {
 
   toIso(timestamp: number): string {
     return new Date(timestamp).toISOString();
+  }
+
+  messageElementId(msgId: string): string {
+    return `whatsapp-message-${msgId}`;
+  }
+
+  hasUnreadMessages(): boolean {
+    return this.unreadMessages() > 0;
+  }
+
+  onMessagesScroll(): void {
+    const element = this.messagesPanel?.nativeElement;
+    if (!element) return;
+    this.isViewingBottom = element.scrollHeight - element.scrollTop - element.clientHeight <= 24;
+    if (this.isViewingBottom) {
+      this.unreadMessages.set(0);
+      this.firstUnreadMessageId = undefined;
+    }
+  }
+
+  jumpToMessages(): void {
+    const unreadId = this.firstUnreadMessageId;
+    if (unreadId) {
+      document.getElementById(this.messageElementId(unreadId))?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      this.unreadMessages.set(0);
+      this.firstUnreadMessageId = undefined;
+      return;
+    }
+    this.scrollToBottom();
   }
 
   private loadViewerName(viewerId: string): void {
@@ -836,16 +963,15 @@ export class ChatWidgetComponent {
     this.viewerNames.set(next);
   }
 
-  private truncateViewers(value: string): string {
-    return value.length > 90 ? `${value.slice(0, 90)}.....` : value;
-  }
-
   private scrollToBottom(): void {
     setTimeout(() => {
       requestAnimationFrame(() => {
         const element = this.messagesPanel?.nativeElement;
         if (!element) return;
         element.scrollTop = element.scrollHeight;
+        this.isViewingBottom = true;
+        this.unreadMessages.set(0);
+        this.firstUnreadMessageId = undefined;
         this.pendingScrollToBottom = false;
       });
     });

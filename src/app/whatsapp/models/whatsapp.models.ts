@@ -185,6 +185,7 @@ export interface WhatsappAccount {
   jid?: string;
   status: string;
   active: boolean;
+  currentAccount?: boolean;
   tenantId?: number;
   carteraId?: number;
   subcarteraId?: number;

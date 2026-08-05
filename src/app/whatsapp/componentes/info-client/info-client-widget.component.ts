@@ -15,6 +15,14 @@ import { PaymentScheduleConfig } from '../../../maintenance/models/typification-
 
 type SearchMode = 'telefono' | 'documento';
 
+type PromiseResult = {
+  kind: 'success' | 'error';
+  icon?: 'check' | 'alert';
+  title: string;
+  message: string;
+  detail?: string;
+};
+
 interface OfferDisplay {
   field: string;
   label: string;
@@ -58,9 +66,28 @@ const PROMISE_TIPIFICATION_ID = 5;
 
       @if (!chat()) {
         <p class="mt-8 text-center text-sm text-slate-400">Sin chat seleccionado.</p>
-      } @else if (loading()) {
-        <p class="mt-8 text-center text-sm text-slate-500">Buscando cliente…</p>
-      } @else if (selectedClient(); as sel) {
+       } @else if (loading()) {
+         <p class="mt-8 text-center text-sm text-slate-500">Buscando cliente…</p>
+       } @else if (promiseResult(); as result) {
+         <div class="flex min-h-0 flex-1 flex-col items-center justify-center px-5 py-8 text-center">
+           <div class="grid size-16 place-items-center rounded-full" [class]="result.kind === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'">
+             @if (result.icon === 'alert' || result.kind === 'error') {
+               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 16h.01"/></svg>
+             } @else {
+               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+             }
+           </div>
+           <h3 class="mt-5 text-base font-bold text-slate-900">{{ result.title }}</h3>
+           <p class="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">{{ result.message }}</p>
+           @if (result.detail) {
+             <p class="mt-3 max-w-xs rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium leading-relaxed text-amber-800 ring-1 ring-amber-100">{{ result.detail }}</p>
+           }
+           <button type="button" class="mt-7 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50" (click)="backFromPromiseResult()">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+             Atrás
+           </button>
+         </div>
+       } @else if (selectedClient(); as sel) {
         <!-- ===== Opciones del cliente ===== -->
         <div class="flex items-center gap-2 border-b border-slate-200 px-3 py-2.5">
           <button
@@ -81,7 +108,7 @@ const PROMISE_TIPIFICATION_ID = 5;
            @if (!showOffers()) {
            <!-- ¿Tiene carta? -->
            <div class="mb-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-            <span class="text-sm font-medium text-slate-700">¿Tiene carta?</span>
+             <span class="text-sm font-medium text-slate-700">¿Tiene carta de no adeudo?</span>
             <span
               class="rounded-full px-2.5 py-0.5 text-xs font-bold"
               [class]="hasCarta() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'"
@@ -173,38 +200,38 @@ const PROMISE_TIPIFICATION_ID = 5;
                   </div>
                    @if (selectedOffer(); as offer) {
                      @if (!offerSent()) {
-                     <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
-                      <p class="text-xs font-bold text-slate-800">{{ offer.label }} · {{ formatCurrency(offer.value) }}</p>
-                      <div class="mt-2 space-y-1.5">
-                        <div class="flex items-center justify-between gap-3">
-                          <label class="text-[10px] font-semibold text-slate-500">Descuento %</label>
-                          <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="discountPercent()" (ngModelChange)="setDiscount($event)" />
-                        </div>
-                        <div class="flex items-center justify-between gap-3">
-                          <label class="text-[10px] font-semibold text-slate-500">Transferencia S/</label>
-                          <input type="number" min="0" max="20" step="0.01" class="w-20 rounded border border-slate-300 px-2 py-1 text-center text-xs font-bold" [ngModel]="transferFee()" (ngModelChange)="setTransferFee($event)" />
-                        </div>
-                      </div>
-                      <p class="mt-2 text-right text-sm font-black text-emerald-700">Total: {{ formatCurrency(calculatedPromiseAmount()) }}</p>
-                      <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                        <span class="text-xs font-semibold text-slate-600">Número de cuotas</span>
-                        <div class="flex items-center gap-1">
-                          <button type="button" class="grid size-7 place-items-center rounded border border-slate-300 text-sm" [disabled]="installmentCount() <= 1" (click)="changeInstallmentCount(-1)">−</button>
-                          <input type="number" min="1" max="20" class="w-14 rounded border border-slate-300 px-1 py-1 text-center text-xs font-bold" [ngModel]="installmentCount()" (ngModelChange)="setInstallmentCount($event)" />
-                          <button type="button" class="grid size-7 place-items-center rounded border border-slate-300 text-sm" [disabled]="installmentCount() >= 20" (click)="changeInstallmentCount(1)">+</button>
-                        </div>
-                      </div>
-                      <div class="mt-2 space-y-1.5">
-                        @for (installment of installments(); track installment.numeroCuota) {
-                          <div class="rounded bg-slate-50 px-2 py-2">
-                            <div class="mb-1 text-[10px] font-bold text-slate-500">Cuota {{ installment.numeroCuota }}</div>
-                            <div class="flex items-center gap-2">
-                              <label class="w-12 text-[10px] text-slate-500">Monto</label>
-                              <input type="number" min="0" step="0.01" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1 text-xs" [ngModel]="installment.monto" (ngModelChange)="updateInstallment(installment.numeroCuota, 'monto', $event)" />
-                            </div>
-                            <div class="mt-1.5 flex items-center gap-2">
-                              <label class="w-12 text-[10px] text-slate-500">Fecha</label>
-                              <input type="date" class="min-w-0 flex-1 rounded border border-slate-300 px-1 py-1 text-[10px]" [ngModel]="installment.fechaPago" (ngModelChange)="updateInstallment(installment.numeroCuota, 'fechaPago', $event)" />
+                       <div class="mt-4 px-1">
+                       <p class="text-base font-bold text-slate-800">{{ offer.label }} · {{ formatCurrency(offer.value) }}</p>
+                       <div class="mt-2 space-y-1.5">
+                         <div class="flex items-center justify-between gap-3">
+                           <label class="text-xs font-semibold text-slate-500">Descuento %</label>
+                           <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1.5 text-center text-sm font-bold" [ngModel]="discountPercent()" (ngModelChange)="setDiscount($event)" />
+                         </div>
+                         <div class="flex items-center justify-between gap-3">
+                           <label class="text-xs font-semibold text-slate-500">Transferencia S/</label>
+                           <input type="number" min="0" max="20" step="0.01" class="w-20 rounded border border-slate-300 px-2 py-1.5 text-center text-sm font-bold" [ngModel]="transferFee()" (ngModelChange)="setTransferFee($event)" />
+                         </div>
+                       </div>
+                       <p class="mt-3 text-right text-base font-black text-emerald-700">Total: {{ formatCurrency(calculatedPromiseAmount()) }}</p>
+                       <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                         <span class="text-sm font-semibold text-slate-600">Número de cuotas</span>
+                         <div class="flex items-center gap-1">
+                           <button type="button" class="grid size-7 place-items-center rounded border border-slate-300 text-sm" [disabled]="installmentCount() <= 1" (click)="changeInstallmentCount(-1)">−</button>
+                           <input type="number" min="1" max="20" class="w-14 rounded border border-slate-300 px-1 py-1 text-center text-sm font-bold" [ngModel]="installmentCount()" (ngModelChange)="setInstallmentCount($event)" />
+                           <button type="button" class="grid size-7 place-items-center rounded border border-slate-300 text-sm" [disabled]="installmentCount() >= 20" (click)="changeInstallmentCount(1)">+</button>
+                         </div>
+                       </div>
+                       <div class="mt-2 space-y-1.5">
+                         @for (installment of installments(); track installment.numeroCuota) {
+                           <div class="rounded bg-slate-50 px-2 py-2">
+                             <div class="mb-1 text-xs font-bold text-slate-500">Cuota {{ installment.numeroCuota }}</div>
+                             <div class="flex items-center gap-2">
+                               <label class="w-12 text-xs text-slate-500">Monto</label>
+                               <input type="number" min="0" step="0.01" class="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm" [ngModel]="installment.monto" (ngModelChange)="updateInstallment(installment.numeroCuota, 'monto', $event)" />
+                             </div>
+                             <div class="mt-1.5 flex items-center gap-2">
+                               <label class="w-12 text-xs text-slate-500">Fecha</label>
+                               <input type="date" class="min-w-0 flex-1 rounded border border-slate-300 px-1 py-1.5 text-sm" [ngModel]="installment.fechaPago" (ngModelChange)="updateInstallment(installment.numeroCuota, 'fechaPago', $event)" />
                             </div>
                           </div>
                         }
@@ -320,6 +347,7 @@ export class InfoClientWidgetComponent {
   readonly cartaError = signal<string | null>(null);
   readonly agreementLoading = signal(false);
   readonly agreementError = signal<string | null>(null);
+  readonly promiseResult = signal<PromiseResult | null>(null);
   readonly showOffers = signal(false);
   readonly offersLoading = signal(false);
   readonly offersError = signal<string | null>(null);
@@ -374,8 +402,9 @@ export class InfoClientWidgetComponent {
       this.query.set('');
       this.manualOpen.set(false);
       this.mode.set('telefono');
-      this.selectedClient.set(null);
-      this.showOffers.set(false);
+       this.selectedClient.set(null);
+       this.promiseResult.set(null);
+       this.showOffers.set(false);
       this.offers.set([]);
       this.offersError.set(null);
       this.promiseInProcess.set(false);
@@ -396,6 +425,7 @@ export class InfoClientWidgetComponent {
 
   openInfo(result: GlobalSearchResult): void {
     this.selectedClient.set(result);
+    this.promiseResult.set(null);
     this.refreshHasCarta(result);
     this.showOffers.set(false);
     this.offers.set([]);
@@ -421,7 +451,14 @@ export class InfoClientWidgetComponent {
     this.offerSent.set(false);
   }
 
+  backFromPromiseResult(): void {
+    this.promiseResult.set(null);
+    this.agreementError.set(null);
+    this.backToOptions();
+  }
+
   runOption(key: string): void {
+    this.promiseResult.set(null);
     if (key === 'compromiso-pago') {
       this.prepareAgreement();
       return;
@@ -441,14 +478,29 @@ export class InfoClientWidgetComponent {
       next: (response) => {
         this.hasCarta.set(true);
         this.cartaCesion.downloadPdf(response.filename).pipe(finalize(() => this.cartaLoading.set(false))).subscribe({
-          next: (blob) => this.store.setPendingAttachment(new File([blob], response.filename, { type: 'application/pdf' })),
-          error: () => this.cartaError.set('No se pudo cargar el PDF de la carta de cesión.')
+          next: (blob) => {
+            this.store.setPendingAttachment(new File([blob], response.filename, { type: 'application/pdf' }));
+            this.promiseResult.set({
+              kind: 'success',
+              title: 'Carta de cesión lista',
+              message: 'La carta de cesión está lista para adjuntarse al mensaje.'
+            });
+          },
+          error: () => this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo cargar la carta de cesión.',
+            message: 'No se pudo cargar el PDF de la carta de cesión.'
+          })
         });
       },
       error: (error) => {
         this.cartaLoading.set(false);
         this.hasCarta.set(false);
-        this.cartaError.set(error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.');
+        this.promiseResult.set({
+          kind: 'error',
+          title: error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.',
+          message: error.status === 404 ? 'Este cliente no tiene carta de cesión.' : 'No se pudo buscar la carta de cesión.'
+        });
       }
     });
   }
@@ -550,9 +602,41 @@ export class InfoClientWidgetComponent {
   }
 
   updateInstallment(numeroCuota: number, field: 'monto' | 'fechaPago', value: number | string): void {
-    this.installments.update(items => items.map(item => item.numeroCuota === numeroCuota
-      ? { ...item, [field]: field === 'monto' ? Number(value) || 0 : String(value) }
-      : item));
+    if (field === 'fechaPago') {
+      this.installments.update(items => items.map(item => item.numeroCuota === numeroCuota
+        ? { ...item, fechaPago: String(value) }
+        : item));
+    } else {
+      const totalCents = Math.round(this.calculatedPromiseAmount() * 100);
+      this.installments.update(items => {
+        const next = items.map(item => ({ ...item }));
+        const editedIndex = numeroCuota - 1;
+        const edited = next[editedIndex];
+        if (!edited) return next;
+
+        const minimumCents = 100;
+        const requestedCents = Math.max(minimumCents, Math.round((Number(value) || 0) * 100));
+        const previousCents = next
+          .slice(0, editedIndex)
+          .reduce((sum, item) => sum + Math.round(item.monto * 100), 0);
+        const followingCount = next.length - numeroCuota;
+        const maxEditedCents = totalCents - previousCents - (followingCount * minimumCents);
+        edited.monto = Math.max(minimumCents, Math.min(requestedCents, maxEditedCents)) / 100;
+
+        if (followingCount === 0) return next;
+
+        const editedAndPreviousCents = previousCents + Math.round(edited.monto * 100);
+        const remainingCents = Math.max(0, totalCents - editedAndPreviousCents);
+        const amountPerFollowing = Math.floor((remainingCents / followingCount));
+        const remainder = remainingCents - (amountPerFollowing * followingCount);
+
+        for (let index = editedIndex + 1; index < next.length; index++) {
+          const isLast = index === next.length - 1;
+          next[index].monto = (isLast ? amountPerFollowing + remainder : amountPerFollowing) / 100;
+        }
+        return next;
+      });
+    }
     this.refreshScheduleConfig();
     this.persistOfferDraft();
   }
@@ -581,7 +665,7 @@ export class InfoClientWidgetComponent {
       return;
     }
     this.scheduleConfig.set({
-      montoTotal: this.installments().reduce((sum, item) => sum + item.monto, 0),
+      montoTotal: this.calculatedPromiseAmount(),
       numeroCuotas: this.installments().length,
       cuotas: this.installments(),
       campoMontoOrigen: offer.field,
@@ -662,9 +746,10 @@ export class InfoClientWidgetComponent {
       this.selectedOffer.set(offer);
       this.discountPercent.set(draft.discount);
       this.transferFee.set(draft.transferFee);
-      this.installmentCount.set(Math.max(1, Math.min(20, draft.installmentCount)));
-      this.installments.set(draft.installments);
-      this.customAmount.set(draft.discount > 0 || draft.transferFee > 0);
+       this.installmentCount.set(Math.max(1, Math.min(20, draft.installmentCount)));
+       this.installments.set(draft.installments);
+       this.normalizeInstallments();
+       this.customAmount.set(draft.discount > 0 || draft.transferFee > 0);
       this.refreshScheduleConfig();
       this.offerSent.set(true);
     } catch {
@@ -676,6 +761,19 @@ export class InfoClientWidgetComponent {
     localStorage.removeItem(this.offerStorageKey);
   }
 
+  private normalizeInstallments(): void {
+    const totalCents = Math.round(this.calculatedPromiseAmount() * 100);
+    this.installments.update(items => {
+      let remaining = totalCents;
+      return items.map((item, index) => {
+        if (index === items.length - 1) return { ...item, monto: remaining / 100 };
+        const amount = Math.min(Math.max(0, Math.round(item.monto * 100)), remaining);
+        remaining -= amount;
+        return { ...item, monto: amount / 100 };
+      });
+    });
+  }
+
   createPromise(): void {
     const result = this.selectedClient();
     const config = this.scheduleConfig();
@@ -683,7 +781,12 @@ export class InfoClientWidgetComponent {
     const user = this.auth.getCurrentUser();
     const clientId = Number(result?.clientData.id);
     if (!result || !config || !chat?.id || !clientId || !user?.id) {
-      this.agreementError.set('Faltan datos para generar la promesa de pago.');
+      this.promiseResult.set({
+        kind: 'error',
+        title: 'No se pudo crear la promesa de pago.',
+        message: 'Faltan datos para generar la promesa de pago.',
+        detail: 'Verifica si el cliente tiene una excepción pendiente antes de volver a intentarlo.'
+      });
       return;
     }
 
@@ -723,22 +826,42 @@ export class InfoClientWidgetComponent {
         this.clearStoredOfferDraft();
         this.offerSent.set(false);
         if (this.customAmount()) {
-          this.agreementError.set('Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.');
+          this.promiseResult.set({
+            kind: 'success',
+            icon: 'alert',
+            title: 'Promesa enviada a evaluación',
+            message: 'Promesa creada y enviada a evaluación. Espera la aprobación antes de enviar el compromiso.'
+          });
           return;
         }
 
         const managementId = Number(created?.id || created?.managementId || created?.data?.id);
         if (!managementId) {
-          this.agreementError.set('La promesa se creó, pero no se pudo generar el acuerdo automáticamente.');
+          this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo completar la promesa',
+            message: 'La promesa se creó, pero no se pudo generar el acuerdo automáticamente.',
+            detail: 'Verifica si el cliente tiene una excepción pendiente antes de volver a intentarlo.'
+          });
           return;
         }
         this.agreementLoading.set(true);
         this.cartaAcuerdo.generarCarta(managementId, Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
           next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' })),
-          error: () => this.agreementError.set('La promesa se creó, pero no se pudo generar el acuerdo.')
+          error: () => this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo generar el acuerdo',
+            message: 'La promesa se creó, pero no se pudo generar el acuerdo.',
+            detail: 'Verifica si el cliente tiene una excepción pendiente.'
+          })
         });
       },
-      error: () => this.agreementError.set('No se pudo crear la promesa de pago.')
+      error: () => this.promiseResult.set({
+        kind: 'error',
+        title: 'No se pudo crear la promesa de pago.',
+        message: 'No fue posible registrar la promesa para este cliente.',
+        detail: 'Verifica si el cliente tiene una excepción pendiente antes de volver a intentarlo.'
+      })
     });
   }
 
@@ -783,7 +906,11 @@ export class InfoClientWidgetComponent {
     const user = this.auth.getCurrentUser();
     if (!documento) return;
     if (!user?.id) {
-      this.agreementError.set('No se encontró el usuario autenticado.');
+      this.promiseResult.set({
+        kind: 'error',
+        title: 'No se pudo generar el compromiso de pago.',
+        message: 'No se encontró el usuario autenticado.'
+      });
       return;
     }
 
@@ -798,14 +925,22 @@ export class InfoClientWidgetComponent {
         const schedule = valid[0];
         if (!schedule) {
           this.agreementLoading.set(false);
-          this.agreementError.set('Este cliente no tiene un compromiso de pago activo.');
+          this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo generar el compromiso de pago.',
+            message: 'Este cliente no tiene un compromiso de pago activo.'
+          });
           return;
         }
 
         const subPortfolioId = result?.subPortfolioId;
         if (!subPortfolioId) {
           this.agreementLoading.set(false);
-          this.agreementError.set('El cliente no tiene subcartera configurada para generar el acuerdo.');
+          this.promiseResult.set({
+            kind: 'error',
+            title: 'No se pudo generar el compromiso de pago.',
+            message: 'El cliente no tiene subcartera configurada para generar el acuerdo.'
+          });
           return;
         }
 
@@ -813,23 +948,46 @@ export class InfoClientWidgetComponent {
           next: (hasTemplate) => {
             if (!hasTemplate) {
               this.agreementLoading.set(false);
-              this.agreementError.set('No hay una plantilla de acuerdo configurada para esta subcartera.');
+              this.promiseResult.set({
+                kind: 'error',
+                title: 'No se pudo generar el compromiso de pago.',
+                message: 'No hay una plantilla de acuerdo configurada para esta subcartera.'
+              });
               return;
             }
             this.cartaAcuerdo.generarCarta(Number(schedule.id), Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
-              next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${documento}.pdf`, { type: 'application/pdf' })),
-              error: () => this.agreementError.set('No se pudo generar el compromiso de pago.')
+              next: (blob) => {
+                this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${documento}.pdf`, { type: 'application/pdf' }));
+                this.promiseResult.set({
+                  kind: 'success',
+                  title: 'Compromiso de pago listo',
+                  message: 'El compromiso de pago está listo para adjuntarse al mensaje.'
+                });
+              },
+              error: () => this.promiseResult.set({
+                kind: 'error',
+                title: 'No se pudo generar el compromiso de pago.',
+                message: 'No se pudo generar el compromiso de pago.'
+              })
             });
           },
           error: () => {
             this.agreementLoading.set(false);
-            this.agreementError.set('No se pudo validar la plantilla del acuerdo.');
+            this.promiseResult.set({
+              kind: 'error',
+              title: 'No se pudo generar el compromiso de pago.',
+              message: 'No se pudo validar la plantilla del acuerdo.'
+            });
           }
         });
       },
       error: () => {
         this.agreementLoading.set(false);
-        this.agreementError.set('No se pudo consultar el compromiso de pago.');
+        this.promiseResult.set({
+          kind: 'error',
+          title: 'No se pudo generar el compromiso de pago.',
+          message: 'No se pudo consultar el compromiso de pago.'
+        });
       }
     });
   }

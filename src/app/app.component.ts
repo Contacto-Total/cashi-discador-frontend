@@ -515,6 +515,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           console.log('📞 [App] PREDICTIVE_CALL_CONNECTED recibido:', message.payload);
           sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
         }
+
+        // Agenda de rellamada del bot (F1f). El backend ya emitía estos eventos,
+        // pero nadie los escuchaba: llegaban al navegador y se descartaban.
+        if (message.type?.startsWith('BOT_AGENDA_') && message.payload) {
+          this.avisoDeAgenda(message.type, message.payload);
+        }
       });
 
       console.log('📞 Escuchando llamadas entrantes...');
@@ -523,6 +529,34 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.verificarRecordatoriosPendientes(user);
     } catch (error) {
       console.error('❌ Error al conectar a FreeSWITCH:', error);
+    }
+  }
+
+  /**
+   * Avisos de la agenda de rellamada del bot (F1f, §6.6.1).
+   *
+   * Duraciones distintas a propósito: el aviso de que se pactó una llamada puede
+   * llegar horas antes y es informativo, pero el recordatorio llega 2 minutos antes
+   * y avisa de que sale de campaña — si se le escapa, le entra una llamada que no
+   * esperaba. Por eso ese se queda 12 s y no 4.
+   *
+   * La toast es una comodidad, no el canal fiable: lo que no se pierde es la
+   * pantalla /bot-agenda, donde el asesor ve sus llamadas del día.
+   */
+  private avisoDeAgenda(tipo: string, payload: any): void {
+    const cliente = payload.nombreCliente || payload.documento || 'el cliente';
+    switch (tipo) {
+      case 'BOT_AGENDA_NUEVA':
+        this.toast.info(`${payload.titulo}: ${payload.mensaje}`, 8000);
+        break;
+      case 'BOT_AGENDA_RECORDATORIO':
+        this.toast.warning(`${payload.titulo}: ${payload.mensaje}`, 12000);
+        break;
+      case 'BOT_AGENDA_FIN':
+        this.toast.success(payload.mensaje, 6000);
+        break;
+      default:
+        console.warn('[BOT-AGENDA] evento no manejado:', tipo, cliente);
     }
   }
 

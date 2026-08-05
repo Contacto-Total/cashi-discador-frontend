@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, FileAudio, Loader } from 'lucide-angular';
+import { LucideAngularModule, Volume2, Download, Search, Calendar, X, Disc, FileAudio, Loader, FileSpreadsheet } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -27,6 +27,7 @@ export class AdminRecordingsComponent implements OnInit {
   readonly Disc = Disc;
   readonly FileAudio = FileAudio;
   readonly Loader = Loader;
+  readonly FileSpreadsheet = FileSpreadsheet;
   readonly Math = Math;
 
   // Data
@@ -79,6 +80,9 @@ export class AdminRecordingsComponent implements OnInit {
   isLoading: boolean = false;
   isDownloadingMassive: boolean = false;
   downloadingUuid: string = '';
+  // Id numérico y no uuid, para que el spinner del reporte sea independiente del
+  // de audio: bajar el audio de una fila no debe girar el botón de reporte.
+  downloadingReporteId: number | null = null;
 
   constructor(
     private recordingsService: AdminRecordingsService,
@@ -369,6 +373,36 @@ export class AdminRecordingsComponent implements OnInit {
         console.error(err);
         this.downloadingUuid = '';
         this.toastService.error('No se encontró el archivo de audio para esta grabación.');
+      }
+    });
+  }
+
+  downloadReporte(recording: RecordingDTO): void {
+    // El boton queda siempre habilitado para que se vea clickeable como el de
+    // audio; si no hay evaluacion se avisa por toast en vez de bloquearlo.
+    if (!recording.tieneEvaluacion) {
+      this.toastService.error('Evaluación de calidad no disponible.');
+      return;
+    }
+
+    this.downloadingReporteId = recording.id;
+    this.recordingsService.downloadReporte(recording.id).subscribe({
+      next: (data: Blob) => {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `evaluacion-${recording.documento}-${this.formatDate(recording.fechaInicio)}-${recording.agente || 'sin-agente'}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        this.downloadingReporteId = null;
+        this.toastService.success('Reporte descargado correctamente.');
+      },
+      error: (err) => {
+        console.error(err);
+        this.downloadingReporteId = null;
+        this.toastService.error('Evaluación de calidad no disponible.');
       }
     });
   }
