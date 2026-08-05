@@ -112,13 +112,10 @@ interface ConfigSpeech {
         <!-- Modo de la plantilla -->
         <div class="max-w-7xl mx-auto mb-6">
           <div class="bg-slate-900 rounded-xl p-6 shadow-sm border border-slate-800">
-            <h2 class="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+            <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <lucide-angular name="sliders" [size]="20" class="text-purple-400"></lucide-angular>
-              Modo de la plantilla
+              Modalidad de presentación del asesor
             </h2>
-            <p class="text-sm text-gray-400 mb-4">
-              Se guarda con la subcartera, pero todavía no cambia cómo se genera el reporte.
-            </p>
 
             <div class="inline-flex bg-slate-800 rounded-lg p-1 border border-slate-700">
               <button type="button" (click)="setRigido(true)"
@@ -332,6 +329,12 @@ export class PlantillasSpeechComponent implements OnInit {
     return sub?.subPortfolioName ?? '';
   }
 
+  /** Nombre de la cartera elegida. Solo viaja al guardar, para leer la tabla. */
+  nombreCarteraSeleccionada(): string {
+    const cartera = this.portfolios.find(p => p.id === this.selectedPortfolioId);
+    return cartera?.portfolioName ?? '';
+  }
+
   // === Búsqueda ===
 
   buscar(): void {
@@ -397,6 +400,9 @@ export class PlantillasSpeechComponent implements OnInit {
     this.saving.set(true);
     this.http.put<any>(`${this.apiUrl}/subcartera/${cfg.idSubcartera}`, {
       nombreSubcartera: this.nombreSubcarteraSeleccionada() || cfg.nombreSubcartera,
+      idInquilino: this.selectedTenantId,
+      idCartera: this.selectedPortfolioId,
+      nombreCartera: this.nombreCarteraSeleccionada(),
       rigido: cfg.rigido,
       cd: cfg.cd,
       pdp: cfg.pdp
