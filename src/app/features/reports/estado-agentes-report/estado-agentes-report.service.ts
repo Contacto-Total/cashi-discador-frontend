@@ -86,11 +86,8 @@ export interface RegistroAsistenciaDTO {
   jornada: string;
   desconexiones: number;
   cambiosEstado: number;
-  /** Primera gestion tipificada del dia */
+  /** Hora de la primera gestion tipificada del dia */
   primeraGestionHora: string | null;
-  primeraGestionId: number | null;
-  /** Minutos entre la conexion y la primera gestion */
-  minutosHastaGestion: number | null;
 }
 
 export interface ResumenAsistenciaPorAgente {

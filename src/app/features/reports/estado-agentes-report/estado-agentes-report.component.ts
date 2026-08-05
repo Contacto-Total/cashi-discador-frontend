@@ -541,7 +541,7 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                     <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado</th>
                     <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tardanza</th>
                     <th class="px-3 py-3 text-center text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase"
-                        title="Hora de la primera gestion tipificada del dia, con su id en registros_gestion">1ra Gestion</th>
+                        title="Hora de la primera gestion tipificada del dia">1ra Gestion</th>
                     <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Conectado</th>
                     <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Jornada</th>
                   </tr>
@@ -586,20 +586,8 @@ import { Inquilino, Cartera, Subcartera } from '../../../comisiones/models/comis
                             [class.text-gray-400]="reg.minutosTardanza === 0">
                           {{ reg.minutosTardanza > 0 ? (reg.minutosTardanza + ' min') : '-' }}
                         </td>
-                        <td class="px-3 py-2 text-center">
-                          @if (reg.primeraGestionHora) {
-                            <div class="text-indigo-600 dark:text-indigo-400 text-xs font-mono font-medium">
-                              {{ reg.primeraGestionHora }}
-                            </div>
-                            <div class="text-[10px] text-gray-500 dark:text-gray-400">
-                              #{{ reg.primeraGestionId }}
-                              @if (reg.minutosHastaGestion !== null) {
-                                <span class="ml-1">({{ reg.minutosHastaGestion }} min)</span>
-                              }
-                            </div>
-                          } @else {
-                            <span class="text-gray-400 text-xs">-</span>
-                          }
+                        <td class="px-3 py-2 text-center text-indigo-600 dark:text-indigo-400 text-xs font-mono font-medium">
+                          {{ reg.primeraGestionHora || '-' }}
                         </td>
                         <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400 text-xs font-mono">
                           {{ reg.estadoAsistencia === 'FALTA' ? '-' : reg.tiempoConectado }}
