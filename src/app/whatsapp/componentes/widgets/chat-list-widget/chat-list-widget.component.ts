@@ -71,7 +71,7 @@ import { AuthService } from '../../../../core/services/auth.service';
               type="button"
               class="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-slate-600 transition hover:text-emerald-700"
               [class.text-emerald-700]="hideClosedWindows()"
-              (click)="hideClosedWindows.update(value => !value)"
+              (click)="toggleClosedWindows()"
             >
               <span class="grid size-4 place-items-center rounded border" [class.border-emerald-600]="hideClosedWindows()" [class.bg-emerald-600]="hideClosedWindows()" [class.border-slate-300]="!hideClosedWindows()">
                 @if (hideClosedWindows()) { <span class="text-[10px] text-white">✓</span> }
@@ -218,6 +218,10 @@ export class ChatListWidgetComponent implements OnInit {
 
   reload(): void {
     this.store.loadChats(0, 30, this.query().trim() || undefined, this.accountFilter(), this.includeHistorical);
+  }
+
+  toggleClosedWindows(): void {
+    this.hideClosedWindows.update(value => !value);
   }
 
   filterByAccount(value: number | string | undefined): void {
