@@ -5,7 +5,7 @@ import { LucideAngularModule } from 'lucide-angular';
 import { RouterLink } from '@angular/router';
 import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { WhatsappApiService } from '../../../services/whatsapp-api.service';
-import { AccountStatusEvent, WhatsappAccount } from '../../../models';
+import { AccountStatusEvent, WhatsappAccount, WhatsappSession } from '../../../models';
 import { WhatsappRealtimeService } from '../../../services/whatsapp-realtime.service';
 import { TenantService } from '../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../maintenance/services/portfolio.service';
@@ -150,8 +150,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   }
 
   isLinked(account: WhatsappAccount): boolean {
-    if (account.status === 'WAITING_QR' || account.status === 'LOGGED_OUT') return false;
-    return account.hasLinkedNumber === true || !!account.phoneNumber;
+    const primary = this.primarySession(account);
+    if (primary?.status === 'WAITING_QR' || primary?.status === 'LOGGED_OUT') return false;
+    return primary?.status === 'CONNECTED' || account.hasLinkedNumber === true || !!account.phoneNumber;
   }
 
   statusLabel(status: string): string {
@@ -170,8 +171,16 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     return status.toLowerCase().replace(/_/g, '-');
   }
 
-  qrSource(account: WhatsappAccount): string {
-    return account.qrData ? `data:image/png;base64,${account.qrData}` : '';
+  qrSource(qr?: string): string {
+    return qr ? `data:image/png;base64,${qr}` : '';
+  }
+
+  sessionLabel(session: WhatsappSession): string {
+    return session.role === 'PRIMARY' ? 'Sesión principal' : `Sesión auxiliar ${session.slot.split('_').pop()}`;
+  }
+
+  private primarySession(account: WhatsappAccount): WhatsappSession | undefined {
+    return account.sessions?.find(session => session.slot === 'PRIMARY');
   }
 
   tenantLabel(account: WhatsappAccount): string {
@@ -362,7 +371,8 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
       tenantId: payload.tenantId ?? current.tenantId,
       carteraId: payload.carteraId ?? current.carteraId,
       subcarteraId: payload.subcarteraId ?? current.subcarteraId,
-      qrData: payload.qr || undefined
+      qrData: payload.qr || undefined,
+      sessions: payload.sessions ?? current.sessions
     };
     this.accounts = this.accounts.map(account => account.id === updated.id ? updated : account);
     if (this.selectedId === updated.id) this.syncForm(updated);

@@ -92,13 +92,23 @@
            </div>
 
            <div class="detail-content">
-            <div class="qr-column" [class.qr-muted]="isLinked(account)">
-              @if (!isLinked(account) && account.qrData) {
-                <div class="qr-frame"><img [src]="qrSource(account)" alt="Código QR para vincular WhatsApp"></div>
-                <p class="qr-caption">Abre WhatsApp en tu teléfono y escanea este código.</p>
-              } @else if (!isLinked(account)) {
-                <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando código QR...</span></div>
-              } @else {
+             <div class="qr-column" [class.qr-muted]="isLinked(account)">
+               @if (account.sessions?.length) {
+                 <div class="session-grid">
+                   @for (session of account.sessions; track session.slot) {
+                     <section class="session-card">
+                       <header>{{ sessionLabel(session) }}<span [ngClass]="statusClass(session.status)">{{ statusLabel(session.status) }}</span></header>
+                       @if (session.qrData) {
+                         <div class="qr-frame"><img [src]="qrSource(session.qrData)" [alt]="'Código QR ' + sessionLabel(session)"></div>
+                       } @else {
+                         <div class="session-placeholder"><lucide-angular [name]="session.status === 'CONNECTED' ? 'check-circle-2' : 'qr-code'" [size]="25"></lucide-angular><span>{{ session.status === 'CONNECTED' ? 'Vinculada' : 'Esperando código QR' }}</span></div>
+                       }
+                     </section>
+                   }
+                 </div>
+               } @else if (!isLinked(account)) {
+                 <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando códigos QR...</span></div>
+               } @else {
                 <div class="linked-number">
                   <span class="linked-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
                   <strong>{{ account.phoneNumber || 'Número vinculado' }}</strong>
