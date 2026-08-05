@@ -29,6 +29,16 @@ export interface RecordatorioPromesa {
   ultimoIntentoRecordatorio: string | null;
   resultadoUltimoIntento: string | null;
   yaLlamoHoy: boolean;
+
+  // Cruce con la agenda del bot (F1f). Ninguno de los dos quita la fila de la
+  // lista: avisan de que ya hay una hora pactada, o de que se prometió una llamada
+  // y no se pudo cumplir.
+  /** Hora de la cita viva, si la hay. El asesor no debería adelantarse. */
+  agendadaPara?: string | null;
+  /** PENDIENTE | ASIGNADA | SIN_ASESOR */
+  estadoAgenda?: string | null;
+  /** Se pactó una llamada con el cliente y nunca se le hizo. */
+  promesaIncumplida?: boolean;
 }
 
 export interface RegistrarRecordatorioRequest {

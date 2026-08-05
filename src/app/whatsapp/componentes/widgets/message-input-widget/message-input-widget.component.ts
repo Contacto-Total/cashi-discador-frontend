@@ -1,7 +1,8 @@
-import { Component, ElementRef, ViewChild, computed, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chat } from '../../../models';
 import { WhatsappMessageStoreService } from '../../../services';
+import { PdfPreviewWidgetComponent } from '../pdf-preview-widget/pdf-preview-widget.component';
 
 /** Tope de tamaño del adjunto (se sube por multipart; el back lo guarda en disco). */
 const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
@@ -9,7 +10,7 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
 @Component({
   selector: 'app-whatsapp-message-input-widget',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, PdfPreviewWidgetComponent],
   template: `
     <div class="space-y-2">
       @if (windowWarning()) {
@@ -30,6 +31,19 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
         </p>
       }
 
+       @if (pendingFiles().length) {
+         <div class="space-y-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2">
+           @for (file of pendingFiles(); track file.name + '-' + $index) {
+             <div class="flex items-center gap-3 px-1 py-1">
+               <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-100 text-[10px] font-bold text-rose-700">{{ file.type === 'application/pdf' ? 'PDF' : 'FILE' }}</span>
+               <div class="min-w-0 flex-1"><p class="truncate text-sm font-semibold text-slate-800">{{ file.name }}</p><p class="text-xs text-slate-500">Listo para enviar</p></div>
+               @if (isPdf(file) && $index === 0) { <button type="button" class="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100" (click)="previewOpen = true">Vista previa</button> }
+               <button type="button" class="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-slate-200" aria-label="Quitar archivo" (click)="removePending($index)">×</button>
+             </div>
+           }
+         </div>
+       }
+
       @if (store.replyingTo(); as reply) {
         <div class="flex items-stretch gap-2 rounded-lg bg-slate-100 py-2 pl-2 pr-1">
           <div class="w-1 shrink-0 rounded bg-emerald-500"></div>
@@ -48,7 +62,7 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
         </div>
       }
 
-      <input #fileInput type="file" class="hidden" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip" (change)="onFileSelected($event)" />
+       <input #fileInput type="file" multiple class="hidden" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip" (change)="onFileSelected($event)" />
 
       @if (recording()) {
         <div class="flex items-center gap-3 rounded-full bg-slate-100 px-4 py-2">
@@ -76,23 +90,24 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
 
           <label class="min-w-0 flex-1">
             <span class="sr-only">Mensaje</span>
-            <textarea
+               <textarea #messageInput
               class="max-h-32 min-h-11 w-full resize-none rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm leading-tight text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:bg-slate-100 disabled:text-slate-500"
               rows="1"
               placeholder="Escribe un mensaje"
               [disabled]="!canSend() || store.sendingMessage()"
               [ngModel]="text()"
               name="messageText"
-              (ngModelChange)="text.set($event)"
+               (ngModelChange)="text.set($event)"
+               (paste)="onPaste($event)"
               (keydown.enter)="handleEnter($event)"
             ></textarea>
           </label>
 
-          @if (text().trim()) {
+           @if (text().trim() || pendingFile()) {
             <button
               type="submit"
               class="h-11 shrink-0 rounded-full bg-emerald-600 px-5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
-              [disabled]="!canSubmit()"
+               [disabled]="!canSubmit()"
             >
               @if (store.sendingMessage()) { Enviando } @else { Enviar }
             </button>
@@ -110,6 +125,7 @@ const MAX_MEDIA_BYTES = 18 * 1024 * 1024;
         </form>
       }
     </div>
+    <app-whatsapp-pdf-preview-widget [open]="previewOpen" [fileUrl]="pdfUrl()" [fileName]="pendingFile()?.name || 'Documento PDF'" (closed)="previewOpen = false" />
   `
 })
 export class MessageInputWidgetComponent {
@@ -121,24 +137,47 @@ export class MessageInputWidgetComponent {
   readonly recordingSeconds = signal(0);
   readonly chat = computed(() => this.store.currentChat());
   readonly canSend = computed(() => this.canSendToChat(this.chat()));
-  readonly canSubmit = computed(() => this.canSend() && !!this.text().trim() && !this.store.sendingMessage());
+  readonly canSubmit = computed(() => this.canSend() && (!!this.text().trim() || this.pendingFiles().length > 0) && !this.store.sendingMessage() && !this.store.uploadingMedia());
+  readonly pendingFiles = computed(() => this.store.pendingAttachments());
+  readonly pendingFile = computed(() => this.store.pendingAttachment());
+  readonly pdfUrl = computed(() => {
+    const file = this.pendingFile();
+    return file && this.isPdf(file) ? URL.createObjectURL(file) : null;
+  });
+  previewOpen = false;
   readonly windowWarning = computed(() => this.getWindowWarning(this.chat()));
 
   private mediaRecorder?: MediaRecorder;
   private audioChunks: Blob[] = [];
   private audioStream?: MediaStream;
   private recordTimer?: ReturnType<typeof setInterval>;
+  private refocusAfterSend = false;
 
-  constructor(readonly store: WhatsappMessageStoreService) {}
+  constructor(readonly store: WhatsappMessageStoreService) {
+    effect(() => {
+      const idle = !this.store.sendingMessage() && !this.store.uploadingMedia();
+      if (!idle || !this.refocusAfterSend) return;
+      this.refocusAfterSend = false;
+      setTimeout(() => this.messageInput?.nativeElement.focus());
+    });
+  }
+
+  @ViewChild('messageInput') private messageInput?: ElementRef<HTMLTextAreaElement>;
 
   send(): void {
     const chat = this.chat();
     const body = this.text().trim();
-    if (!chat?.id || !body || !this.canSubmit()) return;
+    if (!chat?.id || !this.canSubmit()) return;
 
-    this.store.sendText(chat.id, body, this.store.replyingTo()?.msgId);
+    if (this.pendingFile()) {
+      this.store.sendPendingAttachment(chat.id, body || undefined);
+    } else {
+      if (!body) return;
+      this.store.sendText(chat.id, body, this.store.replyingTo()?.msgId);
+    }
     this.store.setReplyingTo(null);
     this.text.set('');
+    this.refocusAfterSend = true;
   }
 
   handleEnter(event: Event): void {
@@ -156,20 +195,37 @@ export class MessageInputWidgetComponent {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
+    const files = Array.from(input.files || []);
     input.value = ''; // permitir re-seleccionar el mismo archivo
     const chat = this.chat();
-    if (!file || !chat?.id || !this.canSend()) return;
+    if (!files.length || !chat?.id || !this.canSend()) return;
 
-    if (file.size > MAX_MEDIA_BYTES) {
-      this.attachError.set(`El archivo supera el límite de ${Math.round(MAX_MEDIA_BYTES / 1024 / 1024)} MB.`);
+    const oversized = files.find(file => file.size > MAX_MEDIA_BYTES);
+    if (oversized) {
+      this.attachError.set(`${oversized.name} supera el límite de ${Math.round(MAX_MEDIA_BYTES / 1024 / 1024)} MB.`);
       return;
     }
 
-    // Sube por multipart y envía la ref (el back guarda el binario en disco).
-    this.store.sendMediaFile(chat.id, file, this.text().trim() || undefined);
-    this.text.set('');
+    this.store.addPendingAttachments(files);
   }
+
+  onPaste(event: ClipboardEvent): void {
+    const files = Array.from(event.clipboardData?.items || [])
+      .filter(item => item.kind === 'file' && item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter((file): file is File => !!file)
+      .map((file, index) => new File([file], `captura-${Date.now()}-${index + 1}.${file.type.split('/')[1] || 'png'}`, { type: file.type }));
+    if (!files.length) return;
+    event.preventDefault();
+    if (this.canSend()) this.store.addPendingAttachments(files);
+  }
+
+  removePending(index: number): void {
+    this.previewOpen = false;
+    this.store.removePendingAttachment(index);
+  }
+
+  isPdf(file: File): boolean { return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'); }
 
   // ---- Grabar audio ----
   async startRecording(): Promise<void> {
@@ -204,8 +260,9 @@ export class MessageInputWidgetComponent {
         const type = this.audioChunks[0]?.type || 'audio/webm';
         const ext = type.includes('ogg') ? 'ogg' : 'webm';
         const file = new File([new Blob(this.audioChunks, { type })], `audio-${Date.now()}.${ext}`, { type });
-        this.store.sendMediaFile(chat.id, file, this.text().trim() || undefined);
-        this.text.set('');
+         this.store.sendMediaFile(chat.id, file, this.text().trim() || undefined);
+         this.text.set('');
+         this.refocusAfterSend = true;
       };
       recorder.stop();
     } else {
@@ -232,13 +289,14 @@ export class MessageInputWidgetComponent {
   }
 
   private canSendToChat(chat: Chat | null): boolean {
-    if (!chat?.id || chat.blocked) return false;
+    if (!chat?.id || chat.blocked || chat.serviceActive === false) return false;
     if (!chat.windowExpiresAt) return true;
     return new Date(chat.windowExpiresAt).getTime() > Date.now();
   }
 
   private getWindowWarning(chat: Chat | null): string {
     if (!chat) return '';
+    if (chat.serviceActive === false) return 'El servicio WhatsApp de esta conversación está deshabilitado.';
     if (chat.blocked) return '24 h expirado.';
     if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '24 h expirado.';
     return '';

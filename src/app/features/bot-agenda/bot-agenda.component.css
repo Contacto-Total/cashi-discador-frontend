@@ -1,5 +1,5 @@
 /* Container */
-.bot-voz { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+.bot-agenda { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
 
 /* Header */
 .page-header {
@@ -125,8 +125,25 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .badge.descartada { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
 .badge.en_llamada { background: rgba(234, 179, 8, 0.12); color: #a16207; }
 
-.empty-state { padding: 3rem; text-align: center; color: var(--text-secondary, #64748b); }
-.empty-state.error { color: #b91c1c; }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 3rem 1.5rem; text-align: center; color: var(--text-secondary, #64748b);
+}
+.empty-state strong { font-size: 1rem; color: var(--text-primary, #0f172a); }
+.empty-state p { margin: 0; font-size: 0.85rem; max-width: 42ch; }
+
+/* El error se enmarca; el vacio no. Un recuadro rojo dice "algo pasa aqui",
+   y "no hay nada agendado" no es algo que pase. */
+.empty-state.error {
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.04);
+  border-radius: 10px;
+  margin: 1rem 0;
+}
+.empty-state.error strong { color: #b91c1c; }
+.empty-state.error .aclaracion { color: #7f1d1d; opacity: 0.85; }
+.empty-state.error button { margin-top: 0.5rem; }
 
 .paginador {
   display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;
@@ -157,7 +174,7 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 }
 
 @media (max-width: 768px) {
-  .bot-voz { padding: 1rem; }
+  .bot-agenda { padding: 1rem; }
   .page-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
   .control-card { flex-direction: column; gap: 1rem; align-items: flex-start; }
 }
@@ -255,4 +272,56 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 @media (max-width: 768px) {
   .detalle-panel { width: 100%; padding: 1rem; }
   .detalle-datos { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ----- propio de la agenda ----- */
+.header-acciones { display: flex; align-items: center; gap: 0.75rem; }
+.header-acciones input[type="date"] {
+  min-height: 40px; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px; background: var(--input-bg, #fff); color: var(--text-primary, #1e293b);
+  font-size: 0.875rem; font-family: inherit;
+}
+.titulo-seccion {
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b); margin: 1.5rem 0 0.75rem;
+}
+
+/* Tarjeta por llamada proxima: se lee de un vistazo, sin entrar al detalle. */
+.tarjeta {
+  display: grid; grid-template-columns: 6.5rem 1fr 10rem auto 20px;
+  align-items: center; gap: 1rem; cursor: pointer;
+  background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.6rem; transition: all 0.15s;
+}
+.tarjeta:hover { border-color: #3b82f6; box-shadow: 0 2px 10px rgba(59, 130, 246, 0.12); }
+.tarjeta .hora { display: flex; flex-direction: column; }
+.tarjeta .hora strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.tarjeta .hora .muted { font-size: 0.75rem; }
+
+/* La que toca ya: tiene que saltar a la vista entre las demas. */
+.tarjeta.inminente {
+  border-color: #f59e0b; background: rgba(245, 158, 11, 0.06);
+  animation: pulso-agenda 2s ease-in-out infinite;
+}
+.tarjeta.inminente .hora strong { color: #b45309; }
+@keyframes pulso-agenda {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35); }
+  50%      { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+}
+
+.badge.pendiente   { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
+.badge.asignada    { background: rgba(234, 179, 8, 0.12); color: #a16207; }
+.badge.atendida    { background: rgba(34, 197, 94, 0.1); color: #047857; }
+.badge.no_contesta { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.badge.sin_asesor  { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.badge.cancelada   { background: var(--bg-secondary, #f1f5f9); color: #64748b; }
+
+.resumen {
+  font-size: 0.875rem; line-height: 1.5; padding: 0.85rem;
+  background: rgba(100, 116, 139, 0.07); border-radius: 10px; margin: 0 0 1rem;
+}
+
+@media (max-width: 768px) {
+  .tarjeta { grid-template-columns: 1fr; gap: 0.4rem; }
+  .page-header .header-acciones { width: 100%; }
 }

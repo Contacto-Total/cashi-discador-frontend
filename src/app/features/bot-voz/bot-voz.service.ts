@@ -31,25 +31,50 @@ export interface BotPerfil {
 
 export interface BotContacto {
   id: number;
-  idCuota?: number;
   idCliente: number;
+  documento?: string;
+  nombreCliente?: string;
+  idCuota?: number;
+  numeroCuota?: number;
+  montoCuota?: number;
+  fechaPromesa?: string;
+  estadoCuota?: string;
   telefono: string;
   idPerfil?: number;
   estado: string;
   intentos: number;
   resultado?: string;
+  proximoIntentoAt?: string;
 }
 
 export interface BotSesion {
   id: number;
   uuidLlamada: string;
   idCliente?: number;
+  documento?: string;
+  nombreCliente?: string;
+  telefono?: string;
   idCuota?: number;
+  numeroCuota?: number;
+  montoCuota?: number;
+  fechaPromesa?: string;
   estado?: string;
   resultadoNegocio?: string;
+  amdResultado?: string;
   duracionSeg?: number;
   costoEstimadoUsd?: number;
   inicio?: string;
+  idGestion?: number;
+}
+
+/** Un turno de la conversacion, para el detalle de una llamada. */
+export interface BotTurno {
+  id: number;
+  turno: number;
+  hablante: string;       // BOT | CLIENTE
+  texto: string;
+  latenciaMs?: number;
+  ts?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -64,6 +89,10 @@ export class BotVozService {
   // Botones start/stop de la cola de llamadas.
   activar(): Observable<BotConfig> { return this.http.post<BotConfig>(`${this.apiUrl}/activar`, {}); }
   desactivar(): Observable<BotConfig> { return this.http.post<BotConfig>(`${this.apiUrl}/desactivar`, {}); }
+
+  getTurnos(idSesion: number): Observable<BotTurno[]> {
+    return this.http.get<BotTurno[]>(`${this.apiUrl}/sesiones/${idSesion}/turnos`);
+  }
 
   getPerfiles(): Observable<BotPerfil[]> { return this.http.get<BotPerfil[]>(`${this.apiUrl}/perfiles`); }
   updatePerfil(id: number, p: Partial<BotPerfil>): Observable<BotPerfil> { return this.http.put<BotPerfil>(`${this.apiUrl}/perfiles/${id}`, p); }

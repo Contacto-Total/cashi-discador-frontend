@@ -9,7 +9,7 @@
     </div>
     <div class="estado-bot" *ngIf="config">
       <span class="dot" [class.on]="config.activo"></span>
-      {{ config.activo ? 'Activo — discando' : 'Detenido' }}
+      {{ estadoBot }}
     </div>
   </div>
 
@@ -19,9 +19,13 @@
   <div class="tabs-container">
     <button class="tab-btn" [class.active]="activeTab === 'config'" (click)="switchTab('config')">
       <lucide-angular name="settings" [size]="16"></lucide-angular> Configuración
+      <span class="punto-sin-guardar" *ngIf="configSinGuardar"
+            title="Cambios sin guardar"></span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'perfiles'" (click)="switchTab('perfiles')">
       <lucide-angular name="layers" [size]="16"></lucide-angular> Perfiles
+      <span class="punto-sin-guardar" *ngIf="hayPerfilesSinGuardar"
+            title="Cambios sin guardar"></span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'cola'" (click)="switchTab('cola')">
       <lucide-angular name="list" [size]="16"></lucide-angular> Cola del día
@@ -36,16 +40,36 @@
     <div class="control-card">
       <div>
         <h3>Discado de la cola</h3>
-        <p class="muted">Inicia o detén el bot. Con "Iniciar", el bot llama uno por uno a la cola del día.</p>
+        <p class="muted">
+          Mientras esté activo, el bot marca las filas pendientes de la cola del día,
+          hasta el tope de llamadas simultáneas.
+        </p>
+        <p class="progreso-cola" *ngIf="cola.length">
+          {{ marcadas }} de {{ cola.length }} filas marcadas hoy
+        </p>
       </div>
       <div class="control-buttons">
-        <button class="btn-primary" (click)="iniciar()" [disabled]="config.activo">
-          <lucide-angular name="play" [size]="18"></lucide-angular> Iniciar
-        </button>
-        <button class="btn-danger" (click)="detener()" [disabled]="!config.activo">
-          <lucide-angular name="square" [size]="18"></lucide-angular> Detener
+        <button [class.btn-danger]="config.activo" [class.btn-primary]="!config.activo"
+                (click)="alternarDiscado()"
+                [disabled]="!config.activo && !!motivoNoIniciar"
+                [title]="config.activo ? '' : motivoNoIniciar">
+          <lucide-angular [name]="iconoBotonDiscado" [size]="18"></lucide-angular>
+          {{ textoBotonDiscado }}
         </button>
       </div>
+    </div>
+
+    <!-- Este importa siempre, tambien con el bot discando. -->
+    <div class="aviso-no-guardado" *ngIf="configSinGuardar">
+      <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+      <span>Tienes cambios sin guardar. No se aplicarán hasta que los guardes.</span>
+      <button class="btn-link" (click)="guardarConfig()">Guardar ahora</button>
+    </div>
+
+    <!-- Este solo antes de arrancar. -->
+    <div class="aviso-no-guardado" *ngIf="!configSinGuardar && !config.activo && !colaMarcable">
+      <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+      <span>No hay cola que marcar: arma la cola del día primero.</span>
     </div>
 
     <div class="form-card">
@@ -63,17 +87,45 @@
             <option *ngFor="let p of perfiles" [ngValue]="p.id">{{ p.nombre }}</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Hora inicio</label>
-          <input type="time" [(ngModel)]="config.horaInicio" />
+        <div class="form-group full-span">
+          <label>Horario de discado</label>
+          <div class="selector-dias">
+            <div class="rango-horas">
+              <select [(ngModel)]="config.horaInicio" (ngModelChange)="alCambiarInicio()"
+                      aria-label="Hora de inicio">
+                <option *ngFor="let h of horasInicio" [value]="h">{{ h }}</option>
+              </select>
+              <span class="muted">a</span>
+              <select [(ngModel)]="config.horaFin" aria-label="Hora de fin">
+                <option *ngFor="let h of horasFin" [value]="h">{{ h }}</option>
+              </select>
+            </div>
+            <div class="dias-presets">
+              <button type="button" *ngFor="let p of PRESETS_HORARIO"
+                      class="preset" [class.on]="presetHorarioActivo(p)"
+                      (click)="aplicarPresetHorario(p)">{{ p.nombre }}</button>
+            </div>
+          </div>
+          <p class="muted resumen-dias"
+             [class.alerta]="horarioFueraDeLey || horarioInvalido">{{ resumenHorario }}</p>
         </div>
-        <div class="form-group">
-          <label>Hora fin</label>
-          <input type="time" [(ngModel)]="config.horaFin" />
-        </div>
-        <div class="form-group">
+        <div class="form-group full-span">
           <label>Días de la semana</label>
-          <input type="text" [(ngModel)]="config.diasSemana" placeholder="L,M,X,J,V,S" />
+          <div class="selector-dias">
+            <div class="dias-botones">
+              <button type="button" *ngFor="let d of DIAS"
+                      class="dia" [class.on]="diaActivo(d.codigo)"
+                      (click)="alternarDia(d.codigo)"
+                      [attr.aria-pressed]="diaActivo(d.codigo)"
+                      [title]="d.nombre">{{ d.codigo }}</button>
+            </div>
+            <div class="dias-presets">
+              <button type="button" *ngFor="let p of PRESETS_DIAS"
+                      class="preset" [class.on]="presetActivo(p.codigos)"
+                      (click)="aplicarPresetDias(p.codigos)">{{ p.nombre }}</button>
+            </div>
+          </div>
+          <p class="muted resumen-dias" [class.alerta]="!config.diasSemana">{{ resumenDias }}</p>
         </div>
         <div class="form-group">
           <label>Llamadas simultáneas</label>
@@ -88,8 +140,9 @@
           </select>
         </div>
       </div>
-      <button class="btn-primary" (click)="guardarConfig()">
-        <lucide-angular name="save" [size]="18"></lucide-angular> Guardar configuración
+      <button class="btn-primary" [class.pendiente]="configSinGuardar" (click)="guardarConfig()">
+        <lucide-angular name="save" [size]="18"></lucide-angular>
+        {{ configSinGuardar ? 'Guardar cambios' : 'Guardar configuración' }}
       </button>
     </div>
   </section>
@@ -129,8 +182,16 @@
         <label>Tono</label>
         <textarea rows="2" [(ngModel)]="p.estiloTono"></textarea>
       </div>
-      <button class="btn-secondary" (click)="guardarPerfil(p)">
-        <lucide-angular name="save" [size]="16"></lucide-angular> Guardar {{ p.nombre }}
+      <div class="aviso-no-guardado" *ngIf="perfilSinGuardar(p)">
+        <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
+        <span>Cambios sin guardar en este perfil.</span>
+      </div>
+      <button [class.btn-secondary]="!perfilSinGuardar(p)"
+              [class.btn-primary]="perfilSinGuardar(p)"
+              [class.pendiente]="perfilSinGuardar(p)"
+              (click)="guardarPerfil(p)">
+        <lucide-angular name="save" [size]="16"></lucide-angular>
+        {{ perfilSinGuardar(p) ? 'Guardar cambios' : 'Guardar' }} {{ p.nombre }}
       </button>
     </div>
   </section>
@@ -154,22 +215,52 @@
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr><th>Cliente</th><th>Cuota</th><th>Teléfono</th><th>Perfil</th><th>Estado</th><th>Intentos</th><th>Resultado</th></tr>
+            <tr>
+              <th>Cliente</th><th>Cuota</th><th>Vence</th><th>Teléfono</th>
+              <th>Perfil</th><th>Estado</th><th>Intentos</th><th>Resultado</th>
+            </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let c of cola">
-              <td>{{ c.idCliente }}</td>
-              <td>{{ c.idCuota }}</td>
+            <tr *ngFor="let c of colaPagina">
+              <td>
+                <div class="celda-principal">{{ c.nombreCliente || ('Cliente ' + c.idCliente) }}</div>
+                <div class="celda-sub">{{ c.documento || '—' }}</div>
+              </td>
+              <td>
+                <div class="celda-principal">{{ c.montoCuota != null ? ('S/ ' + c.montoCuota) : '—' }}</div>
+                <div class="celda-sub" *ngIf="c.numeroCuota">cuota {{ c.numeroCuota }}</div>
+              </td>
+              <td>
+                <div class="celda-principal">{{ c.fechaPromesa ? (c.fechaPromesa | date:'dd/MM') : '—' }}</div>
+                <div class="celda-sub" *ngIf="c.estadoCuota">{{ c.estadoCuota }}</div>
+              </td>
               <td>{{ c.telefono }}</td>
               <td>{{ nombrePerfil(c.idPerfil) }}</td>
               <td><span class="badge" [ngClass]="c.estado.toLowerCase()">{{ c.estado }}</span></td>
-              <td>{{ c.intentos }}</td>
+              <td>
+                {{ c.intentos }}
+                <div class="celda-sub" *ngIf="c.proximoIntentoAt && c.estado === 'PENDIENTE'">
+                  reintenta {{ c.proximoIntentoAt | date:'HH:mm' }}
+                </div>
+              </td>
               <td>{{ c.resultado || '—' }}</td>
             </tr>
           </tbody>
         </table>
-        <div class="empty-state" *ngIf="!loadingCola && cola.length === 0">La cola está vacía. Usa "Armar cola del día".</div>
+        <div class="empty-state error" *ngIf="errorCola">
+          No se pudo cargar la cola. Hubo un error en el servidor — la cola puede tener filas aunque aquí no se vean.
+        </div>
+        <div class="empty-state" *ngIf="!errorCola && !loadingCola && cola.length === 0">La cola está vacía. Usa "Armar cola del día".</div>
       </div>
+        <div class="paginador" *ngIf="totalPaginas(cola) > 1">
+          <button class="btn-link" [disabled]="paginaCola === 1" (click)="irA('cola', paginaCola - 1)">
+            <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+          </button>
+          <span>Página {{ paginaCola }} de {{ totalPaginas(cola) }} · {{ cola.length }} filas</span>
+          <button class="btn-link" [disabled]="paginaCola === totalPaginas(cola)" (click)="irA('cola', paginaCola + 1)">
+            <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+          </button>
+        </div>
     </div>
 
     <div class="descartes" *ngIf="descartes.length">
@@ -186,22 +277,93 @@
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr><th>Inicio</th><th>Cliente</th><th>Cuota</th><th>Estado</th><th>Resultado</th><th>Duración</th><th>Costo</th></tr>
+            <tr>
+              <th>Inicio</th><th>Cliente</th><th>Cuota</th><th>Estado</th>
+              <th>Resultado</th><th>AMD</th><th>Duración</th><th>Costo</th><th></th>
+            </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let s of sesiones">
+            <tr *ngFor="let s of sesionesPagina" class="fila-clicable" (click)="abrirDetalle(s)"
+                title="Ver la transcripción de esta llamada">
               <td>{{ s.inicio | date:'dd/MM HH:mm' }}</td>
-              <td>{{ s.idCliente }}</td>
-              <td>{{ s.idCuota }}</td>
+              <td>
+                <div class="celda-principal">{{ s.nombreCliente || ('Cliente ' + s.idCliente) }}</div>
+                <div class="celda-sub">{{ s.documento || s.telefono || '—' }}</div>
+              </td>
+              <td>
+                <div class="celda-principal">{{ s.montoCuota != null ? ('S/ ' + s.montoCuota) : '—' }}</div>
+                <div class="celda-sub" *ngIf="s.numeroCuota">cuota {{ s.numeroCuota }}</div>
+              </td>
               <td><span class="badge">{{ s.estado }}</span></td>
               <td>{{ s.resultadoNegocio || '—' }}</td>
+              <td>{{ s.amdResultado || '—' }}</td>
               <td>{{ s.duracionSeg ? s.duracionSeg + 's' : '—' }}</td>
               <td>{{ s.costoEstimadoUsd ? ('$' + s.costoEstimadoUsd) : '—' }}</td>
+              <td><lucide-angular name="chevron-right" [size]="16"></lucide-angular></td>
             </tr>
           </tbody>
         </table>
-        <div class="empty-state" *ngIf="sesiones.length === 0">Aún no hay llamadas registradas.</div>
+        <div class="empty-state error" *ngIf="errorSesiones">No se pudieron cargar las llamadas.</div>
+        <div class="empty-state" *ngIf="!errorSesiones && sesiones.length === 0">Aún no hay llamadas registradas.</div>
       </div>
+        <div class="paginador" *ngIf="totalPaginas(sesiones) > 1">
+          <button class="btn-link" [disabled]="paginaSesiones === 1" (click)="irA('sesiones', paginaSesiones - 1)">
+            <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+          </button>
+          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesiones) }} · {{ sesiones.length }} filas</span>
+          <button class="btn-link" [disabled]="paginaSesiones === totalPaginas(sesiones)" (click)="irA('sesiones', paginaSesiones + 1)">
+            <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+          </button>
+        </div>
     </div>
   </section>
+
+  <!-- ===== DETALLE DE UNA LLAMADA ===== -->
+  <div class="detalle-overlay" *ngIf="sesionAbierta" (click)="cerrarDetalle()">
+    <aside class="detalle-panel" (click)="$event.stopPropagation()">
+      <header class="detalle-head">
+        <div>
+          <h3>{{ sesionAbierta.nombreCliente || ('Cliente ' + sesionAbierta.idCliente) }}</h3>
+          <p class="muted">
+            {{ sesionAbierta.documento || '—' }} · {{ sesionAbierta.telefono || '—' }} ·
+            {{ sesionAbierta.inicio | date:'dd/MM/yyyy HH:mm' }}
+          </p>
+        </div>
+        <button class="btn-link" (click)="cerrarDetalle()" aria-label="Cerrar">
+          <lucide-angular name="x" [size]="20"></lucide-angular>
+        </button>
+      </header>
+
+      <div class="detalle-datos">
+        <div><span class="muted">Cuota</span>
+          <strong>{{ sesionAbierta.montoCuota != null ? ('S/ ' + sesionAbierta.montoCuota) : '—' }}</strong>
+          <span class="celda-sub" *ngIf="sesionAbierta.numeroCuota">cuota {{ sesionAbierta.numeroCuota }}</span>
+        </div>
+        <div><span class="muted">Vence</span>
+          <strong>{{ sesionAbierta.fechaPromesa ? (sesionAbierta.fechaPromesa | date:'dd/MM/yyyy') : '—' }}</strong>
+        </div>
+        <div><span class="muted">Resultado</span><strong>{{ sesionAbierta.resultadoNegocio || '—' }}</strong></div>
+        <div><span class="muted">AMD</span><strong>{{ sesionAbierta.amdResultado || '—' }}</strong></div>
+        <div><span class="muted">Duración</span>
+          <strong>{{ sesionAbierta.duracionSeg ? sesionAbierta.duracionSeg + 's' : '—' }}</strong>
+        </div>
+        <div><span class="muted">Costo</span>
+          <strong>{{ sesionAbierta.costoEstimadoUsd ? ('$' + sesionAbierta.costoEstimadoUsd) : '—' }}</strong>
+        </div>
+      </div>
+
+      <h4>Transcripción</h4>
+      <div class="detalle-cargando" *ngIf="cargandoTurnos">Cargando…</div>
+      <div class="empty-state" *ngIf="!cargandoTurnos && turnos.length === 0">
+        Esta llamada no tiene transcripción (no llegó a haber conversación).
+      </div>
+      <ol class="transcripcion" *ngIf="turnos.length">
+        <li *ngFor="let t of turnos" [ngClass]="t.hablante === 'BOT' ? 'de-bot' : 'de-cliente'">
+          <span class="quien">{{ t.hablante === 'BOT' ? 'Clara' : 'Cliente' }}</span>
+          <span class="dicho">{{ t.texto }}</span>
+          <span class="celda-sub" *ngIf="t.latenciaMs">{{ t.latenciaMs }} ms</span>
+        </li>
+      </ol>
+    </aside>
+  </div>
 </div>

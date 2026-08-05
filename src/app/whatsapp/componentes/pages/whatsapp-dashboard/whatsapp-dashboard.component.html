@@ -1,0 +1,187 @@
+<main class="whatsapp-dashboard">
+  <header class="dashboard-header">
+    <div class="header-copy">
+      <div class="eyebrow"><span class="eyebrow-dot"></span> Centro de canales</div>
+      <h1>Servicios WhatsApp</h1>
+      <p>Supervisa el estado de las instancias Go, vincula números y controla qué cartera atiende cada servicio.</p>
+    </div>
+
+    <div class="header-summary" aria-label="Resumen de servicios WhatsApp">
+      <div class="summary-card primary">
+        <span class="summary-number">{{ accounts.length }}</span>
+        <span>Servicios</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-number">{{ connectedAccounts }}</span>
+        <span>Conectados</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-number">{{ activeAccounts }}</span>
+        <span>Activos</span>
+      </div>
+    </div>
+  </header>
+
+  @if (loading) {
+    <section class="empty-state loading-state">
+      <lucide-angular name="loader-2" [size]="28" class="spin"></lucide-angular>
+      <span>Consultando servicios...</span>
+    </section>
+  } @else if (error) {
+    <section class="empty-state error-state">
+      <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
+      <span>{{ error }}</span>
+    </section>
+  } @else if (accounts.length === 0) {
+    <section class="empty-state">
+      <lucide-angular name="monitor" [size]="32"></lucide-angular>
+      <h2>No hay servicios registrados</h2>
+      <p>Inicia una instancia Go para que aparezca en este panel.</p>
+    </section>
+  } @else {
+    <section class="dashboard-grid">
+      <div class="service-list-panel">
+        <div class="panel-heading">
+          <div>
+            <span class="panel-kicker">Inventario</span>
+            <h2>Instancias Go</h2>
+          </div>
+          <span class="live-indicator"><span></span> Actualizando</span>
+        </div>
+
+        <div class="service-mini-stats">
+          <span>{{ linkedAccounts }} vinculados</span>
+          <span>{{ waitingQrAccounts }} esperando QR</span>
+        </div>
+
+        <div class="service-list">
+          @for (account of accounts; track account.id) {
+            <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
+              <span class="service-icon" [ngClass]="statusClass(account.status)"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
+              <span class="service-copy">
+                <span class="service-title-row">
+                  <strong>{{ account.instanciaId }}</strong>
+                  <span class="service-inline-status" [ngClass]="statusClass(account.status)">{{ statusLabel(account.status) }}</span>
+                </span>
+                <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
+              </span>
+              <span class="service-active" [class.enabled]="account.active">{{ account.active ? 'On' : 'Off' }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      @if (selectedAccount; as account) {
+        <div class="detail-panel">
+          <div class="detail-topline">
+            <div>
+              <span class="panel-kicker">Servicio seleccionado</span>
+              <h2>{{ account.instanciaId }}</h2>
+              <p>{{ account.jid || 'JID pendiente de sincronización' }}</p>
+            </div>
+             <span class="detail-status" [ngClass]="statusClass(account.status)">
+               <span class="status-dot"></span>{{ statusLabel(account.status) }}
+             </span>
+           </div>
+
+           <div class="detail-actions">
+             <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
+               <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
+               {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
+             </button>
+           </div>
+
+           <div class="detail-content">
+            <div class="qr-column" [class.qr-muted]="isLinked(account)">
+              @if (!isLinked(account) && account.qrData) {
+                <div class="qr-frame"><img [src]="qrSource(account)" alt="Código QR para vincular WhatsApp"></div>
+                <p class="qr-caption">Abre WhatsApp en tu teléfono y escanea este código.</p>
+              } @else if (!isLinked(account)) {
+                <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando código QR...</span></div>
+              } @else {
+                <div class="linked-number">
+                  <span class="linked-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
+                  <strong>{{ account.phoneNumber || 'Número vinculado' }}</strong>
+                  <span>Listo para operación</span>
+                </div>
+                <div class="account-meta">
+                  <span>Última conexión</span>
+                  <strong>{{ account.lastConnectedAt ? (account.lastConnectedAt | date:'short') : 'Sin registro' }}</strong>
+                </div>
+              }
+            </div>
+
+            @if (isLinked(account)) {
+            <form class="binding-form" (ngSubmit)="saveBinding()">
+              <div class="form-heading">
+                <span class="panel-kicker">Ámbito de operación</span>
+                <h3>Asignación operativa</h3>
+                <p>Un servicio solo puede trabajar con una cartera y subcartera.</p>
+              </div>
+              <label>
+                Tenant
+                <select name="tenantId" [(ngModel)]="form.tenantId" (ngModelChange)="onTenantChange($event)" [disabled]="loadingTenants">
+                  <option [ngValue]="0">{{ loadingTenants ? 'Cargando tenants...' : 'Seleccionar tenant' }}</option>
+                  @for (tenant of tenants; track tenant.id) {
+                    <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Cartera
+                <select name="cartera" [(ngModel)]="form.carteraId" (ngModelChange)="onPortfolioChange($event)" [disabled]="form.tenantId === 0 || loadingPortfolios">
+                  <option [ngValue]="0">{{ loadingPortfolios ? 'Cargando carteras...' : 'Seleccionar cartera' }}</option>
+                  @for (portfolio of portfolios; track portfolio.id) {
+                    <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Subcartera
+                <select name="subcartera" [(ngModel)]="form.subcarteraId" (ngModelChange)="onSubPortfolioChange($event)" [disabled]="form.carteraId === 0 || loadingSubPortfolios">
+                  <option [ngValue]="0">{{ loadingSubPortfolios ? 'Cargando subcarteras...' : 'Seleccionar subcartera' }}</option>
+                  @for (subPortfolio of subPortfolios; track subPortfolio.id) {
+                    <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                  }
+                </select>
+              </label>
+               <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" [class.enabled]="form.active" type="checkbox" name="active" [(ngModel)]="form.active" (ngModelChange)="onActiveChange($event)" [disabled]="activationSaving || saving"></label>
+              <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
+              @if (feedback) { <p class="feedback">{{ feedback }}</p> }
+            </form>
+            } @else {
+              <div class="waiting-panel">
+                <lucide-angular name="unlink" [size]="24"></lucide-angular>
+                <strong>Asignación pendiente</strong>
+                <p>Primero vincula un número con el QR. Después podrás asignar el tenant, la cartera y la subcartera.</p>
+              </div>
+             }
+           </div>
+           @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
+         </div>
+       }
+     </section>
+
+     <section class="instance-chat-panel">
+       <div class="instance-chat-heading">
+         <div>
+           <span class="panel-kicker">Vista rápida</span>
+           <h2>Chat de la instancia seleccionada</h2>
+           <p>{{ selectedAccount ? 'Conversaciones filtradas por la cuenta activa seleccionada.' : 'Selecciona una instancia para ver sus conversaciones.' }}</p>
+         </div>
+         <a class="history-link" routerLink="/whatsapp/history">
+           <lucide-angular name="archive" [size]="15"></lucide-angular>
+           Ver historial completo
+         </a>
+       </div>
+       @if (selectedAccount) {
+         <div class="instance-chat-grid">
+           <app-whatsapp-chat-list-widget></app-whatsapp-chat-list-widget>
+           <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
+         </div>
+       } @else {
+         <div class="instance-chat-empty">Selecciona una instancia para cargar sus chats.</div>
+       }
+     </section>
+   }
+</main>

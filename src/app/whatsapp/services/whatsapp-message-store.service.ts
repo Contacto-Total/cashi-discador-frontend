@@ -9,10 +9,12 @@ export class WhatsappMessageStoreService {
   private readonly messagesByConversation = signal(new Map<number, Message[]>());
   private readonly hasMoreByConversation = signal(new Map<number, boolean>());
   private realtimeSubscription?: Subscription;
+  private viewerHeartbeat?: ReturnType<typeof setInterval>;
 
   // Receipts que llegaron antes que su mensaje (carrera eco OUTGOING / receipt):
   // se guardan por msgId y se aplican cuando el mensaje entra al store.
   private readonly pendingReceipts = new Map<string, MessageStatus>();
+  private readonly localMessageTimestamps = new Map<string, number>();
   // outboundId (respuesta de POST /send) → temporal optimista, para empatar un
   // OUTBOUND_FAILED con el mensaje exacto que lo originó.
   private readonly tempByOutboundId = new Map<number, { conversationId: number; tempMsgId: string }>();
@@ -25,11 +27,15 @@ export class WhatsappMessageStoreService {
   readonly sendingMessage = signal(false);
   readonly uploadingMedia = signal(false);
   readonly sendMessageError = signal<string | null>(null);
+  readonly pendingAttachments = signal<File[]>([]);
+  readonly pendingAttachment = computed(() => this.pendingAttachments()[0] || null);
   readonly activeViewers = signal<string[]>([]);
   readonly replyingTo = signal<Message | null>(null);
   readonly chatsPage = signal(0);
   readonly chatsTotalPages = signal(0);
   readonly chatsQuery = signal<string | undefined>(undefined);
+  readonly chatsAccountId = signal<number | undefined>(undefined);
+  readonly chatsIncludeHistorical = signal(false);
 
   readonly currentMessages = computed(() => {
     const conversationId = this.currentChat()?.id;
@@ -48,13 +54,15 @@ export class WhatsappMessageStoreService {
     private readonly realtime: WhatsappRealtimeService
   ) {}
 
-  loadChats(page = 0, size = 30, q?: string): void {
+  loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId(), includeHistorical = this.chatsIncludeHistorical()): void {
     this.loadingChats.set(true);
-    this.api.getChats(page, size, q).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
+     this.api.getChats(page, size, q, accountId, includeHistorical).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
       next: (response) => {
         this.chatsPage.set(response.number);
         this.chatsTotalPages.set(response.totalPages);
         this.chatsQuery.set(q);
+         this.chatsAccountId.set(accountId);
+         this.chatsIncludeHistorical.set(includeHistorical);
         const mapped = response.content.map(conversationToChat);
         this.chats.set(page === 0 ? mapped : this.mergeChats(this.chats(), mapped));
       }
@@ -63,7 +71,13 @@ export class WhatsappMessageStoreService {
 
   loadNextChatsPage(size = 30): void {
     if (this.loadingChats() || !this.hasMoreChats()) return;
-    this.loadChats(this.chatsPage() + 1, size, this.chatsQuery());
+     this.loadChats(this.chatsPage() + 1, size, this.chatsQuery(), this.chatsAccountId(), this.chatsIncludeHistorical());
+  }
+
+  setAccountFilter(accountId: number | undefined, includeHistorical = this.chatsIncludeHistorical()): void {
+    this.chatsAccountId.set(accountId);
+    this.chatsIncludeHistorical.set(includeHistorical);
+    this.loadChats(0, 30, this.chatsQuery(), accountId, includeHistorical);
   }
 
   selectChatByRoute(conversationId?: number, jid?: string): void {
@@ -107,18 +121,56 @@ export class WhatsappMessageStoreService {
   }
 
   selectChat(chat: Chat | null): void {
+    const previous = this.currentChat();
+    if (previous?.id && previous.id !== chat?.id) {
+      this.api.leaveViewers(previous.id).subscribe();
+    }
+    this.stopViewerHeartbeat();
     this.currentChat.set(chat);
     this.activeViewers.set([]);
     this.replyingTo.set(null); // no arrastrar una respuesta en curso entre chats
+    this.pendingAttachments.set([]);
     if (!chat?.id) return;
+    const conversationId = chat.id;
 
     // El backend marca leído (markRead) pero no emite CHAT_UPDATE, así que el badge
     // de no-leídos hay que bajarlo en la vista al instante o queda "pegado".
-    this.clearUnread(chat.id);
-    this.loadMessages(chat.id);
-    this.api.getViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
-    this.api.joinViewers(chat.id).subscribe({ next: (response) => this.activeViewers.set(response.viewers) });
-    this.api.markRead(chat.id).subscribe();
+     this.clearUnread(conversationId);
+     this.loadMessages(conversationId);
+      this.api.getViewers(conversationId).subscribe({
+       next: (response) => {
+         if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
+       }
+     });
+      this.api.joinViewers(conversationId).subscribe({
+       next: (response) => {
+         if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
+       }
+     });
+      this.viewerHeartbeat = setInterval(() => {
+       if (this.currentChat()?.id !== conversationId) return;
+       this.api.joinViewers(conversationId).subscribe({
+         next: (response) => {
+           if (this.currentChat()?.id === conversationId) this.activeViewers.set(response.viewers);
+         }
+       });
+      }, 30000);
+      this.api.markRead(conversationId).subscribe();
+   }
+
+  private stopViewerHeartbeat(): void {
+    if (this.viewerHeartbeat) {
+      clearInterval(this.viewerHeartbeat);
+      this.viewerHeartbeat = undefined;
+    }
+  }
+
+  stopViewingCurrentChat(): void {
+    const current = this.currentChat();
+    if (current?.id) this.api.leaveViewers(current.id).subscribe();
+    this.stopViewerHeartbeat();
+    this.activeViewers.set([]);
+    this.currentChat.set(null);
   }
 
   private clearUnread(conversationId: number): void {
@@ -149,16 +201,17 @@ export class WhatsappMessageStoreService {
     this.sendMessage({ conversationId, type: 'TEXT', body, quotedMessageId });
   }
 
-  sendMedia(conversationId: number, mediaRef: string, body?: string): void {
-    this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef });
+  sendMedia(conversationId: number, mediaRef: string, body?: string, mediaFileName?: string, mediaMime?: string): void {
+    this.sendMessage({ conversationId, type: 'MEDIA', body, mediaRef, mediaFileName, mediaMime });
   }
 
   /** Sube el archivo al backend (multipart) y luego lo envía con su ref corta. */
   sendMediaFile(conversationId: number, file: File, caption?: string): void {
+    if (this.uploadingMedia() || this.sendingMessage()) return;
     this.sendMessageError.set(null);
     this.uploadingMedia.set(true);
     this.api.uploadMedia(file).pipe(finalize(() => this.uploadingMedia.set(false))).subscribe({
-      next: ({ ref }) => this.sendMedia(conversationId, ref, caption),
+      next: ({ ref, fileName, mime }) => this.sendMedia(conversationId, ref, caption, fileName, mime),
       error: () => this.sendMessageError.set('No se pudo subir el archivo.')
     });
   }
@@ -207,6 +260,7 @@ export class WhatsappMessageStoreService {
       quotedSender: quoted ? (quoted.fromMe ? 'Tú' : (quoted.chatTitle || undefined)) : undefined,
       quotedFromMe: quoted?.fromMe
     };
+    this.localMessageTimestamps.set(tempMsgId, optimistic.timestamp);
     const current = this.messagesByConversation().get(request.conversationId) || [];
     this.setMessages(request.conversationId, [...current, optimistic]);
     // Refleja el envío en la lista al instante (preview + subir el chat), sin
@@ -246,6 +300,13 @@ export class WhatsappMessageStoreService {
       case 'OUTBOUND_FAILED':
         this.patchOutboundFailed(event.payload);
         break;
+      case 'STATUS':
+        if (event.payload.active === false) {
+          this.chats.update(chats => chats.filter(chat =>
+            chat.accountId !== event.payload.accountId &&
+            chat.serviceInstanciaId !== event.payload.instanciaId));
+        }
+        break;
       case 'CHAT_UPDATE':
         this.upsertChat(conversationToChat(event.payload));
         break;
@@ -281,7 +342,18 @@ export class WhatsappMessageStoreService {
 
     let next = index === -1
       ? [...current, normalizedMessage]
-      : current.map((item, i) => i === index ? { ...item, ...normalizedMessage } : item);
+      : current.map((item, i) => {
+        if (i !== index) return item;
+        // El eco del backend puede traer timestamp en otra unidad o anterior al
+        // timestamp local. La posición visual debe conservar el orden de envío.
+        const localTimestamp = this.localMessageTimestamps.get(normalizedMessage.msgId)
+          || (item.msgId.startsWith('temp_') ? item.timestamp : undefined);
+        if (localTimestamp && normalizedMessage.msgId !== item.msgId) {
+          this.localMessageTimestamps.set(normalizedMessage.msgId, localTimestamp);
+        }
+        const timestamp = localTimestamp || normalizedMessage.timestamp;
+        return { ...item, ...normalizedMessage, timestamp };
+      });
 
     // Aplicar un receipt que llegó antes que el mensaje (carrera eco/receipt).
     const buffered = this.pendingReceipts.get(normalizedMessage.msgId);
@@ -318,6 +390,62 @@ export class WhatsappMessageStoreService {
 
     this.setMessages(conversationId, next);
     if (payload.outboundId != null) this.tempByOutboundId.delete(payload.outboundId);
+  }
+
+  setPendingAttachment(file: File | null): void {
+    this.pendingAttachments.set(file ? [file] : []);
+    this.sendMessageError.set(null);
+  }
+
+  addPendingAttachments(files: File[]): void {
+    if (!files.length) return;
+    this.pendingAttachments.update(current => [...current, ...files]);
+    this.sendMessageError.set(null);
+  }
+
+  removePendingAttachment(index: number): void {
+    this.pendingAttachments.update(files => files.filter((_, fileIndex) => fileIndex !== index));
+  }
+
+  sendPendingAttachment(conversationId: number, caption?: string): void {
+    const files = this.pendingAttachments();
+    if (!files.length || this.uploadingMedia() || this.sendingMessage()) return;
+
+    this.sendMessageError.set(null);
+    this.uploadAndSendAttachments(conversationId, files, caption, 0);
+  }
+
+  private uploadAndSendAttachments(conversationId: number, files: File[], caption: string | undefined, index: number): void {
+    const file = files[index];
+    if (!file) {
+      this.pendingAttachments.set([]);
+      return;
+    }
+
+    this.uploadingMedia.set(true);
+    this.api.uploadMedia(file).subscribe({
+      next: ({ ref, fileName, mime }) => {
+        this.pendingAttachments.update(current => current.filter(item => item !== file));
+        this.sendMedia(conversationId, ref, index === 0 ? caption : undefined, fileName || file.name, mime || file.type);
+        if (index + 1 < files.length) {
+          setTimeout(() => this.uploadAndSendAttachments(conversationId, files, caption, index + 1));
+        } else {
+          this.uploadingMedia.set(false);
+        }
+      },
+      error: () => {
+        this.uploadingMedia.set(false);
+        this.sendMessageError.set(`No se pudo subir ${file.name}.`);
+      }
+    });
+  }
+
+  removeFailedMessage(message: Message): void {
+    if (message.status !== 'error' || !message.fromMe) return;
+    const conversationId = message.conversationId;
+    if (!conversationId) return;
+    const current = this.messagesByConversation().get(conversationId) || [];
+    this.setMessages(conversationId, current.filter(item => item.msgId !== message.msgId));
   }
 
   private patchReceiptEvent(payload: unknown): void {
@@ -380,6 +508,9 @@ export class WhatsappMessageStoreService {
 
   private upsertChat(chat: Chat): void {
     this.chats.update((chats) => {
+      if (chat.serviceActive === false) {
+        return chats.filter((item) => item.id !== chat.id && item.jid !== chat.jid);
+      }
       const exists = chats.some((item) => item.id === chat.id || item.jid === chat.jid);
       return (exists ? chats.map((item) => item.id === chat.id || item.jid === chat.jid ? { ...item, ...chat } : item) : [chat, ...chats])
         .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));
