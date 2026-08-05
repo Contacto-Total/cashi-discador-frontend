@@ -83,7 +83,7 @@ interface ConfigSpeech {
             <!-- Subcartera -->
             <div>
               <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Subcartera</label>
-              <select [(ngModel)]="selectedSubPortfolioId"
+              <select [(ngModel)]="selectedSubPortfolioId" (change)="onSubPortfolioChange()"
                       [disabled]="subPortfolios.length === 0"
                       class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
                 <option [ngValue]="0">Seleccionar...</option>
@@ -94,7 +94,7 @@ interface ConfigSpeech {
             </div>
 
             <button (click)="buscar()"
-                    [disabled]="loadingConfig()"
+                    [disabled]="loadingConfig() || !selectedSubPortfolioId"
                     class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
               @if (loadingConfig()) {
                 <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
@@ -315,6 +315,7 @@ export class PlantillasSpeechComponent implements OnInit {
     this.subPortfolios = [];
     this.selectedPortfolioId = 0;
     this.selectedSubPortfolioId = 0;
+    this.limpiarConfig();
 
     if (this.selectedTenantId > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
@@ -327,6 +328,7 @@ export class PlantillasSpeechComponent implements OnInit {
   onPortfolioChange(): void {
     this.subPortfolios = [];
     this.selectedSubPortfolioId = 0;
+    this.limpiarConfig();
 
     if (this.selectedPortfolioId > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
@@ -336,9 +338,25 @@ export class PlantillasSpeechComponent implements OnInit {
     }
   }
 
+  /**
+   * Cambiar de subcartera descarta lo que hay en pantalla: los criterios son de
+   * la subcartera que se buscó, no de la que está elegida en el combo, y dejarlos
+   * hacía que TRAMO PROPIO se viera como si fuera la configuración de CASTIGO
+   * (y que Guardar lo escribiera contra el id equivocado).
+   */
+  onSubPortfolioChange(): void {
+    this.limpiarConfig();
+  }
+
+  private limpiarConfig(): void {
+    this.config.set(null);
+    this.rubrica.set('CD');
+  }
+
+  /** Nombre de la subcartera elegida en el combo. Vacío si no hay ninguna. */
   nombreSubcarteraSeleccionada(): string {
     const sub = this.subPortfolios.find(s => s.id === this.selectedSubPortfolioId);
-    return sub ? sub.subPortfolioName : (this.config()?.nombreSubcartera ?? '');
+    return sub?.subPortfolioName ?? '';
   }
 
   // === Búsqueda ===
@@ -350,8 +368,7 @@ export class PlantillasSpeechComponent implements OnInit {
     }
 
     this.loadingConfig.set(true);
-    this.config.set(null);
-    this.rubrica.set('CD');
+    this.limpiarConfig();
 
     const nombre = encodeURIComponent(this.nombreSubcarteraSeleccionada());
     this.http.get<any>(`${this.apiUrl}/subcartera/${this.selectedSubPortfolioId}?nombre=${nombre}`).subscribe({
@@ -397,9 +414,16 @@ export class PlantillasSpeechComponent implements OnInit {
     const cfg = this.config();
     if (!cfg) return;
 
+    // Red de seguridad: nunca escribir lo que hay en pantalla contra una
+    // subcartera distinta de la que se buscó.
+    if (cfg.idSubcartera !== this.selectedSubPortfolioId) {
+      this.mostrarToast('La subcartera cambió: presiona Buscar antes de guardar.', 'error');
+      return;
+    }
+
     this.saving.set(true);
     this.http.put<any>(`${this.apiUrl}/subcartera/${cfg.idSubcartera}`, {
-      nombreSubcartera: this.nombreSubcarteraSeleccionada(),
+      nombreSubcartera: this.nombreSubcarteraSeleccionada() || cfg.nombreSubcartera,
       rigido: cfg.rigido,
       cd: cfg.cd,
       pdp: cfg.pdp
