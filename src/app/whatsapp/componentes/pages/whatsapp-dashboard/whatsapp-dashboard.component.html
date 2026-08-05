@@ -85,10 +85,10 @@
                     @for (session of account.sessions; track session.slot) {
                       <button type="button" role="tab" [class.selected]="selectedSession(account)?.slot === session.slot" (click)="selectSession(session)">
                         {{ session.role === 'PRIMARY' ? 'Principal' : 'Auxiliar ' + session.slot.split('_').pop() }}
-                        <span [ngClass]="statusClass(session.status)"></span>
+                       <span [ngClass]="statusClass(session.status)"></span>
                       </button>
-               }
-             </section>
+                    }
+                  </div>
                   @if (selectedSession(account); as session) {
                     <div class="qr-session-content">
                       <div class="session-name"><span>{{ sessionLabel(session) }}</span><strong [ngClass]="statusClass(session.status)">{{ statusLabel(session.status) }}</strong></div>
@@ -97,7 +97,7 @@
                         <p class="qr-caption">Escanea este código desde WhatsApp para vincular este dispositivo.</p>
                       } @else {
                         <div class="session-placeholder"><lucide-angular [name]="session.status === 'CONNECTED' ? 'check-circle-2' : 'qr-code'" [size]="28"></lucide-angular><span>{{ session.status === 'CONNECTED' ? 'Sesión vinculada' : 'Esperando código QR' }}</span></div>
-                      }
+                       }
                     </div>
                   }
                 } @else if (!isLinked(account)) {
@@ -112,8 +112,8 @@
                   <span>Última conexión</span>
                   <strong>{{ account.lastConnectedAt ? (account.lastConnectedAt | date:'short') : 'Sin registro' }}</strong>
                 </div>
-              }
-            </div>
+               }
+             </section>
 
             @if (isLinked(account)) {
             <form class="binding-form" (ngSubmit)="saveBinding()">

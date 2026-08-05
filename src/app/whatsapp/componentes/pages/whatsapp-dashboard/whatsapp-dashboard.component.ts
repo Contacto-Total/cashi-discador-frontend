@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { RouterLink } from '@angular/router';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { WhatsappApiService } from '../../../services/whatsapp-api.service';
 import { AccountStatusEvent, WhatsappAccount, WhatsappSession } from '../../../models';
@@ -15,7 +15,7 @@ import { Portfolio, SubPortfolio } from '../../../../maintenance/models/portfoli
 @Component({
   selector: 'app-whatsapp-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink],
+  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, RouterLinkActive],
   templateUrl: './whatsapp-dashboard.component.html',
   styleUrls: ['./whatsapp-dashboard.component.css']
 })
