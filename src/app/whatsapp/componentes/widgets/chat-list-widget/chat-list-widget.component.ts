@@ -16,7 +16,6 @@ import { AuthService } from '../../../../core/services/auth.service';
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600">WhatsApp</p>
-            <h2 class="mt-1 text-xl font-semibold">Conversaciones</h2>
           </div>
           <div class="flex shrink-0 items-center gap-2">
           @if (isAdmin) {
@@ -28,7 +27,19 @@ import { AuthService } from '../../../../core/services/auth.service';
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             </a>
-          }
+           }
+          <button
+            type="button"
+            class="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 text-slate-500 transition hover:border-emerald-500 hover:text-emerald-700"
+            [class.border-emerald-600]="hideClosedWindows()"
+            [class.bg-emerald-50]="hideClosedWindows()"
+            [class.text-emerald-700]="hideClosedWindows()"
+            (click)="toggleClosedWindows()"
+            [title]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida (+24 h)'"
+            [attr.aria-label]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v5l-4 2v-7z"/><path d="m4 4 16 16"/></svg>
+          </button>
           <button
             type="button"
             class="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
@@ -67,17 +78,6 @@ import { AuthService } from '../../../../core/services/auth.service';
            </select>
             </label>
             }
-            <button
-              type="button"
-              class="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-slate-600 transition hover:text-emerald-700"
-              [class.text-emerald-700]="hideClosedWindows()"
-              (click)="toggleClosedWindows()"
-            >
-              <span class="grid size-4 place-items-center rounded border" [class.border-emerald-600]="hideClosedWindows()" [class.bg-emerald-600]="hideClosedWindows()" [class.border-slate-300]="!hideClosedWindows()">
-                @if (hideClosedWindows()) { <span class="text-[10px] text-white">✓</span> }
-              </span>
-              Ocultar chats con ventana vencida (+24 h)
-            </button>
       </header>
 
        <section class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
