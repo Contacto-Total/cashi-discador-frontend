@@ -10,6 +10,7 @@ export class WhatsappMessageStoreService {
   private readonly hasMoreByConversation = signal(new Map<number, boolean>());
   private realtimeSubscription?: Subscription;
   private viewerHeartbeat?: ReturnType<typeof setInterval>;
+  private chatsRequest = 0;
 
   // Receipts que llegaron antes que su mensaje (carrera eco OUTGOING / receipt):
   // se guardan por msgId y se aplican cuando el mensaje entra al store.
@@ -55,9 +56,12 @@ export class WhatsappMessageStoreService {
   ) {}
 
   loadChats(page = 0, size = 30, q?: string, accountId = this.chatsAccountId(), includeHistorical = this.chatsIncludeHistorical()): void {
+    const request = ++this.chatsRequest;
     this.loadingChats.set(true);
-     this.api.getChats(page, size, q, accountId, includeHistorical).pipe(finalize(() => this.loadingChats.set(false))).subscribe({
+     this.api.getChats(page, size, q, accountId, includeHistorical).subscribe({
       next: (response) => {
+        if (request !== this.chatsRequest) return;
+        this.loadingChats.set(false);
         this.chatsPage.set(response.number);
         this.chatsTotalPages.set(response.totalPages);
         this.chatsQuery.set(q);
@@ -65,6 +69,9 @@ export class WhatsappMessageStoreService {
          this.chatsIncludeHistorical.set(includeHistorical);
         const mapped = response.content.map(conversationToChat);
         this.chats.set(page === 0 ? mapped : this.mergeChats(this.chats(), mapped));
+      },
+      error: () => {
+        if (request === this.chatsRequest) this.loadingChats.set(false);
       }
     });
   }
