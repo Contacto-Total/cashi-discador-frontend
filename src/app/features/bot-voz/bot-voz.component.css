@@ -142,6 +142,29 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .descartes { margin-top: 1rem; }
 .descartes h4 { color: var(--text-secondary, #64748b); margin: 0 0 0.5rem; font-size: 0.9rem; }
 
+/* Descartes: tabla explicativa. Antes eran pastillas con el codigo crudo de la
+   regla, ilegibles en cuanto pasaban de cinco. */
+.descartes-card { margin-top: 1rem; }
+.descartes-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; flex-wrap: wrap;
+  padding: 0.9rem 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+.descartes-head h4 { margin: 0 0 0.15rem; font-size: 0.95rem; color: var(--text-primary, #0f172a); }
+.descartes-sub { margin: 0; font-size: 0.8rem; color: var(--text-muted, #64748b); }
+.resumen-reglas { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.resumen-reglas .pill {
+  background: var(--bg-secondary, #f1f5f9); color: var(--text-secondary, #64748b);
+  padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.76rem; white-space: nowrap;
+}
+.resumen-reglas .pill b { color: var(--text-primary, #0f172a); margin-left: 0.15rem; }
+/* Ambar, no rojo: un descarte casi siempre es el sistema filtrando bien. Solo
+   se marca lo que de verdad hay que ir a arreglar (datos malos, sin telefono). */
+.resumen-reglas .pill-alerta { background: rgba(234, 179, 8, 0.14); color: #a16207; }
+.resumen-reglas .pill-alerta b { color: #854d0e; }
+.badge-alerta { background: rgba(234, 179, 8, 0.14); color: #a16207; }
+.descartes-card .porque { font-weight: 400; line-height: 1.35; max-width: 46ch; }
+
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 

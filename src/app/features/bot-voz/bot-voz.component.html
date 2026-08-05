@@ -263,10 +263,57 @@
         </div>
     </div>
 
-    <div class="descartes" *ngIf="descartes.length">
-      <h4>Descartes de hoy</h4>
-      <div class="chips">
-        <span class="chip disc" *ngFor="let d of descartes">{{ d.regla }} · cuota {{ d.idCuota }} — {{ d.detalle }}</span>
+    <div class="table-card descartes-card" *ngIf="descartes.length">
+      <div class="descartes-head">
+        <div>
+          <h4>No entraron en la cola</h4>
+          <p class="descartes-sub">
+            {{ descartes.length }} cuota{{ descartes.length === 1 ? '' : 's' }} que el sistema
+            apartó al armar la cola de hoy, y por qué.
+          </p>
+        </div>
+        <div class="resumen-reglas">
+          <span class="pill" *ngFor="let r of descartesPorRegla" [class.pill-alerta]="!r.ok"
+                [title]="'regla ' + r.regla">
+            {{ r.titulo }} <b>{{ r.n }}</b>
+          </span>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Motivo</th><th>Cuota</th><th>Cliente</th><th>Por qué se apartó</th></tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of descartesPagina">
+              <td>
+                <span class="badge" [class.badge-alerta]="!reglaEsNormal(d.regla)">
+                  {{ reglaTitulo(d.regla) }}
+                </span>
+                <div class="celda-sub">regla {{ d.regla }}</div>
+              </td>
+              <td>{{ d.idCuota != null ? ('#' + d.idCuota) : '—' }}</td>
+              <td>{{ d.idCliente != null ? ('#' + d.idCliente) : '—' }}</td>
+              <td>
+                <div class="celda-principal porque">{{ reglaPorque(d) }}</div>
+                <div class="celda-sub" *ngIf="d.detalle">{{ d.detalle }}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="paginador" *ngIf="totalPaginas(descartes) > 1">
+        <button class="btn-link" [disabled]="paginaDescartes === 1"
+                (click)="irA('descartes', paginaDescartes - 1)">
+          <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
+        </button>
+        <span>Página {{ paginaDescartes }} de {{ totalPaginas(descartes) }} · {{ descartes.length }} filas</span>
+        <button class="btn-link" [disabled]="paginaDescartes === totalPaginas(descartes)"
+                (click)="irA('descartes', paginaDescartes + 1)">
+          <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
+        </button>
       </div>
     </div>
   </section>

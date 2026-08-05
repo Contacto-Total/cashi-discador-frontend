@@ -289,9 +289,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // ----- Paginacion de las tablas -----
   // Del lado del cliente: la cola son decenas de filas y las sesiones vienen
   // topadas en 100 por el backend, asi que no hace falta paginar en servidor.
-  readonly TAM_PAGINA = 20;
+  readonly TAM_PAGINA = 5;
   paginaCola = 1;
   paginaSesiones = 1;
+  paginaDescartes = 1;
 
   /** El refresco cada 5 s puede achicar la lista (filas que salen de la cola).
    *  Sin esto te quedarias en una pagina que ya no existe, viendo vacio. */
@@ -308,14 +309,66 @@ export class BotVozComponent implements OnInit, OnDestroy {
   get sesionesPagina(): BotSesion[] {
     return this.pagina(this.sesiones, this.paginaSesiones, (n) => (this.paginaSesiones = n));
   }
+  get descartesPagina(): any[] {
+    return this.pagina(this.descartes, this.paginaDescartes, (n) => (this.paginaDescartes = n));
+  }
   totalPaginas(filas: unknown[]): number {
     return Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
   }
-  irA(cual: 'cola' | 'sesiones', n: number): void {
-    const filas = cual === 'cola' ? this.cola : this.sesiones;
+  irA(cual: 'cola' | 'sesiones' | 'descartes', n: number): void {
+    const filas = cual === 'cola' ? this.cola
+      : cual === 'sesiones' ? this.sesiones : this.descartes;
     const destino = Math.min(Math.max(1, n), this.totalPaginas(filas));
     if (cual === 'cola') this.paginaCola = destino;
-    else this.paginaSesiones = destino;
+    else if (cual === 'sesiones') this.paginaSesiones = destino;
+    else this.paginaDescartes = destino;
+  }
+
+  // ----- Descartes: por que una cuota no entro en la cola -----
+  //
+  // Antes esto era una fila de pastillas con el codigo crudo ("G13 · cuota 2334 —
+  // el cliente ya tiene una promesa nueva vigente"). El codigo no dice nada a quien
+  // no se sepa las reglas de memoria, y con veinte pastillas seguidas no habia forma
+  // de ver que se descarto por que. Ahora cada regla lleva titulo, explicacion en
+  // castellano y si es un problema que haya que arreglar o el sistema haciendo bien
+  // su trabajo -- que es la pregunta que uno se hace al mirar esta lista.
+  private readonly REGLAS: Record<string, { titulo: string; porque: string; ok: boolean }> = {
+    G3:  { titulo: 'En lista negra',        ok: true,
+           porque: 'El documento está en la blacklist: no se puede contactar a este cliente.' },
+    G4:  { titulo: 'Datos incompletos',     ok: false,
+           porque: 'La cuota no tiene gestión o cliente asociado. Es un problema de datos, no una regla de negocio.' },
+    G6:  { titulo: 'Ya se llamó hoy',       ok: true,
+           porque: 'El bot o un asesor ya contactó esta cuota hoy. No se llama dos veces el mismo día.' },
+    G8:  { titulo: 'Sin teléfono válido',   ok: false,
+           porque: 'El cliente no tiene ningún celular activo de 9 dígitos. Sin número no hay a dónde marcar.' },
+    G11: { titulo: 'Tope diario alcanzado', ok: true,
+           porque: 'Se llegó al máximo de llamadas que permite el perfil activo. Estas cuotas entran mañana.' },
+    G12: { titulo: 'Tiene cita agendada',   ok: true,
+           porque: 'Hay una llamada agendada con un asesor. Llamar antes pisaría esa cita.' },
+    G13: { titulo: 'Ya tiene promesa nueva', ok: true,
+           porque: 'El cliente se comprometió hace poco. Cobrarle la deuda vieja teniendo un acuerdo fresco sería un error.' },
+    DUP: { titulo: 'Teléfono repetido',     ok: true,
+           porque: 'Otra cuota del mismo cliente ya usa ese número hoy. Se llama una vez y se hablan todas.' },
+  };
+
+  reglaTitulo(regla: string): string {
+    return this.REGLAS[regla]?.titulo ?? regla;
+  }
+  reglaPorque(d: any): string {
+    return this.REGLAS[d?.regla]?.porque ?? (d?.detalle || 'Sin detalle registrado.');
+  }
+  /** Falso = hay algo que revisar (datos malos), no el sistema filtrando bien. */
+  reglaEsNormal(regla: string): boolean {
+    return this.REGLAS[regla]?.ok ?? true;
+  }
+
+  /** Resumen por regla, para ver de un vistazo si domina un problema real. */
+  get descartesPorRegla(): { regla: string; titulo: string; n: number; ok: boolean }[] {
+    const cuenta = new Map<string, number>();
+    for (const d of this.descartes) cuenta.set(d.regla, (cuenta.get(d.regla) ?? 0) + 1);
+    return [...cuenta.entries()]
+      .map(([regla, n]) => ({ regla, n, titulo: this.reglaTitulo(regla), ok: this.reglaEsNormal(regla) }))
+      .sort((a, b) => b.n - a.n);
   }
 
   switchTab(t: 'config' | 'perfiles' | 'cola' | 'llamadas'): void {
