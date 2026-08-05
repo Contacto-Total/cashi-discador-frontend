@@ -175,6 +175,15 @@ export interface AccountStatusEvent {
   tenantId?: number;
   carteraId?: number;
   subcarteraId?: number;
+  sessions?: WhatsappSession[];
+}
+
+export interface WhatsappSession {
+  slot: string;
+  role: 'PRIMARY' | 'AUXILIARY';
+  status: string;
+  qrData?: string;
+  updatedAt?: string;
 }
 
 export interface WhatsappAccount {
@@ -193,6 +202,7 @@ export interface WhatsappAccount {
   subcarteraName?: string;
   qrData?: string;
   qrUpdatedAt?: string;
+  sessions: WhatsappSession[];
   lastSeenAt?: string;
   lastConnectedAt?: string;
 }

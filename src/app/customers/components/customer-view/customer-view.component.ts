@@ -6,6 +6,7 @@ import { CustomerService, CustomerResource, ContactMethodResource, PagosClienteR
 import { ApiSystemConfigService } from '../../../collection-management/services/api-system-config.service';
 import { ManagementService, CreateManagementRequest } from '../../../collection-management/services/management.service';
 import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.service';
+import { NoDebtLetterValidatedService } from '../../../features/legacy/agreements/services/no-debt-letter-validated.service';
 
 @Component({
   selector: 'app-customer-view',
@@ -562,6 +563,20 @@ import { OsiptelService, OsiptelBadge } from '../../../core/services/osiptel.ser
                 <!-- Pagos Tab - Historial de Pagos agrupados por Promesa -->
                 @if (activeTab() === 'pagos') {
                   <div class="space-y-2">
+                    <div class="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-700/50 dark:bg-blue-900/20">
+                      <div>
+                        <p class="text-xs font-semibold text-blue-800 dark:text-blue-200">Carta de no adeudo</p>
+                        <p class="text-[0.625rem] text-blue-600 dark:text-blue-300">Elegibilidad para generar la carta</p>
+                      </div>
+                      @if (loadingNoDebtLetter()) {
+                        <span class="text-xs font-medium text-blue-700 dark:text-blue-300">Consultando...</span>
+                      } @else {
+                        <span
+                          class="rounded-full px-2.5 py-1 text-xs font-bold"
+                          [class]="noDebtLetterEligible() ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+                        >{{ noDebtLetterEligible() ? 'Sí' : 'No' }}</span>
+                      }
+                    </div>
                     @if (loadingPagos()) {
                       <div class="flex items-center justify-center py-8">
                         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
@@ -977,6 +992,7 @@ export class CustomerViewComponent implements OnInit {
   private apiSystemConfigService = inject(ApiSystemConfigService);
   private managementService = inject(ManagementService);
   private fmt = inject(FormatService);
+  private noDebtLetterService = inject(NoDebtLetterValidatedService);
 
   customer = signal<CustomerResource | null>(null);
   activeTab = signal<'personal' | 'contacto' | 'ubicacion' | 'referencias' | 'cuentas' | 'pagos' | 'gestiones'>('cuentas');
@@ -1026,6 +1042,9 @@ export class CustomerViewComponent implements OnInit {
   // Pagos del cliente
   pagosCliente = signal<PagosClienteResponse | null>(null);
   loadingPagos = signal(false);
+  noDebtLetterEligible = signal(false);
+  loadingNoDebtLetter = signal(false);
+  private noDebtLetterCustomerId: number | null = null;
   expandedGrupos = signal<Set<string>>(new Set());
 
   // Historial de Gestiones
@@ -1134,6 +1153,9 @@ export class CustomerViewComponent implements OnInit {
     // Limpiar pagos del cliente anterior
     this.pagosCliente.set(null);
     this.expandedGrupos.set(new Set());
+    this.noDebtLetterEligible.set(false);
+    this.loadingNoDebtLetter.set(false);
+    this.noDebtLetterCustomerId = null;
 
     // Usar búsqueda multi-tenant (sin filtro de tenantId) para encontrar duplicados entre inquilinos
     this.customerService.searchCustomersAcrossAllTenants(this.searchCriteria, this.searchDocument).subscribe({
@@ -1178,6 +1200,9 @@ export class CustomerViewComponent implements OnInit {
     // Limpiar pagos del cliente anterior
     this.pagosCliente.set(null);
     this.expandedGrupos.set(new Set());
+    this.noDebtLetterEligible.set(false);
+    this.loadingNoDebtLetter.set(false);
+    this.noDebtLetterCustomerId = null;
     // Limpiar gestiones del cliente anterior
     this.historialGestiones.set([]);
     this.historialHistorico.set([]);
@@ -1218,6 +1243,9 @@ export class CustomerViewComponent implements OnInit {
     if (currentCustomer && !this.pagosCliente()) {
       this.loadPagosCliente(currentCustomer.documentNumber);
     }
+    if (currentCustomer && this.noDebtLetterCustomerId !== currentCustomer.id && !this.loadingNoDebtLetter()) {
+      this.loadNoDebtLetterEligibility(currentCustomer);
+    }
   }
 
   medioAtencionLabel(codigo: string | null): string {
@@ -1249,6 +1277,31 @@ export class CustomerViewComponent implements OnInit {
         console.error('Error cargando pagos del cliente:', error);
         this.pagosCliente.set(null);
         this.loadingPagos.set(false);
+      }
+    });
+  }
+
+  private loadNoDebtLetterEligibility(customer: CustomerResource): void {
+    const tenantId = Number(customer.tenantId);
+    const carteraId = Number(customer.portfolioId);
+    const subcarteraId = Number(customer.subPortfolioId);
+    const documento = customer.documentNumber?.trim();
+
+    this.noDebtLetterCustomerId = customer.id;
+    if (!documento || !tenantId || !carteraId || !subcarteraId) {
+      this.noDebtLetterEligible.set(false);
+      return;
+    }
+
+    this.loadingNoDebtLetter.set(true);
+    this.noDebtLetterService.getEligible({ tenantId, carteraId, subcarteraId, documento, size: 1 }).subscribe({
+      next: response => {
+        this.noDebtLetterEligible.set(response.total > 0);
+        this.loadingNoDebtLetter.set(false);
+      },
+      error: () => {
+        this.noDebtLetterEligible.set(false);
+        this.loadingNoDebtLetter.set(false);
       }
     });
   }

@@ -18,6 +18,15 @@ export interface RegistroEstadoDTO {
   sessionId: string | null;
 }
 
+/**
+ * CONECTADO = todo menos DESCONECTADO
+ * |- PAUSAS  = REFRIGERIO + SSHH
+ * `- JORNADA = CONECTADO - PAUSAS
+ *    |- REUNION = EN_REUNION
+ *    `- (base)  = JORNADA - REUNION
+ *       |- OCIOSO     = DISPONIBLE
+ *       `- PRODUCTIVO = el resto
+ */
 export interface ResumenPorAgente {
   idUsuario: number;
   nombreAgente: string;
@@ -25,14 +34,20 @@ export interface ResumenPorAgente {
   segundosPorEstado: { [estado: string]: number };
   totalSegundosConectado: number;
   totalSegundosProductivo: number;
-  totalSegundosBreak: number;
+  totalSegundosOcioso: number;
+  totalSegundosPausa: number;
+  totalSegundosReunion: number;
+  /** productivo / (jornada - reunion) */
   porcentajeOcupacion: number;
   tiempoConectadoFormateado: string;
   tiempoProductivoFormateado: string;
-  tiempoBreakFormateado: string;
+  tiempoOciosoFormateado: string;
+  tiempoPausaFormateado: string;
+  tiempoReunionFormateado: string;
   horaEntrada: string | null;
   horaSalida: string | null;
   cantidadSesiones: number;
+  /** CONECTADO - PAUSAS (incluye la reunion), no salida - entrada */
   jornadaTotalFormateada: string | null;
   jornadaTotalSegundos: number;
 }
@@ -45,11 +60,7 @@ export interface ResumenEstadoAgentes {
 }
 
 export interface ReporteEstadoAgentesResponse {
-  registros: RegistroEstadoDTO[];
   resumen: ResumenEstadoAgentes;
-  total: number;
-  page: number;
-  size: number;
 }
 
 // ==================== ASISTENCIA ====================
@@ -75,6 +86,8 @@ export interface RegistroAsistenciaDTO {
   jornada: string;
   desconexiones: number;
   cambiosEstado: number;
+  /** Hora de la primera gestion tipificada del dia */
+  primeraGestionHora: string | null;
 }
 
 export interface ResumenAsistenciaPorAgente {
@@ -136,20 +149,17 @@ export class EstadoAgentesReportService {
 
   constructor(private http: HttpClient) {}
 
+  /** Solo el resumen por agente. El detalle fila por fila va en el Excel. */
   getReporte(
     fechaDesde: string,
     fechaHasta: string,
     tenantId?: number,
     carteraId?: number,
-    subcarteraId?: number,
-    page: number = 0,
-    size: number = 50
+    subcarteraId?: number
   ): Observable<ReporteEstadoAgentesResponse> {
     let params = new HttpParams()
       .set('fechaDesde', fechaDesde)
-      .set('fechaHasta', fechaHasta)
-      .set('page', page.toString())
-      .set('size', size.toString());
+      .set('fechaHasta', fechaHasta);
 
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());
