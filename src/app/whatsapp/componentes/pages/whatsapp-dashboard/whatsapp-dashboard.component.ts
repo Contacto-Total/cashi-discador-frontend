@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { RouterLink, RouterLinkActive } from '@angular/router';
 import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { WhatsappApiService } from '../../../services/whatsapp-api.service';
 import { AccountStatusEvent, WhatsappAccount, WhatsappSession } from '../../../models';
@@ -11,11 +10,14 @@ import { TenantService } from '../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../../maintenance/models/portfolio.model';
+import { ChatListWidgetComponent } from '../../widgets/chat-list-widget/chat-list-widget.component';
+import { ChatWidgetComponent } from '../../widgets/chat-widget/chat-widget.component';
+import { WhatsappMessageStoreService } from '../../../services/whatsapp-message-store.service';
 
 @Component({
   selector: 'app-whatsapp-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ChatListWidgetComponent, ChatWidgetComponent],
   templateUrl: './whatsapp-dashboard.component.html',
   styleUrls: ['./whatsapp-dashboard.component.css']
 })
@@ -26,6 +28,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   subPortfolios: SubPortfolio[] = [];
   selectedId: number | null = null;
   selectedSessionSlot = 'PRIMARY';
+  activeView: 'instances' | 'history' = 'instances';
   loading = true;
   saving = false;
   activationSaving = false;
@@ -48,6 +51,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   constructor(
     private readonly whatsappApi: WhatsappApiService,
     private readonly realtime: WhatsappRealtimeService,
+    private readonly messageStore: WhatsappMessageStoreService,
     private readonly tenantService: TenantService,
     private readonly portfolioService: PortfolioService
   ) {}
@@ -89,6 +93,8 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.messageStore.stopViewingCurrentChat();
+    this.messageStore.disconnectRealtime();
     this.realtime.disconnect();
   }
 
@@ -119,6 +125,11 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
       : (account.sessions?.[0]?.slot || 'PRIMARY');
     this.syncForm(account);
     this.feedback = '';
+  }
+
+  selectView(view: 'instances' | 'history'): void {
+    this.activeView = view;
+    if (view === 'history') this.messageStore.connectRealtime();
   }
 
   onTenantChange(tenantId: number): void {

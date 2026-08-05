@@ -1,19 +1,15 @@
 <main class="whatsapp-dashboard">
   <header class="dashboard-header">
-    <div class="header-copy">
-      <div class="eyebrow"><span class="eyebrow-dot"></span> Centro de canales</div>
-      <h1>WhatsApp</h1>
-      <p>Vincula números, administra instancias y define su ámbito operativo.</p>
-    </div>
+    <h1>WhatsApp Dashboard</h1>
   </header>
 
   <nav class="workspace-toolbar" aria-label="Navegación WhatsApp">
-    <a routerLink="/whatsapp/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+    <button type="button" [class.active]="activeView === 'instances'" (click)="selectView('instances')">
       <lucide-angular name="radio" [size]="16"></lucide-angular> Instancias
-    </a>
-    <a routerLink="/whatsapp/history" routerLinkActive="active">
+    </button>
+    <button type="button" [class.active]="activeView === 'history'" (click)="selectView('history')">
       <lucide-angular name="history" [size]="16"></lucide-angular> Historial
-    </a>
+    </button>
     <span class="toolbar-spacer"></span>
     <span class="toolbar-stat">{{ accounts.length }} instancias</span>
     <span class="toolbar-stat">{{ connectedAccounts }} conectadas</span>
@@ -29,13 +25,14 @@
       <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
       <span>{{ error }}</span>
     </section>
-  } @else if (accounts.length === 0) {
+  } @else if (accounts.length === 0 && activeView === 'instances') {
     <section class="empty-state">
       <lucide-angular name="monitor" [size]="32"></lucide-angular>
       <h2>No hay servicios registrados</h2>
       <p>Inicia una instancia Go para que aparezca en este panel.</p>
     </section>
   } @else {
+    @if (activeView === 'instances') {
     <section class="dashboard-grid">
         <aside class="service-list-panel">
           <div class="instance-rail-heading">
@@ -165,5 +162,11 @@
           </section>
         }
       </section>
+    } @else {
+      <section class="history-workspace">
+        <app-whatsapp-chat-list-widget [includeHistorical]="true"></app-whatsapp-chat-list-widget>
+        <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
+      </section>
+    }
     }
 </main>
