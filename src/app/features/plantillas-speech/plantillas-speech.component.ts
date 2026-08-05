@@ -8,6 +8,7 @@ import { TenantService } from '../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
+import { ToastService } from '../../shared/services/toast.service';
 
 type Rubrica = 'CD' | 'PDP';
 
@@ -59,7 +60,7 @@ interface ConfigSpeech {
             <div>
               <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Proveedor</label>
               <select [(ngModel)]="selectedTenantId" (change)="onTenantChange()"
-                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm cursor-pointer transition-colors hover:bg-slate-700/60 hover:border-purple-500/60 focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option [ngValue]="0">Seleccionar...</option>
                 @for (tenant of tenants; track tenant.id) {
                   <option [ngValue]="tenant.id">{{ tenant.tenantName }}</option>
@@ -72,7 +73,7 @@ interface ConfigSpeech {
               <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Cartera</label>
               <select [(ngModel)]="selectedPortfolioId" (change)="onPortfolioChange()"
                       [disabled]="portfolios.length === 0"
-                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
+                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm cursor-pointer transition-colors enabled:hover:bg-slate-700/60 enabled:hover:border-purple-500/60 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
                 <option [ngValue]="0">Seleccionar...</option>
                 @for (portfolio of portfolios; track portfolio.id) {
                   <option [ngValue]="portfolio.id">{{ portfolio.portfolioName }}</option>
@@ -85,7 +86,7 @@ interface ConfigSpeech {
               <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Subcartera</label>
               <select [(ngModel)]="selectedSubPortfolioId" (change)="onSubPortfolioChange()"
                       [disabled]="subPortfolios.length === 0"
-                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50">
+                      class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm cursor-pointer transition-colors enabled:hover:bg-slate-700/60 enabled:hover:border-purple-500/60 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
                 <option [ngValue]="0">Seleccionar...</option>
                 @for (sub of subPortfolios; track sub.id) {
                   <option [ngValue]="sub.id">{{ sub.subPortfolioName }}</option>
@@ -94,7 +95,7 @@ interface ConfigSpeech {
             </div>
 
             <button (click)="buscar()"
-                    [disabled]="loadingConfig() || !selectedSubPortfolioId"
+                    [disabled]="loadingConfig()"
                     class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
               @if (loadingConfig()) {
                 <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
@@ -173,7 +174,7 @@ interface ConfigSpeech {
 
             <div class="divide-y divide-slate-800">
               @for (criterio of criterios(); track criterio.campo; let i = $index) {
-                <div class="px-6 py-3 flex items-center gap-4 hover:bg-slate-800/30 transition-colors">
+                <div class="px-6 py-3 flex items-center gap-4 transition-colors hover:bg-slate-800/60">
                   <span class="w-7 h-7 shrink-0 rounded-full bg-slate-800 text-gray-400 text-xs flex items-center justify-center">
                     {{ i + 1 }}
                   </span>
@@ -194,16 +195,13 @@ interface ConfigSpeech {
                            [checked]="criterio.activo"
                            (change)="alternar(criterio)"
                            class="sr-only peer">
-                    <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    <div class="w-11 h-6 bg-slate-700 transition-all peer-hover:ring-4 peer-hover:ring-purple-500/25 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                   </label>
                 </div>
               }
             </div>
 
-            <div class="px-6 py-4 border-t border-slate-800 flex items-center justify-between flex-wrap gap-3">
-              <p class="text-xs text-gray-500">
-                Los criterios apagados no salen en el Excel: la fila se elimina y las de abajo suben.
-              </p>
+            <div class="px-6 py-4 border-t border-slate-800 flex items-center justify-end flex-wrap gap-3">
               <button (click)="guardar()"
                       [disabled]="saving()"
                       class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm flex items-center gap-2 transition-colors disabled:opacity-50">
@@ -228,31 +226,8 @@ interface ConfigSpeech {
         </div>
       }
 
-      <!-- Toast de éxito/error -->
-      @if (toastMessage()) {
-        <div class="fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg animate-slide-in flex items-center gap-2"
-             [class]="toastType() === 'success' ? 'bg-green-600' : 'bg-red-600'">
-          <lucide-angular [name]="toastType() === 'success' ? 'check-circle' : 'alert-circle'" [size]="20" class="text-white"></lucide-angular>
-          <span class="text-white font-medium">{{ toastMessage() }}</span>
-        </div>
-      }
     </div>
-  `,
-  styles: [`
-    @keyframes slideIn {
-      from {
-        transform: translateY(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-    .animate-slide-in {
-      animation: slideIn 0.3s ease-out;
-    }
-  `]
+  `
 })
 export class PlantillasSpeechComponent implements OnInit {
   private apiUrl = `${environment.apiUrl}/plantillas-speech`;
@@ -276,9 +251,6 @@ export class PlantillasSpeechComponent implements OnInit {
   loadingConfig = signal(false);
   saving = signal(false);
 
-  toastMessage = signal('');
-  toastType = signal<'success' | 'error'>('success');
-
   /** Criterios de la pestaña activa, en el orden en que salen en el Excel. */
   criterios = computed<CriterioSpeech[]>(() => {
     const cfg = this.config();
@@ -291,7 +263,8 @@ export class PlantillasSpeechComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private tenantService: TenantService,
-    private portfolioService: PortfolioService
+    private portfolioService: PortfolioService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -305,7 +278,7 @@ export class PlantillasSpeechComponent implements OnInit {
       next: (data) => { this.tenants = data; },
       error: (err) => {
         console.error('Error cargando proveedores:', err);
-        this.mostrarToast('Error al cargar los proveedores', 'error');
+        this.toastService.error('Error al cargar los proveedores');
       }
     });
   }
@@ -363,7 +336,7 @@ export class PlantillasSpeechComponent implements OnInit {
 
   buscar(): void {
     if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) {
-      this.mostrarToast('Por favor, selecciona Proveedor, Cartera y Subcartera.', 'error');
+      this.toastService.error('Por favor, selecciona Proveedor, Cartera y Subcartera.');
       return;
     }
 
@@ -379,7 +352,7 @@ export class PlantillasSpeechComponent implements OnInit {
       error: (err) => {
         console.error('Error cargando la configuración:', err);
         this.loadingConfig.set(false);
-        this.mostrarToast('Error al cargar la configuración', 'error');
+        this.toastService.error('Error al cargar la configuración');
       }
     });
   }
@@ -417,7 +390,7 @@ export class PlantillasSpeechComponent implements OnInit {
     // Red de seguridad: nunca escribir lo que hay en pantalla contra una
     // subcartera distinta de la que se buscó.
     if (cfg.idSubcartera !== this.selectedSubPortfolioId) {
-      this.mostrarToast('La subcartera cambió: presiona Buscar antes de guardar.', 'error');
+      this.toastService.error('La subcartera cambió: presiona Buscar antes de guardar.');
       return;
     }
 
@@ -431,19 +404,13 @@ export class PlantillasSpeechComponent implements OnInit {
       next: (res) => {
         this.config.set(res.data);
         this.saving.set(false);
-        this.mostrarToast('Plantilla guardada correctamente', 'success');
+        this.toastService.success('Plantilla guardada correctamente');
       },
       error: (err) => {
         console.error('Error guardando la plantilla:', err);
         this.saving.set(false);
-        this.mostrarToast('Error al guardar la plantilla', 'error');
+        this.toastService.error('Error al guardar la plantilla');
       }
     });
-  }
-
-  private mostrarToast(mensaje: string, tipo: 'success' | 'error'): void {
-    this.toastMessage.set(mensaje);
-    this.toastType.set(tipo);
-    setTimeout(() => this.toastMessage.set(''), 3000);
   }
 }
