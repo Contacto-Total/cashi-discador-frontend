@@ -184,6 +184,7 @@ export interface EngagementStatus {
   expiresAt?: string;
   remainingSeconds: number;
   locked: boolean;
+  operationalDayOpen: boolean;
 }
 
 export interface WhatsappSession {

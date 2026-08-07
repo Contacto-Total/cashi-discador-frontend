@@ -1,7 +1,7 @@
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Chat, EngagementStatus } from '../../../models';
-import { WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
+import { UserInfoService, WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PdfPreviewWidgetComponent } from '../pdf-preview-widget/pdf-preview-widget.component';
 
@@ -148,6 +148,7 @@ export class MessageInputWidgetComponent {
   previewOpen = false;
   readonly windowWarning = computed(() => this.getWindowWarning(this.chat()));
   readonly engagement = signal<EngagementStatus | null>(null);
+  readonly engagementOwnerName = signal<string | null>(null);
   private readonly now = signal(Date.now());
 
   private mediaRecorder?: MediaRecorder;
@@ -159,6 +160,7 @@ export class MessageInputWidgetComponent {
   constructor(
     readonly store: WhatsappMessageStoreService,
     private readonly api: WhatsappApiService,
+    private readonly userInfo: UserInfoService,
     private readonly auth: AuthService
   ) {
     effect(() => {
@@ -184,6 +186,19 @@ export class MessageInputWidgetComponent {
         clearInterval(clock);
         clearInterval(refreshTimer);
       });
+    });
+    effect((onCleanup) => {
+      const ownerAgentId = this.engagement()?.ownerAgentId;
+      const ownerId = Number(ownerAgentId);
+      if (!ownerAgentId || !Number.isFinite(ownerId)) {
+        this.engagementOwnerName.set(null);
+        return;
+      }
+      const subscription = this.userInfo.getUserInfoView(ownerId).subscribe({
+        next: user => this.engagementOwnerName.set(user.displayName),
+        error: () => this.engagementOwnerName.set(null)
+      });
+      onCleanup(() => subscription.unsubscribe());
     });
   }
 
@@ -319,6 +334,7 @@ export class MessageInputWidgetComponent {
     const currentAgentId = String(this.auth.getCurrentUser()?.id || '');
     const engagementActive = engagement?.locked
       && new Date(engagement.expiresAt || 0).getTime() > this.now();
+    if (engagement && !engagement.operationalDayOpen) return false;
     if (engagementActive && engagement.ownerAgentId !== currentAgentId) return false;
     if (!chat.windowExpiresAt) return true;
     return new Date(chat.windowExpiresAt).getTime() > Date.now();
@@ -331,12 +347,15 @@ export class MessageInputWidgetComponent {
     const currentAgentId = String(this.auth.getCurrentUser()?.id || '');
     const engagementActive = engagement?.locked
       && new Date(engagement.expiresAt || 0).getTime() > this.now();
+    if (engagement && !engagement.operationalDayOpen) {
+      return 'Los envíos manuales están disponibles de 08:01 a 23:50.';
+    }
     if (engagementActive && engagement.ownerAgentId) {
       const remaining = Math.max(0, new Date(engagement.expiresAt || 0).getTime() - this.now());
       const time = this.formatRemaining(remaining);
       return engagement.ownerAgentId === currentAgentId
         ? `Este chat está enlazado contigo. Se libera en ${time}.`
-        : `Chat enlazado con el agente ${engagement.ownerAgentId}. Se libera en ${time}.`;
+        : `Chat enlazado con el agente ${this.engagementOwnerName() || engagement.ownerAgentId}. Se libera en ${time}.`;
     }
     if (chat.blocked) return '24 h expirado.';
     if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '24 h expirado.';

@@ -582,6 +582,9 @@ export class WhatsappMessageStoreService {
     if (response.status === 409 && response.error?.error === 'CHAT_ENGAGED') {
       return response.error.detail || 'Este chat está enlazado con otro agente.';
     }
+    if (response.status === 409 && response.error?.error === 'OPERATIONAL_DAY_CLOSED') {
+      return response.error.detail || 'El día operativo terminó.';
+    }
     return response.error?.message || 'No se pudo enviar el mensaje.';
   }
 }
