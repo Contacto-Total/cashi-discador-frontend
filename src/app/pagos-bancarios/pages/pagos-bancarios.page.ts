@@ -41,15 +41,20 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
             Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
           </p>
         </div>
-        <a
-          routerLink="/correccion-pagos"
-          class="inline-flex items-center gap-3 rounded-xl bg-green-700 px-6 py-3 text-base font-bold !text-white shadow-md shadow-green-900/20 transition-colors hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-offset-slate-900"
-        >
+        <div class="flex flex-wrap justify-end gap-3">
+          <a routerLink="/reportes-pagos-bancarios" class="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-3 text-base font-bold text-blue-700 shadow-sm transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900">
+            Reportes
+          </a>
+          <a
+            routerLink="/correccion-pagos"
+            class="inline-flex items-center gap-3 rounded-xl bg-green-700 px-6 py-3 text-base font-bold !text-white shadow-md shadow-green-900/20 transition-colors hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-offset-slate-900"
+          >
           <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
           </svg>
           Corrección de pagos
-        </a>
+          </a>
+        </div>
       </div>
 
       <!-- Tabs -->
