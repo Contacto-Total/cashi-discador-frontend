@@ -11,6 +11,7 @@ import {
   SendMessageRequest,
   SendMessageResponse,
   ViewerResponse,
+  EngagementStatus,
   WhatsappAccount
 } from '../models';
 
@@ -87,6 +88,10 @@ export class WhatsappApiService {
 
   getViewers(conversationId: number): Observable<ViewerResponse> {
     return this.http.get<ViewerResponse>(`${this.apiBase}/chats/${conversationId}/viewers`);
+  }
+
+  getEngagement(conversationId: number): Observable<EngagementStatus> {
+    return this.http.get<EngagementStatus>(`${this.apiBase}/chats/${conversationId}/engagement`);
   }
 
   joinViewers(conversationId: number): Observable<ViewerResponse> {

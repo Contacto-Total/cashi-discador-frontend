@@ -178,6 +178,14 @@ export interface AccountStatusEvent {
   sessions?: WhatsappSession[];
 }
 
+export interface EngagementStatus {
+  conversationId: number;
+  ownerAgentId?: string;
+  expiresAt?: string;
+  remainingSeconds: number;
+  locked: boolean;
+}
+
 export interface WhatsappSession {
   slot: string;
   role: 'PRIMARY' | 'AUXILIARY';

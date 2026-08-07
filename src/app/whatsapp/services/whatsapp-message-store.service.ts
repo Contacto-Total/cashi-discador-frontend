@@ -579,6 +579,9 @@ export class WhatsappMessageStoreService {
     if (response.status === 409 && response.error?.error === 'CHAT_BLOCKED') {
       return '24 h expirado.';
     }
+    if (response.status === 409 && response.error?.error === 'CHAT_ENGAGED') {
+      return response.error.detail || 'Este chat está enlazado con otro agente.';
+    }
     return response.error?.message || 'No se pudo enviar el mensaje.';
   }
 }
