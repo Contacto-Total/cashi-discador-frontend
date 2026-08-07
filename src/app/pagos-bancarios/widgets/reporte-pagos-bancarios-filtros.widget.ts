@@ -16,6 +16,7 @@ import { FormsModule } from '@angular/forms';
           <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Banco <span class="text-red-500">*</span></label>
           <select [(ngModel)]="banco" name="banco" required class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-white">
             <option value="BCP">BCP</option>
+            <option value="FINANCIERA_OH">Financiera OH</option>
           </select>
         </div>
         <button type="button" (click)="consultar()" [disabled]="!periodo || !banco || loading" class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400">
