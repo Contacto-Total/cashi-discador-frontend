@@ -2,11 +2,13 @@ import { Component, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusRequest } from '../../services/payment-schedule.service';
+import { FormatService } from '@/shared/services/format.service';
+import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-installment-status-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AppCurrencyPipe],
   template: `
     @if (isOpen()) {
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
@@ -36,7 +38,7 @@ import { PaymentScheduleService, InstallmentResource, UpdateInstallmentStatusReq
                 <div>
                   <span class="text-slate-600 dark:text-slate-400">Monto:</span>
                   <span class="font-bold text-purple-900 dark:text-purple-200 ml-2">
-                    S/ {{ installment()?.amount | number:'1.2-2' }}
+                    {{ installment()?.amount | appCurrency }}
                   </span>
                 </div>
                 <div>
@@ -231,7 +233,7 @@ export class InstallmentStatusDialogComponent {
     return true;
   });
 
-  constructor(private paymentScheduleService: PaymentScheduleService) {
+  constructor(private paymentScheduleService: PaymentScheduleService, private fmt: FormatService) {
     // Reset form when dialog closes
     effect(() => {
       if (!this.isOpen()) {
@@ -314,7 +316,7 @@ export class InstallmentStatusDialogComponent {
   formatDate(dateStr: string | undefined): string {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return this.fmt.date(date);
   }
 
   getStatusBadgeClass(status: string): string {

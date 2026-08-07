@@ -1,0 +1,172 @@
+<main class="whatsapp-dashboard">
+  <div class="mx-auto mb-2 max-w-[1420px] px-0.5 py-1">
+    <div class="text-2xl font-extrabold tracking-tight text-slate-900">WhatsApp Dashboard</div>
+  </div>
+
+  <nav class="workspace-toolbar" aria-label="Navegación WhatsApp">
+    <button type="button" [class.active]="activeView === 'instances'" (click)="selectView('instances')">
+      <lucide-angular name="radio" [size]="16"></lucide-angular> Instancias
+    </button>
+    <button type="button" [class.active]="activeView === 'history'" (click)="selectView('history')">
+      <lucide-angular name="history" [size]="16"></lucide-angular> Historial
+    </button>
+    <span class="toolbar-spacer"></span>
+    <span class="toolbar-stat">{{ accounts.length }} instancias</span>
+    <span class="toolbar-stat">{{ connectedAccounts }} conectadas</span>
+  </nav>
+
+  @if (loading) {
+    <section class="empty-state loading-state">
+      <lucide-angular name="loader-2" [size]="28" class="spin"></lucide-angular>
+      <span>Consultando servicios...</span>
+    </section>
+  } @else if (error) {
+    <section class="empty-state error-state">
+      <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
+      <span>{{ error }}</span>
+    </section>
+  } @else if (accounts.length === 0 && activeView === 'instances') {
+    <section class="empty-state">
+      <lucide-angular name="monitor" [size]="32"></lucide-angular>
+      <h2>No hay servicios registrados</h2>
+      <p>Inicia una instancia Go para que aparezca en este panel.</p>
+    </section>
+  } @else {
+    @if (activeView === 'instances') {
+    <section class="dashboard-grid">
+        <aside class="service-list-panel">
+          <div class="instance-rail-heading">
+            <span class="panel-kicker">Instancias</span>
+            <span class="live-indicator"><span></span> En línea</span>
+          </div>
+          <div class="service-list" aria-label="Instancias Go">
+            @for (account of accounts; track account.id) {
+              <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
+              <span class="service-icon" [ngClass]="statusClass(account.status)"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
+              <span class="service-copy">
+                <span class="service-title-row">
+                  <strong>{{ account.instanciaId }}</strong>
+                  <span class="service-inline-status" [ngClass]="statusClass(account.status)">{{ statusLabel(account.status) }}</span>
+                </span>
+                <small>{{ isLinked(account) ? (account.phoneNumber || 'Número vinculado') : 'Sin número vinculado' }}</small>
+              </span>
+              <span class="service-active" [class.enabled]="account.active">{{ account.active ? 'On' : 'Off' }}</span>
+            </button>
+            }
+          </div>
+        </aside>
+
+      @if (selectedAccount; as account) {
+          <section class="detail-panel">
+           <header class="detail-topline">
+             <div>
+               <span class="panel-kicker">Instancia {{ account.instanciaId }}</span>
+               <h2>{{ account.phoneNumber || 'Vincular número' }}</h2>
+               <p>{{ account.jid || 'La cuenta estará disponible al completar el vínculo.' }}</p>
+             </div>
+             <span class="detail-status" [ngClass]="statusClass(account.status)">
+               <span class="status-dot"></span>{{ statusLabel(account.status) }}
+             </span>
+             <div class="detail-actions">
+              <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
+               <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
+               {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
+              </button>
+             </div>
+            </header>
+
+            <div class="detail-content">
+              <section class="qr-column" [class.qr-muted]="isLinked(account)">
+                @if (account.sessions?.length) {
+                  <div class="session-tabs" role="tablist" aria-label="Sesiones de WhatsApp">
+                    @for (session of account.sessions; track session.slot) {
+                      <button type="button" role="tab" [class.selected]="selectedSession(account)?.slot === session.slot" (click)="selectSession(session)">
+                        {{ session.role === 'PRIMARY' ? 'Principal' : 'Auxiliar ' + session.slot.split('_').pop() }}
+                       <span [ngClass]="statusClass(session.status)"></span>
+                      </button>
+                    }
+                  </div>
+                  @if (selectedSession(account); as session) {
+                    <div class="qr-session-content">
+                      <div class="session-name"><span>{{ sessionLabel(session) }}</span><strong [ngClass]="statusClass(session.status)">{{ statusLabel(session.status) }}</strong></div>
+                      @if (session.qrData) {
+                        <div class="qr-frame"><img [src]="qrSource(session.qrData)" [alt]="'Código QR ' + sessionLabel(session)"></div>
+                        <p class="qr-caption">Escanea este código desde WhatsApp para vincular este dispositivo.</p>
+                      } @else {
+                        <div class="session-placeholder"><lucide-angular [name]="session.status === 'CONNECTED' ? 'check-circle-2' : 'qr-code'" [size]="28"></lucide-angular><span>{{ session.status === 'CONNECTED' ? 'Sesión vinculada' : 'Esperando código QR' }}</span></div>
+                       }
+                    </div>
+                  }
+                } @else if (!isLinked(account)) {
+                 <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando códigos QR...</span></div>
+               } @else {
+                <div class="linked-number">
+                  <span class="linked-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
+                  <strong>{{ account.phoneNumber || 'Número vinculado' }}</strong>
+                  <span>Listo para operación</span>
+                </div>
+                <div class="account-meta">
+                  <span>Última conexión</span>
+                  <strong>{{ account.lastConnectedAt ? (account.lastConnectedAt | date:'short') : 'Sin registro' }}</strong>
+                </div>
+               }
+             </section>
+
+            @if (isLinked(account)) {
+            <form class="binding-form" (ngSubmit)="saveBinding()">
+              <div class="form-heading">
+                <span class="panel-kicker">Ámbito de operación</span>
+                <h3>Asignación operativa</h3>
+                <p>Un servicio solo puede trabajar con una cartera y subcartera.</p>
+              </div>
+              <label>
+                Tenant
+                <select name="tenantId" [(ngModel)]="form.tenantId" (ngModelChange)="onTenantChange($event)" [disabled]="loadingTenants">
+                  <option [ngValue]="0">{{ loadingTenants ? 'Cargando tenants...' : 'Seleccionar tenant' }}</option>
+                  @for (tenant of tenants; track tenant.id) {
+                    <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Cartera
+                <select name="cartera" [(ngModel)]="form.carteraId" (ngModelChange)="onPortfolioChange($event)" [disabled]="form.tenantId === 0 || loadingPortfolios">
+                  <option [ngValue]="0">{{ loadingPortfolios ? 'Cargando carteras...' : 'Seleccionar cartera' }}</option>
+                  @for (portfolio of portfolios; track portfolio.id) {
+                    <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                  }
+                </select>
+              </label>
+              <label>
+                Subcartera
+                <select name="subcartera" [(ngModel)]="form.subcarteraId" (ngModelChange)="onSubPortfolioChange($event)" [disabled]="form.carteraId === 0 || loadingSubPortfolios">
+                  <option [ngValue]="0">{{ loadingSubPortfolios ? 'Cargando subcarteras...' : 'Seleccionar subcartera' }}</option>
+                  @for (subPortfolio of subPortfolios; track subPortfolio.id) {
+                    <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                  }
+                </select>
+              </label>
+               <label class="toggle-row"><span><strong>Habilitar servicio</strong><small>Permitirá usarlo para operación y envío.</small></span><input class="toggle" [class.enabled]="form.active" type="checkbox" name="active" [(ngModel)]="form.active" (ngModelChange)="onActiveChange($event)" [disabled]="activationSaving || saving"></label>
+              <button type="submit" class="save-button" [disabled]="saving"><lucide-angular [name]="saving ? 'loader-2' : 'link'" [size]="17" [class.spin]="saving"></lucide-angular>{{ saving ? 'Guardando...' : 'Guardar enlace' }}</button>
+              @if (feedback) { <p class="feedback">{{ feedback }}</p> }
+            </form>
+            } @else {
+              <div class="waiting-panel">
+                <lucide-angular name="unlink" [size]="24"></lucide-angular>
+                <strong>Asignación pendiente</strong>
+                <p>Primero vincula un número con el QR. Después podrás asignar el tenant, la cartera y la subcartera.</p>
+              </div>
+             }
+            </div>
+            @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
+          </section>
+        }
+      </section>
+    } @else {
+      <section class="history-workspace">
+        <app-whatsapp-chat-list-widget [includeHistorical]="true"></app-whatsapp-chat-list-widget>
+        <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
+      </section>
+    }
+    }
+</main>

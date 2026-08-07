@@ -1604,3 +1604,68 @@ body.light-theme .agente-tiempo {
   color: #64748b;
   border-top: 1px solid #e2e8f0;
 }
+
+
+/* ============================================
+     LAYOUT 2x2 — Resultados + Detalle Operativo
+     Ambos paneles del mismo alto, cards en grid
+     ============================================ */
+  .top-metrics-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .top-metrics-row > .metrics-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .top-metrics-row > .metrics-panel .metrics-grid-resumen {
+    flex: 1;
+    display: grid;
+    grid-auto-rows: 1fr;
+    gap: 8px;
+  }
+
+  /* Resultados: 3 columnas × 2 filas = 6 cards (cards más chicas) */
+  .panel-resultados .metrics-grid-resumen {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  .panel-resultados .card-total-wide {
+    grid-column: span 2 !important;          /* Total más ancho, queda destacado */
+  }
+  .panel-resultados .card-total-wide .metric-value {
+    font-size: 1.6em;              /* opcional: número más grande para que resalte */
+  }
+
+  /* Detalle Operativo: 2 columnas × 2 filas = 4 cards (más anchas) */
+  .panel-detalle-operativo .metrics-grid-resumen {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* ============================================
+     ESQUEMA CROMÁTICO CORPORATIVO POR MÉTRICA
+     positive=verde  warning=ámbar  danger=rojo
+     neutral=azul    time=púrpura
+     ============================================ */
+  .metric-item.card-neutral  .metric-value { color: #2563EB; }
+  .metric-item.card-neutral  .metric-icon  { background: rgba(37, 99, 235, 0.12);  color: #2563EB; }
+
+  .metric-item.card-positive .metric-value { color: #059669; }
+  .metric-item.card-positive .metric-icon  { background: rgba(5, 150, 105, 0.12);  color: #059669; }
+
+  .metric-item.card-warning  .metric-value { color: #D97706; }
+  .metric-item.card-warning  .metric-icon  { background: rgba(217, 119, 6, 0.12);  color: #D97706; }
+
+  .metric-item.card-danger   .metric-value { color: #DC2626; }
+  .metric-item.card-danger   .metric-icon  { background: rgba(220, 38, 38, 0.12);  color: #DC2626; }
+
+  .metric-item.card-time     .metric-value { color: #7C3AED; }
+  .metric-item.card-time     .metric-icon  { background: rgba(124, 58, 237, 0.12); color: #7C3AED; }
+
+  /* Refuerzo visual: borde sutil a la izquierda con el color de la métrica */
+  .metric-item.card-neutral  { border-left: 3px solid #2563EB; }
+  .metric-item.card-positive { border-left: 3px solid #059669; }
+  .metric-item.card-warning  { border-left: 3px solid #D97706; }
+  .metric-item.card-danger   { border-left: 3px solid #DC2626; }
+  .metric-item.card-time     { border-left: 3px solid #7C3AED; }

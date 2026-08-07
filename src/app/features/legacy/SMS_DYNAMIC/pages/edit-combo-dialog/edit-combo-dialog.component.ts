@@ -15,6 +15,7 @@ import { Row } from '../../models/dyn-query';
 import {Router} from "@angular/router";
 import {SuccessDialogComponent} from "@/SMS_DYNAMIC/Common/success-dialog.component";
 import { FormArray, FormGroup, ValidatorFn, AbstractControl } from '@angular/forms';
+import { FormatService } from '@/shared/services/format.service';
 
 type ChipKey =
   | 'NOMBRE' | 'LTD' | 'LTDE' | 'LTD_LTDE'
@@ -39,6 +40,7 @@ export class EditComboDialogComponent implements OnInit {
   private data = inject<ComboResponse>(MAT_DIALOG_DATA);
   private fb = inject(FormBuilder);
   private api = inject(ComboService);
+  private fmt = inject(FormatService);
 
   // --- estado UI que faltaba ---
   submitted = false;
@@ -319,10 +321,10 @@ export class EditComboDialogComponent implements OnInit {
 
     const r = row as Record<string, any>;
     const firstName = (s: any) => String(s ?? '').split(/\s+/)[0] || '';
-    const fmtInt = (v: any) => Number.isFinite(Number(v)) ? Math.trunc(Number(v)).toLocaleString('es-PE') : '';
+    const fmtInt = (v: any) => Number.isFinite(Number(v)) ? this.fmt.number(Math.trunc(Number(v))) : '';
     const hoy = new Date();
     const manana = new Date(hoy.getTime() + 86400000);
-    const fmtDate = (d: Date) => d.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+    const fmtDate = (d: Date) => this.fmt.date(d, { day: '2-digit', month: '2-digit' });
 
     return tpl.replace(VAR_RE, (_m, keyRaw) => {
       const key = String(keyRaw).toUpperCase(); // 👈 normaliza

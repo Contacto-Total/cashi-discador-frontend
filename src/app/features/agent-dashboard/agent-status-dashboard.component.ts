@@ -134,8 +134,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       if (this.isPageRefreshing) return;
 
       const targetUrl = event.url;
-      // Si NO va a collection-management (tipificación), seguimiento ni gestión manual, desconectar
-      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/seguimiento') && !targetUrl.startsWith('/manual-management')) {
+      // Si NO va a gestión, seguimiento, modo manual ni WhatsApp, desconectar.
+      if (!targetUrl.startsWith('/collection-management') && !targetUrl.startsWith('/seguimiento') && !targetUrl.startsWith('/manual-management') && !targetUrl.startsWith('/whatsapp')) {
         this.setDesconectado();
       }
     });
@@ -332,8 +332,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.agentStatusService.enterManualMode(this.currentStatus.idUsuario).subscribe({
       next: () => {
         this.loading = false;
-        // Navegar al softphone
-        this.router.navigate(['/dialer']);
+        // NAVEGAR A GESTION MANUAL
+        this.router.navigate(['/manual-management']);
       },
       error: (err) => {
         console.error('Error entering manual mode:', err);

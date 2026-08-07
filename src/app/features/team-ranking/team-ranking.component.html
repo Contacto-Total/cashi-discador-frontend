@@ -92,7 +92,7 @@
         </div>
         <div class="summary-info">
           <span class="summary-value" [style.color]="getEfectividadColor(ranking.totalesEquipo.efectividadProyeccionEquipo)">
-            {{ ranking.totalesEquipo.efectividadProyeccionEquipo | number:'1.0-1' }}%
+            {{ ranking.totalesEquipo.efectividadProyeccionEquipo | appNumber:'1.0-1' }}%
           </span>
           <span class="summary-label">Efectividad Proyección</span>
         </div>
@@ -129,7 +129,7 @@
           </div>
           <div class="metric highlight">
             <span class="metric-value" [style.color]="getEfectividadColor(ranking.miRanking.efectividadProyeccion)">
-              {{ ranking.miRanking.efectividadProyeccion | number:'1.0-1' }}%
+              {{ ranking.miRanking.efectividadProyeccion | appNumber:'1.0-1' }}%
             </span>
             <span class="metric-label">% Efectividad Proyección</span>
           </div>
@@ -253,14 +253,14 @@
             <td class="col-percent">
               <span class="efectividad-badge" [style.background-color]="getEfectividadColor(agente.efectividadProyeccion) + '20'"
                     [style.color]="getEfectividadColor(agente.efectividadProyeccion)">
-                {{ agente.efectividadProyeccion | number:'1.0-0' }}%
+                {{ agente.efectividadProyeccion | appNumber:'1.0-0' }}%
               </span>
             </td>
             <!-- Efectividad general -->
             <td class="col-percent">
               <span class="efectividad-badge" [style.background-color]="getEfectividadColor(agente.efectividadGeneral) + '20'"
                     [style.color]="getEfectividadColor(agente.efectividadGeneral)">
-                {{ agente.efectividadGeneral | number:'1.0-0' }}%
+                {{ agente.efectividadGeneral | appNumber:'1.0-0' }}%
               </span>
             </td>
             <!-- Tendencia -->
@@ -372,7 +372,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let promesa of promesasMes.promesas">
-              <td class="col-date">{{ promesa.fechaGestion | date:'dd/MM/yyyy' }}</td>
+              <td class="col-date">{{ promesa.fechaGestion | appDate }}</td>
               <td class="col-doc">{{ promesa.documentoCliente }}</td>
               <td class="col-name">{{ promesa.nombreCliente }}</td>
               <td class="col-phone">{{ promesa.telefonoContacto }}</td>
@@ -386,7 +386,7 @@
                   {{ promesa.estadoPago }}
                 </span>
               </td>
-              <td class="col-date">{{ promesa.fechaPagoCompromiso ? (promesa.fechaPagoCompromiso | date:'dd/MM/yyyy') : '-' }}</td>
+              <td class="col-date">{{ promesa.fechaPagoCompromiso ? (promesa.fechaPagoCompromiso | appDate) : '-' }}</td>
             </tr>
           </tbody>
         </table>

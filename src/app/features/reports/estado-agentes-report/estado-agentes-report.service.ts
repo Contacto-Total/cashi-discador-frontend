@@ -18,6 +18,15 @@ export interface RegistroEstadoDTO {
   sessionId: string | null;
 }
 
+/**
+ * CONECTADO = todo menos DESCONECTADO
+ * |- PAUSAS  = REFRIGERIO + SSHH
+ * `- JORNADA = CONECTADO - PAUSAS
+ *    |- REUNION = EN_REUNION
+ *    `- (base)  = JORNADA - REUNION
+ *       |- OCIOSO     = DISPONIBLE
+ *       `- PRODUCTIVO = el resto
+ */
 export interface ResumenPorAgente {
   idUsuario: number;
   nombreAgente: string;
@@ -25,14 +34,20 @@ export interface ResumenPorAgente {
   segundosPorEstado: { [estado: string]: number };
   totalSegundosConectado: number;
   totalSegundosProductivo: number;
-  totalSegundosBreak: number;
+  totalSegundosOcioso: number;
+  totalSegundosPausa: number;
+  totalSegundosReunion: number;
+  /** productivo / (jornada - reunion) */
   porcentajeOcupacion: number;
   tiempoConectadoFormateado: string;
   tiempoProductivoFormateado: string;
-  tiempoBreakFormateado: string;
+  tiempoOciosoFormateado: string;
+  tiempoPausaFormateado: string;
+  tiempoReunionFormateado: string;
   horaEntrada: string | null;
   horaSalida: string | null;
   cantidadSesiones: number;
+  /** CONECTADO - PAUSAS (incluye la reunion), no salida - entrada */
   jornadaTotalFormateada: string | null;
   jornadaTotalSegundos: number;
 }
@@ -45,11 +60,85 @@ export interface ResumenEstadoAgentes {
 }
 
 export interface ReporteEstadoAgentesResponse {
-  registros: RegistroEstadoDTO[];
   resumen: ResumenEstadoAgentes;
-  total: number;
-  page: number;
-  size: number;
+}
+
+// ==================== ASISTENCIA ====================
+
+export type EstadoAsistencia = 'PUNTUAL' | 'TARDE' | 'FALTA';
+
+export interface RegistroAsistenciaDTO {
+  fecha: string;
+  idUsuario: number;
+  nombreAgente: string;
+  username: string;
+  idSubcartera: number | null;
+  subcartera: string | null;
+  /** null cuando el agente no se conecto ese dia */
+  horaIngreso: string | null;
+  horaSalida: string | null;
+  estadoAsistencia: EstadoAsistencia;
+  minutosTardanza: number;
+  tardanzaFormateada: string;
+  segundosConectado: number;
+  tiempoConectado: string;
+  segundosJornada: number;
+  jornada: string;
+  desconexiones: number;
+  cambiosEstado: number;
+  /** Hora de la primera gestion tipificada del dia */
+  primeraGestionHora: string | null;
+}
+
+export interface ResumenAsistenciaPorAgente {
+  idUsuario: number;
+  nombreAgente: string;
+  username: string;
+  subcartera: string | null;
+  diasTrabajados: number;
+  diasPuntual: number;
+  diasTarde: number;
+  diasFalta: number;
+  porcentajePuntualidad: number;
+  totalMinutosTardanza: number;
+  tardanzaAcumulada: string;
+  promedioHoraIngreso: string | null;
+}
+
+export interface ResumenAsistencia {
+  totalAgentes: number;
+  totalDias: number;
+  totalRegistros: number;
+  totalPuntual: number;
+  totalTarde: number;
+  totalFalta: number;
+  porcentajePuntualidad: number;
+  totalMinutosTardanza: number;
+  tardanzaAcumulada: string;
+  agentes: ResumenAsistenciaPorAgente[];
+}
+
+export interface ReporteAsistenciaResponse {
+  registros: RegistroAsistenciaDTO[];
+  resumen: ResumenAsistencia;
+}
+
+export interface AgenteOption {
+  id: number;
+  nombre: string;
+  extension: string | null;
+}
+
+export interface FiltrosAsistencia {
+  fechaDesde: string;
+  fechaHasta: string;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
+  idsUsuarios?: number[];
+  horaEntrada: string;
+  toleranciaMin: number;
+  incluirDomingos: boolean;
 }
 
 @Injectable({
@@ -60,20 +149,17 @@ export class EstadoAgentesReportService {
 
   constructor(private http: HttpClient) {}
 
+  /** Solo el resumen por agente. El detalle fila por fila va en el Excel. */
   getReporte(
     fechaDesde: string,
     fechaHasta: string,
     tenantId?: number,
     carteraId?: number,
-    subcarteraId?: number,
-    page: number = 0,
-    size: number = 50
+    subcarteraId?: number
   ): Observable<ReporteEstadoAgentesResponse> {
     let params = new HttpParams()
       .set('fechaDesde', fechaDesde)
-      .set('fechaHasta', fechaHasta)
-      .set('page', page.toString())
-      .set('size', size.toString());
+      .set('fechaHasta', fechaHasta);
 
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());
@@ -101,5 +187,43 @@ export class EstadoAgentesReportService {
       params,
       responseType: 'blob'
     });
+  }
+
+  // ==================== ASISTENCIA ====================
+
+  getAsistencia(filtros: FiltrosAsistencia): Observable<ReporteAsistenciaResponse> {
+    return this.http.get<ReporteAsistenciaResponse>(`${this.baseUrl}/asistencia`, {
+      params: this.buildAsistenciaParams(filtros)
+    });
+  }
+
+  exportarAsistenciaExcel(filtros: FiltrosAsistencia): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/asistencia/excel`, {
+      params: this.buildAsistenciaParams(filtros),
+      responseType: 'blob'
+    });
+  }
+
+  /** Roster de la subcartera para el multiselect. Mismas reglas que aplica el SP. */
+  getAgentesSubcartera(subcarteraId: number): Observable<AgenteOption[]> {
+    return this.http.get<AgenteOption[]>(`${this.baseUrl}/agentes`, {
+      params: new HttpParams().set('subcarteraId', subcarteraId.toString())
+    });
+  }
+
+  private buildAsistenciaParams(f: FiltrosAsistencia): HttpParams {
+    let params = new HttpParams()
+      .set('fechaDesde', f.fechaDesde)
+      .set('fechaHasta', f.fechaHasta)
+      .set('horaEntrada', f.horaEntrada)
+      .set('toleranciaMin', String(f.toleranciaMin ?? 0))
+      .set('incluirDomingos', String(!!f.incluirDomingos));
+
+    if (f.tenantId) params = params.set('tenantId', f.tenantId.toString());
+    if (f.carteraId) params = params.set('carteraId', f.carteraId.toString());
+    if (f.subcarteraId) params = params.set('subcarteraId', f.subcarteraId.toString());
+    if (f.idsUsuarios?.length) params = params.set('idsUsuarios', f.idsUsuarios.join(','));
+
+    return params;
   }
 }

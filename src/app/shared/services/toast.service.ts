@@ -6,6 +6,8 @@ export interface Toast {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
   duration?: number;
+  /** Contador de "re-intentos" para re-disparar el brillo del borde (uso interno del componente). */
+  glowCount?: number;
 }
 
 @Injectable({

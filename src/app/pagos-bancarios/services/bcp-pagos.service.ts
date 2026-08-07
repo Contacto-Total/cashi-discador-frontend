@@ -1,14 +1,22 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  AprobarArchivoBcpRequest,
+  AprobarArchivoBcpResponse,
+  BcpArchivoCargaRequest,
   BcpArchivoResultado,
   BcpPagoManualRequest,
   BcpPagoManualResponse,
   BcpPagoManualFiltros,
   BcpPagoManualListResponse,
-  ResultadoConciliacion
+  ArchivoCargaDetalleItem,
+  ArchivoCargaDetalleRequest,
+  ArchivoCargaHistorialPage,
+  HistorialArchivosCargaRequest,
+  ResumenConciliacionCliente,
+  ResumenConciliacionClienteRequest
 } from '../models/bcp-archivo.model';
 
 @Injectable({
@@ -25,13 +33,51 @@ export class BcpPagosService {
    * @param file Archivo TXT a procesar
    * @returns Resultado con cabecera y detalles de pagos
    */
-  cargarArchivo(file: File): Observable<BcpArchivoResultado> {
+  cargarArchivo(file: File, request: BcpArchivoCargaRequest): Observable<BcpArchivoResultado> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('tenantId', request.tenantId.toString());
+    formData.append('carteraId', request.carteraId.toString());
+    formData.append('subcarteraId', request.subcarteraId.toString());
 
     console.log('[BCP] Cargando archivo:', file.name);
 
     return this.http.post<BcpArchivoResultado>(`${this.baseUrl}/cargar-archivo`, formData);
+  }
+
+  aprobarArchivo(request: AprobarArchivoBcpRequest): Observable<AprobarArchivoBcpResponse> {
+    console.log('[BCP] Aprobando archivo:', request.nombreArchivo);
+    return this.http.post<AprobarArchivoBcpResponse>(`${this.baseUrl}/aprobar-archivo`, request);
+  }
+
+  obtenerResumenConciliacionCliente(documento: string, request: ResumenConciliacionClienteRequest): Observable<ResumenConciliacionCliente> {
+    const params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    return this.http.get<ResumenConciliacionCliente>(`${this.baseUrl}/clientes/${encodeURIComponent(documento)}/resumen-conciliacion`, { params });
+  }
+
+  listarHistorialArchivosCarga(request: HistorialArchivosCargaRequest): Observable<ArchivoCargaHistorialPage> {
+    let params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    if (request.page !== undefined) params = params.set('page', request.page.toString());
+    if (request.size !== undefined) params = params.set('size', request.size.toString());
+
+    return this.http.get<ArchivoCargaHistorialPage>(`${this.baseUrl}/archivos-carga/historial`, { params });
+  }
+
+  obtenerDetalleArchivoCarga(archivoCargaId: number, request: ArchivoCargaDetalleRequest): Observable<ArchivoCargaDetalleItem[]> {
+    const params = new HttpParams()
+      .set('tenantId', request.tenantId.toString())
+      .set('carteraId', request.carteraId.toString())
+      .set('subcarteraId', request.subcarteraId.toString());
+
+    return this.http.get<ArchivoCargaDetalleItem[]>(`${this.baseUrl}/archivos-carga/${archivoCargaId}/detalle`, { params });
   }
 
   /**
@@ -39,9 +85,12 @@ export class BcpPagosService {
    * @param file Archivo Excel a procesar
    * @returns Resultado con detalles de pagos
    */
-  cargarArchivoOh(file: File): Observable<BcpArchivoResultado> {
+  cargarArchivoOh(file: File, request: BcpArchivoCargaRequest): Observable<BcpArchivoResultado> {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('tenantId', request.tenantId.toString());
+    formData.append('carteraId', request.carteraId.toString());
+    formData.append('subcarteraId', request.subcarteraId.toString());
 
     console.log('[OH] Cargando archivo Excel:', file.name);
 
@@ -101,40 +150,6 @@ export class BcpPagosService {
     return this.http.delete<BcpPagoManualResponse>(`${this.baseUrl}/manuales/${id}`);
   }
 
-  // ============== CONFIGURACIÓN DE CONCILIACIÓN ==============
-
-  /**
-   * Obtiene la configuración actual de conciliación
-   */
-  obtenerConfiguracionConciliacion(): Observable<{ toleranciaMonto: number }> {
-    console.log('[BCP] Obteniendo configuración de conciliación');
-    return this.http.get<{ toleranciaMonto: number }>(`${this.baseUrl}/conciliacion/config`);
-  }
-
-  /**
-   * Actualiza la tolerancia de monto para conciliación
-   * @param tolerancia Valor en soles (ej: 1.00 = ±1 sol de tolerancia)
-   */
-  actualizarToleranciaMonto(tolerancia: number): Observable<{ exitoso: boolean; mensaje: string; toleranciaMonto?: number }> {
-    console.log('[BCP] Actualizando tolerancia de monto a:', tolerancia);
-    const params = new HttpParams().set('tolerancia', tolerancia.toString());
-    return this.http.put<{ exitoso: boolean; mensaje: string; toleranciaMonto?: number }>(
-      `${this.baseUrl}/conciliacion/config/tolerancia-monto`,
-      null,
-      { params }
-    );
-  }
-
-  // ============== CONCILIACIÓN MANUAL ==============
-
-  /**
-   * Ejecuta la conciliación completa: pagos pendientes + re-intento de pagos "por fuera"
-   */
-  ejecutarConciliacionCompleta(): Observable<ResultadoConciliacion> {
-    console.log('[BCP] Ejecutando conciliación completa...');
-    return this.http.post<ResultadoConciliacion>(`${this.baseUrl}/conciliar-completo`, null);
-  }
-
   // ============== REPORTES DE CONCILIACIÓN ==============
 
   /**
@@ -142,33 +157,94 @@ export class BcpPagosService {
    * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
    * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
    */
-  descargarReporteConciliacionPorFecha(fechaInicio: string, fechaFin?: string): void {
+  descargarReporteConciliacionPorFecha(
+    fechaInicio: string,
+    tenantId: number,
+    carteraId: number,
+    subcarteraId: number,
+    fechaFin?: string
+  ): Observable<HttpResponse<Blob>> {
+    console.log('[BCP] Descargando reporte de conciliación por fecha:', {
+      fechaInicio,
+      fechaFin,
+      tenantId,
+      carteraId,
+      subcarteraId
+    });
+    return this.descargarArchivoExcelConFiltros('reporte-conciliacion/excel', fechaInicio, tenantId, carteraId, subcarteraId, fechaFin);
+  }
+
+  // /**
+  //  * Descarga el reporte resumido de conciliación en formato Excel por fecha o rango de fechas
+  //  * @param fechaInicio Fecha de inicio (formato YYYY-MM-DD)
+  //  * @param fechaFin Fecha fin opcional (formato YYYY-MM-DD)
+  //  */
+  // descargarReporteConciliacionResumenPorFecha(
+  //   fechaInicio: string,
+  //   tenantId: number,
+  //   carteraId: number,
+  //   subcarteraId: number,
+  //   fechaFin?: string
+  // ): Observable<HttpResponse<Blob>> {
+  //   console.log('[BCP] Descargando reporte resumido de conciliación por fecha:', {
+  //     fechaInicio,
+  //     fechaFin,
+  //     tenantId,
+  //     carteraId,
+  //     subcarteraId
+  //   });
+  //   return this.descargarArchivoExcelConFiltros('reporte-conciliacion-resumen/excel', fechaInicio, tenantId, carteraId, subcarteraId, fechaFin);
+  // }
+
+  /**
+   * Expone el helper de descarga para reutilizar el mismo patrón en la UI
+   */
+  procesarDescargaArchivo(response: HttpResponse<Blob>, nombrePorDefecto: string): void {
+    this.procesarDescargaBlob(response, nombrePorDefecto);
+  }
+
+  private descargarArchivoExcel(endpoint: string, fechaInicio: string, fechaFin?: string): Observable<HttpResponse<Blob>> {
     let params = new HttpParams().set('fechaInicio', fechaInicio);
     if (fechaFin) {
       params = params.set('fechaFin', fechaFin);
     }
 
-    console.log('[BCP] Descargando reporte de conciliación por fecha:', { fechaInicio, fechaFin });
-
-    this.http.get(`${this.baseUrl}/reporte-conciliacion/excel`, {
+    return this.http.get(`${this.baseUrl}/${endpoint}`, {
       params,
       responseType: 'blob',
       observe: 'response'
-    }).subscribe({
-      next: (response) => {
-        const nombreArchivo = fechaFin
-          ? `reporte-conciliacion-${fechaInicio}-a-${fechaFin}.xlsx`
-          : `reporte-conciliacion-${fechaInicio}.xlsx`;
-        this.procesarDescargaBlob(response, nombreArchivo);
-      },
-      error: (error) => console.error('[BCP] Error descargando reporte:', error)
+    });
+  }
+
+  private descargarArchivoExcelConFiltros(
+    endpoint: string,
+    fechaInicio: string,
+    tenantId: number,
+    carteraId: number,
+    subcarteraId: number,
+    fechaFin?: string
+  ): Observable<HttpResponse<Blob>> {
+    let params = new HttpParams()
+      .set('fechaInicio', fechaInicio)
+      .set('tenantId', tenantId.toString())
+      .set('carteraId', carteraId.toString())
+      .set('subcarteraId', subcarteraId.toString());
+
+    if (fechaFin) {
+      params = params.set('fechaFin', fechaFin);
+    }
+
+    return this.http.get(`${this.baseUrl}/${endpoint}`, {
+      params,
+      responseType: 'blob',
+      observe: 'response'
     });
   }
 
   /**
    * Procesa la descarga de un archivo blob
    */
-  private procesarDescargaBlob(response: any, nombrePorDefecto: string): void {
+  private procesarDescargaBlob(response: HttpResponse<Blob>, nombrePorDefecto: string): void {
     const blob = response.body;
     if (!blob) {
       console.error('[BCP] No se recibió el archivo');

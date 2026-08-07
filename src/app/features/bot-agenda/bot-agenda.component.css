@@ -1,0 +1,327 @@
+/* Container */
+.bot-agenda { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+
+/* Header */
+.page-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;
+}
+.header-content { display: flex; align-items: center; gap: 1rem; }
+.header-icon {
+  width: 48px; height: 48px; border-radius: 12px; color: white;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex; align-items: center; justify-content: center;
+}
+.header-content h1 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary, #1e293b); margin: 0; }
+.header-content p { font-size: 0.875rem; color: var(--text-secondary, #64748b); margin: 0.25rem 0 0 0; }
+
+.estado-bot { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text-secondary, #64748b); font-size: 0.875rem; }
+.estado-bot .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
+.estado-bot .dot.on { background: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
+
+.flash {
+  background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #16a34a; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem;
+}
+
+/* Aviso de por que "Iniciar" esta bloqueado: cambios sin guardar o cola vacia.
+   Mismo formato que .flash pero en ambar, porque no es un exito ni un error. */
+.aviso-no-guardado {
+  display: flex; align-items: center; gap: 0.5rem;
+  background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #b45309; padding: 0.75rem 1rem; border-radius: 8px;
+  margin-bottom: 1rem; font-size: 0.875rem;
+}
+.aviso-no-guardado .btn-link {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: #b45309; font-weight: 600; font-size: 0.875rem; text-decoration: underline;
+}
+.btn-primary.pendiente {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  animation: pulso-pendiente 2s ease-in-out infinite;
+}
+@keyframes pulso-pendiente {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+}
+
+/* Tabs */
+.tabs-container {
+  display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color, #e2e8f0);
+}
+.tab-btn {
+  display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem;
+  border: none; background: none; font-size: 0.875rem; font-weight: 500;
+  color: var(--text-secondary, #64748b); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;
+}
+.tab-btn:hover { color: var(--text-primary, #1e293b); background: var(--bg-secondary, #f8fafc); border-radius: 8px 8px 0 0; }
+.tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; font-weight: 600; }
+
+/* Cards */
+.control-card, .form-card, .perfil-card {
+  background: var(--card-bg, white); border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
+}
+.control-card { display: flex; justify-content: space-between; align-items: center; }
+.control-card h3, .perfil-head h3 { margin: 0 0 0.25rem; color: var(--text-primary, #1e293b); font-size: 1rem; font-weight: 600; }
+.muted { color: var(--text-secondary, #64748b); font-size: 0.8rem; }
+.control-buttons { display: flex; gap: 0.75rem; }
+
+/* Buttons */
+.btn-primary, .btn-secondary, .btn-danger {
+  display: inline-flex; align-items: center; gap: 0.5rem; height: 40px; padding: 0 1.25rem;
+  border-radius: 8px; font-size: 0.875rem; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s;
+}
+.btn-primary { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35); }
+.btn-secondary { background: var(--bg-secondary, #f1f5f9); color: var(--text-primary, #1e293b); border: 1px solid var(--border-color, #e2e8f0); }
+.btn-secondary:hover { background: var(--bg-hover, #e2e8f0); }
+.btn-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; }
+.btn-danger:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35); }
+.btn-primary:disabled, .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.form-group { display: flex; flex-direction: column; gap: 0.375rem; }
+.form-group.full { margin-bottom: 1.25rem; }
+.form-group label { font-size: 0.75rem; font-weight: 500; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: 0.05em; }
+.form-group input, .form-group select, .form-group textarea {
+  min-height: 40px; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px; background: var(--input-bg, white); color: var(--text-primary, #1e293b);
+  font-size: 0.875rem; font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+.form-group input:disabled, .form-group select:disabled { opacity: 0.5; cursor: not-allowed; }
+.checkbox-group { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-primary, #1e293b); }
+
+.perfil-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+
+/* Cola */
+.cola-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
+.chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.chip { background: var(--bg-secondary, #f1f5f9); color: var(--text-secondary, #64748b); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.8rem; }
+.chip.pend { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
+.chip.done { background: rgba(34, 197, 94, 0.1); color: #047857; }
+.chip.disc { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+
+/* Table */
+.table-card { background: var(--card-bg, white); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; overflow: hidden; }
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; padding: 0.75rem 1rem; font-size: 0.75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary, #64748b);
+  background: var(--bg-secondary, #f8fafc); border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+td { padding: 0.75rem 1rem; font-size: 0.875rem; color: var(--text-primary, #1e293b); border-bottom: 1px solid var(--border-color, #e2e8f0); }
+tbody tr:hover { background: var(--bg-hover, #f8fafc); }
+
+.badge { padding: 0.125rem 0.5rem; border-radius: 6px; font-size: 0.78rem; background: var(--bg-secondary, #f1f5f9); color: var(--text-secondary, #64748b); }
+.badge.pendiente { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
+.badge.completada { background: rgba(34, 197, 94, 0.1); color: #047857; }
+.badge.descartada { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.badge.en_llamada { background: rgba(234, 179, 8, 0.12); color: #a16207; }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  padding: 3rem 1.5rem; text-align: center; color: var(--text-secondary, #64748b);
+}
+.empty-state strong { font-size: 1rem; color: var(--text-primary, #0f172a); }
+.empty-state p { margin: 0; font-size: 0.85rem; max-width: 42ch; }
+
+/* El error se enmarca; el vacio no. Un recuadro rojo dice "algo pasa aqui",
+   y "no hay nada agendado" no es algo que pase. */
+.empty-state.error {
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.04);
+  border-radius: 10px;
+  margin: 1rem 0;
+}
+.empty-state.error strong { color: #b91c1c; }
+.empty-state.error .aclaracion { color: #7f1d1d; opacity: 0.85; }
+.empty-state.error button { margin-top: 0.5rem; }
+
+.paginador {
+  display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;
+  padding: 0.6rem 1rem; font-size: 0.8rem; color: var(--text-secondary, #64748b);
+  border-top: 1px solid var(--border-color, #e2e8f0);
+}
+.paginador .btn-link {
+  display: inline-flex; align-items: center; color: var(--text-secondary, #64748b);
+  padding: 0.2rem; border-radius: 6px;
+}
+.paginador .btn-link:hover:not(:disabled) { color: #3b82f6; background: rgba(59, 130, 246, 0.08); }
+.paginador .btn-link:disabled { opacity: 0.35; cursor: not-allowed; }
+.descartes { margin-top: 1rem; }
+.descartes h4 { color: var(--text-secondary, #64748b); margin: 0 0 0.5rem; font-size: 0.9rem; }
+
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* Dark mode */
+:host-context(body.dark-theme) {
+  --card-bg: #1e293b;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+  --bg-secondary: #0f172a;
+  --bg-hover: #334155;
+  --input-bg: #0f172a;
+}
+
+@media (max-width: 768px) {
+  .bot-agenda { padding: 1rem; }
+  .page-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .control-card { flex-direction: column; gap: 1rem; align-items: flex-start; }
+}
+
+/* Celdas de dos lineas: el dato que se lee arriba, el identificador abajo.
+   Antes las tablas mostraban id_cliente e id_cuota, que obligaban a ir a la
+   base para saber a quien se llamo. */
+.celda-principal { font-weight: 600; }
+.celda-sub { font-size: 0.75rem; color: var(--text-muted, #64748b); }
+
+.fila-clicable { cursor: pointer; }
+.fila-clicable:hover { background: rgba(59, 130, 246, 0.06); }
+
+/* Reset base: .btn-link se usa tambien fuera del aviso ambar. */
+.btn-link { background: none; border: none; cursor: pointer; font: inherit; padding: 0; }
+
+/* Selector de dias. Antes era un campo de texto libre y un error de tipeo
+   ("L-V") dejaba dias sin marcar sin ningun aviso. */
+.form-group.full-span { grid-column: 1 / -1; }
+.selector-dias { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.dias-botones { display: flex; gap: 0.375rem; }
+.dia {
+  width: 38px; height: 38px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border-color, #e2e8f0); background: var(--input-bg, #fff);
+  color: var(--text-secondary, #64748b); font-size: 0.875rem; font-weight: 600;
+  transition: all 0.15s;
+}
+.dia:hover { border-color: #3b82f6; color: #3b82f6; }
+.dia.on {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border-color: transparent; color: #fff;
+}
+.dias-presets { display: flex; gap: 0.375rem; margin-left: auto; }
+.preset {
+  padding: 0.3rem 0.7rem; border-radius: 999px; cursor: pointer; font-size: 0.75rem;
+  border: 1px solid var(--border-color, #e2e8f0); background: var(--bg-secondary, #f1f5f9);
+  color: var(--text-secondary, #64748b);
+}
+.preset:hover { border-color: #3b82f6; color: #3b82f6; }
+.preset.on { background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
+.resumen-dias { margin: 0.5rem 0 0; }
+.resumen-dias.alerta { color: #b45309; font-weight: 600; }
+
+.rango-horas { display: flex; align-items: center; gap: 0.5rem; }
+.rango-horas select {
+  min-height: 40px; padding: 0.5rem 0.6rem; width: 6rem; cursor: pointer; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px; background: var(--input-bg, #fff); color: var(--text-primary, #1e293b);
+  font-size: 0.875rem; font-family: inherit;
+}
+.rango-horas select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+.rango-horas select.invalido { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
+
+.punto-sin-guardar {
+  width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+.progreso-cola { font-size: 0.8rem; font-weight: 600; color: var(--text-primary, #1e293b); margin: 0.35rem 0 0; }
+.control-buttons { align-items: center; }
+
+/* Detalle de una llamada: panel lateral con la transcripcion. */
+.detalle-overlay {
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
+  display: flex; justify-content: flex-end; z-index: 1000;
+}
+.detalle-panel {
+  width: min(560px, 100%); height: 100%; overflow-y: auto;
+  background: var(--card-bg, #fff); padding: 1.5rem;
+  box-shadow: -4px 0 24px rgba(15, 23, 42, 0.18);
+}
+.detalle-head { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
+.detalle-head h3 { margin: 0 0 0.25rem; }
+.detalle-head .btn-link { margin-left: auto; color: inherit; text-decoration: none; }
+
+.detalle-datos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem; margin-bottom: 1.5rem;
+  padding: 1rem; border-radius: 8px; background: rgba(100, 116, 139, 0.07);
+}
+.detalle-datos > div { display: flex; flex-direction: column; gap: 0.15rem; }
+.detalle-datos .muted { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+.detalle-cargando { padding: 1rem 0; color: var(--text-muted, #64748b); font-size: 0.875rem; }
+
+.transcripcion { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.transcripcion li { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.6rem 0.85rem; border-radius: 10px; }
+.transcripcion .quien { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.transcripcion .dicho { font-size: 0.9rem; line-height: 1.45; }
+.transcripcion .de-bot   { background: rgba(59, 130, 246, 0.1); }
+.transcripcion .de-bot .quien   { color: #1d4ed8; }
+.transcripcion .de-cliente { background: rgba(100, 116, 139, 0.1); }
+.transcripcion .de-cliente .quien { color: #475569; }
+
+@media (max-width: 768px) {
+  .detalle-panel { width: 100%; padding: 1rem; }
+  .detalle-datos { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ----- propio de la agenda ----- */
+.header-acciones { display: flex; align-items: center; gap: 0.75rem; }
+.header-acciones input[type="date"] {
+  min-height: 40px; padding: 0.5rem 0.75rem; border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px; background: var(--input-bg, #fff); color: var(--text-primary, #1e293b);
+  font-size: 0.875rem; font-family: inherit;
+}
+.titulo-seccion {
+  font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--text-secondary, #64748b); margin: 1.5rem 0 0.75rem;
+}
+
+/* Tarjeta por llamada proxima: se lee de un vistazo, sin entrar al detalle. */
+.tarjeta {
+  display: grid; grid-template-columns: 6.5rem 1fr 10rem auto 20px;
+  align-items: center; gap: 1rem; cursor: pointer;
+  background: var(--card-bg, #fff); border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 0.6rem; transition: all 0.15s;
+}
+.tarjeta:hover { border-color: #3b82f6; box-shadow: 0 2px 10px rgba(59, 130, 246, 0.12); }
+.tarjeta .hora { display: flex; flex-direction: column; }
+.tarjeta .hora strong { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.tarjeta .hora .muted { font-size: 0.75rem; }
+
+/* La que toca ya: tiene que saltar a la vista entre las demas. */
+.tarjeta.inminente {
+  border-color: #f59e0b; background: rgba(245, 158, 11, 0.06);
+  animation: pulso-agenda 2s ease-in-out infinite;
+}
+.tarjeta.inminente .hora strong { color: #b45309; }
+@keyframes pulso-agenda {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.35); }
+  50%      { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0); }
+}
+
+.badge.pendiente   { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
+.badge.asignada    { background: rgba(234, 179, 8, 0.12); color: #a16207; }
+.badge.atendida    { background: rgba(34, 197, 94, 0.1); color: #047857; }
+.badge.no_contesta { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.badge.sin_asesor  { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+.badge.cancelada   { background: var(--bg-secondary, #f1f5f9); color: #64748b; }
+
+.resumen {
+  font-size: 0.875rem; line-height: 1.5; padding: 0.85rem;
+  background: rgba(100, 116, 139, 0.07); border-radius: 10px; margin: 0 0 1rem;
+}
+
+@media (max-width: 768px) {
+  .tarjeta { grid-template-columns: 1fr; gap: 0.4rem; }
+  .page-header .header-acciones { width: 100%; }
+}

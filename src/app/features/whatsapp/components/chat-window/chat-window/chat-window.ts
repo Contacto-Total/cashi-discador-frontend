@@ -1,4 +1,7 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked, HostListener, NgZone, ChangeDetectionStrategy, ChangeDetectorRef, SecurityContext, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { FormatService } from '@/shared/services/format.service';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -33,6 +36,8 @@ import { PickerComponent } from '@ctrl/ngx-emoji-mart';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
+  private fmt = inject(FormatService);
+
   @ViewChild('messagesContainer') messagesContainer!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
 
@@ -46,6 +51,17 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
   // Reply state
   replyingTo: Message | null = null;
+
+  // Paginación
+  hasMoreMessages = false;
+  loadingMore = false;
+
+  // Agentes que están viendo este chat (IDs; sin resolver nombres por ahora)
+  viewers: string[] = [];
+  private viewersSub?: Subscription;
+  private viewerHeartbeat?: any;
+  private joinedConversationId: number | null = null;
+  private readonly VIEWER_HEARTBEAT_MS = 45000;
 
   // Emoji picker state
   showEmojiPicker = false;
@@ -99,12 +115,15 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   private recordingTimer: any = null;
   private audioStream: MediaStream | null = null;
 
+  showContactInfo = false;
+
   constructor(
     private messageService: MessageService,
     private apiService: ApiService,
     private snackBar: MatSnackBar,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer
   ) {}
 
   // Formatear nombre del chat
@@ -140,23 +159,45 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  loadMoreMessages(): void {
+    this.messageService.loadMoreMessages();
+  }
+
   ngOnInit(): void {
+    this.messageService.hasMore$.subscribe(v => { this.hasMoreMessages = v; this.cdr.markForCheck(); });
+    this.messageService.loadingMore$.subscribe(v => { this.loadingMore = v; this.cdr.markForCheck(); });
+
     this.messageService.currentChat$.subscribe(chat => {
       this.currentChat = chat;
+
+      // Soltar el chat anterior antes de registrarse en el nuevo
+      this.releaseViewer();
+      this.viewers = [];
 
       // Verificar estado de ventana cuando cambia el chat
       if (chat) {
         this.messagesLoading = true; // Mostrar loading al cambiar de chat
         this.checkWindowStatus();
         this.startWindowCheck();
+        this.registerViewer(chat);
       } else {
         this.stopWindowCheck();
       }
     });
 
+    // Quién más está viendo el chat abierto
+    this.viewersSub = this.messageService.viewers$.subscribe(map => {
+      const conversationId = this.currentChat?.id;
+      if (conversationId == null) return;
+      this.viewers = map.get(conversationId) || [];
+      this.cdr.markForCheck();
+    });
+
     this.messageService.currentMessages$.subscribe(messages => {
-      console.log('📬 Mensajes recibidos:', messages);
+      console.log('📬 Mensajes recibidos:', messages.length);
       const previousLength = this.messages.length;
+      // Con la emisión previa de [] en loadMessages, previousLength siempre
+      // será 0 al recibir la primera carga de un chat.
       const isNewChatLoad = previousLength === 0 && messages.length > 0;
 
       this.messages = messages;
@@ -165,18 +206,26 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
 
       this.checkIfNewChat();
 
-      // Mostrar loading solo al cambiar de chat
+      // OnPush: toda emisión (incluidos los RECEIPT que solo cambian el estado
+      // de un mensaje sin variar el largo del array) debe forzar repintado. Sin
+      // esto las palomitas no se actualizaban hasta cambiar de chat y volver.
+      this.cdr.markForCheck();
+
       if (isNewChatLoad) {
+        // Primera carga con mensajes: mostrar spinner brevemente y luego revelar
         this.messagesLoading = true;
         this.shouldScroll = true;
 
-        // Esperar a que el DOM esté listo
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             this.messagesLoading = false;
-            this.cdr.markForCheck(); // Marcar para detección de cambios con OnPush
+            this.cdr.markForCheck();
           });
         });
+      } else if (messages.length === 0) {
+        // API devolvió vacío (chat sin mensajes o aún cargando HistorySync)
+        this.messagesLoading = false;
+        this.cdr.markForCheck();
       }
 
       // Si llegó un mensaje nuevo del cliente, verificar estado de ventana
@@ -237,6 +286,46 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
     this.stopWindowCheck();
     this.stopCountdown();
     this.cleanupRecording();
+    this.releaseViewer();
+    this.viewersSub?.unsubscribe();
+  }
+
+  // ===== Quién está viendo el chat =====
+
+  /**
+   * Marca al agente actual como viewer del chat abierto. El heartbeat mantiene
+   * viva la marca: en el backend caduca sola, así que cerrar la pestaña (que
+   * nunca manda el DELETE) no deja un viewer fantasma.
+   */
+  private registerViewer(chat: Chat): void {
+    const conversationId = chat.id;
+    if (conversationId == null) return;   // chat nuevo: aún no existe en BD
+
+    this.joinedConversationId = conversationId;
+
+    const join = () => this.apiService.joinViewers(conversationId).subscribe({
+      next: (res) => this.messageService.setViewers(conversationId, res.viewers || []),
+      error: () => {}   // sin agente identificado el backend responde 400: no rompe el chat
+    });
+
+    join();
+    this.viewerHeartbeat = setInterval(join, this.VIEWER_HEARTBEAT_MS);
+  }
+
+  private releaseViewer(): void {
+    if (this.viewerHeartbeat) {
+      clearInterval(this.viewerHeartbeat);
+      this.viewerHeartbeat = undefined;
+    }
+    if (this.joinedConversationId == null) return;
+
+    this.apiService.leaveViewers(this.joinedConversationId).subscribe({ error: () => {} });
+    this.joinedConversationId = null;
+  }
+
+  /** "Viendo: 49, 51" — IDs por ahora; TODO: resolver nombre del agente. */
+  getViewersLabel(): string {
+    return this.viewers.length > 0 ? `Viendo: ${this.viewers.join(', ')}` : '';
   }
 
   // Verificar estado de ventana de respuesta
@@ -397,6 +486,9 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   cancelReply(): void {
     this.replyingTo = null;
   }
+
+  // Reaccionar, editar y eliminar mensajes, y la presencia/"escribiendo…", no
+  // existen en Spring v2: se quitaron de la UI en vez de seguir llamando al Go.
 
   // Emoji picker methods
   toggleEmojiPicker(event: Event): void {
@@ -704,10 +796,138 @@ export class ChatWindow implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   formatTime(timestamp: number): string {
-    return new Date(timestamp).toLocaleTimeString('es-PE', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    if (!timestamp) return '';
+    return this.fmt.time(timestamp, false);
+  }
+
+  // Retorna true cuando hay que mostrar un separador de fecha DESPUÉS del
+  // mensaje en el DOM (= ENCIMA visualmente con flex-direction: column-reverse).
+  // Se muestra cuando el mensaje siguiente (más antiguo) es de otro día,
+  // o cuando es el mensaje más antiguo del chat.
+  isDayBoundary(index: number): boolean {
+    if (index >= this.reversedMessages.length - 1) return true;
+    const newer  = this.reversedMessages[index];
+    const older  = this.reversedMessages[index + 1];
+    return !this.isSameDay(newer.timestamp, older.timestamp);
+  }
+
+  private isSameDay(ts1: number, ts2: number): boolean {
+    if (!ts1 || !ts2) return false;
+    const d1 = new Date(ts1);
+    const d2 = new Date(ts2);
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth()    === d2.getMonth()    &&
+           d1.getDate()     === d2.getDate();
+  }
+
+  getDayLabel(timestamp: number): string {
+    if (!timestamp) return '';
+    const date   = new Date(timestamp);
+    const now    = new Date();
+    const today  = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const yesterday = today - 86_400_000;
+    const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+    if (msgDay === today)     return 'Hoy';
+    if (msgDay === yesterday) return 'Ayer';
+
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'long' };
+    if (date.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+    return this.fmt.date(date, opts);
+  }
+
+  get isGroupChat(): boolean {
+    return this.currentChat?.isGroup ?? false;
+  }
+
+  // Paleta de colores WhatsApp para participantes de grupo
+  private readonly GROUP_COLORS = [
+    '#e17055', '#00b894', '#0984e3', '#6c5ce7',
+    '#fdcb6e', '#e84393', '#00cec9', '#55efc4',
+    '#a29bfe', '#fd79a8'
+  ];
+
+  getSenderColor(sender?: string): string {
+    if (!sender) return this.GROUP_COLORS[0];
+    let hash = 0;
+    for (let i = 0; i < sender.length; i++) {
+      hash = (hash * 31 + sender.charCodeAt(i)) & 0xffffffff;
+    }
+    return this.GROUP_COLORS[Math.abs(hash) % this.GROUP_COLORS.length];
+  }
+
+  getSenderDisplayName(message: Message): string {
+    if (message.senderName) return message.senderName;
+    if (message.sender) {
+      const num = message.sender.replace('@s.whatsapp.net', '').replace('@lid', '');
+      return '+' + num;
+    }
+    return 'Desconocido';
+  }
+
+  toggleContactInfo(): void {
+    this.showContactInfo = !this.showContactInfo;
+  }
+
+  // ---- Emoji-only detection ----
+  isEmojiOnly(text: string): boolean {
+    if (!text || text.length > 24) return false;
+    // Stripa todo lo que no sea emoji+whitespace; si queda algo, no es solo emojis
+    const stripped = text.replace(/[\p{Emoji}\p{Emoji_Modifier}\p{Emoji_Modifier_Base}\p{Emoji_Component}\s]/gu, '');
+    const hasEmoji = /\p{Emoji}/u.test(text.trim());
+    return hasEmoji && stripped.length === 0;
+  }
+
+  // ---- WhatsApp text formatting ----
+  getFormattedText(text: string): SafeHtml {
+    if (!text) return '';
+    // Escape HTML entities first
+    let t = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    // ```code```
+    t = t.replace(/```([\s\S]*?)```/g, '<code>$1</code>');
+    // *bold*
+    t = t.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+    // _italic_
+    t = t.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+    // ~strikethrough~
+    t = t.replace(/~([^~\n]+)~/g, '<del>$1</del>');
+    // Line breaks
+    t = t.replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(t);
+  }
+
+  hasFormatting(text: string): boolean {
+    return /\*[^*]+\*|_[^_]+_|~[^~]+~|```[\s\S]*?```/.test(text);
+  }
+
+  // ---- Document helpers ----
+  isDocumentMedia(mime?: string): boolean {
+    if (!mime) return false;
+    return !mime.startsWith('image/') && !mime.startsWith('video/') && !mime.startsWith('audio/');
+  }
+
+  isStickerMedia(mime?: string): boolean {
+    return mime === 'image/webp';
+  }
+
+  getDocumentIcon(mime?: string): string {
+    if (!mime) return 'file';
+    if (mime.includes('pdf')) return 'file-text';
+    if (mime.includes('word') || mime.includes('document')) return 'file-text';
+    if (mime.includes('excel') || mime.includes('sheet') || mime.includes('csv')) return 'file-spreadsheet';
+    if (mime.includes('zip') || mime.includes('rar') || mime.includes('compressed')) return 'archive';
+    if (mime.includes('image')) return 'image';
+    return 'file';
+  }
+
+  formatBytes(bytes?: number): string {
+    if (!bytes || bytes === 0) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   getMessageStatusIcon(status?: string): string {

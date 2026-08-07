@@ -1,4 +1,15 @@
 <div class="supervision-page">
+  <!-- Aviso de llamada finalizada (agente o cliente colgó) -->
+  @if (callEnded) {
+    <div style="position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px);">
+      <div style="text-align: center; color: #fff; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid #ef4444; border-radius: 16px; padding: 40px 48px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); animation: fadeIn 0.3s ease;">
+        <lucide-angular name="phone-off" [size]="48" style="color: #ef4444;"></lucide-angular>
+        <h2 style="margin: 16px 0 8px; font-size: 22px;">Llamada finalizada</h2>
+        <p style="color: #94a3b8; margin: 0;">La llamada que supervisabas terminó.<br>Regresando al monitoreo…</p>
+      </div>
+    </div>
+  }
+
   <!-- Header con navegación -->
   <div class="page-header">
     <button class="back-btn" (click)="goBack()">

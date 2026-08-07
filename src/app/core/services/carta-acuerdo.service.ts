@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface VerificarPromesaResponse {
@@ -34,12 +34,17 @@ export interface CartaPendiente {
 export interface CartasPendientesResponse {
   success: boolean;
   total: number;
+  page: number;
+  size: number;
+  totalPages: number;
   data: CartaPendiente[];
 }
 
 @Injectable({
   providedIn: 'root'
 })
+// IMPORTANTE: este servicio tambien es reutilizado por el modulo WhatsApp.
+// Si cambia la generacion del PDF, sus validaciones o el contrato, actualizar WhatsApp.
 export class CartaAcuerdoService {
   private apiUrl = `${environment.apiUrl}/cartas`;
 
@@ -73,6 +78,17 @@ export class CartaAcuerdoService {
   }
 
   /**
+   * Verifica si una subcartera tiene plantilla de carta asignada.
+   * Usa el listado de asignaciones porque GET /asignacion/{id} responde 500
+   * (bug del backend: Map.of con data null en la rama sin asignación).
+   */
+  tienePlantillaSubcartera(idSubcartera: number): Observable<boolean> {
+    return this.http.get<{ success: boolean, data: any[] }>(`${environment.apiUrl}/plantillas-carta/asignaciones`).pipe(
+      map(resp => (resp?.data || []).some(a => Number(a.idSubcartera) === Number(idSubcartera)))
+    );
+  }
+
+  /**
    * Descarga el PDF generado
    */
   descargarPdf(blob: Blob, nombreArchivo: string): void {
@@ -88,13 +104,21 @@ export class CartaAcuerdoService {
    * Obtiene la lista de cartas de acuerdo pendientes por generar
    */
   obtenerCartasPendientes(filtros?: {
+    page?: number;
+    size?: number;
+    sort?: string;
     tenantId?: number;
+    subPortfolioId?: number;
     agenteId?: number;
     fechaInicio?: string;
     fechaFin?: string;
   }): Observable<CartasPendientesResponse> {
     let params: any = {};
+    if (filtros?.page !== undefined) params.page = filtros.page;
+    if (filtros?.size !== undefined) params.size = filtros.size;
+    if (filtros?.sort) params.sort = filtros.sort;
     if (filtros?.tenantId) params.tenantId = filtros.tenantId;
+    if (filtros?.subPortfolioId) params.subPortfolioId = filtros.subPortfolioId;
     if (filtros?.agenteId) params.agenteId = filtros.agenteId;
     if (filtros?.fechaInicio) params.fechaInicio = filtros.fechaInicio;
     if (filtros?.fechaFin) params.fechaFin = filtros.fechaFin;

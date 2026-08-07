@@ -23,6 +23,7 @@ export interface AutoDialerEstadisticas {
   llamadasMarcando: number;
   llamadasNoContestadas: number;
   llamadasAbandonadas: number;
+  llamadasNoCompletadas: number;
   llamadasFallidas: number;
   llamadasConectadasConAsesor: number;
   llamadasFinalizadasSinAsesor: number;
@@ -30,7 +31,14 @@ export interface AutoDialerEstadisticas {
   duracionPromedioFormato: string;
   duracionMaximaSegundos: number;
   duracionMaximaFormato: string;
+
+  // Nuevas metricas del SP
+  contactabilidadOperativa: number;
+  opGestionados: number;
+  opTasaGestion: number;
+
   // Métricas de vueltas (rondas de discado)
+  baseTotal?: number;
   vueltaActual?: number;
   llamadosEnVuelta?: number;
   pendientesEnVuelta?: number;

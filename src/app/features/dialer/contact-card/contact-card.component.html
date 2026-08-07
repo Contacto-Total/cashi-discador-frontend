@@ -48,7 +48,7 @@
         </div>
         <div class="history-item" *ngIf="contact.lastCallDate">
           <lucide-angular name="calendar" class="icon"></lucide-angular>
-          <span>Last call: {{ contact.lastCallDate | date:'short' }}</span>
+          <span>Last call: {{ contact.lastCallDate | appDateTime }}</span>
         </div>
         <div class="history-item" *ngIf="contact.status">
           <lucide-angular name="info" class="icon"></lucide-angular>

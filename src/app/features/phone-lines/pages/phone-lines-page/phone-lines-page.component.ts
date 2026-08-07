@@ -5,11 +5,12 @@ import { LucideAngularModule } from 'lucide-angular';
 import { PhoneLineService, BatchProcessResponse, WhatsAppConnectionStatus } from '../../services/phone-line.service';
 import { PhoneLineResponse } from '../../models/phone-line.response';
 import { interval, Subscription } from 'rxjs';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-phone-lines-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppDateTimePipe],
   templateUrl: './phone-lines-page.component.html',
   styleUrl: './phone-lines-page.component.css'
 })

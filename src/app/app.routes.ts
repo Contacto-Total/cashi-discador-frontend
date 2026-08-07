@@ -2,17 +2,18 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
 import { adminOrSupervisorGuard } from './core/guards/admin-or-supervisor.guard';
+import { gestionPendienteGuard } from './core/guards/gestion-pendiente.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login/login.component').then(m => m.LoginComponent)
   },
-  {
-    path: 'dialer',
-    loadComponent: () => import('./features/dialer/dialer-main/dialer-main.component').then(m => m.DialerMainComponent),
-    canActivate: [authGuard]
-  },
+//  {
+//    path: 'dialer',
+//    loadComponent: () => import('./features/dialer/dialer-main/dialer-main.component').then(m => m.DialerMainComponent),
+//    canActivate: [authGuard]
+//  },
   {
     path: 'admin/monitoring',
     loadComponent: () => import('./features/admin/admin-monitoring/admin-monitoring.component').then(m => m.AdminMonitoringComponent),
@@ -31,6 +32,11 @@ export const routes: Routes = [
   {
     path: 'admin/campaigns/generation',
     loadComponent: () => import('./features/legacy/campaign/pages/campaign-page/campaign-page.component').then(m => m.CampaignPageComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
+    path: 'admin/campaigns/grupos',
+    loadComponent: () => import('./features/admin/grupos-campana/grupos-campana.component').then(m => m.GruposCampanaComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
@@ -185,6 +191,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-page/no-debt-letter-page.component').then(m => m.NoDebtLetterPageComponent),
     canActivate: [authGuard]
   },
+  {
+    path: 'cartas/no-adeudo/nueva-version',
+    loadComponent: () => import('./features/legacy/agreements/pages/no-debt-letter-validated-page/no-debt-letter-validated-page.component').then(m => m.NoDebtLetterValidatedPageComponent),
+    canActivate: [authGuard]
+  },
 
   {
     path: 'admin/extensions',
@@ -192,8 +203,26 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'whatsapp/dashboard',
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-dashboard/whatsapp-dashboard.component').then(m => m.WhatsappDashboardComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'whatsapp/history',
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-history/whatsapp-history.component').then(m => m.WhatsappHistoryComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    // /whatsapp ahora sirve la page nueva (app/whatsapp). El módulo viejo
+    // (features/whatsapp/.../main.component) queda huérfano a propósito.
     path: 'whatsapp',
-    loadComponent: () => import('./features/whatsapp/components/main/main.component').then(m => m.MainComponent),
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-page/whatsapp-page.component').then(m => m.WhatsappPageComponent),
+    canActivate: [authGuard]
+  },
+  {
+    // Alias que ya usa el popup de notificaciones; apunta a la misma page nueva.
+    path: 'wsp2',
+    loadComponent: () => import('./whatsapp/componentes/pages/whatsapp-page/whatsapp-page.component').then(m => m.WhatsappPageComponent),
     canActivate: [authGuard]
   },
   {
@@ -204,7 +233,8 @@ export const routes: Routes = [
   {
     path: 'collection-management',
     loadComponent: () => import('./collection-management/pages/collection-management.page').then(m => m.CollectionManagementPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard],
+    canDeactivate: [gestionPendienteGuard]
   },
   {
     path: 'seguimiento',
@@ -228,6 +258,11 @@ export const routes: Routes = [
   {
     path: 'admin/data-load/daily',
     loadComponent: () => import('./data-load/components/daily-load/daily-load.component').then(m => m.DailyLoadComponent),
+    canActivate: [authGuard, adminGuard]
+  },
+  {
+    path: 'admin/data-load/phones',
+    loadComponent: () => import('./data-load/components/phone-load/phone-load.component').then(m => m.PhoneLoadComponent),
     canActivate: [authGuard, adminGuard]
   },
 
@@ -313,6 +348,21 @@ export const routes: Routes = [
     loadComponent: () => import('./pagos-bancarios/pages/pagos-bancarios.page').then(m => m.PagosBancariosPage),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'correccion-pagos',
+    loadComponent: () => import('./pagos-bancarios/pages/correccion-pagos/correccion-pagos.page').then(m => m.CorreccionPagosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
+    path: 'reportes-pagos-bancarios',
+    loadComponent: () => import('./pagos-bancarios/pages/reportes-pagos-bancarios/reportes-pagos-bancarios.page').then(m => m.ReportesPagosBancariosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
+    path: 'conciliaciones-pagos-manage',
+    loadComponent: () => import('./pagos-bancarios/pages/conciliaciones-pagos/conciliaciones-pagos.page').then(m => m.ConciliacionesPagosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // COMISIONES
@@ -353,6 +403,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/admin/admin-recordings/admin-recordings.component').then(m => m.AdminRecordingsComponent),
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
+  {
+    path: 'admin/amd-test',
+    loadComponent: () => import('./features/admin/amd-test/amd-test.component').then(m => m.AmdTestComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
 
   // ========================================
   // GESTIÓN MANUAL (Tipificación sin llamada)
@@ -391,6 +446,15 @@ export const routes: Routes = [
   },
 
   // ========================================
+  // PLANTILLAS DE REPORTE SPEECH
+  // ========================================
+  {
+    path: 'plantillas-speech',
+    loadComponent: () => import('./features/plantillas-speech/plantillas-speech.component').then(m => m.PlantillasSpeechComponent),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+
+  // ========================================
   // CONVENIOS
   // ========================================
   {
@@ -406,6 +470,21 @@ export const routes: Routes = [
     path: 'settings',
     loadComponent: () => import('./features/settings/settings.component').then(m => m.SettingsComponent),
     canActivate: [authGuard]
+  },
+
+  {
+    path: 'bot-agenda',
+    loadComponent: () => import('./features/bot-agenda/bot-agenda.component').then(m => m.BotAgendaComponent),
+    // sin adminGuard a proposito: el asesor tiene que ver SUS llamadas agendadas.
+    // El filtrado lo hace el backend (/mias resuelve por el usuario del token).
+    canActivate: [authGuard]
+  },
+
+  {
+    path: 'bot-voz',
+    loadComponent: () => import('./features/bot-voz/bot-voz.component').then(m => m.BotVozComponent),
+    // solo ADMIN: BotAdminController exige hasRole('ADMIN'), un supervisor entraria a la vista y recibiria 403 en los datos
+    canActivate: [authGuard, adminGuard]
   },
 
   {

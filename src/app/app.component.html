@@ -199,13 +199,15 @@
           <p class="notif-item-message">{{ notif.mensaje }}</p>
           <span class="notif-item-time">
             <lucide-angular name="clock" [size]="12"></lucide-angular>
-            {{ notif.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}
+            {{ notif.fechaCreacion | appDateTime }}
           </span>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<app-whatsapp-notification-popup *ngIf="!isLoginPage() && authService.isAuthenticated()"></app-whatsapp-notification-popup>
 
 <div *ngIf="isLoginPage() || !authService.isAuthenticated()">
   <router-outlet></router-outlet>

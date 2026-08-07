@@ -1,15 +1,15 @@
-import { Component, OnInit, OnDestroy, signal, computed, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, computed, effect, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, of, Subscription } from 'rxjs';
+import { catchError, firstValueFrom, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
-import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse } from '../services/management.service';
-import { PaymentScheduleService } from '../services/payment-schedule.service';
+import { ManagementService, CreateManagementRequest, StartCallRequest, EndCallRequest, RegisterPaymentRequest, PaymentScheduleRequest, ConfiguracionCabecera, ContinuidadPromesaResponse, PromesaVencidaGraciaResponse } from '../services/management.service';
+import { PaymentScheduleService, InstallmentResource } from '../services/payment-schedule.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { ManagementClassification } from '../models/system-config.model';
 import { CustomerData, TelefonoMetodo } from '../models/customer.model';
@@ -44,6 +44,11 @@ import { CartaAcuerdoService } from '../../core/services/carta-acuerdo.service';
 import { ConfirmCartaDialogComponent } from '../../features/dialer/call-notes/confirm-carta-dialog/confirm-carta-dialog.component';
 import { FirstInstallmentConfigService } from '../../maintenance/services/first-installment-config.service';
 import { CallService } from '../../core/services/call.service';
+import { ToastService } from '../../shared/services/toast.service';
+import { GestionLockService } from '../../core/services/gestion-lock.service';
+import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
+import { FormatService } from '@/shared/services/format.service';
+import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-collection-management',
@@ -54,7 +59,8 @@ import { CallService } from '../../core/services/call.service';
     LucideAngularModule,
     DynamicFieldRendererComponent,
     PaymentScheduleViewComponent,
-    StatusAlarmClockComponent
+    StatusAlarmClockComponent,
+    AppCurrencyPipe
   ],
   template: `
     <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
@@ -65,6 +71,27 @@ import { CallService } from '../../core/services/call.service';
             <div>
               <div class="font-bold">¡Gestión Guardada!</div>
               <div class="text-sm opacity-90">Los datos se registraron correctamente</div>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (showPhoneDuplicateCard()) {
+        <div class="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-900/50 px-4">
+          <div class="w-full max-w-md rounded-xl border border-amber-300 bg-white shadow-2xl dark:border-amber-800 dark:bg-slate-900 animate-[slideInUp_0.25s_ease-out]">
+            <div class="border-b border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/60 dark:bg-amber-950/40">
+              <h3 class="text-sm font-bold text-amber-800 dark:text-amber-300">{{ phoneDuplicateTitle() }}</h3>
+            </div>
+            <div class="px-4 py-3">
+              <p class="text-sm text-slate-700 dark:text-slate-200">{{ phoneDuplicateMessage() }}</p>
+            </div>
+            <div class="flex justify-end border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+              <button
+                (click)="closePhoneDuplicateCard()"
+                class="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-700"
+              >
+                Entendido
+              </button>
             </div>
           </div>
         </div>
@@ -82,9 +109,28 @@ import { CallService } from '../../core/services/call.service';
 
             <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
             <div class="flex items-center gap-4">
+              <!-- Jerarquía del cliente (inquilino / cartera / subcartera) -->
+              @if (clientHierarchy(); as h) {
+                <div class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 max-w-[42rem]"
+                     [title]="h.inquilino + ' / ' + h.cartera + ' / ' + h.subcartera">
+                  <span class="block text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">{{ h.inquilino }} / {{ h.cartera }} / {{ h.subcartera }}</span>
+                </div>
+              }
               <div [class]="'px-3.5 py-1.5 rounded-full text-sm font-bold transition-all duration-300 ' + (rellamadaCallActive() ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 animate-pulse' : callActive() ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400' : isTipifying() ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')">
                 {{ rellamadaCallActive() ? 'RELLAMADA' : callActive() ? 'EN LLAMADA' : isTipifying() ? 'TIPIFICANDO' : 'DISPONIBLE' }}
               </div>
+              @if (showDialerDataRefreshButton()) {
+                <button
+                  type="button"
+                  (click)="refreshDialerCustomerData()"
+                  [disabled]="isLoadingCustomer()"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 transition-colors hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                  title="Recargar datos del cliente sin cortar la llamada"
+                >
+                  <lucide-angular name="refresh-cw" [size]="14" [class]="isLoadingCustomer() ? 'animate-spin' : ''"></lucide-angular>
+                  {{ isLoadingCustomer() ? 'Cargando...' : 'Recargar cliente' }}
+                </button>
+              }
               <!-- Indicador de umbral de tiempo (reloj de alarma) -->
               <app-status-alarm-clock
                 [color]="colorIndicador()"
@@ -160,53 +206,92 @@ import { CallService } from '../../core/services/call.service';
                     </div>
                   }
 
+                  <!-- Ocupación del cliente (desde tabla dinámica) -->
+                  @if (clientOcupacion()) {
+                    <div class="flex items-center gap-2 p-1.5 bg-cyan-50 dark:bg-cyan-950/30 rounded border border-cyan-200 dark:border-cyan-800">
+                      <lucide-angular name="briefcase" [size]="14" class="text-cyan-500 dark:text-cyan-400"></lucide-angular>
+                      <div class="flex-1 min-w-0">
+                        <div class="text-xs text-cyan-500 dark:text-cyan-400">Ocupación</div>
+                        <div class="text-xs font-bold text-cyan-700 dark:text-cyan-300 break-words">{{ clientOcupacion() }}</div>
+                      </div>
+                    </div>
+                  }
+
                   <!-- Información de Contacto -->
                   @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
-                    <!-- Header con botón agregar -->
                     <div class="flex items-center justify-between">
-                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Teléfonos</span>
+                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Métodos de contacto</span>
                       @if (customerData()?.id) {
                         <button
-                          (click)="showAddPhoneForm.set(!showAddPhoneForm())"
+                          (click)="toggleAddContactForm()"
                           class="flex items-center gap-0.5 px-1.5 py-0.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
-                          title="Agregar teléfono"
+                          title="Agregar contacto"
                         >
-                          <lucide-angular [name]="showAddPhoneForm() ? 'x' : 'plus-circle'" [size]="13"></lucide-angular>
-                          {{ showAddPhoneForm() ? 'Cancelar' : 'Agregar' }}
+                          <lucide-angular [name]="showAddContactForm() ? 'x' : 'plus-circle'" [size]="13"></lucide-angular>
+                          {{ showAddContactForm() ? 'Cancelar' : 'Agregar' }}
                         </button>
                       }
                     </div>
 
-                    <!-- Formulario agregar teléfono -->
-                    @if (showAddPhoneForm()) {
-                      <div class="p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800 space-y-1.5">
-                        <input
-                          type="text"
-                          [(ngModel)]="newPhoneNumber"
-                          placeholder="987654321"
-                          maxlength="9"
-                          class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
-                        <select
-                          [(ngModel)]="newPhoneSubtipo"
-                          class="w-full px-2 py-1 border border-blue-300 dark:border-blue-700 rounded text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        >
-                          <option value="telefono_referencia_1">Referencia 1</option>
-                          <option value="telefono_referencia_2">Referencia 2</option>
-                          <option value="telefono_secundario">Secundario</option>
-                        </select>
+                    @if (showAddContactForm()) {
+                      <div class="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-1.5 shadow-sm">
+                        <div class="flex items-center gap-2">
+                          <div class="text-[10px] font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Nuevo contacto</div>
+                          <select
+                            [(ngModel)]="newContactType"
+                            class="flex-1 min-w-0 px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="telefono">Teléfono</option>
+                            <option value="email">Correo</option>
+                          </select>
+                        </div>
+
+                        @if (newContactType === 'telefono') {
+                          <input
+                            type="text"
+                            [(ngModel)]="newPhoneNumber"
+                            placeholder="Agregar numero aqui"
+                            maxlength="9"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          <select
+                            [(ngModel)]="newPhoneSubtipo"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="telefono_referencia_1">Referencia 1</option>
+                            <option value="telefono_referencia_2">Referencia 2</option>
+                            <option value="telefono_secundario">Secundario</option>
+                          </select>
+                        } @else {
+                          <input
+                            type="email"
+                            [(ngModel)]="newEmail"
+                            placeholder="Agregar correo aqui"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                          <select
+                            [(ngModel)]="newEmailSubtipo"
+                            class="w-full px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          >
+                            <option value="email_principal">Principal</option>
+                            <option value="email_secundario">Secundario</option>
+                            <option value="email_trabajo">Trabajo</option>
+                          </select>
+                        }
+
                         <div class="flex gap-1.5">
                           <button
-                            (click)="guardarNuevoTelefono()"
-                            [disabled]="!isValidCellphone(newPhoneNumber) || savingPhone()"
-                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded text-xs font-bold transition-colors"
+                            (click)="guardarNuevoContacto()"
+                            [disabled]="newContactType === 'telefono' ? (!isValidCellphone(newPhoneNumber) || savingPhone()) : (!isValidEmail(newEmail) || savingEmail())"
+                            class="flex-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed !text-white rounded-md text-xs font-bold transition-colors shadow-sm"
+                            style="color: #ffffff;"
                           >
-                            {{ savingPhone() ? 'Guardando...' : 'Guardar' }}
+                            {{ (newContactType === 'telefono' ? savingPhone() : savingEmail()) ? 'Guardando...' : 'Guardar' }}
                           </button>
                           <button
-                            (click)="showAddPhoneForm.set(false); newPhoneNumber = ''; newPhoneSubtipo = 'telefono_referencia_1'"
-                            class="px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-xs font-bold transition-colors"
+                            (click)="cancelAddContactForm()"
+                            class="px-2 py-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md text-xs font-bold transition-colors"
                           >
                             Cancelar
                           </button>
@@ -214,44 +299,125 @@ import { CallService } from '../../core/services/call.service';
                       </div>
                     }
 
-                    <!-- Teléfonos desde metodos_contacto -->
-                    @if (telefonosMetodo().length > 0) {
-                      @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
-                        <div class="flex items-center gap-2 p-1.5 rounded border"
-                             [class]="!tel.activo ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-60' : i === 0 ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'">
-                          <lucide-angular [name]="!tel.activo ? 'phone-off' : i === 0 ? 'smartphone' : 'phone'" [size]="14"
-                                         [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'"></lucide-angular>
-                          <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-1">
-                              <span class="text-xs" [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
-                              @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
-                                <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
-                              }
+                    @if (isManualSource() && !callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
+                      <div id="phone-selector-panel">
+                        <div [class]="'text-xs font-semibold mt-1 ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400')">
+                          {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfonos' }}
+                        </div>
+
+                        @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
+                          <button
+                            type="button"
+                            [disabled]="telefonoContactadoBloqueado()"
+                            (click)="!telefonoContactadoBloqueado() && selectedManualPhone.set(tel.numero)"
+                            [class]="'w-full flex items-center gap-2 px-1.5 py-1 rounded border text-left transition-all duration-200 mt-1 ' +
+                              (telefonoContactadoBloqueado() ? 'cursor-not-allowed opacity-60 ' : 'cursor-pointer ') +
+                              (selectedManualPhone() === tel.numero
+                                ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700 ring-1 ring-green-300 dark:ring-green-800'
+                                : (!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO'
+                                  ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 hover:border-red-300 opacity-80'
+                                  : i === 0
+                                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:border-green-300'
+                                    : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-green-300 dark:hover:border-green-700'))"
+                          >
+                            <lucide-angular
+                              [name]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : i === 0 ? 'smartphone' : 'phone'"
+                              [size]="14"
+                              [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 dark:text-red-500' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">
+                            </lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-1">
+                                <span class="text-xs" [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 dark:text-red-500' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
+                                @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
+                                  <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                                }
+                                @if (osiptelBadge(tel.estadoOsiptel).icon) {
+                                  <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
+                                    <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="13"
+                                                    [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
+                                  </span>
+                                }
+                                @if (whatsappBadge(tel.estadoWhatsapp).show) {
+                                  <span [title]="whatsappBadge(tel.estadoWhatsapp).title" class="inline-flex items-center">
+                                    <svg [attr.class]="whatsappBadge(tel.estadoWhatsapp).class" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                      <path [attr.d]="whatsappIconPath"></path>
+                                    </svg>
+                                  </span>
+                                }
+                              </div>
+                              <div class="text-xs font-bold truncate" [class]="!tel.activo || tel.estadoContactabilidad === 'INVALIDO_CONFIRMADO' ? 'text-red-400 line-through' : selectedManualPhone() === tel.numero || i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
                             </div>
-                            <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                          </button>
+                        }
+                      </div>
+                    } @else {
+                      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">Teléfonos</div>
+
+                      <!-- Teléfonos desde metodos_contacto -->
+                      @if (telefonosMetodo().length > 0) {
+                        @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
+                          <div class="flex items-center gap-2 p-1.5 rounded border"
+                               [class]="!tel.activo ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-60' : i === 0 ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'">
+                            <lucide-angular [name]="!tel.activo ? 'phone-off' : i === 0 ? 'smartphone' : 'phone'" [size]="14"
+                                           [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'"></lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-1">
+                                <span class="text-xs" [class]="!tel.activo ? 'text-red-400 dark:text-red-500' : i === 0 ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'">{{ subtipoLabel(tel.subtipo) }}</span>
+                                @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
+                                  <span class="text-[10px] px-1 py-0 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
+                                }
+                                @if (osiptelBadge(tel.estadoOsiptel).icon) {
+                                  <span [title]="osiptelBadge(tel.estadoOsiptel).title" class="inline-flex items-center">
+                                    <lucide-angular [name]="osiptelBadge(tel.estadoOsiptel).icon" [size]="13"
+                                                    [class]="osiptelBadge(tel.estadoOsiptel).class"></lucide-angular>
+                                  </span>
+                                }
+                                @if (whatsappBadge(tel.estadoWhatsapp).show) {
+                                  <span [title]="whatsappBadge(tel.estadoWhatsapp).title" class="inline-flex items-center">
+                                    <svg [attr.class]="whatsappBadge(tel.estadoWhatsapp).class" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                      <path [attr.d]="whatsappIconPath"></path>
+                                    </svg>
+                                  </span>
+                                }
+                              </div>
+                              <div class="text-xs font-bold truncate" [class]="!tel.activo ? 'text-red-400 line-through' : i === 0 ? 'text-green-700 dark:text-green-300' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</div>
+                            </div>
+                          </div>
+                        }
+                      } @else if (customerData().contacto.telefono_principal) {
+                        <!-- Fallback: mostrar teléfono de la tabla dinámica si metodos_contacto no tiene datos -->
+                        <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
+                          <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-xs text-green-600 dark:text-green-400">Principal</div>
+                            <div class="text-xs font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
                           </div>
                         </div>
                       }
-                    } @else if (customerData().contacto.telefono_principal) {
-                      <!-- Fallback: mostrar teléfono de la tabla dinámica si metodos_contacto no tiene datos -->
-                      <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
-                        <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-xs text-green-600 dark:text-green-400">Principal</div>
-                          <div class="text-xs font-bold text-green-700 dark:text-green-300 truncate">{{ customerData().contacto.telefono_principal }}</div>
-                        </div>
-                      </div>
                     }
-                    <!-- Email -->
-                    @if (customerData().contacto.email) {
-                      <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
-                        <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
-                        <div class="flex-1 min-w-0">
-                          <div class="text-xs text-blue-500 dark:text-blue-400">Email</div>
-                          <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                    <!-- Emails -->
+                    <div class="mt-2 space-y-1.5">
+                      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Correos</div>
+                      @if (emailsMetodo().length > 0) {
+                        @for (email of emailsMetodo(); track email.valor) {
+                          <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                            <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                            <div class="flex-1 min-w-0">
+                              <div class="text-xs text-blue-500 dark:text-blue-400">{{ emailSubtipoLabel(email.subtipo) }}</div>
+                              <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ email.valor }}</div>
+                            </div>
+                          </div>
+                        }
+                      } @else if (customerData().contacto.email) {
+                        <div class="flex items-center gap-2 p-1.5 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800">
+                          <lucide-angular name="mail" [size]="14" class="text-blue-500 dark:text-blue-400"></lucide-angular>
+                          <div class="flex-1 min-w-0">
+                            <div class="text-xs text-blue-500 dark:text-blue-400">Principal</div>
+                            <div class="text-xs font-semibold text-blue-700 dark:text-blue-300 truncate">{{ customerData().contacto.email }}</div>
+                          </div>
                         </div>
-                      </div>
-                    }
+                      }
+                    </div>
                     <!-- Dirección -->
                     @if (customerData().contacto.direccion) {
                       <div class="flex items-center gap-2 p-1.5 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
@@ -288,8 +454,8 @@ import { CallService } from '../../core/services/call.service';
           <div class="p-3 space-y-2">
             <!-- Control de Llamada - COMPACTO -->
             <div [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2 transition-colors duration-300 ' + (callActive() ? 'border-green-400 dark:border-green-500' : 'border-gray-200 dark:border-gray-700')">
-              <div class="flex items-center justify-between">
-                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-xs flex-shrink-0">
                   <div [class]="'p-1 rounded transition-all duration-300 ' + (callActive() ? 'bg-green-100 dark:bg-green-900/30 animate-pulse' : 'bg-blue-100 dark:bg-blue-900/30')">
                   </div>
                   Control de Llamada
@@ -299,11 +465,11 @@ import { CallService } from '../../core/services/call.service';
                     </span>
                   }
                 </h3>
-                <div class="flex gap-2">
+                <div class="flex flex-wrap justify-end gap-2 flex-1 min-w-0">
                   <button
                     (click)="toggleMute()"
                     [disabled]="!callActive() && !rellamadaCallActive()"
-                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                    [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                       ((callActive() || rellamadaCallActive())
                         ? (isMuted()
                           ? 'bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-700 hover:to-yellow-800 text-white'
@@ -315,7 +481,7 @@ import { CallService } from '../../core/services/call.service';
                   <button
                     (click)="toggleHold()"
                     [disabled]="!callActive() && !rellamadaCallActive()"
-                    [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                    [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                       ((callActive() || rellamadaCallActive())
                         ? (isOnHold()
                           ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white animate-pulse'
@@ -327,7 +493,7 @@ import { CallService } from '../../core/services/call.service';
                   <button
                     (click)="endCall()"
                     [disabled]="!callActive()"
-                    class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-2 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                    class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 disabled:from-gray-400 disabled:to-gray-500 text-white dark:text-white disabled:text-gray-200 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                   >
                     Finalizar
                   </button>
@@ -335,7 +501,7 @@ import { CallService } from '../../core/services/call.service';
                   <div class="relative">
                     <button
                       (click)="showWhatsappDropdown.set(!showWhatsappDropdown())"
-                      class="px-4 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                      class="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                     >
                       <lucide-angular name="message-circle" [size]="14"></lucide-angular>
                       WhatsApp
@@ -390,7 +556,7 @@ import { CallService } from '../../core/services/call.service';
                       <button
                         (click)="canRellamar() && (activeCallPhone() ? iniciarRellamada(activeCallPhone()) : showRellamadaDropdown.set(!showRellamadaDropdown()))"
                         [disabled]="!canRellamar()"
-                        [class]="'px-4 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg ' +
+                        [class]="'px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap ' +
                           (canRellamar()
                             ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
                             : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
@@ -405,7 +571,7 @@ import { CallService } from '../../core/services/call.service';
                         </div>
                         <button
                           (click)="colgarRellamada()"
-                          class="px-4 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg"
+                          class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-lg font-bold flex items-center gap-1.5 transition-all duration-300 text-xs shadow-md hover:shadow-lg whitespace-nowrap"
                         >
                           <lucide-angular name="phone-off" [size]="14"></lucide-angular>
                           Colgar
@@ -437,50 +603,6 @@ import { CallService } from '../../core/services/call.service';
                 </div>
               </div>
             </div>
-
-            <!-- Selector de Teléfono para Gestión Manual -->
-            @if (isManualSource() && !callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
-              <div id="phone-selector-panel" [class]="'bg-white dark:bg-gray-800 rounded-lg shadow-md border p-2.5 transition-colors duration-300 ' +
-                (errors()['phone'] && !selectedManualPhone()
-                  ? 'border-red-500 dark:border-red-600 ring-2 ring-red-300 dark:ring-red-800 animate-pulse'
-                  : 'border-amber-300 dark:border-amber-700')">
-                <div class="flex items-center gap-2 mb-2">
-                  <div [class]="'p-1 rounded ' + (errors()['phone'] && !selectedManualPhone() ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30')">
-                    <lucide-angular name="phone" [size]="14" [class]="errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'"></lucide-angular>
-                  </div>
-                  <span [class]="'font-bold text-xs ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-white')">
-                    {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfono Contactado' }}
-                  </span>
-                  @if (selectedManualPhone()) {
-                    <span class="ml-auto text-xs font-mono px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded">{{ selectedManualPhone() }}</span>
-                  }
-                </div>
-                <div class="flex flex-wrap gap-1">
-                  @for (tel of telefonosMetodo(); track tel.numero) {
-                    <button
-                      (click)="tel.activo && selectedManualPhone.set(tel.numero)"
-                      [disabled]="!tel.activo"
-                      [class]="'flex items-center gap-1 px-2 py-1 rounded border text-left transition-all duration-200 text-[11px] ' +
-                        (!tel.activo
-                          ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800 opacity-50 cursor-not-allowed'
-                          : selectedManualPhone() === tel.numero
-                            ? 'bg-amber-50 dark:bg-amber-950/30 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-300'
-                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 hover:bg-amber-50/50 cursor-pointer')"
-                    >
-                      <lucide-angular
-                        [name]="!tel.activo ? 'phone-off' : selectedManualPhone() === tel.numero ? 'check-circle' : 'phone'"
-                        [size]="12"
-                        [class]="!tel.activo ? 'text-red-400' : selectedManualPhone() === tel.numero ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'">
-                      </lucide-angular>
-                      <span class="font-bold" [class]="!tel.activo ? 'text-red-400 line-through' : 'text-slate-700 dark:text-slate-300'">{{ tel.numero }}</span>
-                      @if (contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text) {
-                        <span class="text-[8px] px-1 rounded-full font-medium" [class]="contactabilidadBadge(tel.estadoContactabilidad, tel.activo).class">{{ contactabilidadBadge(tel.estadoContactabilidad, tel.activo).text }}</span>
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
 
             @if (!usesHierarchicalClassifications()) {
             <!-- Resultado de Contacto - COMPACTO -->
@@ -536,6 +658,16 @@ import { CallService } from '../../core/services/call.service';
                       </div>
                       <div class="flex items-center gap-2">
                         @if (!hasScheduleEnEvaluacion(schedule)) {
+                        @if (cartaPlantillaDisponible()) {
+                        <button
+                          (click)="generarCartaDesdeBanner(schedule)"
+                          [disabled]="generandoCartaGestionId() === schedule.id"
+                          class="px-2.5 py-1 bg-black/20 dark:bg-white/20 hover:bg-black/30 dark:hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-black/30 dark:border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                          [title]="cartasGeneradasGestionIds().has(schedule.id) ? 'Volver a generar la carta de acuerdo con los datos actuales de la promesa' : 'Generar la carta de acuerdo de pago'">
+                          <lucide-angular name="file-text" [size]="12"></lucide-angular>
+                          {{ generandoCartaGestionId() === schedule.id ? 'Generando...' : (cartasGeneradasGestionIds().has(schedule.id) ? 'Regenerar acuerdo' : 'Generar acuerdo') }}
+                        </button>
+                        }
                         <button
                           (click)="openVoucherPaymentDialog(schedule)"
                           class="px-2.5 py-1 bg-black/20 dark:bg-white/20 hover:bg-black/30 dark:hover:bg-white/30 rounded text-xs font-semibold transition-all flex items-center gap-1 border border-black/30 dark:border-white/30"
@@ -582,39 +714,7 @@ import { CallService } from '../../core/services/call.service';
                             } @else {
                               <span class="bg-blue-700 text-white text-xs dark:bg-blue-600 px-1 py-0.5 rounded font-semibold flex items-center"><lucide-angular name="clock" [size]="10"></lucide-angular></span>
                             }
-                            @if (canReprogramInstallment(cuota)) {
-                              <button
-                                type="button"
-                                (click)="startReprogrammingCuota(schedule, cuota)"
-                                class="ml-1 px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-800 text-white text-[10px] font-semibold"
-                                title="Reprogramar fecha"
-                              >
-                                Editar fecha
-                              </button>
-                            }
                           </div>
-                          @if (isReprogrammingCuota(cuota)) {
-                            <div class="w-full mt-1 flex flex-wrap items-center gap-1.5 text-[10px] bg-black/10 dark:bg-white/15 rounded px-2 py-1.5">
-                              <input
-                                type="date"
-                                [ngModel]="reprogramDateDraft()"
-                                (ngModelChange)="reprogramDateDraft.set($event || '')"
-                                [min]="getMinReprogramDate()"
-                                [max]="getMaxReprogramDate(cuota, schedule)"
-                                class="px-1.5 py-0.5 rounded border border-gray-300 text-gray-800"
-                              />
-                              <button
-                                type="button"
-                                (click)="confirmReprogramacion(schedule, cuota)"
-                                class="px-1.5 py-0.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold"
-                              >Guardar</button>
-                              <button
-                                type="button"
-                                (click)="cancelReprogrammingCuota()"
-                                class="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-700 text-white"
-                              >Cancelar</button>
-                            </div>
-                          }
                         }
                       </div>
                       @if (hasScheduleEnEvaluacion(schedule)) {
@@ -717,19 +817,19 @@ import { CallService } from '../../core/services/call.service';
                       <div class="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2">
                         <div class="text-xs text-gray-500 dark:text-gray-400 uppercase font-medium">Monto Original</div>
                         <div class="text-sm font-bold text-gray-800 dark:text-gray-100">
-                          S/ {{ continuidadData()!.montoOriginal | number:'1.2-2' }}
+                          {{ continuidadData()!.montoOriginal | appCurrency }}
                         </div>
                       </div>
                       <div class="bg-green-50 dark:bg-green-900/30 rounded-lg p-2">
                         <div class="text-xs text-green-600 dark:text-green-400 uppercase font-medium">Ya Pagado</div>
                         <div class="text-sm font-bold text-green-700 dark:text-green-300">
-                          S/ {{ continuidadData()!.montoPagado | number:'1.2-2' }}
+                          {{ continuidadData()!.montoPagado | appCurrency }}
                         </div>
                       </div>
                       <div class="bg-amber-100 dark:bg-amber-900/50 rounded-lg p-2 ring-2 ring-amber-400 dark:ring-amber-500">
                         <div class="text-xs text-amber-700 dark:text-amber-300 uppercase font-medium">Saldo Restante</div>
                         <div class="text-lg font-bold text-amber-800 dark:text-amber-200">
-                          S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}
+                          {{ continuidadData()!.saldoRestante | appCurrency }}
                         </div>
                       </div>
                     </div>
@@ -743,7 +843,7 @@ import { CallService } from '../../core/services/call.service';
                   <!-- Instrucción -->
                   <div class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg p-2">
                     <lucide-angular name="info" [size]="14"></lucide-angular>
-                    <span>La nueva promesa debe ser por el saldo restante de <strong>S/ {{ continuidadData()!.saldoRestante | number:'1.2-2' }}</strong></span>
+                    <span>La nueva promesa debe ser por el saldo restante de <strong>{{ continuidadData()!.saldoRestante | appCurrency }}</strong></span>
                   </div>
                 </div>
               }
@@ -842,6 +942,48 @@ import { CallService } from '../../core/services/call.service';
               }
             }
 
+            <!-- BLOQUEO PERIODO DE GRACIA - Promesa vencida reciente registrada por otro asesor -->
+            @if (showPromesaVencidaGraciaBlocking()) {
+              <div class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-amber-950/40 border-2 border-amber-400 dark:border-amber-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
+                <div class="flex items-center gap-4">
+                  <div class="relative">
+                    <div class="p-3 bg-amber-500 dark:bg-amber-600 rounded-xl shadow-lg">
+                      <lucide-angular name="shield-alert" [size]="28" class="text-white animate-pulse"></lucide-angular>
+                    </div>
+                    <div class="absolute -top-1 -right-1 w-4 h-4 bg-orange-400 rounded-full animate-bounce"></div>
+                  </div>
+                  <div class="flex-1">
+                    <h3 class="text-base font-bold text-amber-800 dark:text-amber-200">
+                      No puede registrar una nueva Promesa de Pago
+                    </h3>
+                    <p class="text-sm text-amber-600 dark:text-amber-300 mt-1">
+                      Este cliente tiene una promesa vencida recientemente registrada por
+                      <span class="font-bold text-amber-700 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full">
+                        {{ promesaVencidaGracia()?.nombreAgente }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4 bg-white/80 dark:bg-gray-800/80 rounded-lg border border-amber-200 dark:border-amber-700 p-3">
+                  <div class="flex items-start gap-3">
+                    <lucide-angular name="info" [size]="18" class="text-amber-500 dark:text-amber-400 mt-0.5 flex-shrink-0"></lucide-angular>
+                    <div class="text-sm text-amber-700 dark:text-amber-300">
+                      <p class="font-medium">
+                        Solo {{ promesaVencidaGracia()?.nombreAgente }} puede registrar la nueva promesa con este cliente
+                        hasta el {{ promesaVencidaGracia()?.finGracia }} (período de gracia).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div class="mt-3 flex justify-center">
+                  <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold border border-amber-300 dark:border-amber-600">
+                    <lucide-angular name="lock" [size]="14"></lucide-angular>
+                    Seleccione otra tipificación para continuar
+                  </span>
+                </div>
+              </div>
+            }
+
             <!-- Schedule Helper - Payment Schedule Information -->
             @if (isLoadingSchedules()) {
               <div class="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg shadow-md p-3 animate-pulse">
@@ -877,7 +1019,7 @@ import { CallService } from '../../core/services/call.service';
                         </div>
                       </div>
                       <div class="text-xs font-bold text-purple-900 dark:text-purple-100">
-                        S/ {{ schedule.totalAmount | number:'1.2-2' }}
+                        {{ schedule.totalAmount | appCurrency }}
                       </div>
                     </div>
 
@@ -891,7 +1033,7 @@ import { CallService } from '../../core/services/call.service';
                               <span class="font-semibold text-gray-700 dark:text-gray-300">Cuota #{{ installment.installmentNumber }}</span>
                               <span class="text-gray-500 dark:text-gray-400">Vence: {{ formatDate(installment.dueDate) }}</span>
                             </div>
-                            <span class="font-bold text-purple-700 dark:text-purple-300">S/ {{ installment.amount | number:'1.2-2' }}</span>
+                            <span class="font-bold text-purple-700 dark:text-purple-300">{{ installment.amount | appCurrency }}</span>
                           </div>
                         }
                       }
@@ -920,7 +1062,7 @@ import { CallService } from '../../core/services/call.service';
                           type="button"
                           (click)="applyFullSchedulePayment()"
                           class="flex-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1">
-                          Pagar Todo (S/ {{ calculatePendingAmount(schedule) | number:'1.2-2' }})
+                          Pagar Todo ({{ calculatePendingAmount(schedule) | appCurrency }})
                         </button>
                       }
                     </div>
@@ -935,7 +1077,7 @@ import { CallService } from '../../core/services/call.service';
             }
 
             <!-- Selector de Cuota para Cancelación -->
-            @if (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0)) {
+            @if (isCancellationTypification() && hasInstallmentsForCancellation()) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
                   <span class="text-lg">💰</span>
@@ -966,7 +1108,7 @@ import { CallService } from '../../core/services/call.service';
                           />
                           <div>
                             <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                            <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-green-100' : 'text-gray-500 dark:text-gray-400'">
+                            <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-white' : 'text-gray-500 dark:text-gray-400'">
                               Vence: {{ formatDate(cuota.dueDate) }}
                             </span>
                             @if (tienePagoParcial(cuota)) {
@@ -999,7 +1141,7 @@ import { CallService } from '../../core/services/call.service';
                         <label
                           class="flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all"
                           [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota
-                            ? 'bg-amber-600 text-white shadow-md dark:bg-amber-500'
+                            ? 'bg-amber-200 text-slate-950 shadow-md border border-amber-500 dark:bg-amber-300 dark:text-slate-950'
                             : 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-300 dark:border-amber-700'"
                         >
                           <div class="flex items-center gap-3">
@@ -1012,13 +1154,23 @@ import { CallService } from '../../core/services/call.service';
                               class="w-4 h-4 text-amber-600"
                             />
                             <div>
-                              <span class="font-bold text-xs">Cuota {{ cuota.numeroCuota }}</span>
-                              <span class="text-xs ml-2" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-100' : 'text-amber-600 dark:text-amber-400'">
+                              <span class="font-bold text-xs" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-900 dark:text-slate-100'">Cuota {{ cuota.numeroCuota }}</span>
+                              <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-900' : 'text-amber-700 dark:text-amber-300'">
                                 Venció: {{ formatDate(cuota.dueDate) }}
                               </span>
+                              @if (tienePagoParcial(cuota)) {
+                                <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-500 text-slate-950' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
+                              }
                             </div>
                           </div>
-                          <span class="font-bold text-sm">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                          <div class="text-right">
+                            @if (tienePagoParcial(cuota)) {
+                              <span class="text-xs opacity-70 mr-1" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-800' : 'text-slate-700 dark:text-slate-300'">S/ {{ cuota.monto?.toFixed(2) }}</span>
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-950 dark:text-white'">S/ {{ getSaldoPendienteCuota(cuota).toFixed(2) }}</span>
+                            } @else {
+                              <span class="font-bold text-sm" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-950 dark:text-white'">S/ {{ cuota.monto?.toFixed(2) || '0.00' }}</span>
+                            }
+                          </div>
                         </label>
                       }
                     </div>
@@ -1068,13 +1220,19 @@ import { CallService } from '../../core/services/call.service';
                         <input
                           type="date"
                           [value]="fechaPagoEditable()"
-                          [max]="todayDate"
+                          [min]="cancellationPaymentMinDate()"
+                          [max]="cancellationPaymentMaxDate()"
                           (input)="onFechaPagoChange($event)"
                           class="w-full px-2 py-1.5 text-sm rounded-lg border border-green-300 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500"
                         />
                         <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                          Por defecto: hoy
+                          Rango: {{ cancellationPaymentMinDateLabel() }} - {{ cancellationPaymentMaxDateLabel() }}
                         </p>
+                        @if (!isCancellationPaymentDateValid()) {
+                          <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
+                            La fecha de pago no es válida para la cuota seleccionada.
+                          </p>
+                        }
                       </div>
                     </div>
                     <!-- Info de distribución si el monto es diferente -->
@@ -1098,6 +1256,13 @@ import { CallService } from '../../core/services/call.service';
                     }
                   </div>
                 }
+              </div>
+            }
+
+            @if (isCancellationTypification() && !hasInstallmentsForCancellation()) {
+              <div class="mt-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
+                <span>Cliente no cuenta con promesa.</span>
               </div>
             }
 
@@ -1194,8 +1359,8 @@ import { CallService } from '../../core/services/call.service';
               <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
-                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0) && !selectedInstallmentForCancellation())"
-                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid()"
+                [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
+                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid() + ' | Fecha pago válida: ' + isCancellationPaymentDateValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
@@ -1210,81 +1375,109 @@ import { CallService } from '../../core/services/call.service';
         </div>
 
         <!-- PANEL DERECHO - Resumen Deuda y Montos -->
-        <div class="w-72 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300">
-          <!-- Resumen Rápido Deuda -->
-          <div class="p-2 bg-red-100 dark:bg-red-950/20">
-            <div class="text-center">
-              <div class="text-xs uppercase font-bold" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ getPrimaryAmountLabel() }}</div>
-              <div class="text-xl font-black" [ngClass]="themeService.isDarkMode() ? 'text-red-400' : 'text-red-800'">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
-              <div class="text-xs font-semibold" [ngClass]="themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700'">{{ clientDiasMora() }} días mora</div>
+        <div [class]="'w-72 border-l border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden flex flex-col transition-colors duration-300 ' + purchaseColumnClass()">
+          @if (!hasRightPanelClientData()) {
+            <div class="flex flex-1 items-center justify-center px-4 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Cargando datos del cliente...
             </div>
-          </div>
-
-          <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
-          <div class="p-2 flex-1 overflow-y-auto">
-            @if (clientAmountFields().length > 0) {
-              <div class="space-y-1.5">
-                @for (field of clientAmountFields(); track field.field; let i = $index) {
-                  <div class="flex justify-between items-center py-1 px-2 rounded text-xs cursor-pointer transition-all"
-                       [class]="(calcCampoSeleccionado() === field.field)
-                         ? 'ring-1 ring-blue-500 bg-blue-50 dark:bg-blue-950/40'
-                         : getAmountRowClass(i)"
-                       (click)="calcCampoSeleccionado.set(field.field)">
-                    <span class="truncate mr-2 font-medium"
-                          [ngClass]="calcCampoSeleccionado() === field.field
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">{{ field.label }}</span>
-                    <span class="font-bold whitespace-nowrap text-sm"
-                          [ngClass]="calcCampoSeleccionado() === field.field
-                            ? 'text-blue-700 dark:text-blue-300'
-                            : (themeService.isDarkMode() ? 'text-red-300' : 'text-red-800')">
-                      {{ formatByType(field) }}
-                    </span>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Calculadora de Oferta - Compacta -->
-            @if (clientAmountFields().length > 0) {
-              <div class="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
-                <div class="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">Calcular oferta</div>
-                <!-- Fila: [% dcto] + S/[transf] -->
-                <div class="flex items-center gap-1">
-                  <input type="number" [ngModel]="calcDescuento() ?? ''" (ngModelChange)="calcDescuento.set($event === '' ? null : +$event)"
-                         placeholder="% dcto" min="0" max="100" step="1"
-                         class="w-14 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
-                                bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
-                                focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                  <span class="text-[10px] text-slate-400">% dcto</span>
-                  <span class="text-[10px] text-slate-400 mx-0.5">+</span>
-                  <input type="number" [ngModel]="calcCostoTransferencia()" (ngModelChange)="calcCostoTransferencia.set(+$event)"
-                         min="0" step="1"
-                         class="w-12 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
-                                bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
-                                focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
-                  <span class="text-[10px] text-slate-400">transf.</span>
+          } @else {
+            @if (purchaseOrder() || purchasePeriod()) {
+              <div>
+                <div [class]="'px-1 pt-2 pb-0.5 text-sm leading-tight font-bold uppercase text-center ' + purchaseBlockClass()">
+                  @if (purchaseOrder()) {
+                    <div>LOTE: {{ purchaseOrder() }} COMPRA</div>
+                  }
+                  @if (purchasePeriod()) {
+                    <div>PERIODO DE COMPRA: {{ purchasePeriod() }}</div>
+                  }
                 </div>
-                <!-- Resultado -->
-                @if (calcResultado(); as r) {
-                  <div class="mt-2 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5">
-                    <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                      <span>{{ r.campoLabel }} -{{ calcDescuento() }}% +S/{{ calcCostoTransferencia() }}</span>
-                    </div>
-                    <div class="flex justify-between items-center mt-0.5">
-                      <span class="text-[10px] font-bold text-green-700 dark:text-green-400">COBRAR</span>
-                      <span class="text-sm font-black text-green-700 dark:text-green-400">{{ formatCurrency(r.total) }}</span>
-                    </div>
-                  </div>
-                }
               </div>
             }
-          </div>
+
+             <!-- Resumen Rápido Deuda -->
+             <div [class]="'p-2 ' + purchaseSummaryClass()">
+               <div class="text-center">
+                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
+                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+                 @if (clientHeaderFields().length > 0) {
+                    <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
+                      @for (field of clientHeaderFields(); track field.field) {
+                        <div class="flex min-w-0 items-baseline justify-between gap-2">
+                          <span class="whitespace-nowrap font-semibold uppercase">{{ field.label }}:</span>
+                          <span class="min-w-0 truncate text-right font-bold" [title]="field.value">{{ field.value }}</span>
+                        </div>
+                     }
+                   </div>
+                 }
+               </div>
+             </div>
+
+            <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
+            <div class="p-2 flex-1 overflow-y-auto">
+              @if (clientAmountFields().length > 0) {
+                <div class="space-y-1.5">
+                  @for (field of clientAmountFields(); track field.field; let i = $index) {
+                    <div class="flex justify-between items-center py-1 px-2 rounded text-xs cursor-pointer transition-all"
+                         [class]="(calcCampoSeleccionado() === field.field)
+                           ? purchaseSelectedRowClass()
+                           : getAmountRowClass(i)"
+                         (click)="calcCampoSeleccionado.set(field.field)">
+                      <span class="truncate mr-2 font-medium"
+                             [ngClass]="calcCampoSeleccionado() === field.field
+                               ? purchaseSelectedTextClass()
+                               : purchaseTextClass()">{{ field.label }}</span>
+                       <span class="font-bold whitespace-nowrap text-sm"
+                             [ngClass]="calcCampoSeleccionado() === field.field
+                               ? purchaseSelectedTextClass()
+                               : purchaseTextClass()">
+                        {{ formatByType(field) }}
+                      </span>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Calculadora de Oferta - Compacta -->
+              @if (clientAmountFields().length > 0) {
+                <div class="mt-3 border-t border-slate-200 dark:border-slate-700 pt-2">
+                  <div class="text-[10px] font-bold uppercase text-slate-400 dark:text-slate-500 mb-1">Calcular oferta</div>
+                  <!-- Fila: [% dcto] + S/[transf] -->
+                  <div class="flex items-center gap-1">
+                    <input type="number" [ngModel]="calcDescuento() ?? ''" (ngModelChange)="calcDescuento.set($event === '' ? null : +$event)"
+                           placeholder="% dcto" min="0" max="100" step="1"
+                           class="w-14 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
+                                  bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+                                  focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <span class="text-[10px] text-slate-400">% dcto</span>
+                    <span class="text-[10px] text-slate-400 mx-0.5">+</span>
+                    <input type="number" [ngModel]="calcCostoTransferencia()" (ngModelChange)="calcCostoTransferencia.set(+$event)"
+                           min="0" step="1"
+                           class="w-12 px-1 py-1 text-xs text-center font-bold rounded border border-slate-300 dark:border-slate-600
+                                  bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
+                                  focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <span class="text-[10px] text-slate-400">transf.</span>
+                  </div>
+                  <!-- Resultado -->
+                  @if (calcResultado(); as r) {
+                    <div class="mt-2 bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5">
+                      <div class="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                        <span>{{ r.campoLabel }} -{{ calcDescuento() }}% +S/{{ calcCostoTransferencia() }}</span>
+                      </div>
+                      <div class="flex justify-between items-center mt-0.5">
+                        <span class="text-[10px] font-bold text-green-700 dark:text-green-400">COBRAR</span>
+                        <span class="text-sm font-black text-green-700 dark:text-green-400">{{ formatCurrency(r.total) }}</span>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
         </div>
 
         <!-- SECCION DE HISTORIAL DE GESTIONES - Compacto -->
-        <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-44') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
+         <div [class]="(historialExpanded() ? 'h-[50vh]' : 'h-[7.7rem]') + ' bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex flex-col transition-all duration-300'">
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
@@ -1381,7 +1574,7 @@ import { CallService } from '../../core/services/call.service';
               </div>
             }
           </div>
-          <div class="flex-1 overflow-auto">
+          <div class="flex-1 overflow-hidden">
             <!-- TAB ACTUAL -->
             @if (historialTabActivo() === 'actual') {
               @if (historialGestiones().length === 0) {
@@ -1393,63 +1586,122 @@ import { CallService } from '../../core/services/call.service';
                   No hay gestiones con el filtro seleccionado
                 </div>
               } @else {
-                <table class="text-xs table-auto" style="min-width: max-content;">
-                  <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
-                    <tr class="text-left text-slate-600 dark:text-slate-300">
-                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
-                        <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
-                            [class.text-center]="col === 'Estado'">
-                          {{ col }}
-                          <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/50"
-                               (mousedown)="onResizeStart($event, i)"></div>
-                        </th>
+                <div class="flex h-full overflow-hidden">
+                  <div class="min-w-0 flex-1 overflow-auto">
+                    <table class="text-xs table-auto" style="min-width: max-content;">
+                      <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
+                        <tr class="text-left text-slate-600 dark:text-slate-300">
+                          @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
+                            <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
+                                [class.text-center]="col === 'Estado'">
+                              {{ col }}
+                              <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-400/50"
+                                   (mousedown)="onResizeStart($event, i)"></div>
+                            </th>
+                          }
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (gestion of historialGestionesFiltrado(); track gestion.id) {
+                          <tr
+                            (click)="toggleHistorialPromesaDetalle(gestion)"
+                            [class]="'border-b border-slate-100 dark:border-slate-700/50 transition-colors ' +
+                              (isHistorialPromesaSelected(gestion)
+                                ? 'bg-blue-100 dark:bg-blue-950/40'
+                                : gestion.hasSchedule
+                                  ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                  : 'hover:bg-blue-50 dark:hover:bg-blue-900/20')"
+                          >
+                            <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
+                            <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
+                            <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
+                              <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
+                                {{ gestion.tipificacionCompleta }}
+                              </span>
+                            </td>
+                            <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
+                            <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
+                              @if (gestion.promesaCompacta) {
+                                <span class="block truncate text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
+                              } @else {
+                                <span class="text-slate-400 dark:text-slate-600">-</span>
+                              }
+                            </td>
+                            <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
+                              {{ gestion.observacion || '-' }}
+                            </td>
+                            <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
+                              @if (gestion.estadoPago) {
+                                <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
+                                  (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                   gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                   gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                   gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
+                                   'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
+                                  {{ gestion.estadoPagoDisplay }}
+                                </span>
+                              } @else {
+                                <span class="text-slate-400 dark:text-slate-600">-</span>
+                              }
+                            </td>
+                            <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[7]">
+                              <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
+                                {{ gestion.via }}
+                              </span>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  @if (selectedHistorialPromesaGestion(); as promesaSeleccionada) {
+                    <aside class="w-[248px] shrink-0 border-l border-slate-200 bg-slate-50/70 dark:border-slate-700 dark:bg-slate-950/40 flex flex-col">
+                      <div class="px-2.5 py-2 border-b border-slate-200 dark:border-slate-700 flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                          <div class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Detalle de cuotas</div>
+                          <div class="mt-0.5 truncate text-[13px] font-semibold text-green-700 dark:text-green-400">{{ getSelectedHistorialPromesaResumen(promesaSeleccionada.promesaCompacta) || 'Promesa seleccionada' }}</div>
+                          <div class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400" [title]="promesaSeleccionada.nombreAgente">{{ truncateText(promesaSeleccionada.nombreAgente, 50) }}</div>
+                        </div>
+                        <button
+                          type="button"
+                          (click)="cerrarHistorialPromesaDetalle()"
+                          class="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+                          title="Cerrar detalle"
+                        >
+                          <lucide-angular name="x" [size]="14"></lucide-angular>
+                        </button>
+                      </div>
+
+                      @if (isSelectedHistorialPromesaLoading()) {
+                        <div class="flex-1 flex items-center justify-center px-4 text-xs text-slate-500 dark:text-slate-400">
+                          Cargando cuotas...
+                        </div>
+                      } @else if (getSelectedHistorialPromesaInstallments().length > 0) {
+                        <div class="historial-promesa-scroll flex-1 overflow-y-auto px-1.5 py-1.5">
+                          <div class="grid gap-1" [style.gridTemplateColumns]="getSelectedHistorialPromesaGridTemplate()">
+                            @for (cuota of getSelectedHistorialPromesaInstallments(); track cuota.id) {
+                              <div [class]="'rounded-md border px-2 py-1.5 ' + getHistorialPromesaItemClass(cuota.status, $index)">
+                                <div class="flex items-center justify-between gap-1">
+                                  <span class="font-semibold text-slate-700 dark:text-slate-200">Cuota {{ cuota.installmentNumber }}</span>
+                                  <span class="font-bold text-slate-900 dark:text-slate-100">{{ cuota.amount | appCurrency }}</span>
+                                </div>
+                                <div class="mt-0.5 flex items-center justify-between gap-1 text-[10px] text-slate-500 dark:text-slate-400">
+                                  <span>{{ formatDate(cuota.dueDate) }}</span>
+                                  <span class="font-medium">{{ cuota.statusDescription || cuota.status }}</span>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="flex-1 flex items-center justify-center px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                          No hay cuotas disponibles para esta promesa.
+                        </div>
                       }
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (gestion of historialGestionesFiltrado(); track gestion.id) {
-                      <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 whitespace-nowrap overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[0]">{{ gestion.fecha }}</td>
-                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200 font-medium overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[1]" [title]="gestion.nombreAgente">{{ gestion.nombreAgente }}</td>
-                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[2]">
-                          <span class="text-blue-600 dark:text-blue-400 font-medium truncate block" [title]="gestion.tipificacionCompleta">
-                            {{ gestion.tipificacionCompleta }}
-                          </span>
-                        </td>
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300 font-mono overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[3]">{{ gestion.telefono || '-' }}</td>
-                        <td class="px-2 py-1.5 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[4]" [title]="gestion.promesaCompacta">
-                          @if (gestion.promesaCompacta) {
-                            <span class="text-green-600 dark:text-green-400 font-semibold">{{ gestion.promesaCompacta }}</span>
-                          } @else {
-                            <span class="text-slate-400 dark:text-slate-600">-</span>
-                          }
-                        </td>
-                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400 overflow-hidden text-ellipsis" [style.width.px]="historialColWidths()[5]" [title]="gestion.observacion">
-                          {{ gestion.observacion || '-' }}
-                        </td>
-                        <td class="px-2 py-1.5 text-center overflow-hidden" [style.width.px]="historialColWidths()[6]">
-                          @if (gestion.estadoPago) {
-                            <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' +
-                              (gestion.estadoPago === 'PAGADA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
-                               gestion.estadoPago === 'PENDIENTE' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                               gestion.estadoPago === 'VENCIDA' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                               gestion.estadoPago === 'PARCIAL' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                               'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')">
-                              {{ gestion.estadoPagoDisplay }}
-                            </span>
-                          } @else {
-                            <span class="text-slate-400 dark:text-slate-600">-</span>
-                          }
-                        </td>
-                        <td class="px-2 py-1.5 overflow-hidden" [style.width.px]="historialColWidths()[7]">
-                          <span [class]="'px-1.5 py-0.5 rounded text-xs font-semibold ' + gestion.viaClass">
-                            {{ gestion.via }}
-                          </span>
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
+                    </aside>
+                  }
+                </div>
               }
             } @else {
               <!-- TAB HISTÓRICO -->
@@ -1597,12 +1849,22 @@ import { CallService } from '../../core/services/call.service';
         transform: translateY(0);
       }
     }
+
+    .historial-promesa-scroll {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .historial-promesa-scroll::-webkit-scrollbar {
+      display: none;
+    }
   `]
 })
-export class CollectionManagementPage implements OnInit, OnDestroy {
+export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquearSalida {
   protected callActive = signal(false);
   protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
   protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
+  protected activeCallId = signal<number | null>(null); // ID de la llamada del discador (marcador_llamadas.id) para enlazar la gestión
   protected isManualSource = signal(false); // true solo cuando viene desde /manual-management con source=manual
   protected callDuration = signal(0);
   protected saving = signal(false);
@@ -1611,6 +1873,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected showOutputSelector = false; // Para el dropdown de campos del cliente
   protected errors = signal<ValidationErrors>({});
   protected showSuccess = signal(false);
+  protected showPhoneDuplicateCard = signal(false);
+  protected phoneDuplicateTitle = signal('Contacto duplicado');
+  protected phoneDuplicateMessage = signal('El contacto ya existe para este cliente.');
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
   protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
@@ -1620,7 +1885,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
   protected showRellamadaDropdown = signal(false); // UI: dropdown de números
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
-  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !!this.customerData()?.id);
+  // Evita hacer muchos clicks en rellamada y saturar el SIP
+  protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
+
+  // "Teléfono Contactado" queda BLOQUEADO cuando el número proviene de una llamada/rellamada
+  // (activeCallPhone) y pertenece al cliente: el asesor ya no puede cambiarlo manualmente.
+  protected telefonoContactadoBloqueado = computed(() =>
+    !!this.activeCallPhone() && this.telefonosMetodo().some(t => t.numero === this.activeCallPhone()));
 
   // Signals para indicador de umbral de tiempo (reloj de alarma)
   protected colorIndicador = signal<'verde' | 'amarillo' | 'rojo'>('verde');
@@ -1649,6 +1920,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     estadoPago?: string;
     estadoPagoDisplay: string;
     hasSchedule: boolean;
+    grupoPromesaUuid?: string;
     schedule: any;
   }>>([]);
 
@@ -1681,6 +1953,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   protected historialHistoricoTotalPages = signal<number>(0);
   protected historialHistoricoTotalElements = signal<number>(0);
   protected historialHistoricoLoading = signal<boolean>(false);
+  protected selectedHistorialPromesaGroupUuid = signal<string | null>(null);
+  protected historialPromesaLoadingByGroupUuid = signal<Record<string, boolean>>({});
+  protected historialPromesaInstallmentsByGroupUuid = signal<Record<string, InstallmentResource[]>>({});
 
   // Computed signal para filtrar el historial según el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
@@ -1703,6 +1978,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
       return true;
     });
+  });
+
+  protected selectedHistorialPromesaGestion = computed(() => {
+    const groupUuid = this.selectedHistorialPromesaGroupUuid();
+    if (!groupUuid) return null;
+    return this.historialGestionesFiltrado().find(g => g.grupoPromesaUuid === groupUuid) || null;
   });
 
   selectedTenantId?: number;
@@ -1802,7 +2083,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
           continue;
         }
@@ -1832,7 +2115,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
             minCuotas: option.minCuotas || 1,
             maxCuotas: option.maxCuotas || 6,
-            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
           });
         }
       }
@@ -1942,6 +2227,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // 0. Verificar bloqueo de promesa activa
     if (this.showPromesaActivaBlocking()) {
       console.log('[isFormValid] ❌ Bloqueado: cliente tiene promesa activa');
+      return false;
+    }
+
+    // 0.1 Verificar bloqueo por período de gracia de promesa vencida de otro asesor
+    if (this.showPromesaVencidaGraciaBlocking()) {
+      console.log('[isFormValid] ❌ Bloqueado: cliente en período de gracia de otro asesor');
       return false;
     }
 
@@ -2057,17 +2348,33 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
 
+  // Jerarquía del cliente (inquilino/cartera/subcartera) para mostrar el contexto
+  // Ej: "Financiera Oh / CASTIGO / CASTIGO". Viene de /client-search/find.
+  clientHierarchy = signal<{ inquilino: string; cartera: string; subcartera: string } | null>(null);
+
   // Teléfonos desde metodos_contacto
   telefonosMetodo = signal<TelefonoMetodo[]>([]);
 
   // Teléfono seleccionado para gestión manual (sin llamada)
   selectedManualPhone = signal<string>('');
 
+  // True solo cuando estamos en gestión manual sin llamada activa → habilita selección en el panel "Teléfonos"
+  protected modoSeleccionTelefono = computed(() =>
+      this.isManualSource() && !this.callActive() && !this.rellamadaCallActive()
+    );
+
   // Agregar teléfono
-  showAddPhoneForm = signal(false);
+  showAddContactForm = signal(false);
+  newContactType: 'telefono' | 'email' = 'telefono';
   newPhoneNumber = '';
   newPhoneSubtipo = 'telefono_referencia_1';
   savingPhone = signal(false);
+
+  // Agregar correo
+  newEmail = '';
+  newEmailSubtipo = 'email_principal';
+  savingEmail = signal(false);
+  emailsMetodo = signal<Array<{ valor: string; subtipo: string }>>([]);
 
   // WhatsApp
   showWhatsappDropdown = signal(false);
@@ -2169,8 +2476,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     document.body.style.userSelect = '';
   }
 
-  // Cronogramas de pago activos
+  // Cronogramas de pago
   activePaymentSchedules = signal<any[]>([]);
+  allPaymentSchedules = signal<any[]>([]);
+  promesaVencidaGracia = signal<PromesaVencidaGraciaResponse | null>(null);
   reprogrammingCuotaId = signal<number | null>(null);
   reprogramDateDraft = signal<string>('');
 
@@ -2220,7 +2529,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               allPending.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2228,12 +2538,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    return allPending;
+    return this.sortInstallmentsByDueDate(allPending);
   });
 
-  // Computed para obtener cuotas VENCIDAS de la ÚLTIMA promesa (seleccionables para pago retroactivo)
+  // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
+  // Flujo separado: no altera la lógica histórica de promesas activas
   overdueInstallments = computed(() => {
-    const schedules = this.activePaymentSchedules();
+    const schedules = this.allPaymentSchedules();
     if (schedules.length === 0) return [];
 
     // Solo la última promesa (la más reciente)
@@ -2249,7 +2560,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           overdue.push({
             ...cuota,
             scheduleId: latestSchedule.id,
-            grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+            grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+            fechaInicioPromesa: latestSchedule.fechaGestion
           });
         } else if (estado === 'PENDIENTE') {
           const fechaPago = cuota.dueDate || cuota.fechaPago;
@@ -2259,7 +2571,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               overdue.push({
                 ...cuota,
                 scheduleId: latestSchedule.id,
-                grupoPromesaUuid: latestSchedule.grupoPromesaUuid
+                grupoPromesaUuid: latestSchedule.grupoPromesaUuid,
+                fechaInicioPromesa: latestSchedule.fechaGestion
               });
             }
           }
@@ -2267,11 +2580,111 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       }
     }
 
-    return overdue;
+    return this.sortInstallmentsByDueDate(overdue);
+  });
+
+  private sortInstallmentsByDueDate(installments: any[]): any[] {
+    return [...(installments || [])].sort((a: any, b: any) => {
+      const dateA = this.getInstallmentDueTime(a);
+      const dateB = this.getInstallmentDueTime(b);
+
+      if (dateA !== dateB) return dateA - dateB;
+      return Number(a?.numeroCuota || a?.installmentNumber || 0) - Number(b?.numeroCuota || b?.installmentNumber || 0);
+    });
+  }
+
+  private getInstallmentDueTime(installment: any): number {
+    const rawDate = installment?.dueDate || installment?.fechaPromesa || installment?.fechaPago;
+    if (!rawDate) return Number.MAX_SAFE_INTEGER;
+
+    const date = this.parseDateLocal(String(rawDate).split('T')[0]);
+    return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+  }
+
+  hasInstallmentsForCancellation = computed(() => {
+    return this.pendingInstallmentsForCancellation().length > 0 || this.overdueInstallments().length > 0;
+  });
+
+  cancellationPaymentMaxDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const dueDate = cuota?.dueDate || cuota?.fechaPago || cuota?.fechaPromesa;
+    if (!dueDate) return this.todayDate;
+
+    const maxDate = this.parseDateLocal(String(dueDate).split('T')[0]);
+    const today = this.parseDateLocal(this.todayDate);
+    return this.toDateInputValue(maxDate > today ? today : maxDate);
+  });
+
+  cancellationPaymentMinDate = computed(() => {
+    const cuota = this.selectedInstallmentForCancellation();
+    const startDate = cuota?.fechaInicioPromesa || cuota?.fechaGestion || cuota?.startDate;
+    if (!startDate) return '';
+
+    return String(startDate).split('T')[0];
+  });
+
+  cancellationPaymentMinDateLabel = computed(() => {
+    const minDate = this.cancellationPaymentMinDate();
+    return minDate ? this.formatDate(minDate) : 'Sin límite';
+  });
+
+  cancellationPaymentMaxDateLabel = computed(() => {
+    return this.formatDate(this.cancellationPaymentMaxDate());
+  });
+
+  isCancellationPaymentDateValid = computed(() => {
+    if (!this.isCancellationTypification()) return true;
+
+    const cuota = this.selectedInstallmentForCancellation();
+    if (!cuota) return true;
+
+    const fechaPago = this.fechaPagoEditable();
+    if (!fechaPago) return false;
+
+    const pagoDate = this.parseDateLocal(fechaPago);
+    const minDateValue = this.cancellationPaymentMinDate();
+    if (minDateValue) {
+      const minDate = this.parseDateLocal(minDateValue);
+      if (pagoDate < minDate) return false;
+    }
+
+    const maxDate = this.parseDateLocal(this.cancellationPaymentMaxDate());
+    return pagoDate <= maxDate;
   });
 
   // Raw client data from ini_* table (to detect all numeric columns dynamically)
   rawClientData = signal<Record<string, any>>({});
+
+  // Campos fijos de cabecera. El resto de columnas queda disponible para ofertas/montos.
+  private readonly fixedHeaderLabels: Record<string, string> = {
+    documento: 'Documento',
+    num_cuenta_ori: 'Número de cuenta',
+    num_cuenta: 'Número de cuenta',
+    numero_cuenta: 'Número de cuenta',
+    num_cuenta_pmcp: 'Número de cuenta',
+    dias_mora_asig: 'Días mora',
+    dias_mora: 'Días mora',
+    periodo_castigo: 'Período castigo',
+    rango_mora: 'Rango mora',
+    rango_mora_asig: 'Rango mora',
+    rango_mora_proy: 'Rango mora'
+  };
+
+  clientHeaderFields = computed(() => {
+    const rawData = this.rawClientData();
+    const fields: { field: string; label: string; value: string }[] = [];
+    const usedLabels = new Set<string>();
+
+    for (const [field, label] of Object.entries(this.fixedHeaderLabels)) {
+      const rawKey = Object.keys(rawData).find(key => key.toLowerCase() === field);
+      const value = rawKey ? rawData[rawKey] : undefined;
+      if (field === 'documento' || value === undefined || value === null || String(value).trim() === '' || usedLabels.has(label)) continue;
+      fields.push({ field, label, value: String(value).trim() });
+      usedLabels.add(label);
+    }
+
+    return fields;
+  });
 
   // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
   // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
@@ -2289,6 +2702,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
       for (const cabecera of cabeceras) {
         const lowerCodigo = cabecera.codigo.toLowerCase();
+        if (this.isFixedHeaderField(lowerCodigo)) continue;
         const value = rawData[lowerCodigo] ?? rawData[cabecera.codigo];
         const formato = cabecera.formatoVisualizacion || 'MONEDA';
 
@@ -2319,7 +2733,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       // Fallback: si no hay cabeceras, usar lógica anterior pero con exclusiones estrictas
       const excludeFields = [
         'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
-        'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
+         'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
         'periodo', 'edad', 'dias_mora', 'dias_mora_asig',
         'telefono_celular', 'telefono_domicilio', 'telefono_laboral',
         'telf_referencia_1', 'telf_referencia_2'
@@ -2329,7 +2743,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         const lowerKey = key.toLowerCase();
         if (lowerKey.startsWith('fec_') || lowerKey.startsWith('fecha_')) continue;
         if (lowerKey.startsWith('telefono_') || lowerKey.startsWith('telf_')) continue;
-        if (excludeFields.includes(lowerKey)) continue;
+        if (excludeFields.includes(lowerKey) || this.isFixedHeaderField(lowerKey)) continue;
 
         const numValue = typeof value === 'number' ? value : parseFloat(value);
         if (!isNaN(numValue) && numValue >= 0) {
@@ -2353,6 +2767,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     const rawData = this.rawClientData();
     const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
     return typeof diasMora === 'number' ? diasMora : parseInt(diasMora) || 0;
+  });
+
+  private isFixedHeaderField(field: string): boolean {
+    return Object.prototype.hasOwnProperty.call(this.fixedHeaderLabels, field.toLowerCase());
+  }
+
+  // Ocupación del cliente desde la tabla dinámica (ini_*).
+  // Busca la columna exacta y, si no, cualquier columna que contenga "ocupacion".
+  clientOcupacion = computed(() => {
+    const rawData = this.rawClientData();
+    const direct = rawData['ocupacion'] ?? rawData['ocupación'] ?? rawData['occupation'];
+    if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+      return String(direct).trim();
+    }
+    const key = Object.keys(rawData).find(k => k.toLowerCase().includes('ocupacion') || k.toLowerCase().includes('ocupación'));
+    const val = key ? rawData[key] : null;
+    return val === undefined || val === null ? '' : String(val).trim();
   });
 
   // Cabeceras de configuración para mostrar nombres visuales
@@ -2415,6 +2846,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // Número de cuotas pendientes de la promesa activa
   promesaActivaPendingCount = signal<number>(0);
 
+  // ==================== CARTA DE ACUERDO DESDE BANNER ====================
+  // El botón Generar/Regenerar acuerdo solo se muestra si la subcartera tiene plantilla asignada
+  cartaPlantillaDisponible = signal<boolean>(false);
+  // Gestiones que ya tienen carta generada (define la etiqueta Generar vs Regenerar)
+  cartasGeneradasGestionIds = signal<Set<number>>(new Set());
+  // Gestión cuya carta se está generando (deshabilita el botón mientras descarga)
+  generandoCartaGestionId = signal<number | null>(null);
+
+  // ==================== BLOQUEO PERIODO DE GRACIA (PROMESA VENCIDA DE OTRO ASESOR) ====================
+  // Flag para mostrar la card de bloqueo cuando la última promesa del cliente está vencida
+  // y todavía dentro del período de gracia de otro asesor
+  showPromesaVencidaGraciaBlocking = signal<boolean>(false);
+
   // Computed: Opciones de monto para continuidad (solo saldo restante)
   continuityPaymentAmounts = computed<AmountOption[]>(() => {
     const data = this.continuidadData();
@@ -2436,6 +2880,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   shouldShowDynamicForm = computed<boolean>(() => {
     // Si hay bloqueo de promesa activa, NO mostrar formulario
     if (this.showPromesaActivaBlocking()) {
+      return false;
+    }
+
+    // Si hay bloqueo por período de gracia de otro asesor, NO mostrar formulario
+    if (this.showPromesaVencidaGraciaBlocking()) {
       return false;
     }
 
@@ -2468,6 +2917,42 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
+  // Fix temporal: margen de 100ms antes de desbloquear llamadas entrantes
+  private desbloqueoTimeout?: number;
+
+  // --- Bloqueo de salida durante una gestión con llamada en curso ---
+  // Se levanta al guardar (onSaveSuccess) para habilitar la navegación
+  // programática de salida. Muere con la instancia del componente.
+  private salidaAutorizada = false;
+  // Marcador explícito de "se colocó una llamada en esta gestión". Es FALSE al
+  // entrar (incluida la entrada manual, que setea isTipifying sin llamada) y
+  // solo se vuelve TRUE al iniciar una llamada (startCall / iniciarRellamada);
+  // se resetea al guardar. No usamos isTipifying porque la carga manual lo
+  // activa en la entrada sin que haya habido llamada.
+  protected llamadaRealizada = signal(false);
+  // Referencias estables para registrar/desregistrar en el lock service y el
+  // listener de beforeunload (deben ser la MISMA referencia en add/remove).
+  private boundLockCheck = () => this.hasGestionEnCurso() && !this.salidaAutorizada;
+  private boundBeforeUnload = (e: BeforeUnloadEvent) => {
+    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  };
+  // Trampa de historial para el botón "Atrás" del navegador. El CanDeactivate
+  // guard es asíncrono y en back rápido/múltiple el navegador procesa varios
+  // popstate antes de que Angular cancele/restaure la URL, dejando escapar. Esta
+  // trampa es SÍNCRONA: re-empuja el estado en cada popstate mientras hay
+  // gestión con llamada sin guardar, sin ventana asíncrona que explotar.
+  private historyTrapArmed = false;
+  private boundPopState = () => {
+    if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
+      history.pushState(null, '', location.href); // deshacer el back inmediatamente
+      this.toast.warning('Debes guardar la gestión antes de salir');
+    } else {
+      this.historyTrapArmed = false; // sin bloqueo: permitir el back real
+    }
+  };
 
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
@@ -2501,12 +2986,67 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     private comprobanteService: ComprobanteService,
     private cartaAcuerdoService: CartaAcuerdoService,
     private firstInstallmentConfigService: FirstInstallmentConfigService,
-    private callService: CallService
-  ) {}
+    private callService: CallService,
+    private toast: ToastService,
+    private gestionLock: GestionLockService,
+    private fmt: FormatService
+  ) {
+    // Auto-selecciona en "Teléfono Contactado" el último número discado (discador o
+    // rellamada). Como activeCallPhone se actualiza en cada llamada, si el asesor
+    // rellama a otro número, la selección se actualiza sola (gana la última llamada).
+    // Se acota a los teléfonos del cliente cargado para evitar cruces entre clientes;
+    // el asesor puede sobreescribir manualmente después (el effect no re-dispara salvo
+    // que haya una nueva llamada).
+    effect(() => {
+      const discado = this.activeCallPhone();
+      if (!discado) return;
+      const esDelCliente = this.telefonosMetodo().some(t => t.numero === discado);
+      if (esDelCliente) {
+        this.selectedManualPhone.set(discado);
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  /**
+   * Indica si hay una gestión "en curso": se colocó una llamada en esta gestión
+   * (en curso o ya finalizada) y aún no se guarda. NO incluye isTipifying porque
+   * la entrada manual lo activa sin que haya habido llamada (falso positivo de
+   * bloqueo). `llamadaRealizada` cubre tanto llamadas normales (startCall) como
+   * manuales/rellamada (iniciarRellamada).
+   */
+  hasGestionEnCurso(): boolean {
+    return this.callActive() || this.rellamadaCallActive() || this.llamadaRealizada();
+  }
+
+  /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
+  puedeSalir(_nextUrl: string): boolean {
+    return this.salidaAutorizada || !this.hasGestionEnCurso();
+  }
+
+  /**
+   * Arma la trampa de historial empujando un estado centinela (mismo URL) la
+   * primera vez que se coloca una llamada. A partir de ahí, cada "Atrás" del
+   * navegador pop-ea este centinela y el listener de popstate lo vuelve a
+   * empujar, neutralizando el botón Atrás mientras la gestión esté bloqueada.
+   */
+  private armHistoryTrap(): void {
+    if (!this.historyTrapArmed) {
+      history.pushState(null, '', location.href);
+      this.historyTrapArmed = true;
+    }
+  }
 
   ngOnInit() {
     this.loadTenants();
     this.loadManagementHistory();
+
+    // Bloqueo de salida: si se hizo una llamada, la única vía de salida es
+    // Guardar Gestión. Cubre el botón de logout (vía el service) y el
+    // refresh/cierre de pestaña (vía beforeunload). El sidebar y el back se
+    // cubren con el CanDeactivate guard de la ruta.
+    this.gestionLock.register(this.boundLockCheck);
+    window.addEventListener('beforeunload', this.boundBeforeUnload);
+    window.addEventListener('popstate', this.boundPopState);
 
     // Verificar estado inicial de la llamada
     const initialCallState = this.sipService.getCallState();
@@ -2530,22 +3070,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           this.rellamadaCallActive.set(true);
           console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
         }
-        if ((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
-          console.log('📞 [Rellamada] Terminada');
-          this.isRellamada.set(false);
-          this.rellamadaCallActive.set(false);
-          this.sipService.setRellamadaActive(false);
-          this.sipService.clearCurrentOutgoingNumber();
-          this.showRellamadaDropdown.set(false);
-          this.isMuted.set(false);
-          this.isOnHold.set(false);
+        
+        // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
+        if((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
+          console.log('🚫 [Rellamada] Llamada de rellamada terminó, reseteando estado');
+          this.resetRellamadaState();
         }
-        // Si la llamada falla sin haber conectado, limpiar flags
-        if ((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
-          console.log('📞 [Rellamada] Falló antes de conectar, limpiando flags');
-          this.isRellamada.set(false);
-          this.sipService.setRellamadaActive(false);
-          this.showRellamadaDropdown.set(false);
+        else if((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
+          console.log('🚫 [Rellamada] Llamada de rellamada falló, reseteando estado');
+          this.resetRellamadaState();
         }
         return; // No ejecutar lógica normal
       }
@@ -2821,6 +3354,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
   }
 
   /**
@@ -2892,6 +3426,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.rawClientData.set(client);
     console.log('[CUSTOMER] Raw client data from ini_* table:', client);
 
+    // Capturar jerarquía (inquilino/cartera/subcartera) si viene en la respuesta
+    this.clientHierarchy.set(
+      (client?.nombreInquilino || client?.nombreCartera || client?.nombreSubcartera)
+        ? {
+            inquilino: client.nombreInquilino || '',
+            cartera: client.nombreCartera || '',
+            subcartera: client.nombreSubcartera || ''
+          }
+        : null
+    );
+
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
 
@@ -2934,6 +3479,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar historial de gestiones
     this.loadManagementHistory();
@@ -3152,9 +3698,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Carga el cliente de la llamada activa del agente
    * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
    */
-  loadFirstCustomer(retryCount: number = 0) {
+  loadFirstCustomer(retryCount: number = 0, forceRefresh: boolean = false) {
     // Si autoLoadCustomerByPhone ya cargó un cliente (llamada manual/saliente), no duplicar
-    if (this.customerData()?.id && retryCount === 0) {
+    if (this.customerData()?.id && retryCount === 0 && !forceRefresh) {
       console.log('📋 [FULL-DATA] Cliente ya cargado por autoLoadCustomerByPhone, omitiendo loadFirstCustomer');
       return;
     }
@@ -3173,7 +3719,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // El backend envía phoneNumber, contactId, etc. ANTES del bridge.
     // app.component los guarda en sessionStorage porque llegan antes de que esta página cargue.
     // ========================================
-    if (retryCount === 0) {
+    if (retryCount === 0 && !forceRefresh) {
       const predictiveDataStr = sessionStorage.getItem('predictive_call_data');
       if (predictiveDataStr) {
         sessionStorage.removeItem('predictive_call_data');
@@ -3182,6 +3728,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           if (predictiveData.phoneNumber) {
             console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
             this.activeCallPhone.set(predictiveData.anexoDestino || predictiveData.phoneNumber);
+            if (predictiveData.llamadaId) {
+              this.activeCallId.set(predictiveData.llamadaId);
+            }
             this.autoLoadCustomerByPhone(predictiveData.phoneNumber);
             return;
           }
@@ -3209,7 +3758,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           // 2. Llamada terminó rápido (<3s): agente ya está tipificando pero los datos no llegaron
           if (retryCount < 2 && (this.callActive() || this.isTipifying()) && !this.customerData()?.id) {
             console.warn(`⚠️ [FULL-DATA] Sin datos pero en llamada/tipificando - reintentando en 2s (intento ${retryCount + 1}/3)`);
-            setTimeout(() => this.loadFirstCustomer(retryCount + 1), 2000);
+            setTimeout(() => this.loadFirstCustomer(retryCount + 1, forceRefresh), 2000);
           } else {
             console.warn('⚠️ [FULL-DATA] No se obtuvieron datos después de todos los intentos');
             this.isLoadingCustomer.set(false);
@@ -3222,6 +3771,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Guardar contactId del discador para posible rellamada
         if (fullData.contactId) {
           this.dialerContactId.set(fullData.contactId);
+        }
+
+        // Guardar el id de la llamada del discador para enlazar la gestión (registros_gestion.id_llamada)
+        if (fullData.llamadaId) {
+          this.activeCallId.set(fullData.llamadaId);
         }
 
         // Guardar el número real discado
@@ -3243,6 +3797,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  protected showDialerDataRefreshButton(): boolean {
+    return false;
+  }
+
+  protected refreshDialerCustomerData(): void {
+    if (this.isLoadingCustomer()) return;
+
+    this.isManualSource.set(false);
+    this.loadFirstCustomer(0, true);
   }
 
   /**
@@ -3359,6 +3924,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar teléfonos desde metodos_contacto
     const doc = clienteDetalle.documento || '';
@@ -3385,10 +3951,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!documento) {
       console.warn('⚠️ No hay documento del cliente, no se pueden cargar cronogramas');
       this.activePaymentSchedules.set([]);
+      this.allPaymentSchedules.set([]);
       return;
     }
 
     console.log(`📅 Cargando cronogramas activos para documento ${documento}...`);
+
+    // Cargar en paralelo el estado del período de gracia por promesa vencida (Regla B)
+    this.loadPromesaVencidaGracia(documento);
 
     this.managementService.getActiveSchedulesByDocumento(documento).pipe(
       catchError((error) => {
@@ -3401,6 +3971,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         if (!records || records.length === 0) {
           this.activePaymentSchedules.set([]);
+          this.allPaymentSchedules.set([]);
           return;
         }
 
@@ -3408,7 +3979,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Solo necesitamos adaptar el formato para este componente
         const schedules = records.map((schedule: any) => {
           // El servicio ya devuelve installments (no cuotasPromesa)
-          const installments = schedule.installments || [];
+          const installments = this.sortInstallmentsByDueDate(schedule.installments || []);
 
           // Encontrar cuotas pendientes
           const pendingCuotas = installments.filter((c: any) =>
@@ -3418,12 +3989,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           const nextCuota = pendingCuotas[0] || installments[0];
 
           return {
-            id: schedule.scheduleId?.scheduleId || schedule.id,
+            id: schedule.id,
+            managementId: schedule.id,
             grupoPromesaUuid: schedule.scheduleId?.scheduleId,
             totalAmount: schedule.totalAmount,
             numberOfInstallments: schedule.numberOfInstallments || installments.length,
             fechaGestion: schedule.startDate,
-            installments: installments.map((c: any) => ({
+            installments: this.sortInstallmentsByDueDate(installments.map((c: any) => ({
               id: c.id,
               numeroCuota: c.numeroCuota || c.installmentNumber,
               monto: c.montoPromesa || c.monto || c.amount,
@@ -3432,16 +4004,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               fechaPromesa: c.fechaPromesa || c.dueDate || c.fechaPago,
               status: c.status || 'PENDIENTE',
               montoPagadoReal: c.montoPagadoReal || 0
-            })),
+            }))),
             nextDueDate: nextCuota?.fechaPromesa || nextCuota?.dueDate || nextCuota?.fechaPago,
             cuotasPendientes: pendingCuotas.length
           };
         });
 
-        // Filtrar cronogramas que tienen cuotas pendientes o vencidas (pago retroactivo)
-        const activeSchedules = schedules.filter((s: any) =>
-          s.cuotasPendientes > 0 ||
-          s.installments?.some((c: any) => c.status === 'VENCIDA' || c.status === 'VENCIDO')
+        // Ordenar DESC por fecha de gestión para garantizar que [0] sea la promesa inmediata
+        const sortedSchedules = [...schedules].sort((a: any, b: any) => {
+          const dateA = new Date(a?.fechaGestion || 0).getTime();
+          const dateB = new Date(b?.fechaGestion || 0).getTime();
+          return dateB - dateA;
+        });
+
+        // Mantener TODAS para lógica de cancelación (solo usa la inmediata)
+        this.allPaymentSchedules.set(sortedSchedules);
+
+        // Mantener comportamiento histórico de promesas activas:
+        // solo cronogramas con cuotas pendientes.
+        const activeSchedules = sortedSchedules.filter((s: any) =>
+          s.cuotasPendientes > 0
         );
 
         console.log('📅 Cronogramas transformados:', schedules);
@@ -3450,8 +4032,32 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
         if (activeSchedules.length > 0) {
           console.log(`📅 ¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
+          this.cargarEstadoCartaAcuerdo(Number(records[0]?.customerId) || null);
         }
       }
+    });
+  }
+
+  /**
+   * Carga el estado del período de gracia por promesa vencida (Regla B), para pintar
+   * la card de bloqueo si la última promesa del cliente está vencida y le pertenece
+   * todavía a otro asesor.
+   */
+  private loadPromesaVencidaGracia(documento: string) {
+    if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) {
+      this.promesaVencidaGracia.set(null);
+      return;
+    }
+
+    this.managementService.verificarPromesaVencidaGracia(
+      documento, this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId
+    ).pipe(
+      catchError((error) => {
+        console.warn('⚠️ Error verificando período de gracia de promesa vencida:', error);
+        return of(null);
+      })
+    ).subscribe(response => {
+      this.promesaVencidaGracia.set(response);
     });
   }
 
@@ -3510,10 +4116,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             estadoPago: m.estadoPago || undefined,
             estadoPagoDisplay: this.formatEstadoPagoDisplay(m.estadoPago),
             hasSchedule: m.typificationRequiresSchedule || false,
+            grupoPromesaUuid: m.grupoPromesaUuid,
             schedule: null as any
           };
         });
 
+        this.selectedHistorialPromesaGroupUuid.set(null);
         this.historialGestiones.set(historial);
       },
       error: (error) => {
@@ -3610,6 +4218,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   cambiarTabHistorial(tab: 'actual' | 'historico') {
     this.historialTabActivo.set(tab);
+    if (tab !== 'actual') {
+      this.selectedHistorialPromesaGroupUuid.set(null);
+    }
 
     // Si cambia a histórico y no hay datos cargados, cargarlos
     if (tab === 'historico' && this.historialHistorico().length === 0) {
@@ -3618,13 +4229,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private formatDateTime(dateTimeString: string): string {
-    const date = new Date(dateTimeString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    // Fecha+hora siguiendo el idioma del navegador (FormatService).
+    return this.fmt.dateTime(dateTimeString);
   }
 
   private calculateCallDuration(callDetail: any): string {
@@ -3645,8 +4251,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Liberar el bloqueo de salida al destruir el componente (cubre incluso la
+    // salida forzada por /login). El unregister por identidad evita borrar el
+    // predicado de otra instancia.
+    this.gestionLock.unregister(this.boundLockCheck);
+    window.removeEventListener('beforeunload', this.boundBeforeUnload);
+    window.removeEventListener('popstate', this.boundPopState);
+
     if (this.callTimer) {
       clearInterval(this.callTimer);
+    }
+
+    // Fix temporal: si el componente muere antes de los 100ms, el desbloqueo lo hace
+    // el bloque de abajo (isTipifying sigue en true porque el timer no llegó a correr)
+    if (this.desbloqueoTimeout) {
+      clearTimeout(this.desbloqueoTimeout);
+      this.desbloqueoTimeout = undefined;
     }
 
     // IMPORTANTE: Desbloquear llamadas si el componente se destruye
@@ -3673,35 +4293,95 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   async iniciarRellamada(phoneNumber: string) {
-    if (this.rellamadaCallActive() || this.callActive()) return;
+    // Validamos que es una rellamada
+    if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
+    this.llamadaRealizada.set(true); // llamada manual/rellamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
+
     this.activeCallPhone.set(phoneNumber);
     this.sipService.setRellamadaActive(true);
+    this.sipService.setCurrentOutgoingNumber(phoneNumber);
     this.showRellamadaDropdown.set(false);
+
+    // Desbloquear 
+    this.sipService.blockIncomingCallsMode(false);
 
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id;
 
+    if (!agentId) {
+      console.error('❌ No se pudo obtener el ID del agente para la rellamada');
+      this.resetRellamadaState();
+      return;
+    }
+
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
     console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
-    if (agentId) {
+      await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
       const contactId = this.dialerContactId() || undefined;
-      this.callService.registerCall({ agentId, phoneNumber, idCliente, documento, contactId }).subscribe({
-        next: () => console.log('📞 [Rellamada] Registrada en BD'),
-        error: (err: any) => console.error('⚠️ [Rellamada] Error registrando en BD (llamada continúa):', err)
+      this.callService.makeCall({
+        agentId,
+        phoneNumber,
+        idCliente,
+        documento,
+        contactId,
+        tenantId: this.selectedTenantId,
+        carteraId: this.selectedPortfolioId,
+        subcarteraId: this.selectedSubPortfolioId
+      }).subscribe({
+        next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
+        error: (err: any) => {
+          console.error('❌ [Rellamada] Error registrando llamada en BD:', err?.message || err);
+           this.resetRellamadaState();
+        }
       });
+  }
+
+  // Nuevo Helper para la rellamada
+  private resetRellamadaState(): void {
+    this.isRellamada.set(false);
+    this.rellamadaCallActive.set(false);
+    this.sipService.setRellamadaActive(false);
+    this.sipService.clearCurrentOutgoingNumber();
+    this.showRellamadaDropdown.set(false);
+    this.isMuted.set(false);
+    this.isOnHold.set(false);
+
+    if (this.isTipifying()) {
+      this.sipService.blockIncomingCallsMode(true);
+      const currentUser = this.authService.getCurrentUser();
+      if(currentUser?.id) {
+        this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
+          next: () => console.log('[Rellamada] Estado cambiado a TIPIFICANDO'),
+          error: (err: any) => console.error('[Rellamada] Error cambiando estado:', err)
+        });
+      }
     }
+  }
+
+  private async ensureCustomerLoadedForRellamada(phoneNumber: string): Promise<void> {
+    const currentCustomer = this.customerData();
+    if (currentCustomer?.id) {
+      return;
+    }
+
     try {
-      await this.sipService.call(phoneNumber);
-    } catch (err: any) {
-      console.error('❌ [Rellamada] Error al iniciar llamada SIP:', err?.message || err);
-      this.isRellamada.set(false);
-      this.rellamadaCallActive.set(false);
-      this.sipService.setRellamadaActive(false);
-      this.sipService.clearCurrentOutgoingNumber();
-      this.showRellamadaDropdown.set(false);
+      console.log('🔍 [Rellamada] Resolviendo cliente antes de registrar llamada:', phoneNumber);
+      const customers = await firstValueFrom(
+        this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber)
+      );
+
+      if (customers && customers.length > 0) {
+        this.loadCustomerFromResource(customers[0]);
+        console.log(' [Rellamada] Cliente cargado antes del registro:', customers[0].id);
+      } else {
+        console.warn(' [Rellamada] No se encontró cliente por teléfono; se registrará sin idCliente/documento');
+      }
+    } catch (error) {
+      console.error(' [Rellamada] Error cargando cliente antes del registro:', error);
     }
   }
 
@@ -3709,43 +4389,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!this.rellamadaCallActive()) return;
     this.sipService.hangup();
     // El handler de onCallStatus limpia los flags automáticamente
-  }
-
-  cancelarTipificacion() {
-    console.log('❌ Cancelando tipificación...');
-
-    // Si hay rellamada activa, colgarla primero
-    if (this.rellamadaCallActive()) {
-      console.log('📵 Colgando rellamada activa antes de cancelar tipificación...');
-      this.sipService.hangup();
-      this.isRellamada.set(false);
-      this.rellamadaCallActive.set(false);
-      this.sipService.setRellamadaActive(false);
-      this.sipService.clearCurrentOutgoingNumber(); // Limpiar número stale de rellamada
-      this.showRellamadaDropdown.set(false);
-    }
-
-    // Si hay llamada activa, colgarla primero
-    if (this.callActive()) {
-      console.log('📵 Colgando llamada activa antes de cancelar tipificación...');
-      this.endCall(false);
-    }
-
-    // Desbloquear llamadas entrantes
-    this.isTipifying.set(false);
-    this.sipService.blockIncomingCallsMode(false);
-    console.log('🔓 Desbloqueando llamadas entrantes - tipificación cancelada');
-
-    // Navegar PRIMERO, luego cambiar a DISPONIBLE
-    // Esto evita que el auto-dialer asigne una llamada mientras el agente aún está aquí
-    const currentUser = this.authService.getCurrentUser();
-    const agentId = currentUser?.id || 1;
-    this.router.navigate(['/agent-dashboard']).then(() => {
-      this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-        next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-        error: (err: any) => console.error('❌ Error cambiando estado:', err)
-      });
-    });
   }
 
   protected openScheduleDetail(managementId: number) {
@@ -3789,6 +4432,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
   startCall() {
     this.callActive.set(true);
+    this.llamadaRealizada.set(true); // se colocó una llamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
     this.callDuration.set(0);
     this.callStartTime = new Date().toISOString();
 
@@ -3842,22 +4487,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private formatDateOnly(dateStr: string): string {
     if (!dateStr) return '-';
-      
-      // 1. Separamos la cadena en fecha y hora (usando espacio o 'T' como separador)
-      const partes = dateStr.split(/[ T]/);
-      const soloFecha = partes[0]; // Ej: "2026-04-07"
-      
-      // Extraemos la hora y le quitamos los microsegundos (lo que está después del punto)
-      const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
-      
-      // 2. Formateamos la fecha de AAAA-MM-DD a DD/MM/AAAA
-    const dateParts = soloFecha.split('-');
-      let fechaFormateada = soloFecha;
-    if (dateParts.length === 3) {
-      fechaFormateada = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
-    }
-
-      // 3. Juntamos la fecha formateada con la hora al final (si existe)
+    // La FECHA sigue el idioma del navegador (FormatService); la HORA se conserva literal.
+    const partes = dateStr.split(/[ T]/);
+    const soloHora = partes[1] ? partes[1].split('.')[0] : ''; // Ej: "18:15:28"
+    const fechaFormateada = this.fmt.date(partes[0]) || partes[0];
     return soloHora ? `${fechaFormateada} ${soloHora}` : fechaFormateada;
   }
 
@@ -3900,7 +4533,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       'PAGADA': 'Pagada',
       'VENCIDA': 'Vencida',
       'PARCIAL': 'Parcial',
-      'CANCELADA': 'Anulada'
+      'CANCELADA': 'Cancelada',
+      'EN_EVALUACION': 'En evaluacion'
     };
     return estadoMap[estado] || this.formatSnakeCase(estado);
   }
@@ -3959,18 +4593,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     if (!monto || monto <= 0) return '';
 
     const parts: string[] = [];
-    parts.push(`S/${monto.toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`);
+    parts.push(this.fmt.currency(monto, { minimumFractionDigits: 0, maximumFractionDigits: 2 }));
 
     if (totalCuotas && totalCuotas > 0) {
       parts.push(`${totalCuotas} cuota${totalCuotas > 1 ? 's' : ''}`);
     }
 
     if (fechaPrimeraCuota) {
-      // fecha viene como "YYYY-MM-DD", mostrar como "DD/MM"
-      const dateParts = fechaPrimeraCuota.split('-');
-      if (dateParts.length >= 3) {
-        parts.push(`${dateParts[2]}/${dateParts[1]}`);
-      }
+      // fecha compacta (día/mes) siguiendo el idioma del navegador
+      const f = this.fmt.date(fechaPrimeraCuota, { day: '2-digit', month: '2-digit' });
+      if (f) parts.push(f);
     }
 
     return parts.join(' · ');
@@ -4020,6 +4652,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     // Resetear señales de continuidad y bloqueo de promesa activa al cambiar tipificación
     this.resetContinuidadState();
     this.resetPromesaActivaState();
+    this.showPromesaVencidaGraciaBlocking.set(false);
 
     if (levelIndex === 0) {
       this.managementForm.clasificacionNivel1 = value;
@@ -4133,8 +4766,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       } else {
         this.resetPromesaActivaState();
       }
+
+      // Verificar período de gracia de una promesa vencida de otro asesor (Regla B)
+      const gracia = this.promesaVencidaGracia();
+      const currentUser = this.authService.getCurrentUser();
+      const esOtroAsesor = gracia?.idAgente != null && gracia.idAgente !== currentUser?.id;
+      if (gracia?.enGracia && esOtroAsesor) {
+        console.log('[PROMESA-CHECK] ⚠️ Cliente en período de gracia de', gracia.nombreAgente, 'hasta', gracia.finGracia);
+        this.showPromesaVencidaGraciaBlocking.set(true);
+      } else {
+        this.showPromesaVencidaGraciaBlocking.set(false);
+      }
     } else {
       this.resetPromesaActivaState();
+      this.showPromesaVencidaGraciaBlocking.set(false);
     }
   }
 
@@ -4702,10 +5347,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * Formatea un valor numérico como moneda (Soles)
    */
   formatCurrency(value: number): string {
-    return new Intl.NumberFormat('es-PE', {
-      style: 'currency',
-      currency: 'PEN'
-    }).format(value);
+    return this.fmt.currency(value);
   }
 
   /**
@@ -4714,9 +5356,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   formatByType(field: { value: number; formato: string; rawValue: string }): string {
     switch (field.formato) {
       case 'PORCENTAJE':
-        return new Intl.NumberFormat('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(field.value) + '%';
+        // El valor viene como fracción (ej. 0.5 = 50%), por eso se multiplica x100.
+        // min 0 / max 2 decimales → "50%", "65%", "12.5%" (sin ceros de más).
+        return this.fmt.number(field.value * 100, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
       case 'NUMERO':
-        return new Intl.NumberFormat('es-PE').format(field.value);
+        return this.fmt.number(field.value);
       case 'TEXTO':
         return field.rawValue;
       case 'MONEDA':
@@ -4731,8 +5375,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   private parseDateLocal(dateString: string): Date {
     if (!dateString) return new Date();
-    const [year, month, day] = dateString.split('-').map(Number);
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
     return new Date(year, month - 1, day);
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   /**
@@ -4757,6 +5408,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   getPrimaryAmountValue(): number {
     const fields = this.clientAmountFields();
     if (fields.length > 0) {
+      const capitalField = fields.find(f => f.label.trim().toLowerCase() === 'capital')
+        || fields.find(f => f.field.toLowerCase().includes('capital') && !f.field.toLowerCase().includes('tarj'));
+      if (capitalField) return capitalField.value;
       // Buscar campo que contenga "total" en el nombre
       const totalField = fields.find(f =>
         f.label.toLowerCase().includes('total') ||
@@ -4767,15 +5421,114 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     return this.customerData().deuda?.saldo_total || 0;
   }
 
+  purchaseOrder(): string {
+    const rawValue = this.rawClientData()['orden_compra'];
+    return rawValue === undefined || rawValue === null ? '' : String(rawValue).trim().toUpperCase();
+  }
+
+  purchasePeriod(): string {
+    const rawValue = this.rawClientData()['periodo_compra'];
+    if (rawValue === undefined || rawValue === null || rawValue === '') return '';
+
+    const digits = String(rawValue).replace(/\D/g, '');
+    if (digits.length < 6) return String(rawValue).trim();
+
+    const year = digits.slice(0, 4);
+    const month = digits.slice(4, 6);
+    const monthNumber = Number(month);
+    if (monthNumber < 1 || monthNumber > 12) return String(rawValue).trim();
+
+    return `${month}/${year}`;
+  }
+
+  hasRightPanelClientData(): boolean {
+    return Object.keys(this.rawClientData()).length > 0;
+  }
+
+  purchaseBlockClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'bg-[#E9F8F6] text-[#4DB3A7] dark:bg-[#123C38] dark:text-[#4DB3A7]';
+      default:
+        return 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300';
+    }
+  }
+
+  purchaseColumnClass(): string {
+    return 'bg-white dark:bg-slate-900';
+  }
+
+  purchaseSummaryClass(): string {
+    return '';
+  }
+
+  purchaseTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return this.themeService.isDarkMode() ? 'text-red-300' : 'text-red-800';
+      case 'SEGUNDA':
+        return 'text-[#4DB3A7]';
+      default:
+        return this.themeService.isDarkMode() ? 'text-red-300' : 'text-red-800';
+    }
+  }
+
+  purchaseAccentTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return this.themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700';
+      case 'SEGUNDA':
+        return 'text-[#4DB3A7]';
+      default:
+        return this.themeService.isDarkMode() ? 'text-orange-400' : 'text-orange-700';
+    }
+  }
+
+  purchaseSelectedRowClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'ring-1 ring-red-500 bg-red-100 dark:bg-red-950/40';
+      case 'SEGUNDA':
+        return 'ring-1 ring-[#4DB3A7] bg-[#D8F1ED] dark:bg-[#123C38]';
+      default:
+        return 'ring-1 ring-red-500 bg-red-100 dark:bg-red-950/40';
+    }
+  }
+
+  purchaseSelectedTextClass(): string {
+    switch (this.purchaseOrder()) {
+      case 'PRIMERA':
+        return 'text-red-700 dark:text-red-300';
+      case 'SEGUNDA':
+        return 'text-[#228E82] dark:text-[#4DB3A7]';
+      default:
+        return 'text-red-700 dark:text-red-300';
+    }
+  }
+
   /**
    * Obtiene las clases CSS para cada fila de montos según su índice
    * Alterna entre 2 colores para mejor visualización
    */
   getAmountRowClass(index: number): string {
-    const colors = [
-      'bg-red-50 !text-black dark:bg-red-950/30 dark:!text-red-300',
-      'bg-white !text-black dark:bg-gray-800 dark:!text-red-400',
-    ];
+    const colorsByOrder: Record<string, string[]> = {
+      PRIMERA: [
+        'bg-white !text-black dark:bg-slate-900 dark:!text-red-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-red-300',
+      ],
+      SEGUNDA: [
+        'bg-white !text-black dark:bg-slate-900 dark:!text-[#4DB3A7]',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-[#4DB3A7]',
+      ],
+      DEFAULT: [
+        'bg-white !text-black dark:bg-slate-900 dark:!text-red-300',
+        'bg-slate-50 !text-black dark:bg-slate-800 dark:!text-red-300',
+      ]
+    };
+
+    const colors = colorsByOrder[this.purchaseOrder()] || colorsByOrder['DEFAULT'];
     return colors[index % colors.length];
   }
 
@@ -5098,10 +5851,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           })),
           // Porcentaje de auto-aprobación para calcular excepciones
           porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+          porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+          porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
           generaCartaAcuerdo: paymentScheduleData.generaCartaAcuerdo
         },
         // También a nivel raíz para que el backend lo procese
-        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion
+        porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
+        porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
+        porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa
       };
 
       console.log('[SAVE] Creating payment schedule with request:', scheduleRequest);
@@ -5138,7 +5895,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error al guardar cronograma de pago:', error);
           this.saving.set(false);
-          alert('⚠️ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
+          // El backend valida promesas duplicadas/período de gracia (400 con mensaje claro).
+          // El frontend ya no replica esa lógica: si el backend manda un mensaje, se muestra tal cual.
+          if (error?.status === 400 && error?.error?.message) {
+            alert(`⚠️ No puede registrar una nueva Promesa de Pago.\n\n${error.error.message}`);
+          } else {
+            alert('⚠️ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
+          }
         }
       });
     } else {
@@ -5189,7 +5952,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
-        idLlamada: null,  // Se puede obtener si hay ID de llamada en el sistema
+        idLlamada: this.activeCallId(),  // id de la llamada del discador (marcador_llamadas.id); backend lo rescata si viene null
         duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
         // Información del agente y dispositivo
@@ -5218,11 +5981,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               fecha: fechaPago
             });
 
-            // Buscar el grupoPromesaUuid de la cuota
-            const schedule = this.activePaymentSchedules().find(s =>
+            // Buscar también en todos los cronogramas porque las cuotas vencidas no siempre están activas.
+            const schedule = [...this.activePaymentSchedules(), ...this.allPaymentSchedules()].find(s =>
               s.installments?.some((c: any) => c.id === selectedCuota.id)
             );
-            const grupoPromesaUuid = schedule?.grupoPromesaUuid || schedule?.id;
+            const grupoPromesaUuid = selectedCuota.grupoPromesaUuid || schedule?.grupoPromesaUuid || selectedCuota.scheduleId || schedule?.id;
 
             if (!grupoPromesaUuid) {
               console.error('No se encontró el grupoPromesaUuid');
@@ -5236,6 +5999,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
             // Usar el nuevo endpoint de pagos
             this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, {
               grupoPromesaUuid: grupoPromesaUuid,
+              // Cuota elegida por el asesor: la distribución arranca en esta cuota y el excedente
+              // se aplica hacia adelante (sin tocar las anteriores). Si no eligió cuota va null →
+              // FIFO desde la más antigua, comportamiento retrocompatible.
+              cuotaId: selectedCuota ? Number(selectedCuota.id) : null,
               monto: montoPago,
               fechaPago: fechaPago,
               banco: null,
@@ -5246,6 +6013,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               comprobanteUrl: null
             }).subscribe({
               next: (result) => {
+                // El backend puede responder 200 con { success: false } al rechazar el pago
+                // (fecha posterior al vencimiento, cuota ya pagada o de otro grupo).
+                if (result && result.success === false) {
+                  this.handlePagoCancelacionRechazado(result.error || result.mensaje);
+                  return;
+                }
                 console.log('✅ Pago registrado exitosamente:', result);
                 // Limpiar la selección y campos editables
                 this.selectedInstallmentForCancellation.set(null);
@@ -5260,12 +6033,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
               },
               error: (err) => {
                 console.error('⚠️ Error registrando pago:', err);
-                if (err.error?.error || err.error?.mensaje) {
-                  alert(`⚠️ ${err.error.error || err.error.mensaje || 'Error al registrar el pago.'}`);
-                }
-                // Aunque falle el pago, la gestión ya se guardó
-                this.selectedInstallmentForCancellation.set(null);
-                this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
+                // Backend transaccional: si rechaza (HTTP 400) hizo rollback; no quedó nada a medias.
+                this.handlePagoCancelacionRechazado(err?.error?.error || err?.error?.mensaje);
               }
             });
           } else {
@@ -5279,6 +6048,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  /**
+   * Maneja el rechazo del backend al registrar un pago de cancelación (HTTP 400 o
+   * { success: false }). El backend es transaccional e hizo rollback, así que no quedó
+   * nada a medias. Se muestra el motivo y se mantiene la pantalla abierta (sin navegar ni
+   * limpiar cuota/monto/fecha) para que el asesor corrija y reintente.
+   *
+   * NOTA (deuda técnica): la gestión (createManagement) ya se guardó ANTES de este pago,
+   * porque el pago va anidado en su callback de éxito. Si el asesor reintenta con el botón
+   * Guardar se re-crea la gestión (duplicado). El caso común —fecha posterior al vencimiento—
+   * ya está bloqueado en UI por isCancellationPaymentDateValid()/botón deshabilitado, así que
+   * este rechazo solo ocurre con datos obsoletos (cuota ya pagada / de otro grupo). Para un
+   * reintento aislado del pago habría que desacoplarlo de createManagement.
+   */
+  private handlePagoCancelacionRechazado(mensaje?: string): void {
+    const detalle = mensaje || 'El pago fue rechazado. Verifica la fecha y la cuota, luego reintenta.';
+    alert(`⚠️ ${detalle}`);
+    // Re-habilitar el botón Guardar y conservar cuota/monto/fecha para permitir la corrección.
+    this.saving.set(false);
   }
 
   private registerCallToBackend(managementId: number) {
@@ -5362,6 +6151,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   private onSaveSuccess(resultadoCodigo: string, gestionCodigo: string) {
+    // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
+    // Todas las ramas de este método terminan navegando fuera de la pantalla.
+    this.salidaAutorizada = true;
+    this.llamadaRealizada.set(false); // gestión cerrada: ya no hay llamada pendiente de guardar
     this.saving.set(false);
     this.showSuccess.set(true);
 
@@ -5391,15 +6184,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.callStartTime = undefined;
     this.activeCallPhone.set('');
     this.activeCallClientId.set(null);
+    this.activeCallId.set(null);
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
 
     this.activeTab.set('cliente');
 
     // Desbloquear llamadas entrantes - tipificación completada
-    this.isTipifying.set(false);
-    this.sipService.blockIncomingCallsMode(false);
-    console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+    // Fix temporal: 100ms de margen (ver navegación a agent-dashboard más abajo)
+    this.desbloqueoTimeout = window.setTimeout(() => {
+      this.desbloqueoTimeout = undefined;
+      this.isTipifying.set(false);
+      this.sipService.blockIncomingCallsMode(false);
+      console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+    }, 100);
 
     // Verificar si estamos en modo recordatorio dialer
     const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
@@ -5425,7 +6223,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
           error: (err: any) => console.error('❌ Error cambiando estado:', err)
         });
       });
-    }, 2000);
+    // Fix temporal: reducción a 1 segundo
+    }, 1000);
   }
 
   /**
@@ -5496,8 +6295,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
                                 this.activeCallClientId() === this.customerData()?.id;
     const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
-    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone()) {
+    // El número discado (activeCallPhone) cuenta como teléfono contactado aunque no se
+    // haya marcado en el selector (p. ej. número no registrado en la lista del cliente).
+    if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone() && !this.activeCallPhone()) {
       newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
+    }
+
+    if (this.isCancellationTypification() && !this.isCancellationPaymentDateValid()) {
+      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no es válida para la cuota seleccionada';
     }
 
     // 3. Validar campos dinámicos requeridos
@@ -5591,7 +6396,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
 
     switch (format) {
       case 'currency':
-        return 'S/ ' + Number(value).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return this.fmt.currency(value);
 
       case 'number':
         return String(value);
@@ -5599,7 +6404,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       case 'date':
         if (typeof value === 'string') {
           const date = new Date(value);
-          return date.toLocaleDateString('es-PE');
+          return this.fmt.date(date);
         }
         return String(value);
 
@@ -5647,11 +6452,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       } else {
         date = dateValue;
       }
-      return date.toLocaleDateString('es-PE', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      return this.fmt.date(date);
     } catch {
       return String(dateValue);
     }
@@ -5662,8 +6463,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    * saldoPendiente = monto - montoPagadoReal
    */
   getSaldoPendienteCuota(cuota: any): number {
-    const pagado = cuota?.montoPagadoReal || 0;
-    return Math.max(0, (cuota?.monto || 0) - pagado);
+    const monto = Number(cuota?.monto || 0);
+    const pagado = Number(cuota?.montoPagadoReal || 0);
+    const pendiente = Math.max(0, monto - pagado);
+    return this.roundToTwoDecimals(pendiente);
+  }
+
+  private roundToTwoDecimals(value: number): number {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
   }
 
   /**
@@ -5864,10 +6671,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       fecha_nacimiento: customer.birthDate || '',
       edad: customer.age || null,
       contacto: {
-        telefono_principal: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_principal')?.value || '',
-        telefono_alternativo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_secundario')?.value || '',
-        telefono_trabajo: customer.contactMethods?.find((cm: any) => cm.subtype === 'telefono_trabajo')?.value || '',
-        email: customer.contactMethods?.find((cm: any) => cm.contactType === 'email')?.value || '',
+        telefono_principal: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_principal')?.value || '',
+        telefono_alternativo: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_secundario')?.value || '',
+        telefono_trabajo: customer.contactMethods?.find((cm: any) => (cm.subType || cm.subtype) === 'telefono_trabajo')?.value || '',
+        email: customer.contactMethods?.find((cm: any) => (cm.contactType || '').toLowerCase() === 'email')?.value || '',
         direccion: customer.address || ''
       },
       cuenta: {
@@ -5889,6 +6696,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         monto_ultimo_pago: 0
       }
     });
+    this.syncEmailsMetodoFromCurrentData();
 
     // Cargar historial de gestiones del cliente
     this.loadManagementHistory();
@@ -6091,26 +6899,51 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.reprogramDateDraft.set('');
   }
 
-  getMinReprogramDate(): string {
-    return new Date().toISOString().split('T')[0];
+  getMinReprogramDate(cuota?: any, schedule?: any): string {
+    const today = new Date();
+    const minDate = new Date(today);
+
+    const installments = schedule?.installments || [];
+    const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
+    const previousInstallment = currentIndex > 0 ? installments[currentIndex - 1] : null;
+    const previousDateStr = previousInstallment?.dueDate || previousInstallment?.fechaPromesa;
+
+    if (previousDateStr) {
+      const previousDate = new Date(previousDateStr);
+      if (!isNaN(previousDate.getTime()) && previousDate > minDate) {
+        minDate.setTime(previousDate.getTime());
+      }
+    }
+
+    return minDate.toISOString().split('T')[0];
   }
 
   getMaxReprogramDate(cuota: any, schedule: any): string {
     const today = new Date();
-    const maxBy30 = new Date(today);
-    maxBy30.setDate(maxBy30.getDate() + 30);
-
-    const maxDate = new Date(maxBy30);
     const installments = schedule?.installments || [];
     const currentIndex = installments.findIndex((c: any) => c?.id === cuota?.id);
     const nextInstallment = currentIndex >= 0 ? installments[currentIndex + 1] : null;
     const nextDateStr = nextInstallment?.dueDate || nextInstallment?.fechaPromesa;
+    const currentDateStr = cuota?.dueDate || cuota?.fechaPromesa;
+
+    const maxDate = new Date(today);
 
     if (nextDateStr) {
       const nextDate = new Date(nextDateStr);
-      if (!isNaN(nextDate.getTime()) && nextDate < maxDate) {
-        maxDate.setTime(nextDate.getTime());
+      if (!isNaN(nextDate.getTime())) {
+        const maxBeforeNext = new Date(nextDate);
+        maxBeforeNext.setDate(maxBeforeNext.getDate() - 4);
+        maxDate.setTime(maxBeforeNext.getTime());
       }
+    } else if (currentDateStr) {
+      const currentDate = new Date(currentDateStr);
+      if (!isNaN(currentDate.getTime())) {
+        const maxByCurrentInstallment = new Date(currentDate);
+        maxByCurrentInstallment.setDate(maxByCurrentInstallment.getDate() + 30);
+        maxDate.setTime(maxByCurrentInstallment.getTime());
+      }
+    } else {
+      maxDate.setDate(maxDate.getDate() + 30);
     }
 
     return maxDate.toISOString().split('T')[0];
@@ -6123,7 +6956,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       return;
     }
 
-    const minDate = this.getMinReprogramDate();
+    const minDate = this.getMinReprogramDate(cuota, schedule);
     const maxDate = this.getMaxReprogramDate(cuota, schedule);
     if (selectedDate < minDate || selectedDate > maxDate) {
       alert(`Fecha no válida. Debe estar entre ${minDate} y ${maxDate}.`);
@@ -6137,7 +6970,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     }
 
     const currentUser = this.authService.getCurrentUser();
-    const recordId = Number(schedule?.id);
+    const recordId = Number(schedule?.managementId || schedule?.id);
     if (!recordId || !cuota?.id) {
       alert('No se pudo identificar el registro o la cuota a reprogramar.');
       return;
@@ -6397,9 +7230,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
    */
   onSelectCuotaForCancellation(cuota: any): void {
     this.selectedInstallmentForCancellation.set(cuota);
-    // Inicializar monto con el valor de la cuota
-    this.montoPagoEditable.set(cuota.monto || 0);
-    // Inicializar fecha con hoy
+    // Inicializar monto con saldo pendiente (si tiene pago parcial), sino monto total
+    const montoInicial = this.tienePagoParcial(cuota)
+      ? this.getSaldoPendienteCuota(cuota)
+      : (cuota.monto || 0);
+    this.montoPagoEditable.set(montoInicial);
+    // Inicializar fecha con el maximo permitido: hoy, o el vencimiento si la cuota ya vencio
     this.fechaPagoEditable.set(new Date().toISOString().split('T')[0]);
   }
 
@@ -6511,6 +7347,65 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Carga el estado del botón de carta del banner de promesa activa:
+   * si la subcartera tiene plantilla asignada y qué gestiones ya tienen carta generada
+   */
+  private cargarEstadoCartaAcuerdo(idCliente: number | null): void {
+    const idSubcartera = this.selectedSubPortfolioId;
+    if (idSubcartera) {
+      this.cartaAcuerdoService.tienePlantillaSubcartera(idSubcartera).subscribe({
+        next: (tiene) => this.cartaPlantillaDisponible.set(tiene),
+        error: () => this.cartaPlantillaDisponible.set(false)
+      });
+    } else {
+      this.cartaPlantillaDisponible.set(false);
+    }
+
+    if (idCliente) {
+      this.cartaAcuerdoService.obtenerHistorial(idCliente).subscribe({
+        next: (historial) => this.cartasGeneradasGestionIds.set(new Set((historial || []).map(h => h.idGestion))),
+        error: () => this.cartasGeneradasGestionIds.set(new Set())
+      });
+    } else {
+      this.cartasGeneradasGestionIds.set(new Set());
+    }
+  }
+
+  /**
+   * Genera (o regenera) la carta de acuerdo desde el banner de promesa activa.
+   * El backend relee la gestión y sus cuotas, así que la carta sale con los datos actuales.
+   */
+  protected generarCartaDesdeBanner(schedule: any): void {
+    const idGestion = Number(schedule?.id);
+    if (!idGestion || this.generandoCartaGestionId() === idGestion) return;
+
+    const user = this.authService.getCurrentUser();
+    if (!user) {
+      alert('⚠️ No se puede generar la carta: usuario no encontrado');
+      return;
+    }
+
+    this.generandoCartaGestionId.set(idGestion);
+    this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
+      next: (blob) => {
+        const docCliente = this.customerData()?.numero_documento || idGestion;
+        this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${docCliente}.pdf`);
+        this.cartasGeneradasGestionIds.update(ids => {
+          const nuevo = new Set(ids);
+          nuevo.add(idGestion);
+          return nuevo;
+        });
+        this.generandoCartaGestionId.set(null);
+      },
+      error: (error) => {
+        console.error('❌ Error generando carta desde banner:', error);
+        this.generandoCartaGestionId.set(null);
+        alert('⚠️ Error al generar la Carta de Acuerdo.');
+      }
+    });
+  }
+
   // --- Agregar Teléfono ---
   subtipoLabel(subtipo: string): string {
     const labels: Record<string, string> = {
@@ -6527,21 +7422,89 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   }
 
   contactabilidadBadge(estado: string | undefined, activo?: boolean): { text: string; class: string } {
+    /*
+    COMENTADO PARA QUE SE USEN LOS ESTADOS Y PINTE LO QUE TENEMOS DE MOMENTO EN LA BD
     if (activo === false) {
       return { text: 'Equivocado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' };
-    }
+    }*/
     switch (estado) {
-      case 'CONTACTO_TITULAR': return { text: 'Titular', class: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' };
-      case 'CONTACTO_EFECTIVO': return { text: 'Efectivo', class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' };
-      case 'NUEVO': return { text: 'Nuevo', class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' };
-      case 'NO_CONTACTADO': return { text: 'No contactado', class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' };
+      case 'CONTACTO_TITULAR': return { text: 'Titular',             class: 'bg-green-100 text-green-700 dark:bg-green-900/40dark:text-green-300' };
+      case 'CONTACTO_TERCERO': return { text: 'Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
+      case 'CONTACTADO': return { text: 'Contactado',          class: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40dark:text-teal-300' };
+      case 'NO_CONTACTADO': return { text: 'No contactado',       class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'};
+      case 'INVALIDO': return { text: 'Inválido',            class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40dark:text-orange-300' };
+      case 'NUEVO': return { text: 'Nuevo',               class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40dark:text-amber-300' };
+      case 'INVALIDO_CONFIRMADO': return { text: 'Inválido confirmado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'};
       default: return { text: '', class: '' };
     }
   }
 
+  /* MOSTRAR ESTADOS DE OSIPTEL */
+  osiptelBadge(estado: string | undefined ): { icon: string; class: string; title: string } {
+    switch (estado) {
+    case 'PERTENECE': return { icon: 'id-card', class: 'text-green-600 dark:text-green-400', title: 'OSIPTEL: la línea pertenece al titular' };
+      default: 
+      return { icon: '', class: '', title: '' };
+    }
+  }
+
+  // Path del logo oficial de WhatsApp (Simple Icons) para el SVG inline
+  readonly whatsappIconPath = 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.358.101 11.892c0 2.096.549 4.142 1.595 5.945L0 24l6.305-1.654a11.962 11.962 0 005.728 1.459h.005c6.581 0 11.94-5.358 11.943-11.893a11.821 11.821 0 00-3.48-8.443z';
+
+  whatsappBadge(estado: string | undefined): { show: boolean; class: string; title: string } {
+    switch (estado) {
+      case 'TIENE': return { show: true, class: 'text-green-600 dark:text-green-400', title: 'WhatsApp: el número tiene WhatsApp' };
+      default: return { show: false, class: '', title: '' };
+    }
+  }
+
+  emailSubtipoLabel(subtipo: string): string {
+    const labels: Record<string, string> = {
+      'email_principal': 'Principal',
+      'email_secundario': 'Secundario',
+      'email_trabajo': 'Trabajo'
+    };
+    return labels[subtipo] || subtipo || 'Email';
+  }
+
+  private syncEmailsMetodoFromCurrentData(): void {
+    const rawData = this.rawClientData();
+    const sourceMethods = Array.isArray(rawData?.['contactMethods'])
+      ? rawData['contactMethods']
+      : Array.isArray(rawData?.['metodos_contacto'])
+      ? rawData['metodos_contacto']
+      : [];
+
+    const normalized = sourceMethods
+      .filter((cm: any) => ((cm?.contactType || cm?.tipo || '').toString().toLowerCase() === 'email'))
+      .map((cm: any) => ({
+        valor: (cm?.value || cm?.valor || '').toString().trim(),
+        subtipo: (cm?.subType || cm?.subtype || cm?.subtipo || 'email_principal').toString()
+      }))
+      .filter((item: any) => item.valor.length > 0);
+
+    const unique = normalized.filter((item: any, index: number, arr: any[]) =>
+      arr.findIndex((x: any) => x.valor.toLowerCase() === item.valor.toLowerCase()) === index
+    );
+
+    const fallback = (this.customerData()?.contacto?.email || '').trim();
+    if (unique.length === 0 && fallback) {
+      this.emailsMetodo.set([{ valor: fallback, subtipo: 'email_principal' }]);
+      return;
+    }
+
+    this.emailsMetodo.set(unique);
+  }
+
   loadTelefonosMetodo(documento: string): void {
     if (!documento) return;
-    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`).pipe(
+    const params: Record<string, string> = {};
+
+    if (this.selectedTenantId) params['tenantId'] = String(this.selectedTenantId);
+    if (this.selectedPortfolioId) params['carteraId'] = String(this.selectedPortfolioId);
+    if (this.selectedSubPortfolioId) params['subcarteraId'] = String(this.selectedSubPortfolioId);
+
+    this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`, { params }).pipe(
       catchError(err => {
         console.error('❌ Error cargando teléfonos de metodos_contacto:', err);
         return of([]);
@@ -6550,6 +7513,156 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
       console.log('📞 Teléfonos cargados (todos):', telefonos.length);
       this.telefonosMetodo.set(telefonos);
     });
+  }
+
+  protected toggleHistorialPromesaDetalle(gestion: { hasSchedule: boolean; grupoPromesaUuid?: string }): void {
+    if (!gestion.hasSchedule || !gestion.grupoPromesaUuid) return;
+
+    const groupUuid = gestion.grupoPromesaUuid;
+    if (this.selectedHistorialPromesaGroupUuid() === groupUuid) {
+      this.selectedHistorialPromesaGroupUuid.set(null);
+      return;
+    }
+
+    this.selectedHistorialPromesaGroupUuid.set(groupUuid);
+    this.loadHistorialPromesaDetalle(groupUuid);
+  }
+
+  protected cerrarHistorialPromesaDetalle(): void {
+    this.selectedHistorialPromesaGroupUuid.set(null);
+  }
+
+  protected isHistorialPromesaSelected(gestion: { grupoPromesaUuid?: string }): boolean {
+    return !!gestion.grupoPromesaUuid && this.selectedHistorialPromesaGroupUuid() === gestion.grupoPromesaUuid;
+  }
+
+  private loadHistorialPromesaDetalle(groupUuid: string): void {
+    const cache = this.historialPromesaInstallmentsByGroupUuid();
+    if (cache[groupUuid]) return;
+
+    const loading = this.historialPromesaLoadingByGroupUuid();
+    this.historialPromesaLoadingByGroupUuid.set({ ...loading, [groupUuid]: true });
+
+    this.typificationV2Service.getPaymentScheduleByGroup(groupUuid).subscribe({
+      next: (rows) => {
+        const cuotasPromesa = (rows || []).flatMap((registro: any) => registro?.cuotasPromesa || []);
+
+        const mappedInstallments: InstallmentResource[] = cuotasPromesa
+          .map((cuota: any) => ({
+            id: cuota.id,
+            installmentNumber: cuota.numeroCuota || cuota.installmentNumber || 0,
+            amount: cuota.montoPromesa || cuota.monto || cuota.amount || 0,
+            dueDate: cuota.fechaPromesa || cuota.fechaPago || cuota.dueDate || '',
+            paidDate: cuota.fechaPagoReal || cuota.paidDate,
+            status: cuota.estado || cuota.status || 'PENDIENTE',
+            statusDescription: this.formatEstadoPagoDisplay(cuota.estado || cuota.status || 'PENDIENTE')
+          }))
+          .sort((a, b) => a.installmentNumber - b.installmentNumber);
+
+        const current = this.historialPromesaInstallmentsByGroupUuid();
+        this.historialPromesaInstallmentsByGroupUuid.set({ ...current, [groupUuid]: mappedInstallments });
+
+        const nextLoading = this.historialPromesaLoadingByGroupUuid();
+        this.historialPromesaLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
+      },
+      error: (err) => {
+        console.error('[HISTORIAL] Error cargando detalle de cuotas por grupo:', err);
+        const nextLoading = this.historialPromesaLoadingByGroupUuid();
+        this.historialPromesaLoadingByGroupUuid.set({ ...nextLoading, [groupUuid]: false });
+      }
+    });
+  }
+
+  protected getSelectedHistorialPromesaColumnCount(): number {
+    const count = this.getSelectedHistorialPromesaInstallments().length;
+    if (count > 24) return 3;
+    if (count > 12) return 2;
+    return 1;
+  }
+
+  protected getSelectedHistorialPromesaGridTemplate(): string {
+    const cols = this.getSelectedHistorialPromesaColumnCount();
+    return `repeat(${cols}, minmax(0, 1fr))`;
+  }
+
+  protected getSelectedHistorialPromesaResumen(promesaCompacta: string | undefined): string {
+    if (!promesaCompacta) return '';
+    const parts = promesaCompacta.split(' · ').filter(Boolean);
+    return parts[0] || '';
+  }
+
+  protected truncateText(value: string | undefined, maxLength: number): string {
+    if (!value) return '-';
+    if (value.length <= maxLength) return value;
+    return `${value.slice(0, maxLength).trimEnd()}...`;
+  }
+
+  protected isSelectedHistorialPromesaLoading(): boolean {
+    const groupUuid = this.selectedHistorialPromesaGroupUuid();
+    if (!groupUuid) return false;
+    return !!this.historialPromesaLoadingByGroupUuid()[groupUuid];
+  }
+
+  protected getSelectedHistorialPromesaInstallments(): InstallmentResource[] {
+    const groupUuid = this.selectedHistorialPromesaGroupUuid();
+    if (!groupUuid) return [];
+    return this.historialPromesaInstallmentsByGroupUuid()[groupUuid] || [];
+  }
+
+  protected getHistorialPromesaItemClass(status: string | undefined, index: number): string {
+    if (status === 'PENDIENTE' && index === this.getSelectedHistorialPromesaFirstPendingIndex()) {
+      return 'border-blue-300 bg-blue-100 dark:border-blue-800/70 dark:bg-blue-900/35';
+    }
+
+    switch (status) {
+      case 'PAGADA':
+        return 'border-green-300 bg-green-100 dark:border-green-800/70 dark:bg-green-900/35';
+      case 'VENCIDA':
+        return 'border-red-300 bg-red-100 dark:border-red-800/70 dark:bg-red-900/35';
+      case 'PARCIAL':
+        return 'border-orange-300 bg-orange-100 dark:border-orange-800/70 dark:bg-orange-900/35';
+      case 'CANCELADA':
+      case 'EN_EVALUACION':
+        return 'border-sky-300 bg-sky-100 dark:border-sky-800/70 dark:bg-sky-900/35';
+      case 'PENDIENTE':
+      default:
+        return 'border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-800/80';
+    }
+  }
+
+  private getSelectedHistorialPromesaFirstPendingIndex(): number {
+    return this.getSelectedHistorialPromesaInstallments().findIndex(cuota => cuota.status === 'PENDIENTE');
+  }
+
+  closePhoneDuplicateCard(): void {
+    this.showPhoneDuplicateCard.set(false);
+    this.phoneDuplicateTitle.set('Contacto duplicado');
+  }
+
+  toggleAddContactForm(): void {
+    if (this.showAddContactForm()) {
+      this.cancelAddContactForm();
+      return;
+    }
+    this.showAddContactForm.set(true);
+    this.newContactType = 'telefono';
+  }
+
+  cancelAddContactForm(): void {
+    this.showAddContactForm.set(false);
+    this.newContactType = 'telefono';
+    this.newPhoneNumber = '';
+    this.newPhoneSubtipo = 'telefono_referencia_1';
+    this.newEmail = '';
+    this.newEmailSubtipo = 'email_principal';
+  }
+
+  guardarNuevoContacto(): void {
+    if (this.newContactType === 'telefono') {
+      this.guardarNuevoTelefono();
+      return;
+    }
+    this.guardarNuevoCorreo();
   }
 
   guardarNuevoTelefono(): void {
@@ -6563,7 +7676,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
     this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto`, {
       documento,
       valor,
-      subtipo: this.newPhoneSubtipo
+      subtipo: this.newPhoneSubtipo,
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
     }).subscribe({
       next: () => {
         // Recargar la lista completa de teléfonos desde el backend
@@ -6572,7 +7688,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         // Reset form
         this.newPhoneNumber = '';
         this.newPhoneSubtipo = 'telefono_referencia_1';
-        this.showAddPhoneForm.set(false);
+        this.cancelAddContactForm();
         this.savingPhone.set(false);
 
         // Toast de éxito
@@ -6584,6 +7700,59 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
         this.savingPhone.set(false);
         const msg = err.error?.error || 'Error al agregar teléfono';
         console.error('❌ Error agregando teléfono:', msg);
+        if ((msg || '').toLowerCase().includes('ya existe para este cliente')) {
+          this.phoneDuplicateTitle.set('Teléfono duplicado');
+          this.phoneDuplicateMessage.set(msg);
+          this.showPhoneDuplicateCard.set(true);
+          return;
+        }
+        alert(msg);
+      }
+    });
+  }
+
+  guardarNuevoCorreo(): void {
+    const valor = (this.newEmail || '').trim();
+    if (!this.isValidEmail(valor)) return;
+
+    const documento = this.customerData()?.numero_documento;
+    if (!documento) return;
+
+    this.savingEmail.set(true);
+    this.http.post<any>(`${environment.gatewayUrl}/contacts/metodo-contacto-email`, {
+      documento,
+      valor,
+      subtipo: this.newEmailSubtipo,
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
+    }).subscribe({
+      next: () => {
+        const current = this.emailsMetodo();
+        const alreadyExists = current.some(e => e.valor.toLowerCase() === valor.toLowerCase());
+        if (!alreadyExists) {
+          this.emailsMetodo.set([...current, { valor, subtipo: this.newEmailSubtipo }]);
+        }
+
+        this.newEmail = '';
+        this.newEmailSubtipo = 'email_principal';
+        this.cancelAddContactForm();
+        this.savingEmail.set(false);
+
+        this.showSuccess.set(true);
+        setTimeout(() => this.showSuccess.set(false), 3000);
+        console.log('✅ Correo agregado exitosamente:', valor);
+      },
+      error: (err) => {
+        this.savingEmail.set(false);
+        const msg = err.error?.error || 'Error al agregar correo';
+        console.error('❌ Error agregando correo:', msg);
+        if ((msg || '').toLowerCase().includes('ya existe')) {
+          this.phoneDuplicateTitle.set('Correo duplicado');
+          this.phoneDuplicateMessage.set(msg);
+          this.showPhoneDuplicateCard.set(true);
+          return;
+        }
         alert(msg);
       }
     });
@@ -6592,6 +7761,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy {
   // --- WhatsApp ---
   isValidCellphone(num: string): boolean {
     return /^9\d{8}$/.test((num || '').trim());
+  }
+
+  isValidEmail(email: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((email || '').trim());
   }
 
   sendWhatsapp(phone: string): void {

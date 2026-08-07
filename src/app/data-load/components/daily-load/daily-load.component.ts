@@ -551,14 +551,14 @@ export class DailyLoadComponent implements OnInit {
           return;
         }
 
-        const excelHeaders: string[] = (jsonData[0] as any[]).map(h => String(h).toLowerCase());
+        const excelHeaders: string[] = (jsonData[0] as any[]).map(h => String(h).trim().toLowerCase());
         const configuredHeaders = this.previewHeaders();
         const columnMapping: { [excelIndex: number]: number } = {};
         const missingHeaders: HeaderConfiguration[] = [];
 
         configuredHeaders.forEach((header, configIndex) => {
           const excelIndex = excelHeaders.findIndex(
-            excelH => excelH === header.headerName.toLowerCase()
+            excelH => excelH === header.headerName.trim().toLowerCase()
           );
 
           if (excelIndex !== -1) {
@@ -746,7 +746,7 @@ export class DailyLoadComponent implements OnInit {
 
         configuredHeaders.forEach((header, configIndex) => {
           const csvIndex = csvHeaders.findIndex(
-            (csvH: string) => csvH === header.headerName.toLowerCase()
+            (csvH: string) => csvH === header.headerName.trim().toLowerCase()
           );
 
           if (csvIndex !== -1) {

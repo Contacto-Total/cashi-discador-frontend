@@ -1,0 +1,135 @@
+<div class="bot-agenda">
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-icon"><lucide-angular name="calendar-clock" [size]="24"></lucide-angular></div>
+      <div>
+        <h1>Llamadas agendadas</h1>
+        <p>Clientes que pidieron que un asesor les devuelva la llamada</p>
+      </div>
+    </div>
+    <div class="header-acciones">
+      <input type="date" [(ngModel)]="fecha" (ngModelChange)="cargar()" />
+      <button class="btn-secondary" *ngIf="puedeVerTodas" (click)="alternarAlcance()">
+        <lucide-angular [name]="verTodas ? 'user' : 'users'" [size]="16"></lucide-angular>
+        {{ verTodas ? 'Ver solo las mías' : 'Ver las de todos' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="flash" *ngIf="mensaje">{{ mensaje }}</div>
+
+  <!-- Con error los contadores mentirian: dirian "Total: 0" junto al aviso de
+       fallo, y eso es justo lo que hacia leer el error como "no hay nada". -->
+  <div class="chips" *ngIf="!error">
+    <span class="chip">Total: {{ agendas.length }}</span>
+    <span class="chip pend">Por atender: {{ contar('PENDIENTE') }}</span>
+    <span class="chip done">Atendidas: {{ contar('ATENDIDA') }}</span>
+    <span class="chip disc">No contestó: {{ contar('NO_CONTESTA') }}</span>
+    <span class="chip disc" *ngIf="contar('VENCIDA')">No se llamó: {{ contar('VENCIDA') }}</span>
+  </div>
+
+  <div class="empty-state error" *ngIf="error">
+    <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
+    <strong>No se pudo consultar la agenda</strong>
+    <p>{{ errorMotivo }}</p>
+    <p class="aclaracion">
+      Esto <b>no</b> quiere decir que no haya llamadas: quiere decir que no se pudo
+      preguntar. Puede haber llamadas programadas que ahora mismo no se ven.
+    </p>
+    <button class="btn-secondary" (click)="cargar()">
+      <lucide-angular name="refresh-cw" [size]="16"></lucide-angular> Reintentar
+    </button>
+  </div>
+
+  <div class="empty-state" *ngIf="!error && !cargando && agendas.length === 0">
+    <lucide-angular name="calendar-check" [size]="28"></lucide-angular>
+    <strong>No hay llamadas agendadas</strong>
+    <p>Ningún cliente pidió que le devolvieran la llamada este día.</p>
+  </div>
+
+  <!-- Próximas: lo que el asesor necesita ver primero -->
+  <section *ngIf="proximas.length">
+    <h3 class="titulo-seccion">Por atender</h3>
+    <div class="tarjeta" *ngFor="let a of proximas"
+         [class.inminente]="esInminente(a)" (click)="abrir(a)">
+      <div class="hora">
+        <strong>{{ a.fechaHoraPactada | date:'HH:mm' }}</strong>
+        <span class="muted">{{ cuentaAtras(a) }}</span>
+      </div>
+      <div class="cliente">
+        <div class="celda-principal">{{ a.nombreCliente || ('Cliente ' + a.documento) }}</div>
+        <div class="celda-sub">{{ a.documento }} · {{ a.telefono }}</div>
+      </div>
+      <div class="motivo">
+        <span class="badge">{{ etiquetaEstado(a.estado) }}</span>
+        <div class="celda-sub" *ngIf="a.motivo">{{ a.motivo }}</div>
+      </div>
+      <div class="agente" *ngIf="verTodas">
+        <div class="celda-sub">{{ a.nombreAgente || 'sin asignar' }}</div>
+      </div>
+      <lucide-angular name="chevron-right" [size]="18"></lucide-angular>
+    </div>
+  </section>
+
+  <!-- Cerradas -->
+  <section *ngIf="cerradas.length">
+    <h3 class="titulo-seccion">Cerradas</h3>
+    <div class="table-card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Hora</th><th>Cliente</th><th>Estado</th>
+              <th *ngIf="verTodas">Asesor</th><th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of cerradas" class="fila-clicable" (click)="abrir(a)">
+              <td>{{ a.fechaHoraPactada | date:'HH:mm' }}</td>
+              <td>
+                <div class="celda-principal">{{ a.nombreCliente || ('Cliente ' + a.documento) }}</div>
+                <div class="celda-sub">{{ a.documento }}</div>
+              </td>
+              <td><span class="badge" [ngClass]="a.estado.toLowerCase()">{{ etiquetaEstado(a.estado) }}</span></td>
+              <td *ngIf="verTodas">{{ a.nombreAgente || '—' }}</td>
+              <td class="celda-sub">{{ a.detalleCierre || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Detalle: el contexto con el que el asesor entra a la llamada -->
+  <div class="detalle-overlay" *ngIf="seleccionada" (click)="cerrarDetalle()">
+    <aside class="detalle-panel" (click)="$event.stopPropagation()">
+      <header class="detalle-head">
+        <div>
+          <h3>{{ seleccionada.nombreCliente || ('Cliente ' + seleccionada.documento) }}</h3>
+          <p class="muted">
+            {{ seleccionada.documento }} · {{ seleccionada.telefono }} ·
+            {{ seleccionada.fechaHoraPactada | date:'dd/MM/yyyy HH:mm' }}
+          </p>
+        </div>
+        <button class="btn-link" (click)="cerrarDetalle()" aria-label="Cerrar">
+          <lucide-angular name="x" [size]="20"></lucide-angular>
+        </button>
+      </header>
+
+      <div class="detalle-datos">
+        <div><span class="muted">Estado</span><strong>{{ etiquetaEstado(seleccionada.estado) }}</strong></div>
+        <div><span class="muted">Motivo</span><strong>{{ seleccionada.motivo || '—' }}</strong></div>
+        <div *ngIf="verTodas"><span class="muted">Asesor</span><strong>{{ seleccionada.nombreAgente || '—' }}</strong></div>
+      </div>
+
+      <h4>Qué dijo el cliente</h4>
+      <p class="resumen" *ngIf="seleccionada.resumen">{{ seleccionada.resumen }}</p>
+      <p class="muted" *ngIf="!seleccionada.resumen">Sin resumen registrado.</p>
+
+      <ng-container *ngIf="seleccionada.detalleCierre">
+        <h4>Cierre</h4>
+        <p class="muted">{{ seleccionada.detalleCierre }}</p>
+      </ng-container>
+    </aside>
+  </div>
+</div>

@@ -151,14 +151,44 @@
 
           <!-- Cuotas Detail -->
           <div class="cuotas-container" *ngIf="isExpanded(promesa.idGestion) && promesa.cuotas">
-            <div *ngFor="let cuota of promesa.cuotas" class="cuota-item">
-              <div class="cuota-numero">Cuota {{ cuota.numeroCuota }}</div>
-              <div class="cuota-info">
+            <div
+              *ngFor="let cuota of promesa.cuotas"
+              class="cuota-item"
+              [class.editing]="isReprogrammingCuota(promesa.idGestion, cuota.id)">
+              <div class="cuota-col cuota-col-numero">
+                <div class="cuota-numero">Cuota {{ cuota.numeroCuota }}</div>
+              </div>
+
+              <div class="cuota-col cuota-col-main">
                 <span class="cuota-monto">{{ formatMonto(cuota.montoPromesa) }}</span>
                 <span class="cuota-fecha">{{ formatDate(cuota.fechaPromesa) }}</span>
                 <span class="cuota-estado" [style.background-color]="getEstadoCuotaColor(cuota.estado)">
                   {{ cuota.estado }}
                 </span>
+                <button
+                  *ngIf="canReprogramInstallment(cuota)"
+                  type="button"
+                  class="btn-action-small"
+                  (click)="startReprogrammingCuota(promesa, cuota)">
+                  Editar fecha
+                </button>
+              </div>
+
+              <div *ngIf="isReprogrammingCuota(promesa.idGestion, cuota.id)" class="reprogram-editor reprogram-editor-side">
+                <div class="reprogram-editor-row">
+                  <input
+                    type="date"
+                    [ngModel]="reprogramDateDraft()"
+                    (ngModelChange)="reprogramDateDraft.set($event || '')"
+                    [min]="getMinReprogramDate(cuota, promesa)"
+                    [max]="getMaxReprogramDate(cuota, promesa)"
+                    class="search-input reprogram-date-input"
+                  />
+                </div>
+                <div class="reprogram-editor-actions">
+                  <button type="button" class="btn-search btn-save-reprogram" (click)="confirmReprogramacion(promesa, cuota)">Guardar</button>
+                  <button type="button" class="btn-action-small btn-cancel-reprogram" (click)="cancelReprogrammingCuota()">Cancelar</button>
+                </div>
               </div>
             </div>
           </div>
@@ -205,6 +235,30 @@
       <span class="page-info">
         Pagina {{ currentPage() + 1 }} de {{ totalPages() }} ({{ totalElements() }} promesas)
       </span>
+    </div>
+  </div>
+</div>
+
+<!-- Popup Resultado Reprogramacion -->
+<div *ngIf="reprogramResult()" class="modal-overlay" (click)="closeReprogramResultPopup()">
+  <div
+    class="modal-content reprogram-result-modal"
+    [class.is-error]="reprogramResult()?.type === 'error'"
+    (click)="$event.stopPropagation()">
+    <div class="modal-header" [class.error-header]="reprogramResult()?.type === 'error'">
+      <h2 class="!text-white">
+        <lucide-angular class="!text-white" [name]="reprogramResult()?.type === 'success' ? 'check-circle' : 'alert-triangle'" [size]="20"></lucide-angular>
+        {{ reprogramResult()?.type === 'success' ? 'Operacion Exitosa' : 'No se pudo reprogramar' }}
+      </h2>
+      <button class="btn-close !text-white" (click)="closeReprogramResultPopup()">
+        <lucide-angular class="!text-white" name="x" [size]="18"></lucide-angular>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="reprogram-result-text">{{ reprogramResult()?.message }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-search btn-save-reprogram" (click)="closeReprogramResultPopup()">Cerrar</button>
     </div>
   </div>
 </div>

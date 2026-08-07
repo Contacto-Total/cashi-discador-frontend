@@ -7,6 +7,7 @@ import { RecordatoriosService } from '../../../core/services/recordatorios.servi
 import { SipService } from '../../../core/services/sip.service';
 import { RecordatorioPromesa } from '../../../core/models/recordatorio.model';
 import { trigger, state, style, animate, transition, keyframes } from '@angular/animations';
+import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
 export interface RecordatoriosModalData {
   cantidad: number;
@@ -23,7 +24,7 @@ type ModalState = 'initial' | 'countdown' | 'finished';
 @Component({
   selector: 'app-recordatorios-modal',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, AppDatePipe, AppNumberPipe],
   animations: [
     trigger('countdownNumber', [
       transition(':enter', [
@@ -160,13 +161,13 @@ type ModalState = 'initial' | 'countdown' | 'finished';
                 <div>
                   <p class="text-xs text-slate-400">Monto</p>
                   <p class="text-sm font-bold text-green-600 dark:text-green-400">
-                    S/ {{ recordatorioActual.monto | number:'1.2-2' }}
+                    S/ {{ recordatorioActual.monto | appNumber:'1.2-2' }}
                   </p>
                 </div>
                 <div>
                   <p class="text-xs text-slate-400">Fecha</p>
                   <p class="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                    {{ recordatorioActual.fechaPago | date:'dd/MM' }}
+                    {{ recordatorioActual.fechaPago | appDate:'dayMonth' }}
                   </p>
                 </div>
               </div>

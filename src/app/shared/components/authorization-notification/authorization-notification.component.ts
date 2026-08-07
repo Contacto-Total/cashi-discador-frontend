@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, signal, computed } from '@angular/core';
-import { CommonModule, CurrencyPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AutorizacionService, SolicitudAutorizacion, ResponderSolicitudRequest } from '../../../core/services/autorizacion.service';
 import { AuthorizationApprovalModalComponent } from '../authorization-approval-modal/authorization-approval-modal.component';
 import { AuthService } from '../../../core/services/auth.service';
@@ -14,7 +14,6 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [
     CommonModule,
-    CurrencyPipe,
     AuthorizationApprovalModalComponent
   ],
   template: `

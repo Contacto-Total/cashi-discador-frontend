@@ -6,13 +6,14 @@ import { Subscription, interval } from 'rxjs';
 import { startWith, switchMap } from 'rxjs/operators';
 import { Chart, registerables } from 'chart.js';
 import { SystemMetricsService, MetricsSnapshot, HttpErrorDetail } from '../../../core/services/system-metrics.service';
+import { AppTimePipe } from '@/shared/pipes/format.pipes';
 
 Chart.register(...registerables);
 
 @Component({
   selector: 'app-system-monitoring',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, LucideAngularModule, AppTimePipe],
   templateUrl: './system-monitoring.component.html',
   styleUrls: ['./system-monitoring.component.css']
 })

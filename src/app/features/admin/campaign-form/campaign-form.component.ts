@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -22,6 +22,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MAT_DATE_FORMATS } from '@angular/material/core';
+import { AppNumberPipe } from '@/shared/pipes/format.pipes';
+import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
 export const MY_DATE_FORMATS = {
   parse: {
@@ -42,7 +44,9 @@ export const MY_DATE_FORMATS = {
     MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    AppNumberPipe,
+    DragDropModule
   ],
   templateUrl: './campaign-form.component.html',
   styleUrls: ['./campaign-form.component.css'],
@@ -56,6 +60,9 @@ export const MY_DATE_FORMATS = {
 export class CampaignFormComponent implements OnInit {
   startDate: Date | null = null;
   endDate: Date | null = null;
+
+  // FLAG PARA LA CAMPAÑA EN MODO DRAFT (guardada pero sin importar contactos ni exportar Excel)
+  draftCampaignId: number | null = null;
 
   campaign: Campaign = {
     name: '',
@@ -102,6 +109,10 @@ export class CampaignFormComponent implements OnInit {
   distinctValuesForField: string[] = [];
   loadingDistinctValues: boolean = false;
 
+  // Filtros PERIODO (campos YYYYMM, ej: 202504) → selección por AÑO
+  availableYears: string[] = [];
+  newFilterSelectedYears: string[] = [];
+
   // Filtros FECHA
   newFilterMinDate: string = '';
   newFilterMaxDate: string = '';
@@ -122,6 +133,24 @@ export class CampaignFormComponent implements OnInit {
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
 
+  // Grupo dirigido de la campaña. null = todos los asesores de la subcartera.
+  grupos: GrupoAsesor[] = [];
+  selectedGrupoId: number | null = null;
+  loadingGrupos = false;
+
+  // Gestión de grupos (modal)
+  showGruposModal = false;
+  asesoresSubcartera: AsesorMiembro[] = [];
+  loadingAsesoresGrupo = false;
+  grupoFormId: number | null = null;   // null = creando, != null = editando
+  grupoFormNombre = '';
+  grupoFormAsesores: number[] = [];    // ids seleccionados (fuente de verdad que se persiste)
+  savingGrupo = false;
+  grupoError: string | null = null;
+  // Listas para drag & drop (misma data; grupoFormAsesores se deriva de dndSeleccionados)
+  dndDisponibles: AsesorMiembro[] = [];
+  dndSeleccionados: AsesorMiembro[] = [];
+
   // Modal de preview/confirmación
   showPreviewModal: boolean = false;
   previewLoading: boolean = false;
@@ -140,8 +169,10 @@ export class CampaignFormComponent implements OnInit {
   ngOnInit(): void {
   this.loadTenants();
 
-    this.startDate = new Date();
-    this.endDate = new Date();
+    // Default en alta: fecha/hora actual en los inputs datetime-local (los que onSubmit consume)
+    const ahora = this.toDateTimeLocal(new Date().toISOString());
+    this.startDateString = ahora;
+    this.endDateString = ahora;
 
   this.route.params.subscribe(params => {
     if (params['id']) {
@@ -195,9 +226,158 @@ export class CampaignFormComponent implements OnInit {
   onSubPortfolioChange(): void {
     this.filterableFields = [];
     this.selectedRangosAntiguedad = [];
+    this.grupos = [];
+    this.selectedGrupoId = null;
     if (this.selectedSubPortfolioId > 0) {
       this.loadFilterableFields(this.selectedSubPortfolioId);
+      this.loadGrupos(this.selectedSubPortfolioId);
     }
+  }
+
+  /** Grupo actualmente seleccionado (para mostrar sus miembros). */
+  get selectedGrupo(): GrupoAsesor | undefined {
+    return this.selectedGrupoId != null
+      ? this.grupos.find(g => g.id === this.selectedGrupoId)
+      : undefined;
+  }
+
+  // ===== Gestión de grupos (crear/editar/eliminar) =====
+
+  /** Solo los grupos especiales (el default no se gestiona). */
+  get gruposEspeciales(): GrupoAsesor[] {
+    return this.grupos.filter(g => !g.esDefault);
+  }
+
+  abrirGestionGrupos(): void {
+    if (!this.selectedSubPortfolioId || this.selectedSubPortfolioId <= 0) {
+      return;
+    }
+    this.resetGrupoForm();
+    this.loadingAsesoresGrupo = true;
+    this.campaignService.getAsesoresSubcartera(this.selectedSubPortfolioId).subscribe({
+      next: (asesores) => { this.asesoresSubcartera = asesores; this.prepararDnd(); this.loadingAsesoresGrupo = false; },
+      error: () => { this.asesoresSubcartera = []; this.prepararDnd(); this.loadingAsesoresGrupo = false; }
+    });
+    this.showGruposModal = true;
+  }
+
+  /** Reparte los asesores de la subcartera en "disponibles" vs "en el grupo" según grupoFormAsesores. */
+  prepararDnd(): void {
+    const sel = new Set(this.grupoFormAsesores);
+    this.dndSeleccionados = this.asesoresSubcartera.filter(a => sel.has(a.idUsuario));
+    this.dndDisponibles = this.asesoresSubcartera.filter(a => !sel.has(a.idUsuario));
+  }
+
+  /** Drop entre listas (o reordenar dentro de una). Sincroniza grupoFormAsesores. */
+  onDropAsesor(event: CdkDragDrop<AsesorMiembro[]>): void {
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      transferArrayItem(event.previousContainer.data, event.container.data, event.previousIndex, event.currentIndex);
+    }
+    this.grupoFormAsesores = this.dndSeleccionados.map(a => a.idUsuario);
+  }
+
+  cerrarGestionGrupos(): void {
+    this.showGruposModal = false;
+    // refrescar el dropdown conservando la selección actual
+    if (this.selectedSubPortfolioId > 0) {
+      this.loadGrupos(this.selectedSubPortfolioId, this.selectedGrupoId ?? undefined);
+    }
+  }
+
+  resetGrupoForm(): void {
+    this.grupoFormId = null;
+    this.grupoFormNombre = '';
+    this.grupoFormAsesores = [];
+    this.grupoError = null;
+    this.prepararDnd();
+  }
+
+  editarGrupo(g: GrupoAsesor): void {
+    this.grupoFormId = g.id;
+    this.grupoFormNombre = g.nombre;
+    this.grupoFormAsesores = (g.miembros || []).map(m => m.idUsuario);
+    this.grupoError = null;
+    this.prepararDnd();
+  }
+
+  toggleGrupoAsesor(idUsuario: number): void {
+    const i = this.grupoFormAsesores.indexOf(idUsuario);
+    if (i >= 0) { this.grupoFormAsesores.splice(i, 1); }
+    else { this.grupoFormAsesores.push(idUsuario); }
+  }
+
+  isGrupoAsesorSel(idUsuario: number): boolean {
+    return this.grupoFormAsesores.includes(idUsuario);
+  }
+
+  private recargarGrupos(): void {
+    if (this.selectedSubPortfolioId > 0) {
+      this.campaignService.getGruposBySubcartera(this.selectedSubPortfolioId)
+        .subscribe(gs => this.grupos = gs);
+    }
+  }
+
+  guardarGrupo(): void {
+    const nombre = (this.grupoFormNombre || '').trim();
+    if (!nombre) { this.grupoError = 'El nombre del grupo es obligatorio'; return; }
+    if (this.grupoFormAsesores.length === 0) { this.grupoError = 'Seleccione al menos un asesor'; return; }
+
+    this.savingGrupo = true;
+    this.grupoError = null;
+    const onOk = () => { this.savingGrupo = false; this.resetGrupoForm(); this.recargarGrupos(); };
+    const onErr = (err: any) => {
+      this.savingGrupo = false;
+      this.grupoError = err?.error?.message || 'No se pudo guardar el grupo';
+    };
+
+    if (this.grupoFormId) {
+      this.campaignService.actualizarGrupo(this.grupoFormId, { nombre, idsUsuarios: this.grupoFormAsesores })
+        .subscribe({ next: onOk, error: onErr });
+    } else {
+      this.campaignService.crearGrupo({ nombre, idSubcartera: this.selectedSubPortfolioId, idsUsuarios: this.grupoFormAsesores })
+        .subscribe({ next: onOk, error: onErr });
+    }
+  }
+
+  eliminarGrupoUI(g: GrupoAsesor): void {
+    if (!window.confirm(`¿Eliminar el grupo "${g.nombre}"?`)) { return; }
+    this.campaignService.eliminarGrupo(g.id).subscribe({
+      next: () => {
+        if (this.grupoFormId === g.id) { this.resetGrupoForm(); }
+        if (this.selectedGrupoId === g.id) {
+          const def = this.grupos.find(x => x.esDefault);
+          this.selectedGrupoId = def ? def.id : null;
+        }
+        this.recargarGrupos();
+      },
+      error: (err) => { this.grupoError = err?.error?.message || 'No se pudo eliminar el grupo'; }
+    });
+  }
+
+  /**
+   * Carga los grupos de la subcartera (default + especiales) y preselecciona:
+   * - en edición: el grupo de la campaña (preferId);
+   * - en creación (preferId no provisto): el grupo por defecto.
+   */
+  loadGrupos(subcarteraId: number, preferId?: number | null): void {
+    this.loadingGrupos = true;
+    this.campaignService.getGruposBySubcartera(subcarteraId).subscribe({
+      next: (grupos) => {
+        this.grupos = grupos;
+        const def = grupos.find(g => g.esDefault);
+        this.selectedGrupoId = (preferId != null)
+          ? preferId
+          : (def ? def.id : null);
+        this.loadingGrupos = false;
+      },
+      error: (err) => {
+        console.error('Error cargando grupos de subcartera:', err);
+        this.grupos = [];
+        this.loadingGrupos = false;
+      }
+    });
   }
 
   toggleRangoAntiguedad(valor: string): void {
@@ -239,6 +419,9 @@ export class CampaignFormComponent implements OnInit {
   getSelectedFieldDataType(): string {
     if (this.selectedFieldId === 0) return '';
     const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+    // Campos PERIODO (YYYYMM) se marcan con formato='PERIODO' en definiciones_campos.
+    // Se filtran por AÑO aunque el dato sea NUMERICO.
+    if ((field?.format || '').toUpperCase() === 'PERIODO') return 'PERIODO';
     const dt = field?.dataType || 'NUMERICO';
     // BOOLEAN/BIT se maneja igual que TEXTO (selección de valores distintos)
     return dt === 'BOOLEAN' ? 'TEXTO' : dt;
@@ -253,6 +436,8 @@ export class CampaignFormComponent implements OnInit {
     this.distinctValuesForField = [];
     this.newFilterMinDate = '';
     this.newFilterMaxDate = '';
+    this.availableYears = [];
+    this.newFilterSelectedYears = [];
 
     if (dataType === 'TEXTO' && this.selectedTenantId && this.selectedPortfolioId && this.selectedSubPortfolioId) {
       const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
@@ -272,6 +457,46 @@ export class CampaignFormComponent implements OnInit {
         });
       }
     }
+
+    // PERIODO: traemos los valores crudos (YYYYMM) y derivamos los AÑOS únicos en el cliente
+    if (dataType === 'PERIODO' && this.selectedTenantId && this.selectedPortfolioId && this.selectedSubPortfolioId) {
+      const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (field) {
+        this.loadingDistinctValues = true;
+        this.campaignService.getDistinctValues(
+          this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId, field.fieldCode
+        ).subscribe({
+          next: (values) => {
+            const years = new Set<string>();
+            values.forEach(v => {
+              const n = Number(v);                 // "202504" o "202504.00" → 202504
+              if (!isNaN(n) && n >= 100000) {       // un periodo YYYYMM tiene 6 dígitos
+                years.add(String(Math.floor(n / 100)));
+              }
+            });
+            this.availableYears = Array.from(years).sort().reverse(); // años descendentes
+            this.loadingDistinctValues = false;
+          },
+          error: (err) => {
+            console.error('Error loading periodo values:', err);
+            this.loadingDistinctValues = false;
+          }
+        });
+      }
+    }
+  }
+
+  toggleYear(year: string): void {
+    const idx = this.newFilterSelectedYears.indexOf(year);
+    if (idx >= 0) {
+      this.newFilterSelectedYears.splice(idx, 1);
+    } else {
+      this.newFilterSelectedYears.push(year);
+    }
+  }
+
+  isYearSelected(year: string): boolean {
+    return this.newFilterSelectedYears.includes(year);
   }
 
   toggleDistinctValue(value: string): void {
@@ -321,6 +546,37 @@ export class CampaignFormComponent implements OnInit {
         this.error = 'Ingrese al menos una fecha (desde o hasta)';
         return;
       }
+      if (dataType === 'PERIODO' && this.newFilterSelectedYears.length === 0) {
+        this.error = 'Seleccione al menos un año';
+        return;
+      }
+    }
+
+    // PERIODO: cada año seleccionado se convierte en un rango NUMERICO [YYYY01, YYYY12].
+    // El backend ya soporta NUMERICO (BETWEEN) y une varios rangos del mismo campo con OR,
+    // así que años no contiguos (ej. 2023 y 2025) también funcionan. Sin cambios en backend.
+    if (tieneCampo && dataType === 'PERIODO') {
+      const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (selectedField) {
+        for (const y of this.newFilterSelectedYears) {
+          const yr = Number(y);
+          this.campaignFilters.push({
+            fieldDefinitionId: selectedField.id,
+            fieldCode: selectedField.fieldCode,
+            fieldName: `${selectedField.fieldName} (${y})`,
+            dataType: 'NUMERICO',
+            minValue: yr * 100 + 1,    // YYYY01
+            maxValue: yr * 100 + 12,   // YYYY12
+            tipoContacto: this.selectedTipoContacto ?? undefined
+          });
+        }
+      }
+      this.selectedFieldId = 0;
+      this.newFilterSelectedYears = [];
+      this.availableYears = [];
+      this.selectedTipoContacto = null;
+      this.error = null;
+      return;
     }
 
     // Si solo tiene tipo de contacto (sin campo), crear filtro solo con tipoContacto
@@ -365,6 +621,8 @@ export class CampaignFormComponent implements OnInit {
     this.distinctValuesForField = [];
     this.newFilterMinDate = '';
     this.newFilterMaxDate = '';
+    this.availableYears = [];
+    this.newFilterSelectedYears = [];
     this.selectedTipoContacto = null;
     this.error = null;
   }
@@ -476,9 +734,11 @@ export class CampaignFormComponent implements OnInit {
                 selectedSubPortfolioId: this.selectedSubPortfolioId
               });
 
-              // Cargar campos filtrables y filtros existentes
+              // Cargar campos filtrables, grupos y filtros existentes.
+              // El grupo de la campaña se preselecciona dentro de loadGrupos.
               if (campaign.subPortfolioId) {
                 this.loadFilterableFields(campaign.subPortfolioId);
+                this.loadGrupos(campaign.subPortfolioId, campaign.idGrupoAsesores ?? undefined);
               }
               if (campaign.id) {
                 this.loadCampaignFilters(campaign.id);
@@ -549,6 +809,9 @@ export class CampaignFormComponent implements OnInit {
       ? this.selectedTiposTelefono.join(',')
       : undefined;
 
+    // Grupo dirigido (null = todos los asesores de la subcartera)
+    this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
+
     this.error = null;
 
     if (this.isEditMode && this.campaignId) {
@@ -572,7 +835,8 @@ export class CampaignFormComponent implements OnInit {
 
   /**
    * Muestra el modal de preview con el resumen de la campaña
-   */
+   * FUNCION PARA FLUJO ANTIGUO (sin guardar campaña en modo draft)
+  
   showPreview(): void {
     this.previewLoading = true;
     this.previewError = null;
@@ -603,19 +867,110 @@ export class CampaignFormComponent implements OnInit {
       }
     });
   }
+  */
+
+  /**
+   * ------------------------------------------------------------
+   * Muestra el modal de preview con el resumen de la campaña
+   * ------------------------------------------------------------
+  */
+
+  showPreview(): void {
+    this.previewLoading = true;
+    this.previewError = null;
+    this.showPreviewModal = true;
+
+    const filtroRangoAnt = this.selectedRangosAntiguedad.length > 0
+      ? this.selectedRangosAntiguedad.join(',') : undefined;
+    const filtroTipoTel = this.selectedTiposTelefono.length > 0
+      ? this.selectedTiposTelefono.join(',') : undefined;
+
+    // 1) Crear la campaña primero
+    this.campaignService.createCampaign(this.campaign).subscribe({
+      next: (response: any) => {
+        const newCampaignId = response.campaignId || response.campaign?.id || response.id;
+        if (!newCampaignId) {
+          this.previewError = 'No se pudo crear la campaña para el preview';
+          this.previewLoading = false;
+          return;
+        }
+        this.draftCampaignId = newCampaignId;
+                
+        // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
+        this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
+          next: () => {
+            // 3) Llamar al preview SP
+            this.campaignService.previewImportacionSP(
+              newCampaignId,
+              this.selectedTenantId,
+              this.selectedPortfolioId,
+              this.selectedSubPortfolioId,
+              this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+              filtroRangoAnt,
+              filtroTipoTel
+            ).subscribe({
+              next: (preview) => {
+                this.previewData = preview;
+                this.previewLoading = false;
+              },
+              error: (err) => {
+                console.error('Error preview V2:', err);
+                this.previewError = 'Error al obtener el preview';
+                this.previewLoading = false;
+              }
+            });
+          },
+          error: (err) => {
+            console.error('Error guardando filtros:', err);
+            this.previewError = 'Error al guardar los filtros';
+            this.previewLoading = false;
+          }
+        });
+      },
+      error: (err) => {
+        console.error('Error creando campaña draft:', err);
+        this.previewError = 'Error al crear la campaña draft';
+        this.previewLoading = false;
+      }
+    });
+  }
+
+
 
   /**
    * Cierra el modal de preview
-   */
+   * FUNCION PARA FLUJO ANTIGUO (sin guardar campaña en modo draft)
+   
   closePreviewModal(): void {
     this.showPreviewModal = false;
     this.previewData = null;
     this.previewError = null;
   }
+  */
 
   /**
-   * Confirma la creación de la campaña desde el modal de preview
-   */
+   * ------------------------------------------------------------
+   * Cerrar el modal de preview con el resumen de la campaña
+   * ------------------------------------------------------------
+  */
+
+  closePreviewModal(): void {
+    if (this.draftCampaignId) {
+      this.campaignService.deleteCampaign(this.draftCampaignId).subscribe({
+        next: () => console.log('Draft campaña borrada'),
+        error: (err) => console.error('Error borrando draft:', err)
+      });
+      this.draftCampaignId = null;
+    }
+    this.showPreviewModal = false;
+    this.previewData = null;
+    this.previewError = null;
+  }
+
+
+  /**
+   * Cierra el modal de preview
+   * FUNCION PARA FLUJO ANTIGUO (sin guardar campaña en modo draft)
   confirmCreateCampaign(): void {
     this.showPreviewModal = false;
     this.loading = true;
@@ -641,6 +996,43 @@ export class CampaignFormComponent implements OnInit {
       }
     });
   }
+    */
+
+  /**
+   * ------------------------------------------------------------
+   * Confirma la creación de la campaña desde el modal de preview
+   * ------------------------------------------------------------
+  */
+
+  confirmCreateCampaign(): void {
+    if (!this.draftCampaignId) {
+      this.error = 'No hay campaña draft para confirmar';
+      return;
+    }
+
+    this.showPreviewModal = false;
+    this.loading = true;
+    const campaignIdToImport = this.draftCampaignId;
+    this.draftCampaignId = null;
+
+    // Importar contactos usando el SP
+    this.campaignService.importarContactosSP(campaignIdToImport).subscribe({
+      next: (response) => {
+        console.log('Import V2 exitoso:', response);
+        // guardar filtros SIN ejecutar V1
+        this.saveFiltersAndNavigate(campaignIdToImport, false);
+
+        // exportar excel manualmente
+        this.exportCampaignToExcel(campaignIdToImport);
+      },
+      error: (err) => {
+        console.error('Error en import V2:', err);
+        this.error = 'Error al importar contactos: ' + (err.error?.message || err.message);
+        this.loading = false;
+      }
+    });
+  }
+
 
   /**
    * Calcula el total de contactos del preview
@@ -660,6 +1052,8 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private saveFiltersAndNavigate(campaignId: number, exportExcel: boolean = false): void {
+    // El grupo dirigido se guarda como parte de la campaña (campaign.idGrupoAsesores),
+    // no requiere una llamada aparte. Aquí solo persistimos los filtros.
     // SIEMPRE llamar a saveCampaignFilters (incluso con array vacío)
     // En modo EDICIÓN (exportExcel=false), pasamos skipImport=true para no re-importar contactos
     // En modo CREAR (exportExcel=true), pasamos skipImport=false para importar contactos

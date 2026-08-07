@@ -4,11 +4,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { LucideAngularModule } from 'lucide-angular';
 import { Contact } from '../../../core/models/contact.model';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-contact-card',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, LucideAngularModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, LucideAngularModule, AppDateTimePipe],
   templateUrl: './contact-card.component.html',
   styleUrls: ['./contact-card.component.css']
 })

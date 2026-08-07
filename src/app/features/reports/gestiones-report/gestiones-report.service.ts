@@ -71,6 +71,33 @@ export interface ReporteResponse {
   totalPages: number;
 }
 
+export interface AgenteGestion {
+  id: number;
+  nombre: string;
+}
+
+export interface TipificacionCatalogo {
+  id: number;
+  nombre: string;
+  nivel: number;
+  parentId: number | null;
+}
+
+export interface GestionesFiltros {
+  fechaDesde?: string;
+  fechaHasta?: string;
+  idCartera?: number | null;
+  idSubcartera?: number | null;
+  idAgentes?: number[];
+  idCampana?: number | null;
+  documento?: string;
+  telefono?: string;
+  rutaNivel1?: string | null;
+  rutaNivel2?: string | null;
+  rutaNivel3?: string | null;
+  gestionSistema?: string | null; // '' (todas) | 'EXCLUIR' (Call) | 'SOLO' (Progresivo/Predictivo) | 'EXTERNA' (vacío)
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -79,54 +106,51 @@ export class GestionesReportService {
 
   constructor(private http: HttpClient) {}
 
-  getReporte(
-    fechaDesde?: string,
-    fechaHasta?: string,
-    idCartera?: number,
-    idSubcartera?: number,
-    idAgente?: number,
-    idCampana?: number,
-    estadoGestion?: string,
-    page: number = 0,
-    size: number = 50
-  ): Observable<ReporteResponse> {
-    let params = new HttpParams()
+  /** Construye los HttpParams comunes a partir de los filtros */
+  private buildParams(f: GestionesFiltros): HttpParams {
+    let params = new HttpParams();
+    if (f.fechaDesde) params = params.set('fechaDesde', f.fechaDesde);
+    if (f.fechaHasta) params = params.set('fechaHasta', f.fechaHasta);
+    if (f.idCartera) params = params.set('idCartera', f.idCartera.toString());
+    if (f.idSubcartera) params = params.set('idSubcartera', f.idSubcartera.toString());
+    if (f.idCampana) params = params.set('idCampana', f.idCampana.toString());
+    if (f.documento && f.documento.trim()) params = params.set('documento', f.documento.trim());
+    if (f.telefono && f.telefono.trim()) params = params.set('telefono', f.telefono.trim());
+    if (f.rutaNivel1) params = params.set('rutaNivel1', f.rutaNivel1);
+    if (f.rutaNivel2) params = params.set('rutaNivel2', f.rutaNivel2);
+    if (f.rutaNivel3) params = params.set('rutaNivel3', f.rutaNivel3);
+    if (f.gestionSistema) params = params.set('gestionSistema', f.gestionSistema);
+    if (f.idAgentes && f.idAgentes.length) {
+      for (const id of f.idAgentes) {
+        params = params.append('idAgentes', id.toString());
+      }
+    }
+    return params;
+  }
+
+  getReporte(filtros: GestionesFiltros, page: number = 0, size: number = 50): Observable<ReporteResponse> {
+    const params = this.buildParams(filtros)
       .set('page', page.toString())
       .set('size', size.toString());
-
-    if (fechaDesde) params = params.set('fechaDesde', fechaDesde);
-    if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
-    if (idCartera) params = params.set('idCartera', idCartera.toString());
-    if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
-    if (idAgente) params = params.set('idAgente', idAgente.toString());
-    if (idCampana) params = params.set('idCampana', idCampana.toString());
-    if (estadoGestion) params = params.set('estadoGestion', estadoGestion);
-
     return this.http.get<ReporteResponse>(this.baseUrl, { params });
   }
 
-  exportarExcel(
-    fechaDesde?: string,
-    fechaHasta?: string,
-    idCartera?: number,
-    idSubcartera?: number,
-    idAgente?: number,
-    idCampana?: number,
-    estadoGestion?: string
-  ): Observable<Blob> {
-    let params = new HttpParams();
+  exportarExcel(filtros: GestionesFiltros): Observable<Blob> {
+    const params = this.buildParams(filtros);
+    return this.http.get(`${this.baseUrl}/excel`, { params, responseType: 'blob' });
+  }
 
-    if (fechaDesde) params = params.set('fechaDesde', fechaDesde);
-    if (fechaHasta) params = params.set('fechaHasta', fechaHasta);
+  /** Asesores con gestiones, acotados a proveedor/cartera/subcartera */
+  getAgentes(idTenant?: number | null, idCartera?: number | null, idSubcartera?: number | null): Observable<AgenteGestion[]> {
+    let params = new HttpParams();
+    if (idTenant) params = params.set('idTenant', idTenant.toString());
     if (idCartera) params = params.set('idCartera', idCartera.toString());
     if (idSubcartera) params = params.set('idSubcartera', idSubcartera.toString());
-    if (idAgente) params = params.set('idAgente', idAgente.toString());
-    if (idCampana) params = params.set('idCampana', idCampana.toString());
-    if (estadoGestion) params = params.set('estadoGestion', estadoGestion);
+    return this.http.get<AgenteGestion[]>(`${this.baseUrl}/agentes`, { params });
+  }
 
-    return this.http.get(`${this.baseUrl}/excel`, {
-      params,
-      responseType: 'blob'
-    });
+  /** Catálogo de tipificaciones (niveles 1-3) para los filtros en cascada */
+  getTipificaciones(): Observable<TipificacionCatalogo[]> {
+    return this.http.get<TipificacionCatalogo[]>(`${this.baseUrl}/tipificaciones`);
   }
 }

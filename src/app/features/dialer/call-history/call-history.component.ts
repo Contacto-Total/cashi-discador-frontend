@@ -5,11 +5,12 @@ import { MatTableModule } from '@angular/material/table';
 import { LucideAngularModule } from 'lucide-angular';
 import { CallService } from '../../../core/services/call.service';
 import { Call } from '../../../core/models/call.model';
+import { AppTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-call-history',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, LucideAngularModule],
+  imports: [CommonModule, MatCardModule, MatTableModule, LucideAngularModule, AppTimePipe],
   templateUrl: './call-history.component.html',
   styleUrls: ['./call-history.component.css']
 })

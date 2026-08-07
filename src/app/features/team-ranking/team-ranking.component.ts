@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewEncapsulation } from '@angular/core';
-import { CommonModule, DecimalPipe, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
+import { AppNumberPipe, AppDatePipe } from '@/shared/pipes/format.pipes';
 import { TeamRankingService, TeamRankingDTO, AgentRankingInfo, PromesasMesDTO, PromesaDetalle } from './team-ranking.service';
 import { AuthService } from '../../core/services/auth.service';
 import { interval, Subscription } from 'rxjs';
@@ -10,7 +11,7 @@ import { saveAs } from 'file-saver';
 @Component({
   selector: 'app-team-ranking',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule, DecimalPipe, DatePipe],
+  imports: [CommonModule, LucideAngularModule, AppNumberPipe, AppDatePipe],
   templateUrl: './team-ranking.component.html',
   styleUrls: ['./team-ranking.component.css'],
   encapsulation: ViewEncapsulation.None

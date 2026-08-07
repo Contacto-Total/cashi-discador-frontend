@@ -1,4 +1,5 @@
-import { Component, input, output, signal, computed } from '@angular/core';
+import { Component, input, output, signal, computed, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -131,6 +132,8 @@ export class ChipSelectComponent {
   showCustomInput = signal<boolean>(false);
   customValue: number | null = null;
 
+  private fmt = inject(FormatService);
+
   constructor() {
     // Sincronizar valor inicial
     this.selectedValue.set(this.value());
@@ -166,7 +169,7 @@ export class ChipSelectComponent {
 
   formatValue(value: any): string {
     if (typeof value === 'number') {
-      return `$${value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      return `$${this.fmt.number(value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
     return String(value);
   }

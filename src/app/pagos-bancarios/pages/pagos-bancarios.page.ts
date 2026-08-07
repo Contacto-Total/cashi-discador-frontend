@@ -1,20 +1,34 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { BcpPagosService } from '../services/bcp-pagos.service';
+import { AuthService } from '../../core/services/auth.service';
+import { TenantService } from '../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../maintenance/services/portfolio.service';
+import { Tenant } from '../../maintenance/models/tenant.model';
+import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import {
   BcpArchivoResultado,
   BcpPagoManualRequest,
   BcpPagoManualResponse,
   BcpPagoManual,
   BcpPagoManualFiltros,
-  ResultadoConciliacion
+  AprobarArchivoBcpResponse,
+  PrevalidacionArchivoBcp,
+  ResumenConciliacionCliente
 } from '../models/bcp-archivo.model';
+import { BcpPrevalidacionArchivoWidget } from '../widgets/bcp-prevalidacion-archivo.widget';
+import { BcpPagosDuplicadosWidget } from '../widgets/bcp-pagos-duplicados.widget';
+import { BcpNoProcesadosWidget } from '../widgets/bcp-no-procesados.widget';
+import { ClienteResumenConciliacionDrawerWidget } from '../widgets/cliente-resumen-conciliacion-drawer.widget';
+import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget';
 
 @Component({
   selector: 'app-pagos-bancarios',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink, BcpPrevalidacionArchivoWidget, BcpPagosDuplicadosWidget, BcpNoProcesadosWidget, ClienteResumenConciliacionDrawerWidget, HistorialCargasBcpWidget],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
       <!-- Header -->
@@ -27,134 +41,21 @@ import {
             Registra pagos bancarios de forma manual o masiva (BCP y Financiera OH)
           </p>
         </div>
-        <div class="flex items-center gap-2">
-          <!-- Botón de conciliación manual -->
-          <button
-            (click)="ejecutarConciliacion()"
-            [disabled]="isLoadingConciliacion()"
-            class="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            title="Ejecutar conciliación de pagos"
+        <div class="flex flex-wrap justify-end gap-3">
+          <a routerLink="/reportes-pagos-bancarios" class="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-3 text-base font-bold text-blue-700 shadow-sm transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-blue-700 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-900">
+            Reportes
+          </a>
+          <a
+            routerLink="/correccion-pagos"
+            class="inline-flex items-center gap-3 rounded-xl bg-green-700 px-6 py-3 text-base font-bold !text-white shadow-md shadow-green-900/20 transition-colors hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-offset-slate-900"
           >
-            @if (isLoadingConciliacion()) {
-              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              Conciliando...
-            } @else {
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-              </svg>
-              Ejecutar Conciliación
-            }
-          </button>
-
-          <!-- Botón de configuración -->
-          <button
-            (click)="toggleConfigPanel()"
-            class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-            title="Configuración de conciliación"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
-          </button>
+          <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Corrección de pagos
+          </a>
         </div>
       </div>
-
-      <!-- Panel de configuración de conciliación -->
-      @if (showConfigPanel()) {
-        <div class="mb-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
-              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-              Configuración de Conciliación
-            </h2>
-            <button
-              (click)="showConfigPanel.set(false)"
-              class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-              </svg>
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Tolerancia de monto -->
-            <div class="space-y-3">
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Tolerancia de Monto (en soles)
-              </label>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                Diferencia máxima permitida entre el monto del banco y el monto registrado por la asesora para hacer match.
-                <br>Ejemplo: Si es 1.00, un pago de S/150.50 hará match con S/150.00 o S/151.00
-              </p>
-              <div class="flex items-center gap-3">
-                <div class="relative flex-1 max-w-xs">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">S/</span>
-                  <input
-                    type="number"
-                    [(ngModel)]="configTolerancia"
-                    min="0"
-                    max="10"
-                    step="0.10"
-                    class="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="0.00"
-                  />
-                </div>
-                <button
-                  (click)="guardarConfiguracion()"
-                  [disabled]="isLoadingConfig()"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                >
-                  @if (isLoadingConfig()) {
-                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
-                  } @else {
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                  }
-                  Guardar
-                </button>
-              </div>
-              @if (configMessage()) {
-                <p class="text-sm" [class]="configMessage()!.success ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                  {{ configMessage()!.text }}
-                </p>
-              }
-            </div>
-
-            <!-- Info de configuración actual -->
-            <div class="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
-              <h3 class="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Configuración Actual</h3>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Tolerancia de monto:</span>
-                  <span class="font-medium text-slate-800 dark:text-white">
-                    @if (configTolerancia === 0) {
-                      Match exacto
-                    } @else {
-                      ± S/ {{ configTolerancia.toFixed(2) }}
-                    }
-                  </span>
-                </div>
-                <div class="flex justify-between">
-                  <span class="text-slate-500 dark:text-slate-400">Tolerancia de fecha:</span>
-                  <span class="font-medium text-slate-800 dark:text-white">Match exacto</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
 
       <!-- Tabs -->
       <div class="mb-6">
@@ -196,6 +97,18 @@ import {
               </svg>
               Carga OH
             </button>
+            <button
+              (click)="activeTab.set('historial')"
+              [class]="activeTab() === 'historial'
+                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300'"
+              class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors flex items-center gap-2"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              Historial
+            </button>
           </nav>
         </div>
       </div>
@@ -206,6 +119,52 @@ import {
           <h2 class="text-lg font-semibold text-slate-800 dark:text-white mb-4">
             Cargar Archivo BCP (formato CREP)
           </h2>
+
+          <div class="mb-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor</label>
+              <select
+                [(ngModel)]="selectedTenantId"
+                (ngModelChange)="onTenantChange($event)"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option [ngValue]="0">Seleccione proveedor...</option>
+                @for (tenant of tenants(); track tenant.id) {
+                  <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+              <select
+                [(ngModel)]="selectedPortfolioId"
+                (ngModelChange)="onPortfolioChange($event)"
+                [disabled]="selectedTenantId === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Seleccione cartera...</option>
+                @for (portfolio of portfolios(); track portfolio.id) {
+                  <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+              <select
+                [(ngModel)]="selectedSubPortfolioId"
+                (ngModelChange)="onSubPortfolioChange($event)"
+                [disabled]="selectedPortfolioId === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Seleccione subcartera...</option>
+                @for (subPortfolio of subPortfolios(); track subPortfolio.id) {
+                  <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                }
+              </select>
+            </div>
+          </div>
 
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div class="flex-1">
@@ -236,7 +195,7 @@ import {
 
             <button
               (click)="procesarArchivo()"
-              [disabled]="!selectedFile() || isLoading()"
+              [disabled]="!selectedFile() || isLoading() || !hasRequiredBcpContext()"
               class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               @if (isLoading()) {
@@ -292,43 +251,54 @@ import {
             </div>
           }
 
-          <!-- Tabla de detalles -->
-          @if (resultado()?.detalles && resultado()!.detalles.length > 0) {
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Detalle de Pagos</h2>
-                <span class="text-sm text-slate-600 dark:text-slate-400">{{ resultado()?.detalles?.length }} registros</span>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-slate-100 dark:bg-slate-700/50">
-                    <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Documento</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Monto</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Nro. Op.</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Sucursal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Terminal</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400 uppercase">Agencia</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (d of resultado()?.detalles; track d.numeroFila) {
-                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento || d.codigoDepositante }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.numeroOperacion }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.sucursal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.terminal }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.agencia }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
+          @if (getPrevalidacionProcesada().length > 0) {
+            <app-bcp-prevalidacion-archivo
+              [data]="getPrevalidacionProcesadaFiltrada()"
+              [todosAprobables]="resultado()?.todosAprobables === true"
+              [approvalEnabled]="canAprobarArchivo()"
+              [isSaving]="isApprovingArchivo()"
+              [pagosDuplicados]="resultado()?.pagosDuplicados || []"
+              [completed]="archivoAprobado()"
+              (guardar)="aprobarArchivo($event)"
+              (documentoClick)="abrirResumenConciliacionBcp($event)"
+            ></app-bcp-prevalidacion-archivo>
+          }
+
+          @if (hasPagosDuplicados()) {
+            <app-bcp-pagos-duplicados
+              [pagos]="resultado()?.pagosDuplicados || []"
+              [estadoCarga]="resultado()?.estadoCarga"
+            ></app-bcp-pagos-duplicados>
+          }
+
+          @if (getPagosYaConciliados().length > 0) {
+            <app-bcp-no-procesados
+              [data]="getPagosYaConciliados()"
+              title="Pagos ya conciliados previamente"
+              description="Este pago ya fue conciliado previamente. Estos registros no se aprueban ni se envían a conciliación."
+            ></app-bcp-no-procesados>
+          }
+
+          @if (resultado()?.prevalidacionNoProcesados && resultado()!.prevalidacionNoProcesados!.length > 0) {
+            <app-bcp-no-procesados [data]="resultado()!.prevalidacionNoProcesados!"></app-bcp-no-procesados>
+          }
+
+          @if (resultadoAprobacion(); as aprobacion) {
+            <div class="mb-6 rounded-lg border p-4" [class]="aprobacion.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+              <p class="font-semibold">{{ aprobacion.mensaje }}</p>
+              @if (aprobacion.exitoso) {
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacion.archivoId }} · Pagos insertados: {{ aprobacion.pagosInsertados }} · Verificados: {{ aprobacion.pagosVerificados }} · Conciliaciones: {{ aprobacion.conciliacionesAprobadas }}</p>
+              }
+              @if (aprobacion.errores && aprobacion.errores.length > 0) {
+                <ul class="mt-2 list-disc pl-5 text-sm">
+                  @for (error of aprobacion.errores; track error) {
+                    <li>{{ error }}</li>
+                  }
+                </ul>
+              }
             </div>
           }
+
         }
       }
 
@@ -765,6 +735,52 @@ import {
             Cargar Archivo Excel de Pagos
           </h2>
 
+          <div class="mb-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor</label>
+              <select
+                [(ngModel)]="selectedTenantIdOh"
+                (ngModelChange)="onTenantChangeOh($event)"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option [ngValue]="0">Seleccione proveedor...</option>
+                @for (tenant of tenants(); track tenant.id) {
+                  <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera</label>
+              <select
+                [(ngModel)]="selectedPortfolioIdOh"
+                (ngModelChange)="onPortfolioChangeOh($event)"
+                [disabled]="selectedTenantIdOh === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Seleccione cartera...</option>
+                @for (portfolio of portfoliosOh(); track portfolio.id) {
+                  <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera</label>
+              <select
+                [(ngModel)]="selectedSubPortfolioIdOh"
+                (ngModelChange)="onSubPortfolioChangeOh($event)"
+                [disabled]="selectedPortfolioIdOh === 0"
+                class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400"
+              >
+                <option [ngValue]="0">Seleccione subcartera...</option>
+                @for (subPortfolio of subPortfoliosOh(); track subPortfolio.id) {
+                  <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
           <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div class="flex-1">
               <label
@@ -794,7 +810,7 @@ import {
 
             <button
               (click)="procesarArchivoOh()"
-              [disabled]="!selectedFileOh() || isLoadingOh()"
+              [disabled]="!selectedFileOh() || !hasRequiredOhContext() || isLoadingOh()"
               class="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               @if (isLoadingOh()) {
@@ -821,6 +837,18 @@ import {
 
         <!-- Resultados de carga OH -->
         @if (resultadoOh()) {
+          @if (resultadoOh()?.duplicadosOmitidos && resultadoOh()!.duplicadosOmitidos > 0) {
+            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
+              <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <div>
+                <p class="font-medium text-amber-800 dark:text-amber-300">Se omitieron {{ resultadoOh()?.duplicadosOmitidos }} pagos ya cargados</p>
+                <p class="text-sm text-amber-700 dark:text-amber-400">La prevalidación muestra solo los pagos nuevos devueltos por el servicio.</p>
+              </div>
+            </div>
+          }
+
           @if (resultadoOh()?.exitoso && resultadoOh()?.archivoId) {
             <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-3">
               <svg class="w-6 h-6 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -838,57 +866,54 @@ import {
             </div>
           }
 
-          @if (!resultadoOh()?.exitoso && resultadoOh()?.duplicadosOmitidos && resultadoOh()!.duplicadosOmitidos > 0) {
-            <div class="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-3">
-              <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-              </svg>
-              <div>
-                <p class="font-medium text-amber-800 dark:text-amber-300">Todos los registros ya existen</p>
-                <p class="text-sm text-amber-700 dark:text-amber-400">{{ resultadoOh()?.duplicadosOmitidos }} registros duplicados</p>
-              </div>
-            </div>
+          @if (getPrevalidacionOhProcesadaFiltrada().length > 0) {
+            <app-bcp-prevalidacion-archivo
+              [data]="getPrevalidacionOhProcesadaFiltrada()"
+              [todosAprobables]="resultadoOh()?.todosAprobables === true"
+              [approvalEnabled]="canAprobarArchivoOh()"
+              [isSaving]="isApprovingArchivoOh()"
+              [pagosDuplicados]="resultadoOh()?.pagosDuplicados || []"
+              [completed]="archivoOhAprobado()"
+              (guardar)="aprobarArchivoOh($event)"
+              (documentoClick)="abrirResumenConciliacionOh($event)"
+            ></app-bcp-prevalidacion-archivo>
           }
 
-          <!-- Tabla de detalles OH (Preview) -->
-          @if (resultadoOh()?.detalles && resultadoOh()!.detalles.length > 0) {
-            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-              <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800 dark:text-white">Preview de Pagos OH</h2>
-                <span class="text-sm text-slate-600 dark:text-slate-400">
-                  {{ resultadoOh()?.detalles?.length }} registros cargados
-                </span>
-              </div>
-              <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
-                  <thead class="bg-purple-100 dark:bg-purple-900/20">
-                    <tr>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">#</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">DNI</th>
-                      <th class="px-3 py-3 text-left text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Fecha</th>
-                      <th class="px-3 py-3 text-right text-xs font-medium text-purple-700 dark:text-purple-400 uppercase">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-                    @for (d of resultadoOh()?.detalles?.slice(0, 10); track d.numeroFila) {
-                      <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                        <td class="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">{{ d.numeroFila }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-slate-800 dark:text-white">{{ d.documento }}</td>
-                        <td class="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{{ d.fechaPago }}</td>
-                        <td class="px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 text-right">S/ {{ formatMonto(d.montoPagado) }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-              @if (resultadoOh()!.detalles.length > 10) {
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 text-center text-sm text-slate-600 dark:text-slate-400">
-                  ... y {{ resultadoOh()!.detalles.length - 10 }} registros más
-                </div>
+          @if (hasPagosDuplicadosOh()) {
+            <app-bcp-pagos-duplicados
+              [pagos]="resultadoOh()?.pagosDuplicados || []"
+              [estadoCarga]="resultadoOh()?.estadoCarga"
+            ></app-bcp-pagos-duplicados>
+          }
+
+          @if (getPagosYaConciliadosOh().length > 0) {
+            <app-bcp-no-procesados
+              [data]="getPagosYaConciliadosOh()"
+              title="Pagos ya conciliados previamente"
+              description="Este pago ya fue conciliado previamente. Estos registros no se aprueban ni se envían a conciliación."
+            ></app-bcp-no-procesados>
+          }
+
+          @if (resultadoAprobacionOh(); as aprobacionOh) {
+            <div class="mb-6 rounded-lg border p-4" [class]="aprobacionOh.exitoso ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-300' : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'">
+              <p class="font-semibold">{{ aprobacionOh.mensaje }}</p>
+              @if (aprobacionOh.exitoso) {
+                <p class="mt-1 text-sm">Archivo ID: {{ aprobacionOh.archivoId }} · Pagos insertados: {{ aprobacionOh.pagosInsertados }} · Verificados: {{ aprobacionOh.pagosVerificados }} · Conciliaciones: {{ aprobacionOh.conciliacionesAprobadas }}</p>
+              }
+              @if (aprobacionOh.errores && aprobacionOh.errores.length > 0) {
+                <ul class="mt-2 list-disc pl-5 text-sm">
+                  @for (error of aprobacionOh.errores; track error) {
+                    <li>{{ error }}</li>
+                  }
+                </ul>
               }
             </div>
           }
         }
+      }
+
+      @if (activeTab() === 'historial') {
+        <app-historial-cargas-bcp></app-historial-cargas-bcp>
       }
 
       <!-- Modal de confirmación de eliminación -->
@@ -932,133 +957,42 @@ import {
         </div>
       }
 
-      <!-- Modal de resultado de conciliación -->
-      @if (showConciliacionModal()) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full mx-4 overflow-hidden">
-            <!-- Header -->
-            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between"
-                 [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
-                   ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                   : 'bg-slate-50 dark:bg-slate-700/50'">
-              <div class="flex items-center gap-3">
-                <div class="p-2 rounded-full"
-                     [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
-                       ? 'bg-emerald-100 dark:bg-emerald-800/50'
-                       : 'bg-slate-200 dark:bg-slate-600'">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                       [class]="resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0
-                         ? 'text-emerald-600 dark:text-emerald-400'
-                         : 'text-slate-500 dark:text-slate-400'">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                  </svg>
-                </div>
-                <h3 class="text-lg font-semibold text-slate-800 dark:text-white">Resultado de Conciliación</h3>
-              </div>
-              <button
-                (click)="cerrarModalConciliacion()"
-                class="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded transition-colors"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            <!-- Body -->
-            <div class="p-6">
-              <!-- Estadísticas -->
-              <div class="grid grid-cols-3 gap-4 mb-6">
-                <div class="text-center p-4 bg-slate-100 dark:bg-slate-700/50 rounded-lg">
-                  <p class="text-2xl font-bold text-slate-800 dark:text-white">{{ resultadoConciliacion()?.totalProcesados || 0 }}</p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">Total Procesados</p>
-                </div>
-                <div class="text-center p-4 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
-                  <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ resultadoConciliacion()?.matchesEncontrados || 0 }}</p>
-                  <p class="text-xs text-emerald-600 dark:text-emerald-400">Matches</p>
-                </div>
-                <div class="text-center p-4 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ resultadoConciliacion()?.sinMatch || 0 }}</p>
-                  <p class="text-xs text-amber-600 dark:text-amber-400">Sin Match</p>
-                </div>
-              </div>
-
-              <!-- Mensaje explicativo -->
-              <div class="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                @if (resultadoConciliacion()?.matchesEncontrados && resultadoConciliacion()!.matchesEncontrados > 0) {
-                  <p class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    Se encontraron {{ resultadoConciliacion()?.matchesEncontrados }} coincidencias entre pagos del banco y pagos registrados.
-                  </p>
-                } @else {
-                  <p class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    No se encontraron nuevas coincidencias. Los pagos pendientes siguen como "pagos por fuera".
-                  </p>
-                }
-              </div>
-
-              <!-- Detalle de matches (si hay) -->
-              @if (resultadoConciliacion()?.detallesMatch && resultadoConciliacion()!.detallesMatch.length > 0) {
-                <div class="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                  <div class="bg-slate-50 dark:bg-slate-700/50 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400">
-                    Detalle de Matches
-                  </div>
-                  <div class="max-h-48 overflow-y-auto">
-                    @for (match of resultadoConciliacion()?.detallesMatch?.slice(0, 10); track match.bcpPagoDetalleId) {
-                      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-sm flex justify-between items-center">
-                        <span class="text-slate-700 dark:text-slate-300">
-                          DNI: <span class="font-medium">{{ match.documento }}</span>
-                        </span>
-                        <span class="text-emerald-600 dark:text-emerald-400 font-medium">
-                          S/ {{ formatMonto(match.monto) }}
-                        </span>
-                      </div>
-                    }
-                    @if (resultadoConciliacion()!.detallesMatch.length > 10) {
-                      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 text-sm text-center text-slate-500 dark:text-slate-400">
-                        ... y {{ resultadoConciliacion()!.detallesMatch.length - 10 }} más
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
-            </div>
-
-            <!-- Footer -->
-            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/30 flex justify-end">
-              <button
-                (click)="cerrarModalConciliacion()"
-                class="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
+      <app-cliente-resumen-conciliacion-drawer
+        [open]="resumenDrawerOpen()"
+        [loading]="isLoadingResumenCliente()"
+        [error]="resumenClienteError()"
+        [documento]="resumenClienteDocumento()"
+        [resumen]="resumenCliente()"
+        [tenantId]="resumenCliente()?.tenantId || selectedTenantId || selectedTenantIdOh"
+        [carteraId]="resumenCliente()?.carteraId || selectedPortfolioId || selectedPortfolioIdOh"
+        [subcarteraId]="resumenCliente()?.subcarteraId || selectedSubPortfolioId || selectedSubPortfolioIdOh"
+        (close)="cerrarResumenConciliacion()"
+        (refreshRequested)="refrescarResumenConciliacion()"
+      ></app-cliente-resumen-conciliacion-drawer>
     </div>
   `
 })
 export class PagosBancariosPage implements OnInit {
   // Tab activa
-  activeTab = signal<'masiva' | 'manual' | 'oh'>('masiva');
+  activeTab = signal<'masiva' | 'manual' | 'oh' | 'historial'>('masiva');
 
   // Carga Masiva BCP
   selectedFile = signal<File | null>(null);
   isLoading = signal(false);
   errorMessage = signal<string | null>(null);
   resultado = signal<BcpArchivoResultado | null>(null);
+  isApprovingArchivo = signal(false);
+  resultadoAprobacion = signal<AprobarArchivoBcpResponse | null>(null);
+  archivoAprobado = signal(false);
 
   // Carga OH
   selectedFileOh = signal<File | null>(null);
   isLoadingOh = signal(false);
   errorMessageOh = signal<string | null>(null);
   resultadoOh = signal<BcpArchivoResultado | null>(null);
+  isApprovingArchivoOh = signal(false);
+  resultadoAprobacionOh = signal<AprobarArchivoBcpResponse | null>(null);
+  archivoOhAprobado = signal(false);
 
   // Ingreso Manual
   pagoManual: BcpPagoManualRequest = {
@@ -1097,98 +1031,206 @@ export class PagosBancariosPage implements OnInit {
   pagoAEliminar = signal<BcpPagoManual | null>(null);
   isDeleting = signal(false);
 
-  // Configuración de conciliación
-  showConfigPanel = signal(false);
-  configTolerancia = 0;
-  isLoadingConfig = signal(false);
-  configMessage = signal<{ success: boolean; text: string } | null>(null);
+  resumenDrawerOpen = signal(false);
+  isLoadingResumenCliente = signal(false);
+  resumenClienteError = signal<string | null>(null);
+  resumenClienteDocumento = signal<string | null>(null);
+  resumenCliente = signal<ResumenConciliacionCliente | null>(null);
 
-  // Conciliación manual
-  isLoadingConciliacion = signal(false);
-  showConciliacionModal = signal(false);
-  resultadoConciliacion = signal<ResultadoConciliacion | null>(null);
+  tenants = signal<Tenant[]>([]);
+  portfolios = signal<Portfolio[]>([]);
+  subPortfolios = signal<SubPortfolio[]>([]);
+  selectedTenantId = 0;
+  selectedPortfolioId = 0;
+  selectedSubPortfolioId = 0;
+  portfoliosOh = signal<Portfolio[]>([]);
+  subPortfoliosOh = signal<SubPortfolio[]>([]);
+  selectedTenantIdOh = 0;
+  selectedPortfolioIdOh = 0;
+  selectedSubPortfolioIdOh = 0;
 
-  constructor(private bcpService: BcpPagosService) {}
+  private fmt = inject(FormatService);
+
+  constructor(
+    private bcpService: BcpPagosService,
+    private authService: AuthService,
+    private tenantService: TenantService,
+    private portfolioService: PortfolioService
+  ) {}
 
   ngOnInit(): void {
     // Cargar lista si estamos en el tab manual
     if (this.activeTab() === 'manual') {
       this.cargarPagosManuales();
     }
-    // Cargar configuración de conciliación
-    this.cargarConfiguracion();
+    this.cargarTenants();
   }
 
-  // === Configuración de Conciliación ===
-  toggleConfigPanel(): void {
-    this.showConfigPanel.set(!this.showConfigPanel());
-    if (this.showConfigPanel()) {
-      this.cargarConfiguracion();
+  cargarTenants(): void {
+    this.tenantService.getAllTenants().subscribe({
+      next: (tenants) => this.tenants.set(tenants),
+      error: (error) => console.error('Error cargando proveedores:', error)
+    });
+  }
+
+  onTenantChange(tenantId: number): void {
+    this.selectedTenantId = Number(tenantId) || 0;
+    this.selectedPortfolioId = 0;
+    this.selectedSubPortfolioId = 0;
+    this.portfolios.set([]);
+    this.subPortfolios.set([]);
+    this.clearBcpCargaResult();
+
+    if (this.selectedTenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedTenantId).subscribe({
+        next: (portfolios) => this.portfolios.set(portfolios),
+        error: (error) => console.error('Error cargando carteras:', error)
+      });
     }
   }
 
-  cargarConfiguracion(): void {
-    this.bcpService.obtenerConfiguracionConciliacion().subscribe({
-      next: (config) => {
-        this.configTolerancia = config.toleranciaMonto;
+  onPortfolioChange(portfolioId: number): void {
+    this.selectedPortfolioId = Number(portfolioId) || 0;
+    this.selectedSubPortfolioId = 0;
+    this.subPortfolios.set([]);
+    this.clearBcpCargaResult();
+
+    if (this.selectedPortfolioId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioId).subscribe({
+        next: (subPortfolios) => this.subPortfolios.set(subPortfolios),
+        error: (error) => console.error('Error cargando subcarteras:', error)
+      });
+    }
+  }
+
+  onSubPortfolioChange(subPortfolioId: number): void {
+    this.selectedSubPortfolioId = Number(subPortfolioId) || 0;
+    this.clearBcpCargaResult();
+  }
+
+  private clearBcpCargaResult(): void {
+    this.resultado.set(null);
+    this.resultadoAprobacion.set(null);
+    this.errorMessage.set(null);
+    this.archivoAprobado.set(false);
+  }
+
+  onTenantChangeOh(tenantId: number): void {
+    this.selectedTenantIdOh = Number(tenantId) || 0;
+    this.selectedPortfolioIdOh = 0;
+    this.selectedSubPortfolioIdOh = 0;
+    this.portfoliosOh.set([]);
+    this.subPortfoliosOh.set([]);
+    this.clearOhCargaResult();
+
+    if (this.selectedTenantIdOh > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedTenantIdOh).subscribe({
+        next: (portfolios) => this.portfoliosOh.set(portfolios),
+        error: (error) => console.error('Error cargando carteras OH:', error)
+      });
+    }
+  }
+
+  onPortfolioChangeOh(portfolioId: number): void {
+    this.selectedPortfolioIdOh = Number(portfolioId) || 0;
+    this.selectedSubPortfolioIdOh = 0;
+    this.subPortfoliosOh.set([]);
+    this.clearOhCargaResult();
+
+    if (this.selectedPortfolioIdOh > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedPortfolioIdOh).subscribe({
+        next: (subPortfolios) => this.subPortfoliosOh.set(subPortfolios),
+        error: (error) => console.error('Error cargando subcarteras OH:', error)
+      });
+    }
+  }
+
+  onSubPortfolioChangeOh(subPortfolioId: number): void {
+    this.selectedSubPortfolioIdOh = Number(subPortfolioId) || 0;
+    this.clearOhCargaResult();
+  }
+
+  hasRequiredOhContext(): boolean {
+    return this.selectedTenantIdOh > 0 && this.selectedPortfolioIdOh > 0 && this.selectedSubPortfolioIdOh > 0;
+  }
+
+  private clearOhCargaResult(): void {
+    this.resultadoOh.set(null);
+    this.resultadoAprobacionOh.set(null);
+    this.errorMessageOh.set(null);
+    this.archivoOhAprobado.set(false);
+  }
+
+  abrirResumenConciliacionBcp(row: PrevalidacionArchivoBcp): void {
+    this.abrirResumenConciliacion(row, 'bcp');
+  }
+
+  abrirResumenConciliacionOh(row: PrevalidacionArchivoBcp): void {
+    this.abrirResumenConciliacion(row, 'oh');
+  }
+
+  private abrirResumenConciliacion(row: PrevalidacionArchivoBcp, origen: 'bcp' | 'oh'): void {
+    const documento = String((row as any).documentoBanco || (row as any).documento_banco || '').trim();
+    if (!documento) return;
+
+    const request = origen === 'bcp'
+      ? {
+        tenantId: this.selectedTenantId,
+        carteraId: this.selectedPortfolioId,
+        subcarteraId: this.selectedSubPortfolioId
+      }
+      : {
+        tenantId: this.selectedTenantIdOh,
+        carteraId: this.selectedPortfolioIdOh,
+        subcarteraId: this.selectedSubPortfolioIdOh
+      };
+
+    if (!request.tenantId || !request.carteraId || !request.subcarteraId) return;
+
+    this.resumenDrawerOpen.set(true);
+    this.isLoadingResumenCliente.set(true);
+    this.resumenClienteError.set(null);
+    this.resumenClienteDocumento.set(documento);
+    this.resumenCliente.set(null);
+
+    this.bcpService.obtenerResumenConciliacionCliente(documento, request).subscribe({
+      next: (resumen) => {
+        this.resumenCliente.set(resumen);
+        this.isLoadingResumenCliente.set(false);
       },
       error: (error) => {
-        console.error('Error cargando configuración:', error);
-        this.configTolerancia = 0;
+        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo cargar el resumen de conciliación.');
+        this.isLoadingResumenCliente.set(false);
       }
     });
   }
 
-  guardarConfiguracion(): void {
-    this.isLoadingConfig.set(true);
-    this.configMessage.set(null);
-
-    this.bcpService.actualizarToleranciaMonto(this.configTolerancia).subscribe({
-      next: (result) => {
-        if (result.exitoso) {
-          this.configMessage.set({ success: true, text: 'Configuración guardada correctamente' });
-        } else {
-          this.configMessage.set({ success: false, text: result.mensaje });
-        }
-        this.isLoadingConfig.set(false);
-        // Limpiar mensaje después de 3 segundos
-        setTimeout(() => this.configMessage.set(null), 3000);
-      },
-      error: (error) => {
-        this.configMessage.set({ success: false, text: error.error?.mensaje || 'Error al guardar configuración' });
-        this.isLoadingConfig.set(false);
-      }
-    });
+  cerrarResumenConciliacion(): void {
+    this.resumenDrawerOpen.set(false);
   }
 
-  // === Conciliación Manual ===
-  ejecutarConciliacion(): void {
-    this.isLoadingConciliacion.set(true);
-    this.resultadoConciliacion.set(null);
+  refrescarResumenConciliacion(): void {
+    const documento = this.resumenClienteDocumento();
+    const resumen = this.resumenCliente();
+    if (!documento || !resumen) return;
 
-    this.bcpService.ejecutarConciliacionCompleta().subscribe({
-      next: (resultado) => {
-        this.resultadoConciliacion.set(resultado);
-        this.showConciliacionModal.set(true);
-        this.isLoadingConciliacion.set(false);
+    this.isLoadingResumenCliente.set(true);
+    this.resumenClienteError.set(null);
+
+    this.bcpService.obtenerResumenConciliacionCliente(documento, {
+      tenantId: resumen.tenantId,
+      carteraId: resumen.carteraId,
+      subcarteraId: resumen.subcarteraId
+    }).subscribe({
+      next: (nuevoResumen) => {
+        this.resumenCliente.set(nuevoResumen);
+        this.isLoadingResumenCliente.set(false);
       },
       error: (error) => {
-        console.error('Error en conciliación:', error);
-        this.resultadoConciliacion.set({
-          totalProcesados: 0,
-          matchesEncontrados: 0,
-          sinMatch: 0,
-          detallesMatch: [],
-          pagosSinMatch: []
-        });
-        this.showConciliacionModal.set(true);
-        this.isLoadingConciliacion.set(false);
+        this.resumenClienteError.set(error.error?.mensaje || error.error?.message || error.message || 'No se pudo refrescar el resumen de conciliación.');
+        this.isLoadingResumenCliente.set(false);
       }
     });
-  }
-
-  cerrarModalConciliacion(): void {
-    this.showConciliacionModal.set(false);
   }
 
   // === Carga Masiva ===
@@ -1204,6 +1246,8 @@ export class PagosBancariosPage implements OnInit {
       this.selectedFile.set(file);
       this.errorMessage.set(null);
       this.resultado.set(null);
+      this.resultadoAprobacion.set(null);
+      this.archivoAprobado.set(false);
     }
   }
 
@@ -1211,10 +1255,21 @@ export class PagosBancariosPage implements OnInit {
     const file = this.selectedFile();
     if (!file) return;
 
+    if (!this.hasRequiredBcpContext()) {
+      this.errorMessage.set('Seleccione proveedor, cartera y subcartera para prevalidar el archivo.');
+      return;
+    }
+
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    this.resultadoAprobacion.set(null);
+    this.archivoAprobado.set(false);
 
-    this.bcpService.cargarArchivo(file).subscribe({
+    this.bcpService.cargarArchivo(file, {
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId
+    }).subscribe({
       next: (resultado) => {
         this.resultado.set(resultado);
         if (!resultado.exitoso) {
@@ -1227,6 +1282,164 @@ export class PagosBancariosPage implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  getPrevalidacionProcesada(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultado();
+    const rows = resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+    return rows.filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
+      && !this.isPagoYaConciliado(row));
+  }
+
+  getPrevalidacionProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
+    const rows = this.getPrevalidacionProcesada();
+    return rows.filter(row => {
+      return this.matchesContextFilter(row, 'tenantId', 'tenant_id', this.selectedTenantId)
+        && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioId)
+        && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioId)
+        && !this.isPrevalidacionDuplicada(row);
+    });
+  }
+
+  getPrevalidacionOriginal(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultado();
+    return resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+  }
+
+  getPagosYaConciliados(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOriginal().filter(row => this.isPagoYaConciliado(row));
+  }
+
+  hasRequiredBcpContext(): boolean {
+    return this.selectedTenantId > 0 && this.selectedPortfolioId > 0 && this.selectedSubPortfolioId > 0;
+  }
+
+  hasPagosDuplicados(): boolean {
+    const resultado = this.resultado();
+    const estadoCarga = resultado?.estadoCarga;
+
+    return estadoCarga === 'PREVALIDADO_CON_DUPLICADOS_CONTEXTO'
+      || estadoCarga === 'ARCHIVO_CON_PAGOS_DUPLICADOS'
+      || estadoCarga === 'TODOS_PAGOS_YA_REGISTRADOS'
+      || (resultado?.pagosDuplicados?.length ?? 0) > 0
+      || (resultado?.duplicadosOmitidos ?? 0) > 0;
+  }
+
+  canAprobarArchivo(): boolean {
+    const prevalidacion = this.getPrevalidacionProcesadaFiltrada();
+
+    return !this.archivoAprobado()
+      && prevalidacion.length > 0
+      && prevalidacion.every(row => (row as any).estadoPrevalidacion === 'LISTO_PARA_APROBAR' || (row as any).estado_prevalidacion === 'LISTO_PARA_APROBAR');
+  }
+
+  aprobarArchivo(filasAprobadas: PrevalidacionArchivoBcp[]): void {
+    const resultado = this.resultado();
+    const user = this.authService.getCurrentUser();
+
+    if (!resultado || !this.canAprobarArchivo() || !user || !filasAprobadas || filasAprobadas.length === 0) return;
+
+    const paresAprobados = this.getParesAprobados(filasAprobadas);
+    if (paresAprobados.length === 0) return;
+
+    this.isApprovingArchivo.set(true);
+    this.resultadoAprobacion.set(null);
+    this.errorMessage.set(null);
+
+    this.bcpService.aprobarArchivo({
+      nombreArchivo: resultado.nombreArchivo,
+      cabecera: resultado.cabecera,
+      detalles: paresAprobados.map(par => par.detalle),
+      prevalidacion: paresAprobados.map(par => par.prevalidacion),
+      aprobadoPorId: user.id,
+      aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
+    }).subscribe({
+      next: (response) => {
+        const aprobacion = this.normalizeAprobacionResponse(response);
+        this.resultadoAprobacion.set(aprobacion);
+        this.isApprovingArchivo.set(false);
+
+        if (aprobacion.exitoso) {
+          this.selectedFile.set(null);
+          this.archivoAprobado.set(true);
+        }
+      },
+      error: (error) => {
+        this.resultadoAprobacion.set(this.normalizeAprobacionResponse(this.getAprobacionErrorBody(error)));
+        this.isApprovingArchivo.set(false);
+      }
+    });
+  }
+
+  private getAprobacionErrorBody(error: any): Partial<AprobarArchivoBcpResponse> | undefined {
+    const body = error?.error;
+
+    if (!body) return undefined;
+    if (typeof body !== 'string') return body;
+
+    try {
+      return JSON.parse(body);
+    } catch {
+      return { exitoso: false, mensaje: body };
+    }
+  }
+
+  private normalizeAprobacionResponse(response?: Partial<AprobarArchivoBcpResponse> | null): AprobarArchivoBcpResponse {
+    const errores = Array.isArray(response?.errores) ? response.errores : [];
+    const mensaje = response?.mensaje || errores[0] || 'No se pudo aprobar el archivo';
+
+    return {
+      exitoso: response?.exitoso === true,
+      mensaje,
+      archivoId: response?.archivoId,
+      pagosInsertados: response?.pagosInsertados ?? 0,
+      pagosVerificados: response?.pagosVerificados ?? 0,
+      conciliacionesAprobadas: response?.conciliacionesAprobadas ?? 0,
+      errores
+    };
+  }
+
+  private matchesContextFilter(row: any, camelKey: string, snakeKey: string, selectedId: number): boolean {
+    if (!selectedId) return true;
+    const value = row?.[camelKey] ?? row?.[snakeKey];
+    if (value === null || value === undefined || value === '') return true;
+    return Number(value) === Number(selectedId);
+  }
+
+  private isPrevalidacionLista(row: any): boolean {
+    return !this.isPagoYaConciliado(row)
+      && (row?.estadoPrevalidacion === 'LISTO_PARA_APROBAR' || row?.estado_prevalidacion === 'LISTO_PARA_APROBAR');
+  }
+
+  private isPagoYaConciliado(row: any): boolean {
+    return row?.estadoPrevalidacion === 'PAGO_YA_CONCILIADO_PREVIAMENTE'
+      || row?.estado_prevalidacion === 'PAGO_YA_CONCILIADO_PREVIAMENTE';
+  }
+
+  private isPrevalidacionDuplicada(row: PrevalidacionArchivoBcp): boolean {
+    const operacionesDuplicadas = new Set(
+      (this.resultado()?.pagosDuplicados || [])
+        .map(pago => pago.numeroOperacion?.trim())
+        .filter(Boolean)
+    );
+
+    if (operacionesDuplicadas.size === 0) return false;
+
+    const operacion = ((row as any).numeroOperacion || (row as any).numero_operacion || '').trim();
+    return !!operacion && operacionesDuplicadas.has(operacion);
+  }
+
+  private getParesAprobados(filasAprobadas: PrevalidacionArchivoBcp[]): Array<{ detalle: any; prevalidacion: PrevalidacionArchivoBcp }> {
+    const detalles = this.resultado()?.detalles || [];
+    const prevalidacion = this.getPrevalidacionOriginal();
+    const aprobadas = new Set(filasAprobadas);
+
+    return detalles
+      .map((detalle: any, index: number) => ({ detalle, prevalidacion: prevalidacion[index] }))
+      .filter(par => !!par.prevalidacion
+        && aprobadas.has(par.prevalidacion)
+        && this.isPrevalidacionLista(par.prevalidacion)
+        && !this.isPrevalidacionDuplicada(par.prevalidacion));
   }
 
   // === Carga OH ===
@@ -1243,6 +1456,8 @@ export class PagosBancariosPage implements OnInit {
       this.selectedFileOh.set(file);
       this.errorMessageOh.set(null);
       this.resultadoOh.set(null);
+      this.resultadoAprobacionOh.set(null);
+      this.archivoOhAprobado.set(false);
     }
   }
 
@@ -1250,10 +1465,21 @@ export class PagosBancariosPage implements OnInit {
     const file = this.selectedFileOh();
     if (!file) return;
 
+    if (!this.hasRequiredOhContext()) {
+      this.errorMessageOh.set('Seleccione proveedor, cartera y subcartera para prevalidar el archivo OH.');
+      return;
+    }
+
     this.isLoadingOh.set(true);
     this.errorMessageOh.set(null);
+    this.resultadoAprobacionOh.set(null);
+    this.archivoOhAprobado.set(false);
 
-    this.bcpService.cargarArchivoOh(file).subscribe({
+    this.bcpService.cargarArchivoOh(file, {
+      tenantId: this.selectedTenantIdOh,
+      carteraId: this.selectedPortfolioIdOh,
+      subcarteraId: this.selectedSubPortfolioIdOh
+    }).subscribe({
       next: (resultado) => {
         this.resultadoOh.set(resultado);
         if (!resultado.exitoso) {
@@ -1266,6 +1492,113 @@ export class PagosBancariosPage implements OnInit {
         this.isLoadingOh.set(false);
       }
     });
+  }
+
+  getPrevalidacionOhProcesada(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOhConDetalle()
+      .filter((row: any) => (row.estadoPrevalidacion || row.estado_prevalidacion) !== 'CLIENTE_NO_PERTENECE_A_CONTEXTO'
+        && !this.isPagoYaConciliado(row));
+  }
+
+  private getPrevalidacionOhConDetalle(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultadoOh();
+    const detalles = resultado?.detalles || [];
+    const prevalidacion = this.getPrevalidacionOhOriginal();
+
+    return prevalidacion.map((row: any, index: number) => {
+      const detalle = detalles[index] || {};
+      return {
+        ...row,
+        documentoBanco: row.documentoBanco ?? row.documento_banco ?? detalle.documento,
+        fechaBanco: row.fechaBanco ?? row.fecha_banco ?? detalle.fechaPago,
+        montoBanco: row.montoBanco ?? row.monto_banco ?? detalle.montoPagado,
+        numeroOperacion: row.numeroOperacion ?? row.numero_operacion ?? detalle.numeroOperacion,
+        banco: row.banco ?? detalle.banco,
+        __prevalidacionIndex: index
+      };
+    });
+  }
+
+  getPrevalidacionOhOriginal(): PrevalidacionArchivoBcp[] {
+    const resultado: any = this.resultadoOh();
+    return resultado?.prevalidacion || resultado?.prevalidacionProcesados || resultado?.prevalidacion_procesados || [];
+  }
+
+  getPrevalidacionOhProcesadaFiltrada(): PrevalidacionArchivoBcp[] {
+    const rows = this.getPrevalidacionOhProcesada();
+    return rows.filter(row => {
+      return this.matchesContextFilter(row, 'tenantId', 'tenant_id', this.selectedTenantIdOh)
+        && this.matchesContextFilter(row, 'carteraId', 'cartera_id', this.selectedPortfolioIdOh)
+        && this.matchesContextFilter(row, 'subcarteraId', 'subcartera_id', this.selectedSubPortfolioIdOh);
+    });
+  }
+
+  getPagosYaConciliadosOh(): PrevalidacionArchivoBcp[] {
+    return this.getPrevalidacionOhConDetalle().filter(row => this.isPagoYaConciliado(row));
+  }
+
+  hasPagosDuplicadosOh(): boolean {
+    return (this.resultadoOh()?.pagosDuplicados?.length ?? 0) > 0;
+  }
+
+  canAprobarArchivoOh(): boolean {
+    const prevalidacion = this.getPrevalidacionOhProcesadaFiltrada();
+
+    return !this.archivoOhAprobado()
+      && this.resultadoOh()?.todosAprobables === true
+      && prevalidacion.length > 0;
+  }
+
+  aprobarArchivoOh(filasAprobadas: PrevalidacionArchivoBcp[]): void {
+    const resultado = this.resultadoOh();
+    const user = this.authService.getCurrentUser();
+
+    if (!resultado || !this.canAprobarArchivoOh() || !user || !filasAprobadas || filasAprobadas.length === 0) return;
+
+    const paresAprobados = this.getParesAprobadosOh(filasAprobadas);
+    if (paresAprobados.length === 0) return;
+
+    this.isApprovingArchivoOh.set(true);
+    this.resultadoAprobacionOh.set(null);
+    this.errorMessageOh.set(null);
+
+    this.bcpService.aprobarArchivo({
+      nombreArchivo: resultado.nombreArchivo,
+      cabecera: resultado.cabecera,
+      detalles: paresAprobados.map(par => par.detalle),
+      prevalidacion: paresAprobados.map(par => par.prevalidacion),
+      aprobadoPorId: user.id,
+      aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
+    }).subscribe({
+      next: (response) => {
+        const aprobacion = this.normalizeAprobacionResponse(response);
+        this.resultadoAprobacionOh.set(aprobacion);
+        this.isApprovingArchivoOh.set(false);
+
+        if (aprobacion.exitoso) {
+          this.selectedFileOh.set(null);
+          this.archivoOhAprobado.set(true);
+        }
+      },
+      error: (error) => {
+        this.resultadoAprobacionOh.set(this.normalizeAprobacionResponse(this.getAprobacionErrorBody(error)));
+        this.isApprovingArchivoOh.set(false);
+      }
+    });
+  }
+
+  private getParesAprobadosOh(filasAprobadas: PrevalidacionArchivoBcp[]): Array<{ detalle: any; prevalidacion: PrevalidacionArchivoBcp }> {
+    const detalles = this.resultadoOh()?.detalles || [];
+    const prevalidacion = this.getPrevalidacionOhOriginal();
+    const aprobadas = new Set(filasAprobadas);
+
+    return filasAprobadas
+      .filter(row => aprobadas.has(row) && this.isPrevalidacionLista(row))
+      .map((row: any) => {
+        const index = Number(row.__prevalidacionIndex);
+        return { detalle: detalles[index], prevalidacion: prevalidacion[index] };
+      })
+      .filter(par => !!par.detalle && !!par.prevalidacion);
   }
 
   // === Ingreso Manual ===
@@ -1493,7 +1826,7 @@ export class PagosBancariosPage implements OnInit {
 
   formatMonto(monto: number | undefined): string {
     if (monto === undefined || monto === null) return '0.00';
-    return monto.toLocaleString('es-PE', {
+    return this.fmt.number(monto, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });

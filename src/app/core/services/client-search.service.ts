@@ -23,6 +23,8 @@ export interface DynamicClient {
   [key: string]: any; // Permitir campos dinámicos adicionales
 }
 
+
+//ESTE RESULT SER UNA LISTA
 /**
  * Resultado de búsqueda global con contexto
  */
@@ -34,6 +36,15 @@ export interface GlobalSearchResult {
   nombreCartera: string;
   nombreSubcartera: string;
   clientData: DynamicClient;
+}
+
+export interface GlobalNameSearchResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  data: GlobalSearchResult[];
 }
 
 @Injectable({
@@ -57,10 +68,23 @@ export class ClientSearchService {
    * Busca un cliente globalmente por número de teléfono.
    * Busca en metodos_contacto y encuentra automáticamente el contexto.
    */
-  findClientGlobalByPhone(telefono: string): Observable<GlobalSearchResult> {
+  findClientGlobalByPhone(telefono: string): Observable<GlobalSearchResult[]> {
     const params = new HttpParams().set('telefono', telefono);
-    return this.http.get<GlobalSearchResult>(`${this.apiUrl}/global-phone`, { params });
+    return this.http.get<GlobalSearchResult[]>(`${this.apiUrl}/global-phone`, { params });
   }
+
+  /**
+   * Busca clientes globalmente por nombre completo, nombres o apellidos.
+   */
+  findClientsGlobalByName(q: string, page: number = 0, size: number = 20): Observable<GlobalNameSearchResponse> {
+    const params = new HttpParams()
+      .set('q', q)
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    return this.http.get<GlobalNameSearchResponse>(`${this.apiUrl}/global-name`, { params });
+  }
+
 
   /**
    * Busca un cliente por documento exacto

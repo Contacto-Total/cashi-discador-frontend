@@ -1,4 +1,7 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter, inject } from '@angular/core';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { MatListModule } from '@angular/material/list';
 import { MatBadgeModule } from '@angular/material/badge';
@@ -30,7 +33,9 @@ import { LucideAngularModule } from 'lucide-angular';
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss'
 })
-export class ChatList implements OnInit {
+export class ChatList implements OnInit, OnDestroy {
+  private fmt = inject(FormatService);
+
   @Output() chatSelected = new EventEmitter<Chat>();
 
   allItems: Chat[] = [];
@@ -40,6 +45,19 @@ export class ChatList implements OnInit {
   selectedChatJid: string | null = null;
   isDarkMode: boolean = false;
   filterMode: 'all' | 'unread' = 'all';
+  chatsLoading = false;
+  chatsHasMore = false;
+
+  // La búsqueda la resuelve el backend (`q`); se debouncea para no lanzar una
+  // consulta por tecla.
+  private searchInput$ = new Subject<string>();
+  private subs = new Subscription();
+  showNewChatInput = false;
+  newChatNumber = '';
+  contextMenuChat: Chat | null = null;
+  contextMenuX = 0;
+  contextMenuY = 0;
+  showContextMenu = false;
 
   constructor(
     private messageService: MessageService,
@@ -49,22 +67,58 @@ export class ChatList implements OnInit {
 
   ngOnInit(): void {
     // Suscribirse a los chats activos
-    this.messageService.allItems$.subscribe(items => {
+    this.subs.add(this.messageService.allItems$.subscribe(items => {
       console.log('📱 Chats activos:', items.length);
       this.allItems = items;
       this.filterChats();
-    });
+    }));
 
     // Suscribirse a TODOS los contactos para la búsqueda
-    this.messageService.contacts$.subscribe(contacts => {
-      console.log('📇 Todos los contactos:', contacts.length);
+    this.subs.add(this.messageService.contacts$.subscribe(contacts => {
       this.allContacts = contacts;
-    });
+    }));
 
     // Suscribirse al estado del tema
-    this.themeService.isDarkMode$.subscribe(isDark => {
+    this.subs.add(this.themeService.isDarkMode$.subscribe(isDark => {
       this.isDarkMode = isDark;
-    });
+    }));
+
+    // Estado de la paginación
+    this.subs.add(this.messageService.chatsLoading$.subscribe(v => this.chatsLoading = v));
+    this.subs.add(this.messageService.chatsHasMore$.subscribe(v => this.chatsHasMore = v));
+
+    this.subs.add(
+      this.searchInput$.pipe(debounceTime(300), distinctUntilChanged())
+        .subscribe(q => this.messageService.loadChats(q))
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subs.unsubscribe();
+  }
+
+  /**
+   * Cada tecla filtra en local (respuesta inmediata sobre lo ya cargado) y, tras
+   * el debounce, dispara la búsqueda remota que trae los chats que no están en
+   * memoria.
+   */
+  onSearchChange(): void {
+    this.filterChats();
+    this.searchInput$.next(this.searchText.trim());
+  }
+
+  clearSearch(): void {
+    this.searchText = '';
+    this.onSearchChange();
+  }
+
+  /** Carga la siguiente página al acercarse al final de la lista. */
+  onScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    const nearEnd = el.scrollHeight - el.scrollTop - el.clientHeight < 200;
+    if (nearEnd) {
+      this.messageService.loadMoreChats();
+    }
   }
 
   toggleTheme(): void {
@@ -163,17 +217,87 @@ export class ChatList implements OnInit {
     const diff = now.getTime() - date.getTime();
 
     if (diff < 86400000) {
-      return date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+      return this.fmt.time(date, false);
     } else if (diff < 604800000) {
-      return date.toLocaleDateString('es-PE', { weekday: 'short' });
+      return this.fmt.date(date, { weekday: 'short' });
     } else {
-      return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' });
+      return this.fmt.date(date, { day: '2-digit', month: '2-digit' });
     }
   }
 
   truncateMessage(message?: string): string {
     if (!message) return 'Toca para iniciar conversación';
     return message.length > 50 ? message.substring(0, 50) + '...' : message;
+  }
+
+  getMediaIcon(chat: Chat): string {
+    switch (chat.lastMsgMediaKind) {
+      case 'image':    return '📷';
+      case 'video':    return '🎥';
+      case 'audio':    return '🎵';
+      case 'document': return '📄';
+      case 'sticker':  return '🎭';
+      default:         return '📎';
+    }
+  }
+
+  getLastMsgPreview(chat: Chat): string {
+    if (chat.lastMsgHasMedia) {
+      const icon = this.getMediaIcon(chat);
+      const caption = chat.lastMsgText?.trim() ? ` ${chat.lastMsgText}` : '';
+      switch (chat.lastMsgMediaKind) {
+        case 'image':    return `${icon} Foto${caption}`;
+        case 'video':    return `${icon} Video${caption}`;
+        case 'audio':    return `${icon} Mensaje de voz`;
+        case 'document': return `${icon} Documento`;
+        case 'sticker':  return `${icon} Sticker`;
+        default:         return `${icon} Adjunto`;
+      }
+    }
+    if (!chat.lastMsgText) return 'Toca para iniciar conversación';
+    return chat.lastMsgText.length > 48
+      ? chat.lastMsgText.substring(0, 48) + '…'
+      : chat.lastMsgText;
+  }
+
+  toggleNewChat(): void {
+    this.showNewChatInput = !this.showNewChatInput;
+    this.newChatNumber = '';
+  }
+
+  startNewChat(): void {
+    const raw = this.newChatNumber.replace(/\D/g, '');
+    if (!raw) return;
+    const jid = raw.startsWith('51') ? `${raw}@s.whatsapp.net` : `51${raw}@s.whatsapp.net`;
+    const newChat: Chat = {
+      jid,
+      name: `+${raw.startsWith('51') ? raw : '51' + raw}`,
+      lastMsgText: '',
+      lastMsgTs: 0,
+      unreadCount: 0,
+      isGroup: false,
+    };
+    this.showNewChatInput = false;
+    this.newChatNumber = '';
+    this.selectChat(newChat);
+  }
+
+  openContextMenu(event: MouseEvent, chat: Chat): void {
+    event.preventDefault();
+    this.contextMenuChat = chat;
+    this.contextMenuX = event.clientX;
+    this.contextMenuY = event.clientY;
+    this.showContextMenu = true;
+  }
+
+  closeContextMenu(): void {
+    this.showContextMenu = false;
+    this.contextMenuChat = null;
+  }
+
+  markAsUnread(chat: Chat): void {
+    this.messageService.markChatAsUnread(chat.jid);
+    this.closeContextMenu();
   }
 
   // Formatear nombre del chat para mostrar números bonitos

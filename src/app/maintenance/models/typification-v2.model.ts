@@ -155,6 +155,9 @@ export interface CampoOpcionDTO {
   minCuotas?: number;  // Número mínimo de cuotas permitidas (default 1)
   maxCuotas?: number;  // Número máximo de cuotas permitidas (default 6)
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
+  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+
 }
 
 export interface ConfigurarOpcionesCampoRequest {
@@ -172,6 +175,9 @@ export interface OpcionToggleDTO {
   minCuotas?: number;  // Número mínimo de cuotas permitidas
   maxCuotas?: number;  // Número máximo de cuotas permitidas
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación (solo personalizado)
+  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+
 }
 
 export interface CampoConOpcionesResponse {
@@ -208,6 +214,9 @@ export interface PaymentScheduleConfig {
   montoBase?: number;  // Monto original del campo (antes de descuento/excepción). null = monto libre
   generaCartaAcuerdo?: boolean;  // Si el monto seleccionado genera carta de acuerdo
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
+  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+
 }
 
 export interface PaymentScheduleRequest {
@@ -222,4 +231,7 @@ export interface PaymentScheduleRequest {
   metodoContacto?: string;
   schedule: PaymentScheduleConfig;
   porcentajeAutoAprobacion?: number;  // Porcentaje máximo de descuento para auto-aprobación
+  porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+  porcentajeMaximoPromesa?: number;          // % máx que la promesa puede superar la deuda (bloqueo)
+
 }

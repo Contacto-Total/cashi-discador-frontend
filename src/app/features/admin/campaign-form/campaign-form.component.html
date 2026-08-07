@@ -65,21 +65,15 @@
 
         <div class="form-row">
         <div class="form-group">
-          <label>Fecha Inicio</label>
-          <mat-form-field appearance="fill" class="form-input">
-            <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate">
-            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
-            <mat-datepicker #startPicker></mat-datepicker>
-          </mat-form-field>
+          <label>Fecha y Hora Inicio</label>
+          <input type="datetime-local" class="form-input"
+                 name="startDate" [(ngModel)]="startDateString">
         </div>
 
         <div class="form-group">
-          <label>Fecha Fin</label>
-          <mat-form-field appearance="fill" class="form-input">
-            <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate">
-            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
-            <mat-datepicker #endPicker></mat-datepicker>
-          </mat-form-field>
+          <label>Fecha y Hora Fin</label>
+          <input type="datetime-local" class="form-input"
+                 name="endDate" [(ngModel)]="endDateString">
         </div>
       </div>
       </div>
@@ -300,6 +294,54 @@
       </div>
     </div>
 
+    <!-- SECCIÓN: Grupo de asesores -->
+    <div class="form-section full-width" *ngIf="selectedSubPortfolioId > 0">
+      <h2>
+        <lucide-angular name="users" [size]="20"></lucide-angular>
+        Grupo de Asesores
+      </h2>
+      <p class="section-description">
+        Elija el grupo de asesores que trabajará esta campaña. El grupo por defecto son
+        todos los asesores de la subcartera. Para dirigirla a un subconjunto, cree un grupo
+        personalizado y selecciónelo aquí.
+      </p>
+
+      <div class="form-group">
+        <label for="grupoAsesores">Grupo dirigido</label>
+        <select
+          id="grupoAsesores"
+          name="grupoAsesores"
+          [(ngModel)]="selectedGrupoId"
+          class="form-select">
+          <option *ngFor="let g of grupos" [ngValue]="g.id">
+            {{ g.nombre }}{{ g.esDefault ? ' — por defecto (todos)' : '' }} ({{ g.totalMiembros }} asesor(es))
+          </option>
+        </select>
+        <small style="display:block; margin-top:6px; opacity:0.7;">
+          {{ loadingGrupos ? 'Cargando grupos...' : '' }}
+        </small>
+      </div>
+
+      <!-- Asesores del grupo elegido -->
+      <div class="form-group" *ngIf="selectedGrupo as g">
+        <label>
+          Asesores del grupo «{{ g.nombre }}»{{ g.esDefault ? ' (por defecto)' : '' }} ({{ g.totalMiembros }})
+        </label>
+        <div class="rango-antiguedad-grid" *ngIf="g.miembros && g.miembros.length > 0; else grupoVacio">
+          <div *ngFor="let m of g.miembros" class="rango-checkbox-label" style="cursor:default;">
+            <span class="rango-checkbox-text">{{ m.nombre }}
+              <small style="display:block; opacity:0.7; font-weight:normal;">
+                {{ m.extension ? 'Anexo ' + m.extension : 'Sin anexo' }}
+              </small>
+            </span>
+          </div>
+        </div>
+        <ng-template #grupoVacio>
+          <p class="section-description" style="opacity:0.7;">Este grupo no tiene asesores.</p>
+        </ng-template>
+      </div>
+    </div>
+
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section">
       <h2>
@@ -390,6 +432,31 @@
               </div>
             </ng-container>
 
+            <!-- PERIODO: Multiselect de años (YYYYMM → captura todos los meses del año) -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'PERIODO'">
+              <div class="form-group texto-values-group" style="grid-column: span 2;">
+                <label>Años Disponibles <small>(captura todos los meses del año seleccionado)</small></label>
+                <div *ngIf="loadingDistinctValues" class="info-message">
+                  <span>Cargando años...</span>
+                </div>
+                <div *ngIf="!loadingDistinctValues && availableYears.length > 0" class="distinct-values-list">
+                  <label class="distinct-value-item" *ngFor="let y of availableYears">
+                    <input
+                      type="checkbox"
+                      [checked]="isYearSelected(y)"
+                      (change)="toggleYear(y)">
+                    <span>{{ y }}</span>
+                  </label>
+                </div>
+                <div *ngIf="!loadingDistinctValues && availableYears.length === 0" class="info-message">
+                  <span>No se encontraron periodos para este campo.</span>
+                </div>
+                <div *ngIf="newFilterSelectedYears.length > 0" class="selected-count">
+                  {{ newFilterSelectedYears.length }} año(s) seleccionado(s)
+                </div>
+              </div>
+            </ng-container>
+
             <!-- FECHA: Rango de fechas -->
             <ng-container *ngIf="getSelectedFieldDataType() === 'FECHA'">
               <div class="form-group">
@@ -449,14 +516,14 @@
                 <div class="range-display">
                   <div class="range-value" *ngIf="filter.minValue !== undefined && filter.minValue !== null">
                     <span class="range-label">Mínimo</span>
-                    <span class="range-number">{{ filter.minValue | number }}</span>
+                    <span class="range-number">{{ filter.minValue | appNumber }}</span>
                   </div>
                   <div class="range-separator" *ngIf="filter.minValue !== undefined && filter.maxValue !== undefined">
                     <lucide-angular name="arrow-right" [size]="20"></lucide-angular>
                   </div>
                   <div class="range-value" *ngIf="filter.maxValue !== undefined && filter.maxValue !== null">
                     <span class="range-label">Máximo</span>
-                    <span class="range-number">{{ filter.maxValue | number }}</span>
+                    <span class="range-number">{{ filter.maxValue | appNumber }}</span>
                   </div>
                 </div>
               </div>
@@ -614,23 +681,23 @@
         <div class="preview-info">
           <div class="info-item">
             <span class="info-label">Total en Subcartera:</span>
-            <span class="info-value">{{ previewData.totalClientesSubcartera | number }}</span>
+            <span class="info-value">{{ previewData.totalClientesSubcartera | appNumber }}</span>
           </div>
           <div class="info-item" *ngIf="previewData.excluidosPorBlacklist > 0">
             <span class="info-label">Excluidos por Blacklist:</span>
-            <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | number }}</span>
+            <span class="info-value text-red">-{{ previewData.excluidosPorBlacklist | appNumber }}</span>
           </div>
           <div class="info-item" *ngIf="(previewData.excluidosPorPagoCumplido ?? 0) > 0">
             <span class="info-label">Excluidos por Pago Cumplido:</span>
-            <span class="info-value text-red">-{{ previewData.excluidosPorPagoCumplido | number }}</span>
+            <span class="info-value text-red">-{{ previewData.excluidosPorPagoCumplido | appNumber }}</span>
           </div>
           <div class="info-item" *ngIf="(previewData.excluidosPorFiltros ?? 0) > 0">
             <span class="info-label">Excluidos por Filtros:</span>
-            <span class="info-value text-orange">-{{ previewData.excluidosPorFiltros | number }}</span>
+            <span class="info-value text-orange">-{{ previewData.excluidosPorFiltros | appNumber }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">Disponibles:</span>
-            <span class="info-value text-green">{{ (previewData.totalConFiltros ?? previewData.totalDespuesBlacklist) | number }}</span>
+            <span class="info-value text-green">{{ (previewData.totalConFiltros ?? previewData.totalDespuesBlacklist) | appNumber }}</span>
           </div>
         </div>
 
@@ -651,14 +718,14 @@
                   <span class="tipo-code" [style.background-color]="tipo.color">{{ tipo.codigo }}</span>
                 </td>
                 <td>{{ tipo.nombre }}</td>
-                <td class="text-right">{{ (previewData.porTipoContactoFiltrado[tipo.codigo] || 0) | number }}</td>
+                <td class="text-right">{{ (previewData.porTipoContactoFiltrado[tipo.codigo] || 0) | appNumber }}</td>
                 <td class="text-right">{{ getPreviewPercentage(previewData.porTipoContactoFiltrado[tipo.codigo] || 0) }}%</td>
               </tr>
             </tbody>
             <tfoot>
               <tr class="total-row">
                 <td colspan="2"><strong>TOTAL</strong></td>
-                <td class="text-right"><strong>{{ getPreviewTotal() | number }}</strong></td>
+                <td class="text-right"><strong>{{ getPreviewTotal() | appNumber }}</strong></td>
                 <td class="text-right"><strong>100.0%</strong></td>
               </tr>
             </tfoot>

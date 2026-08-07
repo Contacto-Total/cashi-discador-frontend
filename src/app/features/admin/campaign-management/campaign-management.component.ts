@@ -10,11 +10,12 @@ import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
 
 @Component({
   selector: 'app-campaign-management',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule],
+  imports: [CommonModule, FormsModule, RouterModule, LucideAngularModule, AppDateTimePipe],
   templateUrl: './campaign-management.component.html',
   styleUrls: ['./campaign-management.component.css'],
   encapsulation: ViewEncapsulation.None

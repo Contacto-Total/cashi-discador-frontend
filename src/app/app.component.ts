@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, AfterViewInit, ViewEncapsulation, HostListener } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterModule, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
@@ -23,15 +23,19 @@ import { RecordatoriosModalComponent } from './shared/components/recordatorios-m
 import { RecordatoriosService } from './core/services/recordatorios.service';
 import { SupervisionService } from './core/services/supervision.service';
 import { ToastNotificationComponent } from './shared/components/toast-notification/toast-notification.component';
+import { ToastService } from './shared/services/toast.service';
+import { GestionLockService } from './core/services/gestion-lock.service';
 import { environment } from '../environments/environment';
 import { Subscription } from 'rxjs';
+import { AppDateTimePipe } from '@/shared/pipes/format.pipes';
+import { WhatsAppNotificationPopupComponent } from './features/whatsapp/components/notification-popup/whatsapp-notification-popup.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
+    AppDateTimePipe,
     RouterOutlet,
     RouterModule,
     LucideAngularModule,
@@ -39,7 +43,8 @@ import { Subscription } from 'rxjs';
     AgentTimeAlertOverlayComponent,
     SupervisionPanelComponent,
     PeripheralStatusBannerComponent,
-    ToastNotificationComponent
+    ToastNotificationComponent,
+    WhatsAppNotificationPopupComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
@@ -94,7 +99,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     private supervisionService: SupervisionService,
     private peripheralHealthService: PeripheralHealthService,
     private dialog: MatDialog,
-    private router: Router
+    private router: Router,
+    private toast: ToastService,
+    private gestionLock: GestionLockService
   ) {}
 
   // Notificaciones methods
@@ -333,7 +340,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.dialogRef = null;
 
       if (result === 'logout') {
-        this.logout();
+        this.logout(true);
       }
       // NO llamar cerrarSesionPorInactividad si result === 'timeout'
       // porque onTimeout$ ya lo llamó (evita duplicado)
@@ -354,11 +361,15 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.dialogRef = null;
     }
 
-    // Mostrar alerta PRIMERO (bloqueante)
-    alert('Tu sesión ha expirado por inactividad');
+    // Notificación NO bloqueante. Antes había un alert() nativo (el diálogo
+    // "cobranza.contactototal.com.pe dice…") que BLOQUEABA el hilo: como en la
+    // inactividad el usuario está ausente, nunca lo cerraba y por eso el logout
+    // (y el disconnectAgent que marca DESCONECTADO) quedaba diferido → el estado
+    // del agente se trababa en BD (EN_REUNION/TIPIFICANDO/etc.).
+    this.toast.warning('Tu sesión se cerró por inactividad');
 
-    // Cerrar sesión DESPUÉS de que el usuario acepte
-    this.logout();
+    // Cerrar sesión de inmediato (marca DESCONECTADO en backend vía disconnectAgent)
+    this.logout(true);
 
     // Resetear flag solo después de que la navegación complete
     setTimeout(() => {
@@ -504,6 +515,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           console.log('📞 [App] PREDICTIVE_CALL_CONNECTED recibido:', message.payload);
           sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
         }
+
+        // Agenda de rellamada del bot (F1f). El backend ya emitía estos eventos,
+        // pero nadie los escuchaba: llegaban al navegador y se descartaban.
+        if (message.type?.startsWith('BOT_AGENDA_') && message.payload) {
+          this.avisoDeAgenda(message.type, message.payload);
+        }
       });
 
       console.log('📞 Escuchando llamadas entrantes...');
@@ -512,6 +529,34 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.verificarRecordatoriosPendientes(user);
     } catch (error) {
       console.error('❌ Error al conectar a FreeSWITCH:', error);
+    }
+  }
+
+  /**
+   * Avisos de la agenda de rellamada del bot (F1f, §6.6.1).
+   *
+   * Duraciones distintas a propósito: el aviso de que se pactó una llamada puede
+   * llegar horas antes y es informativo, pero el recordatorio llega 2 minutos antes
+   * y avisa de que sale de campaña — si se le escapa, le entra una llamada que no
+   * esperaba. Por eso ese se queda 12 s y no 4.
+   *
+   * La toast es una comodidad, no el canal fiable: lo que no se pierde es la
+   * pantalla /bot-agenda, donde el asesor ve sus llamadas del día.
+   */
+  private avisoDeAgenda(tipo: string, payload: any): void {
+    const cliente = payload.nombreCliente || payload.documento || 'el cliente';
+    switch (tipo) {
+      case 'BOT_AGENDA_NUEVA':
+        this.toast.info(`${payload.titulo}: ${payload.mensaje}`, 8000);
+        break;
+      case 'BOT_AGENDA_RECORDATORIO':
+        this.toast.warning(`${payload.titulo}: ${payload.mensaje}`, 12000);
+        break;
+      case 'BOT_AGENDA_FIN':
+        this.toast.success(payload.mensaje, 6000);
+        break;
+      default:
+        console.warn('[BOT-AGENDA] evento no manejado:', tipo, cliente);
     }
   }
 
@@ -556,7 +601,15 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
 
-  logout(): void {
+  logout(forced = false): void {
+    // Bloqueo de salida: si hay una gestión con llamada sin guardar, el logout
+    // manual queda bloqueado (la única vía de salida es Guardar Gestión).
+    // El logout forzado (inactividad / sesión expirada) siempre procede.
+    if (!forced && this.gestionLock.isLocked) {
+      this.toast.warning('Debes guardar la gestión antes de cerrar sesión');
+      return;
+    }
+
     console.log('[LOGOUT] Iniciando proceso de cierre de sesión...');
 
     // Obtener el usuario actual antes de limpiar todo

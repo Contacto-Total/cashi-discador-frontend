@@ -1,70 +1,217 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, forkJoin } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { Message, Chat, Contact } from '../../models/message.model';
 import { ApiService } from './api.service';
-import { WebsocketService } from './websocket.service';
+import { RealtimeService, WhatsAppEvent } from './realtime.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MessageService {
   private messagesMap = new Map<string, Message[]>();
+  private hasMoreMap  = new Map<string, boolean>();   // si hay mensajes anteriores
   private chatsSubject = new BehaviorSubject<Chat[]>([]);
   private contactsSubject = new BehaviorSubject<Contact[]>([]);
   private allItemsSubject = new BehaviorSubject<Chat[]>([]);
   private currentChatSubject = new BehaviorSubject<Chat | null>(null);
   private currentMessagesSubject = new BehaviorSubject<Message[]>([]);
+  private hasMoreSubject = new BehaviorSubject<boolean>(false);
+  private loadingMoreSubject = new BehaviorSubject<boolean>(false);
   private windowStatusUpdateSubject = new BehaviorSubject<any>(null);
+  private viewersSubject = new BehaviorSubject<Map<number, string[]>>(new Map());
 
   chats$ = this.chatsSubject.asObservable();
   contacts$ = this.contactsSubject.asObservable();
   allItems$ = this.allItemsSubject.asObservable();
   currentChat$ = this.currentChatSubject.asObservable();
   currentMessages$ = this.currentMessagesSubject.asObservable();
+  hasMore$ = this.hasMoreSubject.asObservable();
+  loadingMore$ = this.loadingMoreSubject.asObservable();
   windowStatusUpdate$ = this.windowStatusUpdateSubject.asObservable();
+  viewers$ = this.viewersSubject.asObservable();
+
+  // ---- Paginación de la lista de chats ----
+  private readonly CHATS_PAGE_SIZE = 30;
+  private chatsPage = 0;
+  private chatsQuery = '';
+  private chatsHasMoreSubject = new BehaviorSubject<boolean>(false);
+  private chatsLoadingSubject = new BehaviorSubject<boolean>(false);
+
+  chatsHasMore$ = this.chatsHasMoreSubject.asObservable();
+  chatsLoading$ = this.chatsLoadingSubject.asObservable();
+
+  private viewersMap = new Map<number, string[]>();
+
+  private readonly originalTitle = document.title;
 
   constructor(
     private apiService: ApiService,
-    private wsService: WebsocketService
+    private realtime: RealtimeService
   ) {
     console.log('🔧 MessageService constructor called');
-    this.initializeWebSocket();
-    this.loadChatsAndContacts();
+    this.requestNotificationPermission();
+    this.initializeRealtime();
+    this.loadChats();
   }
 
-  private initializeWebSocket(): void {
-    this.wsService.getMessages().subscribe({
-      next: (wsMsg: any) => {
-        console.log('📨 WebSocket mensaje recibido:', wsMsg);
+  private requestNotificationPermission(): void {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }
 
-        const msgType = wsMsg.type || wsMsg.Type;
+  private playNotificationSound(): void {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx() as AudioContext;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch {}
+  }
 
-        switch (msgType) {
+  private showBrowserNotification(chatId: string, message: Message): void {
+    if (document.hasFocus()) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const chat = this.allItemsSubject.value.find(c => c.jid === chatId);
+    const title = chat?.name || chatId;
+    let body = message.text || '';
+    if (message.hasMedia && !body) {
+      const kind = message.media?.kind;
+      body = kind === 'image' ? '📷 Foto'
+           : kind === 'video' ? '🎥 Video'
+           : kind === 'audio' ? '🎵 Mensaje de voz'
+           : '📎 Adjunto';
+    }
+    const n = new Notification(title, {
+      body: body.substring(0, 100),
+      icon: chat?.profilePictureUrl || '/favicon.ico',
+      tag: chatId,
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
+
+  updateDocumentTitle(): void {
+    const total = this.allItemsSubject.value.reduce((s, c) => s + (c.unreadCount || 0), 0);
+    document.title = total > 0 ? `(${total}) ${this.originalTitle}` : this.originalTitle;
+  }
+
+  markChatAsUnread(chatId: string): void {
+    const allItems = [...this.allItemsSubject.value];
+    const i = allItems.findIndex(c => c.jid === chatId);
+    if (i !== -1) {
+      allItems[i] = { ...allItems[i], unreadCount: Math.max(1, allItems[i].unreadCount || 0) };
+      this.allItemsSubject.next(allItems);
+      this.updateDocumentTitle();
+    }
+  }
+
+  private initializeRealtime(): void {
+    this.realtime.events$.subscribe({
+      next: (event: WhatsAppEvent) => {
+        switch (event.type) {
           case 'INCOMING':
           case 'OUTGOING':
-          case 'MESSAGE':
-            this.handleIncomingMessage(wsMsg);
+            // Los handlers trabajan con un objeto plano; el chat vive en el
+            // sobre del evento, no en el payload.
+            this.handleIncomingMessage({
+              ...event.payload,
+              chat: event.chat || event.payload?.chat,
+              type: event.type
+            });
             break;
           case 'RECEIPT':
-            this.handleReceipt(wsMsg);
+            this.handleReceipt({ ...event.payload, chat: event.chat });
+            break;
+          case 'OUTBOUND_FAILED':
+            this.handleOutboundFailed({ ...event.payload, chat: event.chat || event.payload?.chat });
+            break;
+          case 'MESSAGE_NOTIFICATION':
+            // El mensaje entrante ya llega por INCOMING; la notificación es un
+            // aviso liviano redundante para esta vista. Sin acción.
             break;
           case 'CHAT_UPDATE':
-            this.loadChats();
+            this.handleChatUpdate(event);
             break;
-          case 'WINDOW_STATUS':
-          case 'WINDOW_UPDATE':
-          case 'BLOCKED':
-          case 'UNBLOCKED':
-            this.handleWindowStatusUpdate(wsMsg);
+          case 'VIEWERS':
+            this.handleViewers(event);
+            break;
+          case 'STATUS':
+            // Estado de la cuenta (conectada/baneada): sin UI en /whatsapp por ahora.
+            console.log('ℹ️ Estado de cuenta:', event.payload);
             break;
           default:
-            console.log('⚠️ Tipo de mensaje desconocido:', msgType);
+            console.log('⚠️ Evento realtime desconocido:', event.type);
         }
       },
       error: (err) => {
-        console.error('❌ WebSocket error:', err);
+        console.error('❌ Error en el stream realtime:', err);
       }
     });
+  }
+
+  /**
+   * Resumen de conversación recalculado por el backend: es la fuente de verdad
+   * del no-leído, la ventana de 24h y el último mensaje.
+   */
+  private handleChatUpdate(event: WhatsAppEvent): void {
+    if (!event.payload) return;
+
+    // toChat() refresca de paso las cachés del ApiService (id de conversación y
+    // estado de ventana), de las que tira getWindowStatus().
+    const fresh = this.apiService.toChat(event.payload);
+    const isCurrent = this.currentChatSubject.value?.jid === fresh.jid;
+
+    const allItems = [...this.allItemsSubject.value];
+    const i = allItems.findIndex(c => c.jid === fresh.jid);
+
+    if (i !== -1) {
+      // En el chat abierto el no-leído local manda: el backend todavía cuenta el
+      // mensaje que estamos a punto de marcar como leído.
+      allItems[i] = { ...allItems[i], ...fresh, unreadCount: isCurrent ? 0 : fresh.unreadCount };
+    } else {
+      allItems.push({ ...fresh, isGroup: fresh.jid.endsWith('@g.us') });
+    }
+
+    this.allItemsSubject.next(allItems.sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0)));
+    this.updateDocumentTitle();
+
+    // Alimenta el countdown de la ventana de 24h sin esperar al poll de 30s.
+    this.windowStatusUpdateSubject.next({
+      chat: fresh.jid,
+      isBlocked: !!fresh.blocked,
+      ...this.remainingWindow(fresh)
+    });
+  }
+
+  private remainingWindow(chat: Chat): { hoursRemaining: number; minutesRemaining: number } {
+    const expiresAt = chat.windowExpiresAt ? new Date(chat.windowExpiresAt).getTime() : 0;
+    const remaining = expiresAt ? Math.max(0, expiresAt - Date.now()) : 0;
+    return {
+      hoursRemaining: Math.floor(remaining / 3600000),
+      minutesRemaining: Math.floor((remaining % 3600000) / 60000)
+    };
+  }
+
+  private handleViewers(event: WhatsAppEvent): void {
+    if (event.conversationId == null) return;
+    this.viewersMap.set(event.conversationId, event.payload?.viewers || []);
+    this.viewersSubject.next(new Map(this.viewersMap));
+  }
+
+  /** Siembra la lista de viewers con la respuesta del POST/GET (no por evento). */
+  setViewers(conversationId: number, viewers: string[]): void {
+    this.viewersMap.set(conversationId, viewers);
+    this.viewersSubject.next(new Map(this.viewersMap));
   }
 
   private handleIncomingMessage(payload: any): void {
@@ -86,6 +233,7 @@ export class MessageService {
       hasMedia: payload.hasMedia || false,
       media: payload.media,
       status: payload.status || (isFromMe ? 'sent' : undefined),
+      sentByAgentId: payload.sentByAgentId,
       quotedMessageId: payload.quotedMessageId,
       quotedText: payload.quotedText,
       quotedSender: payload.quotedSender,
@@ -106,11 +254,24 @@ export class MessageService {
 
     // Si no existe y es OUTGOING, buscar mensaje temporal para reemplazar
     if (existingIndex === -1 && isFromMe) {
+      // Vía rápida: mismo texto dentro de una ventana corta (eco casi inmediato).
       existingIndex = messages.findIndex(m =>
         m.msgId.startsWith('temp_') &&
         m.text === message.text &&
         Math.abs(m.timestamp - message.timestamp) < 5000
       );
+
+      // Fallback: el eco OUTGOING puede tardar MUCHO más de 5s (cola de salida +
+      // rate-limit adaptivo por cuenta + ida/vuelta al Go). Sin este empate el
+      // temporal nunca toma el msgId real y los RECEIPT posteriores —que llegan
+      // con el msgId real— no encuentran a qué mensaje aplicarse.
+      if (existingIndex === -1) {
+        existingIndex = messages.findIndex(m =>
+          m.msgId.startsWith('temp_') &&
+          m.status === 'pending' &&
+          m.text === message.text
+        );
+      }
 
       if (existingIndex !== -1) {
         console.log(`🔄 Reemplazando mensaje temporal ${messages[existingIndex].msgId} con ${message.msgId}`);
@@ -122,11 +283,13 @@ export class MessageService {
       messages.push(message);
       console.log(`✅ Mensaje nuevo agregado: ${message.msgId}`);
 
-      // Si es INCOMING y no estoy en ese chat, incrementar contador
+      // Si es INCOMING y no estoy en ese chat, incrementar contador + notificar
       if (!isFromMe) {
         const currentChat = this.currentChatSubject.value;
         if (!currentChat || currentChat.jid !== chatId) {
           this.incrementUnreadCount(chatId);
+          this.playNotificationSound();
+          this.showBrowserNotification(chatId, message);
         }
       }
     } else {
@@ -152,6 +315,11 @@ export class MessageService {
     this.updateChatInList(chatId, message);
   }
 
+  /** Ranking de estados: nunca retroceder (un delivered no debe pisar un read). */
+  private static readonly STATUS_RANK: Record<string, number> = {
+    pending: 0, sent: 1, delivered: 2, read: 3, error: 99
+  };
+
   private handleReceipt(payload: any): void {
     if (!payload || !payload.chat) return;
 
@@ -159,7 +327,7 @@ export class MessageService {
     const messageIds = Array.isArray(payload.ids) ? payload.ids :
                       payload.msgId ? [payload.msgId] :
                       payload.id ? [payload.id] : [];
-    const status = payload.status || payload.receipt as Message['status'];
+    const status = (payload.status || payload.receipt) as Message['status'];
 
     if (!this.messagesMap.has(chatId)) return;
 
@@ -169,9 +337,15 @@ export class MessageService {
     messageIds.forEach((msgId: string) => {
       const message = messages.find(m => m.msgId === msgId);
       if (message && message.fromMe) {
-        message.status = status;
-        updated = true;
-        console.log(`✅ Estado actualizado: ${msgId} → ${status}`);
+        // Los receipts pueden llegar desordenados por SSE: solo avanzar el estado,
+        // nunca degradarlo (read no vuelve a delivered, delivered no vuelve a sent).
+        const cur = MessageService.STATUS_RANK[message.status ?? 'sent'] ?? 0;
+        const next = MessageService.STATUS_RANK[status ?? 'sent'] ?? 0;
+        if (next > cur) {
+          message.status = status;
+          updated = true;
+          console.log(`✅ Estado actualizado: ${msgId} → ${status}`);
+        }
       }
     });
 
@@ -183,40 +357,75 @@ export class MessageService {
     }
   }
 
-  private handleWindowStatusUpdate(payload: any): void {
-    console.log('🔔 Actualización de estado de ventana recibida:', payload);
+  /**
+   * Un envío murió en la outbox (sin msgId real). Marca como 'error' el temporal
+   * pendiente que lo originó, empatándolo por chat + texto. Si ya no hay burbuja
+   * optimista (otra pestaña/recarga), no hay nada que marcar.
+   */
+  private handleOutboundFailed(payload: any): void {
+    const chatId = payload?.chat;
+    if (!chatId || !this.messagesMap.has(chatId)) return;
 
-    // Emitir el evento para que chat-window lo escuche
-    this.windowStatusUpdateSubject.next(payload);
+    const messages = this.messagesMap.get(chatId)!;
+    const idx = messages.findIndex(m =>
+      m.msgId.startsWith('temp_') &&
+      m.fromMe &&
+      (m.status === 'pending' || m.status === 'sent') &&
+      (payload.text == null || m.text === payload.text)
+    );
+    if (idx === -1) return;
+
+    messages[idx].status = 'error';
+    console.warn(`✖ Envío fallido marcado como error: ${messages[idx].msgId} (${payload.error ?? 'sin detalle'})`);
+
+    const currentChat = this.currentChatSubject.value;
+    if (currentChat && currentChat.jid === chatId) {
+      this.currentMessagesSubject.next([...messages]);
+    }
   }
 
-  loadChats(): void {
-    this.loadChatsAndContacts();
+  /** Primera página de chats. `query` no vacío = búsqueda remota por nombre/número. */
+  loadChats(query = ''): void {
+    this.chatsQuery = query.trim();
+    this.fetchChatsPage(0, true);
   }
 
-  loadChatsAndContacts(): void {
-    console.log('📥 Cargando chats y contactos desde BD...');
+  /** Siguiente página (scroll al final de la lista). */
+  loadMoreChats(): void {
+    if (this.chatsLoadingSubject.value || !this.chatsHasMoreSubject.value) return;
+    this.fetchChatsPage(this.chatsPage + 1, false);
+  }
 
-    forkJoin({
-      chats: this.apiService.getChats(),
-      contacts: this.apiService.getContacts()
-    }).subscribe({
-      next: ({ chats, contacts }) => {
-        console.log('✅ Datos cargados - Chats:', chats.length, '| Contactos:', contacts.length);
+  private fetchChatsPage(page: number, replace: boolean): void {
+    this.chatsLoadingSubject.next(true);
 
-        this.chatsSubject.next(chats);
-        this.contactsSubject.next(contacts);
+    this.apiService.getChats(page, this.CHATS_PAGE_SIZE, this.chatsQuery).subscribe({
+      next: ({ chats, hasMore }) => {
+        const enriched = chats.map(c => ({ ...c, isGroup: c.jid.endsWith('@g.us') }));
 
-        // Filtrar y ordenar chats con mensajes
-        const chatsWithMessages = chats
+        // Merge por jid: al paginar, un chat que subió de posición entre páginas
+        // no debe entrar dos veces.
+        const byJid = new Map<string, Chat>(
+          (replace ? [] : this.allItemsSubject.value).map(c => [c.jid, c])
+        );
+        enriched.forEach(c => byJid.set(c.jid, { ...byJid.get(c.jid), ...c }));
+
+        const merged = [...byJid.values()]
           .filter(chat => chat.lastMsgTs && chat.lastMsgTs > 0)
           .sort((a, b) => (b.lastMsgTs || 0) - (a.lastMsgTs || 0));
 
-        console.log('📋 Chats con mensajes:', chatsWithMessages.length);
-        this.allItemsSubject.next(chatsWithMessages);
+        this.chatsPage = page;
+        this.chatsHasMoreSubject.next(hasMore);
+        this.chatsSubject.next(enriched);
+        this.allItemsSubject.next(merged);
+        this.chatsLoadingSubject.next(false);
+        this.updateDocumentTitle();
+
+        console.log(`📋 Chats página ${page} (${enriched.length}, hasMore=${hasMore}, q="${this.chatsQuery}")`);
       },
       error: (err) => {
-        console.error('❌ Error cargando chats/contactos:', err);
+        this.chatsLoadingSubject.next(false);
+        console.error('❌ Error cargando chats:', err);
       }
     });
   }
@@ -226,6 +435,7 @@ export class MessageService {
       console.log('💬 Chat deseleccionado');
       this.currentChatSubject.next(null);
       this.currentMessagesSubject.next([]);
+      this.hasMoreSubject.next(false);
       return;
     }
 
@@ -233,50 +443,88 @@ export class MessageService {
     this.currentChatSubject.next(chat);
     this.loadMessages(chat.jid);
 
-    // Marcar como leído
     setTimeout(() => {
       this.updateChatUnreadCount(chat.jid, 0);
     }, 300);
   }
 
   private loadMessages(chatId: string): void {
-    console.log('📨 Cargando mensajes desde BD para:', chatId);
+    this.currentMessagesSubject.next([]);
+    this.hasMoreSubject.next(false);
 
     this.apiService.getMessages(chatId).subscribe({
-      next: (messages) => {
-        console.log('✅ Mensajes cargados desde BD:', messages.length);
+      next: ({ messages, hasMore }) => {
+        console.log(`✅ Mensajes cargados: ${messages.length} (hasMore=${hasMore})`);
 
-        const messagesWithStatus: Message[] = messages.map(msg => ({
-          msgId: msg.msgId,
-          chat: msg.chat,
-          chatTitle: msg.chatTitle,
-          text: msg.text || '',
-          fromMe: msg.fromMe,
-          timestamp: msg.timestamp,
-          hasMedia: msg.hasMedia || false,
-          media: msg.media,
-          status: msg.status || (msg.fromMe ? 'sent' : undefined),
-          quotedMessageId: msg.quotedMessageId,
-          quotedText: msg.quotedText,
-          quotedSender: msg.quotedSender,
-          quotedFromMe: msg.quotedFromMe
-        }));
+        const mapped = this.mapMessages(messages);
+        mapped.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-        // Reemplazar completamente los mensajes en memoria con los de BD
-        this.messagesMap.set(chatId, messagesWithStatus);
-        this.currentMessagesSubject.next([...messagesWithStatus]);
+        this.messagesMap.set(chatId, mapped);
+        this.hasMoreMap.set(chatId, hasMore);
+        this.hasMoreSubject.next(hasMore);
+        this.currentMessagesSubject.next([...mapped]);
 
-        // Auto-marcar como leído si hay mensajes no leídos
-        const hasUnreadMessages = messagesWithStatus.some(m => !m.fromMe);
-        if (hasUnreadMessages && messagesWithStatus.length > 0) {
+        if (mapped.length > 0) {
           setTimeout(() => {
-            const lastMsg = messagesWithStatus[messagesWithStatus.length - 1];
-            this.apiService.markAsRead(chatId, lastMsg.msgId).subscribe();
+            this.apiService.markAsRead(chatId, mapped[mapped.length - 1].msgId).subscribe();
           }, 500);
         }
       },
       error: (err) => console.error('❌ Error loading messages:', err)
     });
+  }
+
+  /** Carga el bloque anterior de mensajes (paginación hacia atrás). */
+  loadMoreMessages(): void {
+    const chatId = this.currentChatSubject.value?.jid;
+    if (!chatId || !this.hasMoreMap.get(chatId) || this.loadingMoreSubject.value) return;
+
+    const existing = this.messagesMap.get(chatId) || [];
+    const oldest = existing.length > 0 ? existing[0].timestamp : undefined;
+
+    this.loadingMoreSubject.next(true);
+
+    this.apiService.getMessages(chatId, oldest).subscribe({
+      next: ({ messages, hasMore }) => {
+        const mapped = this.mapMessages(messages);
+        mapped.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        // Prepend, deduplicando por msgId
+        const existingIds = new Set(existing.map(m => m.msgId));
+        const newOnes = mapped.filter(m => !existingIds.has(m.msgId));
+        const combined = [...newOnes, ...existing];
+
+        this.messagesMap.set(chatId, combined);
+        this.hasMoreMap.set(chatId, hasMore);
+        this.hasMoreSubject.next(hasMore);
+        this.currentMessagesSubject.next([...combined]);
+        this.loadingMoreSubject.next(false);
+        console.log(`📜 +${newOnes.length} msgs anteriores cargados (hasMore=${hasMore})`);
+      },
+      error: (err) => {
+        this.loadingMoreSubject.next(false);
+        console.error('❌ Error loading more:', err);
+      }
+    });
+  }
+
+  private mapMessages(messages: Message[]): Message[] {
+    return messages.map(msg => ({
+      msgId:           msg.msgId,
+      chat:            msg.chat,
+      chatTitle:       msg.chatTitle,
+      text:            msg.text || '',
+      fromMe:          msg.fromMe,
+      timestamp:       msg.timestamp,
+      hasMedia:        msg.hasMedia || false,
+      media:           msg.media,
+      status:          msg.status || (msg.fromMe ? 'sent' : undefined),
+      sentByAgentId:   msg.sentByAgentId,
+      quotedMessageId: msg.quotedMessageId,
+      quotedText:      msg.quotedText,
+      quotedSender:    msg.quotedSender,
+      quotedFromMe:    msg.quotedFromMe
+    }));
   }
 
   sendMessage(to: string, text: string, quotedMessageId?: string): void {
@@ -379,6 +627,8 @@ export class MessageService {
       allItems[itemIndex].lastMsgText = lastMessage.text;
       allItems[itemIndex].lastMsgTs = lastMessage.timestamp;
       allItems[itemIndex].lastMsgFromMe = lastMessage.fromMe;
+      allItems[itemIndex].lastMsgHasMedia = lastMessage.hasMedia;
+      allItems[itemIndex].lastMsgMediaKind = lastMessage.media?.kind;
     } else {
       // Chat nuevo - crear
       const newChat: Chat = {
@@ -427,6 +677,7 @@ export class MessageService {
       this.chatsSubject.next(chats);
     }
 
+    this.updateDocumentTitle();
     console.log(`📬 Contador de no leídos incrementado para ${chatId}`);
   }
 
@@ -449,5 +700,6 @@ export class MessageService {
     if (count === 0) {
       console.log(`✅ Chat marcado como leído: ${chatId}`);
     }
+    this.updateDocumentTitle();
   }
 }

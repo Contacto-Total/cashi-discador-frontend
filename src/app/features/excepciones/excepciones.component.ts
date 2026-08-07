@@ -6,6 +6,7 @@ import { ExcepcionesService, ExcepcionPendiente } from './excepciones.service';
 import { ExcepcionesReportService, ReporteExcepcionDTO, ResumenMetricas } from '../reports/excepciones-report/excepciones-report.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserRole } from '../../core/models/user.model';
+import { FormatService } from '@/shared/services/format.service';
 
 @Component({
   selector: 'app-excepciones',
@@ -404,6 +405,7 @@ export class ExcepcionesComponent implements OnInit {
   excepcionesService = inject(ExcepcionesService);
   reporteService = inject(ExcepcionesReportService);
   private authService = inject(AuthService);
+  private fmt = inject(FormatService);
 
   // Tab activo
   tabActivo = signal<'pendientes' | 'historial'>('pendientes');
@@ -611,11 +613,11 @@ export class ExcepcionesComponent implements OnInit {
 
   formatCurrency(value: number | null): string {
     if (value === null || value === undefined) return '-';
-    return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(value);
+    return this.fmt.currency(value);
   }
 
   formatDate(dateStr: string): string {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return this.fmt.date(new Date(dateStr));
   }
 }

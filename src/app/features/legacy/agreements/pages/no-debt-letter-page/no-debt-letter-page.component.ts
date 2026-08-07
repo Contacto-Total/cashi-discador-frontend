@@ -1,9 +1,11 @@
-import { Component, effect } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { AgreementsService } from '../../services/agreements.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { ThemeService } from '../../../../../shared/services/theme.service';
+import { FormatService } from '@/shared/services/format.service';
+import { ClientSearchService } from '../../../../../core/services/client-search.service';
 
 @Component({
   selector: 'app-no-debt-letter-page',
@@ -13,6 +15,8 @@ import { ThemeService } from '../../../../../shared/services/theme.service';
   styleUrls: ['./no-debt-letter-page.component.css']
 })
 export class NoDebtLetterPageComponent {
+  private fmt = inject(FormatService);
+
   searchForm: FormGroup;
   letterForm: FormGroup;
   isDarkMode = false;
@@ -36,7 +40,8 @@ export class NoDebtLetterPageComponent {
   constructor(
     private fb: FormBuilder,
     private agreementsService: AgreementsService,
-    private themeService: ThemeService
+    private themeService: ThemeService,
+    private clientSearchService: ClientSearchService
   ) {
     this.searchForm = this.fb.group({
       dniBusqueda: ['', [Validators.required, Validators.pattern(/^\d{8}$/)]]
@@ -63,7 +68,7 @@ export class NoDebtLetterPageComponent {
     if (!dateString) return '';
     const [year, month, day] = dateString.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-    const formatted = date.toLocaleDateString('es-PE', {
+    const formatted = this.fmt.date(date, {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
@@ -97,32 +102,43 @@ export class NoDebtLetterPageComponent {
   }
 
   private buscarNuevoSistema(dni: string) {
-    this.agreementsService.getAgreementDataNuevo(dni).subscribe({
-      next: (response: any) => {
-        this.letterForm.patchValue({
-          nombreCompleto: response.nombreCompleto,
-          dni: response.documento || dni,
-          numeroCuenta: response.numeroCuenta,
-          fechaActual: this.formatDate(new Date()),
-          fechaCancelacion: this.formatDate(new Date())
+    this.clientSearchService.findClientGlobal(dni).subscribe({
+      next: (result) => {
+        this.agreementsService.getAgreementDataNuevo(dni, {
+          tenantId: result.tenantId,
+          carteraId: result.portfolioId,
+          subcarteraId: result.subPortfolioId
+        }).subscribe({
+          next: (response: any) => {
+            this.letterForm.patchValue({
+              nombreCompleto: response.nombreCompleto,
+              dni: response.documento || dni,
+              numeroCuenta: response.numeroCuenta,
+              fechaActual: this.formatDate(new Date()),
+              fechaCancelacion: this.formatDate(new Date())
+            });
+
+            this.mostrarDocumento = true;
+            this.isLoading = false;
+            this.showToast('success', 'Datos cargados correctamente (sistema nuevo)');
+          },
+          error: (error: any) => this.handleNuevoSistemaError(error)
         });
-
-        this.mostrarDocumento = true;
-        this.isLoading = false;
-        this.showToast('success', 'Datos cargados correctamente (sistema nuevo)');
       },
-      error: (error: any) => {
-        this.isLoading = false;
-
-        if (error.status === 404) {
-          this.showToast('error', 'Cliente no encontrado en el sistema.');
-        } else if (error.status === 422) {
-          this.showToast('warning', error.message || 'El cliente no tiene promesa de pago registrada.');
-        } else {
-          this.showToast('error', 'Error al obtener datos del cliente.');
-        }
-      }
+      error: (error: any) => this.handleNuevoSistemaError(error)
     });
+  }
+
+  private handleNuevoSistemaError(error: any): void {
+    this.isLoading = false;
+
+    if (error.status === 404) {
+      this.showToast('error', 'Cliente no encontrado en el sistema.');
+    } else if (error.status === 422) {
+      this.showToast('warning', error.message || 'El cliente no tiene promesa de pago registrada.');
+    } else {
+      this.showToast('error', error.message || 'Error al obtener datos del cliente.');
+    }
   }
 
   private buscarAntiguoSistema(dni: string) {

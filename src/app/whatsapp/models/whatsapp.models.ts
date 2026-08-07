@@ -1,0 +1,263 @@
+export interface PageResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  number: number;
+  size: number;
+}
+
+export type MessageStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'error';
+
+export type OutboundType = 'TEXT' | 'MEDIA' | 'TEMPLATE';
+
+export type WhatsAppEventType =
+  | 'INCOMING'
+  | 'OUTGOING'
+  | 'RECEIPT'
+  | 'CHAT_UPDATE'
+  | 'VIEWERS'
+  | 'STATUS'
+  | 'MESSAGE_NOTIFICATION'
+  | 'OUTBOUND_FAILED';
+
+export interface MediaInfo {
+  mediaId?: string;
+  kind?: 'image' | 'video' | 'audio' | 'document' | 'sticker' | string;
+  mime?: string;
+  fileName?: string;
+  caption?: string;
+  fileLength?: number;
+  url?: string;
+}
+
+export interface Conversation {
+  id: number;
+  accountId?: number;
+  serviceInstanciaId?: string;
+  servicePhoneNumber?: string;
+  serviceCarteraId?: number;
+  serviceSubcarteraId?: number;
+  serviceCarteraName?: string;
+  serviceSubcarteraName?: string;
+  serviceActive?: boolean;
+  contactJid: string;
+  contactPhone?: string;
+  name?: string;
+  isGroup?: boolean;
+  lastMsgTs?: number;
+  lastMsgText?: string;
+  lastMsgFromMe?: boolean;
+  unreadCount?: number;
+  profilePictureUrl?: string;
+  lastIncomingAt?: string;
+  lastOutgoingAt?: string;
+  windowExpiresAt?: string;
+  blocked?: boolean;
+}
+
+export interface Chat {
+  id?: number;
+  jid: string;
+  accountId?: number;
+  serviceInstanciaId?: string;
+  servicePhoneNumber?: string;
+  serviceCarteraId?: number;
+  serviceSubcarteraId?: number;
+  serviceCarteraName?: string;
+  serviceSubcarteraName?: string;
+  serviceActive?: boolean;
+  contactPhone?: string;
+  name: string;
+  lastMsgText?: string;
+  lastMsgTs?: number;
+  unreadCount?: number;
+  lastMsgFromMe?: boolean;
+  profilePictureUrl?: string;
+  isGroup?: boolean;
+  blocked?: boolean;
+  windowExpiresAt?: string;
+}
+
+export interface Message {
+  id?: number;
+  msgId: string;
+  chat: string;
+  conversationId?: number;
+  chatTitle?: string;
+  text: string;
+  fromMe: boolean;
+  timestamp: number;
+  hasMedia?: boolean;
+  media?: MediaInfo;
+  status?: MessageStatus;
+  messageType?: 'INCOMING' | 'OUTGOING' | string;
+  sentByAgentId?: string;
+  quotedMessageId?: string;
+  quotedText?: string;
+  quotedSender?: string;
+  quotedFromMe?: boolean;
+  isEdited?: boolean;
+  isDeleted?: boolean;
+}
+
+export interface MessagePageResponse {
+  messages: Message[];
+  hasMore: boolean;
+}
+
+export interface MessageReceipt {
+  msgId: string;
+  status: Extract<MessageStatus, 'sent' | 'delivered' | 'read'>;
+}
+
+export interface MessageAgentView {
+  agentId: string;
+  seenAt: string;
+}
+
+export interface SendMessageRequest {
+  conversationId: number;
+  type: OutboundType;
+  body?: string;
+  mediaRef?: string;
+  mediaFileName?: string;
+  mediaMime?: string;
+  quotedMessageId?: string;
+}
+
+export interface SendMessageResponse {
+  id: number;
+  status: 'QUEUED' | string;
+}
+
+export interface WindowStatus {
+  conversationId?: number;
+  blocked: boolean;
+  hasActiveWindow: boolean;
+  windowExpiresAt?: string;
+}
+
+export interface ViewerResponse {
+  conversationId: number;
+  viewers: string[];
+}
+
+export interface MessageNotification {
+  conversationId: number;
+  chat: string;
+  chatTitle: string;
+  msgId: string;
+  text?: string;
+  timestamp: number;
+  hasMedia: boolean;
+  mediaKind?: string;
+}
+
+export interface OutboundFailedPayload {
+  outboundId?: number;
+  conversationId?: number;
+  chat: string;
+  text?: string;
+  type?: OutboundType;
+  status: 'error';
+  error: string;
+}
+
+export interface AccountStatusEvent {
+  accountId?: number;
+  instanciaId: string;
+  status: string;
+  jid?: string;
+  phoneNumber?: string;
+  hasLinkedNumber?: boolean;
+  qr?: string;
+  active?: boolean;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
+  sessions?: WhatsappSession[];
+}
+
+export interface EngagementStatus {
+  conversationId: number;
+  ownerAgentId?: string;
+  expiresAt?: string;
+  remainingSeconds: number;
+  locked: boolean;
+}
+
+export interface WhatsappSession {
+  slot: string;
+  role: 'PRIMARY' | 'AUXILIARY';
+  status: string;
+  qrData?: string;
+  updatedAt?: string;
+}
+
+export interface WhatsappAccount {
+  id: number;
+  instanciaId: string;
+  phoneNumber?: string;
+  hasLinkedNumber: boolean;
+  jid?: string;
+  status: string;
+  active: boolean;
+  currentAccount?: boolean;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
+  carteraName?: string;
+  subcarteraName?: string;
+  qrData?: string;
+  qrUpdatedAt?: string;
+  sessions: WhatsappSession[];
+  lastSeenAt?: string;
+  lastConnectedAt?: string;
+}
+
+export interface WhatsAppEventPayloadMap {
+  INCOMING: Message;
+  OUTGOING: Message;
+  RECEIPT: MessageReceipt;
+  CHAT_UPDATE: Conversation;
+  VIEWERS: ViewerResponse;
+  STATUS: AccountStatusEvent;
+  MESSAGE_NOTIFICATION: MessageNotification;
+  OUTBOUND_FAILED: OutboundFailedPayload;
+}
+
+export interface WhatsAppEvent<T = unknown> {
+  type: WhatsAppEventType;
+  conversationId?: number | null;
+  chat?: string | null;
+  payload: T;
+}
+
+export type TypedWhatsAppEvent = {
+  [K in WhatsAppEventType]: WhatsAppEvent<WhatsAppEventPayloadMap[K]> & { type: K };
+}[WhatsAppEventType];
+
+export function conversationToChat(conversation: Conversation): Chat {
+  return {
+    id: conversation.id,
+    jid: conversation.contactJid,
+    accountId: conversation.accountId,
+    serviceInstanciaId: conversation.serviceInstanciaId,
+    servicePhoneNumber: conversation.servicePhoneNumber,
+    serviceCarteraId: conversation.serviceCarteraId,
+    serviceSubcarteraId: conversation.serviceSubcarteraId,
+    serviceCarteraName: conversation.serviceCarteraName,
+    serviceSubcarteraName: conversation.serviceSubcarteraName,
+    serviceActive: conversation.serviceActive,
+    contactPhone: conversation.contactPhone,
+    name: conversation.name || conversation.contactPhone || conversation.contactJid,
+    lastMsgText: conversation.lastMsgText,
+    lastMsgTs: conversation.lastMsgTs,
+    unreadCount: conversation.unreadCount,
+    lastMsgFromMe: conversation.lastMsgFromMe,
+    profilePictureUrl: conversation.profilePictureUrl,
+    isGroup: conversation.isGroup,
+    blocked: conversation.blocked,
+    windowExpiresAt: conversation.windowExpiresAt
+  };
+}

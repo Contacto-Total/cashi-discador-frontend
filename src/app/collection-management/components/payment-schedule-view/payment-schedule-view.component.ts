@@ -2,6 +2,8 @@ import { Component, Input, signal, computed, ViewChild, OnChanges, SimpleChanges
 import { CommonModule } from '@angular/common';
 import { PaymentScheduleService, PaymentScheduleResource, InstallmentResource, InstallmentStatusHistoryResource } from '../../services/payment-schedule.service';
 import { InstallmentStatusDialogComponent } from '../installment-status-dialog/installment-status-dialog.component';
+import { FormatService } from '@/shared/services/format.service';
+import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
 interface InstallmentWithStatus extends InstallmentResource {
   latestStatus?: InstallmentStatusHistoryResource;
@@ -10,7 +12,7 @@ interface InstallmentWithStatus extends InstallmentResource {
 @Component({
   selector: 'app-payment-schedule-view',
   standalone: true,
-  imports: [CommonModule, InstallmentStatusDialogComponent],
+  imports: [CommonModule, InstallmentStatusDialogComponent, AppCurrencyPipe],
   template: `
     <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
 
@@ -25,7 +27,7 @@ interface InstallmentWithStatus extends InstallmentResource {
           </div>
           <div class="text-right">
             <div class="text-sm opacity-90">Monto Total</div>
-            <div class="text-2xl font-bold">S/ {{ schedule()?.totalAmount | number:'1.2-2' }}</div>
+            <div class="text-2xl font-bold">{{ schedule()?.totalAmount | appCurrency }}</div>
           </div>
         </div>
       </div>
@@ -77,7 +79,7 @@ interface InstallmentWithStatus extends InstallmentResource {
                   <!-- Monto -->
                   <td class="px-4 py-3 text-right">
                     <div class="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      S/ {{ installment.amount | number:'1.2-2' }}
+                      {{ installment.amount | appCurrency }}
                     </div>
                   </td>
 
@@ -154,7 +156,7 @@ interface InstallmentWithStatus extends InstallmentResource {
                                   </span>
                                   @if (historyItem.amountPaid) {
                                     <span class="ml-2 text-slate-700 dark:text-slate-300">
-                                      S/ {{ historyItem.amountPaid | number:'1.2-2' }}
+                                      {{ historyItem.amountPaid | appCurrency }}
                                     </span>
                                   }
                                   @if (historyItem.observations) {
@@ -254,7 +256,7 @@ export class PaymentScheduleViewComponent implements OnChanges {
     };
   });
 
-  constructor(private paymentScheduleService: PaymentScheduleService) {}
+  constructor(private paymentScheduleService: PaymentScheduleService, private fmt: FormatService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['managementId'] && this.managementId) {
@@ -333,18 +335,12 @@ export class PaymentScheduleViewComponent implements OnChanges {
 
   formatDate(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return this.fmt.date(date);
   }
 
   formatDateTime(dateStr: string): string {
     const date = new Date(dateStr);
-    return date.toLocaleString('es-PE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return this.fmt.dateTime(date);
   }
 
   getStatusBadgeClass(status: string): string {

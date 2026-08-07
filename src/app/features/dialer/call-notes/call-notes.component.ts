@@ -1,4 +1,5 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
+import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -51,6 +52,8 @@ import { ConfirmCartaDialogComponent } from './confirm-carta-dialog/confirm-cart
   styleUrls: ['./call-notes.component.css']
 })
 export class CallNotesComponent implements OnInit {
+  private fmt = inject(FormatService);
+
   @Input() call: Call | null = null;
   @Input() contact: Contact | null = null;
 
@@ -343,7 +346,7 @@ export class CallNotesComponent implements OnInit {
     // Si el campo tiene un valor desde la tabla dinámica, agregarlo como opción
     if (field.value !== null && field.value !== undefined) {
       options.push({
-        label: `${field.labelCampo}: $${Number(field.value).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        label: `${field.labelCampo}: $${this.fmt.number(field.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         value: field.value
       });
     }

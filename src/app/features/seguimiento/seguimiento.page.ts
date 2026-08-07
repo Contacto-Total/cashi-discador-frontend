@@ -9,13 +9,14 @@ import { SipService } from '../../core/services/sip.service';
 import { AgentState } from '../../core/models/agent-status.model';
 import { RecordatorioPromesa } from '../../core/models/recordatorio.model';
 import { trigger, style, animate, transition, keyframes, state } from '@angular/animations';
+import { AppDatePipe, AppNumberPipe, AppTimePipe } from '@/shared/pipes/format.pipes';
 
 type PageState = 'initial' | 'countdown' | 'finished';
 
 @Component({
   selector: 'app-seguimiento-page',
   standalone: true,
-  imports: [CommonModule, LucideAngularModule],
+  imports: [CommonModule, LucideAngularModule, AppDatePipe, AppNumberPipe, AppTimePipe],
   animations: [
     trigger('countdownNumber', [
       transition(':enter', [
@@ -132,6 +133,30 @@ type PageState = 'initial' | 'countdown' | 'finished';
                 </div>
               </div>
 
+              <!-- Cruce con la agenda del bot (F1f). Va arriba del todo a propósito:
+                   cambia lo que el asesor debe hacer con esta ficha, así que no puede
+                   quedar debajo del monto. -->
+              <div *ngIf="recordatorioActual.promesaIncumplida"
+                   class="mb-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500">
+                <p class="text-sm font-semibold text-red-800 dark:text-red-300">
+                  Se le prometió una llamada a las
+                  {{ recordatorioActual.agendadaPara | appTime:false }} y no se pudo hacer
+                </p>
+                <p class="text-xs text-red-700 dark:text-red-400 mt-0.5">
+                  El cliente la está esperando. Llámale tú.
+                </p>
+              </div>
+
+              <div *ngIf="!recordatorioActual.promesaIncumplida && recordatorioActual.agendadaPara"
+                   class="mb-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500">
+                <p class="text-sm font-semibold text-blue-800 dark:text-blue-300">
+                  Cita pactada para las {{ recordatorioActual.agendadaPara | appTime:false }}
+                </p>
+                <p class="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                  El sistema te la marcará solo. No hace falta que llames ahora.
+                </p>
+              </div>
+
               <!-- Estado de la promesa -->
               <div class="bg-white dark:bg-slate-900 rounded-lg p-3 border border-slate-200 dark:border-slate-600 mb-3">
                 <div class="flex items-center justify-between mb-2">
@@ -153,13 +178,13 @@ type PageState = 'initial' | 'countdown' | 'finished';
                   <div>
                     <p class="text-xs text-slate-400">Monto</p>
                     <p class="text-sm font-bold text-green-600 dark:text-green-400">
-                      S/ {{ recordatorioActual.monto | number:'1.2-2' }}
+                      S/ {{ recordatorioActual.monto | appNumber:'1.2-2' }}
                     </p>
                   </div>
                   <div>
                     <p class="text-xs text-slate-400">Fecha</p>
                     <p class="text-sm font-semibold text-slate-700 dark:text-gray-300">
-                      {{ recordatorioActual.fechaPago | date:'dd/MM' }}
+                      {{ recordatorioActual.fechaPago | appDate:'dayMonth' }}
                     </p>
                   </div>
                 </div>

@@ -83,6 +83,7 @@ export interface ManagementResource {
   estadoPago?: string;        // Estado del pago (PENDIENTE, PAGADA, VENCIDA, etc.)
   totalCuotas?: number;       // Número total de cuotas
   fechaPrimeraCuota?: string; // Fecha de la primera cuota (YYYY-MM-DD)
+  grupoPromesaUuid?: string;  // UUID del grupo de promesa
 }
 
 export interface CallDetailResource {
@@ -144,6 +145,13 @@ export interface ContinuidadPromesaResponse {
   fechaVencimiento?: string;
   nombreCliente?: string;
   documentoCliente?: string;
+}
+
+export interface PromesaVencidaGraciaResponse {
+  enGracia: boolean;
+  idAgente?: number;
+  nombreAgente?: string;
+  finGracia?: string;
 }
 
 
@@ -234,11 +242,15 @@ export interface PaymentScheduleRequest {
   telefonoContacto?: string;
   // Porcentaje de auto-aprobación para excepciones
   porcentajeAutoAprobacion?: number;
+  porcentajeAutoAprobacionAumento?: number;
+  porcentajeMaximoPromesa?: number;
   schedule: {
     montoTotal: number;
     numeroCuotas: number;
     cuotas: PaymentInstallmentRequest[];
     porcentajeAutoAprobacion?: number;  // Porcentaje para calcular excepciones
+    porcentajeAutoAprobacionAumento?: number;  // % máx de aumento sobre la deuda para auto-aprobación
+    porcentajeMaximoPromesa?: number;
     generaCartaAcuerdo?: boolean;       // Si el monto genera carta de acuerdo
   };
 }
@@ -375,7 +387,8 @@ export class ManagementService {
           estadoPago: r.estadoPago || undefined,
           typificationRequiresSchedule: !!r.grupoPromesaUuid,
           totalCuotas: r.totalCuotas || undefined,
-          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined
+          fechaPrimeraCuota: r.fechaPrimeraCuota || undefined,
+          grupoPromesaUuid: r.grupoPromesaUuid || undefined
         } as ManagementResource;
       }))
     );
@@ -398,6 +411,9 @@ export class ManagementService {
   /**
    * Obtiene cronogramas de pago activos por documento del cliente.
    * Más robusto que buscar por ID.
+   *
+   * IMPORTANTE: este método tambien es reutilizado por WhatsApp para generar
+   * compromisos de pago. Si cambia su contrato o sus validaciones, actualizar WhatsApp.
    */
   getActiveSchedulesByDocumento(documento: string): Observable<PaymentSchedule[]> {
     console.log('[SCHEDULE] Fetching active schedules for documento:', documento);
@@ -411,6 +427,23 @@ export class ManagementService {
         }
       }),
       map(records => this.transformToPaymentSchedules(records))
+    );
+  }
+
+  /**
+   * Verifica si un cliente está dentro del período de gracia de una promesa vencida
+   * (Regla B), para pintar la card de bloqueo antes de que el asesor intente guardar.
+   */
+  verificarPromesaVencidaGracia(
+    documento: string,
+    tenantId: number,
+    carteraId: number,
+    subcarteraId: number
+  ): Observable<PromesaVencidaGraciaResponse> {
+    const params = { tenantId: tenantId.toString(), carteraId: carteraId.toString(), subcarteraId: subcarteraId.toString() };
+    return this.http.get<PromesaVencidaGraciaResponse>(
+      `${this.baseUrl}/payment-schedule/documento/${documento}/vencida-en-gracia`,
+      { params }
     );
   }
 

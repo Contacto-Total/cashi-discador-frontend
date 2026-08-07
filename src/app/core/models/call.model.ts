@@ -48,6 +48,9 @@ export interface MakeCallRequest {
   contactId?: number;
   idCliente?: number;
   documento?: string;
+  tenantId?: number;
+  carteraId?: number;
+  subcarteraId?: number;
   campaignId?: number;
 }
 
