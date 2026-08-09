@@ -33,6 +33,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
   armandoCola?: number;
   guardandoCola = false;
   demoCargando?: number;
+  /** El audio que esta sonando. Sin esto, cada clic apilaba otra reproduccion encima
+   *  y sonaban tres voces a la vez; y volver a pulsar no paraba nada. */
+  private demoAudio?: HTMLAudioElement;
+  demoSonando?: number;
   /** Lo que diria cada tono, indexado por id. Se guarda para que quede en pantalla
    *  despues de sonar: la diferencia entre un tono y otro esta en las palabras. */
   demoTexto: Record<number, string> = {};
@@ -43,6 +47,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   objPrimerContacto = false;
 
   nuevaCola: BotCola = this.colaVacia();
+  /** El formulario de alta vive en un modal, como el de campañas. */
+  modalCola = false;
 
   /**
    * Estilos que se pueden elegir. Es un selector y no un campo libre a proposito: este
@@ -53,6 +59,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * Los textos estan redactados para matizar COMO habla, nunca QUE puede ofrecer.
    * Cuando haga falta uno nuevo se añade aqui, revisado.
    */
+  /**
+   * Voces disponibles. El id de ElevenLabs vive AQUI y no en un campo de texto.
+   *
+   * Antes el formulario pedia "saqk76H0L3GCnuHtLDw6" a mano: un supervisor no tiene
+   * de donde sacar eso, y un caracter mal copiado deja al bot mudo en la siguiente
+   * llamada sin decir por que. Elige por nombre; el id lo pone el codigo.
+   */
+  readonly VOCES = [
+    { id: 'saqk76H0L3GCnuHtLDw6', nombre: 'Karla', genero: 'F' },
+  ];
+
   readonly ESTILOS = [
     { nombre: 'Sin ajuste (el de siempre)', texto: '' },
     { nombre: 'Cordial y cercano',
@@ -117,6 +134,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.refresco);
+    this.pararDemo();       // si no, la muestra sigue sonando al cambiar de pantalla
   }
 
   /** La cola se refresca siempre porque de ella sale el estado de la cabecera.
@@ -505,6 +523,34 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
+  abrirModalCola(): void {
+    this.nuevaCola = this.colaVacia();
+    this.objRecordatorio = true;
+    this.objCreacion = true;
+    this.objPrimerContacto = false;
+    this.idInquilinoSel = 0;
+    this.idCarteraSel = 0;
+    this.carteras = [];
+    this.subcarteras = [];
+    this.modalCola = true;
+    this.cargarSubcarteras();
+  }
+
+  cerrarModalCola(): void { this.modalCola = false; }
+
+  eliminarCola(c: BotCola): void {
+    if (!c.id) return;
+    if (c.estaDiscando) {
+      this.flash('Detén la cola antes de eliminarla', true);
+      return;
+    }
+    if (!confirm(`¿Eliminar la cola "${c.nombre}"? Se borra también lo que tenga pendiente hoy.`)) return;
+    this.svc.eliminarCola(c.id).subscribe({
+      next: () => { this.cargarColas(); this.cargarCola(true); this.flash('Cola eliminada'); },
+      error: () => this.flash('No se pudo eliminar la cola', true),
+    });
+  }
+
   crearCola(): void {
     const objetivos = [
       this.objRecordatorio ? 'RECORDATORIO' : null,
@@ -531,6 +577,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       next: () => {
         this.guardandoCola = false;
         this.nuevaCola = this.colaVacia();
+        this.modalCola = false;
         this.cargarColas();
         this.flash('Cola creada');
       },
@@ -675,23 +722,65 @@ export class BotVozComponent implements OnInit, OnDestroy {
    */
   escuchar(t: BotTono): void {
     if (!t.id) { this.flash('Guarda el tono antes de escucharlo', true); return; }
+    // Si ya suena algo, este clic lo para y no pide nada mas: el boton es el mismo
+    // para escuchar y para cortar.
+    if (this.demoSonando != null) { this.pararDemo(); return; }
+    if (this.demoCargando != null) return;          // ya hay una muestra en camino
+
     this.demoCargando = t.id;
     this.svc.demoTono(t.id).subscribe({
       next: (d) => {
         this.demoCargando = undefined;
         this.demoTexto[t.id!] = d?.texto ?? '';
-        if (d?.audioBase64) {
-          new Audio(`data:audio/wav;base64,${d.audioBase64}`).play()
-            .catch(() => this.flash('El navegador bloqueó la reproducción', true));
-        } else {
-          this.flash('Se generó la frase pero no el audio', true);
+        if (!d?.audioBase64) {
+          this.flash(d?.error || 'Se generó la frase pero no el audio', true);
+          return;
         }
+        const audio = new Audio(`data:audio/wav;base64,${d.audioBase64}`);
+        this.demoAudio = audio;
+        this.demoSonando = t.id;
+        // Los tres caminos por los que deja de sonar: termina, falla o lo paran.
+        audio.onended = () => this.pararDemo();
+        audio.onerror = () => { this.pararDemo(); this.flash('No se pudo reproducir', true); };
+        audio.play().catch(() => {
+          this.pararDemo();
+          this.flash('El navegador bloqueó la reproducción', true);
+        });
       },
       error: () => {
         this.demoCargando = undefined;
         this.flash('No se pudo generar la muestra', true);
       },
     });
+  }
+
+  /** El género lo dice la voz elegida; no es un campo aparte que pueda contradecirla. */
+  alElegirVoz(t: BotTono): void {
+    const v = this.VOCES.find((x) => x.id === t.voiceId);
+    if (v) { t.vozEtiqueta = v.nombre; t.generoVoz = v.genero; }
+  }
+
+  pararDemo(): void {
+    if (this.demoAudio) {
+      this.demoAudio.pause();
+      this.demoAudio.currentTime = 0;
+    }
+    this.demoAudio = undefined;
+    this.demoSonando = undefined;
+  }
+
+  /** Texto del boton: escuchar, generando o parar. */
+  textoEscuchar(t: BotTono): string {
+    if (this.demoCargando === t.id) return 'Generando…';
+    if (this.demoSonando === t.id) return 'Detener';
+    return 'Escuchar';
+  }
+
+  /** Solo se bloquean los OTROS: el del audio que suena tiene que poder pararlo. */
+  escucharBloqueado(t: BotTono): boolean {
+    if (this.demoCargando != null) return this.demoCargando !== t.id;
+    if (this.demoSonando != null) return this.demoSonando !== t.id;
+    return false;
   }
 
   // ----- Config -----
@@ -822,13 +911,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   // ----- Cola -----
-  armarCola(): void {
-    this.armando = true;
-    this.svc.armarCola().subscribe({
-      next: (r) => { this.armando = false; this.flash(`Cola armada: ${r.encolados} en cola, ${r.candidatos} candidatos`); this.cargarCola(); },
-      error: () => { this.armando = false; this.flash('Error al armar la cola', true); },
-    });
-  }
+  // El armado global se elimino: la cola del dia SIEMPRE es la de una cola concreta.
+  // Habia dos botones para lo mismo —"Armar cola del dia" y "Armar" en cada fila— y
+  // el global no sabia a que subcartera llamaba, asi que mezclaba todas.
+
   /** silencioso: sin spinner, para que el refresco automatico no parpadee. */
   cargarCola(silencioso = false): void {
     this.loadingCola = !silencioso;

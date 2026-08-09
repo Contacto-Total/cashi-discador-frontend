@@ -188,6 +188,9 @@ export class BotVozService {
   }
   /** Rellena la cola del dia con los clientes de SU subcartera. */
   armarColaDe(id: number): Observable<any> { return this.http.post<any>(`${this.apiUrl}/colas/${id}/armar`, {}); }
+  eliminarCola(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/colas/${id}`);
+  }
   /** El boton. Arrancar y parar no pierden lo encolado. */
   iniciarCola(id: number): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas/${id}/iniciar`, {}); }
   detenerCola(id: number): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas/${id}/detener`, {}); }
@@ -228,7 +231,6 @@ export class BotVozService {
   }
 
 
-  armarCola(): Observable<any> { return this.http.post<any>(`${this.apiUrl}/cola/armar`, {}); }
   getCola(fecha?: string): Observable<BotContacto[]> {
     const q = fecha ? `?fecha=${fecha}` : '';
     return this.http.get<BotContacto[]>(`${this.apiUrl}/cola${q}`);

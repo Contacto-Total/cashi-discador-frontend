@@ -489,3 +489,154 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border-color: rgba(239, 68, 68, 0.35);
   color: #b91c1c;
 }
+
+/* ============================================================================
+   Lista de colas — misma forma que la gestión de campañas.
+   Se copian los patrones de campaign-management (tarjeta con barra de acento,
+   acciones a la derecha, meta-tags abajo, modal para el alta) en vez de inventar
+   otros: son la misma clase de pantalla y deben leerse igual.
+   ========================================================================= */
+
+.seccion-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.seccion-head h3 { margin: 0 0 4px; font-size: 17px; }
+.seccion-head p { margin: 0; max-width: 62ch; }
+
+.seccion-acciones { display: flex; align-items: center; gap: 10px; }
+
+.stat-badge {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 14px; border-radius: 10px;
+  background: var(--fondo-suave, #f3f4f6); border: 1px solid var(--borde, #e5e7eb);
+}
+.stat-badge.active { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.3); }
+.stat-number { font-size: 18px; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-suave,#6b7280); }
+
+.btn-create {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border: none; border-radius: 9px;
+  background: var(--primario, #3b82f6); color: #fff;
+  font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
+}
+.btn-create:hover { filter: brightness(1.05); }
+
+/* Una cola. La barra de acento a la izquierda solo se enciende cuando disca de
+   verdad: es lo primero que se busca al entrar. */
+.cola-card {
+  display: flex; overflow: hidden;
+  background: var(--fondo-tarjeta, #fff);
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 12px; margin-bottom: 12px;
+}
+.cola-card.is-dialing { border-color: rgba(34,197,94,.45); }
+
+.card-accent { width: 4px; flex: 0 0 4px; background: var(--borde, #d1d5db); }
+.card-accent.on { background: #22c55e; }
+
+.card-content { flex: 1; padding: 14px 18px; min-width: 0; }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.card-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.card-title-row h3 { margin: 0; font-size: 15px; font-weight: 600; }
+
+.status-badge {
+  padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: var(--fondo-suave, #f3f4f6); color: var(--texto-suave, #4b5563);
+}
+
+.dialing-indicator {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #16a34a;
+}
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+  animation: pulso 1.6s ease-in-out infinite;
+}
+@keyframes pulso { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+.card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.btn-action-small {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--borde, #e5e7eb); border-radius: 7px;
+  background: var(--fondo-tarjeta, #fff); color: var(--texto-suave, #6b7280);
+  cursor: pointer;
+}
+.btn-action-small:hover:not(:disabled) { background: var(--fondo-suave, #f9fafb); color: var(--texto, #374151); }
+.btn-action-small:disabled { opacity: .4; cursor: not-allowed; }
+.btn-action-small.btn-activate { color: #16a34a; border-color: rgba(34,197,94,.35); }
+.btn-action-small.btn-pause    { color: #b45309; border-color: rgba(245,158,11,.35); }
+.btn-action-small.btn-delete   { color: #b91c1c; border-color: rgba(239,68,68,.3); }
+
+.card-description { margin: 8px 0 0; font-size: 13px; color: var(--texto-suave, #6b7280); }
+
+.card-bottom { margin-top: 10px; }
+.card-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.meta-tag {
+  padding: 3px 8px; border-radius: 6px; font-size: 11px;
+  background: var(--fondo-suave, #f3f4f6); color: var(--texto-suave, #6b7280);
+}
+.meta-date { font-variant-numeric: tabular-nums; }
+
+/* Modal del alta. */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(17, 24, 39, .55);
+}
+.modal-content {
+  display: flex; flex-direction: column;
+  width: min(760px, 100%); max-height: 88vh;
+  background: var(--fondo-tarjeta, #fff);
+  border-radius: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--borde, #e5e7eb);
+}
+.modal-header h3 { margin: 0; font-size: 16px; }
+.btn-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: none; border-radius: 7px;
+  background: transparent; color: var(--texto-suave, #6b7280); cursor: pointer;
+}
+.btn-close:hover { background: var(--fondo-suave, #f3f4f6); }
+
+/* El cuerpo scrollea y el pie se queda fijo: con once campos, el botón de crear
+   quedaba fuera de pantalla. */
+.modal-body { padding: 18px 20px; overflow-y: auto; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px; border-top: 1px solid var(--borde, #e5e7eb);
+}
+.btn-cancel, .btn-submit {
+  padding: 9px 18px; border-radius: 9px; font-size: 14px;
+  font-family: inherit; cursor: pointer;
+}
+.btn-cancel { border: 1px solid var(--borde, #d1d5db); background: transparent; color: inherit; }
+.btn-submit { border: none; background: var(--primario, #3b82f6); color: #fff; }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Tarjeta de contenido normal, en bloque.
+   NO se reutiliza `.control-card` porque esa es `display:flex` — está hecha para la
+   cabecera de Configuración, texto a un lado y botones al otro. Meter un formulario
+   dentro colocaba cada campo en una columna, que es por lo que la pantalla salía
+   desparramada de lado a lado. */
+.panel {
+  display: block;
+  background: var(--card-bg, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+.panel h3 { margin: 0 0 .25rem; font-size: 1rem; font-weight: 600; }
