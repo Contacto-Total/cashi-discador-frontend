@@ -118,26 +118,13 @@
        formulario ocupaba media pantalla siempre, incluso sin querer crear nada. -->
   <section *ngIf="vista === 'colas'">
 
-    <div class="seccion-head">
-      <div>
-        <h3>Colas de discado</h3>
-        <p class="muted">
-          Cada cola llama a los clientes de una subcartera. El objetivo de cada llamada
-          lo decide el estado del cliente, fila a fila.
-        </p>
-      </div>
-      <div class="seccion-acciones">
-        <div class="stat-badge" [class.active]="colas.length > 0">
-          <span class="stat-number">{{ colas.length }}</span>
-          <span class="stat-label">{{ colas.length === 1 ? 'Cola' : 'Colas' }}</span>
-        </div>
-        <button class="btn-create" *ngIf="puedeCrearCola" (click)="abrirModalCola()">
-          <lucide-angular name="plus-circle" [size]="18"></lucide-angular>
-          <span>Nueva cola</span>
-        </button>
-        <span class="muted" *ngIf="!puedeCrearCola">{{ motivoNoCrear }}</span>
-      </div>
-    </div>
+    <!-- El contador y "Nueva cola" viven en la cabecera de la pagina: aqui salian
+         otra vez y se veian dos veces lo mismo, una encima de otra. -->
+    <p class="ayuda" *ngIf="colas.length">
+      Cada cola llama a los clientes de una subcartera. El objetivo de cada llamada lo
+      decide el estado del cliente, fila a fila.
+    </p>
+    <p class="ayuda" *ngIf="!puedeCrearCola && !colas.length">{{ motivoNoCrear }}</p>
 
     <div class="empty-state" *ngIf="!colas.length">
       <p><lucide-angular name="inbox" [size]="20"></lucide-angular>
@@ -404,23 +391,9 @@
             </p>
           </div>
 
-          <div class="objetivos-bloque">
-            <span class="etiqueta">¿Cuántos clientes entran a la cola?</span>
-            <p class="muted">
-              Las casillas de arriba dicen <strong>a quién</strong> se llama; esto dice
-              <strong>cuántos</strong> caben en un día. Sin tope entrarían todos los que
-              cumplan, y en castigo son casi diez mil.
-            </p>
-            <label class="obj-sub" style="margin-left: 0;">
-              Clientes al día
-              <input type="number" min="1" [(ngModel)]="nuevaCola.maxLlamadasDia"
-                     [placeholder]="heredado('maxLlamadasDia')">
-            </label>
-            <p class="muted">
-              No es el número de llamadas: quien no contesta se reintenta sin ocupar otro
-              sitio, así que las marcaciones pueden ser bastantes más.
-            </p>
-          </div>
+          <!-- No hay tope de clientes: entran todos los que cumplan los objetivos y
+               los filtros. Poner un número encima dejaba fuera a gente sin criterio, y
+               quien se quedaba dentro lo decidía el orden de la tabla. -->
 
           <div class="reglas-resumen" *ngIf="reglasEfectivas">
             <span class="etiqueta">Con qué condiciones puede cerrar</span>
@@ -436,6 +409,10 @@
           </div>
 
         </div>
+
+        <p class="aviso-pausa" *ngIf="errorModal">
+          <lucide-angular name="alert-triangle" [size]="15"></lucide-angular> {{ errorModal }}
+        </p>
 
         <div class="modal-footer">
           <button class="btn-cancel" (click)="cerrarModalCola()">Cancelar</button>

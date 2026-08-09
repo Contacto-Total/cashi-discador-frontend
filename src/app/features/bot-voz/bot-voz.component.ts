@@ -60,6 +60,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
   modalCola = false;
   /** Id de la cola que se está editando. undefined = se está creando una nueva. */
   editandoCola?: number;
+  /** El fallo al guardar, DENTRO del formulario. El aviso de arriba queda detrás del
+   *  modal y no se ve: el error tiene que estar donde está el usuario. */
+  errorModal = '';
 
   /**
    * Estilos que se pueden elegir. Es un selector y no un campo libre a proposito: este
@@ -416,6 +419,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   abrirModalCola(): void {
     this.editandoCola = undefined;
+    this.errorModal = '';
     this.nuevaCola = this.colaVacia();
     this.objRecordatorio = true;
     this.objCreacion = true;
@@ -431,6 +435,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   cerrarModalCola(): void {
     this.modalCola = false;
+    this.errorModal = '';
     this.editandoCola = undefined;
   }
 
@@ -475,9 +480,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
       this.objPrimerContacto ? 'PRIMER_CONTACTO' : null,
     ].filter(Boolean).join(',');
     if (!objetivos) {
-      this.flash('Marca al menos a quién debe llamar', true);
+      this.errorModal = 'Marca al menos una cosa que deba hacer Clara.';
       return;
     }
+    this.errorModal = '';
     this.guardandoCola = true;
     // El inquilino y la cartera ya los eligio el usuario en la cascada. Hacen falta
     // para localizar la tabla dinamica de la subcartera, que es de donde salen los
@@ -505,11 +511,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
       },
       error: (e) => {
         this.guardandoCola = false;
-        // 409 es la regla de una cola por subcartera, y merece su propio mensaje: con
-        // un "no se pudo guardar" el supervisor no sabe que ya tiene una.
-        this.flash(e?.status === 409
-          ? 'Esa subcartera ya tiene una cola. Edita la que hay.'
-          : this.editandoCola ? 'No se pudo guardar la cola' : 'No se pudo crear la cola', true);
+        // Se queda EN el formulario. Antes salía como aviso de página y el modal lo
+        // tapaba: parecía que el botón no hacía nada.
+        this.errorModal =
+          e?.status === 409 ? 'Esa subcartera ya tiene una cola. Edita la que hay.'
+          : e?.status === 403 ? 'No tienes permiso sobre esa subcartera.'
+          : e?.status === 400 ? 'Faltan datos: revisa el nombre y la subcartera.'
+          : 'No se pudo guardar la cola. Vuelve a intentarlo.';
       },
     });
   }
