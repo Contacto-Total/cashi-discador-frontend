@@ -94,6 +94,10 @@ export interface BotRegla {
   diasMinASegunda?: number | null;
   diasMaxASegunda?: number | null;
   maxCuotasBot?: number | null;
+  /** Meses de cada opción, en orden: "12,5,3,1". Vacío = los calcula el sistema. */
+  curvaMeses?: string | null;
+  /** La última opción de la escalera solo se acepta con pago el mismo día. */
+  ultimoEscalonSoloHoy?: boolean | null;
   activo?: boolean;
 }
 
@@ -208,6 +212,24 @@ export class BotVozService {
   demoTono(id: number): Observable<any> { return this.http.get<any>(`${this.apiUrl}/tonos/${id}/demo`); }
 
   // ---- Reglas de negociación por subcartera ----
+
+  // ---- Jerarquía proveedor → cartera → subcartera ----
+  //
+  // Se pide al MISMO backend que todo lo demás de esta pantalla (`/comisiones/...`),
+  // no al microservicio de configuración: ese vive en otro host y otra autenticación,
+  // y por eso los tres desplegables salían vacíos sin decir por qué.
+
+  getProveedores(): Observable<any[]> {
+    return this.http.get<any[]>(`${environment.gatewayUrl}/comisiones/inquilinos`);
+  }
+  getCarteras(idInquilino: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.gatewayUrl}/comisiones/carteras?idInquilino=${idInquilino}`);
+  }
+  getSubcarteras(idCartera: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${environment.gatewayUrl}/comisiones/subcarteras?idCartera=${idCartera}`);
+  }
 
   getReglas(): Observable<BotRegla[]> { return this.http.get<BotRegla[]>(`${this.apiUrl}/reglas`); }
   /** Lo que rige HOY para esa subcartera, ya con la herencia aplicada. */

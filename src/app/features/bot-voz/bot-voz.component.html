@@ -310,25 +310,25 @@
               <input type="text" [(ngModel)]="nuevaCola.nombre" placeholder="Castigo — mañana">
             </label>
             <label>
-              Inquilino
+              Proveedor
               <select [(ngModel)]="idInquilinoSel" (ngModelChange)="alElegirInquilino()">
                 <option [ngValue]="0" disabled>Elige uno…</option>
-                <option *ngFor="let i of inquilinos" [ngValue]="i.id">{{ i.nombre }}</option>
+                <option *ngFor="let i of inquilinos" [ngValue]="i.id">{{ i.nombreInquilino }}</option>
               </select>
             </label>
             <label>
               Cartera
               <select [(ngModel)]="idCarteraSel" (ngModelChange)="alElegirCartera()"
                       [disabled]="!carteras.length">
-                <option [ngValue]="0" disabled>Elige una…</option>
-                <option *ngFor="let c of carteras" [ngValue]="c.id">{{ c.nombre }}</option>
+                <option [ngValue]="0" disabled>Elige el proveedor primero…</option>
+                <option *ngFor="let c of carteras" [ngValue]="c.id">{{ c.nombreCartera }}</option>
               </select>
             </label>
             <label>
               Subcartera
               <select [(ngModel)]="nuevaCola.idSubcartera" [disabled]="!subcarteras.length">
-                <option [ngValue]="undefined" disabled>Elige una…</option>
-                <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombre }}</option>
+                <option [ngValue]="undefined" disabled>Elige la cartera primero…</option>
+                <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
               </select>
             </label>
             <label>
@@ -431,66 +431,198 @@
     </div>
   </section>
 
-  <!-- ===== REGLAS DE NEGOCIACION ===== -->
+  <!-- ===== VOCES Y TONOS =====
+       Se perdio al reescribir Colas y hay que dejarla escrita entera, no parcheada:
+       la pestaña salia en blanco porque la seccion no existia en el archivo. -->
+  <section *ngIf="activeTab === 'tonos'">
+    <div class="panel">
+      <h3>Con qué voz y en qué tono habla</h3>
+      <p class="ayuda">
+        Un tono es la <strong>personalidad completa</strong> del bot: cómo se llama, cómo
+        redacta y cómo suena. Van juntos a propósito — si eliges una voz de hombre y dejas
+        el nombre <em>Clara</em>, el bot se presentará como Clara con voz masculina.
+      </p>
+      <p class="ayuda">
+        El estilo cambia <strong>cómo</strong> habla, nunca <strong>qué</strong> puede
+        ofrecer: los importes y los plazos salen de Reglas y ningún tono los mueve.
+        Cada cola elige uno de esta lista.
+      </p>
+    </div>
+
+    <div class="tono-card" *ngFor="let t of tonos">
+      <div class="card-title-row" style="margin-bottom: 14px;">
+        <h3>{{ t.nombre || 'Tono sin nombre' }}</h3>
+        <span class="status-badge">se presenta como {{ t.nombreBot }}</span>
+      </div>
+
+      <div class="grid-form">
+        <label>
+          Nombre del tono
+          <input type="text" [(ngModel)]="t.nombre">
+          <small class="muted">Solo para reconocerlo en la lista al crear una cola.</small>
+        </label>
+        <label>
+          El bot se presenta como
+          <input type="text" [(ngModel)]="t.nombreBot">
+          <small class="muted">Es lo que dice al saludar: «le habla {{ t.nombreBot || 'Clara' }}».</small>
+        </label>
+        <label>
+          Voz
+          <select [(ngModel)]="t.voiceId" (ngModelChange)="alElegirVoz(t)">
+            <option *ngFor="let v of VOCES" [ngValue]="v.id">{{ v.nombre }}</option>
+          </select>
+          <small class="muted">
+            De momento solo hay una contratada. Las nuevas se añaden desde el código.
+          </small>
+        </label>
+        <label>
+          Velocidad
+          <input type="number" step="0.05" min="0.5" max="1.5" [(ngModel)]="t.ttsSpeed">
+          <small class="muted">1 es el ritmo natural; 1,1 va algo más rápido.</small>
+        </label>
+        <label>
+          Estabilidad
+          <input type="number" step="0.05" min="0" max="1" [(ngModel)]="t.ttsStability">
+          <small class="muted">Más alta suena más plana y predecible; más baja, más variada.</small>
+        </label>
+        <label>
+          Expresividad
+          <input type="number" step="0.05" min="0" max="1" [(ngModel)]="t.ttsStyle">
+          <small class="muted">Cuánta entonación pone. Alta puede sonar teatral por teléfono.</small>
+        </label>
+      </div>
+
+      <label class="ancho">
+        Estilo al hablar
+        <select [(ngModel)]="t.estiloTono">
+          <option *ngFor="let e of ESTILOS" [ngValue]="e.texto">{{ e.nombre }}</option>
+        </select>
+        <small class="muted" *ngIf="t.estiloTono">Se le indica: «{{ t.estiloTono }}»</small>
+        <small class="muted" *ngIf="!t.estiloTono">
+          Sin ajuste: habla con el tono base, calmado y formal.
+        </small>
+      </label>
+
+      <div class="acciones">
+        <button class="btn-secondary" (click)="escuchar(t)" [disabled]="escucharBloqueado(t)">
+          <lucide-angular [name]="demoSonando === t.id ? 'square' : 'volume-2'" [size]="16"></lucide-angular>
+          {{ textoEscuchar(t) }}
+        </button>
+        <button class="btn-primary" (click)="guardarTono(t)">Guardar</button>
+      </div>
+
+      <p class="demo" *ngIf="demoTexto[t.id!]">
+        <strong>{{ t.nombreBot }} diría:</strong> «{{ demoTexto[t.id!] }}»
+      </p>
+    </div>
+
+    <button class="btn-create" (click)="nuevoTono()">
+      <lucide-angular name="plus-circle" [size]="18"></lucide-angular> Añadir tono
+    </button>
+  </section>
+
+  <!-- ===== REGLAS DE NEGOCIACION =====
+       No se añaden filas desde aqui: las define el equipo con negocio y aqui se
+       ajustan sus valores. Un boton de "añadir" invitaba a crear reglas sueltas para
+       subcarteras que nadie habia acordado. -->
   <section *ngIf="activeTab === 'reglas'">
     <div class="panel">
-      <h3>Reglas de negociación</h3>
+      <h3>Qué puede pactar el bot</h3>
       <p class="ayuda">
-        Lo que el bot puede pactar. La fila <strong>sin subcartera</strong> es la que
-        aplica por defecto; una subcartera con fila propia manda sobre ella. Lo que
-        dejes <strong>vacío</strong> hereda, y si no hay nada configurado rige lo que
-        está escrito en el código — o sea que con esto vacío el bot se comporta como
-        siempre.
+        Estos son los límites dentro de los que Clara puede cerrar un acuerdo por
+        teléfono. Ella nunca los decide: los calcula el sistema con estos números y solo
+        los pronuncia. Aquí <strong>se ajustan los valores</strong>; las reglas en sí las
+        definimos nosotros con negocio.
+      </p>
+      <p class="ayuda">
+        La fila <strong>Por defecto</strong> rige en toda subcartera que no tenga la
+        suya. Un campo <strong>vacío</strong> hereda de esa fila por defecto y, si
+        tampoco lo dice, de lo que está escrito en el código.
       </p>
 
-      <label>
-        Ver qué rige hoy para
+      <label class="ancho">
+        Ver qué rige hoy en una subcartera
         <select [(ngModel)]="subcarteraMirada" (ngModelChange)="verEfectivas($event)">
           <option [ngValue]="undefined">— elige una subcartera —</option>
-          <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombre }}</option>
+          <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
         </select>
+        <small class="muted" *ngIf="!subcarteras.length">
+          Entra primero a Colas y elige un proveedor y una cartera para poblar esta lista.
+        </small>
       </label>
       <p class="demo" *ngIf="reglasEfectivas">
         Enganche entre {{ reglasEfectivas.pctPrimeraMin }} y {{ reglasEfectivas.pctPrimeraMax }},
-        k mínimo {{ reglasEfectivas.kMinPrimera }},
-        primera cuota como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días,
-        segunda entre {{ reglasEfectivas.diasMinASegunda }} y {{ reglasEfectivas.diasMaxASegunda }} días.
+        con la primera cuota al menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las
+        demás. La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días
+        y la segunda entre {{ reglasEfectivas.diasMinASegunda }} y
+        {{ reglasEfectivas.diasMaxASegunda }} días después.
       </p>
     </div>
 
     <div class="tono-card" *ngFor="let r of reglas">
+      <div class="card-title-row" style="margin-bottom: 14px;">
+        <h3>{{ r.idSubcartera ? nombreSubcartera(r.idSubcartera) : 'Por defecto (todas)' }}</h3>
+        <span class="status-badge" *ngIf="!r.idSubcartera">se aplica si no hay una propia</span>
+      </div>
+
       <div class="grid-form">
         <label>
-          Subcartera
-          <select [(ngModel)]="r.idSubcartera">
-            <option [ngValue]="null">Por defecto (todas)</option>
-            <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombre }}</option>
-          </select>
+          Enganche mínimo
+          <input type="number" step="0.01" min="0" max="1" [(ngModel)]="r.pctPrimeraMin"
+                 placeholder="hereda">
+          <small class="muted">Parte del total que se pide en la primera cuota. 0,10 = 10 %.</small>
         </label>
-        <label>Nombre <input type="text" [(ngModel)]="r.nombre"></label>
-        <label>Enganche mínimo <input type="number" step="0.01" min="0" max="1"
-               [(ngModel)]="r.pctPrimeraMin" placeholder="hereda"></label>
-        <label>Enganche máximo <input type="number" step="0.01" min="0" max="1"
-               [(ngModel)]="r.pctPrimeraMax" placeholder="hereda"></label>
-        <label>k mínimo <input type="number" step="0.1" min="1"
-               [(ngModel)]="r.kMinPrimera" placeholder="hereda"></label>
-        <label>Días máx. 1ª cuota <input type="number" min="0"
-               [(ngModel)]="r.diasMaxPrimeraCuota" placeholder="hereda"></label>
-        <label>2ª cuota desde <input type="number" min="1"
-               [(ngModel)]="r.diasMinASegunda" placeholder="hereda"></label>
-        <label>2ª cuota hasta <input type="number" min="1"
-               [(ngModel)]="r.diasMaxASegunda" placeholder="hereda"></label>
-        <label>Tope de cuotas del bot <input type="number" min="1"
-               [(ngModel)]="r.maxCuotasBot" placeholder="hereda"></label>
+        <label>
+          Enganche máximo
+          <input type="number" step="0.01" min="0" max="1" [(ngModel)]="r.pctPrimeraMax"
+                 placeholder="hereda">
+          <small class="muted">Tope de esa primera cuota, en la opción más cara.</small>
+        </label>
+        <label>
+          La 1ª cuota, veces el resto
+          <input type="number" step="0.1" min="1" [(ngModel)]="r.kMinPrimera" placeholder="hereda">
+          <small class="muted">
+            Con 1,5 la primera es una vez y media cada una de las otras. Por debajo de 1
+            saldría más barata que las demás.
+          </small>
+        </label>
+        <label>
+          Días máx. para la 1ª cuota
+          <input type="number" min="0" [(ngModel)]="r.diasMaxPrimeraCuota" placeholder="hereda">
+          <small class="muted">Desde la llamada. 0 = solo hoy.</small>
+        </label>
+        <label>
+          2ª cuota, desde
+          <input type="number" min="1" [(ngModel)]="r.diasMinASegunda" placeholder="hereda">
+          <small class="muted">Días después de la primera.</small>
+        </label>
+        <label>
+          2ª cuota, hasta
+          <input type="number" min="1" [(ngModel)]="r.diasMaxASegunda" placeholder="hereda">
+          <small class="muted">Se busca que caiga en el mismo mes.</small>
+        </label>
+        <label>
+          Máximo de cuotas
+          <input type="number" min="1" [(ngModel)]="r.maxCuotasBot" placeholder="hereda">
+          <small class="muted">Lo máximo que el bot puede ofrecer, aunque la opción admita más.</small>
+        </label>
+        <label>
+          Plazos por opción
+          <input type="text" [(ngModel)]="r.curvaMeses" placeholder="p. ej. 12,5,3,1">
+          <small class="muted">
+            Meses de cada rebaja, en orden. Vacío = los calcula el sistema.
+          </small>
+        </label>
+        <label class="check" style="align-self: end;">
+          <input type="checkbox" [(ngModel)]="r.ultimoEscalonSoloHoy">
+          La última opción, solo con pago hoy
+        </label>
       </div>
+
       <div class="acciones">
         <button class="btn-primary" (click)="guardarRegla(r)">Guardar</button>
       </div>
     </div>
-
-    <button class="btn-secondary" (click)="nuevaRegla()">
-      <lucide-angular name="plus" [size]="16"></lucide-angular> Añadir reglas
-    </button>
   </section>
 
   <!-- ===== LO ENCOLADO HOY =====

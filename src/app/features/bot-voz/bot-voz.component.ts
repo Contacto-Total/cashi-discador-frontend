@@ -2,8 +2,6 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { TenantService } from '../../maintenance/services/tenant.service';
-import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import {
   BotVozService, BotConfig, BotPerfil, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaFiltro,
@@ -67,7 +65,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * llamada sin decir por que. Elige por nombre; el id lo pone el codigo.
    */
   readonly VOCES = [
-    { id: 'saqk76H0L3GCnuHtLDw6', nombre: 'Karla', genero: 'F' },
+    { id: 'saqk76H0L3GCnuHtLDw6', nombre: 'Voz femenina (la actual)', genero: 'F' },
   ];
 
   readonly ESTILOS = [
@@ -121,9 +119,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private readonly REFRESCO_MS = 5000;
   private refresco?: ReturnType<typeof setInterval>;
 
-  constructor(private svc: BotVozService,
-              private tenantSvc: TenantService,
-              private portfolioSvc: PortfolioService) {}
+  constructor(private svc: BotVozService) {}
 
   ngOnInit(): void {
     this.cargarConfig();
@@ -495,9 +491,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   cargarSubcarteras(): void {
     if (this.inquilinos.length) return;          // ya cargados
-    this.tenantSvc.getAllTenants().subscribe({
+    this.svc.getProveedores().subscribe({
       next: (t) => (this.inquilinos = t || []),
-      error: () => this.flash('No se pudieron cargar los inquilinos', true),
+      error: () => this.flash('No se pudieron cargar los proveedores', true),
     });
   }
 
@@ -507,7 +503,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.idCarteraSel = 0;
     this.nuevaCola.idSubcartera = undefined as any;
     if (!this.idInquilinoSel) return;
-    this.portfolioSvc.getPortfoliosByTenant(this.idInquilinoSel).subscribe({
+    this.svc.getCarteras(this.idInquilinoSel).subscribe({
       next: (c) => (this.carteras = c || []),
       error: () => this.flash('No se pudieron cargar las carteras', true),
     });
@@ -517,7 +513,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.subcarteras = [];
     this.nuevaCola.idSubcartera = undefined as any;
     if (!this.idCarteraSel) return;
-    this.portfolioSvc.getSubPortfoliosByPortfolio(this.idCarteraSel).subscribe({
+    this.svc.getSubcarteras(this.idCarteraSel).subscribe({
       next: (s) => (this.subcarteras = s || []),
       error: () => this.flash('No se pudieron cargar las subcarteras', true),
     });
@@ -620,7 +616,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   nombreSubcartera(id?: number): string {
     const s = this.subcarteras.find((x) => x.id === id);
-    return s ? (s.nombre || s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
+    return s ? (s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
   }
 
   nombreTono(id?: number | null): string {
@@ -653,10 +649,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
       next: (r) => (this.reglasEfectivas = r),
       error: () => this.flash('No se pudieron resolver las reglas', true),
     });
-  }
-
-  nuevaRegla(): void {
-    this.reglas.push({ idSubcartera: null, nombre: 'Nueva regla', activo: true });
   }
 
   guardarRegla(r: BotRegla): void {
