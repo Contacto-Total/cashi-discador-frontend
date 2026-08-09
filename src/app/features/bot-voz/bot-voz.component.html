@@ -27,6 +27,15 @@
       <span class="punto-sin-guardar" *ngIf="hayPerfilesSinGuardar"
             title="Cambios sin guardar"></span>
     </button>
+    <button class="tab-btn" [class.active]="activeTab === 'colas'" (click)="switchTab('colas')">
+      <lucide-angular name="target" [size]="16"></lucide-angular> Colas
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'tonos'" (click)="switchTab('tonos')">
+      <lucide-angular name="mic" [size]="16"></lucide-angular> Voces y tonos
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'reglas'" (click)="switchTab('reglas')">
+      <lucide-angular name="scale" [size]="16"></lucide-angular> Reglas
+    </button>
     <button class="tab-btn" [class.active]="activeTab === 'cola'" (click)="switchTab('cola')">
       <lucide-angular name="list" [size]="16"></lucide-angular> Cola del día
     </button>
@@ -178,10 +187,10 @@
           <input type="checkbox" [(ngModel)]="p.permiteProponerFechas" /> <span>Permite proponer fechas</span>
         </label>
       </div>
-      <div class="form-group full">
-        <label>Tono</label>
-        <textarea rows="2" [(ngModel)]="p.estiloTono"></textarea>
-      </div>
+      <!-- El "Tono" del perfil se quitó de aquí: la columna existía, se guardaba bien
+           y NO la leía nadie — nunca. Cualquiera podía escribir cómo quería que
+           hablara el bot, guardarlo, y no pasaba nada. El tono de verdad vive en la
+           pestaña "Voces y tonos", junto a la voz, que es la misma decisión. -->
       <div class="aviso-no-guardado" *ngIf="perfilSinGuardar(p)">
         <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
         <span>Cambios sin guardar en este perfil.</span>
@@ -194,6 +203,293 @@
         {{ perfilSinGuardar(p) ? 'Guardar cambios' : 'Guardar' }} {{ p.nombre }}
       </button>
     </div>
+  </section>
+
+  <!-- ===== COLAS (definicion) ===== -->
+  <section *ngIf="activeTab === 'colas'">
+    <div class="control-card">
+      <h3>Nueva cola</h3>
+      <p class="ayuda">
+        Una cola llama a los clientes de <strong>una subcartera</strong>. El objetivo de
+        cada llamada lo decide el estado del cliente, fila a fila: si su cuota está por
+        vencer se le recuerda, si ya venció se negocia una nueva promesa, y si nunca ha
+        tenido ninguna se busca la primera.
+      </p>
+
+      <div class="grid-form">
+        <label>
+          Nombre
+          <input type="text" [(ngModel)]="nuevaCola.nombre" placeholder="Castigo — mañana">
+        </label>
+        <label>
+          Subcartera
+          <select [(ngModel)]="nuevaCola.idSubcartera">
+            <option [ngValue]="undefined" disabled>Elige una…</option>
+            <option *ngFor="let s of subcarteras" [ngValue]="s.id">
+              {{ s.nombreSubcartera }} ({{ s.codigoSubcartera }})
+            </option>
+          </select>
+        </label>
+        <label>
+          Voz y tono
+          <select [(ngModel)]="nuevaCola.idTono">
+            <option [ngValue]="null">La de siempre (Clara)</option>
+            <option *ngFor="let t of tonos" [ngValue]="t.id">
+              {{ t.nombre }} — {{ t.nombreBot }}<span *ngIf="t.vozEtiqueta">, {{ t.vozEtiqueta }}</span>
+            </option>
+          </select>
+        </label>
+        <label>
+          Simultáneas
+          <input type="number" min="1" [(ngModel)]="nuevaCola.maxLlamadasSimultaneas"
+                 placeholder="hereda">
+        </label>
+        <label>
+          Desde
+          <input type="time" [(ngModel)]="nuevaCola.horaInicio">
+        </label>
+        <label>
+          Hasta
+          <input type="time" [(ngModel)]="nuevaCola.horaFin">
+        </label>
+        <label>
+          Cupo del día
+          <input type="number" min="1" [(ngModel)]="nuevaCola.maxLlamadasDia" placeholder="hereda">
+        </label>
+        <label>
+          Días de anticipación
+          <input type="number" min="0" [(ngModel)]="nuevaCola.diasAnticipacion" placeholder="hereda">
+        </label>
+        <label>
+          Reintentos por cuota
+          <input type="number" min="1" [(ngModel)]="nuevaCola.maxIntentosPorCuota" placeholder="hereda">
+        </label>
+      </div>
+
+      <p class="ayuda">
+        Lo que dejes <strong>vacío</strong> lo hereda: primero del perfil de intensidad y,
+        si tampoco lo dice, de la configuración global. La ventana horaria global es el
+        tope legal — una cola solo puede estrecharla, nunca ampliarla.
+      </p>
+
+      <div class="objetivos">
+        <span class="etiqueta">A quién llama</span>
+        <label class="check">
+          <input type="checkbox" [(ngModel)]="objRecordatorio"> Recordar cuotas por vencer
+        </label>
+        <label class="check">
+          <input type="checkbox" [(ngModel)]="objCreacion"> Negociar cuotas vencidas
+        </label>
+        <label class="check">
+          <input type="checkbox" [(ngModel)]="objPrimerContacto"> Buscar la primera promesa
+          <small>(clientes sin ningún compromiso)</small>
+        </label>
+      </div>
+
+      <button class="btn-primary" (click)="crearCola()"
+              [disabled]="!nuevaCola.nombre || !nuevaCola.idSubcartera || guardandoCola">
+        <lucide-angular name="plus" [size]="18"></lucide-angular> Crear cola
+      </button>
+    </div>
+
+    <div class="tabla-wrap">
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Cola</th><th>Subcartera</th><th>Objetivos</th><th>Voz</th>
+            <th>Horario</th><th>Último armado</th><th>Estado</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let c of colas">
+            <td>{{ c.nombre }}</td>
+            <td>{{ nombreSubcartera(c.idSubcartera) }}</td>
+            <td class="objetivos-celda">
+              <span class="chip" *ngFor="let o of objetivosDe(c)">{{ o }}</span>
+            </td>
+            <td>{{ nombreTono(c.idTono) }}</td>
+            <td>{{ c.horaInicio }} – {{ c.horaFin }}</td>
+            <td>{{ c.ultimaArmadaAt ? (c.ultimaArmadaAt | date:'dd/MM HH:mm') : '—' }}</td>
+            <td>
+              <span class="badge" [class.badge-on]="c.estaDiscando">
+                {{ c.estaDiscando ? 'Discando' : 'Detenida' }}
+              </span>
+            </td>
+            <td class="acciones">
+              <button class="btn-sec" (click)="armarColaDe(c)" [disabled]="armandoCola === c.id">
+                {{ armandoCola === c.id ? 'Armando…' : 'Armar' }}
+              </button>
+              <!-- Un solo boton que alterna, como el de la cabecera: con dos, uno
+                   siempre esta gris y no se sabe cual es el estado actual. -->
+              <button class="btn-sec" (click)="editarFiltros(c)">Filtros</button>
+              <button class="btn-primary" (click)="alternarCola(c)">
+                {{ c.estaDiscando ? 'Detener' : 'Iniciar' }}
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="!colas.length">
+            <td colspan="8" class="vacio">Todavía no hay ninguna cola. Crea una arriba.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== TONOS ===== -->
+  <section *ngIf="activeTab === 'tonos'">
+    <div class="control-card">
+      <h3>Voces y tonos</h3>
+      <p class="ayuda">
+        El nombre y la voz van juntos: si eliges una voz de hombre y dejas el nombre
+        <em>Clara</em>, el bot se presentará como Clara con voz masculina. El estilo
+        cambia <strong>cómo</strong> habla, nunca <strong>qué</strong> puede ofrecer.
+      </p>
+    </div>
+
+    <div class="tono-card" *ngFor="let t of tonos">
+      <div class="grid-form">
+        <label>Nombre del tono <input type="text" [(ngModel)]="t.nombre"></label>
+        <label>Se presenta como <input type="text" [(ngModel)]="t.nombreBot"></label>
+        <label>
+          Género de la voz
+          <select [(ngModel)]="t.generoVoz">
+            <option value="F">Femenina</option>
+            <option value="M">Masculina</option>
+          </select>
+        </label>
+        <label>Voz (ElevenLabs) <input type="text" [(ngModel)]="t.voiceId"></label>
+        <label>Etiqueta de la voz <input type="text" [(ngModel)]="t.vozEtiqueta" placeholder="Karla"></label>
+        <label>Velocidad <input type="number" step="0.05" min="0.5" max="1.5" [(ngModel)]="t.ttsSpeed"></label>
+        <label>Estabilidad <input type="number" step="0.05" min="0" max="1" [(ngModel)]="t.ttsStability"></label>
+        <label>Expresividad <input type="number" step="0.05" min="0" max="1" [(ngModel)]="t.ttsStyle"></label>
+      </div>
+      <label class="ancho">
+        Estilo
+        <select [(ngModel)]="t.estiloTono">
+          <option *ngFor="let e of ESTILOS" [ngValue]="e.texto">{{ e.nombre }}</option>
+        </select>
+        <small class="muted" *ngIf="t.estiloTono">«{{ t.estiloTono }}»</small>
+        <small class="muted" *ngIf="!t.estiloTono">
+          Sin ajuste: habla con el tono base, calmado y formal.
+        </small>
+      </label>
+
+      <div class="acciones">
+        <button class="btn-sec" (click)="escuchar(t)" [disabled]="demoCargando === t.id">
+          <lucide-angular name="volume-2" [size]="16"></lucide-angular>
+          {{ demoCargando === t.id ? 'Generando…' : 'Escuchar' }}
+        </button>
+        <button class="btn-primary" (click)="guardarTono(t)">Guardar</button>
+      </div>
+
+      <p class="demo" *ngIf="demoTexto[t.id!]">
+        <strong>{{ t.nombreBot }} diría:</strong> «{{ demoTexto[t.id!] }}»
+      </p>
+    </div>
+
+    <button class="btn-sec" (click)="nuevoTono()">
+      <lucide-angular name="plus" [size]="16"></lucide-angular> Añadir tono
+    </button>
+  </section>
+
+  <!-- ===== FILTROS DE UNA COLA ===== -->
+  <section *ngIf="activeTab === 'colas' && filtrosDe" class="control-card">
+    <h3>Filtros de la cola</h3>
+    <p class="ayuda">
+      Cada filtro es una condición sobre una columna de la tabla de esa subcartera, igual
+      que en una campaña. Sin filtros entra toda la subcartera. El <em>código de campo</em>
+      se traduce al nombre real de la columna; si no existe en esa tabla, ese filtro se
+      ignora y queda avisado en el log.
+    </p>
+
+    <div class="filtro-fila" *ngFor="let f of filtros; let i = index">
+      <input type="text" [(ngModel)]="f.fieldCode" placeholder="código de campo (ej. dias_mora)">
+      <select [(ngModel)]="f.dataType">
+        <option value="NUMERICO">Número</option>
+        <option value="FECHA">Fecha</option>
+        <option value="TEXTO">Texto</option>
+        <option value="BOOLEAN">Sí/No</option>
+      </select>
+      <ng-container *ngIf="f.dataType === 'NUMERICO'">
+        <input type="number" [(ngModel)]="f.minValue" placeholder="desde">
+        <input type="number" [(ngModel)]="f.maxValue" placeholder="hasta">
+      </ng-container>
+      <ng-container *ngIf="f.dataType === 'FECHA'">
+        <input type="date" [(ngModel)]="f.minDate">
+        <input type="date" [(ngModel)]="f.maxDate">
+      </ng-container>
+      <ng-container *ngIf="f.dataType === 'TEXTO' || f.dataType === 'BOOLEAN'">
+        <input type="text" [(ngModel)]="f.selectedValues" placeholder="valores separados por coma">
+      </ng-container>
+      <button class="btn-sec" (click)="quitarFiltro(i)">Quitar</button>
+    </div>
+
+    <div class="acciones">
+      <button class="btn-sec" (click)="nuevoFiltro()">Añadir filtro</button>
+      <button class="btn-primary" (click)="guardarFiltros()">Guardar filtros</button>
+    </div>
+  </section>
+
+  <!-- ===== REGLAS DE NEGOCIACION ===== -->
+  <section *ngIf="activeTab === 'reglas'">
+    <div class="control-card">
+      <h3>Reglas de negociación</h3>
+      <p class="ayuda">
+        Lo que el bot puede pactar. La fila <strong>sin subcartera</strong> es la que
+        aplica por defecto; una subcartera con fila propia manda sobre ella. Lo que
+        dejes <strong>vacío</strong> hereda, y si no hay nada configurado rige lo que
+        está escrito en el código — o sea que con esto vacío el bot se comporta como
+        siempre.
+      </p>
+
+      <label>
+        Ver qué rige hoy para
+        <select [(ngModel)]="subcarteraMirada" (ngModelChange)="verEfectivas($event)">
+          <option [ngValue]="undefined">— elige una subcartera —</option>
+          <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
+        </select>
+      </label>
+      <p class="demo" *ngIf="reglasEfectivas">
+        Enganche entre {{ reglasEfectivas.pctPrimeraMin }} y {{ reglasEfectivas.pctPrimeraMax }},
+        k mínimo {{ reglasEfectivas.kMinPrimera }},
+        primera cuota como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días,
+        segunda entre {{ reglasEfectivas.diasMinASegunda }} y {{ reglasEfectivas.diasMaxASegunda }} días.
+      </p>
+    </div>
+
+    <div class="tono-card" *ngFor="let r of reglas">
+      <div class="grid-form">
+        <label>
+          Subcartera
+          <select [(ngModel)]="r.idSubcartera">
+            <option [ngValue]="null">Por defecto (todas)</option>
+            <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
+          </select>
+        </label>
+        <label>Nombre <input type="text" [(ngModel)]="r.nombre"></label>
+        <label>Enganche mínimo <input type="number" step="0.01" min="0" max="1"
+               [(ngModel)]="r.pctPrimeraMin" placeholder="hereda"></label>
+        <label>Enganche máximo <input type="number" step="0.01" min="0" max="1"
+               [(ngModel)]="r.pctPrimeraMax" placeholder="hereda"></label>
+        <label>k mínimo <input type="number" step="0.1" min="1"
+               [(ngModel)]="r.kMinPrimera" placeholder="hereda"></label>
+        <label>Días máx. 1ª cuota <input type="number" min="0"
+               [(ngModel)]="r.diasMaxPrimeraCuota" placeholder="hereda"></label>
+        <label>2ª cuota desde <input type="number" min="1"
+               [(ngModel)]="r.diasMinASegunda" placeholder="hereda"></label>
+        <label>2ª cuota hasta <input type="number" min="1"
+               [(ngModel)]="r.diasMaxASegunda" placeholder="hereda"></label>
+        <label>Tope de cuotas del bot <input type="number" min="1"
+               [(ngModel)]="r.maxCuotasBot" placeholder="hereda"></label>
+      </div>
+      <div class="acciones">
+        <button class="btn-primary" (click)="guardarRegla(r)">Guardar</button>
+      </div>
+    </div>
+
+    <button class="btn-sec" (click)="nuevaRegla()">
+      <lucide-angular name="plus" [size]="16"></lucide-angular> Añadir reglas
+    </button>
   </section>
 
   <!-- ===== COLA ===== -->

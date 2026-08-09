@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   BotVozService, BotConfig, BotPerfil, BotContacto, BotSesion, BotTurno,
+  BotCola, BotTono, BotRegla, BotColaFiltro,
 } from './bot-voz.service';
 
 @Component({
@@ -14,7 +15,59 @@ import {
   styleUrls: ['./bot-voz.component.css'],
 })
 export class BotVozComponent implements OnInit, OnDestroy {
-  activeTab: 'config' | 'perfiles' | 'cola' | 'llamadas' = 'config';
+  activeTab: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'cola' | 'llamadas' = 'config';
+
+  // ----- Colas y tonos -----
+  colas: BotCola[] = [];
+  tonos: BotTono[] = [];
+  subcarteras: any[] = [];
+  armandoCola?: number;
+  guardandoCola = false;
+  demoCargando?: number;
+  /** Lo que diria cada tono, indexado por id. Se guarda para que quede en pantalla
+   *  despues de sonar: la diferencia entre un tono y otro esta en las palabras. */
+  demoTexto: Record<number, string> = {};
+
+  /** Los tres objetivos como casillas. Se juntan en `objetivos` al crear. */
+  objRecordatorio = true;
+  objCreacion = true;
+  objPrimerContacto = false;
+
+  nuevaCola: BotCola = this.colaVacia();
+
+  /**
+   * Estilos que se pueden elegir. Es un selector y no un campo libre a proposito: este
+   * texto se inyecta en el system prompt del modelo, y con un textarea abierto
+   * cualquiera puede escribir algo que contradiga las reglas duras — "acepta lo que
+   * te pida el cliente" iria directo delante del modelo.
+   *
+   * Los textos estan redactados para matizar COMO habla, nunca QUE puede ofrecer.
+   * Cuando haga falta uno nuevo se añade aqui, revisado.
+   */
+  readonly ESTILOS = [
+    { nombre: 'Sin ajuste (el de siempre)', texto: '' },
+    { nombre: 'Cordial y cercano',
+      texto: 'Usa un trato calido y cercano, sin perder el usted. Reconoce lo que te '
+           + 'cuenta el cliente antes de continuar.' },
+    { nombre: 'Firme y directo',
+      texto: 'Se breve y directo. Ve al punto sin rodeos ni cortesias repetidas, '
+           + 'manteniendo el respeto.' },
+    { nombre: 'Formal y sobrio',
+      texto: 'Manten un registro formal y sobrio, con frases cortas y sin coloquialismos.' },
+    { nombre: 'Paciente y explicativo',
+      texto: 'Explica con calma y comprueba que el cliente te ha entendido antes de '
+           + 'seguir adelante.' },
+  ];
+
+  // ----- Reglas de negociacion -----
+  reglas: BotRegla[] = [];
+  /** Lo que rige hoy para la subcartera mirada, ya con la herencia aplicada. */
+  reglasEfectivas?: any;
+  subcarteraMirada?: number;
+
+  // ----- Filtros de la cola que se esta editando -----
+  filtrosDe?: number;
+  filtros: BotColaFiltro[] = [];
 
   config?: BotConfig;
   perfiles: BotPerfil[] = [];
@@ -371,10 +424,238 @@ export class BotVozComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.n - a.n);
   }
 
-  switchTab(t: 'config' | 'perfiles' | 'cola' | 'llamadas'): void {
+  switchTab(t: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'cola' | 'llamadas'): void {
     this.activeTab = t;
     if (t === 'cola') this.cargarCola();
     if (t === 'llamadas') this.cargarSesiones();
+    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarSubcarteras(); }
+    if (t === 'tonos') this.cargarTonos();
+    if (t === 'reglas') { this.cargarReglas(); this.cargarSubcarteras(); }
+  }
+
+  // ----- Colas -----
+
+  /**
+   * Una cola nueva no trae valores puestos: todo en null es "hereda".
+   *
+   * Rellenarlos con 08:00 y 1 seria peor que dejarlos vacios — la cola se llevaria
+   * una copia congelada del horario y cambiar el global dejaria de servir de nada.
+   */
+  private colaVacia(): BotCola {
+    return {
+      nombre: '', idSubcartera: undefined as any, objetivos: '',
+      idTono: null, horaInicio: null, horaFin: null,
+      maxLlamadasSimultaneas: null, maxLlamadasDia: null,
+      diasAnticipacion: null, maxIntentosPorCuota: null,
+    };
+  }
+
+  cargarColas(): void {
+    this.svc.getColas().subscribe({
+      next: (c) => (this.colas = c),
+      error: () => this.flash('No se pudieron cargar las colas', true),
+    });
+  }
+
+  cargarTonos(): void {
+    this.svc.getTonos(true).subscribe({
+      next: (t) => (this.tonos = t),
+      error: () => this.flash('No se pudieron cargar los tonos', true),
+    });
+  }
+
+  cargarSubcarteras(): void {
+    this.svc.getSubcarteras().subscribe({
+      next: (s) => (this.subcarteras = s),
+      error: () => this.flash('No se pudieron cargar las subcarteras', true),
+    });
+  }
+
+  crearCola(): void {
+    const objetivos = [
+      this.objRecordatorio ? 'RECORDATORIO' : null,
+      this.objCreacion ? 'CREACION' : null,
+      this.objPrimerContacto ? 'PRIMER_CONTACTO' : null,
+    ].filter(Boolean).join(',');
+    if (!objetivos) {
+      this.flash('Marca al menos a quién debe llamar', true);
+      return;
+    }
+    this.guardandoCola = true;
+    // La subcartera no basta: para leer la tabla dinamica del universo hace falta
+    // tambien su inquilino y su cartera, y esos los resuelve el backend.
+    this.svc.getJerarquia(this.nuevaCola.idSubcartera).subscribe({
+      next: (j) => this.guardarCola({ ...this.nuevaCola, objetivos, ...j }),
+      error: () => this.guardarCola({ ...this.nuevaCola, objetivos }),
+    });
+  }
+
+  private guardarCola(cola: BotCola): void {
+    this.svc.crearCola(cola).subscribe({
+      next: () => {
+        this.guardandoCola = false;
+        this.nuevaCola = this.colaVacia();
+        this.cargarColas();
+        this.flash('Cola creada');
+      },
+      error: () => {
+        this.guardandoCola = false;
+        this.flash('No se pudo crear la cola', true);
+      },
+    });
+  }
+
+  armarColaDe(c: BotCola): void {
+    if (!c.id) return;
+    this.armandoCola = c.id;
+    this.svc.armarColaDe(c.id).subscribe({
+      next: (r) => {
+        this.armandoCola = undefined;
+        this.cargarColas();
+        this.flash(`Encolados ${r?.encolados ?? 0}`
+          + (r?.primerContacto ? `, ${r.primerContacto} sin promesa previa` : ''));
+      },
+      error: () => {
+        this.armandoCola = undefined;
+        this.flash('No se pudo armar la cola', true);
+      },
+    });
+  }
+
+  /** Un solo boton que alterna, como el de la cabecera. Parar no pierde lo encolado. */
+  alternarCola(c: BotCola): void {
+    if (!c.id) return;
+    const accion = c.estaDiscando ? this.svc.detenerCola(c.id) : this.svc.iniciarCola(c.id);
+    accion.subscribe({
+      next: (actualizada) => {
+        c.estaDiscando = actualizada.estaDiscando;
+        this.flash(c.estaDiscando ? 'Cola iniciada' : 'Cola detenida');
+      },
+      error: () => this.flash('No se pudo cambiar el estado de la cola', true),
+    });
+  }
+
+  nombreSubcartera(id?: number): string {
+    const s = this.subcarteras.find((x) => x.id === id);
+    return s ? s.nombreSubcartera : `#${id ?? '—'}`;
+  }
+
+  nombreTono(id?: number | null): string {
+    if (!id) return 'Clara (por defecto)';
+    return this.tonos.find((t) => t.id === id)?.nombre ?? `#${id}`;
+  }
+
+  objetivosDe(c: BotCola): string[] {
+    const bonito: Record<string, string> = {
+      RECORDATORIO: 'Recordar',
+      CREACION: 'Negociar',
+      PRIMER_CONTACTO: '1ª promesa',
+    };
+    return (c.objetivos || '').split(',').filter(Boolean).map((o) => bonito[o.trim()] ?? o);
+  }
+
+  // ----- Reglas -----
+
+  cargarReglas(): void {
+    this.svc.getReglas().subscribe({
+      next: (r) => (this.reglas = r),
+      error: () => this.flash('No se pudieron cargar las reglas', true),
+    });
+  }
+
+  /** Lo que rige hoy, que no siempre es lo que hay guardado en su fila. */
+  verEfectivas(idSubcartera?: number): void {
+    this.subcarteraMirada = idSubcartera;
+    this.svc.getReglasEfectivas(idSubcartera).subscribe({
+      next: (r) => (this.reglasEfectivas = r),
+      error: () => this.flash('No se pudieron resolver las reglas', true),
+    });
+  }
+
+  nuevaRegla(): void {
+    this.reglas.push({ idSubcartera: null, nombre: 'Nueva regla', activo: true });
+  }
+
+  guardarRegla(r: BotRegla): void {
+    const obs = r.id ? this.svc.actualizarRegla(r.id, r) : this.svc.crearRegla(r);
+    obs.subscribe({
+      next: (g) => { r.id = g.id; this.flash('Reglas guardadas'); },
+      error: () => this.flash('No se pudo guardar. ¿Ya hay una fila por defecto?', true),
+    });
+  }
+
+  // ----- Filtros de una cola -----
+
+  editarFiltros(c: BotCola): void {
+    if (!c.id) return;
+    this.filtrosDe = this.filtrosDe === c.id ? undefined : c.id;
+    if (this.filtrosDe) {
+      this.svc.getFiltros(c.id).subscribe({
+        next: (f) => (this.filtros = f),
+        error: () => this.flash('No se pudieron cargar los filtros', true),
+      });
+    }
+  }
+
+  nuevoFiltro(): void {
+    this.filtros.push({ fieldCode: '', dataType: 'NUMERICO' });
+  }
+
+  quitarFiltro(i: number): void { this.filtros.splice(i, 1); }
+
+  guardarFiltros(): void {
+    if (!this.filtrosDe) return;
+    this.svc.guardarFiltros(this.filtrosDe, this.filtros).subscribe({
+      next: (f) => { this.filtros = f; this.flash('Filtros guardados'); },
+      error: () => this.flash('No se pudieron guardar los filtros', true),
+    });
+  }
+
+  // ----- Tonos -----
+
+  nuevoTono(): void {
+    this.tonos.push({
+      nombre: 'Nuevo tono', nombreBot: 'Clara', generoVoz: 'F',
+      voiceId: 'saqk76H0L3GCnuHtLDw6', vozEtiqueta: 'Karla',
+      ttsStability: 0.7, ttsStyle: 0.2, ttsSimilarityBoost: 0.75, ttsSpeed: 1.1,
+      activo: true,
+    });
+  }
+
+  guardarTono(t: BotTono): void {
+    const obs = t.id ? this.svc.actualizarTono(t.id, t) : this.svc.crearTono(t);
+    obs.subscribe({
+      next: (guardado) => { t.id = guardado.id; this.flash('Tono guardado'); },
+      error: () => this.flash('No se pudo guardar el tono', true),
+    });
+  }
+
+  /**
+   * Genera y reproduce una frase con ESE tono.
+   *
+   * La frase la escribe el bot con el estilo configurado, no es un texto fijo: la
+   * diferencia entre un tono y otro esta sobre todo en las palabras, y una frase
+   * fija sonaria igual con todos los tonos.
+   */
+  escuchar(t: BotTono): void {
+    if (!t.id) { this.flash('Guarda el tono antes de escucharlo', true); return; }
+    this.demoCargando = t.id;
+    this.svc.demoTono(t.id).subscribe({
+      next: (d) => {
+        this.demoCargando = undefined;
+        this.demoTexto[t.id!] = d?.texto ?? '';
+        if (d?.audioBase64) {
+          new Audio(`data:audio/wav;base64,${d.audioBase64}`).play()
+            .catch(() => this.flash('El navegador bloqueó la reproducción', true));
+        } else {
+          this.flash('Se generó la frase pero no el audio', true);
+        }
+      },
+      error: () => {
+        this.demoCargando = undefined;
+        this.flash('No se pudo generar la muestra', true);
+      },
+    });
   }
 
   // ----- Config -----
