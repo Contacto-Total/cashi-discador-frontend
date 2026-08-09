@@ -25,8 +25,6 @@ export interface BotPerfil {
   incluirVencidas: boolean;
   maxDiasVencida?: number | null;
   maxIntentosPorCuota: number;
-  estiloTono: string;
-  permiteProponerFechas: boolean;
 }
 
 /**
@@ -45,6 +43,8 @@ export interface BotCola {
   objetivos: string;
   idTono?: number | null;
   idPerfil?: number | null;
+  /** AUTO = el ritmo lo decide el día del mes. MANUAL = el perfil fijado arriba. */
+  modoPerfil?: string;
   /** Todo lo de abajo hereda cuando va vacío: cola → perfil → configuración global. */
   horaInicio?: string | null;
   horaFin?: string | null;
@@ -58,6 +58,9 @@ export interface BotCola {
   maxIntentosPorCuota?: number | null;
   estado?: string;               // BORRADOR | LISTA | CERRADA
   estaDiscando?: boolean;
+  /** Por qué dejó de discar. Vacío = la paró una persona. */
+  motivoPausa?: string | null;
+  pausadaAt?: string | null;
   ultimaArmadaAt?: string;
   ultimoResumen?: string;
 }
@@ -127,6 +130,8 @@ export interface BotContacto {
   estadoCuota?: string;
   telefono: string;
   idPerfil?: number;
+  idCola?: number;
+  tipoObjetivo?: string;
   estado: string;
   intentos: number;
   resultado?: string;
@@ -172,9 +177,8 @@ export class BotVozService {
   getConfig(): Observable<BotConfig> { return this.http.get<BotConfig>(`${this.apiUrl}/config`); }
   updateConfig(c: Partial<BotConfig>): Observable<BotConfig> { return this.http.put<BotConfig>(`${this.apiUrl}/config`, c); }
 
-  // Botones start/stop de la cola de llamadas.
-  activar(): Observable<BotConfig> { return this.http.post<BotConfig>(`${this.apiUrl}/activar`, {}); }
-  desactivar(): Observable<BotConfig> { return this.http.post<BotConfig>(`${this.apiUrl}/desactivar`, {}); }
+  // `activar`/`desactivar` se quitaron: escribian en bot_config.activo, que ya no
+  // gobierna el discado. Cada cola tiene su propio Iniciar/Detener.
 
   getTurnos(idSesion: number): Observable<BotTurno[]> {
     return this.http.get<BotTurno[]>(`${this.apiUrl}/sesiones/${idSesion}/turnos`);
@@ -184,6 +188,12 @@ export class BotVozService {
   updatePerfil(id: number, p: Partial<BotPerfil>): Observable<BotPerfil> { return this.http.put<BotPerfil>(`${this.apiUrl}/perfiles/${id}`, p); }
 
   // ---- Colas: definir, armar, iniciar y detener ----
+
+  /** Qué puede hacer quien está mirando. El servidor decide igual; esto solo evita
+   *  ofrecer botones que van a devolver 403. */
+  getPermisos(): Observable<{ admin: boolean; subcarteras: number[]; configuracionTecnica: boolean }> {
+    return this.http.get<any>(`${this.apiUrl}/permisos`);
+  }
 
   getColas(): Observable<BotCola[]> { return this.http.get<BotCola[]>(`${this.apiUrl}/colas`); }
   crearCola(c: BotCola): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas`, c); }
@@ -208,8 +218,15 @@ export class BotVozService {
   actualizarTono(id: number, t: Partial<BotTono>): Observable<BotTono> {
     return this.http.put<BotTono>(`${this.apiUrl}/tonos/${id}`, t);
   }
-  /** Que diria, con que voz, y el audio ya sintetizado en base64. */
-  demoTono(id: number): Observable<any> { return this.http.get<any>(`${this.apiUrl}/tonos/${id}/demo`); }
+  /**
+   * Prueba de voz con la configuración TAL COMO ESTÁ EN PANTALLA.
+   *
+   * Se manda el tono entero y no su id: antes leía de la base y sonaba lo último
+   * guardado, así que cambiabas la velocidad, dabas a Escuchar y oías la anterior.
+   */
+  demoTono(t: BotTono): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/tonos/demo`, t);
+  }
 
   // ---- Reglas de negociación por subcartera ----
 

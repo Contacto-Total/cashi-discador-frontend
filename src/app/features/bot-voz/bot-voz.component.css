@@ -640,3 +640,53 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   margin-bottom: 1rem;
 }
 .panel h3 { margin: 0 0 .25rem; font-size: 1rem; font-weight: 600; }
+
+/* Los cinco estados de una cola.
+   Cada uno tiene su color porque cada uno se arregla de forma distinta: esperar,
+   volver a armar, o darle a Iniciar. Con una sola etiqueta "Pausada" para todos,
+   el supervisor no sabe si tiene que hacer algo. */
+.estado-pill {
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.estado-pill.st-discando { background: #dcfce7; color: #15803d; }
+.estado-pill.st-pausada  { background: #fef3c7; color: #b45309; }
+.estado-pill.st-borrador { background: #e5e7eb; color: #4b5563; }
+.estado-pill.st-espera   { background: #dbeafe; color: #1d4ed8; }
+.estado-pill.st-alerta   { background: #fee2e2; color: #b91c1c; }
+
+/* Por qué la apagó el sistema. Solo sale cuando hay motivo, y ese es justo el caso
+   en el que alguien tiene que enterarse. */
+.aviso-pausa {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 0 0; padding: 8px 12px;
+  background: rgba(239, 68, 68, .08);
+  border-left: 3px solid rgba(239, 68, 68, .5);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px; color: #b91c1c;
+}
+
+/* Panel del ojo: cuelga de su tarjeta, sangrado para que se vea de quién es. */
+.detalle-cola { margin: -4px 0 14px 16px; border-left: 3px solid var(--primario, #3b82f6); }
+.detalle-cola h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.detalle-cola h4 + p, .detalle-cola .tabla-wrap { margin-bottom: 18px; }
+
+/* Las tres casillas de qué debe hacer Clara, con su explicación al lado. */
+.objetivos-bloque, .reglas-resumen {
+  padding: 14px 0; border-top: 1px solid var(--borde, #e5e7eb);
+}
+.objetivos-bloque .etiqueta, .reglas-resumen .etiqueta {
+  display: block; margin-bottom: 4px;
+  font-size: 13px; font-weight: 600; color: var(--texto, #374151);
+}
+.objetivos-bloque > .muted, .reglas-resumen .muted { margin: 0 0 12px; }
+
+.obj-opcion {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; cursor: pointer;
+}
+.obj-opcion input { margin-top: 3px; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+.obj-opcion span { display: flex; flex-direction: column; gap: 2px; }
+.obj-opcion strong { font-size: 13px; font-weight: 600; }
+.obj-opcion small { font-size: 12px; color: var(--texto-suave, #6b7280); }

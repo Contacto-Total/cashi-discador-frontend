@@ -23,6 +23,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // Cascada inquilino -> cartera -> subcartera, la misma que usa el formulario de
   // campañas. Mi primera version pedia /subcarteras a secas contra la base equivocada
   // y ese endpoint ni existe: cuelga de /comisiones y exige idCartera.
+  /** Lo que este usuario puede hacer. Se pide una vez al entrar. */
+  esAdmin = false;
+  puedeTecnico = false;
+  misSubcarteras: number[] = [];
+
   inquilinos: any[] = [];
   carteras: any[] = [];
   subcarteras: any[] = [];
@@ -90,6 +95,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   subcarteraMirada?: number;
 
   // ----- Filtros de la cola que se esta editando -----
+  /** Cola cuyo detalle esta abierto (el boton del ojo). */
+  detalleDe?: number;
   filtrosDe?: number;
   filtros: BotColaFiltro[] = [];
 
@@ -122,6 +129,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   constructor(private svc: BotVozService) {}
 
   ngOnInit(): void {
+    this.cargarPermisos();
     this.cargarConfig();
     this.cargarPerfiles();
     this.cargarCola(true);   // alimenta el indicador de estado de la cabecera
@@ -146,12 +154,21 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * la cabecera decia "discando" indefinidamente.
    */
   get estadoBot(): string {
-    if (!this.config?.activo) return 'Detenido';
+    // Sale de las COLAS, no de `bot_config.activo`. Ese flag dejo de gobernar el
+    // discado y la cabecera decia "Detenido" con colas marcando.
+    const discando = this.colas.filter((c) => c.estaDiscando).length;
+    if (!this.colas.length) return 'Sin colas creadas';
+    if (!discando) return 'Ninguna cola discando';
     const enLlamada = this.contar('EN_LLAMADA');
-    if (enLlamada > 0) return `Discando — ${enLlamada} en llamada`;
+    if (enLlamada > 0) return `${enLlamada} en llamada · ${discando} cola(s) activa(s)`;
     const pendientes = this.contar('PENDIENTE');
-    if (pendientes > 0) return `Activo — ${pendientes} en cola`;
-    return this.cola.length ? 'Activo — cola terminada' : 'Activo — sin cola';
+    if (pendientes > 0) return `${pendientes} por marcar · ${discando} cola(s) activa(s)`;
+    return `${discando} cola(s) activa(s) · sin filas pendientes`;
+  }
+
+  /** El punto verde de la cabecera. */
+  get hayDiscando(): boolean {
+    return this.colas.some((c) => c.estaDiscando);
   }
 
   /** true si el formulario de config difiere de lo ultimo guardado. */
@@ -160,46 +177,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
            JSON.stringify(this.config) !== this.configGuardada;
   }
 
-  /** Filas que el bot todavia puede marcar. Sin esto, "Iniciar" prendia el
-   *  kill-switch sobre una cola vacia y el bot quedaba "activo" sin marcar
-   *  nada, que es indistinguible de que algo se rompio. */
-  get colaMarcable(): number {
-    return this.contar('PENDIENTE') + this.contar('EN_LLAMADA');
-  }
-
-  /** Solo aplica antes de arrancar. El aviso de cambios sin guardar va aparte
-   *  porque ese importa siempre, tambien con el bot discando: editar la config
-   *  a media cola y no guardarla es justo cuando mas se pierde. */
-  get motivoNoIniciar(): string {
-    if (this.configSinGuardar) return 'Guarda la configuración antes de iniciar';
-    if (!this.colaMarcable) return 'No hay cola que marcar: arma la cola del día primero';
-    return '';
-  }
-
-  /** Cuantas filas de la cola ya se intentaron: distingue arrancar de reanudar. */
-  get colaYaIniciada(): boolean {
-    return this.cola.some((c) => (c.intentos ?? 0) > 0);
-  }
+  // colaMarcable, motivoNoIniciar y colaYaIniciada se fueron con el boton maestro:
+  // solo servian para decidir si se podia encender el kill-switch global.
 
   get marcadas(): number {
     return this.cola.filter((c) => (c.intentos ?? 0) > 0).length;
   }
 
-  /** Un solo boton que alterna. Con dos botones, uno siempre estaba gris y
-   *  "Iniciar" mentia cuando la cola ya iba por la mitad. */
-  get textoBotonDiscado(): string {
-    if (this.config?.activo) return 'Detener discado';
-    return this.colaYaIniciada ? 'Reanudar discado' : 'Iniciar discado';
-  }
-
-  get iconoBotonDiscado(): string {
-    return this.config?.activo ? 'square' : 'play';
-  }
-
-  alternarDiscado(): void {
-    if (this.config?.activo) this.detener();
-    else this.iniciar();
-  }
 
   /**
    * Dias seleccionables, en la convencion L M X J V: la X de miercoles evita la M
@@ -472,7 +456,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
       idTono: null, horaInicio: null, horaFin: null,
       maxLlamadasSimultaneas: null, maxLlamadasDia: null,
       diasAnticipacion: null, maxIntentosPorCuota: null,
+      modoPerfil: 'AUTO', idPerfil: null,
     };
+  }
+
+  /** 0,15 -> "15 %". El número crudo no se lee bien en una frase. */
+  pct(v?: number | null): string {
+    return v == null ? '—' : `${Math.round(Number(v) * 100)} %`;
   }
 
   cargarColas(): void {
@@ -509,6 +499,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Al elegir subcartera se enseñan las condiciones que le aplican. */
+  alElegirSubcartera(): void {
+    if (this.nuevaCola.idSubcartera) this.verEfectivas(this.nuevaCola.idSubcartera);
+  }
+
   alElegirCartera(): void {
     this.subcarteras = [];
     this.nuevaCola.idSubcartera = undefined as any;
@@ -530,6 +525,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.subcarteras = [];
     this.modalCola = true;
     this.cargarSubcarteras();
+    this.cargarPerfiles();
   }
 
   cerrarModalCola(): void { this.modalCola = false; }
@@ -612,6 +608,69 @@ export class BotVozComponent implements OnInit, OnDestroy {
       },
       error: () => this.flash('No se pudo cambiar el estado de la cola', true),
     });
+  }
+
+  /**
+   * Los cinco estados de una cola. Son cinco y no dos porque hay tres formas
+   * distintas de "no está llamando" y cada una se arregla de otra manera: esperar,
+   * volver a armar, o darle a Iniciar.
+   */
+  estadoCola(c: BotCola): { texto: string; clase: string; ayuda: string } {
+    if (!c.estaDiscando) {
+      if (c.motivoPausa) {
+        return { texto: 'Detenida por el sistema', clase: 'st-alerta',
+                 ayuda: c.motivoPausa };
+      }
+      if (!c.ultimaArmadaAt) {
+        return { texto: 'Borrador', clase: 'st-borrador',
+                 ayuda: 'Creada pero nunca armada. Dale a Armar para llenarla.' };
+      }
+      return { texto: 'Pausada', clase: 'st-pausada',
+               ayuda: 'La detuvo una persona. Dale a Iniciar para reanudar.' };
+    }
+    if (!this.dentroDeHorario(c)) {
+      return { texto: 'Fuera de horario', clase: 'st-espera',
+               ayuda: 'Está encendida, pero fuera de su ventana. Sigue mañana sola.' };
+    }
+    if (this.pendientesDe(c) === 0) {
+      return { texto: 'Cola agotada', clase: 'st-espera',
+               ayuda: 'No quedan clientes por marcar hoy. Vuelve a armarla.' };
+    }
+    return { texto: 'Discando', clase: 'st-discando', ayuda: 'Marcando ahora mismo.' };
+  }
+
+  /** Filas de HOY de esa cola que todavía se pueden marcar. */
+  pendientesDe(c: BotCola): number {
+    return this.cola.filter((f) => f.idCola === c.id &&
+      (f.estado === 'PENDIENTE' || f.estado === 'EN_LLAMADA')).length;
+  }
+
+  private dentroDeHorario(c: BotCola): boolean {
+    const ahora = new Date();
+    const hhmm = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+    if (c.horaInicio && hhmm < c.horaInicio.slice(0, 5)) return false;
+    if (c.horaFin && hhmm > c.horaFin.slice(0, 5)) return false;
+    return true;
+  }
+
+  /** Por qué está ese cliente en la cola, dicho para una persona. */
+  motivoLlamada(objetivo?: string): string {
+    switch (objetivo) {
+      case 'RECORDATORIO':    return 'Recordarle una cuota por vencer';
+      case 'CREACION':        return 'Negociar una cuota vencida';
+      case 'PRIMER_CONTACTO': return 'Abrir su primera promesa';
+      default:                return '—';
+    }
+  }
+
+  verDetalle(c: BotCola): void {
+    this.detalleDe = this.detalleDe === c.id ? undefined : c.id;
+    if (this.detalleDe) this.cargarCola();
+  }
+
+  /** Lo encolado hoy por ESA cola. */
+  filasDe(c: BotCola): BotContacto[] {
+    return this.cola.filter((f) => f.idCola === c.id);
   }
 
   nombreSubcartera(id?: number): string {
@@ -713,24 +772,25 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * fija sonaria igual con todos los tonos.
    */
   escuchar(t: BotTono): void {
-    if (!t.id) { this.flash('Guarda el tono antes de escucharlo', true); return; }
+    // Ya no hace falta guardar antes: se prueba lo que hay en pantalla.
     // Si ya suena algo, este clic lo para y no pide nada mas: el boton es el mismo
     // para escuchar y para cortar.
     if (this.demoSonando != null) { this.pararDemo(); return; }
     if (this.demoCargando != null) return;          // ya hay una muestra en camino
 
-    this.demoCargando = t.id;
-    this.svc.demoTono(t.id).subscribe({
+    this.demoCargando = t.id ?? -1;
+    this.svc.demoTono(t).subscribe({
       next: (d) => {
+        const clave = t.id ?? -1;
         this.demoCargando = undefined;
-        this.demoTexto[t.id!] = d?.texto ?? '';
+        this.demoTexto[clave] = d?.texto ?? '';
         if (!d?.audioBase64) {
           this.flash(d?.error || 'Se generó la frase pero no el audio', true);
           return;
         }
         const audio = new Audio(`data:audio/wav;base64,${d.audioBase64}`);
         this.demoAudio = audio;
-        this.demoSonando = t.id;
+        this.demoSonando = clave;
         // Los tres caminos por los que deja de sonar: termina, falla o lo paran.
         audio.onended = () => this.pararDemo();
         audio.onerror = () => { this.pararDemo(); this.flash('No se pudo reproducir', true); };
@@ -763,19 +823,51 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** Texto del boton: escuchar, generando o parar. */
   textoEscuchar(t: BotTono): string {
-    if (this.demoCargando === t.id) return 'Generando…';
-    if (this.demoSonando === t.id) return 'Detener';
+    const clave = t.id ?? -1;
+    if (this.demoCargando === clave) return 'Generando…';
+    if (this.demoSonando === clave) return 'Detener';
     return 'Escuchar';
   }
 
   /** Solo se bloquean los OTROS: el del audio que suena tiene que poder pararlo. */
   escucharBloqueado(t: BotTono): boolean {
-    if (this.demoCargando != null) return this.demoCargando !== t.id;
-    if (this.demoSonando != null) return this.demoSonando !== t.id;
+    const clave = t.id ?? -1;
+    if (this.demoCargando != null) return this.demoCargando !== clave;
+    if (this.demoSonando != null) return this.demoSonando !== clave;
     return false;
   }
 
   // ----- Config -----
+  cargarPermisos(): void {
+    this.svc.getPermisos().subscribe({
+      next: (p) => {
+        this.esAdmin = !!p.admin;
+        this.puedeTecnico = !!p.configuracionTecnica;
+        this.misSubcarteras = p.subcarteras || [];
+      },
+      // Sin permisos resueltos se asume lo mas restrictivo: es preferible que falte un
+      // boton a que aparezca uno que el servidor va a rechazar.
+      error: () => { this.esAdmin = false; this.puedeTecnico = false; this.misSubcarteras = []; },
+    });
+  }
+
+  /**
+   * ¿Puede crear una cola? Un admin siempre. Un supervisor solo si le queda alguna
+   * subcartera suya sin cola — porque es una por subcartera.
+   */
+  get puedeCrearCola(): boolean {
+    if (this.esAdmin) return true;
+    const conCola = new Set(this.colas.map((c) => c.idSubcartera));
+    return this.misSubcarteras.some((id) => !conCola.has(id));
+  }
+
+  get motivoNoCrear(): string {
+    if (!this.misSubcarteras.length) {
+      return 'No tienes ninguna subcartera asignada, así que no hay cola que crear.';
+    }
+    return 'Ya existe la cola de tu subcartera. Edítala en vez de crear otra.';
+  }
+
   cargarConfig(): void {
     this.svc.getConfig().subscribe({
       next: (c) => this.fijarConfig(c),
@@ -811,23 +903,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
-  /** Los botones start/stop solo mueven el kill-switch. Antes pisaban toda la
-   *  config con la respuesta del servidor y se borraba lo que el usuario
-   *  estuviera editando: asi se perdio un cambio del tope de simultaneas. */
-  iniciar(): void {
-    if (this.motivoNoIniciar) { this.flash(this.motivoNoIniciar, true); return; }
-    this.svc.activar().subscribe({
-      next: (c) => { this.marcarActivo(c.activo); this.flash('Bot iniciado — discando cola'); },
-      error: () => this.flash('Error al iniciar', true),
-    });
-  }
-  detener(): void {
-    this.svc.desactivar().subscribe({
-      next: (c) => { this.marcarActivo(c.activo); this.flash('Bot detenido'); },
-      error: () => this.flash('Error al detener', true),
-    });
-  }
-
   private fijarConfig(c: BotConfig): void {
     // El backend devuelve LocalTime con segundos ("11:00:00") y las opciones
     // del select son "HH:MM". Sin recortar, ninguna opcion coincide con el
@@ -838,18 +913,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // La copia de referencia se toma ya normalizada: si no, el recorte de los
     // segundos contaria como un cambio sin guardar apenas abres la pantalla.
     this.configGuardada = JSON.stringify(c);
-  }
-
-  /** Mueve solo `activo`, en el formulario y en la referencia guardada, para
-   *  que el kill-switch no cuente como un cambio sin guardar. */
-  private marcarActivo(valor: boolean): void {
-    if (!this.config) return;
-    this.config.activo = valor;
-    if (this.configGuardada) {
-      const guardada = JSON.parse(this.configGuardada);
-      guardada.activo = valor;
-      this.configGuardada = JSON.stringify(guardada);
-    }
   }
 
   nombrePerfil(id?: number): string {

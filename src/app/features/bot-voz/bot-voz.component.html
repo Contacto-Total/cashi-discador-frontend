@@ -7,8 +7,8 @@
         <p>Recordatorios de pago automáticos</p>
       </div>
     </div>
-    <div class="estado-bot" *ngIf="config">
-      <span class="dot" [class.on]="config.activo"></span>
+    <div class="estado-bot">
+      <span class="dot" [class.on]="hayDiscando"></span>
       {{ estadoBot }}
     </div>
   </div>
@@ -23,7 +23,7 @@
             title="Cambios sin guardar"></span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'perfiles'" (click)="switchTab('perfiles')">
-      <lucide-angular name="layers" [size]="16"></lucide-angular> Perfiles
+      <lucide-angular name="gauge" [size]="16"></lucide-angular> Ritmo
       <span class="punto-sin-guardar" *ngIf="hayPerfilesSinGuardar"
             title="Cambios sin guardar"></span>
     </button>
@@ -43,26 +43,16 @@
 
   <!-- ===== CONFIG ===== -->
   <section *ngIf="activeTab === 'config' && config">
-    <div class="control-card">
-      <div>
-        <h3>Discado de la cola</h3>
-        <p class="muted">
-          Mientras esté activo, el bot marca las filas pendientes de la cola del día,
-          hasta el tope de llamadas simultáneas.
-        </p>
-        <p class="progreso-cola" *ngIf="cola.length">
-          {{ marcadas }} de {{ cola.length }} filas marcadas hoy
-        </p>
-      </div>
-      <div class="control-buttons">
-        <button [class.btn-danger]="config.activo" [class.btn-primary]="!config.activo"
-                (click)="alternarDiscado()"
-                [disabled]="!config.activo && !!motivoNoIniciar"
-                [title]="config.activo ? '' : motivoNoIniciar">
-          <lucide-angular [name]="iconoBotonDiscado" [size]="18"></lucide-angular>
-          {{ textoBotonDiscado }}
-        </button>
-      </div>
+    <!-- Aqui vivia "Iniciar/Detener discado", que escribia en bot_config.activo.
+         Se quito porque ya no gobierna nada: el discado lo manda el boton de cada
+         cola. Dejarlo era peor que no tenerlo — un boton de parar que no para. -->
+    <div class="panel">
+      <h3>Límites del sistema</h3>
+      <p class="ayuda">
+        El tope que ninguna cola puede saltarse. La ventana horaria es la de la Ley
+        29571: una cola puede acortarla, nunca ampliarla. El discado se enciende y se
+        apaga en <strong>cada cola</strong>, en la pestaña Colas.
+      </p>
     </div>
 
     <!-- Este importa siempre, tambien con el bot discando. -->
@@ -72,27 +62,11 @@
       <button class="btn-link" (click)="guardarConfig()">Guardar ahora</button>
     </div>
 
-    <!-- Este solo antes de arrancar. -->
-    <div class="aviso-no-guardado" *ngIf="!configSinGuardar && !config.activo && !colaMarcable">
-      <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
-      <span>No hay cola que marcar: arma la cola del día primero.</span>
-    </div>
 
     <div class="form-card">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Modo de perfil</label>
-          <select [(ngModel)]="config.modoPerfil">
-            <option value="MANUAL">Manual (yo elijo el perfil)</option>
-            <option value="AUTO">Automático (por día del mes)</option>
-          </select>
-        </div>
-        <div class="form-group" *ngIf="config.modoPerfil === 'MANUAL'">
-          <label>Perfil activo</label>
-          <select [(ngModel)]="config.idPerfilActivo">
-            <option *ngFor="let p of perfiles" [ngValue]="p.id">{{ p.nombre }}</option>
-          </select>
-        </div>
+        <!-- El modo de perfil se mudo a cada cola: ahi decide si su ritmo lo fija
+             una persona o el dia del mes. Aqui gobernaba a todas por igual. -->
         <div class="form-group full-span">
           <label>Horario de discado</label>
           <div class="selector-dias">
@@ -153,52 +127,69 @@
     </div>
   </section>
 
-  <!-- ===== PERFILES ===== -->
+  <!-- ===== RITMO DE LLAMADA (antes "perfiles") =====
+       Se le quitaron dos campos: "Tono", que no lo leia nadie y ahora vive junto a la
+       voz; e "Incluir vencidas", que era decir dos veces lo mismo — eso lo decide la
+       casilla "Generar promesa de una cuota vencida" de cada cola. -->
   <section *ngIf="activeTab === 'perfiles'">
+    <div class="panel">
+      <h3>Ritmo de llamada</h3>
+      <p class="ayuda">
+        Cuánto llama el bot según el día del mes. Al principio se va con calma y al
+        cierre se aprieta. Cada cola elige si sigue este calendario sola —lo normal— o
+        si se queda fija en un ritmo.
+      </p>
+      <p class="ayuda">
+        <strong>A quién llama no se decide aquí</strong>, sino en cada cola, con las
+        casillas de qué debe hacer Clara.
+      </p>
+    </div>
+
     <div class="perfil-card" *ngFor="let p of perfiles">
       <div class="perfil-head">
         <h3>{{ p.nombre }}</h3>
-        <span class="muted">días {{ p.diaMesDesde }}–{{ p.diaMesHasta }} del mes</span>
+        <span class="muted">se aplica del día {{ p.diaMesDesde }} al {{ p.diaMesHasta }} del mes</span>
       </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Máx. llamadas/día</label>
-          <input type="number" [(ngModel)]="p.maxLlamadasDia" />
-        </div>
-        <div class="form-group">
-          <label>Días de anticipación</label>
-          <input type="number" [(ngModel)]="p.diasAnticipacion" />
-        </div>
-        <div class="form-group">
-          <label>Máx. intentos/cuota</label>
-          <input type="number" [(ngModel)]="p.maxIntentosPorCuota" />
-        </div>
-        <div class="form-group">
-          <label>Máx. días vencida</label>
-          <input type="number" [(ngModel)]="p.maxDiasVencida" [disabled]="!p.incluirVencidas" />
-        </div>
-        <label class="checkbox-group">
-          <input type="checkbox" [(ngModel)]="p.incluirVencidas" /> <span>Incluir vencidas</span>
+      <div class="grid-form">
+        <label>
+          Llamadas al día
+          <input type="number" min="1" [(ngModel)]="p.maxLlamadasDia" />
+          <small class="muted">Tope de clientes que entran a la cola en un día.</small>
         </label>
-        <label class="checkbox-group">
-          <input type="checkbox" [(ngModel)]="p.permiteProponerFechas" /> <span>Permite proponer fechas</span>
+        <label>
+          Días de anticipación
+          <input type="number" min="0" [(ngModel)]="p.diasAnticipacion" />
+          <small class="muted">
+            Con cuántos días de adelanto se recuerda una cuota antes de que venza.
+          </small>
+        </label>
+        <label>
+          Intentos por cliente
+          <input type="number" min="1" [(ngModel)]="p.maxIntentosPorCuota" />
+          <small class="muted">Cuántas veces se vuelve a marcar si no contesta.</small>
+        </label>
+        <label>
+          Hasta cuántos días de vencida
+          <input type="number" min="0" [(ngModel)]="p.maxDiasVencida" />
+          <small class="muted">
+            Mora máxima para seguir llamando. Solo cuenta en las colas que negocian
+            cuotas vencidas.
+          </small>
         </label>
       </div>
-      <!-- El "Tono" del perfil se quitó de aquí: la columna existía, se guardaba bien
-           y NO la leía nadie — nunca. Cualquiera podía escribir cómo quería que
-           hablara el bot, guardarlo, y no pasaba nada. El tono de verdad vive en la
-           pestaña "Voces y tonos", junto a la voz, que es la misma decisión. -->
+
       <div class="aviso-no-guardado" *ngIf="perfilSinGuardar(p)">
         <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
-        <span>Cambios sin guardar en este perfil.</span>
+        <span>Tienes cambios sin guardar en este ritmo.</span>
       </div>
-      <button [class.btn-secondary]="!perfilSinGuardar(p)"
-              [class.btn-primary]="perfilSinGuardar(p)"
-              [class.pendiente]="perfilSinGuardar(p)"
-              (click)="guardarPerfil(p)">
-        <lucide-angular name="save" [size]="16"></lucide-angular>
-        {{ perfilSinGuardar(p) ? 'Guardar cambios' : 'Guardar' }} {{ p.nombre }}
-      </button>
+      <div class="acciones">
+        <button [class.btn-secondary]="!perfilSinGuardar(p)"
+                [class.btn-primary]="perfilSinGuardar(p)"
+                (click)="guardarPerfil(p)">
+          <lucide-angular name="save" [size]="16"></lucide-angular>
+          {{ perfilSinGuardar(p) ? 'Guardar cambios' : 'Guardado' }}
+        </button>
+      </div>
     </div>
   </section>
 
@@ -221,67 +212,119 @@
           <span class="stat-number">{{ colas.length }}</span>
           <span class="stat-label">{{ colas.length === 1 ? 'Cola' : 'Colas' }}</span>
         </div>
-        <button class="btn-create" (click)="abrirModalCola()">
+        <button class="btn-create" *ngIf="puedeCrearCola" (click)="abrirModalCola()">
           <lucide-angular name="plus-circle" [size]="18"></lucide-angular>
           <span>Nueva cola</span>
         </button>
+        <span class="muted" *ngIf="!puedeCrearCola">{{ motivoNoCrear }}</span>
       </div>
     </div>
 
     <div class="empty-state" *ngIf="!colas.length">
-      <p><lucide-angular name="inbox" [size]="20"></lucide-angular> Todavía no hay ninguna cola</p>
-      <button class="btn-create" (click)="abrirModalCola()">Crear la primera</button>
+      <p><lucide-angular name="inbox" [size]="20"></lucide-angular>
+        {{ esAdmin ? 'Todavía no hay ninguna cola' : 'Tu subcartera aún no tiene cola' }}</p>
+      <button class="btn-create" *ngIf="puedeCrearCola" (click)="abrirModalCola()">Crear la primera</button>
+      <p class="muted" *ngIf="!puedeCrearCola">{{ motivoNoCrear }}</p>
     </div>
 
-    <div class="cola-card" *ngFor="let c of colas" [class.is-dialing]="c.estaDiscando">
-      <div class="card-accent" [class.on]="c.estaDiscando"></div>
-      <div class="card-content">
+    <div *ngFor="let c of colas">
+      <div class="cola-card" [class.is-dialing]="estadoCola(c).clase === 'st-discando'">
+        <div class="card-accent" [class.on]="estadoCola(c).clase === 'st-discando'"></div>
+        <div class="card-content">
 
-        <div class="card-top">
-          <div class="card-title-row">
-            <h3>{{ c.nombre }}</h3>
-            <span class="status-badge">{{ nombreSubcartera(c.idSubcartera) }}</span>
-            <span *ngIf="c.estaDiscando" class="dialing-indicator">
-              <span class="pulse-dot"></span> Discando
-            </span>
+          <div class="card-top">
+            <div class="card-title-row">
+              <h3>{{ c.nombre }}</h3>
+              <span class="estado-pill" [ngClass]="estadoCola(c).clase"
+                    [title]="estadoCola(c).ayuda">{{ estadoCola(c).texto }}</span>
+              <span class="status-badge">{{ nombreSubcartera(c.idSubcartera) }}</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn-action-small" (click)="verDetalle(c)" title="Ver la cola y su configuración">
+                <lucide-angular name="eye" [size]="15"></lucide-angular>
+              </button>
+              <button class="btn-action-small" (click)="editarFiltros(c)" title="Filtros de segmentación">
+                <lucide-angular name="filter" [size]="15"></lucide-angular>
+              </button>
+              <button class="btn-action-small" (click)="armarColaDe(c)"
+                      [disabled]="armandoCola === c.id" title="Llenar la cola de hoy">
+                <lucide-angular [name]="armandoCola === c.id ? 'loader' : 'refresh-cw'"
+                                [size]="15" [class.spin]="armandoCola === c.id"></lucide-angular>
+              </button>
+              <button [class]="c.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
+                      (click)="alternarCola(c)"
+                      [title]="c.estaDiscando ? 'Detener' : 'Iniciar'">
+                <lucide-angular [name]="c.estaDiscando ? 'pause' : 'play'" [size]="15"></lucide-angular>
+              </button>
+              <button class="btn-action-small btn-delete" (click)="eliminarCola(c)"
+                      [disabled]="c.estaDiscando"
+                      [title]="c.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar'">
+                <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+              </button>
+            </div>
           </div>
-          <div class="card-actions">
-            <button class="btn-action-small" (click)="editarFiltros(c)" title="Filtros de segmentación">
-              <lucide-angular name="filter" [size]="15"></lucide-angular>
-            </button>
-            <button class="btn-action-small" (click)="armarColaDe(c)"
-                    [disabled]="armandoCola === c.id" title="Rellenar la cola de hoy">
-              <lucide-angular [name]="armandoCola === c.id ? 'loader' : 'refresh-cw'"
-                              [size]="15" [class.spin]="armandoCola === c.id"></lucide-angular>
-            </button>
-            <button [class]="c.estaDiscando ? 'btn-action-small btn-pause' : 'btn-action-small btn-activate'"
-                    (click)="alternarCola(c)"
-                    [title]="c.estaDiscando ? 'Detener' : 'Iniciar'">
-              <lucide-angular [name]="c.estaDiscando ? 'pause' : 'play'" [size]="15"></lucide-angular>
-            </button>
-            <button class="btn-action-small btn-delete" (click)="eliminarCola(c)"
-                    [disabled]="c.estaDiscando"
-                    [title]="c.estaDiscando ? 'Detenla antes de eliminarla' : 'Eliminar'">
-              <lucide-angular name="trash-2" [size]="15"></lucide-angular>
-            </button>
+
+          <!-- Solo cuando lo apagó el sistema. Es la diferencia entre reactivarla o
+               buscar antes qué pasó. -->
+          <p class="aviso-pausa" *ngIf="!c.estaDiscando && c.motivoPausa">
+            <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+            {{ c.motivoPausa }}<span *ngIf="c.pausadaAt"> · {{ c.pausadaAt | date:'dd/MM HH:mm' }}</span>
+          </p>
+
+          <div class="card-bottom">
+            <div class="card-meta">
+              <span class="meta-tag" *ngFor="let o of objetivosDe(c)">{{ o }}</span>
+              <span class="meta-tag">{{ nombreTono(c.idTono) }}</span>
+              <span class="meta-tag">
+                {{ c.horaInicio ? (c.horaInicio + ' a ' + c.horaFin) : 'Horario general' }}
+              </span>
+              <span class="meta-tag">
+                {{ c.modoPerfil === 'MANUAL' ? 'Ritmo fijo' : 'Ritmo automático' }}
+              </span>
+              <span class="meta-tag meta-date" *ngIf="c.ultimaArmadaAt">
+                Armada {{ c.ultimaArmadaAt | date:'dd/MM HH:mm' }} · {{ pendientesDe(c) }} por marcar
+              </span>
+              <span class="meta-tag" *ngIf="!c.ultimaArmadaAt">Sin armar todavía</span>
+            </div>
           </div>
         </div>
+      </div>
 
-        <p *ngIf="c.descripcion" class="card-description">{{ c.descripcion }}</p>
+      <!-- Detalle: la configuración de esta cola y lo que tiene encolado hoy. -->
+      <div class="panel detalle-cola" *ngIf="detalleDe === c.id">
+        <h4>Qué hace esta cola</h4>
+        <div class="card-meta" style="margin-bottom: 14px;">
+          <span class="meta-tag" *ngFor="let o of objetivosDe(c)">{{ o }}</span>
+          <span class="meta-tag">Habla como {{ nombreTono(c.idTono) }}</span>
+          <span class="meta-tag" *ngIf="c.maxLlamadasDia">Tope {{ c.maxLlamadasDia }} al día</span>
+          <span class="meta-tag" *ngIf="c.maxLlamadasSimultaneas">
+            {{ c.maxLlamadasSimultaneas }} llamada(s) a la vez
+          </span>
+        </div>
 
-        <div class="card-bottom">
-          <div class="card-meta">
-            <span class="meta-tag" *ngFor="let o of objetivosDe(c)">{{ o }}</span>
-            <span class="meta-tag">{{ nombreTono(c.idTono) }}</span>
-            <span class="meta-tag" *ngIf="c.horaInicio || c.horaFin">
-              {{ c.horaInicio || '—' }} a {{ c.horaFin || '—' }}
-            </span>
-            <span class="meta-tag" *ngIf="!c.horaInicio && !c.horaFin">Horario heredado</span>
-            <span class="meta-tag meta-date" *ngIf="c.ultimaArmadaAt">
-              Armada {{ c.ultimaArmadaAt | date:'dd/MM HH:mm' }}
-            </span>
-            <span class="meta-tag" *ngIf="!c.ultimaArmadaAt">Sin armar</span>
-          </div>
+        <h4>Clientes en la cola de hoy</h4>
+        <p class="muted" *ngIf="!filasDe(c).length">
+          Todavía no ha armado ninguna. Dale al botón de recargar de la tarjeta.
+        </p>
+        <div class="tabla-wrap" *ngIf="filasDe(c).length">
+          <table class="tabla">
+            <thead>
+              <tr><th>Cliente</th><th>Por qué se le llama</th><th>Teléfono</th>
+                  <th>Estado</th><th>Intentos</th></tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let f of filasDe(c)">
+                <td>
+                  <div class="celda-principal">{{ f.nombreCliente || '—' }}</div>
+                  <div class="celda-sub">{{ f.documento }}</div>
+                </td>
+                <td>{{ motivoLlamada(f.tipoObjetivo) }}</td>
+                <td>{{ f.telefono }}</td>
+                <td><span class="badge">{{ f.estado }}</span></td>
+                <td>{{ f.intentos }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -326,7 +369,8 @@
             </label>
             <label>
               Subcartera
-              <select [(ngModel)]="nuevaCola.idSubcartera" [disabled]="!subcarteras.length">
+              <select [(ngModel)]="nuevaCola.idSubcartera" (ngModelChange)="alElegirSubcartera()"
+                      [disabled]="!subcarteras.length">
                 <option [ngValue]="undefined" disabled>Elige la cartera primero…</option>
                 <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
               </select>
@@ -362,24 +406,78 @@
               <input type="number" min="0" [(ngModel)]="nuevaCola.diasAnticipacion" placeholder="hereda">
             </label>
             <label>
-              Reintentos por cuota
+              Reintentos por cliente
               <input type="number" min="1" [(ngModel)]="nuevaCola.maxIntentosPorCuota" placeholder="hereda">
+            </label>
+            <label>
+              Ritmo de llamada
+              <select [(ngModel)]="nuevaCola.modoPerfil">
+                <option value="AUTO">Automático según el día del mes</option>
+                <option value="MANUAL">Fijo, el que yo elija</option>
+              </select>
+              <small class="muted">
+                Con automático no hay que cambiarlo en quincena: se ajusta solo.
+              </small>
+            </label>
+            <label *ngIf="nuevaCola.modoPerfil === 'MANUAL'">
+              Ritmo fijo
+              <select [(ngModel)]="nuevaCola.idPerfil">
+                <option [ngValue]="null" disabled>Elige uno…</option>
+                <option *ngFor="let p of perfiles" [ngValue]="p.id">{{ p.nombre }}</option>
+              </select>
             </label>
           </div>
 
-          <div class="objetivos">
-            <span class="etiqueta">A quién llama</span>
-            <label class="check">
-              <input type="checkbox" [(ngModel)]="objRecordatorio"> Recordar cuotas por vencer
+          <div class="objetivos-bloque">
+            <span class="etiqueta">¿Qué quieres que haga Clara?</span>
+            <p class="muted">
+              Marca al menos una. De esto depende a quién se llama: sin ninguna marcada
+              no entraría ningún cliente en la cola.
+            </p>
+
+            <label class="obj-opcion">
+              <input type="checkbox" [(ngModel)]="objRecordatorio">
+              <span>
+                <strong>Recordar una cuota que está por vencer</strong>
+                <small>No negocia ni ofrece descuentos: solo avisa de la fecha.</small>
+              </span>
             </label>
-            <label class="check">
-              <input type="checkbox" [(ngModel)]="objCreacion"> Negociar cuotas vencidas
+
+            <label class="obj-opcion">
+              <input type="checkbox" [(ngModel)]="objCreacion">
+              <span>
+                <strong>Negociar una cuota que ya venció</strong>
+                <small>Ofrece las rebajas configuradas hasta cerrar una promesa nueva.</small>
+              </span>
             </label>
-            <label class="check">
-              <input type="checkbox" [(ngModel)]="objPrimerContacto"> Buscar la primera promesa
-              <small>(clientes sin ningún compromiso)</small>
+
+            <label class="obj-opcion">
+              <input type="checkbox" [(ngModel)]="objPrimerContacto">
+              <span>
+                <strong>Abrir la primera promesa de un cliente</strong>
+                <small>Clientes de la subcartera que nunca han pactado nada.</small>
+              </span>
             </label>
+
+            <p class="aviso-pausa" *ngIf="!objRecordatorio && !objCreacion && !objPrimerContacto">
+              <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+              Sin marcar ninguna, la cola no traerá ningún cliente.
+            </p>
           </div>
+
+          <div class="reglas-resumen" *ngIf="reglasEfectivas">
+            <span class="etiqueta">Con qué condiciones puede cerrar</span>
+            <p class="muted">
+              Enganche entre el {{ pct(reglasEfectivas.pctPrimeraMin) }} y el
+              {{ pct(reglasEfectivas.pctPrimeraMax) }} del total, con la primera cuota al
+              menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las demás.
+              La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días
+              y la segunda entre {{ reglasEfectivas.diasMinASegunda }} y
+              {{ reglasEfectivas.diasMaxASegunda }} días después.
+            </p>
+            <p class="muted"><em>Esto no se edita aquí: lo define administración.</em></p>
+          </div>
+
         </div>
 
         <div class="modal-footer">
@@ -453,20 +551,25 @@
       <div class="card-title-row" style="margin-bottom: 14px;">
         <h3>{{ t.nombre || 'Tono sin nombre' }}</h3>
         <span class="status-badge">se presenta como {{ t.nombreBot }}</span>
+        <span class="status-badge" *ngIf="t.vozEtiqueta">voz {{ t.vozEtiqueta }}</span>
       </div>
+      <p class="ayuda" *ngIf="!puedeTecnico">
+        La voz y sus ajustes los define administración. Aquí eliges cómo habla y lo
+        escuchas antes de guardarlo.
+      </p>
 
       <div class="grid-form">
-        <label>
+        <label *ngIf="puedeTecnico">
           Nombre del tono
           <input type="text" [(ngModel)]="t.nombre">
           <small class="muted">Solo para reconocerlo en la lista al crear una cola.</small>
         </label>
-        <label>
+        <label *ngIf="puedeTecnico">
           El bot se presenta como
           <input type="text" [(ngModel)]="t.nombreBot">
           <small class="muted">Es lo que dice al saludar: «le habla {{ t.nombreBot || 'Clara' }}».</small>
         </label>
-        <label>
+        <label *ngIf="puedeTecnico">
           Voz
           <select [(ngModel)]="t.voiceId" (ngModelChange)="alElegirVoz(t)">
             <option *ngFor="let v of VOCES" [ngValue]="v.id">{{ v.nombre }}</option>
@@ -475,17 +578,17 @@
             De momento solo hay una contratada. Las nuevas se añaden desde el código.
           </small>
         </label>
-        <label>
+        <label *ngIf="puedeTecnico">
           Velocidad
           <input type="number" step="0.05" min="0.5" max="1.5" [(ngModel)]="t.ttsSpeed">
           <small class="muted">1 es el ritmo natural; 1,1 va algo más rápido.</small>
         </label>
-        <label>
+        <label *ngIf="puedeTecnico">
           Estabilidad
           <input type="number" step="0.05" min="0" max="1" [(ngModel)]="t.ttsStability">
           <small class="muted">Más alta suena más plana y predecible; más baja, más variada.</small>
         </label>
-        <label>
+        <label *ngIf="puedeTecnico">
           Expresividad
           <input type="number" step="0.05" min="0" max="1" [(ngModel)]="t.ttsStyle">
           <small class="muted">Cuánta entonación pone. Alta puede sonar teatral por teléfono.</small>
@@ -511,12 +614,12 @@
         <button class="btn-primary" (click)="guardarTono(t)">Guardar</button>
       </div>
 
-      <p class="demo" *ngIf="demoTexto[t.id!]">
-        <strong>{{ t.nombreBot }} diría:</strong> «{{ demoTexto[t.id!] }}»
+      <p class="demo" *ngIf="demoTexto[t.id ?? -1]">
+        <strong>{{ t.nombreBot }} diría:</strong> «{{ demoTexto[t.id ?? -1] }}»
       </p>
     </div>
 
-    <button class="btn-create" (click)="nuevoTono()">
+    <button class="btn-create" *ngIf="puedeTecnico" (click)="nuevoTono()">
       <lucide-angular name="plus-circle" [size]="18"></lucide-angular> Añadir tono
     </button>
   </section>
@@ -619,9 +722,12 @@
         </label>
       </div>
 
-      <div class="acciones">
+      <div class="acciones" *ngIf="esAdmin">
         <button class="btn-primary" (click)="guardarRegla(r)">Guardar</button>
       </div>
+      <p class="muted" *ngIf="!esAdmin">
+        Estas condiciones las define administración. Aquí solo se consultan.
+      </p>
     </div>
   </section>
 
