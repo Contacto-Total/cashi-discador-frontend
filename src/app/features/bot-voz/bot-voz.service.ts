@@ -227,15 +227,6 @@ export class BotVozService {
     return this.http.put<BotColaFiltro[]>(`${this.apiUrl}/colas/${idCola}/filtros`, f);
   }
 
-  /** Subcarteras para el desplegable al crear una cola. */
-  getSubcarteras(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiUrl}/subcarteras`);
-  }
-  /** Inquilino y cartera de una subcartera: hacen falta para leer su tabla dinamica. */
-  getJerarquia(idSubcartera: number): Observable<{ idInquilino: number; idCartera: number }> {
-    return this.http.get<{ idInquilino: number; idCartera: number }>(
-      `${environment.apiUrl}/subcarteras/${idSubcartera}/jerarquia`);
-  }
 
   armarCola(): Observable<any> { return this.http.post<any>(`${this.apiUrl}/cola/armar`, {}); }
   getCola(fecha?: string): Observable<BotContacto[]> {

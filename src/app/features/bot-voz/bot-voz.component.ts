@@ -2,6 +2,8 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
+import { TenantService } from '../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import {
   BotVozService, BotConfig, BotPerfil, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaFiltro,
@@ -15,12 +17,19 @@ import {
   styleUrls: ['./bot-voz.component.css'],
 })
 export class BotVozComponent implements OnInit, OnDestroy {
-  activeTab: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'cola' | 'llamadas' = 'config';
+  activeTab: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'llamadas' = 'config';
 
   // ----- Colas y tonos -----
   colas: BotCola[] = [];
   tonos: BotTono[] = [];
+  // Cascada inquilino -> cartera -> subcartera, la misma que usa el formulario de
+  // campañas. Mi primera version pedia /subcarteras a secas contra la base equivocada
+  // y ese endpoint ni existe: cuelga de /comisiones y exige idCartera.
+  inquilinos: any[] = [];
+  carteras: any[] = [];
   subcarteras: any[] = [];
+  idInquilinoSel = 0;
+  idCarteraSel = 0;
   armandoCola?: number;
   guardandoCola = false;
   demoCargando?: number;
@@ -80,6 +89,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   errorSesiones = false;
   armando = false;
   mensaje = '';
+  mensajeEsError = false;
 
   /** Copia de la config tal como esta en el servidor. Sirve para saber si el
    *  formulario tiene cambios sin guardar: en QAS se perdio un cambio del tope
@@ -94,7 +104,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private readonly REFRESCO_MS = 5000;
   private refresco?: ReturnType<typeof setInterval>;
 
-  constructor(private svc: BotVozService) {}
+  constructor(private svc: BotVozService,
+              private tenantSvc: TenantService,
+              private portfolioSvc: PortfolioService) {}
 
   ngOnInit(): void {
     this.cargarConfig();
@@ -424,11 +436,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.n - a.n);
   }
 
-  switchTab(t: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'cola' | 'llamadas'): void {
+  switchTab(t: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'llamadas'): void {
     this.activeTab = t;
-    if (t === 'cola') this.cargarCola();
     if (t === 'llamadas') this.cargarSesiones();
-    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarSubcarteras(); }
+    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarSubcarteras(); this.cargarCola(); }
     if (t === 'tonos') this.cargarTonos();
     if (t === 'reglas') { this.cargarReglas(); this.cargarSubcarteras(); }
   }
@@ -465,8 +476,31 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   cargarSubcarteras(): void {
-    this.svc.getSubcarteras().subscribe({
-      next: (s) => (this.subcarteras = s),
+    if (this.inquilinos.length) return;          // ya cargados
+    this.tenantSvc.getAllTenants().subscribe({
+      next: (t) => (this.inquilinos = t || []),
+      error: () => this.flash('No se pudieron cargar los inquilinos', true),
+    });
+  }
+
+  alElegirInquilino(): void {
+    this.carteras = [];
+    this.subcarteras = [];
+    this.idCarteraSel = 0;
+    this.nuevaCola.idSubcartera = undefined as any;
+    if (!this.idInquilinoSel) return;
+    this.portfolioSvc.getPortfoliosByTenant(this.idInquilinoSel).subscribe({
+      next: (c) => (this.carteras = c || []),
+      error: () => this.flash('No se pudieron cargar las carteras', true),
+    });
+  }
+
+  alElegirCartera(): void {
+    this.subcarteras = [];
+    this.nuevaCola.idSubcartera = undefined as any;
+    if (!this.idCarteraSel) return;
+    this.portfolioSvc.getSubPortfoliosByPortfolio(this.idCarteraSel).subscribe({
+      next: (s) => (this.subcarteras = s || []),
       error: () => this.flash('No se pudieron cargar las subcarteras', true),
     });
   }
@@ -482,11 +516,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
       return;
     }
     this.guardandoCola = true;
-    // La subcartera no basta: para leer la tabla dinamica del universo hace falta
-    // tambien su inquilino y su cartera, y esos los resuelve el backend.
-    this.svc.getJerarquia(this.nuevaCola.idSubcartera).subscribe({
-      next: (j) => this.guardarCola({ ...this.nuevaCola, objetivos, ...j }),
-      error: () => this.guardarCola({ ...this.nuevaCola, objetivos }),
+    // El inquilino y la cartera ya los eligio el usuario en la cascada. Hacen falta
+    // para localizar la tabla dinamica de la subcartera, que es de donde salen los
+    // clientes sin promesa.
+    this.guardarCola({
+      ...this.nuevaCola, objetivos,
+      idInquilino: this.idInquilinoSel || undefined,
+      idCartera: this.idCarteraSel || undefined,
     });
   }
 
@@ -537,7 +573,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   nombreSubcartera(id?: number): string {
     const s = this.subcarteras.find((x) => x.id === id);
-    return s ? s.nombreSubcartera : `#${id ?? '—'}`;
+    return s ? (s.nombre || s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
   }
 
   nombreTono(id?: number | null): string {
@@ -823,8 +859,16 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
-  private flash(m: string, _error = false): void {
+  /**
+   * Aviso efimero. El segundo argumento decide el color.
+   *
+   * Estaba como `_error` y no se usaba: todas las llamadas pasaban `true` para los
+   * fallos y salian igual de verdes que un guardado correcto. "No se pudieron cargar
+   * las subcarteras" en verde se lee como que fue bien.
+   */
+  private flash(m: string, error = false): void {
     this.mensaje = m;
-    setTimeout(() => (this.mensaje = ''), 3500);
+    this.mensajeEsError = error;
+    setTimeout(() => { this.mensaje = ''; this.mensajeEsError = false; }, 3500);
   }
 }

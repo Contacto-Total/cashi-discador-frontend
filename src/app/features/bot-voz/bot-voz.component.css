@@ -279,3 +279,213 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   .detalle-panel { width: 100%; padding: 1rem; }
   .detalle-datos { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================================================
+   Colas, tonos, reglas y filtros.
+   Las secciones nuevas usaban clases que no existían en esta hoja, así que el
+   navegador las pintaba como texto suelto: los formularios salían en una sola
+   línea, sin rejilla ni tarjetas. Esto es lo que faltaba.
+   ========================================================================= */
+
+/* Texto explicativo de cada pestaña. Va apagado a propósito: acompaña, no compite
+   con los campos. */
+.ayuda {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--texto-suave, #6b7280);
+  max-width: 78ch;
+}
+
+/* Rejilla de campos. `auto-fit` y no un número fijo de columnas: la misma rejilla
+   sirve para el formulario de 6 campos de una cola y para el de 9 de un tono. */
+.grid-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.grid-form label,
+label.ancho {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto, #374151);
+}
+
+label.ancho { grid-column: 1 / -1; margin-bottom: 16px; }
+
+.grid-form input,
+.grid-form select,
+label.ancho input,
+label.ancho select,
+label.ancho textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--borde, #d1d5db);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--fondo-input, #fff);
+  color: inherit;
+}
+
+.grid-form input:focus,
+.grid-form select:focus,
+label.ancho select:focus {
+  outline: 2px solid var(--primario, #3b82f6);
+  outline-offset: -1px;
+}
+
+/* Un campo vacío significa "hereda", así que el placeholder tiene que leerse como
+   una respuesta y no como un hueco por rellenar. */
+.grid-form input::placeholder { color: #9ca3af; font-style: italic; }
+
+.grid-form select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.grid-form label small,
+label.ancho small { font-weight: 400; font-size: 12px; }
+
+/* Tarjeta de un tono o de una fila de reglas. */
+.tono-card {
+  background: var(--fondo-tarjeta, #fff);
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+/* Las casillas de "a quién llama". */
+.objetivos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0 16px;
+  border-top: 1px solid var(--borde, #e5e7eb);
+}
+
+.objetivos .etiqueta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto, #374151);
+}
+
+.objetivos .check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.objetivos .check input { width: 15px; height: 15px; cursor: pointer; }
+.objetivos .check small { color: var(--texto-suave, #6b7280); }
+
+/* Una condición de filtro por línea. Los campos cambian según el tipo de dato, de
+   ahí el `wrap`: con fechas o con una lista de valores ocupan distinto. */
+.filtro-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--borde, #e5e7eb);
+}
+
+.filtro-fila input,
+.filtro-fila select {
+  padding: 7px 9px;
+  border: 1px solid var(--borde, #d1d5db);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.filtro-fila input[type="text"] { flex: 1 1 200px; min-width: 160px; }
+.filtro-fila input[type="number"],
+.filtro-fila input[type="date"] { width: 130px; }
+
+/* Fila de botones al pie de una tarjeta. */
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Lo que diría el tono al escucharlo, y el resumen de las reglas efectivas. */
+.demo {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: var(--fondo-suave, #f9fafb);
+  border-left: 3px solid var(--primario, #3b82f6);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Tabla de colas. */
+.tabla-wrap {
+  overflow-x: auto;
+  background: var(--fondo-tarjeta, #fff);
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 12px;
+}
+
+.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.tabla th {
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--texto-suave, #6b7280);
+  border-bottom: 1px solid var(--borde, #e5e7eb);
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--borde-suave, #f3f4f6);
+  vertical-align: middle;
+}
+
+.tabla tr:last-child td { border-bottom: none; }
+
+.tabla .acciones { margin: 0; justify-content: flex-end; }
+
+.objetivos-celda { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.vacio {
+  padding: 28px 14px;
+  text-align: center;
+  color: var(--texto-suave, #6b7280);
+}
+
+/* Discando / detenida. El verde solo cuando está marcando de verdad: si el estado
+   se ve igual encendido que apagado, el botón deja de significar nada. */
+.badge-on {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+/* El mismo aviso, cuando lo que informa es un fallo.
+   `.flash` iba siempre en verde y el parámetro de error se ignoraba, así que
+   "No se pudieron cargar las subcarteras" salía con el mismo color que un guardado
+   correcto — y un fallo que se ve como un éxito no es un aviso, es ruido. */
+.flash.flash-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}

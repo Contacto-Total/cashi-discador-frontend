@@ -13,7 +13,7 @@
     </div>
   </div>
 
-  <div class="flash" *ngIf="mensaje">{{ mensaje }}</div>
+  <div class="flash" [class.flash-error]="mensajeEsError" *ngIf="mensaje">{{ mensaje }}</div>
 
   <!-- Tabs -->
   <div class="tabs-container">
@@ -35,9 +35,6 @@
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'reglas'" (click)="switchTab('reglas')">
       <lucide-angular name="scale" [size]="16"></lucide-angular> Reglas
-    </button>
-    <button class="tab-btn" [class.active]="activeTab === 'cola'" (click)="switchTab('cola')">
-      <lucide-angular name="list" [size]="16"></lucide-angular> Cola del día
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'llamadas'" (click)="switchTab('llamadas')">
       <lucide-angular name="phone-call" [size]="16"></lucide-angular> Llamadas
@@ -222,12 +219,25 @@
           <input type="text" [(ngModel)]="nuevaCola.nombre" placeholder="Castigo — mañana">
         </label>
         <label>
+          Inquilino
+          <select [(ngModel)]="idInquilinoSel" (ngModelChange)="alElegirInquilino()">
+            <option [ngValue]="0" disabled>Elige uno…</option>
+            <option *ngFor="let i of inquilinos" [ngValue]="i.id">{{ i.nombre }}</option>
+          </select>
+        </label>
+        <label>
+          Cartera
+          <select [(ngModel)]="idCarteraSel" (ngModelChange)="alElegirCartera()"
+                  [disabled]="!carteras.length">
+            <option [ngValue]="0" disabled>Elige una…</option>
+            <option *ngFor="let c of carteras" [ngValue]="c.id">{{ c.nombre }}</option>
+          </select>
+        </label>
+        <label>
           Subcartera
-          <select [(ngModel)]="nuevaCola.idSubcartera">
+          <select [(ngModel)]="nuevaCola.idSubcartera" [disabled]="!subcarteras.length">
             <option [ngValue]="undefined" disabled>Elige una…</option>
-            <option *ngFor="let s of subcarteras" [ngValue]="s.id">
-              {{ s.nombreSubcartera }} ({{ s.codigoSubcartera }})
-            </option>
+            <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombre }}</option>
           </select>
         </label>
         <label>
@@ -316,12 +326,12 @@
               </span>
             </td>
             <td class="acciones">
-              <button class="btn-sec" (click)="armarColaDe(c)" [disabled]="armandoCola === c.id">
+              <button class="btn-secondary" (click)="armarColaDe(c)" [disabled]="armandoCola === c.id">
                 {{ armandoCola === c.id ? 'Armando…' : 'Armar' }}
               </button>
               <!-- Un solo boton que alterna, como el de la cabecera: con dos, uno
                    siempre esta gris y no se sabe cual es el estado actual. -->
-              <button class="btn-sec" (click)="editarFiltros(c)">Filtros</button>
+              <button class="btn-secondary" (click)="editarFiltros(c)">Filtros</button>
               <button class="btn-primary" (click)="alternarCola(c)">
                 {{ c.estaDiscando ? 'Detener' : 'Iniciar' }}
               </button>
@@ -375,7 +385,7 @@
       </label>
 
       <div class="acciones">
-        <button class="btn-sec" (click)="escuchar(t)" [disabled]="demoCargando === t.id">
+        <button class="btn-secondary" (click)="escuchar(t)" [disabled]="demoCargando === t.id">
           <lucide-angular name="volume-2" [size]="16"></lucide-angular>
           {{ demoCargando === t.id ? 'Generando…' : 'Escuchar' }}
         </button>
@@ -387,7 +397,7 @@
       </p>
     </div>
 
-    <button class="btn-sec" (click)="nuevoTono()">
+    <button class="btn-secondary" (click)="nuevoTono()">
       <lucide-angular name="plus" [size]="16"></lucide-angular> Añadir tono
     </button>
   </section>
@@ -421,11 +431,11 @@
       <ng-container *ngIf="f.dataType === 'TEXTO' || f.dataType === 'BOOLEAN'">
         <input type="text" [(ngModel)]="f.selectedValues" placeholder="valores separados por coma">
       </ng-container>
-      <button class="btn-sec" (click)="quitarFiltro(i)">Quitar</button>
+      <button class="btn-secondary" (click)="quitarFiltro(i)">Quitar</button>
     </div>
 
     <div class="acciones">
-      <button class="btn-sec" (click)="nuevoFiltro()">Añadir filtro</button>
+      <button class="btn-secondary" (click)="nuevoFiltro()">Añadir filtro</button>
       <button class="btn-primary" (click)="guardarFiltros()">Guardar filtros</button>
     </div>
   </section>
@@ -446,7 +456,7 @@
         Ver qué rige hoy para
         <select [(ngModel)]="subcarteraMirada" (ngModelChange)="verEfectivas($event)">
           <option [ngValue]="undefined">— elige una subcartera —</option>
-          <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
+          <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombre }}</option>
         </select>
       </label>
       <p class="demo" *ngIf="reglasEfectivas">
@@ -463,7 +473,7 @@
           Subcartera
           <select [(ngModel)]="r.idSubcartera">
             <option [ngValue]="null">Por defecto (todas)</option>
-            <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
+            <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombre }}</option>
           </select>
         </label>
         <label>Nombre <input type="text" [(ngModel)]="r.nombre"></label>
@@ -487,13 +497,15 @@
       </div>
     </div>
 
-    <button class="btn-sec" (click)="nuevaRegla()">
+    <button class="btn-secondary" (click)="nuevaRegla()">
       <lucide-angular name="plus" [size]="16"></lucide-angular> Añadir reglas
     </button>
   </section>
 
-  <!-- ===== COLA ===== -->
-  <section *ngIf="activeTab === 'cola'">
+  <!-- ===== LO ENCOLADO HOY =====
+       Vive dentro de "Colas" y no en una pestaña aparte: es la misma cola vista por
+       dentro. Dos pestañas para lo mismo obligaban a adivinar cual mirar. -->
+  <section *ngIf="activeTab === 'colas'">
     <div class="cola-bar">
       <button class="btn-primary" (click)="armarCola()" [disabled]="armando">
         <lucide-angular [name]="armando ? 'loader' : 'refresh-cw'" [size]="18" [class.spin]="armando"></lucide-angular>
