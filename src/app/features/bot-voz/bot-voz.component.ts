@@ -15,7 +15,11 @@ import {
   styleUrls: ['./bot-voz.component.css'],
 })
 export class BotVozComponent implements OnInit, OnDestroy {
-  activeTab: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'llamadas' = 'config';
+  /**
+   * Qué se está mirando. Arranca en COLAS: es lo que se hace todos los días.
+   * Ritmo, voces y reglas se abren desde los botones de la cabecera y vuelven aquí.
+   */
+  vista: 'colas' | 'ritmo' | 'tonos' | 'reglas' | 'llamadas' = 'colas';
 
   // ----- Colas y tonos -----
   colas: BotCola[] = [];
@@ -31,6 +35,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   inquilinos: any[] = [];
   carteras: any[] = [];
   subcarteras: any[] = [];
+  /** Todas las que puede ver, sin depender de la cascada. */
+  subcarterasPlanas: any[] = [];
   idInquilinoSel = 0;
   idCarteraSel = 0;
   armandoCola?: number;
@@ -130,6 +136,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.cargarPermisos();
+    this.cargarSubcarterasPlanas();
+    this.cargarColas();
+    this.cargarTonos();
     this.cargarConfig();
     this.cargarPerfiles();
     this.cargarCola(true);   // alimenta el indicador de estado de la cabecera
@@ -145,7 +154,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  Config y perfiles no: recargarlos pisaria lo que el usuario esta editando. */
   private refrescar(): void {
     this.cargarCola(true);
-    if (this.activeTab === 'llamadas') this.cargarSesiones();
+    if (this.vista === 'llamadas') this.cargarSesiones();
   }
 
   /**
@@ -434,10 +443,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.n - a.n);
   }
 
-  switchTab(t: 'config' | 'perfiles' | 'colas' | 'tonos' | 'reglas' | 'llamadas'): void {
-    this.activeTab = t;
+  abrir(v: 'colas' | 'ritmo' | 'tonos' | 'reglas' | 'llamadas'): void {
+    // Un segundo clic en el mismo botón devuelve a las colas: hace de ida y de vuelta.
+    this.vista = this.vista === v && v !== 'colas' ? 'colas' : v;
+    const t = this.vista;
     if (t === 'llamadas') this.cargarSesiones();
-    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarSubcarteras(); this.cargarCola(); }
+    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarCola(); }
+    if (t === 'ritmo') this.cargarPerfiles();
     if (t === 'tonos') this.cargarTonos();
     if (t === 'reglas') { this.cargarReglas(); this.cargarSubcarteras(); }
   }
@@ -460,6 +472,31 @@ export class BotVozComponent implements OnInit, OnDestroy {
     };
   }
 
+  // ---- Lo que se hereda, para poder enseñarlo ----
+  //
+  // Un recuadro vacío que pone "hereda" no informa de nada: no sabes si vas a llamar
+  // a 50 clientes o a 500. Estos ayudantes ponen el valor real en el placeholder.
+
+  /** El ritmo que se aplicaría hoy si la cola no fija ninguno. */
+  get ritmoVigente(): BotPerfil | undefined {
+    if (this.nuevaCola.modoPerfil === 'MANUAL' && this.nuevaCola.idPerfil) {
+      return this.perfiles.find((p) => p.id === this.nuevaCola.idPerfil);
+    }
+    const dia = new Date().getDate();
+    return this.perfiles.find((p) => p.diaMesDesde <= dia && p.diaMesHasta >= dia);
+  }
+
+  heredado(campo: 'maxLlamadasDia' | 'diasAnticipacion' | 'maxIntentosPorCuota'): string {
+    const v = this.ritmoVigente?.[campo];
+    return v == null ? 'hereda' : `hereda: ${v}`;
+  }
+
+  // Topes del sistema. No son configuración de negocio —son la ley y el techo de
+  // canales de la máquina— así que no se editan en el panel: se enseñan como límite.
+  get topeSimultaneas(): number { return this.config?.maxLlamadasSimultaneas ?? 1; }
+  get topeHoraInicio(): string { return this.hhmm(this.config?.horaInicio) || '08:00'; }
+  get topeHoraFin(): string { return this.hhmm(this.config?.horaFin) || '20:00'; }
+
   /** 0,15 -> "15 %". El número crudo no se lee bien en una frase. */
   pct(v?: number | null): string {
     return v == null ? '—' : `${Math.round(Number(v) * 100)} %`;
@@ -476,6 +513,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.svc.getTonos(true).subscribe({
       next: (t) => (this.tonos = t),
       error: () => this.flash('No se pudieron cargar los tonos', true),
+    });
+  }
+
+  cargarSubcarterasPlanas(): void {
+    this.svc.getSubcarterasPlanas().subscribe({
+      next: (s) => (this.subcarterasPlanas = s || []),
+      error: () => this.flash('No se pudieron cargar las subcarteras', true),
     });
   }
 
@@ -674,7 +718,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   nombreSubcartera(id?: number): string {
-    const s = this.subcarteras.find((x) => x.id === id);
+    const s = this.subcarterasPlanas.find((x) => x.id === id)
+           || this.subcarteras.find((x) => x.id === id);
     return s ? (s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
   }
 

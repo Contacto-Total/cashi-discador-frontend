@@ -690,3 +690,37 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .obj-opcion span { display: flex; flex-direction: column; gap: 2px; }
 .obj-opcion strong { font-size: 13px; font-weight: 600; }
 .obj-opcion small { font-size: 12px; color: var(--texto-suave, #6b7280); }
+
+/* Cabecera con acciones, como en Gestión de Campañas: la pantalla es de COLAS y lo
+   que se toca de vez en cuando —ritmo, voces, reglas— vive en botones, no en pestañas. */
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.btn-header {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 9px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--card-bg, #fff); color: var(--text-primary, #334155);
+  font-size: 13px; font-family: inherit; cursor: pointer;
+}
+.btn-header:hover { background: var(--fondo-suave, #f8fafc); }
+.btn-header.on {
+  background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.4);
+  color: #1d4ed8; font-weight: 600;
+}
+
+.volver { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; padding: 0; font-size: 13px; }
+
+/* El parámetro que cuelga de un objetivo: sangrado para que se vea de quién es.
+   "Con cuántos días de adelanto" solo significa algo si recuerdas cuotas. */
+.obj-sub {
+  display: flex; flex-direction: column; gap: 5px;
+  margin: 0 0 10px 26px; max-width: 280px;
+  font-size: 12px; color: var(--text-secondary, #64748b);
+}
+.obj-sub input {
+  padding: 7px 9px; border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 7px; font-size: 13px; font-family: inherit;
+}
+.obj-sub input::placeholder { font-style: italic; color: #9ca3af; }

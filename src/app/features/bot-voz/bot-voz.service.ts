@@ -236,6 +236,18 @@ export class BotVozService {
   // no al microservicio de configuración: ese vive en otro host y otra autenticación,
   // y por eso los tres desplegables salían vacíos sin decir por qué.
 
+  /**
+   * Todas las subcarteras que este usuario puede ver, planas.
+   *
+   * La cascada proveedor -> cartera -> subcartera sirve para ELEGIR al crear una cola.
+   * Para pintar el nombre de una que ya está guardada, o para consultar sus reglas,
+   * obligaba a recorrer la cascada entera antes de ver nada: las tarjetas mostraban
+   * "#27" y la lista de reglas salía vacía.
+   */
+  getSubcarterasPlanas(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/subcarteras`);
+  }
+
   getProveedores(): Observable<any[]> {
     return this.http.get<any[]>(`${environment.gatewayUrl}/comisiones/inquilinos`);
   }
