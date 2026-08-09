@@ -162,6 +162,9 @@
               <button class="btn-action-small" (click)="verDetalle(c)" title="Ver la cola y su configuración">
                 <lucide-angular name="eye" [size]="15"></lucide-angular>
               </button>
+              <button class="btn-action-small" (click)="editarCola(c)" title="Editar la cola">
+                <lucide-angular name="pencil" [size]="15"></lucide-angular>
+              </button>
               <button class="btn-action-small" (click)="editarFiltros(c)" title="Filtros de segmentación">
                 <lucide-angular name="filter" [size]="15"></lucide-angular>
               </button>
@@ -253,7 +256,7 @@
     <div class="modal-overlay" *ngIf="modalCola" (click)="cerrarModalCola()">
       <div class="modal-content" (click)="$event.stopPropagation()">
         <div class="modal-header">
-          <h3>Nueva cola</h3>
+          <h3>{{ editandoCola ? 'Editar cola' : 'Nueva cola' }}</h3>
           <button class="btn-close" (click)="cerrarModalCola()">
             <lucide-angular name="x" [size]="18"></lucide-angular>
           </button>
@@ -271,14 +274,14 @@
               Nombre
               <input type="text" [(ngModel)]="nuevaCola.nombre" placeholder="Castigo — mañana">
             </label>
-            <label>
+            <label *ngIf="!editandoCola">
               Proveedor
               <select [(ngModel)]="idInquilinoSel" (ngModelChange)="alElegirInquilino()">
                 <option [ngValue]="0" disabled>Elige uno…</option>
                 <option *ngFor="let i of inquilinos" [ngValue]="i.id">{{ i.nombreInquilino }}</option>
               </select>
             </label>
-            <label>
+            <label *ngIf="!editandoCola">
               Cartera
               <select [(ngModel)]="idCarteraSel" (ngModelChange)="alElegirCartera()"
                       [disabled]="!carteras.length">
@@ -288,8 +291,15 @@
             </label>
             <label>
               Subcartera
+              <small class="muted" *ngIf="editandoCola">
+                No se cambia al editar: sería convertir esta cola en la de otra cartera
+                con las filas de la anterior dentro. Para eso, bórrala y crea otra.
+              </small>
               <select [(ngModel)]="nuevaCola.idSubcartera" (ngModelChange)="alElegirSubcartera()"
-                      [disabled]="!subcarteras.length">
+                      [disabled]="!!editandoCola || !subcarteras.length">
+                <option *ngIf="editandoCola" [ngValue]="nuevaCola.idSubcartera">
+                  {{ nombreSubcartera(nuevaCola.idSubcartera) }}
+                </option>
                 <option [ngValue]="undefined" disabled>Elige la cartera primero…</option>
                 <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
               </select>
@@ -431,7 +441,7 @@
           <button class="btn-cancel" (click)="cerrarModalCola()">Cancelar</button>
           <button class="btn-submit" (click)="crearCola()"
                   [disabled]="!nuevaCola.nombre || !nuevaCola.idSubcartera || guardandoCola">
-            {{ guardandoCola ? 'Creando…' : 'Crear cola' }}
+            {{ guardandoCola ? 'Guardando…' : (editandoCola ? 'Guardar cambios' : 'Crear cola') }}
           </button>
         </div>
       </div>

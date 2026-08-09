@@ -58,6 +58,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   nuevaCola: BotCola = this.colaVacia();
   /** El formulario de alta vive en un modal, como el de campañas. */
   modalCola = false;
+  /** Id de la cola que se está editando. undefined = se está creando una nueva. */
+  editandoCola?: number;
 
   /**
    * Estilos que se pueden elegir. Es un selector y no un campo libre a proposito: este
@@ -180,116 +182,22 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.colas.some((c) => c.estaDiscando);
   }
 
-  /** true si el formulario de config difiere de lo ultimo guardado. */
-  get configSinGuardar(): boolean {
-    return !!this.config && this.configGuardada !== '' &&
-           JSON.stringify(this.config) !== this.configGuardada;
-  }
 
   // colaMarcable, motivoNoIniciar y colaYaIniciada se fueron con el boton maestro:
   // solo servian para decidir si se podia encender el kill-switch global.
 
-  get marcadas(): number {
-    return this.cola.filter((c) => (c.intentos ?? 0) > 0).length;
-  }
 
 
-  /**
-   * Dias seleccionables, en la convencion L M X J V: la X de miercoles evita la M
-   * repetida de martes. Es lo que ya guarda la columna, asi que lo que se pinta y
-   * lo que se guarda son el mismo valor.
-   *
-   * Sabado y domingo NO estan: la Ley 29571 prohibe la cobranza en fin de semana
-   * (ver §10 del MD). Se quitan del selector en vez de dejarlos y avisar, porque
-   * un aviso se ignora y una opcion que no existe, no.
-   */
-  readonly DIAS = [
-    { codigo: 'L', nombre: 'Lunes' },
-    { codigo: 'M', nombre: 'Martes' },
-    { codigo: 'X', nombre: 'Miércoles' },
-    { codigo: 'J', nombre: 'Jueves' },
-    { codigo: 'V', nombre: 'Viernes' },
-  ];
 
-  readonly PRESETS_DIAS = [
-    { nombre: 'Toda la semana', codigos: 'L,M,X,J,V', resumen: 'Marca de lunes a viernes.' },
-    { nombre: 'Solo L-M-V', codigos: 'L,X,V', resumen: 'Marca lunes, miércoles y viernes.' },
-  ];
 
-  /**
-   * Ventana horaria recomendada por la Ley 29571 arts. 61-62 (llamadas a horas
-   * inoportunas). El MD la fija en 08:00-20:00 de lunes a viernes (§10). El
-   * desplegable solo ofrece horas de ese rango, asi que no se puede elegir una
-   * hora fuera de la ley: la validacion vive en las opciones que existen.
-   */
-  readonly HORA_LEGAL_DESDE = '08:00';
-  readonly HORA_LEGAL_HASTA = '20:00';
 
-  /**
-   * Horas en punto de la ventana legal (08:00-20:00), sin minutos.
-   *
-   * Es un <select> y no un <input type="time"> porque ese dibuja el widget
-   * nativo, que muestra AM/PM segun el idioma del navegador y no se puede
-   * forzar desde el HTML (peticion abierta en el W3C desde 2022). Aqui el texto
-   * de cada opcion lo escribimos nosotros, asi que siempre es 24 h.
-   *
-   * Solo 13 opciones: el rango invalido no se puede ni elegir, con lo que la
-   * validacion de min/max deja de depender de que el usuario escriba bien.
-   */
-  private opcionesHora(desde: number, hasta: number): string[] {
-    return Array.from({ length: hasta - desde + 1 },
-                      (_, i) => `${String(desde + i).padStart(2, '0')}:00`);
-  }
 
-  /** Si la BD trae una hora que no esta en la rejilla (11:30 o 23:00, puestas
-   *  por SQL), se agrega como opcion para que el select no salga en blanco y
-   *  al guardar no la borre. */
-  private conActual(lista: string[], actual?: string): string[] {
-    const hm = this.hhmm(actual);
-    return !hm || lista.includes(hm) ? lista : [...lista, hm].sort();
-  }
 
-  /** El inicio llega hasta una hora antes del tope: si no, el fin se queda sin
-   *  ninguna opcion posible. */
-  get horasInicio(): string[] {
-    const desde = Number(this.HORA_LEGAL_DESDE.slice(0, 2));
-    const hasta = Number(this.HORA_LEGAL_HASTA.slice(0, 2)) - 1;
-    return this.conActual(this.opcionesHora(desde, hasta), this.config?.horaInicio);
-  }
 
-  /** El fin solo ofrece horas posteriores al inicio: asi no se puede elegir un
-   *  rango invertido, en vez de avisarlo despues de haberlo guardado. */
-  get horasFin(): string[] {
-    const desde = Number(this.hhmm(this.config?.horaInicio).slice(0, 2) ||
-                         this.HORA_LEGAL_DESDE.slice(0, 2)) + 1;
-    const hasta = Number(this.HORA_LEGAL_HASTA.slice(0, 2));
-    return this.conActual(this.opcionesHora(Math.min(desde, hasta), hasta), this.config?.horaFin);
-  }
 
-  /** Al mover el inicio, el fin puede quedar antes: se corre al minimo valido. */
-  alCambiarInicio(): void {
-    if (!this.config) return;
-    if (this.hhmm(this.config.horaFin) <= this.hhmm(this.config.horaInicio)) {
-      this.config.horaFin = this.horasFin[0];
-    }
-  }
 
-  readonly PRESETS_HORARIO = [
-    { nombre: 'Todo el día', inicio: '08:00', fin: '20:00' },
-    { nombre: 'Mañana', inicio: '08:00', fin: '12:00' },
-    { nombre: 'Tarde', inicio: '14:00', fin: '20:00' },
-  ];
 
-  aplicarPresetHorario(p: { inicio: string; fin: string }): void {
-    if (!this.config) return;
-    this.config.horaInicio = p.inicio;
-    this.config.horaFin = p.fin;
-  }
 
-  presetHorarioActivo(p: { inicio: string; fin: string }): boolean {
-    return this.hhmm(this.config?.horaInicio) === this.hhmm(p.inicio)
-        && this.hhmm(this.config?.horaFin) === this.hhmm(p.fin);
-  }
 
   /** "08:00:00" y "08:00" tienen que comparar igual: el backend devuelve con
    *  segundos y el <input type="time"> escribe sin ellos. */
@@ -297,66 +205,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return (v ?? '').slice(0, 5);
   }
 
-  get horarioInvalido(): boolean {
-    const i = this.hhmm(this.config?.horaInicio), f = this.hhmm(this.config?.horaFin);
-    return !!i && !!f && f <= i;
-  }
 
-  get horarioFueraDeLey(): boolean {
-    const i = this.hhmm(this.config?.horaInicio), f = this.hhmm(this.config?.horaFin);
-    if (!i || !f) return false;
-    return i < this.HORA_LEGAL_DESDE || f > this.HORA_LEGAL_HASTA;
-  }
 
-  get resumenHorario(): string {
-    const i = this.hhmm(this.config?.horaInicio), f = this.hhmm(this.config?.horaFin);
-    if (!i || !f) return '';
-    if (this.horarioInvalido) return 'La hora de fin debe ser posterior a la de inicio.';
-    const horas = (Number(f.slice(0, 2)) * 60 + Number(f.slice(3)) -
-                   Number(i.slice(0, 2)) * 60 - Number(i.slice(3))) / 60;
-    const texto = `Marca de ${i} a ${f} (${Number(horas.toFixed(1))} h por día).`;
-    return this.horarioFueraDeLey
-      ? `${texto} Fuera de la ventana recomendada por la Ley 29571 (${this.HORA_LEGAL_DESDE}–${this.HORA_LEGAL_HASTA}).`
-      : texto;
-  }
 
-  private codigosActivos(): string[] {
-    return (this.config?.diasSemana ?? '')
-      .toUpperCase().split(',').map((d) => d.trim()).filter(Boolean);
-  }
 
-  diaActivo(codigo: string): boolean {
-    return this.codigosActivos().includes(codigo);
-  }
 
-  /** Reescribe el campo en el orden canonico, nunca en el orden de los clics. */
-  alternarDia(codigo: string): void {
-    if (!this.config) return;
-    const activos = new Set(this.codigosActivos());
-    activos.has(codigo) ? activos.delete(codigo) : activos.add(codigo);
-    this.config.diasSemana = this.DIAS
-      .filter((d) => activos.has(d.codigo)).map((d) => d.codigo).join(',');
-  }
 
-  aplicarPresetDias(codigos: string): void {
-    if (this.config) this.config.diasSemana = codigos;
-  }
 
-  presetActivo(codigos: string): boolean {
-    return this.config?.diasSemana === codigos;
-  }
 
-  /** Los cuadritos en una frase, para no tener que descifrarlos. */
-  get resumenDias(): string {
-    const activos = this.codigosActivos();
-    if (!activos.length) return 'No marca ningún día: el bot nunca saldrá a discar.';
-    const preset = this.PRESETS_DIAS.find((p) => this.presetActivo(p.codigos));
-    if (preset) return preset.resumen;
-    const nombres = this.DIAS.filter((d) => activos.includes(d.codigo))
-      .map((d) => d.nombre.toLowerCase());
-    if (nombres.length === 1) return `Marca solo los ${nombres[0]}.`;
-    return `Marca ${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}.`;
-  }
 
   // ----- Paginacion de las tablas -----
   // Del lado del cliente: la cola son decenas de filas y las sesiones vienen
@@ -559,6 +415,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   abrirModalCola(): void {
+    this.editandoCola = undefined;
     this.nuevaCola = this.colaVacia();
     this.objRecordatorio = true;
     this.objCreacion = true;
@@ -572,7 +429,31 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.cargarPerfiles();
   }
 
-  cerrarModalCola(): void { this.modalCola = false; }
+  cerrarModalCola(): void {
+    this.modalCola = false;
+    this.editandoCola = undefined;
+  }
+
+  /**
+   * Abre el formulario con la cola ya cargada.
+   *
+   * Se edita la MISMA cola, no se crea otra: con una por subcartera, "crear" no es una
+   * alternativa a "editar". Antes solo se podia crear y borrar, asi que cambiar un
+   * horario obligaba a eliminar la cola —perdiendo lo encolado— y rehacerla.
+   */
+  editarCola(c: BotCola): void {
+    this.editandoCola = c.id;
+    this.nuevaCola = { ...c };
+    const objs = (c.objetivos || '').split(',').map((o) => o.trim());
+    this.objRecordatorio = objs.includes('RECORDATORIO');
+    this.objCreacion = objs.includes('CREACION');
+    this.objPrimerContacto = objs.includes('PRIMER_CONTACTO');
+    // La subcartera no se cambia al editar: cambiarla convertiria esta cola en la de
+    // otra cartera, con las filas de la anterior dentro. Para eso se borra y se crea.
+    this.cargarPerfiles();
+    if (c.idSubcartera) this.verEfectivas(c.idSubcartera);
+    this.modalCola = true;
+  }
 
   eliminarCola(c: BotCola): void {
     if (!c.id) return;
@@ -609,17 +490,26 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   private guardarCola(cola: BotCola): void {
-    this.svc.crearCola(cola).subscribe({
+    const peticion = this.editandoCola
+      ? this.svc.actualizarCola(this.editandoCola, cola)
+      : this.svc.crearCola(cola);
+    peticion.subscribe({
       next: () => {
+        const editaba = !!this.editandoCola;
         this.guardandoCola = false;
         this.nuevaCola = this.colaVacia();
         this.modalCola = false;
+        this.editandoCola = undefined;
         this.cargarColas();
-        this.flash('Cola creada');
+        this.flash(editaba ? 'Cola actualizada' : 'Cola creada');
       },
-      error: () => {
+      error: (e) => {
         this.guardandoCola = false;
-        this.flash('No se pudo crear la cola', true);
+        // 409 es la regla de una cola por subcartera, y merece su propio mensaje: con
+        // un "no se pudo guardar" el supervisor no sabe que ya tiene una.
+        this.flash(e?.status === 409
+          ? 'Esa subcartera ya tiene una cola. Edita la que hay.'
+          : this.editandoCola ? 'No se pudo guardar la cola' : 'No se pudo crear la cola', true);
       },
     });
   }
@@ -919,34 +809,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
       error: () => this.flash('No se pudo cargar la configuración', true),
     });
   }
-  guardarConfig(): void {
-    if (!this.config) return;
-    // Antes se guardaba un horario invertido y el aviso recien salia despues,
-    // con la configuracion ya rota en la base.
-    if (this.horarioInvalido) {
-      this.flash('La hora de fin debe ser posterior a la de inicio', true);
-      return;
-    }
-    if (!this.config.diasSemana) {
-      this.flash('Selecciona al menos un día de la semana', true);
-      return;
-    }
-    // Sanea lo que pueda venir de la base: un "S" o "D" heredado seguiria
-    // haciendo discar en fin de semana y el selector ya no lo muestra, asi que
-    // nadie podria quitarlo desde aqui.
-    const validos = this.DIAS.map((d) => d.codigo);
-    this.config.diasSemana = this.codigosActivos()
-      .filter((c) => validos.includes(c))
-      .join(',');
-    if (!this.config.diasSemana) {
-      this.flash('Selecciona al menos un día de la semana', true);
-      return;
-    }
-    this.svc.updateConfig(this.config).subscribe({
-      next: (c) => { this.fijarConfig(c); this.flash('Configuración guardada'); },
-      error: () => this.flash('Error al guardar', true),
-    });
-  }
 
   private fijarConfig(c: BotConfig): void {
     // El backend devuelve LocalTime con segundos ("11:00:00") y las opciones
@@ -976,9 +838,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
   perfilSinGuardar(p: BotPerfil): boolean {
     const guardado = this.perfilesGuardados.get(p.id);
     return guardado !== undefined && guardado !== JSON.stringify(p);
-  }
-  get hayPerfilesSinGuardar(): boolean {
-    return this.perfiles.some((p) => this.perfilSinGuardar(p));
   }
   guardarPerfil(p: BotPerfil): void {
     this.svc.updatePerfil(p.id, p).subscribe({

@@ -175,7 +175,8 @@ export class BotVozService {
   constructor(private http: HttpClient) {}
 
   getConfig(): Observable<BotConfig> { return this.http.get<BotConfig>(`${this.apiUrl}/config`); }
-  updateConfig(c: Partial<BotConfig>): Observable<BotConfig> { return this.http.put<BotConfig>(`${this.apiUrl}/config`, c); }
+  // updateConfig se quitó: `bot_config` ya no es configuración editable, son los
+  // límites del sistema (ventana legal y techo de canales). Se leen, no se tocan aquí.
 
   // `activar`/`desactivar` se quitaron: escribian en bot_config.activo, que ya no
   // gobierna el discado. Cada cola tiene su propio Iniciar/Detener.
