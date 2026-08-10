@@ -25,7 +25,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
           Reporte de Compromisos
         </h1>
         <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Compromisos de pago registrados con detalle de cuotas y estados
+          Compromisos con cuotas que vencen en el rango, con su cronograma y estados completos
         </p>
       </div>
 
@@ -34,7 +34,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <!-- Fecha Desde -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Desde *</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimiento Desde *</label>
             <input type="date" [(ngModel)]="filtros.fechaDesde"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
@@ -43,7 +43,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
           <!-- Fecha Hasta -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fecha Hasta *</label>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Vencimiento Hasta *</label>
             <input type="date" [(ngModel)]="filtros.fechaHasta"
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
@@ -183,6 +183,11 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
           </div>
         </div>
 
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+          El rango filtra por <strong>fecha de vencimiento de cuota</strong>, no por la fecha en que se
+          registro el compromiso: un acuerdo generado hace meses aparece si alguna de sus cuotas vence
+          dentro del rango, y baja con su cronograma completo.
+        </p>
         @if (!filtros.fechaDesde || !filtros.fechaHasta) {
           <p class="mt-2 text-sm text-amber-600 dark:text-amber-400">
             * Las fechas son obligatorias para evitar consultas muy grandes
@@ -212,7 +217,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
               </div>
               <div>
                 <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ metricas()!.promesasPagadas }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Pagadas</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Cuotas Pagadas</p>
               </div>
             </div>
           </div>
@@ -224,7 +229,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
               </div>
               <div>
                 <p class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{{ metricas()!.promesasPendientes }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Pendientes</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Cuotas Pendientes</p>
               </div>
             </div>
           </div>
@@ -236,7 +241,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
               </div>
               <div>
                 <p class="text-2xl font-bold text-red-600 dark:text-red-400">{{ metricas()!.promesasVencidas }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Vencidas</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Cuotas Vencidas</p>
               </div>
             </div>
           </div>
@@ -268,7 +273,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-xs text-purple-100 uppercase">Monto Total Promesas</p>
+            <p class="text-xs text-purple-100 uppercase">Monto Cuotas del Rango</p>
             <p class="text-xl font-bold">S/ {{ metricas()!.montoTotalPromesas | appNumber:'1.2-2' }}</p>
           </div>
           <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-md p-4 text-white">
@@ -297,7 +302,7 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Telefono</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Tipo</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Variable PDP</th>
-                <th class="px-3 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Monto Promesa</th>
+                <th class="px-3 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Monto Acuerdo</th>
                 <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Cuotas</th>
                 <th class="px-3 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Estado Pago</th>
                 <th class="px-3 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase">Pagado</th>
@@ -435,13 +440,15 @@ export class CompromisosReportComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // El rango filtra por vencimiento de cuota, no por la fecha de registro del compromiso.
+    // Un default de hoy/hoy devolveria casi nada (solo lo que vence justo hoy), asi que se
+    // arranca con el mes en curso, que es la lectura habitual: "que me vence este mes".
     const today = new Date();
     const yyyy = today.getFullYear();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    const todayStr = `${yyyy}-${mm}-${dd}`;
-    this.filtros.fechaDesde = todayStr;
-    this.filtros.fechaHasta = todayStr;
+    this.filtros.fechaDesde = `${yyyy}-${mm}-01`;
+    this.filtros.fechaHasta = `${yyyy}-${mm}-${dd}`;
 
     // Cargar dropdowns en paralelo
     this.comisionesService.obtenerInquilinos().subscribe({
