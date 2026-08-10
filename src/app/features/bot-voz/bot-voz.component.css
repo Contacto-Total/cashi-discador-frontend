@@ -737,3 +737,16 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 /* Un descarte que no es rutina —blacklist, sin teléfono— pintado distinto: son los
    que explican por qué la cola salió más corta de lo que se esperaba. */
 .meta-tag.meta-alerta { background: rgba(245,158,11,.12); color: #b45309; }
+
+/* Cabecera del detalle: el titulo a la izquierda y el buscador a la derecha. */
+.detalle-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.detalle-head h4 { margin: 0; }
+.buscador {
+  flex: 0 1 320px; min-width: 200px;
+  padding: 8px 11px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
+}
+.buscador:focus { outline: 2px solid var(--primario, #3b82f6); outline-offset: -1px; }

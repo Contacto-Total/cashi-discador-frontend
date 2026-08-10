@@ -35,8 +35,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
   inquilinos: any[] = [];
   carteras: any[] = [];
   subcarteras: any[] = [];
-  /** Todas las que puede ver, sin depender de la cascada. */
-  subcarterasPlanas: any[] = [];
   idInquilinoSel = 0;
   idCarteraSel = 0;
   armandoCola?: number;
@@ -141,7 +139,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.cargarPermisos();
-    this.cargarSubcarterasPlanas();
     this.cargarColas();
     this.cargarTonos();
     this.cargarConfig();
@@ -376,12 +373,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
-  cargarSubcarterasPlanas(): void {
-    this.svc.getSubcarterasPlanas().subscribe({
-      next: (s) => (this.subcarterasPlanas = s || []),
-      error: () => this.flash('No se pudieron cargar las subcarteras', true),
-    });
-  }
 
   cargarSubcarteras(): void {
     if (this.inquilinos.length) return;          // ya cargados
@@ -619,17 +610,60 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   verDetalle(c: BotCola): void {
     this.detalleDe = this.detalleDe === c.id ? undefined : c.id;
+    this.busquedaDetalle = '';
+    this.paginaDetalle = 1;
     if (this.detalleDe) this.cargarCola();   // trae también los descartes
   }
 
-  /** Lo encolado hoy por ESA cola. */
+  // ---- El detalle de una cola: buscador y paginado ----
+  //
+  // La cola de castigo trae ~9.800 filas. Pintarlas todas cuelga el navegador, y sin
+  // buscador la unica forma de encontrar a alguien es bajar por la lista.
+
+  busquedaDetalle = '';
+  paginaDetalle = 1;
+  readonly POR_PAGINA_DETALLE = 5;
+
+  /** Lo encolado hoy por ESA cola, ya filtrado por lo que se haya escrito. */
   filasDe(c: BotCola): BotContacto[] {
-    return this.cola.filter((f) => f.idCola === c.id);
+    const q = this.busquedaDetalle.trim().toLowerCase();
+    return this.cola.filter((f) => {
+      if (f.idCola !== c.id) return false;
+      if (!q) return true;
+      // Documento, nombre o telefono: los tres campos por los que se busca a alguien.
+      return (f.documento || '').toLowerCase().includes(q)
+          || (f.nombreCliente || '').toLowerCase().includes(q)
+          || (f.telefono || '').includes(q);
+    });
   }
 
+  /** La pagina que se pinta. */
+  filasDePagina(c: BotCola): BotContacto[] {
+    const todas = this.filasDe(c);
+    const total = this.paginasDetalle(c);
+    if (this.paginaDetalle > total) this.paginaDetalle = total;
+    const desde = (this.paginaDetalle - 1) * this.POR_PAGINA_DETALLE;
+    return todas.slice(desde, desde + this.POR_PAGINA_DETALLE);
+  }
+
+  paginasDetalle(c: BotCola): number {
+    return Math.max(1, Math.ceil(this.filasDe(c).length / this.POR_PAGINA_DETALLE));
+  }
+
+  pasarPagina(c: BotCola, delta: number): void {
+    this.paginaDetalle = Math.min(Math.max(1, this.paginaDetalle + delta), this.paginasDetalle(c));
+  }
+
+  /** Buscar reinicia la pagina: si no, buscas y te quedas en una pagina que ya no existe. */
+  alBuscarEnDetalle(): void { this.paginaDetalle = 1; }
+
   nombreSubcartera(id?: number): string {
-    const s = this.subcarterasPlanas.find((x) => x.id === id)
-           || this.subcarteras.find((x) => x.id === id);
+    // El nombre viaja con la cola, así que no hace falta ninguna lista aparte: en
+    // cuanto la tarjeta existe, su nombre existe. Antes salía "#27" hasta que llegara
+    // una segunda petición, y si fallaba se quedaba así.
+    const deLaCola = this.colas.find((c) => c.idSubcartera === id)?.nombreSubcartera;
+    if (deLaCola) return deLaCola;
+    const s = this.subcarteras.find((x) => x.id === id);
     return s ? (s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
   }
 
@@ -648,6 +682,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   // ----- Reglas -----
+
+  /**
+   * Subcarteras sobre las que tiene sentido consultar reglas: las que tienen cola.
+   *
+   * Antes era la lista completa —doce, la mayoría sin bot— y había que buscar la
+   * tuya entre todas.
+   */
+  get subcarterasConCola(): { id: number; nombre: string }[] {
+    const vistas = new Map<number, string>();
+    for (const c of this.colas) {
+      if (c.idSubcartera) vistas.set(c.idSubcartera, c.nombreSubcartera || `#${c.idSubcartera}`);
+    }
+    return [...vistas.entries()].map(([id, nombre]) => ({ id, nombre }));
+  }
 
   cargarReglas(): void {
     this.svc.getReglas().subscribe({

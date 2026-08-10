@@ -219,9 +219,17 @@
           </span>
         </div>
 
-        <h4>Clientes en la cola de hoy</h4>
-        <p class="muted" *ngIf="!filasDe(c).length">
+        <div class="detalle-head">
+          <h4>Clientes en la cola de hoy <span class="muted">({{ filasDe(c).length }})</span></h4>
+          <input class="buscador" type="search" [(ngModel)]="busquedaDetalle"
+                 (ngModelChange)="alBuscarEnDetalle()"
+                 placeholder="Buscar por documento, nombre o teléfono">
+        </div>
+        <p class="muted" *ngIf="!filasDe(c).length && !busquedaDetalle">
           Todavía no ha armado ninguna. Dale al botón de recargar de la tarjeta.
+        </p>
+        <p class="muted" *ngIf="!filasDe(c).length && busquedaDetalle">
+          Nadie coincide con «{{ busquedaDetalle }}» en esta cola.
         </p>
         <div class="tabla-wrap" *ngIf="filasDe(c).length">
           <table class="tabla">
@@ -230,7 +238,7 @@
                   <th>Situación</th><th>Veces marcado</th></tr>
             </thead>
             <tbody>
-              <tr *ngFor="let f of filasDe(c)">
+              <tr *ngFor="let f of filasDePagina(c)">
                 <td>
                   <div class="celda-principal">{{ f.nombreCliente || '—' }}</div>
                   <div class="celda-sub">{{ f.documento }}</div>
@@ -242,6 +250,16 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="paginador" *ngIf="paginasDetalle(c) > 1">
+          <button class="btn-link" [disabled]="paginaDetalle === 1" (click)="pasarPagina(c, -1)">
+            <lucide-angular name="chevron-left" [size]="15"></lucide-angular> Anterior
+          </button>
+          <span>Página {{ paginaDetalle }} de {{ paginasDetalle(c) }} · {{ filasDe(c).length }} clientes</span>
+          <button class="btn-link" [disabled]="paginaDetalle === paginasDetalle(c)" (click)="pasarPagina(c, 1)">
+            Siguiente <lucide-angular name="chevron-right" [size]="15"></lucide-angular>
+          </button>
         </div>
       </div>
     </div>
@@ -611,9 +629,7 @@
         Ver qué rige hoy en una subcartera
         <select [(ngModel)]="subcarteraMirada" (ngModelChange)="verEfectivas($event)">
           <option [ngValue]="undefined">— elige una subcartera —</option>
-          <option *ngFor="let s of subcarterasPlanas" [ngValue]="s.id">
-            {{ s.nombreSubcartera }} · {{ s.nombreCartera }}
-          </option>
+          <option *ngFor="let s of subcarterasConCola" [ngValue]="s.id">{{ s.nombre }}</option>
         </select>
       </label>
       <p class="demo" *ngIf="reglasEfectivas">
