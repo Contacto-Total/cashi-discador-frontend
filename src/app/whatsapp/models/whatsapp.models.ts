@@ -187,6 +187,34 @@ export interface EngagementStatus {
   operationalDayOpen: boolean;
 }
 
+export interface SendAccessStatus {
+  conversationId: number;
+  allowed: boolean;
+  reason: string;
+  detail?: string;
+  ownerAgentId?: string;
+  ownerType?: 'DAILY' | 'PROMISE';
+  ownerExpiresAt?: string;
+  windowExpiresAt?: string;
+  operationalDayOpen: boolean;
+}
+
+export interface CreatePromiseChatAssignmentRequest {
+  clientId: number;
+  promiseId: number;
+  phone?: string;
+}
+
+export interface PromiseEngagementValidationResponse {
+  valid: boolean;
+  clientBelongsToScope: boolean;
+  phoneBelongsToClient: boolean;
+  promiseBelongsToClient: boolean;
+  engagementAllowed: boolean;
+  promiseStatus: string;
+  detail?: string;
+}
+
 export interface WhatsappSession {
   slot: string;
   role: 'PRIMARY' | 'AUXILIARY';
