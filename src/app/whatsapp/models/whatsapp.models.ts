@@ -202,7 +202,17 @@ export interface SendAccessStatus {
 export interface CreatePromiseChatAssignmentRequest {
   clientId: number;
   promiseId: number;
+  clientDocument: string;
   phone?: string;
+}
+
+export interface PromiseChatAssignment {
+  conversationId: number;
+  agentId: string;
+  clientId: number;
+  clientDocument: string;
+  promiseId: number;
+  status: 'ACTIVE' | 'RELEASED' | 'EXPIRED' | 'PAID' | 'CANCELLED';
 }
 
 export interface PromiseEngagementValidationResponse {

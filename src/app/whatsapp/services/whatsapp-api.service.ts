@@ -15,6 +15,7 @@ import {
   SendAccessStatus,
   CreatePromiseChatAssignmentRequest,
   PromiseEngagementValidationResponse,
+  PromiseChatAssignment,
   WhatsappAccount
 } from '../models';
 
@@ -107,6 +108,10 @@ export class WhatsappApiService {
 
   validatePromiseAssignment(conversationId: number, request: CreatePromiseChatAssignmentRequest): Observable<PromiseEngagementValidationResponse> {
     return this.http.post<PromiseEngagementValidationResponse>(`${this.apiBase}/chats/${conversationId}/promise-assignment/validate`, request);
+  }
+
+  getPromiseAssignment(conversationId: number): Observable<PromiseChatAssignment> {
+    return this.http.get<PromiseChatAssignment>(`${this.apiBase}/chats/${conversationId}/promise-assignment`);
   }
 
   joinViewers(conversationId: number): Observable<ViewerResponse> {
