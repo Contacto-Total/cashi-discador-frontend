@@ -574,8 +574,10 @@ export class InfoClientWidgetComponent {
           return;
         }
         this.acl.searchByDocument(assignment.clientDocument).subscribe({
-          next: result => {
-            if (this.lastChatKey === key) this.openInfo(result);
+          next: results => {
+            const result = results[0];
+            if (result && this.lastChatKey === key) this.openInfo(result);
+            else if (!result) this.searchClientByChatPhone(chat, key);
           },
           error: () => this.searchClientByChatPhone(chat, key)
         });
