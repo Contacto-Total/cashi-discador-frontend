@@ -750,3 +750,29 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
 }
 .buscador:focus { outline: 2px solid var(--primario, #3b82f6); outline-offset: -1px; }
+
+/* Selector de jerarquía: proveedor → cartera → subcartera, en su propia tarjeta.
+   Mismo patrón que el resto de la aplicación, para que se reconozca sin leerlo. */
+.selector-jerarquia {
+  margin-top: 14px; padding: 14px 16px;
+  background: var(--fondo-suave, #fafafa);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+}
+.jerarquia-titulo {
+  display: flex; align-items: center; gap: 9px; margin-bottom: 12px;
+  font-size: 14px; font-weight: 600; color: var(--text-primary, #1e293b);
+}
+.jerarquia-campos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;
+}
+.jerarquia-campos label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text-primary, #334155);
+}
+.jerarquia-campos select {
+  padding: 9px 11px; font-size: 14px; font-family: inherit;
+  border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px;
+  background: var(--card-bg, #fff); color: inherit;
+}
+.jerarquia-campos select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }

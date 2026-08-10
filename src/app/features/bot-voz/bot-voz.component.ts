@@ -231,15 +231,32 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return filas.slice(desde, desde + this.TAM_PAGINA);
   }
 
-  get sesionesPagina(): BotSesion[] {
-    return this.pagina(this.sesiones, this.paginaSesiones, (n) => (this.paginaSesiones = n));
+  /** Lo escrito en el buscador de llamadas. */
+  busquedaLlamadas = '';
+
+  /** Las llamadas que coinciden con la busqueda. Sin nada escrito, todas. */
+  get sesionesFiltradas(): BotSesion[] {
+    const q = this.busquedaLlamadas.trim().toLowerCase();
+    if (!q) return this.sesiones;
+    return this.sesiones.filter((s) =>
+      (s.documento || '').toLowerCase().includes(q)
+      || (s.nombreCliente || '').toLowerCase().includes(q)
+      || (s.telefono || '').includes(q)
+      || (s.resultadoNegocio || '').toLowerCase().includes(q));
   }
+
+  get sesionesPagina(): BotSesion[] {
+    return this.pagina(this.sesionesFiltradas, this.paginaSesiones, (n) => (this.paginaSesiones = n));
+  }
+
+  /** Buscar vuelve a la primera pagina: si no, buscas y caes en una que ya no existe. */
+  alBuscarLlamadas(): void { this.paginaSesiones = 1; }
   totalPaginas(filas: unknown[]): number {
     return Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
   }
   irA(cual: 'cola' | 'sesiones' | 'descartes', n: number): void {
     const filas = cual === 'cola' ? this.cola
-      : cual === 'sesiones' ? this.sesiones : this.descartes;
+      : cual === 'sesiones' ? this.sesionesFiltradas : this.descartes;
     const destino = Math.min(Math.max(1, n), this.totalPaginas(filas));
     if (cual === 'cola') this.paginaCola = destino;
     else if (cual === 'sesiones') this.paginaSesiones = destino;
@@ -308,7 +325,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarCola(); }
     if (t === 'ritmo') this.cargarPerfiles();
     if (t === 'tonos') this.cargarTonos();
-    if (t === 'reglas') { this.cargarReglas(); this.cargarSubcarteras(); }
+    if (t === 'reglas') { this.cargarReglas(); this.cargarProveedoresReglas(); }
   }
 
   // ----- Colas -----
@@ -683,18 +700,47 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Reglas -----
 
-  /**
-   * Subcarteras sobre las que tiene sentido consultar reglas: las que tienen cola.
-   *
-   * Antes era la lista completa —doce, la mayoría sin bot— y había que buscar la
-   * tuya entre todas.
-   */
-  get subcarterasConCola(): { id: number; nombre: string }[] {
-    const vistas = new Map<number, string>();
-    for (const c of this.colas) {
-      if (c.idSubcartera) vistas.set(c.idSubcartera, c.nombreSubcartera || `#${c.idSubcartera}`);
-    }
-    return [...vistas.entries()].map(([id, nombre]) => ({ id, nombre }));
+  // ---- Cascada de Reglas ----
+  //
+  // Estado propio, separado del alta de una cola. Compartirlo haria que elegir una
+  // cartera aqui dejara el formulario de la cola a medio rellenar la proxima vez que
+  // se abriera, y viceversa.
+  regProveedores: any[] = [];
+  regCarteras: any[] = [];
+  regSubcarteras: any[] = [];
+  regProveedorSel = 0;
+  regCarteraSel = 0;
+
+  cargarProveedoresReglas(): void {
+    if (this.regProveedores.length) return;
+    this.svc.getProveedores().subscribe({
+      next: (p) => (this.regProveedores = p || []),
+      error: () => this.flash('No se pudieron cargar los proveedores', true),
+    });
+  }
+
+  regAlElegirProveedor(): void {
+    this.regCarteras = [];
+    this.regSubcarteras = [];
+    this.regCarteraSel = 0;
+    this.subcarteraMirada = undefined;
+    this.reglasEfectivas = undefined;
+    if (!this.regProveedorSel) return;
+    this.svc.getCarteras(this.regProveedorSel).subscribe({
+      next: (c) => (this.regCarteras = c || []),
+      error: () => this.flash('No se pudieron cargar las carteras', true),
+    });
+  }
+
+  regAlElegirCartera(): void {
+    this.regSubcarteras = [];
+    this.subcarteraMirada = undefined;
+    this.reglasEfectivas = undefined;
+    if (!this.regCarteraSel) return;
+    this.svc.getSubcarteras(this.regCarteraSel).subscribe({
+      next: (s) => (this.regSubcarteras = s || []),
+      error: () => this.flash('No se pudieron cargar las subcarteras', true),
+    });
   }
 
   cargarReglas(): void {

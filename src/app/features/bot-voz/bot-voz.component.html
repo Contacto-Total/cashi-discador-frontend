@@ -625,13 +625,38 @@
         tampoco lo dice, de lo que está escrito en el código.
       </p>
 
-      <label class="ancho">
-        Ver qué rige hoy en una subcartera
-        <select [(ngModel)]="subcarteraMirada" (ngModelChange)="verEfectivas($event)">
-          <option [ngValue]="undefined">— elige una subcartera —</option>
-          <option *ngFor="let s of subcarterasConCola" [ngValue]="s.id">{{ s.nombre }}</option>
-        </select>
-      </label>
+      <div class="selector-jerarquia">
+        <div class="jerarquia-titulo">
+          <lucide-angular name="layers" [size]="17"></lucide-angular>
+          <span>Ver qué rige hoy en una subcartera</span>
+        </div>
+        <div class="jerarquia-campos">
+          <label>
+            Proveedor
+            <select [(ngModel)]="regProveedorSel" (ngModelChange)="regAlElegirProveedor()">
+              <option [ngValue]="0">Seleccione…</option>
+              <option *ngFor="let p of regProveedores" [ngValue]="p.id">{{ p.nombreInquilino }}</option>
+            </select>
+          </label>
+          <label>
+            Cartera
+            <select [(ngModel)]="regCarteraSel" (ngModelChange)="regAlElegirCartera()"
+                    [disabled]="!regCarteras.length">
+              <option [ngValue]="0">Seleccione…</option>
+              <option *ngFor="let c of regCarteras" [ngValue]="c.id">{{ c.nombreCartera }}</option>
+            </select>
+          </label>
+          <label>
+            Subcartera
+            <select [(ngModel)]="subcarteraMirada" (ngModelChange)="verEfectivas($event)"
+                    [disabled]="!regSubcarteras.length">
+              <option [ngValue]="undefined">Seleccione…</option>
+              <option *ngFor="let s of regSubcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <p class="demo" *ngIf="reglasEfectivas">
         Enganche entre {{ reglasEfectivas.pctPrimeraMin }} y {{ reglasEfectivas.pctPrimeraMax }},
         con la primera cuota al menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las
@@ -716,6 +741,15 @@
 
   <!-- ===== LLAMADAS ===== -->
   <section *ngIf="vista === 'llamadas'">
+    <div class="detalle-head">
+      <h3>Llamadas del bot <span class="muted">({{ sesionesFiltradas.length }})</span></h3>
+      <input class="buscador" type="search" [(ngModel)]="busquedaLlamadas"
+             (ngModelChange)="alBuscarLlamadas()"
+             placeholder="Buscar por documento, nombre, teléfono o resultado">
+    </div>
+    <p class="muted" *ngIf="!sesionesFiltradas.length && busquedaLlamadas">
+      Ninguna llamada coincide con «{{ busquedaLlamadas }}».
+    </p>
     <div class="table-card">
       <div class="table-wrapper">
         <table>
@@ -749,12 +783,12 @@
         <div class="empty-state error" *ngIf="errorSesiones">No se pudieron cargar las llamadas.</div>
         <div class="empty-state" *ngIf="!errorSesiones && sesiones.length === 0">Aún no hay llamadas registradas.</div>
       </div>
-        <div class="paginador" *ngIf="totalPaginas(sesiones) > 1">
+        <div class="paginador" *ngIf="totalPaginas(sesionesFiltradas) > 1">
           <button class="btn-link" [disabled]="paginaSesiones === 1" (click)="irA('sesiones', paginaSesiones - 1)">
             <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
           </button>
-          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesiones) }} · {{ sesiones.length }} filas</span>
-          <button class="btn-link" [disabled]="paginaSesiones === totalPaginas(sesiones)" (click)="irA('sesiones', paginaSesiones + 1)">
+          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} · {{ sesionesFiltradas.length }} llamadas</span>
+          <button class="btn-link" [disabled]="paginaSesiones === totalPaginas(sesionesFiltradas)" (click)="irA('sesiones', paginaSesiones + 1)">
             <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
           </button>
         </div>
