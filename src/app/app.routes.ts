@@ -354,6 +354,11 @@ export const routes: Routes = [
     canActivate: [authGuard, adminOrSupervisorGuard]
   },
   {
+    path: 'reportes-pagos-bancarios',
+    loadComponent: () => import('./pagos-bancarios/pages/reportes-pagos-bancarios/reportes-pagos-bancarios.page').then(m => m.ReportesPagosBancariosPage),
+    canActivate: [authGuard, adminOrSupervisorGuard]
+  },
+  {
     path: 'conciliaciones-pagos-manage',
     loadComponent: () => import('./pagos-bancarios/pages/conciliaciones-pagos/conciliaciones-pagos.page').then(m => m.ConciliacionesPagosPage),
     canActivate: [authGuard, adminOrSupervisorGuard]

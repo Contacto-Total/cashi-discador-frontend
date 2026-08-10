@@ -2,10 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
-import { RouterLink } from '@angular/router';
 import { interval, Subscription, startWith, switchMap } from 'rxjs';
 import { WhatsappApiService } from '../../../services/whatsapp-api.service';
-import { AccountStatusEvent, WhatsappAccount } from '../../../models';
+import { AccountStatusEvent, WhatsappAccount, WhatsappSession } from '../../../models';
 import { WhatsappRealtimeService } from '../../../services/whatsapp-realtime.service';
 import { TenantService } from '../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../maintenance/services/portfolio.service';
@@ -18,7 +17,7 @@ import { WhatsappMessageStoreService } from '../../../services/whatsapp-message-
 @Component({
   selector: 'app-whatsapp-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule, RouterLink, ChatListWidgetComponent, ChatWidgetComponent],
+  imports: [CommonModule, FormsModule, LucideAngularModule, ChatListWidgetComponent, ChatWidgetComponent],
   templateUrl: './whatsapp-dashboard.component.html',
   styleUrls: ['./whatsapp-dashboard.component.css']
 })
@@ -28,6 +27,8 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   portfolios: Portfolio[] = [];
   subPortfolios: SubPortfolio[] = [];
   selectedId: number | null = null;
+  selectedSessionSlot = 'PRIMARY';
+  activeView: 'instances' | 'history' = 'instances';
   loading = true;
   saving = false;
   activationSaving = false;
@@ -57,8 +58,6 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTenants();
-    this.messageStore.connectRealtime();
-
     this.subscriptions.add(
       interval(15000).pipe(
         startWith(0),
@@ -121,9 +120,16 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
 
   selectAccount(account: WhatsappAccount): void {
     this.selectedId = account.id;
+    this.selectedSessionSlot = account.sessions?.some(session => session.slot === 'PRIMARY')
+      ? 'PRIMARY'
+      : (account.sessions?.[0]?.slot || 'PRIMARY');
     this.syncForm(account);
-    this.messageStore.setAccountFilter(account.id, false);
     this.feedback = '';
+  }
+
+  selectView(view: 'instances' | 'history'): void {
+    this.activeView = view;
+    if (view === 'history') this.messageStore.connectRealtime();
   }
 
   onTenantChange(tenantId: number): void {
@@ -150,8 +156,9 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   }
 
   isLinked(account: WhatsappAccount): boolean {
-    if (account.status === 'WAITING_QR' || account.status === 'LOGGED_OUT') return false;
-    return account.hasLinkedNumber === true || !!account.phoneNumber;
+    const primary = this.primarySession(account);
+    if (primary?.status === 'WAITING_QR' || primary?.status === 'LOGGED_OUT') return false;
+    return primary?.status === 'CONNECTED' || account.hasLinkedNumber === true || !!account.phoneNumber;
   }
 
   statusLabel(status: string): string {
@@ -170,8 +177,25 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
     return status.toLowerCase().replace(/_/g, '-');
   }
 
-  qrSource(account: WhatsappAccount): string {
-    return account.qrData ? `data:image/png;base64,${account.qrData}` : '';
+  qrSource(qr?: string): string {
+    return qr ? `data:image/png;base64,${qr}` : '';
+  }
+
+  sessionLabel(session: WhatsappSession): string {
+    return session.role === 'PRIMARY' ? 'Sesión principal' : `Sesión auxiliar ${session.slot.split('_').pop()}`;
+  }
+
+  selectSession(session: WhatsappSession): void {
+    this.selectedSessionSlot = session.slot;
+  }
+
+  selectedSession(account: WhatsappAccount): WhatsappSession | undefined {
+    return account.sessions?.find(session => session.slot === this.selectedSessionSlot)
+      || account.sessions?.[0];
+  }
+
+  private primarySession(account: WhatsappAccount): WhatsappSession | undefined {
+    return account.sessions?.find(session => session.slot === 'PRIMARY');
   }
 
   tenantLabel(account: WhatsappAccount): string {
@@ -362,7 +386,8 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
       tenantId: payload.tenantId ?? current.tenantId,
       carteraId: payload.carteraId ?? current.carteraId,
       subcarteraId: payload.subcarteraId ?? current.subcarteraId,
-      qrData: payload.qr || undefined
+      qrData: payload.qr || undefined,
+      sessions: payload.sessions ?? current.sessions
     };
     this.accounts = this.accounts.map(account => account.id === updated.id ? updated : account);
     if (this.selectedId === updated.id) this.syncForm(updated);

@@ -175,6 +175,62 @@ export interface AccountStatusEvent {
   tenantId?: number;
   carteraId?: number;
   subcarteraId?: number;
+  sessions?: WhatsappSession[];
+}
+
+export interface EngagementStatus {
+  conversationId: number;
+  ownerAgentId?: string;
+  expiresAt?: string;
+  remainingSeconds: number;
+  locked: boolean;
+  operationalDayOpen: boolean;
+}
+
+export interface SendAccessStatus {
+  conversationId: number;
+  allowed: boolean;
+  reason: string;
+  detail?: string;
+  ownerAgentId?: string;
+  ownerType?: 'DAILY' | 'PROMISE';
+  ownerExpiresAt?: string;
+  windowExpiresAt?: string;
+  operationalDayOpen: boolean;
+}
+
+export interface CreatePromiseChatAssignmentRequest {
+  clientId: number;
+  promiseId: number;
+  clientDocument: string;
+  phone?: string;
+}
+
+export interface PromiseChatAssignment {
+  conversationId: number;
+  agentId: string;
+  clientId: number;
+  clientDocument: string;
+  promiseId: number;
+  status: 'ACTIVE' | 'RELEASED' | 'EXPIRED' | 'PAID' | 'CANCELLED';
+}
+
+export interface PromiseEngagementValidationResponse {
+  valid: boolean;
+  clientBelongsToScope: boolean;
+  phoneBelongsToClient: boolean;
+  promiseBelongsToClient: boolean;
+  engagementAllowed: boolean;
+  promiseStatus: string;
+  detail?: string;
+}
+
+export interface WhatsappSession {
+  slot: string;
+  role: 'PRIMARY' | 'AUXILIARY';
+  status: string;
+  qrData?: string;
+  updatedAt?: string;
 }
 
 export interface WhatsappAccount {
@@ -193,6 +249,7 @@ export interface WhatsappAccount {
   subcarteraName?: string;
   qrData?: string;
   qrUpdatedAt?: string;
+  sessions: WhatsappSession[];
   lastSeenAt?: string;
   lastConnectedAt?: string;
 }

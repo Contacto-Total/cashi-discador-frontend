@@ -1,10 +1,19 @@
 /* Container */
-.bot-voz { padding: 1.5rem; max-width: 1200px; margin: 0 auto; }
+/* Mismo ancho que Gestión de Campañas: la lista de colas y sus tablas necesitan el
+   sitio, y con 1200 px quedaba una franja vacía a los lados en pantallas normales. */
+.bot-voz { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
 
 /* Header */
 .page-header {
-  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; flex-wrap: wrap;
+  margin-bottom: 1.5rem; padding: 1rem 1.25rem;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
 }
+.page-header h1 { margin: 0; font-size: 1.15rem; }
+.page-header p { margin: 2px 0 0; font-size: .8rem; color: var(--text-secondary, #64748b); }
 .header-content { display: flex; align-items: center; gap: 1rem; }
 .header-icon {
   width: 48px; height: 48px; border-radius: 12px; color: white;
@@ -142,6 +151,29 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .descartes { margin-top: 1rem; }
 .descartes h4 { color: var(--text-secondary, #64748b); margin: 0 0 0.5rem; font-size: 0.9rem; }
 
+/* Descartes: tabla explicativa. Antes eran pastillas con el codigo crudo de la
+   regla, ilegibles en cuanto pasaban de cinco. */
+.descartes-card { margin-top: 1rem; }
+.descartes-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem; flex-wrap: wrap;
+  padding: 0.9rem 1rem; border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+.descartes-head h4 { margin: 0 0 0.15rem; font-size: 0.95rem; color: var(--text-primary, #0f172a); }
+.descartes-sub { margin: 0; font-size: 0.8rem; color: var(--text-muted, #64748b); }
+.resumen-reglas { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.resumen-reglas .pill {
+  background: var(--bg-secondary, #f1f5f9); color: var(--text-secondary, #64748b);
+  padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.76rem; white-space: nowrap;
+}
+.resumen-reglas .pill b { color: var(--text-primary, #0f172a); margin-left: 0.15rem; }
+/* Ambar, no rojo: un descarte casi siempre es el sistema filtrando bien. Solo
+   se marca lo que de verdad hay que ir a arreglar (datos malos, sin telefono). */
+.resumen-reglas .pill-alerta { background: rgba(234, 179, 8, 0.14); color: #a16207; }
+.resumen-reglas .pill-alerta b { color: #854d0e; }
+.badge-alerta { background: rgba(234, 179, 8, 0.14); color: #a16207; }
+.descartes-card .porque { font-weight: 400; line-height: 1.35; max-width: 46ch; }
+
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -256,3 +288,524 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   .detalle-panel { width: 100%; padding: 1rem; }
   .detalle-datos { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================================================
+   Colas, tonos, reglas y filtros.
+   Las secciones nuevas usaban clases que no existían en esta hoja, así que el
+   navegador las pintaba como texto suelto: los formularios salían en una sola
+   línea, sin rejilla ni tarjetas. Esto es lo que faltaba.
+   ========================================================================= */
+
+/* Texto explicativo de cada pestaña. Va apagado a propósito: acompaña, no compite
+   con los campos. */
+.ayuda {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--texto-suave, #6b7280);
+  max-width: 78ch;
+}
+
+/* Rejilla de campos. `auto-fit` y no un número fijo de columnas: la misma rejilla
+   sirve para el formulario de 6 campos de una cola y para el de 9 de un tono. */
+.grid-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.grid-form label,
+label.ancho {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--texto, #374151);
+}
+
+label.ancho { grid-column: 1 / -1; margin-bottom: 16px; }
+
+.grid-form input,
+.grid-form select,
+label.ancho input,
+label.ancho select,
+label.ancho textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--borde, #d1d5db);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--fondo-input, #fff);
+  color: inherit;
+}
+
+.grid-form input:focus,
+.grid-form select:focus,
+label.ancho select:focus {
+  outline: 2px solid var(--primario, #3b82f6);
+  outline-offset: -1px;
+}
+
+/* Un campo vacío significa "hereda", así que el placeholder tiene que leerse como
+   una respuesta y no como un hueco por rellenar. */
+.grid-form input::placeholder { color: #9ca3af; font-style: italic; }
+
+.grid-form select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.grid-form label small,
+label.ancho small { font-weight: 400; font-size: 12px; }
+
+/* Tarjeta de un tono o de una fila de reglas. */
+.tono-card {
+  background: var(--fondo-tarjeta, #fff);
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+/* Las casillas de "a quién llama". */
+.objetivos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0 16px;
+  border-top: 1px solid var(--borde, #e5e7eb);
+}
+
+.objetivos .etiqueta {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto, #374151);
+}
+
+.objetivos .check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.objetivos .check input { width: 15px; height: 15px; cursor: pointer; }
+.objetivos .check small { color: var(--texto-suave, #6b7280); }
+
+/* Una condición de filtro por línea. Los campos cambian según el tipo de dato, de
+   ahí el `wrap`: con fechas o con una lista de valores ocupan distinto. */
+.filtro-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--borde, #e5e7eb);
+}
+
+.filtro-fila input,
+.filtro-fila select {
+  padding: 7px 9px;
+  border: 1px solid var(--borde, #d1d5db);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.filtro-fila input[type="text"] { flex: 1 1 200px; min-width: 160px; }
+.filtro-fila input[type="number"],
+.filtro-fila input[type="date"] { width: 130px; }
+
+/* Fila de botones al pie de una tarjeta. */
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Lo que diría el tono al escucharlo, y el resumen de las reglas efectivas. */
+.demo {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: var(--fondo-suave, #f9fafb);
+  border-left: 3px solid var(--primario, #3b82f6);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Tabla de colas. */
+.tabla-wrap {
+  overflow-x: auto;
+  background: var(--fondo-tarjeta, #fff);
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 12px;
+}
+
+.tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.tabla th {
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--texto-suave, #6b7280);
+  border-bottom: 1px solid var(--borde, #e5e7eb);
+  white-space: nowrap;
+}
+
+.tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--borde-suave, #f3f4f6);
+  vertical-align: middle;
+}
+
+.tabla tr:last-child td { border-bottom: none; }
+
+.tabla .acciones { margin: 0; justify-content: flex-end; }
+
+.objetivos-celda { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.vacio {
+  padding: 28px 14px;
+  text-align: center;
+  color: var(--texto-suave, #6b7280);
+}
+
+/* Discando / detenida. El verde solo cuando está marcando de verdad: si el estado
+   se ve igual encendido que apagado, el botón deja de significar nada. */
+.badge-on {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+/* El mismo aviso, cuando lo que informa es un fallo.
+   `.flash` iba siempre en verde y el parámetro de error se ignoraba, así que
+   "No se pudieron cargar las subcarteras" salía con el mismo color que un guardado
+   correcto — y un fallo que se ve como un éxito no es un aviso, es ruido. */
+.flash.flash-error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b91c1c;
+}
+
+/* ============================================================================
+   Lista de colas — misma forma que la gestión de campañas.
+   Se copian los patrones de campaign-management (tarjeta con barra de acento,
+   acciones a la derecha, meta-tags abajo, modal para el alta) en vez de inventar
+   otros: son la misma clase de pantalla y deben leerse igual.
+   ========================================================================= */
+
+.seccion-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.seccion-head h3 { margin: 0 0 4px; font-size: 17px; }
+.seccion-head p { margin: 0; max-width: 62ch; }
+
+.seccion-acciones { display: flex; align-items: center; gap: 10px; }
+
+.stat-badge {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 14px; border-radius: 10px;
+  background: var(--fondo-suave, #f3f4f6); border: 1px solid var(--borde, #e5e7eb);
+}
+.stat-badge.active { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.3); }
+.stat-number { font-size: 18px; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-suave,#6b7280); }
+
+.btn-create {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border: none; border-radius: 9px;
+  background: var(--primario, #3b82f6); color: #fff;
+  font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
+}
+.btn-create:hover { filter: brightness(1.05); }
+
+/* Una cola. La barra de acento a la izquierda solo se enciende cuando disca de
+   verdad: es lo primero que se busca al entrar. */
+.cola-card {
+  display: flex; overflow: hidden;
+  background: var(--fondo-tarjeta, #fff);
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 12px; margin-bottom: 12px;
+}
+.cola-card.is-dialing { border-color: rgba(34,197,94,.45); }
+
+.card-accent { width: 4px; flex: 0 0 4px; background: var(--borde, #d1d5db); }
+.card-accent.on { background: #22c55e; }
+
+.card-content { flex: 1; padding: 14px 18px; min-width: 0; }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.card-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.card-title-row h3 { margin: 0; font-size: 15px; font-weight: 600; }
+
+.status-badge {
+  padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: var(--fondo-suave, #f3f4f6); color: var(--texto-suave, #4b5563);
+}
+
+.dialing-indicator {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: #16a34a;
+}
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+  animation: pulso 1.6s ease-in-out infinite;
+}
+@keyframes pulso { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+
+.card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+.btn-action-small {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--borde, #e5e7eb); border-radius: 7px;
+  background: var(--fondo-tarjeta, #fff); color: var(--texto-suave, #6b7280);
+  cursor: pointer;
+}
+.btn-action-small:hover:not(:disabled) { background: var(--fondo-suave, #f9fafb); color: var(--texto, #374151); }
+.btn-action-small:disabled { opacity: .4; cursor: not-allowed; }
+.btn-action-small.btn-activate { color: #16a34a; border-color: rgba(34,197,94,.35); }
+.btn-action-small.btn-pause    { color: #b45309; border-color: rgba(245,158,11,.35); }
+.btn-action-small.btn-delete   { color: #b91c1c; border-color: rgba(239,68,68,.3); }
+
+.card-description { margin: 8px 0 0; font-size: 13px; color: var(--texto-suave, #6b7280); }
+
+.card-bottom { margin-top: 10px; }
+.card-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+.meta-tag {
+  padding: 3px 8px; border-radius: 6px; font-size: 11px;
+  background: var(--fondo-suave, #f3f4f6); color: var(--texto-suave, #6b7280);
+}
+.meta-date { font-variant-numeric: tabular-nums; }
+
+/* Modal del alta. */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(17, 24, 39, .55);
+}
+.modal-content {
+  display: flex; flex-direction: column;
+  width: min(760px, 100%); max-height: 88vh;
+  background: var(--fondo-tarjeta, #fff);
+  border-radius: 14px; box-shadow: 0 20px 50px rgba(0,0,0,.25);
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--borde, #e5e7eb);
+}
+.modal-header h3 { margin: 0; font-size: 16px; }
+.btn-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: none; border-radius: 7px;
+  background: transparent; color: var(--texto-suave, #6b7280); cursor: pointer;
+}
+.btn-close:hover { background: var(--fondo-suave, #f3f4f6); }
+
+/* El cuerpo scrollea y el pie se queda fijo: con once campos, el botón de crear
+   quedaba fuera de pantalla. */
+.modal-body { padding: 18px 20px; overflow-y: auto; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px; border-top: 1px solid var(--borde, #e5e7eb);
+}
+.btn-cancel, .btn-submit {
+  padding: 9px 18px; border-radius: 9px; font-size: 14px;
+  font-family: inherit; cursor: pointer;
+}
+.btn-cancel { border: 1px solid var(--borde, #d1d5db); background: transparent; color: inherit; }
+.btn-submit { border: none; background: var(--primario, #3b82f6); color: #fff; }
+.btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Tarjeta de contenido normal, en bloque.
+   NO se reutiliza `.control-card` porque esa es `display:flex` — está hecha para la
+   cabecera de Configuración, texto a un lado y botones al otro. Meter un formulario
+   dentro colocaba cada campo en una columna, que es por lo que la pantalla salía
+   desparramada de lado a lado. */
+.panel {
+  display: block;
+  background: var(--card-bg, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+.panel h3 { margin: 0 0 .25rem; font-size: 1rem; font-weight: 600; }
+
+/* Los cinco estados de una cola.
+   Cada uno tiene su color porque cada uno se arregla de forma distinta: esperar,
+   volver a armar, o darle a Iniciar. Con una sola etiqueta "Pausada" para todos,
+   el supervisor no sabe si tiene que hacer algo. */
+.estado-pill {
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.estado-pill.st-discando { background: #dcfce7; color: #15803d; }
+.estado-pill.st-pausada  { background: #fef3c7; color: #b45309; }
+.estado-pill.st-borrador { background: #e5e7eb; color: #4b5563; }
+.estado-pill.st-espera   { background: #dbeafe; color: #1d4ed8; }
+.estado-pill.st-alerta   { background: #fee2e2; color: #b91c1c; }
+
+/* Por qué la apagó el sistema. Solo sale cuando hay motivo, y ese es justo el caso
+   en el que alguien tiene que enterarse. */
+.aviso-pausa {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 0 0; padding: 8px 12px;
+  background: rgba(239, 68, 68, .08);
+  border-left: 3px solid rgba(239, 68, 68, .5);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px; color: #b91c1c;
+}
+
+/* Panel del ojo: cuelga de su tarjeta, sangrado para que se vea de quién es. */
+.detalle-cola { margin: -4px 0 14px 16px; border-left: 3px solid var(--primario, #3b82f6); }
+.detalle-cola h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.detalle-cola h4 + p, .detalle-cola .tabla-wrap { margin-bottom: 18px; }
+
+/* Las tres casillas de qué debe hacer Clara, con su explicación al lado. */
+.objetivos-bloque, .reglas-resumen {
+  padding: 14px 0; border-top: 1px solid var(--borde, #e5e7eb);
+}
+.objetivos-bloque .etiqueta, .reglas-resumen .etiqueta {
+  display: block; margin-bottom: 4px;
+  font-size: 13px; font-weight: 600; color: var(--texto, #374151);
+}
+.objetivos-bloque > .muted, .reglas-resumen .muted { margin: 0 0 12px; }
+
+.obj-opcion {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 0; cursor: pointer;
+}
+.obj-opcion input { margin-top: 3px; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+.obj-opcion span { display: flex; flex-direction: column; gap: 2px; }
+.obj-opcion strong { font-size: 13px; font-weight: 600; }
+.obj-opcion small { font-size: 12px; color: var(--texto-suave, #6b7280); }
+
+/* Cabecera con acciones, como en Gestión de Campañas: la pantalla es de COLAS y lo
+   que se toca de vez en cuando —ritmo, voces, reglas— vive en botones, no en pestañas. */
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.btn-header {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 9px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--card-bg, #fff); color: var(--text-primary, #334155);
+  font-size: 13px; font-family: inherit; cursor: pointer;
+}
+.btn-header:hover { background: var(--fondo-suave, #f8fafc); }
+.btn-header.on {
+  background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.4);
+  color: #1d4ed8; font-weight: 600;
+}
+
+.volver { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; padding: 0; font-size: 13px; }
+
+/* El parámetro que cuelga de un objetivo: sangrado para que se vea de quién es.
+   "Con cuántos días de adelanto" solo significa algo si recuerdas cuotas. */
+.obj-sub {
+  display: flex; flex-direction: column; gap: 5px;
+  margin: 0 0 10px 26px; max-width: 280px;
+  font-size: 12px; color: var(--text-secondary, #64748b);
+}
+.obj-sub input {
+  padding: 7px 9px; border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 7px; font-size: 13px; font-family: inherit;
+}
+.obj-sub input::placeholder { font-style: italic; color: #9ca3af; }
+
+/* Un descarte que no es rutina —blacklist, sin teléfono— pintado distinto: son los
+   que explican por qué la cola salió más corta de lo que se esperaba. */
+.meta-tag.meta-alerta { background: rgba(245,158,11,.12); color: #b45309; }
+
+/* Cabecera del detalle: el titulo a la izquierda y el buscador a la derecha. */
+.detalle-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.detalle-head h4 { margin: 0; }
+.buscador {
+  flex: 0 1 320px; min-width: 200px;
+  padding: 8px 11px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
+}
+.buscador:focus { outline: 2px solid var(--primario, #3b82f6); outline-offset: -1px; }
+
+/* Selector de jerarquía: proveedor → cartera → subcartera, en su propia tarjeta.
+   Mismo patrón que el resto de la aplicación, para que se reconozca sin leerlo. */
+.selector-jerarquia {
+  margin-top: 14px; padding: 14px 16px;
+  background: var(--fondo-suave, #fafafa);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+}
+.jerarquia-titulo {
+  display: flex; align-items: center; gap: 9px; margin-bottom: 12px;
+  font-size: 14px; font-weight: 600; color: var(--text-primary, #1e293b);
+}
+.jerarquia-campos {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px;
+}
+.jerarquia-campos label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text-primary, #334155);
+}
+.jerarquia-campos select {
+  padding: 9px 11px; font-size: 14px; font-family: inherit;
+  border: 1px solid var(--border-color, #cbd5e1); border-radius: 8px;
+  background: var(--card-bg, #fff); color: inherit;
+}
+.jerarquia-campos select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+
+/* Un campo por el que segmentar, con sus valores como casillas.
+   Se elige de lo que existe en la cartera; antes había que escribir el nombre de la
+   columna a ciegas y un nombre mal puesto se ignoraba en silencio. */
+.campo-filtro {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+.campo-filtro:last-child { border-bottom: none; }
+
+.campo-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.campo-titulo { font-size: 14px; font-weight: 600; color: var(--text-primary, #1e293b); }
+.campo-estado { font-size: 12px; color: #16a34a; display: flex; align-items: center; gap: 6px; }
+.campo-estado.muted { color: var(--text-secondary, #94a3b8); }
+.campo-estado .btn-link { font-size: 12px; padding: 0; }
+
+.campo-valores { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* La casilla y su conteo en una sola pastilla: el número es lo que dice si merece la
+   pena marcarla, así que va al lado y no en otra columna. */
+.valor-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px; cursor: pointer;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 999px;
+  background: var(--card-bg, #fff); font-size: 13px;
+}
+.valor-chip:hover { background: var(--fondo-suave, #f8fafc); }
+.valor-chip.on { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.45); color: #1d4ed8; }
+.valor-chip input { width: 15px; height: 15px; cursor: pointer; }
+.valor-chip b { font-variant-numeric: tabular-nums; opacity: .7; }
+.valor-chip.on b { opacity: 1; }

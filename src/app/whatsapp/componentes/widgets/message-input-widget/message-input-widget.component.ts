@@ -1,7 +1,8 @@
 import { Component, ElementRef, ViewChild, computed, effect, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Chat } from '../../../models';
-import { WhatsappMessageStoreService } from '../../../services';
+import { Chat, SendAccessStatus } from '../../../models';
+import { UserInfoService, WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
+import { AuthService } from '../../../../core/services/auth.service';
 import { PdfPreviewWidgetComponent } from '../pdf-preview-widget/pdf-preview-widget.component';
 
 /** Tope de tamaño del adjunto (se sube por multipart; el back lo guarda en disco). */
@@ -146,6 +147,9 @@ export class MessageInputWidgetComponent {
   });
   previewOpen = false;
   readonly windowWarning = computed(() => this.getWindowWarning(this.chat()));
+  readonly sendAccess = signal<SendAccessStatus | null>(null);
+  readonly engagementOwnerName = signal<string | null>(null);
+  private readonly now = signal(Date.now());
 
   private mediaRecorder?: MediaRecorder;
   private audioChunks: Blob[] = [];
@@ -153,12 +157,48 @@ export class MessageInputWidgetComponent {
   private recordTimer?: ReturnType<typeof setInterval>;
   private refocusAfterSend = false;
 
-  constructor(readonly store: WhatsappMessageStoreService) {
+  constructor(
+    readonly store: WhatsappMessageStoreService,
+    private readonly api: WhatsappApiService,
+    private readonly userInfo: UserInfoService,
+    private readonly auth: AuthService
+  ) {
     effect(() => {
       const idle = !this.store.sendingMessage() && !this.store.uploadingMedia();
       if (!idle || !this.refocusAfterSend) return;
       this.refocusAfterSend = false;
       setTimeout(() => this.messageInput?.nativeElement.focus());
+    });
+    effect((onCleanup) => {
+      const conversationId = this.chat()?.id;
+      if (!conversationId) {
+        this.sendAccess.set(null);
+        return;
+      }
+      const refresh = () => this.api.getSendAccess(conversationId).subscribe({
+        next: status => this.sendAccess.set(status),
+        error: () => this.sendAccess.set(null)
+      });
+      refresh();
+      const clock = setInterval(() => this.now.set(Date.now()), 1000);
+      const refreshTimer = setInterval(refresh, 30000);
+      onCleanup(() => {
+        clearInterval(clock);
+        clearInterval(refreshTimer);
+      });
+    });
+    effect((onCleanup) => {
+      const ownerAgentId = this.sendAccess()?.ownerAgentId;
+      const ownerId = Number(ownerAgentId);
+      if (!ownerAgentId || !Number.isFinite(ownerId)) {
+        this.engagementOwnerName.set(null);
+        return;
+      }
+      const subscription = this.userInfo.getUserInfoView(ownerId).subscribe({
+        next: user => this.engagementOwnerName.set(user.displayName),
+        error: () => this.engagementOwnerName.set(null)
+      });
+      onCleanup(() => subscription.unsubscribe());
     });
   }
 
@@ -290,6 +330,8 @@ export class MessageInputWidgetComponent {
 
   private canSendToChat(chat: Chat | null): boolean {
     if (!chat?.id || chat.blocked || chat.serviceActive === false) return false;
+    const access = this.sendAccess();
+    if (access && !access.allowed) return false;
     if (!chat.windowExpiresAt) return true;
     return new Date(chat.windowExpiresAt).getTime() > Date.now();
   }
@@ -297,8 +339,36 @@ export class MessageInputWidgetComponent {
   private getWindowWarning(chat: Chat | null): string {
     if (!chat) return '';
     if (chat.serviceActive === false) return 'El servicio WhatsApp de esta conversación está deshabilitado.';
-    if (chat.blocked) return '24 h expirado.';
-    if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '24 h expirado.';
+    const access = this.sendAccess();
+    const currentAgentId = String(this.auth.getCurrentUser()?.id || '');
+    if (access && !access.allowed) {
+      if (access.reason === 'PROMISE_ENGAGED' && access.ownerAgentId) {
+        return `Chat enlazado a una promesa del agente ${this.engagementOwnerName() || access.ownerAgentId}.`;
+      }
+      if (access.reason === 'DAILY_ENGAGED' && access.ownerAgentId) {
+        const remaining = Math.max(0, new Date(access.ownerExpiresAt || 0).getTime() - this.now());
+        return `Chat enlazado con el agente ${this.engagementOwnerName() || access.ownerAgentId}. Se libera en ${this.formatRemaining(remaining)}.`;
+      }
+      return access.detail || 'No puedes enviar mensajes en este chat.';
+    }
+    if (access?.ownerType === 'PROMISE' && access.ownerAgentId === currentAgentId) {
+      return 'Este chat está enlazado contigo por una promesa activa.';
+    }
+    if (access?.ownerType === 'DAILY' && access.ownerAgentId === currentAgentId) {
+      const remaining = Math.max(0, new Date(access.ownerExpiresAt || 0).getTime() - this.now());
+      const time = this.formatRemaining(remaining);
+      return `Este chat está enlazado contigo. Se libera en ${time}.`;
+    }
+    if (chat.blocked) return '12 h expirado.';
+    if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '12 h expirado.';
     return '';
+  }
+
+  private formatRemaining(milliseconds: number): string {
+    const totalSeconds = Math.ceil(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 }

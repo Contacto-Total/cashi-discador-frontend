@@ -1,26 +1,19 @@
 <main class="whatsapp-dashboard">
-  <header class="dashboard-header">
-    <div class="header-copy">
-      <div class="eyebrow"><span class="eyebrow-dot"></span> Centro de canales</div>
-      <h1>Servicios WhatsApp</h1>
-      <p>Supervisa el estado de las instancias Go, vincula números y controla qué cartera atiende cada servicio.</p>
-    </div>
+  <div class="mx-auto mb-2 max-w-[1420px] px-0.5 py-1">
+    <div class="text-2xl font-extrabold tracking-tight text-slate-900">WhatsApp Dashboard</div>
+  </div>
 
-    <div class="header-summary" aria-label="Resumen de servicios WhatsApp">
-      <div class="summary-card primary">
-        <span class="summary-number">{{ accounts.length }}</span>
-        <span>Servicios</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-number">{{ connectedAccounts }}</span>
-        <span>Conectados</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-number">{{ activeAccounts }}</span>
-        <span>Activos</span>
-      </div>
-    </div>
-  </header>
+  <nav class="workspace-toolbar" aria-label="Navegación WhatsApp">
+    <button type="button" [class.active]="activeView === 'instances'" (click)="selectView('instances')">
+      <lucide-angular name="radio" [size]="16"></lucide-angular> Instancias
+    </button>
+    <button type="button" [class.active]="activeView === 'history'" (click)="selectView('history')">
+      <lucide-angular name="history" [size]="16"></lucide-angular> Historial
+    </button>
+    <span class="toolbar-spacer"></span>
+    <span class="toolbar-stat">{{ accounts.length }} instancias</span>
+    <span class="toolbar-stat">{{ connectedAccounts }} conectadas</span>
+  </nav>
 
   @if (loading) {
     <section class="empty-state loading-state">
@@ -32,31 +25,23 @@
       <lucide-angular name="alert-triangle" [size]="28"></lucide-angular>
       <span>{{ error }}</span>
     </section>
-  } @else if (accounts.length === 0) {
+  } @else if (accounts.length === 0 && activeView === 'instances') {
     <section class="empty-state">
       <lucide-angular name="monitor" [size]="32"></lucide-angular>
       <h2>No hay servicios registrados</h2>
       <p>Inicia una instancia Go para que aparezca en este panel.</p>
     </section>
   } @else {
+    @if (activeView === 'instances') {
     <section class="dashboard-grid">
-      <div class="service-list-panel">
-        <div class="panel-heading">
-          <div>
-            <span class="panel-kicker">Inventario</span>
-            <h2>Instancias Go</h2>
+        <aside class="service-list-panel">
+          <div class="instance-rail-heading">
+            <span class="panel-kicker">Instancias</span>
+            <span class="live-indicator"><span></span> En línea</span>
           </div>
-          <span class="live-indicator"><span></span> Actualizando</span>
-        </div>
-
-        <div class="service-mini-stats">
-          <span>{{ linkedAccounts }} vinculados</span>
-          <span>{{ waitingQrAccounts }} esperando QR</span>
-        </div>
-
-        <div class="service-list">
-          @for (account of accounts; track account.id) {
-            <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
+          <div class="service-list" aria-label="Instancias Go">
+            @for (account of accounts; track account.id) {
+              <button type="button" class="service-card" [class.selected]="selectedId === account.id" (click)="selectAccount(account)">
               <span class="service-icon" [ngClass]="statusClass(account.status)"><lucide-angular name="radio" [size]="19"></lucide-angular></span>
               <span class="service-copy">
                 <span class="service-title-row">
@@ -67,38 +52,54 @@
               </span>
               <span class="service-active" [class.enabled]="account.active">{{ account.active ? 'On' : 'Off' }}</span>
             </button>
-          }
-        </div>
-      </div>
+            }
+          </div>
+        </aside>
 
       @if (selectedAccount; as account) {
-        <div class="detail-panel">
-          <div class="detail-topline">
-            <div>
-              <span class="panel-kicker">Servicio seleccionado</span>
-              <h2>{{ account.instanciaId }}</h2>
-              <p>{{ account.jid || 'JID pendiente de sincronización' }}</p>
-            </div>
+          <section class="detail-panel">
+           <header class="detail-topline">
+             <div>
+               <span class="panel-kicker">Instancia {{ account.instanciaId }}</span>
+               <h2>{{ account.phoneNumber || 'Vincular número' }}</h2>
+               <p>{{ account.jid || 'La cuenta estará disponible al completar el vínculo.' }}</p>
+             </div>
              <span class="detail-status" [ngClass]="statusClass(account.status)">
                <span class="status-dot"></span>{{ statusLabel(account.status) }}
              </span>
-           </div>
-
-           <div class="detail-actions">
-             <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
+             <div class="detail-actions">
+              <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
                <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
                {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
-             </button>
-           </div>
+              </button>
+             </div>
+            </header>
 
-           <div class="detail-content">
-            <div class="qr-column" [class.qr-muted]="isLinked(account)">
-              @if (!isLinked(account) && account.qrData) {
-                <div class="qr-frame"><img [src]="qrSource(account)" alt="Código QR para vincular WhatsApp"></div>
-                <p class="qr-caption">Abre WhatsApp en tu teléfono y escanea este código.</p>
-              } @else if (!isLinked(account)) {
-                <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando código QR...</span></div>
-              } @else {
+            <div class="detail-content">
+              <section class="qr-column" [class.qr-muted]="isLinked(account)">
+                @if (account.sessions?.length) {
+                  <div class="session-tabs" role="tablist" aria-label="Sesiones de WhatsApp">
+                    @for (session of account.sessions; track session.slot) {
+                      <button type="button" role="tab" [class.selected]="selectedSession(account)?.slot === session.slot" (click)="selectSession(session)">
+                        {{ session.role === 'PRIMARY' ? 'Principal' : 'Auxiliar ' + session.slot.split('_').pop() }}
+                       <span [ngClass]="statusClass(session.status)"></span>
+                      </button>
+                    }
+                  </div>
+                  @if (selectedSession(account); as session) {
+                    <div class="qr-session-content">
+                      <div class="session-name"><span>{{ sessionLabel(session) }}</span><strong [ngClass]="statusClass(session.status)">{{ statusLabel(session.status) }}</strong></div>
+                      @if (session.qrData) {
+                        <div class="qr-frame"><img [src]="qrSource(session.qrData)" [alt]="'Código QR ' + sessionLabel(session)"></div>
+                        <p class="qr-caption">Escanea este código desde WhatsApp para vincular este dispositivo.</p>
+                      } @else {
+                        <div class="session-placeholder"><lucide-angular [name]="session.status === 'CONNECTED' ? 'check-circle-2' : 'qr-code'" [size]="28"></lucide-angular><span>{{ session.status === 'CONNECTED' ? 'Sesión vinculada' : 'Esperando código QR' }}</span></div>
+                       }
+                    </div>
+                  }
+                } @else if (!isLinked(account)) {
+                 <div class="qr-placeholder"><lucide-angular name="qr-code" [size]="38"></lucide-angular><span>Esperando códigos QR...</span></div>
+               } @else {
                 <div class="linked-number">
                   <span class="linked-icon"><lucide-angular name="phone-call" [size]="24"></lucide-angular></span>
                   <strong>{{ account.phoneNumber || 'Número vinculado' }}</strong>
@@ -108,8 +109,8 @@
                   <span>Última conexión</span>
                   <strong>{{ account.lastConnectedAt ? (account.lastConnectedAt | date:'short') : 'Sin registro' }}</strong>
                 </div>
-              }
-            </div>
+               }
+             </section>
 
             @if (isLinked(account)) {
             <form class="binding-form" (ngSubmit)="saveBinding()">
@@ -156,32 +157,16 @@
                 <p>Primero vincula un número con el QR. Después podrás asignar el tenant, la cartera y la subcartera.</p>
               </div>
              }
-           </div>
-           @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
-         </div>
-       }
-     </section>
-
-     <section class="instance-chat-panel">
-       <div class="instance-chat-heading">
-         <div>
-           <span class="panel-kicker">Vista rápida</span>
-           <h2>Chat de la instancia seleccionada</h2>
-           <p>{{ selectedAccount ? 'Conversaciones filtradas por la cuenta activa seleccionada.' : 'Selecciona una instancia para ver sus conversaciones.' }}</p>
-         </div>
-         <a class="history-link" routerLink="/whatsapp/history">
-           <lucide-angular name="archive" [size]="15"></lucide-angular>
-           Ver historial completo
-         </a>
-       </div>
-       @if (selectedAccount) {
-         <div class="instance-chat-grid">
-           <app-whatsapp-chat-list-widget></app-whatsapp-chat-list-widget>
-           <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
-         </div>
-       } @else {
-         <div class="instance-chat-empty">Selecciona una instancia para cargar sus chats.</div>
-       }
-     </section>
-   }
+            </div>
+            @if (feedback) { <p class="detail-feedback">{{ feedback }}</p> }
+          </section>
+        }
+      </section>
+    } @else {
+      <section class="history-workspace">
+        <app-whatsapp-chat-list-widget [includeHistorical]="true"></app-whatsapp-chat-list-widget>
+        <app-whatsapp-chat-widget [readOnly]="true"></app-whatsapp-chat-widget>
+      </section>
+    }
+    }
 </main>

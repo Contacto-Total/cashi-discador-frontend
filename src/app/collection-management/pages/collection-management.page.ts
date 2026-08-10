@@ -2917,6 +2917,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private callTimer?: number;
   private managementId?: string;
   private callStartTime?: string;
+  // Fix temporal: margen de 100ms antes de desbloquear llamadas entrantes
+  private desbloqueoTimeout?: number;
 
   // --- Bloqueo de salida durante una gestión con llamada en curso ---
   // Se levanta al guardar (onSaveSuccess) para habilitar la navegación
@@ -4258,6 +4260,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (this.callTimer) {
       clearInterval(this.callTimer);
+    }
+
+    // Fix temporal: si el componente muere antes de los 100ms, el desbloqueo lo hace
+    // el bloque de abajo (isTipifying sigue en true porque el timer no llegó a correr)
+    if (this.desbloqueoTimeout) {
+      clearTimeout(this.desbloqueoTimeout);
+      this.desbloqueoTimeout = undefined;
     }
 
     // IMPORTANTE: Desbloquear llamadas si el componente se destruye
@@ -6182,9 +6191,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.activeTab.set('cliente');
 
     // Desbloquear llamadas entrantes - tipificación completada
-    this.isTipifying.set(false);
-    this.sipService.blockIncomingCallsMode(false);
-    console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+    // Fix temporal: 100ms de margen (ver navegación a agent-dashboard más abajo)
+    this.desbloqueoTimeout = window.setTimeout(() => {
+      this.desbloqueoTimeout = undefined;
+      this.isTipifying.set(false);
+      this.sipService.blockIncomingCallsMode(false);
+      console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+    }, 100);
 
     // Verificar si estamos en modo recordatorio dialer
     const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
@@ -6210,7 +6223,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           error: (err: any) => console.error('❌ Error cambiando estado:', err)
         });
       });
-    }, 2000);
+    // Fix temporal: reducción a 1 segundo
+    }, 1000);
   }
 
   /**

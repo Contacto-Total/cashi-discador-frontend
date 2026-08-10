@@ -1,7 +1,10 @@
 import { Component, computed, effect, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs';
-import { WhatsappMessageStoreService } from '../../services';
+import { catchError, finalize, of, switchMap, throwError } from 'rxjs';
+import { environment } from '../../../../environments/environment';
+import { Chat } from '../../models';
+import { WhatsappApiService, WhatsappMessageStoreService } from '../../services';
 import { ClientInfoAclService, DynamicClient, GlobalSearchResult } from './client-info-acl.service';
 
 // NOTA DE MANTENIMIENTO: estos servicios se reutilizan desde collection-management.
@@ -131,7 +134,7 @@ const PROMISE_TIPIFICATION_ID = 5;
 
             @if (!showOffers()) {
             <!-- Opciones del cliente -->
-            <div class="space-y-2">
+             <div class="space-y-2">
             @for (opt of options; track opt.key) {
               <button
                  type="button"
@@ -155,8 +158,40 @@ const PROMISE_TIPIFICATION_ID = 5;
                 <span class="min-w-0 flex-1">{{ opt.label }}</span>
                 <svg class="shrink-0 text-slate-300" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
               </button>
-             }
-            </div>
+              }
+              @if (followUpActive()) {
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-800">
+                  <p class="text-sm font-bold">Seguimiento activo</p>
+                  <p class="mt-1 text-xs">Este cliente está enlazado a tu promesa. Otros agentes pueden ver el chat, pero no enviar mensajes.</p>
+                </div>
+              } @else if (followUpOpen()) {
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <p class="text-sm font-bold text-emerald-900">Dar seguimiento a promesa</p>
+                  <p class="mt-1 text-xs text-emerald-800">Puedes registrar opcionalmente el número indicado por el cliente antes de crear el enlace.</p>
+                  <input class="mt-3 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm" type="tel" placeholder="Número con código de país (opcional)" [ngModel]="followUpPhone()" (ngModelChange)="followUpPhone.set($event)" />
+                  @if (followUpError()) { <p class="mt-2 text-xs font-medium text-rose-700">{{ followUpError() }}</p> }
+                  <div class="mt-3 flex gap-2">
+                    <button type="button" class="flex-1 rounded bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-300" [disabled]="savingFollowUp()" (click)="followUpOpen.set(false)">Cancelar</button>
+                    <button type="button" class="flex-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" [disabled]="savingFollowUp()" (click)="createFollowUp()">{{ savingFollowUp() ? 'Guardando...' : 'Confirmar enlace' }}</button>
+                  </div>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="flex w-full items-center gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  [disabled]="!followUpEligible() || checkingFollowUp()"
+                  [title]="followUpEligible() ? 'Enlazar este chat a la promesa activa' : (followUpError() || 'No hay una promesa vigente para seguimiento')"
+                  (click)="openFollowUp()"
+                >
+                  <span class="min-w-0 flex-1">Dar seguimiento a promesa</span>
+                </button>
+                @if (checkingFollowUp()) {
+                  <p class="text-xs text-slate-500">Validando promesa activa…</p>
+                } @else if (followUpError()) {
+                  <p class="text-xs text-amber-700">{{ followUpError() }}</p>
+                }
+              }
+             </div>
             } @else {
               <div class="mb-3 flex items-center gap-2">
                 <button type="button" class="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-slate-100" aria-label="Volver a opciones" (click)="backToOptions()">
@@ -363,6 +398,14 @@ export class InfoClientWidgetComponent {
   readonly transferFee = signal<number>(0);
   readonly installmentCount = signal(1);
   readonly installments = signal<InstallmentEditor[]>([]);
+  readonly activePromiseId = signal<number | null>(null);
+  readonly followUpEligible = signal(false);
+  readonly checkingFollowUp = signal(false);
+  readonly followUpOpen = signal(false);
+  readonly followUpActive = signal(false);
+  readonly followUpPhone = signal('');
+  readonly followUpError = signal<string | null>(null);
+  readonly savingFollowUp = signal(false);
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -388,7 +431,9 @@ export class InfoClientWidgetComponent {
     private readonly cartaCesion: CartaCesionService,
     private readonly cartaAcuerdo: CartaAcuerdoService,
     private readonly management: ManagementService,
-    private readonly auth: AuthService
+    private readonly auth: AuthService,
+    private readonly http: HttpClient,
+    private readonly whatsappApi: WhatsappApiService
   ) {
     // Al entrar a un chat, buscamos por el número del chat (últimos 9 dígitos).
     effect(() => {
@@ -411,15 +456,10 @@ export class InfoClientWidgetComponent {
       this.scheduleConfig.set(null);
       this.selectedOffer.set(null);
       this.installments.set([]);
-      this.offerSent.set(false);
-      if (!chat) return;
-
-      const phone = this.acl.phoneKey(chat.contactPhone);
-      if (phone.length < 7) {
-        this.manualOpen.set(true); // sin teléfono usable → búsqueda manual
-        return;
-      }
-      this.autoSearchByPhone(phone, key);
+       this.offerSent.set(false);
+       this.resetFollowUp();
+       if (!chat) return;
+       this.loadAssignedClientOrSearch(chat, key);
     });
   }
 
@@ -435,10 +475,129 @@ export class InfoClientWidgetComponent {
     this.selectedOffer.set(null);
     this.installments.set([]);
     this.offerSent.set(false);
+    this.resetFollowUp();
+    const chat = this.chat();
+    const agentId = String(this.auth.getCurrentUser()?.id || '');
+    if (chat?.id) {
+      this.whatsappApi.getSendAccess(chat.id).subscribe({
+        next: access => this.followUpActive.set(access.ownerType === 'PROMISE' && access.ownerAgentId === agentId)
+      });
+    }
+    this.loadFollowUpEligibility(result);
   }
 
   closeInfo(): void {
     this.selectedClient.set(null);
+  }
+
+  openFollowUp(): void {
+    this.followUpError.set(null);
+    this.followUpPhone.set(this.chat()?.contactPhone || '');
+    this.followUpOpen.set(true);
+  }
+
+  private loadFollowUpEligibility(result: GlobalSearchResult): void {
+    const chat = this.chat();
+    const clientId = Number(result.clientData.id);
+    const documento = result.clientData.documento?.trim();
+    if (!chat?.id || !clientId || !documento) return;
+    this.checkingFollowUp.set(true);
+    this.management.getActiveSchedulesByDocumento(documento).pipe(finalize(() => this.checkingFollowUp.set(false))).subscribe({
+      next: schedules => {
+        const active = (schedules || []).find((schedule: any) => schedule.installments?.some((item: any) =>
+          item.status === 'PENDIENTE' || item.status === 'PARCIAL'));
+        const promiseId = Number(active?.managementId || active?.id);
+        if (!promiseId) return;
+        this.activePromiseId.set(promiseId);
+        this.whatsappApi.validatePromiseAssignment(chat.id!, { clientId, promiseId, clientDocument: documento }).subscribe({
+          next: validation => {
+            this.followUpEligible.set(validation.valid);
+            this.followUpError.set(validation.valid ? null : (validation.detail || 'La promesa no permite seguimiento.'));
+          },
+          error: () => this.followUpError.set('No se pudo validar la promesa para seguimiento.')
+        });
+      },
+      error: () => this.followUpError.set('No se pudieron consultar las promesas del cliente.')
+    });
+  }
+
+  createFollowUp(): void {
+    const result = this.selectedClient();
+    const chat = this.chat();
+    const promiseId = this.activePromiseId();
+    const clientId = Number(result?.clientData.id);
+    const documento = result?.clientData.documento?.trim();
+    const phone = this.followUpPhone().trim() || undefined;
+    if (!result || !chat?.id || !promiseId || !clientId || !documento) return;
+
+    this.savingFollowUp.set(true);
+    this.followUpError.set(null);
+    const registerPhone$ = phone
+      ? this.http.post(`${environment.apiUrl}/contacts/metodo-contacto`, {
+          documento,
+          valor: phone,
+          subtipo: 'telefono_referencia_1',
+          tenantId: result.tenantId,
+          carteraId: result.portfolioId,
+          subcarteraId: result.subPortfolioId
+        }).pipe(catchError(error => {
+          const detail = String(error?.error?.error || error?.error?.detail || '').toLowerCase();
+          return detail.includes('ya existe para este cliente') ? of(null) : throwError(() => error);
+        }))
+      : of(null);
+    registerPhone$.pipe(
+      switchMap(() => this.whatsappApi.createPromiseAssignment(chat.id!, { clientId, promiseId, clientDocument: documento, phone })),
+      finalize(() => this.savingFollowUp.set(false))
+    ).subscribe({
+      next: () => {
+        this.followUpActive.set(true);
+        this.followUpOpen.set(false);
+      },
+      error: (error) => this.followUpError.set(error?.error?.detail || error?.error?.error || 'No se pudo crear el enlace de seguimiento.')
+    });
+  }
+
+  private resetFollowUp(): void {
+    this.activePromiseId.set(null);
+    this.followUpEligible.set(false);
+    this.checkingFollowUp.set(false);
+    this.followUpOpen.set(false);
+    this.followUpActive.set(false);
+    this.followUpPhone.set('');
+    this.followUpError.set(null);
+  }
+
+  private loadAssignedClientOrSearch(chat: Chat, key: string | number | undefined): void {
+    if (!chat.id) {
+      this.searchClientByChatPhone(chat, key);
+      return;
+    }
+    this.whatsappApi.getPromiseAssignment(chat.id).subscribe({
+      next: assignment => {
+        if (!assignment?.clientDocument) {
+          this.searchClientByChatPhone(chat, key);
+          return;
+        }
+        this.acl.searchByDocument(assignment.clientDocument).subscribe({
+          next: results => {
+            const result = results[0];
+            if (result && this.lastChatKey === key) this.openInfo(result);
+            else if (!result) this.searchClientByChatPhone(chat, key);
+          },
+          error: () => this.searchClientByChatPhone(chat, key)
+        });
+      },
+      error: () => this.searchClientByChatPhone(chat, key)
+    });
+  }
+
+  private searchClientByChatPhone(chat: Chat, key: string | number | undefined): void {
+    const phone = this.acl.phoneKey(chat.contactPhone);
+    if (phone.length < 7) {
+      this.manualOpen.set(true);
+      return;
+    }
+    this.autoSearchByPhone(phone, key);
   }
 
   backToOptions(): void {
@@ -1057,6 +1216,7 @@ export class InfoClientWidgetComponent {
           const clean = this.clean(list);
           this.results.set(clean);
           this.manualOpen.set(clean.length === 0);
+          if (clean.length === 1) this.openInfo(clean[0]);
         },
         error: () => {
           if (this.lastChatKey !== key) return;

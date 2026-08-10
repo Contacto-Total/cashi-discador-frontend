@@ -1,21 +1,45 @@
 import { Component, Input, OnInit, computed, signal } from '@angular/core';
 import { DatePipe, formatDate } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { Chat, WhatsappAccount } from '../../../models';
 import { WhatsappApiService, WhatsappMessageStoreService } from '../../../services';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-whatsapp-chat-list-widget',
   standalone: true,
-  imports: [DatePipe, FormsModule],
+  imports: [DatePipe, FormsModule, RouterLink],
   template: `
     <aside class="flex h-full min-h-0 flex-col overflow-hidden border-r border-slate-200 bg-white text-slate-950">
       <header class="border-b border-slate-200 p-3">
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-600">WhatsApp</p>
-            <h2 class="mt-1 text-xl font-semibold">Conversaciones</h2>
           </div>
+          <div class="flex shrink-0 items-center gap-2">
+          @if (isAdmin) {
+            <a
+              routerLink="/whatsapp/dashboard"
+              class="grid size-9 place-items-center rounded-full border border-slate-300 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700"
+              title="Administrar instancias"
+              aria-label="Administrar instancias"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            </a>
+           }
+          <button
+            type="button"
+            class="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 text-slate-500 transition hover:border-emerald-500 hover:text-emerald-700"
+            [class.border-emerald-600]="hideClosedWindows()"
+            [class.bg-emerald-50]="hideClosedWindows()"
+            [class.text-emerald-700]="hideClosedWindows()"
+            (click)="toggleClosedWindows()"
+            [title]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida (+12 h)'"
+            [attr.aria-label]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida'"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v5l-4 2v-7z"/><path d="m4 4 16 16"/></svg>
+          </button>
           <button
             type="button"
             class="grid size-9 shrink-0 place-items-center rounded-full border border-slate-300 text-slate-600 transition hover:border-emerald-500 hover:text-emerald-700 disabled:opacity-50"
@@ -26,6 +50,7 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.animate-spin]="store.loadingChats()"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
           </button>
+          </div>
         </div>
 
          <label class="mt-3 block">
@@ -51,8 +76,8 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
                <option [ngValue]="account.id">{{ account.phoneNumber || account.instanciaId }} · {{ account.subcarteraName || ('Subcartera #' + account.subcarteraId) }}</option>
              }
            </select>
-           </label>
-           }
+            </label>
+            }
       </header>
 
        <section class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -70,7 +95,7 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
           </div>
         } @else {
           <div>
-            @for (chat of store.chats(); track trackChat(chat)) {
+            @for (chat of visibleChats(); track trackChat(chat)) {
               <button
                 type="button"
                 [class]="chatButtonClass(chat)"
@@ -89,7 +114,7 @@ import { WhatsappApiService, WhatsappMessageStoreService } from '../../../servic
                     </div>
                   }
                   @if (chat.blocked) {
-                    <span class="absolute -bottom-1 -right-1 rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">24h</span>
+                    <span class="absolute -bottom-1 -right-1 rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">12h</span>
                   }
                 </div>
 
@@ -148,27 +173,37 @@ export class ChatListWidgetComponent implements OnInit {
   @Input() includeHistorical = false;
   readonly query = signal('');
   readonly accountFilter = signal<number | undefined>(undefined);
+  readonly hideClosedWindows = signal(false);
   serviceAccounts: WhatsappAccount[] = [];
   readonly skeletonItems = [1, 2, 3, 4, 5];
   readonly selectedChat = computed(() => this.store.currentChat());
+  readonly visibleChats = computed(() => this.store.chats().filter(chat =>
+    !this.hideClosedWindows() || !this.isWindowClosed(chat)));
 
   private searchTimer?: ReturnType<typeof setTimeout>;
 
   constructor(
     readonly store: WhatsappMessageStoreService,
-    private readonly whatsappApi: WhatsappApiService
+    private readonly whatsappApi: WhatsappApiService,
+    private readonly auth: AuthService
   ) {}
+
+  get isAdmin(): boolean {
+    return this.auth.getCurrentUser()?.role === 'ADMIN';
+  }
 
   ngOnInit(): void {
     if (this.includeHistorical) {
       this.store.setAccountFilter(undefined, true);
-    } else if (!this.store.chats().length) {
-      this.store.loadChats();
+    } else {
+      // El store es singleton: al volver desde historial se debe reemplazar su
+      // contenido, aunque todavía conserve chats de una cuenta eliminada.
+      this.store.setAccountFilter(undefined, false);
     }
     this.whatsappApi.getWhatsappAccounts().subscribe({
        next: accounts => this.serviceAccounts = this.includeHistorical
          ? accounts
-         : accounts.filter(account => account.active === true)
+          : accounts.filter(account => account.active === true && account.currentAccount !== false)
     });
   }
 
@@ -183,6 +218,10 @@ export class ChatListWidgetComponent implements OnInit {
 
   reload(): void {
     this.store.loadChats(0, 30, this.query().trim() || undefined, this.accountFilter(), this.includeHistorical);
+  }
+
+  toggleClosedWindows(): void {
+    this.hideClosedWindows.update(value => !value);
   }
 
   filterByAccount(value: number | string | undefined): void {
@@ -233,6 +272,11 @@ export class ChatListWidgetComponent implements OnInit {
   preview(chat: Chat): string {
     if (chat.lastMsgText?.trim()) return chat.lastMsgText;
     return chat.lastMsgTs ? 'Mensaje multimedia' : 'Sin mensajes recientes';
+  }
+
+  private isWindowClosed(chat: Chat): boolean {
+    return chat.blocked === true
+      || (!!chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now());
   }
 
   serviceLabel(chat: Chat): string {
