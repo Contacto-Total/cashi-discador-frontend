@@ -466,44 +466,42 @@
 
       <div class="modal-body">
         <p class="ayuda">
-          Cada filtro acota a quién se llama, sobre una columna de la cartera. Sin
-          filtros entran todos los que cumplan los objetivos de la cola.
+          Marca los valores que quieres incluir. <strong>Un campo sin nada marcado no
+          filtra</strong>: entran todos. Los números son cuánta gente hay en cada valor
+          dentro de esta cartera.
         </p>
 
-        <div class="filtro-fila" *ngFor="let f of filtros; let i = index">
-          <input type="text" [(ngModel)]="f.fieldCode" placeholder="campo (p. ej. dias_mora)">
-          <select [(ngModel)]="f.dataType">
-            <option value="NUMERICO">Número</option>
-            <option value="FECHA">Fecha</option>
-            <option value="TEXTO">Texto</option>
-            <option value="BOOLEAN">Sí/No</option>
-          </select>
-          <ng-container *ngIf="f.dataType === 'NUMERICO'">
-            <input type="number" [(ngModel)]="f.minValue" placeholder="desde">
-            <input type="number" [(ngModel)]="f.maxValue" placeholder="hasta">
-          </ng-container>
-          <ng-container *ngIf="f.dataType === 'FECHA'">
-            <input type="date" [(ngModel)]="f.minDate">
-            <input type="date" [(ngModel)]="f.maxDate">
-          </ng-container>
-          <ng-container *ngIf="f.dataType === 'TEXTO' || f.dataType === 'BOOLEAN'">
-            <input type="text" [(ngModel)]="f.selectedValues" placeholder="valores separados por coma">
-          </ng-container>
-          <button class="btn-action-small btn-delete" (click)="quitarFiltro(i)" title="Quitar">
-            <lucide-angular name="trash-2" [size]="15"></lucide-angular>
-          </button>
+        <p class="muted" *ngIf="cargandoCampos">Leyendo los campos de la cartera…</p>
+        <p class="muted" *ngIf="!cargandoCampos && !campos.length">
+          Esta cartera no tiene campos con valores agrupables, así que no hay nada por
+          lo que segmentar aquí.
+        </p>
+
+        <div class="campo-filtro" *ngFor="let campo of campos">
+          <div class="campo-head">
+            <span class="campo-titulo">{{ campo.etiqueta }}</span>
+            <span class="campo-estado" *ngIf="marcadosDe(campo.codigo)">
+              {{ marcadosDe(campo.codigo) }} seleccionado(s)
+              <button class="btn-link" (click)="limpiarCampo(campo.codigo)">quitar</button>
+            </span>
+            <span class="campo-estado muted" *ngIf="!marcadosDe(campo.codigo)">entran todos</span>
+          </div>
+          <div class="campo-valores">
+            <label class="valor-chip" *ngFor="let v of campo.valores"
+                   [class.on]="estaMarcado(campo.codigo, v.valor)">
+              <input type="checkbox" [checked]="estaMarcado(campo.codigo, v.valor)"
+                     (change)="alternarValor(campo.codigo, v.valor)">
+              <span>{{ v.valor }}</span>
+              <b>{{ v.n }}</b>
+            </label>
+          </div>
         </div>
-
-        <p class="muted" *ngIf="!filtros.length">
-          Esta cola no tiene filtros: entran todos los que cumplan sus objetivos.
-        </p>
-
-        <button class="btn-secondary" (click)="nuevoFiltro()">
-          <lucide-angular name="plus-circle" [size]="16"></lucide-angular> Añadir filtro
-        </button>
       </div>
 
       <div class="modal-footer">
+        <span class="muted" style="margin-right:auto">
+          {{ camposFiltrando ? (camposFiltrando + ' campo(s) filtrando') : 'Sin filtros: entra toda la cartera' }}
+        </span>
         <button class="btn-cancel" (click)="cerrarFiltros()">Cancelar</button>
         <button class="btn-submit" (click)="guardarFiltros()">Guardar filtros</button>
       </div>

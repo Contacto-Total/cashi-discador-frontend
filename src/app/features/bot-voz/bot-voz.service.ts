@@ -267,6 +267,11 @@ export class BotVozService {
 
   // ---- Filtros de una cola ----
 
+  /** Por qué campos se puede segmentar esa cola, con valores reales y conteos. */
+  getCamposDeCola(idCola: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/colas/${idCola}/campos`);
+  }
+
   getFiltros(idCola: number): Observable<BotColaFiltro[]> {
     return this.http.get<BotColaFiltro[]>(`${this.apiUrl}/colas/${idCola}/filtros`);
   }

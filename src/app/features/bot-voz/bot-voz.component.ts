@@ -107,6 +107,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Cola cuyo detalle esta abierto (el boton del ojo). */
   detalleDe?: number;
   filtrosDe?: number;
+  /** Lo guardado, solo para saber qué venía marcado. Las condiciones se arman al
+   *  guardar desde `marcados`; ya no se editan fila a fila a mano. */
   filtros: BotColaFiltro[] = [];
 
   config?: BotConfig;
@@ -581,7 +583,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     }
     if (!this.dentroDeHorario(c)) {
       return { texto: 'Fuera de horario', clase: 'st-espera',
-               ayuda: 'Está encendida, pero fuera de su ventana. Sigue mañana sola.' };
+               ayuda: this.porQueFueraDeHorario(c) };
     }
     if (this.pendientesDe(c) === 0) {
       return { texto: 'Cola agotada', clase: 'st-espera',
@@ -590,17 +592,47 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return { texto: 'Discando', clase: 'st-discando', ayuda: 'Marcando ahora mismo.' };
   }
 
+  /** Por qué no puede marcar ahora. Sin esto, "fuera de horario" no dice si es la
+   *  hora o el día, que se arreglan distinto. */
+  private porQueFueraDeHorario(c: BotCola): string {
+    const ahora = new Date();
+    const dias = c.diasSemana || this.config?.diasSemana || '';
+    const hoy = ['D', 'L', 'M', 'X', 'J', 'V', 'S'][ahora.getDay()];
+    if (dias && !dias.toUpperCase().split(',').map((d) => d.trim()).includes(hoy)) {
+      return `Hoy no se marca: la ventana permitida es ${dias}. Vuelve el próximo día hábil.`;
+    }
+    const desde = (c.horaInicio || this.config?.horaInicio || '').slice(0, 5);
+    const hasta = (c.horaFin || this.config?.horaFin || '').slice(0, 5);
+    return `Fuera del horario ${desde}–${hasta}. Sigue sola cuando vuelva a abrirse.`;
+  }
+
   /** Filas de HOY de esa cola que todavía se pueden marcar. */
   pendientesDe(c: BotCola): number {
     return this.cola.filter((f) => f.idCola === c.id &&
       (f.estado === 'PENDIENTE' || f.estado === 'EN_LLAMADA')).length;
   }
 
+  /**
+   * ¿Puede marcar ahora mismo?
+   *
+   * Mira el horario de la cola Y el que hereda. Antes solo miraba el suyo, y una cola
+   * que lo tiene vacío —lo normal— nunca daba "fuera de horario": decía "Discando" un
+   * domingo a las ocho de la tarde sin marcar nada y sin explicar por qué.
+   */
   private dentroDeHorario(c: BotCola): boolean {
     const ahora = new Date();
     const hhmm = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
-    if (c.horaInicio && hhmm < c.horaInicio.slice(0, 5)) return false;
-    if (c.horaFin && hhmm > c.horaFin.slice(0, 5)) return false;
+    const desde = (c.horaInicio || this.config?.horaInicio || '').slice(0, 5);
+    const hasta = (c.horaFin || this.config?.horaFin || '').slice(0, 5);
+    if (desde && hhmm < desde) return false;
+    if (hasta && hhmm > hasta) return false;
+    // Los días también se heredan. Es lo que faltaba: el tope legal es de lunes a
+    // viernes y el fin de semana no se marca.
+    const dias = c.diasSemana || this.config?.diasSemana || '';
+    if (dias) {
+      const hoy = ['D', 'L', 'M', 'X', 'J', 'V', 'S'][ahora.getDay()];
+      if (!dias.toUpperCase().split(',').map((d) => d.trim()).includes(hoy)) return false;
+    }
     return true;
   }
 
@@ -769,14 +801,58 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Filtros de una cola -----
 
+  /** Los campos por los que se puede segmentar, con sus valores. */
+  campos: any[] = [];
+  cargandoCampos = false;
+  /** Valores marcados, por campo. Es lo que se convierte en filtros al guardar. */
+  marcados: Record<string, Set<string>> = {};
+
   editarFiltros(c: BotCola): void {
     if (!c.id) return;
     this.filtrosDe = c.id;
     this.filtros = [];
+    this.campos = [];
+    this.marcados = {};
+    this.cargandoCampos = true;
+
+    this.svc.getCamposDeCola(c.id).subscribe({
+      next: (cs) => { this.campos = cs || []; this.cargandoCampos = false; },
+      error: () => { this.cargandoCampos = false; this.flash('No se pudieron cargar los campos', true); },
+    });
+    // Lo ya guardado se pinta como marcado: editar un filtro tiene que partir de lo
+    // que hay, no de cero.
     this.svc.getFiltros(c.id).subscribe({
-      next: (f) => (this.filtros = f),
+      next: (f) => {
+        this.filtros = f;
+        for (const x of f) {
+          if (!x.selectedValues) continue;
+          this.marcados[x.fieldCode] = new Set(x.selectedValues.split(',').map((v) => v.trim()));
+        }
+      },
       error: () => this.flash('No se pudieron cargar los filtros', true),
     });
+  }
+
+  estaMarcado(campo: string, valor: string): boolean {
+    return this.marcados[campo]?.has(valor) ?? false;
+  }
+
+  alternarValor(campo: string, valor: string): void {
+    const set = this.marcados[campo] ?? new Set<string>();
+    if (set.has(valor)) set.delete(valor); else set.add(valor);
+    if (set.size) this.marcados[campo] = set; else delete this.marcados[campo];
+  }
+
+  /** Cuántos marcados lleva un campo. Nada marcado = ese campo no filtra. */
+  marcadosDe(campo: string): number {
+    return this.marcados[campo]?.size ?? 0;
+  }
+
+  limpiarCampo(campo: string): void { delete this.marcados[campo]; }
+
+  /** Cuántas condiciones acabarían aplicándose. */
+  get camposFiltrando(): number {
+    return Object.keys(this.marcados).length;
   }
 
   /** Cerrar descarta lo no guardado, que es lo que espera un Cancelar. */
@@ -785,15 +861,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.filtros = [];
   }
 
-  nuevoFiltro(): void {
-    this.filtros.push({ fieldCode: '', dataType: 'NUMERICO' });
-  }
-
-  quitarFiltro(i: number): void { this.filtros.splice(i, 1); }
 
   guardarFiltros(): void {
     if (!this.filtrosDe) return;
-    this.svc.guardarFiltros(this.filtrosDe, this.filtros).subscribe({
+    // Lo marcado se convierte en filtros de tipo TEXTO con sus valores. Un campo sin
+    // nada marcado no genera filtro: no filtrar es distinto de filtrar por nada.
+    const filtros = Object.entries(this.marcados)
+      .filter(([, vals]) => vals.size > 0)
+      .map(([fieldCode, vals]) => ({
+        fieldCode, dataType: 'TEXTO', selectedValues: [...vals].join(','),
+      }));
+    this.svc.guardarFiltros(this.filtrosDe, filtros).subscribe({
       next: () => { this.cerrarFiltros(); this.cargarColas(); this.flash('Filtros guardados'); },
       error: () => this.flash('No se pudieron guardar los filtros', true),
     });

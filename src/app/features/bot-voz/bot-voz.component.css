@@ -776,3 +776,36 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   background: var(--card-bg, #fff); color: inherit;
 }
 .jerarquia-campos select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+
+/* Un campo por el que segmentar, con sus valores como casillas.
+   Se elige de lo que existe en la cartera; antes había que escribir el nombre de la
+   columna a ciegas y un nombre mal puesto se ignoraba en silencio. */
+.campo-filtro {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+.campo-filtro:last-child { border-bottom: none; }
+
+.campo-head {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.campo-titulo { font-size: 14px; font-weight: 600; color: var(--text-primary, #1e293b); }
+.campo-estado { font-size: 12px; color: #16a34a; display: flex; align-items: center; gap: 6px; }
+.campo-estado.muted { color: var(--text-secondary, #94a3b8); }
+.campo-estado .btn-link { font-size: 12px; padding: 0; }
+
+.campo-valores { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* La casilla y su conteo en una sola pastilla: el número es lo que dice si merece la
+   pena marcarla, así que va al lado y no en otra columna. */
+.valor-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px; cursor: pointer;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 999px;
+  background: var(--card-bg, #fff); font-size: 13px;
+}
+.valor-chip:hover { background: var(--fondo-suave, #f8fafc); }
+.valor-chip.on { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.45); color: #1d4ed8; }
+.valor-chip input { width: 15px; height: 15px; cursor: pointer; }
+.valor-chip b { font-variant-numeric: tabular-nums; opacity: .7; }
+.valor-chip.on b { opacity: 1; }
