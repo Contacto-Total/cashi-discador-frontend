@@ -15,13 +15,13 @@
         <span class="stat-label">{{ colas.length === 1 ? 'Cola' : 'Colas' }}</span>
       </div>
       <button class="btn-header" [class.on]="vista === 'ritmo'" (click)="abrir('ritmo')">
-        <lucide-angular name="gauge" [size]="17"></lucide-angular> Ritmo
+        <lucide-angular name="sliders" [size]="17"></lucide-angular> Ritmo
       </button>
       <button class="btn-header" [class.on]="vista === 'tonos'" (click)="abrir('tonos')">
         <lucide-angular name="mic" [size]="17"></lucide-angular> Voces y tonos
       </button>
       <button class="btn-header" [class.on]="vista === 'reglas'" (click)="abrir('reglas')">
-        <lucide-angular name="scale" [size]="17"></lucide-angular> Reglas
+        <lucide-angular name="clipboard-list" [size]="17"></lucide-angular> Reglas
       </button>
       <button class="btn-header" [class.on]="vista === 'llamadas'" (click)="abrir('llamadas')">
         <lucide-angular name="phone-call" [size]="17"></lucide-angular> Llamadas
@@ -211,6 +211,14 @@
           </span>
         </div>
 
+        <h4 *ngIf="descartesDe(c).length">Quiénes no entraron, y por qué</h4>
+        <div class="card-meta" *ngIf="descartesDe(c).length" style="margin-bottom: 18px;">
+          <span class="meta-tag" *ngFor="let d of descartesDe(c)"
+                [class.meta-alerta]="!d.ok" [title]="'regla ' + d.regla">
+            {{ d.titulo }}: <b>{{ d.n }}</b>
+          </span>
+        </div>
+
         <h4>Clientes en la cola de hoy</h4>
         <p class="muted" *ngIf="!filasDe(c).length">
           Todavía no ha armado ninguna. Dale al botón de recargar de la tarjeta.
@@ -219,7 +227,7 @@
           <table class="tabla">
             <thead>
               <tr><th>Cliente</th><th>Por qué se le llama</th><th>Teléfono</th>
-                  <th>Estado</th><th>Intentos</th></tr>
+                  <th>Situación</th><th>Veces marcado</th></tr>
             </thead>
             <tbody>
               <tr *ngFor="let f of filasDe(c)">
@@ -229,7 +237,7 @@
                 </td>
                 <td>{{ motivoLlamada(f.tipoObjetivo) }}</td>
                 <td>{{ f.telefono }}</td>
-                <td><span class="badge">{{ f.estado }}</span></td>
+                <td><span class="badge">{{ situacionFila(f.estado) }}</span></td>
                 <td>{{ f.intentos }}</td>
               </tr>
             </tbody>
@@ -425,43 +433,64 @@
     </div>
   </section>
 
-  <!-- ===== FILTROS DE UNA COLA ===== -->
-  <section *ngIf="vista === 'colas' && filtrosDe" class="panel">
-    <h3>Filtros de la cola</h3>
-    <p class="ayuda">
-      Cada filtro es una condición sobre una columna de la tabla de esa subcartera, igual
-      que en una campaña. Sin filtros entra toda la subcartera. El <em>código de campo</em>
-      se traduce al nombre real de la columna; si no existe en esa tabla, ese filtro se
-      ignora y queda avisado en el log.
-    </p>
+  <!-- ===== FILTROS DE UNA COLA =====
+       En modal, como el alta: antes era un panel suelto debajo de la lista, sin forma
+       de cerrarlo ni de cancelar. Un formulario del que no se puede salir obliga a
+       recargar la pagina para desistir. -->
+  <div class="modal-overlay" *ngIf="filtrosDe" (click)="cerrarFiltros()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Filtros de la cola</h3>
+        <button class="btn-close" (click)="cerrarFiltros()">
+          <lucide-angular name="x" [size]="18"></lucide-angular>
+        </button>
+      </div>
 
-    <div class="filtro-fila" *ngFor="let f of filtros; let i = index">
-      <input type="text" [(ngModel)]="f.fieldCode" placeholder="código de campo (ej. dias_mora)">
-      <select [(ngModel)]="f.dataType">
-        <option value="NUMERICO">Número</option>
-        <option value="FECHA">Fecha</option>
-        <option value="TEXTO">Texto</option>
-        <option value="BOOLEAN">Sí/No</option>
-      </select>
-      <ng-container *ngIf="f.dataType === 'NUMERICO'">
-        <input type="number" [(ngModel)]="f.minValue" placeholder="desde">
-        <input type="number" [(ngModel)]="f.maxValue" placeholder="hasta">
-      </ng-container>
-      <ng-container *ngIf="f.dataType === 'FECHA'">
-        <input type="date" [(ngModel)]="f.minDate">
-        <input type="date" [(ngModel)]="f.maxDate">
-      </ng-container>
-      <ng-container *ngIf="f.dataType === 'TEXTO' || f.dataType === 'BOOLEAN'">
-        <input type="text" [(ngModel)]="f.selectedValues" placeholder="valores separados por coma">
-      </ng-container>
-      <button class="btn-secondary" (click)="quitarFiltro(i)">Quitar</button>
-    </div>
+      <div class="modal-body">
+        <p class="ayuda">
+          Cada filtro acota a quién se llama, sobre una columna de la cartera. Sin
+          filtros entran todos los que cumplan los objetivos de la cola.
+        </p>
 
-    <div class="acciones">
-      <button class="btn-secondary" (click)="nuevoFiltro()">Añadir filtro</button>
-      <button class="btn-primary" (click)="guardarFiltros()">Guardar filtros</button>
+        <div class="filtro-fila" *ngFor="let f of filtros; let i = index">
+          <input type="text" [(ngModel)]="f.fieldCode" placeholder="campo (p. ej. dias_mora)">
+          <select [(ngModel)]="f.dataType">
+            <option value="NUMERICO">Número</option>
+            <option value="FECHA">Fecha</option>
+            <option value="TEXTO">Texto</option>
+            <option value="BOOLEAN">Sí/No</option>
+          </select>
+          <ng-container *ngIf="f.dataType === 'NUMERICO'">
+            <input type="number" [(ngModel)]="f.minValue" placeholder="desde">
+            <input type="number" [(ngModel)]="f.maxValue" placeholder="hasta">
+          </ng-container>
+          <ng-container *ngIf="f.dataType === 'FECHA'">
+            <input type="date" [(ngModel)]="f.minDate">
+            <input type="date" [(ngModel)]="f.maxDate">
+          </ng-container>
+          <ng-container *ngIf="f.dataType === 'TEXTO' || f.dataType === 'BOOLEAN'">
+            <input type="text" [(ngModel)]="f.selectedValues" placeholder="valores separados por coma">
+          </ng-container>
+          <button class="btn-action-small btn-delete" (click)="quitarFiltro(i)" title="Quitar">
+            <lucide-angular name="trash-2" [size]="15"></lucide-angular>
+          </button>
+        </div>
+
+        <p class="muted" *ngIf="!filtros.length">
+          Esta cola no tiene filtros: entran todos los que cumplan sus objetivos.
+        </p>
+
+        <button class="btn-secondary" (click)="nuevoFiltro()">
+          <lucide-angular name="plus-circle" [size]="16"></lucide-angular> Añadir filtro
+        </button>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="cerrarFiltros()">Cancelar</button>
+        <button class="btn-submit" (click)="guardarFiltros()">Guardar filtros</button>
+      </div>
     </div>
-  </section>
+  </div>
 
   <!-- ===== VOCES Y TONOS =====
        Se perdio al reescribir Colas y hay que dejarla escrita entera, no parcheada:
@@ -553,9 +582,10 @@
       </p>
     </div>
 
-    <button class="btn-create" *ngIf="puedeTecnico" (click)="nuevoTono()">
-      <lucide-angular name="plus-circle" [size]="18"></lucide-angular> Añadir tono
-    </button>
+    <!-- "Añadir tono" se quito: creaba una fila vacia sin forma de cancelarla, y las
+         voces no se dan de alta desde aqui — vienen del catalogo contratado en
+         ElevenLabs y se registran en el codigo. Lo que se ajusta es como habla cada
+         tono, no cuantos hay. -->
   </section>
 
   <!-- ===== REGLAS DE NEGOCIACION =====
@@ -664,127 +694,9 @@
     </div>
   </section>
 
-  <!-- ===== LO ENCOLADO HOY =====
-       Vive dentro de "Colas" y no en una pestaña aparte: es la misma cola vista por
-       dentro. Dos pestañas para lo mismo obligaban a adivinar cual mirar. -->
-  <section *ngIf="vista === 'colas'">
-    <div class="cola-bar">
-      <!-- El boton global "Armar cola del dia" se elimino: no sabia a que subcartera
-           llamaba, asi que mezclaba todas. Cada cola se arma desde su propia tarjeta. -->
-      <div class="chips">
-        <span class="chip">Total: {{ cola.length }}</span>
-        <span class="chip pend">Pendiente: {{ contar('PENDIENTE') }}</span>
-        <span class="chip done">Completada: {{ contar('COMPLETADA') }}</span>
-        <span class="chip disc">Descartada: {{ contar('DESCARTADA') }}</span>
-      </div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Cliente</th><th>Cuota</th><th>Vence</th><th>Teléfono</th>
-              <th>Perfil</th><th>Estado</th><th>Intentos</th><th>Resultado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let c of colaPagina">
-              <td>
-                <div class="celda-principal">{{ c.nombreCliente || ('Cliente ' + c.idCliente) }}</div>
-                <div class="celda-sub">{{ c.documento || '—' }}</div>
-              </td>
-              <td>
-                <div class="celda-principal">{{ c.montoCuota != null ? ('S/ ' + c.montoCuota) : '—' }}</div>
-                <div class="celda-sub" *ngIf="c.numeroCuota">cuota {{ c.numeroCuota }}</div>
-              </td>
-              <td>
-                <div class="celda-principal">{{ c.fechaPromesa ? (c.fechaPromesa | date:'dd/MM') : '—' }}</div>
-                <div class="celda-sub" *ngIf="c.estadoCuota">{{ c.estadoCuota }}</div>
-              </td>
-              <td>{{ c.telefono }}</td>
-              <td>{{ nombrePerfil(c.idPerfil) }}</td>
-              <td><span class="badge" [ngClass]="c.estado.toLowerCase()">{{ c.estado }}</span></td>
-              <td>
-                {{ c.intentos }}
-                <div class="celda-sub" *ngIf="c.proximoIntentoAt && c.estado === 'PENDIENTE'">
-                  reintenta {{ c.proximoIntentoAt | date:'HH:mm' }}
-                </div>
-              </td>
-              <td>{{ c.resultado || '—' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="empty-state error" *ngIf="errorCola">
-          No se pudo cargar la cola. Hubo un error en el servidor — la cola puede tener filas aunque aquí no se vean.
-        </div>
-        <div class="empty-state" *ngIf="!errorCola && !loadingCola && cola.length === 0">La cola está vacía. Arma alguna de las colas de arriba.</div>
-      </div>
-        <div class="paginador" *ngIf="totalPaginas(cola) > 1">
-          <button class="btn-link" [disabled]="paginaCola === 1" (click)="irA('cola', paginaCola - 1)">
-            <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
-          </button>
-          <span>Página {{ paginaCola }} de {{ totalPaginas(cola) }} · {{ cola.length }} filas</span>
-          <button class="btn-link" [disabled]="paginaCola === totalPaginas(cola)" (click)="irA('cola', paginaCola + 1)">
-            <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
-          </button>
-        </div>
-    </div>
-
-    <div class="table-card descartes-card" *ngIf="descartes.length">
-      <div class="descartes-head">
-        <div>
-          <h4>No entraron en la cola</h4>
-          <p class="descartes-sub">
-            {{ descartes.length }} cuota{{ descartes.length === 1 ? '' : 's' }} que el sistema
-            apartó al armar la cola de hoy, y por qué.
-          </p>
-        </div>
-        <div class="resumen-reglas">
-          <span class="pill" *ngFor="let r of descartesPorRegla" [class.pill-alerta]="!r.ok"
-                [title]="'regla ' + r.regla">
-            {{ r.titulo }} <b>{{ r.n }}</b>
-          </span>
-        </div>
-      </div>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Motivo</th><th>Cuota</th><th>Cliente</th><th>Por qué se apartó</th></tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let d of descartesPagina">
-              <td>
-                <span class="badge" [class.badge-alerta]="!reglaEsNormal(d.regla)">
-                  {{ reglaTitulo(d.regla) }}
-                </span>
-                <div class="celda-sub">regla {{ d.regla }}</div>
-              </td>
-              <td>{{ d.idCuota != null ? ('#' + d.idCuota) : '—' }}</td>
-              <td>{{ d.idCliente != null ? ('#' + d.idCliente) : '—' }}</td>
-              <td>
-                <div class="celda-principal porque">{{ reglaPorque(d) }}</div>
-                <div class="celda-sub" *ngIf="d.detalle">{{ d.detalle }}</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="paginador" *ngIf="totalPaginas(descartes) > 1">
-        <button class="btn-link" [disabled]="paginaDescartes === 1"
-                (click)="irA('descartes', paginaDescartes - 1)">
-          <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
-        </button>
-        <span>Página {{ paginaDescartes }} de {{ totalPaginas(descartes) }} · {{ descartes.length }} filas</span>
-        <button class="btn-link" [disabled]="paginaDescartes === totalPaginas(descartes)"
-                (click)="irA('descartes', paginaDescartes + 1)">
-          <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
-        </button>
-      </div>
-    </div>
-  </section>
+  <!-- La tabla suelta de "lo encolado hoy" se elimino: enseñaba exactamente lo mismo
+       que el panel del ojo, una debajo de otra, y ademas mezclaba las filas de todas
+       las colas. Cada cola enseña las suyas en su detalle, que es donde se buscan. -->
 
   <!-- ===== LLAMADAS ===== -->
   <section *ngIf="vista === 'llamadas'">

@@ -733,3 +733,7 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border-radius: 7px; font-size: 13px; font-family: inherit;
 }
 .obj-sub input::placeholder { font-style: italic; color: #9ca3af; }
+
+/* Un descarte que no es rutina —blacklist, sin teléfono— pintado distinto: son los
+   que explican por qué la cola salió más corta de lo que se esperaba. */
+.meta-tag.meta-alerta { background: rgba(245,158,11,.12); color: #b45309; }

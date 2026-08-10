@@ -234,14 +234,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return filas.slice(desde, desde + this.TAM_PAGINA);
   }
 
-  get colaPagina(): BotContacto[] {
-    return this.pagina(this.cola, this.paginaCola, (n) => (this.paginaCola = n));
-  }
   get sesionesPagina(): BotSesion[] {
     return this.pagina(this.sesiones, this.paginaSesiones, (n) => (this.paginaSesiones = n));
-  }
-  get descartesPagina(): any[] {
-    return this.pagina(this.descartes, this.paginaDescartes, (n) => (this.paginaDescartes = n));
   }
   totalPaginas(filas: unknown[]): number {
     return Math.max(1, Math.ceil(filas.length / this.TAM_PAGINA));
@@ -285,18 +279,25 @@ export class BotVozComponent implements OnInit, OnDestroy {
   reglaTitulo(regla: string): string {
     return this.REGLAS[regla]?.titulo ?? regla;
   }
-  reglaPorque(d: any): string {
-    return this.REGLAS[d?.regla]?.porque ?? (d?.detalle || 'Sin detalle registrado.');
-  }
   /** Falso = hay algo que revisar (datos malos), no el sistema filtrando bien. */
   reglaEsNormal(regla: string): boolean {
     return this.REGLAS[regla]?.ok ?? true;
   }
 
   /** Resumen por regla, para ver de un vistazo si domina un problema real. */
-  get descartesPorRegla(): { regla: string; titulo: string; n: number; ok: boolean }[] {
+  /**
+   * Los descartes de UNA cola, agrupados por regla.
+   *
+   * Es la única respuesta a "¿por qué no le llamó a este cliente?". Antes se pintaban
+   * los de todas las colas juntos, debajo de la lista; ahora cuelgan de la cola que
+   * los generó, que es donde se buscan.
+   */
+  descartesDe(c: BotCola): { regla: string; titulo: string; n: number; ok: boolean }[] {
     const cuenta = new Map<string, number>();
-    for (const d of this.descartes) cuenta.set(d.regla, (cuenta.get(d.regla) ?? 0) + 1);
+    for (const d of this.descartes) {
+      if (d.idCola !== c.id) continue;
+      cuenta.set(d.regla, (cuenta.get(d.regla) ?? 0) + 1);
+    }
     return [...cuenta.entries()]
       .map(([regla, n]) => ({ regla, n, titulo: this.reglaTitulo(regla), ok: this.reglaEsNormal(regla) }))
       .sort((a, b) => b.n - a.n);
@@ -595,6 +596,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  /** El estado de la fila, en castellano. "EN_LLAMADA" no es una palabra. */
+  situacionFila(estado?: string): string {
+    switch (estado) {
+      case 'PENDIENTE':  return 'Por marcar';
+      case 'EN_LLAMADA': return 'Llamando ahora';
+      case 'COMPLETADA': return 'Ya se llamó';
+      case 'DESCARTADA': return 'Descartada';
+      default:           return estado || '—';
+    }
+  }
+
   /** Por qué está ese cliente en la cola, dicho para una persona. */
   motivoLlamada(objetivo?: string): string {
     switch (objetivo) {
@@ -607,7 +619,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   verDetalle(c: BotCola): void {
     this.detalleDe = this.detalleDe === c.id ? undefined : c.id;
-    if (this.detalleDe) this.cargarCola();
+    if (this.detalleDe) this.cargarCola();   // trae también los descartes
   }
 
   /** Lo encolado hoy por ESA cola. */
@@ -665,13 +677,18 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   editarFiltros(c: BotCola): void {
     if (!c.id) return;
-    this.filtrosDe = this.filtrosDe === c.id ? undefined : c.id;
-    if (this.filtrosDe) {
-      this.svc.getFiltros(c.id).subscribe({
-        next: (f) => (this.filtros = f),
-        error: () => this.flash('No se pudieron cargar los filtros', true),
-      });
-    }
+    this.filtrosDe = c.id;
+    this.filtros = [];
+    this.svc.getFiltros(c.id).subscribe({
+      next: (f) => (this.filtros = f),
+      error: () => this.flash('No se pudieron cargar los filtros', true),
+    });
+  }
+
+  /** Cerrar descarta lo no guardado, que es lo que espera un Cancelar. */
+  cerrarFiltros(): void {
+    this.filtrosDe = undefined;
+    this.filtros = [];
   }
 
   nuevoFiltro(): void {
@@ -683,21 +700,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   guardarFiltros(): void {
     if (!this.filtrosDe) return;
     this.svc.guardarFiltros(this.filtrosDe, this.filtros).subscribe({
-      next: (f) => { this.filtros = f; this.flash('Filtros guardados'); },
+      next: () => { this.cerrarFiltros(); this.cargarColas(); this.flash('Filtros guardados'); },
       error: () => this.flash('No se pudieron guardar los filtros', true),
     });
   }
 
   // ----- Tonos -----
 
-  nuevoTono(): void {
-    this.tonos.push({
-      nombre: 'Nuevo tono', nombreBot: 'Clara', generoVoz: 'F',
-      voiceId: 'saqk76H0L3GCnuHtLDw6', vozEtiqueta: 'Karla',
-      ttsStability: 0.7, ttsStyle: 0.2, ttsSimilarityBoost: 0.75, ttsSpeed: 1.1,
-      activo: true,
-    });
-  }
 
   guardarTono(t: BotTono): void {
     const obs = t.id ? this.svc.actualizarTono(t.id, t) : this.svc.crearTono(t);
@@ -830,9 +839,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.configGuardada = JSON.stringify(c);
   }
 
-  nombrePerfil(id?: number): string {
-    return this.perfiles.find((p) => p.id === id)?.nombre ?? '—';
-  }
 
   // ----- Perfiles -----
   cargarPerfiles(): void {
