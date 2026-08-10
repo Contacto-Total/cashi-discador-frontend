@@ -110,8 +110,8 @@ export class WhatsappApiService {
     return this.http.post<PromiseEngagementValidationResponse>(`${this.apiBase}/chats/${conversationId}/promise-assignment/validate`, request);
   }
 
-  getPromiseAssignment(conversationId: number): Observable<PromiseChatAssignment> {
-    return this.http.get<PromiseChatAssignment>(`${this.apiBase}/chats/${conversationId}/promise-assignment`);
+  getPromiseAssignment(conversationId: number): Observable<PromiseChatAssignment | null> {
+    return this.http.get<PromiseChatAssignment | null>(`${this.apiBase}/chats/${conversationId}/promise-assignment`);
   }
 
   joinViewers(conversationId: number): Observable<ViewerResponse> {

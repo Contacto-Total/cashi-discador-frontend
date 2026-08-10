@@ -185,6 +185,11 @@ const PROMISE_TIPIFICATION_ID = 5;
                 >
                   <span class="min-w-0 flex-1">Dar seguimiento a promesa</span>
                 </button>
+                @if (checkingFollowUp()) {
+                  <p class="text-xs text-slate-500">Validando promesa activa…</p>
+                } @else if (followUpError()) {
+                  <p class="text-xs text-amber-700">{{ followUpError() }}</p>
+                }
               }
              </div>
             } @else {
@@ -569,7 +574,7 @@ export class InfoClientWidgetComponent {
     }
     this.whatsappApi.getPromiseAssignment(chat.id).subscribe({
       next: assignment => {
-        if (!assignment.clientDocument) {
+        if (!assignment?.clientDocument) {
           this.searchClientByChatPhone(chat, key);
           return;
         }
@@ -1211,6 +1216,7 @@ export class InfoClientWidgetComponent {
           const clean = this.clean(list);
           this.results.set(clean);
           this.manualOpen.set(clean.length === 0);
+          if (clean.length === 1) this.openInfo(clean[0]);
         },
         error: () => {
           if (this.lastChatKey !== key) return;
