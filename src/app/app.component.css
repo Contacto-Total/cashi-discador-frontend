@@ -94,20 +94,25 @@ input[type="datetime-local"]:lang(es) {
 }
 
 /* Logo */
+/* Alto fijo y no padding: asi el centro del texto cae siempre en el mismo punto y
+   se puede cuadrar con la cabecera de la pagina. Con padding, el alto dependia del
+   icono y cambiarlo descuadraba las dos. 72px de alto -> texto centrado a 36px, que
+   es donde queda tambien el titulo de la pagina. */
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px 16px;
+  height: 72px;
+  padding: 0 16px;
   margin-bottom: 8px;
   border-bottom: 1px solid #1e293b;
 }
 
 .logo-icon {
   background-color: #10B981;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;

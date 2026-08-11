@@ -29,6 +29,8 @@ export interface DynamicClient {
  * Resultado de búsqueda global con contexto
  */
 export interface GlobalSearchResult {
+  /** ID canónico de cashi_db.clientes, distinto al ID de la tabla dinámica. */
+  clientId: number;
   tenantId: number;
   portfolioId: number;
   subPortfolioId: number;

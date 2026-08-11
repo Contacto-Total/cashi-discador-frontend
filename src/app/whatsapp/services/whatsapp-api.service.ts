@@ -12,7 +12,13 @@ import {
   SendMessageResponse,
   ViewerResponse,
   EngagementStatus,
-  WhatsappAccount
+  SendAccessStatus,
+  CreatePromiseChatAssignmentRequest,
+    PromiseEngagementValidationResponse,
+    PromiseChatAssignment,
+    WhatsappAccount,
+    Agendamiento,
+    CreateAgendamientoRequest
 } from '../models';
 
 @Injectable({ providedIn: 'root' })
@@ -92,6 +98,30 @@ export class WhatsappApiService {
 
   getEngagement(conversationId: number): Observable<EngagementStatus> {
     return this.http.get<EngagementStatus>(`${this.apiBase}/chats/${conversationId}/engagement`);
+  }
+
+  getSendAccess(conversationId: number): Observable<SendAccessStatus> {
+    return this.http.get<SendAccessStatus>(`${this.apiBase}/chats/${conversationId}/send-access`);
+  }
+
+  createPromiseAssignment(conversationId: number, request: CreatePromiseChatAssignmentRequest): Observable<void> {
+    return this.http.post<void>(`${this.apiBase}/chats/${conversationId}/promise-assignment`, request);
+  }
+
+  validatePromiseAssignment(conversationId: number, request: CreatePromiseChatAssignmentRequest): Observable<PromiseEngagementValidationResponse> {
+    return this.http.post<PromiseEngagementValidationResponse>(`${this.apiBase}/chats/${conversationId}/promise-assignment/validate`, request);
+  }
+
+  getPromiseAssignment(conversationId: number): Observable<PromiseChatAssignment | null> {
+    return this.http.get<PromiseChatAssignment | null>(`${this.apiBase}/chats/${conversationId}/promise-assignment`);
+  }
+
+  getAgendamiento(conversationId: number): Observable<Agendamiento> {
+    return this.http.get<Agendamiento>(`${this.apiBase}/chats/${conversationId}/agendamiento`);
+  }
+
+  createAgendamiento(conversationId: number, request: CreateAgendamientoRequest): Observable<Agendamiento> {
+    return this.http.post<Agendamiento>(`${this.apiBase}/chats/${conversationId}/agendamiento`, request);
   }
 
   joinViewers(conversationId: number): Observable<ViewerResponse> {

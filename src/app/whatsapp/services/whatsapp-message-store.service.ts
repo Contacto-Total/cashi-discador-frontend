@@ -575,12 +575,18 @@ export class WhatsappMessageStoreService {
   }
 
   private getSendErrorMessage(error: unknown): string {
-    const response = error as { status?: number; error?: { error?: string; detail?: string; message?: string } };
+    const response = error as { status?: number; error?: { error?: string; reason?: string; detail?: string; message?: string } };
     if (response.status === 409 && response.error?.error === 'CHAT_BLOCKED') {
       return '24 h expirado.';
     }
     if (response.status === 409 && response.error?.error === 'CHAT_ENGAGED') {
       return response.error.detail || 'Este chat está enlazado con otro agente.';
+    }
+    if (response.status === 409 && response.error?.error === 'OPERATIONAL_DAY_CLOSED') {
+      return response.error.detail || 'El día operativo terminó.';
+    }
+    if (response.status === 409 && response.error?.reason) {
+      return response.error.detail || 'No puedes enviar mensajes en este chat.';
     }
     return response.error?.message || 'No se pudo enviar el mensaje.';
   }

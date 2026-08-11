@@ -184,6 +184,66 @@ export interface EngagementStatus {
   expiresAt?: string;
   remainingSeconds: number;
   locked: boolean;
+  operationalDayOpen: boolean;
+}
+
+export interface Agendamiento {
+  conversationId: number;
+  accountId: number;
+  chatJid: string;
+  clientId: number;
+  clientDocument?: string;
+  clientName?: string;
+  phone?: string;
+  carteraId?: number;
+  carteraName?: string;
+  subcarteraId?: number;
+  subcarteraName?: string;
+  scheduledByAgentId: string;
+}
+
+export interface CreateAgendamientoRequest {
+  clientId: number;
+  clientDocument: string;
+  phone?: string;
+}
+
+export interface SendAccessStatus {
+  conversationId: number;
+  allowed: boolean;
+  reason: string;
+  detail?: string;
+  ownerAgentId?: string;
+  ownerType?: 'DAILY' | 'PROMISE';
+  ownerExpiresAt?: string;
+  windowExpiresAt?: string;
+  operationalDayOpen: boolean;
+}
+
+export interface CreatePromiseChatAssignmentRequest {
+  clientId: number;
+  promiseId: number;
+  clientDocument: string;
+  phone?: string;
+}
+
+export interface PromiseChatAssignment {
+  conversationId: number;
+  agentId: string;
+  clientId: number;
+  clientDocument: string;
+  promiseId: number;
+  status: 'ACTIVE' | 'RELEASED' | 'EXPIRED' | 'PAID' | 'CANCELLED';
+}
+
+export interface PromiseEngagementValidationResponse {
+  valid: boolean;
+  clientBelongsToScope: boolean;
+  phoneBelongsToClient: boolean;
+  promiseBelongsToClient: boolean;
+  engagementAllowed: boolean;
+  promiseStatus: string;
+  detail?: string;
 }
 
 export interface WhatsappSession {
