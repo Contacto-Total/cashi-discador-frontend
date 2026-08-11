@@ -68,12 +68,12 @@
 .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; font-weight: 600; }
 
 /* Cards */
-.control-card, .form-card, .perfil-card {
+.control-card, .form-card, .ritmo-card {
   background: var(--card-bg, white); border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
 }
 .control-card { display: flex; justify-content: space-between; align-items: center; }
-.control-card h3, .perfil-head h3 { margin: 0 0 0.25rem; color: var(--text-primary, #1e293b); font-size: 1rem; font-weight: 600; }
+.control-card h3, .ritmo-head h3 { margin: 0 0 0.25rem; color: var(--text-primary, #1e293b); font-size: 1rem; font-weight: 600; }
 .muted { color: var(--text-secondary, #64748b); font-size: 0.8rem; }
 .control-buttons { display: flex; gap: 0.75rem; }
 
@@ -106,7 +106,7 @@
 .form-group input:disabled, .form-group select:disabled { opacity: 0.5; cursor: not-allowed; }
 .checkbox-group { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-primary, #1e293b); }
 
-.perfil-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+.ritmo-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
 
 /* Cola */
 .cola-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
@@ -809,3 +809,92 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .valor-chip input { width: 15px; height: 15px; cursor: pointer; }
 .valor-chip b { font-variant-numeric: tabular-nums; opacity: .7; }
 .valor-chip.on b { opacity: 1; }
+
+/* ===== TONO POR OBJETIVO =====
+   Va plegado dentro del form de la cola. Cerrado no ocupa nada; abierto son tres
+   selectores en una rejilla que se adapta, no tres filas sueltas estirando el modal. */
+.tonos-objetivo {
+  border: 1px dashed var(--borde, #e2e8f0);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--fondo-suave, #f8fafc);
+}
+.tonos-objetivo > .btn-link {
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 13px;
+}
+.tonos-objetivo > small { display: block; margin-top: 6px; }
+.rejilla-tonos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.rejilla-tonos label { margin: 0; }
+
+/* ===== ALTA DE FILTRO =====
+   La fila de "elige campo + agregar", como en la segmentación de campañas. */
+.alta-filtro {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px;
+  margin-bottom: 18px;
+  border: 1px solid var(--borde, #e2e8f0);
+  border-radius: 8px;
+  background: var(--fondo-suave, #f8fafc);
+}
+.alta-filtro label { flex: 1 1 260px; margin: 0; }
+.alta-filtro .btn-submit { white-space: nowrap; }
+.vacio-filtros {
+  padding: 22px;
+  text-align: center;
+  border: 1px dashed var(--borde, #e2e8f0);
+  border-radius: 8px;
+}
+.campo-head .quitar { margin-left: 12px; color: #dc2626; font-size: 12px; }
+
+/* ===== RITMO EN LECTURA =====
+   Lo que el supervisor ve del ritmo dentro del formulario de su cola. No es un form
+   deshabilitado —un input en gris invita a pelearse con él— sino datos: qué rige hoy,
+   con qué números y cuándo cambia. */
+.ritmo-lectura {
+  grid-column: 1 / -1;
+  border: 1px solid var(--borde, #e2e8f0);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--fondo-suave, #f8fafc);
+}
+.lectura-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.ritmo-vigente { font-size: 13px; color: var(--texto-suave, #64748b); }
+.ritmo-vigente strong { color: #2563eb; }
+.ritmo-vigente small { margin-left: 4px; }
+.ritmo-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px 18px;
+  margin: 0 0 10px;
+}
+.ritmo-datos dt { font-size: 12px; color: var(--texto-suave, #64748b); }
+.ritmo-datos dd { margin: 2px 0 0; font-weight: 600; font-size: 14px; }
+
+/* Nota bajo un objetivo: sustituye al input cuando el número no lo pone el supervisor. */
+.obj-nota {
+  margin: 6px 0 14px 30px;
+  font-size: 13px;
+  color: var(--texto-suave, #64748b);
+}
+.obj-nota strong { color: var(--texto, #0f172a); }
+
+/* Quién tocó esto por última vez. Discreta y a la derecha: es un dato de auditoría,
+   no compite con el botón de guardar. */
+.firma { margin-left: auto; font-size: 12px; font-style: italic; }

@@ -6,23 +6,20 @@ import { environment } from '../../../environments/environment';
 export interface BotConfig {
   id?: number;
   activo: boolean;
-  modoPerfil: string;              // MANUAL | AUTO
-  idPerfilActivo?: number;
+  // `modoRitmo` e `idRitmoActivo` se quitaron: elegian el ritmo del armado GLOBAL,
+  // que ya no existe. Cada cola elige el suyo con su propio `modoRitmo`.
   horaInicio: string;             // HH:mm:ss
   horaFin: string;
   diasSemana: string;
   maxLlamadasSimultaneas: number;
-  politicaTitularidad: string;    // IGNORA | PRIORIZA_LIBRES | SOLO_LIBRES
 }
 
-export interface BotPerfil {
+export interface BotRitmo {
   id: number;
   nombre: string;
   diaMesDesde: number;
   diaMesHasta: number;
-  maxLlamadasDia: number;
   diasAnticipacion: number;
-  incluirVencidas: boolean;
   maxDiasVencida?: number | null;
   maxIntentosPorCuota: number;
 }
@@ -41,20 +38,21 @@ export interface BotCola {
   idSubcartera: number;
   /** Coma-separados: RECORDATORIO | CREACION | PRIMER_CONTACTO */
   objetivos: string;
+  /** Tono de respaldo: se usa en los objetivos que no tengan uno propio. */
   idTono?: number | null;
-  idPerfil?: number | null;
-  /** AUTO = el ritmo lo decide el día del mes. MANUAL = el perfil fijado arriba. */
-  modoPerfil?: string;
-  /** Todo lo de abajo hereda cuando va vacío: cola → perfil → configuración global. */
+  idTonoRecordatorio?: number | null;
+  idTonoVencida?: number | null;
+  idTonoPrimera?: number | null;
+  idRitmo?: number | null;
+  /** AUTO = el ritmo lo decide el día del mes. MANUAL = el ritmo fijado arriba. */
+  modoRitmo?: string;
+  /** Todo lo de abajo hereda cuando va vacío: cola → ritmo → configuración global. */
   horaInicio?: string | null;
   horaFin?: string | null;
   diasSemana?: string | null;
   maxLlamadasSimultaneas?: number | null;
-  politicaTitularidad?: string | null;
   diasAnticipacion?: number | null;
-  incluirVencidas?: boolean | null;
   maxDiasVencida?: number | null;
-  maxLlamadasDia?: number | null;
   maxIntentosPorCuota?: number | null;
   estado?: string;               // BORRADOR | LISTA | CERRADA
   estaDiscando?: boolean;
@@ -67,6 +65,9 @@ export interface BotCola {
   nombreInquilino?: string;
   ultimaArmadaAt?: string;
   ultimoResumen?: string;
+  /** Quién la tocó por última vez y cuándo. Solo lectura: lo pone el backend. */
+  actualizadoPor?: string | null;
+  fechaActualizacion?: string | null;
 }
 
 /** Una personalidad del bot: como se llama, como escribe y como suena. Van juntas. */
@@ -84,6 +85,8 @@ export interface BotTono {
   ttsSimilarityBoost?: number;
   ttsSpeed?: number;
   activo?: boolean;
+  actualizadoPor?: string | null;
+  fechaActualizacion?: string | null;
 }
 
 /**
@@ -106,6 +109,8 @@ export interface BotRegla {
   /** La última opción de la escalera solo se acepta con pago el mismo día. */
   ultimoEscalonSoloHoy?: boolean | null;
   activo?: boolean;
+  actualizadoPor?: string | null;
+  fechaActualizacion?: string | null;
 }
 
 /** Una condición sobre una columna de la tabla de la subcartera. Igual que en campañas. */
@@ -133,7 +138,7 @@ export interface BotContacto {
   fechaPromesa?: string;
   estadoCuota?: string;
   telefono: string;
-  idPerfil?: number;
+  idRitmo?: number;
   idCola?: number;
   tipoObjetivo?: string;
   estado: string;
@@ -189,8 +194,8 @@ export class BotVozService {
     return this.http.get<BotTurno[]>(`${this.apiUrl}/sesiones/${idSesion}/turnos`);
   }
 
-  getPerfiles(): Observable<BotPerfil[]> { return this.http.get<BotPerfil[]>(`${this.apiUrl}/perfiles`); }
-  updatePerfil(id: number, p: Partial<BotPerfil>): Observable<BotPerfil> { return this.http.put<BotPerfil>(`${this.apiUrl}/perfiles/${id}`, p); }
+  getRitmos(): Observable<BotRitmo[]> { return this.http.get<BotRitmo[]>(`${this.apiUrl}/ritmos`); }
+  actualizarRitmo(id: number, p: Partial<BotRitmo>): Observable<BotRitmo> { return this.http.put<BotRitmo>(`${this.apiUrl}/ritmos/${id}`, p); }
 
   // ---- Colas: definir, armar, iniciar y detener ----
 
@@ -270,6 +275,17 @@ export class BotVozService {
   /** Por qué campos se puede segmentar esa cola, con valores reales y conteos. */
   getCamposDeCola(idCola: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/colas/${idCola}/campos`);
+  }
+
+  /** Los valores de un campo con sus conteos. Se pide al añadir ese filtro, no antes. */
+  getValoresDeCampo(idCola: number, campo: string): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.apiUrl}/colas/${idCola}/campos/${encodeURIComponent(campo)}/valores`);
+  }
+
+  /** Cuánta gente entraría con estos filtros, sin guardarlos ni armar la cola. */
+  previewCola(idCola: number, filtros: BotColaFiltro[]): Observable<{ conFiltros: number; total: number; error?: string }> {
+    return this.http.post<any>(`${this.apiUrl}/colas/${idCola}/preview`, filtros);
   }
 
   getFiltros(idCola: number): Observable<BotColaFiltro[]> {

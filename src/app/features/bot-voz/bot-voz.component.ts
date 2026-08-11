@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
-  BotVozService, BotConfig, BotPerfil, BotContacto, BotSesion, BotTurno,
+  BotVozService, BotConfig, BotRitmo, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaFiltro,
 } from './bot-voz.service';
 
@@ -47,6 +47,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Lo que diria cada tono, indexado por id. Se guarda para que quede en pantalla
    *  despues de sonar: la diferencia entre un tono y otro esta en las palabras. */
   demoTexto: Record<number, string> = {};
+  /** Si la ultima muestra salio de la cache del micro (no se cobro) o se sintetizo. */
+  demoCacheada: Record<number, boolean> = {};
+
+  /** Abre los selectores de tono por objetivo. Cerrado, la cola usa uno solo. */
+  afinarTonos = false;
 
   /** Los tres objetivos como casillas. Se juntan en `objetivos` al crear. */
   objRecordatorio = true;
@@ -112,7 +117,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   filtros: BotColaFiltro[] = [];
 
   config?: BotConfig;
-  perfiles: BotPerfil[] = [];
+  ritmos: BotRitmo[] = [];
   cola: BotContacto[] = [];
   descartes: any[] = [];
   sesiones: BotSesion[] = [];
@@ -129,8 +134,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  de simultaneas porque nadie noto que habia que darle a "Guardar". */
   private configGuardada = '';
 
-  /** Igual que configGuardada pero por perfil, indexado por id. */
-  private perfilesGuardados = new Map<number, string>();
+  /** Igual que configGuardada pero por ritmo, indexado por id. */
+  private ritmosGuardados = new Map<number, string>();
 
   /** Refresco de las vistas de monitoreo. Las filas cambian de estado mientras
    *  el bot disca y sin esto la pantalla se queda en la foto de cuando entraste. */
@@ -144,7 +149,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.cargarColas();
     this.cargarTonos();
     this.cargarConfig();
-    this.cargarPerfiles();
+    this.cargarRitmos();
     this.cargarCola(true);   // alimenta el indicador de estado de la cabecera
     this.refresco = setInterval(() => this.refrescar(), this.REFRESCO_MS);
   }
@@ -155,7 +160,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   /** La cola se refresca siempre porque de ella sale el estado de la cabecera.
-   *  Config y perfiles no: recargarlos pisaria lo que el usuario esta editando. */
+   *  Config y ritmos no: recargarlos pisaria lo que el usuario esta editando. */
   private refrescar(): void {
     this.cargarCola(true);
     if (this.vista === 'llamadas') this.cargarSesiones();
@@ -283,7 +288,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     G8:  { titulo: 'Sin teléfono válido',   ok: false,
            porque: 'El cliente no tiene ningún celular activo de 9 dígitos. Sin número no hay a dónde marcar.' },
     G11: { titulo: 'Tope diario alcanzado', ok: true,
-           porque: 'Se llegó al máximo de llamadas que permite el perfil activo. Estas cuotas entran mañana.' },
+           porque: 'Se llegó al máximo de llamadas que permite el ritmo activo. Estas cuotas entran mañana.' },
     G12: { titulo: 'Tiene cita agendada',   ok: true,
            porque: 'Hay una llamada agendada con un asesor. Llamar antes pisaría esa cita.' },
     G13: { titulo: 'Ya tiene promesa nueva', ok: true,
@@ -320,12 +325,16 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   abrir(v: 'colas' | 'ritmo' | 'tonos' | 'reglas' | 'llamadas'): void {
+    // El ritmo es del admin: el botón no se le pinta al supervisor, pero la vista se
+    // cierra también aquí. Ocultar el botón no es esconder la pantalla — basta con que
+    // algo llame a abrir('ritmo') para colarse.
+    if (v === 'ritmo' && !this.esAdmin) return;
     // Un segundo clic en el mismo botón devuelve a las colas: hace de ida y de vuelta.
     this.vista = this.vista === v && v !== 'colas' ? 'colas' : v;
     const t = this.vista;
     if (t === 'llamadas') this.cargarSesiones();
     if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarCola(); }
-    if (t === 'ritmo') this.cargarPerfiles();
+    if (t === 'ritmo') this.cargarRitmos();
     if (t === 'tonos') this.cargarTonos();
     if (t === 'reglas') { this.cargarReglas(); this.cargarProveedoresReglas(); }
   }
@@ -342,9 +351,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return {
       nombre: '', idSubcartera: undefined as any, objetivos: '',
       idTono: null, horaInicio: null, horaFin: null,
-      maxLlamadasSimultaneas: null, maxLlamadasDia: null,
+      maxLlamadasSimultaneas: null,
       diasAnticipacion: null, maxIntentosPorCuota: null,
-      modoPerfil: 'AUTO', idPerfil: null,
+      modoRitmo: 'AUTO', idRitmo: null,
     };
   }
 
@@ -354,15 +363,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // a 50 clientes o a 500. Estos ayudantes ponen el valor real en el placeholder.
 
   /** El ritmo que se aplicaría hoy si la cola no fija ninguno. */
-  get ritmoVigente(): BotPerfil | undefined {
-    if (this.nuevaCola.modoPerfil === 'MANUAL' && this.nuevaCola.idPerfil) {
-      return this.perfiles.find((p) => p.id === this.nuevaCola.idPerfil);
+  get ritmoVigente(): BotRitmo | undefined {
+    if (this.nuevaCola.modoRitmo === 'MANUAL' && this.nuevaCola.idRitmo) {
+      return this.ritmos.find((p) => p.id === this.nuevaCola.idRitmo);
     }
     const dia = new Date().getDate();
-    return this.perfiles.find((p) => p.diaMesDesde <= dia && p.diaMesHasta >= dia);
+    return this.ritmos.find((p) => p.diaMesDesde <= dia && p.diaMesHasta >= dia);
   }
 
-  heredado(campo: 'maxLlamadasDia' | 'diasAnticipacion' | 'maxIntentosPorCuota'): string {
+  heredado(campo: 'diasAnticipacion' | 'maxIntentosPorCuota'): string {
     const v = this.ritmoVigente?.[campo];
     return v == null ? 'hereda' : `hereda: ${v}`;
   }
@@ -370,6 +379,22 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // Topes del sistema. No son configuración de negocio —son la ley y el techo de
   // canales de la máquina— así que no se editan en el panel: se enseñan como límite.
   get topeSimultaneas(): number { return this.config?.maxLlamadasSimultaneas ?? 1; }
+  /**
+   * "Modificado por jperez · 10/08 14:32". Vacío si nadie lo ha tocado todavía.
+   *
+   * Se enseña donde se cambia lo que hace Clara —reglas y tonos— porque hay nueve
+   * administradores: sin esto, un cambio en lo que puede pactar el bot no tiene autor.
+   */
+  firma(x?: { actualizadoPor?: string | null; fechaActualizacion?: string | null }): string {
+    if (!x?.actualizadoPor) return '';
+    const f = x.fechaActualizacion ? new Date(x.fechaActualizacion) : null;
+    const cuando = f && !isNaN(f.getTime())
+      ? ` · ${f.toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit' })} `
+        + f.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    return `Modificado por ${x.actualizadoPor}${cuando}`;
+  }
+
   get topeHoraInicio(): string { return this.hhmm(this.config?.horaInicio) || '08:00'; }
   get topeHoraFin(): string { return this.hhmm(this.config?.horaFin) || '20:00'; }
 
@@ -435,13 +460,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.objRecordatorio = true;
     this.objCreacion = true;
     this.objPrimerContacto = false;
+    this.afinarTonos = false;
     this.idInquilinoSel = 0;
     this.idCarteraSel = 0;
     this.carteras = [];
     this.subcarteras = [];
     this.modalCola = true;
     this.cargarSubcarteras();
-    this.cargarPerfiles();
+    this.cargarRitmos();
   }
 
   cerrarModalCola(): void {
@@ -464,9 +490,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.objRecordatorio = objs.includes('RECORDATORIO');
     this.objCreacion = objs.includes('CREACION');
     this.objPrimerContacto = objs.includes('PRIMER_CONTACTO');
+    // Si la cola ya tiene algun tono por objetivo, el bloque se abre solo: si no, no
+    // habria forma de ver lo que hay configurado sin saber que existe el enlace.
+    this.afinarTonos = c.idTonoRecordatorio != null
+        || c.idTonoVencida != null || c.idTonoPrimera != null;
     // La subcartera no se cambia al editar: cambiarla convertiria esta cola en la de
     // otra cartera, con las filas de la anterior dentro. Para eso se borra y se crea.
-    this.cargarPerfiles();
+    this.cargarRitmos();
     if (c.idSubcartera) this.verEfectivas(c.idSubcartera);
     this.modalCola = true;
   }
@@ -496,14 +526,31 @@ export class BotVozComponent implements OnInit, OnDestroy {
     }
     this.errorModal = '';
     this.guardandoCola = true;
+    // Con el bloque cerrado se limpian los tres: si no, quien lo abre, elige tonos y
+    // vuelve a cerrarlo guardaria unos tonos que la pantalla ya no enseña. Lo mismo
+    // si se queda con un solo objetivo: ahi el bloque se oculta, y guardar un tono
+    // por objetivo que nadie puede ver ni quitar es peor que no guardarlo.
+    const porObjetivo = this.afinarTonos && this.hayVariosObjetivos()
+      ? {
+          idTonoRecordatorio: this.objRecordatorio ? this.nuevaCola.idTonoRecordatorio : null,
+          idTonoVencida: this.objCreacion ? this.nuevaCola.idTonoVencida : null,
+          idTonoPrimera: this.objPrimerContacto ? this.nuevaCola.idTonoPrimera : null,
+        }
+      : { idTonoRecordatorio: null, idTonoVencida: null, idTonoPrimera: null };
     // El inquilino y la cartera ya los eligio el usuario en la cascada. Hacen falta
     // para localizar la tabla dinamica de la subcartera, que es de donde salen los
     // clientes sin promesa.
     this.guardarCola({
-      ...this.nuevaCola, objetivos,
+      ...this.nuevaCola, objetivos, ...porObjetivo,
       idInquilino: this.idInquilinoSel || undefined,
       idCartera: this.idCarteraSel || undefined,
     });
+  }
+
+  /** Afinar el tono solo tiene sentido si la cola hace mas de una cosa. */
+  hayVariosObjetivos(): boolean {
+    return [this.objRecordatorio, this.objCreacion, this.objPrimerContacto]
+        .filter(Boolean).length > 1;
   }
 
   private guardarCola(cola: BotCola): void {
@@ -801,9 +848,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Filtros de una cola -----
 
-  /** Los campos por los que se puede segmentar, con sus valores. */
+  /** Catalogo de campos segmentables: codigo, etiqueta y cuantos valores tiene. Sin
+   *  los valores — esos se piden campo a campo al añadirlo. */
   campos: any[] = [];
   cargandoCampos = false;
+  /** Los campos que el usuario ha añadido, ya con sus valores y conteos cargados.
+   *  Es lo unico que se pinta: la lista de arriba solo alimenta el desplegable. */
+  agregados: any[] = [];
+  campoAAgregar = '';
+  cargandoValores = false;
+  /** Campos cuyos valores estan pedidos y aun no han vuelto. */
+  private enCurso = new Set<string>();
+  /** Cuánta gente entra con lo marcado, y cuánta habría sin filtrar. */
+  preview?: { conFiltros: number; total: number };
+  probando = false;
   /** Valores marcados, por campo. Es lo que se convierte en filtros al guardar. */
   marcados: Record<string, Set<string>> = {};
 
@@ -812,11 +870,21 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.filtrosDe = c.id;
     this.filtros = [];
     this.campos = [];
+    this.agregados = [];
+    this.campoAAgregar = '';
+    this.enCurso.clear();
+    this.cargandoValores = false;
+    this.preview = undefined;
+    this.probando = false;
     this.marcados = {};
     this.cargandoCampos = true;
 
     this.svc.getCamposDeCola(c.id).subscribe({
-      next: (cs) => { this.campos = cs || []; this.cargandoCampos = false; },
+      next: (cs) => {
+        this.campos = cs || [];
+        this.cargandoCampos = false;
+        this.pintarFiltrosGuardados();
+      },
       error: () => { this.cargandoCampos = false; this.flash('No se pudieron cargar los campos', true); },
     });
     // Lo ya guardado se pinta como marcado: editar un filtro tiene que partir de lo
@@ -828,9 +896,76 @@ export class BotVozComponent implements OnInit, OnDestroy {
           if (!x.selectedValues) continue;
           this.marcados[x.fieldCode] = new Set(x.selectedValues.split(',').map((v) => v.trim()));
         }
+        this.pintarFiltrosGuardados();
       },
       error: () => this.flash('No se pudieron cargar los filtros', true),
     });
+  }
+
+  /**
+   * Deja abiertos los campos que ya tenian filtro guardado.
+   *
+   * Se llama desde las DOS peticiones porque hacen falta las dos y llegan en el orden
+   * que quieran: el catalogo dice como se llama el campo, los filtros dicen cuales
+   * estaban puestos. La que llegue segunda es la que acaba pintando.
+   */
+  private pintarFiltrosGuardados(): void {
+    if (this.cargandoCampos || !this.campos.length) return;
+    for (const codigo of Object.keys(this.marcados)) {
+      if (this.agregados.some((a) => a.codigo === codigo)) continue;
+      const campo = this.campos.find((c) => c.codigo === codigo);
+      if (campo) this.cargarValores(campo);
+    }
+  }
+
+  /** Los que aun no estan puestos: añadir dos veces el mismo campo no significa nada. */
+  camposDisponibles(): any[] {
+    return this.campos.filter((c) => !this.agregados.some((a) => a.codigo === c.codigo));
+  }
+
+  agregarFiltro(): void {
+    const campo = this.campos.find((c) => c.codigo === this.campoAAgregar);
+    if (!campo) return;
+    this.cargarValores(campo);
+    this.campoAAgregar = '';
+  }
+
+  /**
+   * Trae los valores de ese campo y lo añade a la lista de puestos.
+   *
+   * Los dos guardas no son adorno. `enCurso` evita que el mismo campo se pida dos
+   * veces antes de que vuelva la primera —el `agregados.some()` de quien llama no
+   * sirve, porque `agregados` no se llena hasta la respuesta— y la comparacion con
+   * `filtrosDe` descarta lo que llega tarde: cerrar el panel y abrir el de otra cola
+   * dejaba entrar los valores de la cola anterior en la nueva.
+   */
+  private cargarValores(campo: any): void {
+    const cola = this.filtrosDe;
+    if (!cola || this.enCurso.has(campo.codigo)) return;
+    this.enCurso.add(campo.codigo);
+    this.cargandoValores = true;
+    this.svc.getValoresDeCampo(cola, campo.codigo).subscribe({
+      next: (vs) => {
+        this.enCurso.delete(campo.codigo);
+        this.cargandoValores = this.enCurso.size > 0;
+        if (this.filtrosDe !== cola) return;                 // llego tarde: ya no es esta cola
+        if (this.agregados.some((a) => a.codigo === campo.codigo)) return;
+        this.agregados.push({ ...campo, valores: vs || [] });
+      },
+      error: () => {
+        this.enCurso.delete(campo.codigo);
+        this.cargandoValores = this.enCurso.size > 0;
+        if (this.filtrosDe !== cola) return;
+        this.flash(`No se pudieron leer los valores de ${campo.etiqueta}`, true);
+      },
+    });
+  }
+
+  /** Quita el campo de la pantalla y con el sus marcas: si no esta, no filtra. */
+  quitarFiltro(codigo: string): void {
+    this.agregados = this.agregados.filter((a) => a.codigo !== codigo);
+    delete this.marcados[codigo];
+    this.preview = undefined;
   }
 
   estaMarcado(campo: string, valor: string): boolean {
@@ -841,14 +976,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
     const set = this.marcados[campo] ?? new Set<string>();
     if (set.has(valor)) set.delete(valor); else set.add(valor);
     if (set.size) this.marcados[campo] = set; else delete this.marcados[campo];
+    // El conteo de antes ya no vale. Dejarlo en pantalla seria peor que no tenerlo:
+    // diria 727 mientras marcas cosas que lo cambian.
+    this.preview = undefined;
   }
 
   /** Cuántos marcados lleva un campo. Nada marcado = ese campo no filtra. */
   marcadosDe(campo: string): number {
     return this.marcados[campo]?.size ?? 0;
   }
-
-  limpiarCampo(campo: string): void { delete this.marcados[campo]; }
 
   /** Cuántas condiciones acabarían aplicándose. */
   get camposFiltrando(): number {
@@ -861,6 +997,37 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.filtros = [];
   }
 
+
+  /**
+   * Pregunta cuánta gente entraría con lo que hay marcado AHORA.
+   *
+   * Se pide a mano y no en cada clic: cada consulta agrupa la cartera entera, y
+   * dispararla en cada casilla sería castigar la base para responder a alguien que
+   * todavía está eligiendo.
+   */
+  probarFiltros(): void {
+    if (!this.filtrosDe || this.probando) return;
+    this.probando = true;
+    this.svc.previewCola(this.filtrosDe, this.filtrosDeLoMarcado()).subscribe({
+      next: (r) => {
+        this.probando = false;
+        if (r?.error) { this.flash(r.error, true); return; }
+        this.preview = { conFiltros: r.conFiltros ?? 0, total: r.total ?? 0 };
+      },
+      error: () => { this.probando = false; this.flash('No se pudo calcular', true); },
+    });
+  }
+
+  /** Lo marcado, en la forma que entiende el backend. Lo usan probar y guardar. */
+  private filtrosDeLoMarcado(): BotColaFiltro[] {
+    // Un campo sin nada marcado no genera filtro: no filtrar es distinto de filtrar
+    // por nada.
+    return Object.entries(this.marcados)
+      .filter(([, vals]) => vals.size > 0)
+      .map(([fieldCode, vals]) => ({
+        fieldCode, dataType: 'TEXTO', selectedValues: [...vals].join(','),
+      }));
+  }
 
   guardarFiltros(): void {
     if (!this.filtrosDe) return;
@@ -908,6 +1075,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
         const clave = t.id ?? -1;
         this.demoCargando = undefined;
         this.demoTexto[clave] = d?.texto ?? '';
+        // Solo se factura la primera vez con esos ajustes; luego sale de la cache
+        // del micro. Se enseña para que nadie tenga que adivinar cuando gasta.
+        this.demoCacheada[clave] = d?.cacheada === true;
         if (!d?.audioBase64) {
           this.flash(d?.error || 'Se generó la frase pero no el audio', true);
           return;
@@ -1012,27 +1182,27 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
 
-  // ----- Perfiles -----
-  cargarPerfiles(): void {
-    this.svc.getPerfiles().subscribe((p) => {
-      this.perfiles = p;
-      this.perfilesGuardados = new Map(p.map((x) => [x.id, JSON.stringify(x)]));
+  // ----- Ritmos -----
+  cargarRitmos(): void {
+    this.svc.getRitmos().subscribe((p) => {
+      this.ritmos = p;
+      this.ritmosGuardados = new Map(p.map((x) => [x.id, JSON.stringify(x)]));
     });
   }
-  /** Mismo problema que la config: sin esto editas un perfil, no le das a
+  /** Mismo problema que la config: sin esto editas un ritmo, no le das a
    *  guardar y el cambio se pierde sin ningun aviso. */
-  perfilSinGuardar(p: BotPerfil): boolean {
-    const guardado = this.perfilesGuardados.get(p.id);
+  ritmoSinGuardar(p: BotRitmo): boolean {
+    const guardado = this.ritmosGuardados.get(p.id);
     return guardado !== undefined && guardado !== JSON.stringify(p);
   }
-  guardarPerfil(p: BotPerfil): void {
-    this.svc.updatePerfil(p.id, p).subscribe({
+  guardarRitmo(p: BotRitmo): void {
+    this.svc.actualizarRitmo(p.id, p).subscribe({
       next: (r) => {
         Object.assign(p, r);
-        this.perfilesGuardados.set(p.id, JSON.stringify(p));
-        this.flash(`Perfil ${p.nombre} guardado`);
+        this.ritmosGuardados.set(p.id, JSON.stringify(p));
+        this.flash(`Ritmo ${p.nombre} guardado`);
       },
-      error: () => this.flash('Error al guardar perfil', true),
+      error: () => this.flash('Error al guardar ritmo', true),
     });
   }
 
