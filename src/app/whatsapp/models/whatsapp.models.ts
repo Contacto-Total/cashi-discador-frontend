@@ -187,6 +187,27 @@ export interface EngagementStatus {
   operationalDayOpen: boolean;
 }
 
+export interface Agendamiento {
+  conversationId: number;
+  accountId: number;
+  chatJid: string;
+  clientId: number;
+  clientDocument?: string;
+  clientName?: string;
+  phone?: string;
+  carteraId?: number;
+  carteraName?: string;
+  subcarteraId?: number;
+  subcarteraName?: string;
+  scheduledByAgentId: string;
+}
+
+export interface CreateAgendamientoRequest {
+  clientId: number;
+  clientDocument: string;
+  phone?: string;
+}
+
 export interface SendAccessStatus {
   conversationId: number;
   allowed: boolean;

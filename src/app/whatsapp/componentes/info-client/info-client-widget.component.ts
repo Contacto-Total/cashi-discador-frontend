@@ -5,6 +5,7 @@ import { catchError, finalize, of, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { Chat } from '../../models';
 import { WhatsappApiService, WhatsappMessageStoreService } from '../../services';
+import { Agendamiento } from '../../models';
 import { ClientInfoAclService, DynamicClient, GlobalSearchResult } from './client-info-acl.service';
 
 // NOTA DE MANTENIMIENTO: estos servicios se reutilizan desde collection-management.
@@ -107,6 +108,21 @@ const PROMISE_TIPIFICATION_ID = 5;
           </div>
         </div>
 
+        @if (!agendamiento()) {
+          <div class="min-h-0 flex-1 overflow-y-auto p-4">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <p class="text-sm font-bold text-emerald-950">Agendar conversación</p>
+              <p class="mt-1 text-xs leading-relaxed text-emerald-800">Confirma el cliente para habilitar las opciones del panel. El número es opcional cuando el chat llega como LID.</p>
+              <label class="mt-4 block text-xs font-semibold text-emerald-900">Número de WhatsApp</label>
+              <input class="mt-1.5 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm" type="tel" placeholder="Número con código de país (opcional)" [ngModel]="schedulePhone()" (ngModelChange)="schedulePhone.set($event)" />
+              @if (scheduleError()) { <p class="mt-2 text-xs font-medium text-rose-700">{{ scheduleError() }}</p> }
+              <div class="mt-4 flex gap-2">
+                <button type="button" class="flex-1 rounded bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-300" [disabled]="scheduling()" (click)="closeInfo()">Cambiar cliente</button>
+                <button type="button" class="flex-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" [disabled]="scheduling()" (click)="createAgendamiento()">{{ scheduling() ? 'Agendando...' : 'Agendar chat' }}</button>
+              </div>
+            </div>
+          </div>
+        } @else {
         <div class="min-h-0 flex-1 overflow-y-auto p-3">
            @if (!showOffers()) {
            <!-- ¿Tiene carta? -->
@@ -174,8 +190,8 @@ const PROMISE_TIPIFICATION_ID = 5;
                     <button type="button" class="flex-1 rounded bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-300" [disabled]="savingFollowUp()" (click)="followUpOpen.set(false)">Cancelar</button>
                     <button type="button" class="flex-1 rounded bg-emerald-600 px-3 py-2 text-xs font-bold text-white disabled:bg-slate-300" [disabled]="savingFollowUp()" (click)="createFollowUp()">{{ savingFollowUp() ? 'Guardando...' : 'Confirmar enlace' }}</button>
                   </div>
-                </div>
-              } @else {
+                  </div>
+                } @else {
                 <button
                   type="button"
                   class="flex w-full items-center gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-left text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -191,8 +207,9 @@ const PROMISE_TIPIFICATION_ID = 5;
                   <p class="text-xs text-amber-700">{{ followUpError() }}</p>
                 }
               }
-             </div>
-            } @else {
+          </div>
+        }
+       } @else {
               <div class="mb-3 flex items-center gap-2">
                 <button type="button" class="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-slate-100" aria-label="Volver a opciones" (click)="backToOptions()">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
@@ -342,8 +359,8 @@ const PROMISE_TIPIFICATION_ID = 5;
                   class="cursor-pointer px-4 py-3 transition hover:bg-emerald-50/70"
                   role="button"
                   tabindex="0"
-                  (click)="openInfo(r)"
-                  (keyup.enter)="openInfo(r)"
+                   (click)="selectForScheduling(r)"
+                   (keyup.enter)="selectForScheduling(r)"
                 >
                   <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ r.nombreCartera }} · {{ r.nombreSubcartera }}</p>
                   <p class="mt-1 truncate text-sm font-bold leading-5 text-slate-950" [title]="clientName(r.clientData)">{{ clientName(r.clientData) }}</p>
@@ -377,6 +394,10 @@ export class InfoClientWidgetComponent {
   readonly error = signal<string | null>(null);
 
   readonly selectedClient = signal<GlobalSearchResult | null>(null);
+  readonly agendamiento = signal<Agendamiento | null>(null);
+  readonly scheduling = signal(false);
+  readonly schedulePhone = signal('');
+  readonly scheduleError = signal<string | null>(null);
   readonly hasCarta = signal(false);
   readonly cartaLoading = signal(false);
   readonly cartaError = signal<string | null>(null);
@@ -448,6 +469,10 @@ export class InfoClientWidgetComponent {
       this.manualOpen.set(false);
       this.mode.set('telefono');
        this.selectedClient.set(null);
+       this.agendamiento.set(null);
+       this.scheduling.set(false);
+       this.schedulePhone.set('');
+       this.scheduleError.set(null);
        this.promiseResult.set(null);
        this.showOffers.set(false);
       this.offers.set([]);
@@ -488,6 +513,32 @@ export class InfoClientWidgetComponent {
 
   closeInfo(): void {
     this.selectedClient.set(null);
+  }
+
+  selectForScheduling(result: GlobalSearchResult): void {
+    this.selectedClient.set(result);
+    this.schedulePhone.set(this.chat()?.contactPhone || '');
+    this.scheduleError.set(null);
+  }
+
+  createAgendamiento(): void {
+    const result = this.selectedClient();
+    const chat = this.chat();
+    const clientId = Number(result?.clientId);
+    const clientDocument = result?.clientData.documento?.trim();
+    if (!result || !chat?.id || !clientId || !clientDocument) return;
+    this.scheduling.set(true);
+    this.scheduleError.set(null);
+    const phone = this.schedulePhone().trim() || undefined;
+    this.whatsappApi.createAgendamiento(chat.id, { clientId, clientDocument, phone }).pipe(
+      finalize(() => this.scheduling.set(false))
+    ).subscribe({
+      next: agendamiento => {
+        this.agendamiento.set(agendamiento);
+        this.openInfo(result);
+      },
+      error: error => this.scheduleError.set(error?.error?.detail || error?.error?.error || 'No se pudo agendar el chat.')
+    });
   }
 
   openFollowUp(): void {
@@ -572,13 +623,14 @@ export class InfoClientWidgetComponent {
       this.searchClientByChatPhone(chat, key);
       return;
     }
-    this.whatsappApi.getPromiseAssignment(chat.id).subscribe({
-      next: assignment => {
-        if (!assignment?.clientDocument) {
+    this.whatsappApi.getAgendamiento(chat.id).subscribe({
+      next: agendamiento => {
+        if (!agendamiento?.clientDocument) {
           this.searchClientByChatPhone(chat, key);
           return;
         }
-        this.acl.searchByDocument(assignment.clientDocument).subscribe({
+        this.agendamiento.set(agendamiento);
+        this.acl.searchByDocument(agendamiento.clientDocument).subscribe({
           next: results => {
             const result = results[0];
             if (result && this.lastChatKey === key) this.openInfo(result);
@@ -1216,7 +1268,7 @@ export class InfoClientWidgetComponent {
           const clean = this.clean(list);
           this.results.set(clean);
           this.manualOpen.set(clean.length === 0);
-          if (clean.length === 1) this.openInfo(clean[0]);
+          if (clean.length === 1) this.selectForScheduling(clean[0]);
         },
         error: () => {
           if (this.lastChatKey !== key) return;
