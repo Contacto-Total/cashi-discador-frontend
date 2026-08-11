@@ -169,9 +169,6 @@
               <button class="btn-action-small" (click)="editarCola(c)" title="Editar la cola">
                 <lucide-angular name="pencil" [size]="15"></lucide-angular>
               </button>
-              <button class="btn-action-small" (click)="editarFiltros(c)" title="Filtros de segmentación">
-                <lucide-angular name="filter" [size]="15"></lucide-angular>
-              </button>
               <button class="btn-action-small" (click)="armarColaDe(c)"
                       [disabled]="armandoCola === c.id" title="Llenar la cola de hoy">
                 <lucide-angular [name]="armandoCola === c.id ? 'loader' : 'refresh-cw'"
@@ -346,24 +343,82 @@
           </section>
 
           <!-- ===== 2 · A QUIÉN LLAMA =====
-               Los objetivos estaban al final del formulario. Son lo primero que hay que
-               decidir: de ellos depende si la cola trae a alguien, y el aviso de "sin
-               marcar ninguna no traerá ningún cliente" aparecía cuando ya llevabas medio
-               formulario relleno.
+               Una sola pregunta, en dos partes que se leen como una frase: de qué parte
+               de la cartera, y por qué motivo se les llama. Antes eran dos pantallas
+               distintas —los objetivos al final del formulario, los filtros en un modal
+               detrás de otro botón— y las dos se presentaban como "a quién se llama", así
+               que parecía que competían. No compiten: se multiplican.
 
-               Aquí no se configura ni un número: se marca la tarea, se elige el ritmo, y
-               debajo se lee lo que eso significa hoy. Los números los pone el calendario
-               de ritmos, que es de administración y vale para todas las carteras. -->
+               Aquí no se configura ni un número. Los de intensidad los pone el calendario
+               de ritmos; el único que se ve es cuánta gente entra, y sale del mismo
+               código que arma la cola. -->
           <section class="bloque">
-            <span class="etiqueta"><span class="paso">2</span> Qué quieres que haga Clara</span>
+            <span class="etiqueta"><span class="paso">2</span> A quién llama esta cola</span>
             <div class="objetivos-bloque">
-            <p class="muted">
-              Marca al menos una. De esto depende a quién se llama: sin ninguna marcada
-              no entraría ningún cliente en la cola.
+
+            <p class="frase" *ngIf="nuevaCola.idSubcartera">
+              De la subcartera <strong>{{ nombreSubcartera(nuevaCola.idSubcartera) }}</strong>…
+            </p>
+            <p class="muted" *ngIf="!nuevaCola.idSubcartera">
+              Elige antes la subcartera: de ella salen los campos por los que se puede
+              filtrar.
             </p>
 
+            <!-- ===== …QUE ESTÉN EN (los filtros) ===== -->
+            <div class="filtros-inline" *ngIf="nuevaCola.idSubcartera">
+              <p class="frase">…que estén en</p>
+
+              <p class="muted" *ngIf="cargandoCampos">Leyendo los campos de la cartera…</p>
+              <p class="muted" *ngIf="!cargandoCampos && !campos.length">
+                Esta cartera no tiene campos agrupables, así que no hay por dónde
+                segmentar. Entra la subcartera entera.
+              </p>
+
+              <div class="campo-filtro" *ngFor="let campo of agregados">
+                <div class="campo-head">
+                  <span class="campo-titulo">{{ campo.etiqueta }}</span>
+                  <span class="campo-estado muted" *ngIf="!marcadosDe(campo.codigo)">
+                    nada marcado: entran todos
+                  </span>
+                  <button class="btn-link quitar" type="button"
+                          (click)="quitarFiltro(campo.codigo)">Quitar</button>
+                </div>
+                <!-- Sin el conteo por valor: contaba filas de la tabla dinámica de la
+                     cartera, no de la cola, así que decía 450 al lado de un valor del
+                     que iban a entrar doce. El número honesto es el de abajo. -->
+                <div class="campo-valores">
+                  <label class="valor-chip" *ngFor="let v of campo.valores"
+                         [class.on]="estaMarcado(campo.codigo, v.valor)">
+                    <input type="checkbox" [checked]="estaMarcado(campo.codigo, v.valor)"
+                           (change)="alternarValor(campo.codigo, v.valor)">
+                    <span>{{ v.valor }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="alta-filtro" *ngIf="!cargandoCampos && camposDisponibles().length">
+                <select [(ngModel)]="campoAAgregar" [ngModelOptions]="{standalone: true}">
+                  <option [ngValue]="''" disabled>Añadir un campo…</option>
+                  <option *ngFor="let c of camposDisponibles()" [ngValue]="c.codigo">
+                    {{ c.etiqueta }}
+                  </option>
+                </select>
+                <button class="btn-link" type="button" (click)="agregarFiltro()"
+                        [disabled]="!campoAAgregar || cargandoValores">
+                  <lucide-angular name="plus" [size]="14"></lucide-angular>
+                  {{ cargandoValores ? 'Leyendo valores…' : 'Añadir' }}
+                </button>
+              </div>
+              <p class="muted" *ngIf="!agregados.length && campos.length && !cargandoCampos">
+                Sin filtros entra toda la subcartera. Añade un campo para reducirla.
+              </p>
+            </div>
+
+            <!-- ===== …Y A LOS QUE LES TOQUE (los objetivos) ===== -->
+            <p class="frase">…y a los que les toque</p>
+
             <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objRecordatorio">
+              <input type="checkbox" [(ngModel)]="objRecordatorio" (ngModelChange)="recalcular()">
               <span>
                 <strong>Recordar una cuota que está por vencer</strong>
                 <small>No negocia ni ofrece descuentos: solo avisa de la fecha.</small>
@@ -371,7 +426,7 @@
             </label>
 
             <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objCreacion">
+              <input type="checkbox" [(ngModel)]="objCreacion" (ngModelChange)="recalcular()">
               <span>
                 <strong>Negociar una cuota que ya venció</strong>
                 <small>Ofrece las rebajas configuradas hasta cerrar una promesa nueva.</small>
@@ -379,7 +434,7 @@
             </label>
 
             <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objPrimerContacto">
+              <input type="checkbox" [(ngModel)]="objPrimerContacto" (ngModelChange)="recalcular()">
               <span>
                 <strong>Abrir la primera promesa de un cliente</strong>
                 <small>Clientes de la subcartera que nunca han pactado nada.</small>
@@ -398,7 +453,7 @@
               <div class="grid-form">
                 <label *ngIf="esAdmin">
                   Ritmo
-                  <select [(ngModel)]="nuevaCola.modoRitmo">
+                  <select [(ngModel)]="nuevaCola.modoRitmo" (ngModelChange)="recalcular()">
                     <option value="AUTO">Automático según el día del mes</option>
                     <option value="MANUAL">Fijo, el que yo elija</option>
                   </select>
@@ -408,7 +463,7 @@
                 </label>
                 <label *ngIf="esAdmin && nuevaCola.modoRitmo === 'MANUAL'">
                   Ritmo fijo
-                  <select [(ngModel)]="nuevaCola.idRitmo">
+                  <select [(ngModel)]="nuevaCola.idRitmo" (ngModelChange)="recalcular()">
                     <option [ngValue]="null" disabled>Elige uno…</option>
                     <option *ngFor="let p of ritmos" [ngValue]="p.id">{{ p.nombre }}</option>
                   </select>
@@ -442,6 +497,25 @@
                 </small>
               </div>
             </div>
+
+            <!-- El único número de la pantalla, y de las dos preguntas a la vez. Sale de
+                 correr el armado en simulación, así que es literalmente lo que entrará.
+                 Antes había tres —los valores de cada chip, el "(N valores)" y un botón
+                 "Ver cuántos entran"— y ninguno contaba este universo. -->
+            <div class="cuantos-entran" *ngIf="nuevaCola.idSubcartera">
+              <lucide-angular name="users" [size]="16"></lucide-angular>
+              <span *ngIf="calculando" class="muted">Contando…</span>
+              <span *ngIf="!calculando && errorPreview" class="aviso">{{ errorPreview }}</span>
+              <span *ngIf="!calculando && !errorPreview && entran !== undefined">
+                Entran <strong>{{ entran }}</strong> cliente(s)
+                <small class="muted" *ngIf="camposFiltrando">
+                  con {{ camposFiltrando }} filtro(s) puesto(s)
+                </small>
+                <small class="muted" *ngIf="!camposFiltrando">
+                  — sin filtros, entra toda la subcartera
+                </small>
+              </span>
+            </div>
             </div>
           </section>
 
@@ -469,10 +543,34 @@
                      [placeholder]="'hereda: ' + topeSimultaneas">
               <small class="muted">
                 Conversaciones que sostiene a la vez esta cola. No puede pasar de
-                {{ topeSimultaneas }}: es el techo de canales de la máquina, compartido
-                por todas.
+                {{ topeSimultaneas }}, que es el techo compartido por todas.
               </small>
             </label>
+            </div>
+
+            <!-- El techo global, editable por el admin y aquí mismo.
+                 Estaba sembrado en 1 y no había forma de cambiarlo desde ninguna
+                 pantalla: se quitó el PUT /config metiéndolo en el mismo saco que la
+                 ventana de la Ley 29571, y no es lo mismo. La ley no cambia; cuántas
+                 llamadas aguanta la máquina, sí. Es el ÚNICO tope: el micro tenía otro
+                 en su .env y se quitó, porque capaba por debajo de este sin que se
+                 viera. -->
+            <div class="tope-global" *ngIf="esAdmin">
+              <span class="etiqueta">Techo de todas las colas</span>
+              <p class="muted">
+                Cuántas llamadas sostiene el bot a la vez, sumando todas las colas.
+                Ninguna puede pasar de aquí.
+              </p>
+              <div class="linea-tope">
+                <input type="number" min="1" [(ngModel)]="topeGlobalEdit"
+                       [ngModelOptions]="{standalone: true}">
+                <button class="btn-secondary" type="button"
+                        [disabled]="guardandoTope || topeGlobalEdit === topeSimultaneas"
+                        (click)="guardarTopeGlobal()">
+                  {{ guardandoTope ? 'Guardando…' : 'Guardar techo' }}
+                </button>
+                <small class="muted">{{ firma(config) }}</small>
+              </div>
             </div>
 
           </section>
@@ -563,100 +661,12 @@
     </div>
   </section>
 
-  <!-- ===== FILTROS DE UNA COLA =====
-       En modal, como el alta: antes era un panel suelto debajo de la lista, sin forma
-       de cerrarlo ni de cancelar. Un formulario del que no se puede salir obliga a
-       recargar la pagina para desistir. -->
-  <div class="modal-overlay" *ngIf="filtrosDe" (click)="cerrarFiltros()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Filtros de la cola</h3>
-        <button class="btn-close" (click)="cerrarFiltros()">
-          <lucide-angular name="x" [size]="18"></lucide-angular>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <p class="ayuda">
-          Marca los valores que quieres incluir. <strong>Un campo sin nada marcado no
-          filtra</strong>: entran todos. Los números son cuánta gente hay en cada valor
-          dentro de esta cartera.
-        </p>
-
-        <p class="muted" *ngIf="cargandoCampos">Leyendo los campos de la cartera…</p>
-        <p class="muted" *ngIf="!cargandoCampos && !campos.length">
-          Esta cartera no tiene campos con valores agrupables, así que no hay nada por
-          lo que segmentar aquí.
-        </p>
-
-        <!-- Alta de filtro. Igual que en campañas: se elige el campo y se añade. Antes
-             se volcaban los treinta campos con todos sus valores nada más abrir, y
-             había que bajar por la lista entera para encontrar el que interesaba. -->
-        <div class="alta-filtro" *ngIf="!cargandoCampos && campos.length">
-          <label>
-            Campo a filtrar
-            <select [(ngModel)]="campoAAgregar">
-              <option [ngValue]="''" disabled>Elige un campo…</option>
-              <option *ngFor="let c of camposDisponibles()" [ngValue]="c.codigo">
-                {{ c.etiqueta }} ({{ c.valores }} valores)
-              </option>
-            </select>
-          </label>
-          <button class="btn-submit" (click)="agregarFiltro()"
-                  [disabled]="!campoAAgregar || cargandoValores">
-            <lucide-angular name="plus" [size]="15"></lucide-angular>
-            {{ cargandoValores ? 'Leyendo valores…' : 'Agregar filtro' }}
-          </button>
-          <span class="muted" *ngIf="!camposDisponibles().length">
-            Ya añadiste todos los campos disponibles.
-          </span>
-        </div>
-
-        <p class="muted vacio-filtros" *ngIf="!agregados.length && campos.length">
-          Sin filtros: entra toda la cartera. Añade uno para reducirla.
-        </p>
-
-        <div class="campo-filtro" *ngFor="let campo of agregados">
-          <div class="campo-head">
-            <span class="campo-titulo">{{ campo.etiqueta }}</span>
-            <span class="campo-estado" *ngIf="marcadosDe(campo.codigo)">
-              {{ marcadosDe(campo.codigo) }} seleccionado(s)
-            </span>
-            <span class="campo-estado muted" *ngIf="!marcadosDe(campo.codigo)">
-              nada marcado: entran todos
-            </span>
-            <button class="btn-link quitar" (click)="quitarFiltro(campo.codigo)">Quitar</button>
-          </div>
-          <div class="campo-valores">
-            <label class="valor-chip" *ngFor="let v of campo.valores"
-                   [class.on]="estaMarcado(campo.codigo, v.valor)">
-              <input type="checkbox" [checked]="estaMarcado(campo.codigo, v.valor)"
-                     (change)="alternarValor(campo.codigo, v.valor)">
-              <span>{{ v.valor }}</span>
-              <b>{{ v.n }}</b>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <span class="muted" style="margin-right:auto">
-          <ng-container *ngIf="preview">
-            Entran <strong>{{ preview.conFiltros }}</strong> de {{ preview.total }}
-            <span *ngIf="!camposFiltrando"> — sin filtros, entra toda la cartera</span>
-          </ng-container>
-          <ng-container *ngIf="!preview">
-            {{ camposFiltrando ? (camposFiltrando + ' campo(s) filtrando') : 'Sin filtros: entra toda la cartera' }}
-          </ng-container>
-        </span>
-        <button class="btn-secondary" (click)="probarFiltros()" [disabled]="probando">
-          {{ probando ? 'Contando…' : 'Ver cuántos entran' }}
-        </button>
-        <button class="btn-cancel" (click)="cerrarFiltros()">Cancelar</button>
-        <button class="btn-submit" (click)="guardarFiltros()">Guardar filtros</button>
-      </div>
-    </div>
-  </div>
+  <!-- El modal de filtros se elimino. Colgaba de `/colas/{id}`, asi que obligaba a
+       crear la cola y volver despues por otra pantalla para decidir a quien llama:
+       dos pasos para una sola decision. Y llevaba tres numeros calculados sobre el
+       universo equivocado —el conteo de cada chip, el "(N valores)" del desplegable y
+       el boton "Ver cuantos entran"—. Ahora los filtros van en el bloque 2 del alta y
+       el unico numero sale del mismo codigo que arma la cola. -->
 
   <!-- ===== VOCES Y TONOS =====
        Se perdio al reescribir Colas y hay que dejarla escrita entera, no parcheada:

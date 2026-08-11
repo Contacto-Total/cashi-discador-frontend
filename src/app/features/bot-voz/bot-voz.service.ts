@@ -11,7 +11,11 @@ export interface BotConfig {
   horaInicio: string;             // HH:mm:ss
   horaFin: string;
   diasSemana: string;
+  /** El techo de llamadas a la vez, sumando todas las colas. Lo edita el admin. */
   maxLlamadasSimultaneas: number;
+  /** Quién tocó el techo por última vez. Lo devuelve el backend; no se envía. */
+  actualizadoPor?: string | null;
+  fechaActualizacion?: string | null;
 }
 
 /**
@@ -199,6 +203,16 @@ export class BotVozService {
   constructor(private http: HttpClient) {}
 
   getConfig(): Observable<BotConfig> { return this.http.get<BotConfig>(`${this.apiUrl}/config`); }
+
+  /**
+   * Lo único editable de la configuración global: el techo de llamadas simultáneas.
+   *
+   * La ventana horaria no se toca desde aquí a propósito —es el límite de la Ley
+   * 29571— y una cola solo puede estrecharla desde su propio formulario.
+   */
+  actualizarConfig(cambios: Partial<BotConfig>): Observable<BotConfig> {
+    return this.http.put<BotConfig>(`${this.apiUrl}/config`, cambios);
+  }
   // updateConfig se quitó: `bot_config` ya no es configuración editable, son los
   // límites del sistema (ventana legal y techo de canales). Se leen, no se tocan aquí.
 
@@ -285,22 +299,40 @@ export class BotVozService {
     return this.http.put<BotRegla>(`${this.apiUrl}/reglas/${id}`, r);
   }
 
-  // ---- Filtros de una cola ----
+  // ---- Filtros ----
+  //
+  // Van por SUBCARTERA y no por cola. Los filtros son parte de la misma decisión que
+  // los objetivos —a quién llamamos— así que se eligen dentro del alta, y ahí la cola
+  // todavía no existe. Colgarlos de `/colas/{id}` obligaba a guardar primero y volver
+  // después por otro formulario.
 
-  /** Por qué campos se puede segmentar esa cola, con valores reales y conteos. */
-  getCamposDeCola(idCola: number): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/colas/${idCola}/campos`);
+  /** Por qué campos se puede segmentar esta subcartera. */
+  getCampos(idInquilino: number, idCartera: number, idSubcartera: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/subcarteras/${idSubcartera}/campos`,
+      { params: { idInquilino, idCartera } });
   }
 
-  /** Los valores de un campo con sus conteos. Se pide al añadir ese filtro, no antes. */
-  getValoresDeCampo(idCola: number, campo: string): Observable<any[]> {
+  /** Los valores de un campo. Se piden al añadir ese filtro, no al abrir la pantalla. */
+  getValoresDeCampo(idInquilino: number, idCartera: number, idSubcartera: number,
+                    campo: string): Observable<any[]> {
     return this.http.get<any[]>(
-      `${this.apiUrl}/colas/${idCola}/campos/${encodeURIComponent(campo)}/valores`);
+      `${this.apiUrl}/subcarteras/${idSubcartera}/campos/${encodeURIComponent(campo)}/valores`,
+      { params: { idInquilino, idCartera } });
   }
 
-  /** Cuánta gente entraría con estos filtros, sin guardarlos ni armar la cola. */
-  previewCola(idCola: number, filtros: BotColaFiltro[]): Observable<{ conFiltros: number; total: number; error?: string }> {
-    return this.http.post<any>(`${this.apiUrl}/colas/${idCola}/preview`, filtros);
+  /**
+   * Cuánta gente entraría, sin guardar nada.
+   *
+   * Corre el mismo código que arma la cola, en simulación. La versión anterior contaba
+   * con una consulta aparte cuyo universo era el de la primera promesa, así que el
+   * número no tenía que ver con lo que entraba por recordatorio ni por vencidas.
+   */
+  preview(idSubcartera: number, req: {
+    idCola?: number | null; idInquilino: number; idCartera: number;
+    objetivos: string; modoRitmo?: string; idRitmo?: number | null;
+    filtros: BotColaFiltro[];
+  }): Observable<{ entran?: number; candidatos?: number; error?: string }> {
+    return this.http.post<any>(`${this.apiUrl}/subcarteras/${idSubcartera}/preview`, req);
   }
 
   getFiltros(idCola: number): Observable<BotColaFiltro[]> {
