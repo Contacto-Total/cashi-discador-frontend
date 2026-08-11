@@ -114,7 +114,7 @@ const PROMISE_TIPIFICATION_ID = 5;
               <p class="text-sm font-bold text-emerald-950">Agendar conversación</p>
               <p class="mt-1 text-xs leading-relaxed text-emerald-800">Confirma el cliente para habilitar las opciones del panel. El número es opcional cuando el chat llega como LID.</p>
               <label class="mt-4 block text-xs font-semibold text-emerald-900">Número de WhatsApp</label>
-              <input class="mt-1.5 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm" type="tel" placeholder="Número con código de país (opcional)" [ngModel]="schedulePhone()" (ngModelChange)="schedulePhone.set($event)" />
+              <input class="mt-1.5 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm" type="tel" inputmode="numeric" maxlength="9" placeholder="Número de 9 dígitos (opcional)" [ngModel]="schedulePhone()" (ngModelChange)="schedulePhone.set($event)" />
               @if (scheduleError()) { <p class="mt-2 text-xs font-medium text-rose-700">{{ scheduleError() }}</p> }
               <div class="mt-4 flex gap-2">
                 <button type="button" class="flex-1 rounded bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-300" [disabled]="scheduling()" (click)="closeInfo()">Cambiar cliente</button>
@@ -183,8 +183,10 @@ const PROMISE_TIPIFICATION_ID = 5;
               } @else if (followUpOpen()) {
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                   <p class="text-sm font-bold text-emerald-900">Dar seguimiento a promesa</p>
-                  <p class="mt-1 text-xs text-emerald-800">Puedes registrar opcionalmente el número indicado por el cliente antes de crear el enlace.</p>
-                  <input class="mt-3 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm" type="tel" placeholder="Número con código de país (opcional)" [ngModel]="followUpPhone()" (ngModelChange)="followUpPhone.set($event)" />
+                  <p class="mt-1 text-xs text-emerald-800">Puedes registrar opcionalmente un número adicional antes de crear el enlace.</p>
+                  @if (followUpNeedsPhone()) {
+                    <input class="mt-3 w-full rounded border border-emerald-300 bg-white px-3 py-2 text-sm" type="tel" inputmode="numeric" maxlength="9" placeholder="Número de 9 dígitos (opcional)" [ngModel]="followUpPhone()" (ngModelChange)="followUpPhone.set($event)" />
+                  }
                   @if (followUpError()) { <p class="mt-2 text-xs font-medium text-rose-700">{{ followUpError() }}</p> }
                   <div class="mt-3 flex gap-2">
                     <button type="button" class="flex-1 rounded bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-300" [disabled]="savingFollowUp()" (click)="followUpOpen.set(false)">Cancelar</button>
@@ -427,6 +429,11 @@ export class InfoClientWidgetComponent {
   readonly followUpPhone = signal('');
   readonly followUpError = signal<string | null>(null);
   readonly savingFollowUp = signal(false);
+  readonly followUpNeedsPhone = computed(() => {
+    const whatsappPhone = this.toLocalPhone(this.chat()?.contactPhone);
+    const scheduledPhone = this.toLocalPhone(this.agendamiento()?.phone);
+    return !whatsappPhone || whatsappPhone !== scheduledPhone;
+  });
 
   readonly modes: { value: SearchMode; label: string }[] = [
     { value: 'telefono', label: 'Número' },
@@ -517,7 +524,7 @@ export class InfoClientWidgetComponent {
 
   selectForScheduling(result: GlobalSearchResult): void {
     this.selectedClient.set(result);
-    this.schedulePhone.set(this.chat()?.contactPhone || '');
+    this.schedulePhone.set(this.toLocalPhone(this.chat()?.contactPhone));
     this.scheduleError.set(null);
   }
 
@@ -527,9 +534,10 @@ export class InfoClientWidgetComponent {
     const clientId = Number(result?.clientId);
     const clientDocument = result?.clientData.documento?.trim();
     if (!result || !chat?.id || !clientId || !clientDocument) return;
-    this.scheduling.set(true);
     this.scheduleError.set(null);
-    const phone = this.schedulePhone().trim() || undefined;
+    const phone = this.validPhoneOrError(this.schedulePhone(), error => this.scheduleError.set(error));
+    if (phone === undefined && this.schedulePhone().trim()) return;
+    this.scheduling.set(true);
     this.whatsappApi.createAgendamiento(chat.id, { clientId, clientDocument, phone }).pipe(
       finalize(() => this.scheduling.set(false))
     ).subscribe({
@@ -543,7 +551,7 @@ export class InfoClientWidgetComponent {
 
   openFollowUp(): void {
     this.followUpError.set(null);
-    this.followUpPhone.set(this.chat()?.contactPhone || '');
+    this.followUpPhone.set(this.toLocalPhone(this.chat()?.contactPhone));
     this.followUpOpen.set(true);
   }
 
@@ -578,7 +586,10 @@ export class InfoClientWidgetComponent {
     const promiseId = this.activePromiseId();
     const clientId = Number(result?.clientId);
     const documento = result?.clientData.documento?.trim();
-    const phone = this.followUpPhone().trim() || undefined;
+    const phone = this.followUpNeedsPhone()
+      ? this.validPhoneOrError(this.followUpPhone(), error => this.followUpError.set(error))
+      : undefined;
+    if (phone === undefined && this.followUpNeedsPhone() && this.followUpPhone().trim()) return;
     if (!result || !chat?.id || !promiseId || !clientId || !documento) return;
 
     this.savingFollowUp.set(true);
@@ -616,6 +627,22 @@ export class InfoClientWidgetComponent {
     this.followUpActive.set(false);
     this.followUpPhone.set('');
     this.followUpError.set(null);
+  }
+
+  private toLocalPhone(value?: string | null): string {
+    let digits = (value || '').replace(/\D/g, '');
+    if (digits.length === 11 && digits.startsWith('51')) digits = digits.slice(2);
+    return digits;
+  }
+
+  private validPhoneOrError(value: string, setError: (error: string | null) => void): string | undefined {
+    const phone = this.toLocalPhone(value);
+    if (!phone) return undefined;
+    if (phone.length !== 9) {
+      setError('El número debe tener exactamente 9 dígitos.');
+      return undefined;
+    }
+    return phone;
   }
 
   private loadAssignedClientOrSearch(chat: Chat, key: string | number | undefined): void {
