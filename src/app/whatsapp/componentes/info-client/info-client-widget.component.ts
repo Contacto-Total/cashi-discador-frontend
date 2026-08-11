@@ -60,12 +60,7 @@ const PROMISE_TIPIFICATION_ID = 5;
   template: `
     <aside class="flex h-full min-h-0 flex-col overflow-hidden border-l border-slate-200 bg-white text-slate-950">
       <header class="border-b border-slate-200 px-4 py-3">
-        <h3 class="text-sm font-semibold text-slate-900">Información del cliente</h3>
-        @if (chat(); as c) {
-          <p class="truncate text-xs text-slate-500">{{ c.name }} · {{ c.contactPhone || '—' }}</p>
-        } @else {
-          <p class="text-xs text-slate-500">Selecciona un chat</p>
-        }
+        <h3 class="text-sm font-semibold text-slate-900">Información y herramientas</h3>
       </header>
 
       @if (!chat()) {
@@ -104,7 +99,7 @@ const PROMISE_TIPIFICATION_ID = 5;
           </button>
           <div class="min-w-0">
             <p class="truncate text-sm font-semibold text-slate-900">{{ clientName(sel.clientData) }}</p>
-            <p class="truncate text-xs text-slate-500">Doc: {{ sel.clientData.documento }}</p>
+            <p class="truncate text-xs text-slate-500">Doc: {{ sel.clientData.documento }} · {{ sel.nombreCartera }} · {{ sel.nombreSubcartera }}</p>
           </div>
         </div>
 
@@ -395,7 +390,7 @@ export class InfoClientWidgetComponent {
   readonly loading = signal(false);
   readonly results = signal<GlobalSearchResult[]>([]);
   readonly manualOpen = signal(false);
-  readonly mode = signal<SearchMode>('telefono');
+  readonly mode = signal<SearchMode>('documento');
   readonly query = signal('');
   readonly searching = signal(false);
   readonly error = signal<string | null>(null);
@@ -442,7 +437,7 @@ export class InfoClientWidgetComponent {
   });
 
   readonly modes: { value: SearchMode; label: string }[] = [
-    { value: 'telefono', label: 'Número' },
+    { value: 'telefono', label: 'Teléfono' },
     { value: 'documento', label: 'Documento' }
   ];
 
@@ -480,7 +475,7 @@ export class InfoClientWidgetComponent {
       this.error.set(null);
       this.query.set('');
       this.manualOpen.set(false);
-      this.mode.set('telefono');
+       this.mode.set('documento');
        this.selectedClient.set(null);
        this.agendamiento.set(null);
        this.scheduling.set(false);
