@@ -161,6 +161,20 @@ export class AdminRecordingsComponent implements OnInit {
     }
   }
 
+  /**
+   * Los filtros de columna son de la tabla, no de la búsqueda: si quedan puestos
+   * de una consulta anterior recortan la siguiente en silencio. Un filtro de
+   * campaña, por ejemplo, se lleva por delante todas las manuales, que salen
+   * como "Llamada Manual".
+   */
+  private resetTableFilters(): void {
+    this.filterDocumento = '';
+    this.filterTelefono = '';
+    this.filterCampana = '';
+    this.filterAgente = '';
+    this.filterTipificacion = '';
+  }
+
   private validatePortfolioSelection(): boolean {
     if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) {
       this.toastService.error('Por favor, selecciona Proveedor, Cartera y Subcartera.');
@@ -180,6 +194,7 @@ export class AdminRecordingsComponent implements OnInit {
       return;
     }
 
+    this.resetTableFilters();
     this.isLoading = true;
     this.recordingsService.searchByDates(
       this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
@@ -207,6 +222,7 @@ export class AdminRecordingsComponent implements OnInit {
       return;
     }
 
+    this.resetTableFilters();
     this.isLoading = true;
     this.recordingsService.searchByDocumento(
       this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
@@ -234,6 +250,7 @@ export class AdminRecordingsComponent implements OnInit {
       return;
     }
 
+    this.resetTableFilters();
     this.isLoading = true;
     this.recordingsService.searchByTelefono(
       this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
@@ -281,11 +298,7 @@ export class AdminRecordingsComponent implements OnInit {
   }
 
   clearFilters(): void {
-    this.filterDocumento = '';
-    this.filterTelefono = '';
-    this.filterCampana = '';
-    this.filterAgente = '';
-    this.filterTipificacion = '';
+    this.resetTableFilters();
     this.applyFilters();
   }
 
