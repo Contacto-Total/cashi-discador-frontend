@@ -14,14 +14,27 @@ export interface BotConfig {
   maxLlamadasSimultaneas: number;
 }
 
+/**
+ * El calendario de intensidad, global para todas las carteras. Sus números van POR
+ * TAREA, porque cada uno solo significa algo en una de ellas:
+ *
+ *   TAREA                    diasAnticipacion   maxDiasVencida   intentos
+ *   Recordatorio                    sí                --            sí
+ *   PDP de cuota vencida            --                sí            sí
+ *   1ª PDP                          --                --            sí
+ */
 export interface BotRitmo {
   id: number;
   nombre: string;
   diaMesDesde: number;
   diaMesHasta: number;
+  /** Solo recordatorios: con cuántos días de adelanto se avisa. */
   diasAnticipacion: number;
-  maxDiasVencida?: number | null;
-  maxIntentosPorCuota: number;
+  /** Solo vencidas: ancho de la ventana hacia atrás, en días. Techo 3. */
+  maxDiasVencida: number;
+  intentosRecordatorio: number;
+  intentosVencida: number;
+  intentosPrimera: number;
 }
 
 /**
@@ -46,14 +59,16 @@ export interface BotCola {
   idRitmo?: number | null;
   /** AUTO = el ritmo lo decide el día del mes. MANUAL = el ritmo fijado arriba. */
   modoRitmo?: string;
-  /** Todo lo de abajo hereda cuando va vacío: cola → ritmo → configuración global. */
+  /**
+   * Lo de abajo hereda de la configuración global cuando va vacío.
+   *
+   * Los números de intensidad —días de anticipación, ancho de vencidas e intentos— ya
+   * no están aquí: los pone el ritmo, y por tarea. La cola dice a quién se llama.
+   */
   horaInicio?: string | null;
   horaFin?: string | null;
   diasSemana?: string | null;
   maxLlamadasSimultaneas?: number | null;
-  diasAnticipacion?: number | null;
-  maxDiasVencida?: number | null;
-  maxIntentosPorCuota?: number | null;
   estado?: string;               // BORRADOR | LISTA | CERRADA
   estaDiscando?: boolean;
   /** Por qué dejó de discar. Vacío = la paró una persona. */

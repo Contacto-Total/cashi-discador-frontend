@@ -721,18 +721,25 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 
 .volver { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; padding: 0; font-size: 13px; }
 
-/* El parámetro que cuelga de un objetivo: sangrado para que se vea de quién es.
-   "Con cuántos días de adelanto" solo significa algo si recuerdas cuotas. */
-.obj-sub {
-  display: flex; flex-direction: column; gap: 5px;
-  margin: 0 0 10px 26px; max-width: 280px;
-  font-size: 12px; color: var(--text-secondary, #64748b);
+/* ===== LOS CUATRO BLOQUES DEL FORMULARIO =====
+   Qué cola es -> a quién llama -> cuándo llama -> cómo suena. El número no es adorno:
+   dice que hay un orden y cuánto falta. Antes eran doce campos seguidos en una rejilla
+   plana, donde "Subcartera" y "Deja de llamar" pesaban igual. */
+.bloque { padding: 18px 0; border-top: 1px solid var(--borde, #e5e7eb); }
+.bloque:first-of-type { padding-top: 4px; border-top: none; }
+.bloque > .etiqueta {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-size: 13px; font-weight: 600; color: var(--texto, #374151);
 }
-.obj-sub input {
-  padding: 7px 9px; border: 1px solid var(--border-color, #d1d5db);
-  border-radius: 7px; font-size: 13px; font-family: inherit;
+.paso {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #eff6ff; color: #2563eb;
+  font-size: 11px; font-weight: 700;
 }
-.obj-sub input::placeholder { font-style: italic; color: #9ca3af; }
+/* Dentro de un bloque, el separador ya lo pone el bloque. */
+.bloque .objetivos-bloque { padding: 0; border-top: none; }
+
 
 /* Un descarte que no es rutina —blacklist, sin teléfono— pintado distinto: son los
    que explican por qué la cola salió más corta de lo que se esperaba. */
@@ -856,44 +863,42 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 }
 .campo-head .quitar { margin-left: 12px; color: #dc2626; font-size: 12px; }
 
-/* ===== RITMO EN LECTURA =====
-   Lo que el supervisor ve del ritmo dentro del formulario de su cola. No es un form
-   deshabilitado —un input en gris invita a pelearse con él— sino datos: qué rige hoy,
-   con qué números y cuándo cambia. */
-.ritmo-lectura {
-  grid-column: 1 / -1;
-  border: 1px solid var(--borde, #e2e8f0);
-  border-radius: 8px;
-  padding: 14px 16px;
-  background: var(--fondo-suave, #f8fafc);
+/* ===== EL CALENDARIO, POR TAREA =====
+   Cada tarea con sus numeros dentro. Antes eran tres recuadros seguidos por ritmo y no
+   habia forma de saber a cual de las tres cosas que hace Clara afectaba cada uno. */
+.tarea { padding: 12px 0; border-top: 1px dashed var(--borde, #e5e7eb); }
+.tarea:first-of-type { border-top: none; }
+.tarea-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-size: 13px; color: var(--texto, #374151);
 }
-.lectura-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-.ritmo-vigente { font-size: 13px; color: var(--texto-suave, #64748b); }
-.ritmo-vigente strong { color: #2563eb; }
-.ritmo-vigente small { margin-left: 4px; }
-.ritmo-datos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px 18px;
-  margin: 0 0 10px;
-}
-.ritmo-datos dt { font-size: 12px; color: var(--texto-suave, #64748b); }
-.ritmo-datos dd { margin: 2px 0 0; font-weight: 600; font-size: 14px; }
+.tarea-head .muted { font-size: 12px; }
 
-/* Nota bajo un objetivo: sustituye al input cuando el número no lo pone el supervisor. */
-.obj-nota {
-  margin: 6px 0 14px 30px;
-  font-size: 13px;
-  color: var(--texto-suave, #64748b);
+/* ===== EL RITMO ELEGIDO, DENTRO DEL FORMULARIO =====
+   Va pegado a las casillas de tarea porque es lo que les da valor: "negociar vencidas"
+   no dice nada por si solo —vencidas de cuando, con cuantos intentos— y el ritmo lo
+   responde. No se configura aqui: se lee. */
+.ritmo-elegido { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde, #e5e7eb); }
+.ritmo-elegido .ritmo-vigente {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px;
+  margin: 8px 0 0; font-size: 13px; color: var(--texto-suave, #64748b);
 }
-.obj-nota strong { color: var(--texto, #0f172a); }
+.ritmo-elegido .ritmo-vigente strong { color: #2563eb; }
+.ritmo-elegido .btn-link {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; font-size: 13px;
+}
+.lo-que-hara {
+  margin-top: 12px; padding: 12px 14px;
+  border-radius: 8px; background: var(--fondo-suave, #f8fafc);
+  border: 1px solid var(--borde, #e2e8f0);
+}
+.lo-que-hara .etiqueta {
+  display: block; margin-bottom: 8px;
+  font-size: 12px; font-weight: 600; color: var(--texto, #374151);
+}
+.lo-que-hara ul { margin: 0; padding-left: 18px; }
+.lo-que-hara li { font-size: 13px; line-height: 1.55; color: var(--texto, #0f172a); }
+.lo-que-hara small { display: block; margin-top: 8px; }
 
 /* Quién tocó esto por última vez. Discreta y a la derecha: es un dato de auditoría,
    no compite con el botón de guardar. */

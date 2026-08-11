@@ -352,15 +352,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
       nombre: '', idSubcartera: undefined as any, objetivos: '',
       idTono: null, horaInicio: null, horaFin: null,
       maxLlamadasSimultaneas: null,
-      diasAnticipacion: null, maxIntentosPorCuota: null,
       modoRitmo: 'AUTO', idRitmo: null,
     };
   }
 
-  // ---- Lo que se hereda, para poder enseñarlo ----
+  // ---- El ritmo que rige, para poder enseñarlo ----
   //
-  // Un recuadro vacío que pone "hereda" no informa de nada: no sabes si vas a llamar
-  // a 50 clientes o a 500. Estos ayudantes ponen el valor real en el placeholder.
+  // Los reintentos y los días de anticipación ya no se editan por cola: los manda el
+  // calendario de ritmos. Aquí se resuelve cuál rige hoy para poder decir el número
+  // en el formulario, en lectura. Un recuadro que pone "hereda" no informa de nada.
 
   /** El ritmo que se aplicaría hoy si la cola no fija ninguno. */
   get ritmoVigente(): BotRitmo | undefined {
@@ -371,9 +371,68 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.ritmos.find((p) => p.diaMesDesde <= dia && p.diaMesHasta >= dia);
   }
 
-  heredado(campo: 'diasAnticipacion' | 'maxIntentosPorCuota'): string {
-    const v = this.ritmoVigente?.[campo];
-    return v == null ? 'hereda' : `hereda: ${v}`;
+  /**
+   * Las tres cosas que hace Clara, con el campo de intentos que le toca a cada una.
+   *
+   * Ordena la pantalla del calendario: antes eran tres números sueltos por ritmo y no
+   * había forma de saber a cuál de las tres afectaba cada uno.
+   */
+  readonly TOPE_VENCIDA = 3;
+  readonly TAREAS: Array<{
+    clave: string; titulo: string; subtitulo: string; icono: string;
+    campoIntentos: 'intentosRecordatorio' | 'intentosVencida' | 'intentosPrimera';
+  }> = [
+    { clave: 'RECORDATORIO', titulo: 'Recordatorio',
+      subtitulo: 'cuotas que aún no vencen', icono: 'bell',
+      campoIntentos: 'intentosRecordatorio' },
+    { clave: 'CREACION', titulo: 'PDP de cuota vencida',
+      subtitulo: 'negociar una promesa nueva', icono: 'handshake',
+      campoIntentos: 'intentosVencida' },
+    { clave: 'PRIMER_CONTACTO', titulo: '1ª PDP',
+      // `plus-circle` y no `user-plus`: el juego de iconos que registra app.config no
+      // trae UserPlus, y un icono no registrado no se pinta ni avisa.
+      subtitulo: 'clientes que nunca han pactado', icono: 'plus-circle',
+      campoIntentos: 'intentosPrimera' },
+  ];
+
+  /**
+   * Lo que hará Clara con el ritmo elegido, en frases, y solo de lo que esté marcado.
+   *
+   * Va justo debajo de las casillas y no en una tabla aparte porque es la respuesta a
+   * "¿y esto qué significa hoy?". El supervisor no configura nada aquí: lee la
+   * consecuencia de lo que acaba de marcar.
+   */
+  loQueHara(): string[] {
+    const r = this.ritmoVigente;
+    if (!r) return [];
+    const frases: string[] = [];
+    if (this.objRecordatorio) {
+      frases.push(`Recordará cuotas ${r.diasAnticipacion} día(s) antes de que venzan`
+        + `, con ${r.intentosRecordatorio} intento(s) por cliente.`);
+    }
+    if (this.objCreacion) {
+      frases.push(`Negociará cuotas de hasta ${r.maxDiasVencida} día(s) de vencidas`
+        + `, con ${r.intentosVencida} intento(s). No entran las de clientes que sigan`
+        + ` en el periodo de gracia de su asesor.`);
+    }
+    if (this.objPrimerContacto) {
+      frases.push(`Abrirá primeras promesas con ${r.intentosPrimera} intento(s)`
+        + ` por cliente.`);
+    }
+    return frases;
+  }
+
+  /**
+   * El calendario de ritmos vive fuera del modal, asi que ir alli lo cierra. Se avisa
+   * antes: perder un formulario a medio llenar por pulsar un enlace informativo es
+   * peor que el viaje de vuelta.
+   */
+  irAlCalendario(): void {
+    const aviso = 'Se cerrará este formulario y se perderá lo que no hayas guardado. '
+      + '¿Ir al calendario de ritmos?';
+    if (!confirm(aviso)) return;
+    this.cerrarModalCola();
+    this.abrir('ritmo');
   }
 
   // Topes del sistema. No son configuración de negocio —son la ley y el techo de
