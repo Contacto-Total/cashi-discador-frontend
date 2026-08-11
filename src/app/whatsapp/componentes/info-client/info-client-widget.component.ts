@@ -180,6 +180,11 @@ const PROMISE_TIPIFICATION_ID = 5;
                   <p class="text-sm font-bold">Seguimiento activo</p>
                   <p class="mt-1 text-xs">Este cliente está enlazado a tu promesa. Otros agentes pueden ver el chat, pero no enviar mensajes.</p>
                 </div>
+              } @else if (followUpOwnerAgentId(); as ownerAgentId) {
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-amber-900">
+                  <p class="text-sm font-bold">Seguimiento asignado</p>
+                  <p class="mt-1 text-xs">Este chat está enlazado a la promesa del agente {{ ownerAgentId }}. No puedes tomar este seguimiento.</p>
+                </div>
               } @else if (followUpOpen()) {
                 <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                   <p class="text-sm font-bold text-emerald-900">Dar seguimiento a promesa</p>
@@ -426,6 +431,7 @@ export class InfoClientWidgetComponent {
   readonly checkingFollowUp = signal(false);
   readonly followUpOpen = signal(false);
   readonly followUpActive = signal(false);
+  readonly followUpOwnerAgentId = signal<string | null>(null);
   readonly followUpPhone = signal('');
   readonly followUpError = signal<string | null>(null);
   readonly savingFollowUp = signal(false);
@@ -512,7 +518,11 @@ export class InfoClientWidgetComponent {
     const agentId = String(this.auth.getCurrentUser()?.id || '');
     if (chat?.id) {
       this.whatsappApi.getSendAccess(chat.id).subscribe({
-        next: access => this.followUpActive.set(access.ownerType === 'PROMISE' && access.ownerAgentId === agentId)
+        next: access => {
+          const ownerAgentId = access.ownerType === 'PROMISE' ? access.ownerAgentId || null : null;
+          this.followUpActive.set(ownerAgentId === agentId);
+          this.followUpOwnerAgentId.set(ownerAgentId !== agentId ? ownerAgentId : null);
+        }
       });
     }
     this.loadFollowUpEligibility(result);
@@ -625,6 +635,7 @@ export class InfoClientWidgetComponent {
     this.checkingFollowUp.set(false);
     this.followUpOpen.set(false);
     this.followUpActive.set(false);
+    this.followUpOwnerAgentId.set(null);
     this.followUpPhone.set('');
     this.followUpError.set(null);
   }
