@@ -803,8 +803,10 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 
 .campo-valores { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* La casilla y su conteo en una sola pastilla: el número es lo que dice si merece la
-   pena marcarla, así que va al lado y no en otra columna. */
+/* La casilla como pastilla. El conteo que llevaba al lado se quitó: contaba filas de
+   la tabla dinámica de la cartera, no de la cola, así que ponía 450 junto a un valor
+   del que iban a entrar doce. El número honesto es el de "entran N", al pie del
+   bloque, que sale de simular el armado. */
 .valor-chip {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 12px; cursor: pointer;
@@ -814,8 +816,53 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .valor-chip:hover { background: var(--fondo-suave, #f8fafc); }
 .valor-chip.on { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.45); color: #1d4ed8; }
 .valor-chip input { width: 15px; height: 15px; cursor: pointer; }
-.valor-chip b { font-variant-numeric: tabular-nums; opacity: .7; }
-.valor-chip.on b { opacity: 1; }
+
+/* ===== A QUIÉN LLAMA: LOS FILTROS DENTRO DEL FORMULARIO =====
+   Sangrados bajo la frase "…que estén en" para que se lean como parte de ella y no
+   como una configuración aparte. Antes vivían en un modal detrás de otro botón, y las
+   dos pantallas se presentaban como "a quién se llama". */
+.frase { margin: 12px 0 8px; font-size: 13px; color: var(--texto, #374151); }
+.frase strong { color: #2563eb; }
+.filtros-inline {
+  margin: 0 0 4px 14px; padding-left: 14px;
+  border-left: 2px solid var(--borde, #e5e7eb);
+}
+.filtros-inline .campo-filtro { padding: 10px 0; }
+.alta-filtro { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.alta-filtro select {
+  min-height: 34px; padding: 4px 8px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border-color, #d1d5db); border-radius: 7px;
+  background: var(--input-bg, #fff);
+}
+.alta-filtro .btn-link { display: inline-flex; align-items: center; gap: 5px; padding: 0; font-size: 13px; }
+
+/* El único número de la pantalla, y de las dos preguntas a la vez. */
+.cuantos-entran {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-top: 16px; padding: 12px 14px;
+  border-radius: 8px; background: rgba(59,130,246,.07);
+  border: 1px solid rgba(59,130,246,.25);
+  font-size: 14px; color: var(--texto, #0f172a);
+}
+.cuantos-entran strong { font-size: 17px; color: #1d4ed8; font-variant-numeric: tabular-nums; }
+.cuantos-entran .aviso { color: #b45309; font-size: 13px; }
+
+/* El techo compartido por todas las colas, editable solo por el admin. */
+.tope-global {
+  margin-top: 16px; padding: 12px 14px;
+  border-radius: 8px; border: 1px dashed var(--borde, #e2e8f0);
+  background: var(--fondo-suave, #f8fafc);
+}
+.tope-global .etiqueta {
+  display: block; margin-bottom: 4px;
+  font-size: 13px; font-weight: 600; color: var(--texto, #374151);
+}
+.tope-global > .muted { margin: 0 0 10px; }
+.linea-tope { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.linea-tope input {
+  width: 90px; min-height: 38px; padding: 6px 10px; font-size: 14px; font-family: inherit;
+  border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
+}
 
 /* ===== TONO POR OBJETIVO =====
    Va plegado dentro del form de la cola. Cerrado no ocupa nada; abierto son tres
