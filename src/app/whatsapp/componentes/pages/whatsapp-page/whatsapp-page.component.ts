@@ -22,7 +22,7 @@ import { AgentState } from '../../../../core/models/agent-status.model';
       </section>
 
       @if (isInactive) {
-        <section class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-6" aria-live="assertive">
+        <section class="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/80 p-6" aria-live="assertive">
           <div class="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
             <h1 class="text-lg font-semibold text-slate-950">Sesión inactiva</h1>
             <p class="mt-2 text-sm text-slate-600">Tu estado cambió a desconectado por inactividad.</p>
@@ -39,7 +39,7 @@ import { AgentState } from '../../../../core/models/agent-status.model';
   `
 })
 export class WhatsappPageComponent implements OnInit, OnDestroy {
-  private static readonly INACTIVITY_TIMEOUT_MS = 5000;
+  private static readonly INACTIVITY_TIMEOUT_MS = 60000;
   private routeSub?: Subscription;
   private statusChangedByWhatsapp = false;
   private inactivityTimer?: ReturnType<typeof setTimeout>;
