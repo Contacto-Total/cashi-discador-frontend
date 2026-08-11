@@ -498,7 +498,7 @@ export class InfoClientWidgetComponent {
 
   private loadFollowUpEligibility(result: GlobalSearchResult): void {
     const chat = this.chat();
-    const clientId = Number(result.clientData.id);
+    const clientId = Number(result.clientId);
     const documento = result.clientData.documento?.trim();
     if (!chat?.id || !clientId || !documento) return;
     this.checkingFollowUp.set(true);
@@ -525,7 +525,7 @@ export class InfoClientWidgetComponent {
     const result = this.selectedClient();
     const chat = this.chat();
     const promiseId = this.activePromiseId();
-    const clientId = Number(result?.clientData.id);
+    const clientId = Number(result?.clientId);
     const documento = result?.clientData.documento?.trim();
     const phone = this.followUpPhone().trim() || undefined;
     if (!result || !chat?.id || !promiseId || !clientId || !documento) return;
