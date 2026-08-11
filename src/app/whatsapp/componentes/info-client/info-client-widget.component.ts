@@ -206,8 +206,9 @@ const PROMISE_TIPIFICATION_ID = 5;
                 } @else if (followUpError()) {
                   <p class="text-xs text-amber-700">{{ followUpError() }}</p>
                 }
-              }
+            }
           </div>
+        }
        } @else {
               <div class="mb-3 flex items-center gap-2">
                 <button type="button" class="grid size-7 place-items-center rounded-full text-slate-500 hover:bg-slate-100" aria-label="Volver a opciones" (click)="backToOptions()">
