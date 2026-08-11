@@ -35,7 +35,7 @@ import { AuthService } from '../../../../core/services/auth.service';
             [class.bg-emerald-50]="hideClosedWindows()"
             [class.text-emerald-700]="hideClosedWindows()"
             (click)="toggleClosedWindows()"
-            [title]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida (+12 h)'"
+            [title]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida (+24 h)'"
             [attr.aria-label]="hideClosedWindows() ? 'Mostrar chats con ventana vencida' : 'Ocultar chats con ventana vencida'"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v5l-4 2v-7z"/><path d="m4 4 16 16"/></svg>
@@ -114,7 +114,7 @@ import { AuthService } from '../../../../core/services/auth.service';
                     </div>
                   }
                   @if (chat.blocked) {
-                    <span class="absolute -bottom-1 -right-1 rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">12h</span>
+                    <span class="absolute -bottom-1 -right-1 rounded bg-rose-500 px-1.5 py-0.5 text-[10px] font-bold text-white">24h</span>
                   }
                 </div>
 

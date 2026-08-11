@@ -577,7 +577,7 @@ export class WhatsappMessageStoreService {
   private getSendErrorMessage(error: unknown): string {
     const response = error as { status?: number; error?: { error?: string; reason?: string; detail?: string; message?: string } };
     if (response.status === 409 && response.error?.error === 'CHAT_BLOCKED') {
-      return '12 h expirado.';
+      return '24 h expirado.';
     }
     if (response.status === 409 && response.error?.error === 'CHAT_ENGAGED') {
       return response.error.detail || 'Este chat está enlazado con otro agente.';

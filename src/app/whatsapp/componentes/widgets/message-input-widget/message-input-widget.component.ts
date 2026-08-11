@@ -359,8 +359,8 @@ export class MessageInputWidgetComponent {
       const time = this.formatRemaining(remaining);
       return `Este chat está enlazado contigo. Se libera en ${time}.`;
     }
-    if (chat.blocked) return '12 h expirado.';
-    if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '12 h expirado.';
+    if (chat.blocked) return '24 h expirado.';
+    if (chat.windowExpiresAt && new Date(chat.windowExpiresAt).getTime() <= Date.now()) return '24 h expirado.';
     return '';
   }
 
