@@ -354,7 +354,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
       [AgentState.EN_MANUAL]: '#607d8b',
       [AgentState.DESCONECTADO]: '#9e9e9e',
       [AgentState.GESTION_MANUAL]: '#009688',
-      [AgentState.SEGUIMIENTO]: '#E91E63'
+      [AgentState.SEGUIMIENTO]: '#E91E63',
+      [AgentState.WHATSAPP]: '#25D366'
     };
     return colors[state] || '#757575';
   }

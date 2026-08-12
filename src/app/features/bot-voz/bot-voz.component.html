@@ -76,29 +76,42 @@
       <!-- "Llamadas al día" (max_llamadas_dia) estaba aquí y se quitó: no limita nada.
            Se lee en un solo punto del backend, `BotColaService:187`, y está detrás de
            `idCola == null` —el armado global, anterior a las colas—, que hoy no llama
-           nadie. Cuántos clientes entran lo deciden los filtros de la cola. -->
-      <div class="grid-form">
-        <label>
-          Días de anticipación
-          <input type="number" min="0" [(ngModel)]="p.diasAnticipacion" />
-          <small class="muted">
-            Con cuántos días de adelanto se recuerda una cuota antes de que venza.
-          </small>
-        </label>
-        <label>
-          Intentos por cliente
-          <input type="number" min="1" [(ngModel)]="p.maxIntentosPorCuota" />
-          <small class="muted">Cuántas veces se vuelve a marcar si no contesta.</small>
-        </label>
-        <label>
-          Hasta cuántos días de vencida
-          <input type="number" min="0" max="3" [(ngModel)]="p.maxDiasVencida" />
-          <small class="muted">
-            Máximo <strong>3</strong>, y el backend lo capa aunque aquí se escriba más.
-            Con 3 se llama a la cuota el día que los cumple: antes es del asesor que la
-            pactó. Vacío = esta etapa no llama cuotas vencidas.
-          </small>
-        </label>
+           nadie. Cuántos clientes entran lo deciden los filtros de la cola.
+
+           Lo que queda va POR TAREA. Antes eran tres números sueltos por ritmo y no
+           había forma de saber a cuál de las tres cosas que hace Clara afectaba cada
+           uno: "días de anticipación" solo significa algo recordando, y "hasta cuántos
+           días de vencida" solo negociando. -->
+      <div class="tarea" *ngFor="let t of TAREAS">
+        <div class="tarea-head">
+          <lucide-angular [name]="t.icono" [size]="15"></lucide-angular>
+          <strong>{{ t.titulo }}</strong>
+          <span class="muted">{{ t.subtitulo }}</span>
+        </div>
+        <div class="grid-form">
+          <label *ngIf="t.clave === 'RECORDATORIO'">
+            Días de anticipación
+            <input type="number" min="0" [(ngModel)]="p.diasAnticipacion" />
+            <small class="muted">
+              Con cuántos días de adelanto se avisa de una cuota antes de que venza.
+            </small>
+          </label>
+          <label *ngIf="t.clave === 'CREACION'">
+            Hasta cuántos días de vencida
+            <input type="number" min="1" [max]="TOPE_VENCIDA" [(ngModel)]="p.maxDiasVencida" />
+            <small class="muted">
+              Ancho de la ventana hacia atrás. Máximo <strong>{{ TOPE_VENCIDA }}</strong>,
+              y el backend lo topa aunque aquí se escriba más. No cuenta el periodo de
+              gracia: las cuotas cuyo cliente siga en gracia de su asesor no entran,
+              tengan la antigüedad que tengan.
+            </small>
+          </label>
+          <label>
+            Intentos por cliente
+            <input type="number" min="1" [(ngModel)]="p[t.campoIntentos]" />
+            <small class="muted">Cuántas veces se vuelve a marcar si no contesta.</small>
+          </label>
+        </div>
       </div>
 
       <div class="aviso-no-guardado" *ngIf="ritmoSinGuardar(p)">
@@ -155,9 +168,6 @@
               </button>
               <button class="btn-action-small" (click)="editarCola(c)" title="Editar la cola">
                 <lucide-angular name="pencil" [size]="15"></lucide-angular>
-              </button>
-              <button class="btn-action-small" (click)="editarFiltros(c)" title="Filtros de segmentación">
-                <lucide-angular name="filter" [size]="15"></lucide-angular>
               </button>
               <button class="btn-action-small" (click)="armarColaDe(c)"
                       [disabled]="armandoCola === c.id" title="Llenar la cola de hoy">
@@ -281,12 +291,20 @@
 
         <div class="modal-body">
           <p class="ayuda">
-            Lo que dejes <strong>vacío</strong> lo hereda: primero del ritmo de intensidad
-            y, si tampoco lo dice, de la configuración global. La ventana horaria global es
-            el tope legal — una cola solo puede estrecharla, nunca ampliarla.
+            Lo que dejes <strong>vacío</strong> lo hereda de la configuración global. La
+            ventana horaria es el tope legal — una cola solo puede estrecharla, nunca
+            ampliarla.
           </p>
 
-          <div class="grid-form">
+          <!-- El formulario va en cuatro bloques, en el orden en que se piensa una cola:
+               qué es -> a quién llama -> cuándo llama -> cómo suena. Antes eran doce
+               campos en una rejilla plana donde "Subcartera" pesaba lo mismo que "Deja de
+               llamar", y los objetivos —lo único que decide si la cola trae a alguien—
+               quedaban al final, después del horario y del tono. -->
+
+          <section class="bloque">
+            <span class="etiqueta"><span class="paso">1</span> Qué cola es</span>
+            <div class="grid-form">
             <label>
               Nombre
               <input type="text" [(ngModel)]="nuevaCola.nombre" placeholder="Castigo — mañana">
@@ -321,6 +339,246 @@
                 <option *ngFor="let s of subcarteras" [ngValue]="s.id">{{ s.nombreSubcartera }}</option>
               </select>
             </label>
+            </div>
+          </section>
+
+          <!-- ===== 2 · A QUIÉN LLAMA =====
+               Una sola pregunta, en dos partes que se leen como una frase: de qué parte
+               de la cartera, y por qué motivo se les llama. Antes eran dos pantallas
+               distintas —los objetivos al final del formulario, los filtros en un modal
+               detrás de otro botón— y las dos se presentaban como "a quién se llama", así
+               que parecía que competían. No compiten: se multiplican.
+
+               Aquí no se configura ni un número. Los de intensidad los pone el calendario
+               de ritmos; el único que se ve es cuánta gente entra, y sale del mismo
+               código que arma la cola. -->
+          <section class="bloque">
+            <span class="etiqueta"><span class="paso">2</span> A quién llama esta cola</span>
+            <div class="objetivos-bloque">
+
+            <p class="frase" *ngIf="nuevaCola.idSubcartera">
+              De la subcartera <strong>{{ nombreSubcartera(nuevaCola.idSubcartera) }}</strong>…
+            </p>
+            <p class="muted" *ngIf="!nuevaCola.idSubcartera">
+              Elige antes la subcartera: de ella salen los campos por los que se puede
+              filtrar.
+            </p>
+
+            <!-- ===== …QUE ESTÉN EN (los filtros) ===== -->
+            <div class="filtros-inline" *ngIf="nuevaCola.idSubcartera">
+              <p class="frase">…que estén en</p>
+
+              <p class="muted" *ngIf="cargandoCampos">Leyendo los campos de la cartera…</p>
+              <p class="muted" *ngIf="!cargandoCampos && !campos.length">
+                Esta cartera no tiene campos agrupables, así que no hay por dónde
+                segmentar. Entra la subcartera entera.
+              </p>
+
+              <div class="campo-filtro" *ngFor="let campo of agregados">
+                <div class="campo-head">
+                  <span class="campo-titulo">{{ campo.etiqueta }}</span>
+                  <span class="campo-estado muted" *ngIf="!marcadosDe(campo.codigo)">
+                    nada marcado: entran todos
+                  </span>
+                  <button class="btn-link quitar" type="button"
+                          (click)="quitarFiltro(campo.codigo)">Quitar</button>
+                </div>
+                <!-- Sin el conteo por valor: contaba filas de la tabla dinámica de la
+                     cartera, no de la cola, así que decía 450 al lado de un valor del
+                     que iban a entrar doce. El número honesto es el de abajo. -->
+                <div class="campo-valores">
+                  <label class="valor-chip" *ngFor="let v of campo.valores"
+                         [class.on]="estaMarcado(campo.codigo, v.valor)">
+                    <input type="checkbox" [checked]="estaMarcado(campo.codigo, v.valor)"
+                           (change)="alternarValor(campo.codigo, v.valor)">
+                    <span>{{ v.valor }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="alta-filtro" *ngIf="!cargandoCampos && camposDisponibles().length">
+                <select [(ngModel)]="campoAAgregar" [ngModelOptions]="{standalone: true}">
+                  <option [ngValue]="''" disabled>Añadir un campo…</option>
+                  <option *ngFor="let c of camposDisponibles()" [ngValue]="c.codigo">
+                    {{ c.etiqueta }}
+                  </option>
+                </select>
+                <button class="btn-link" type="button" (click)="agregarFiltro()"
+                        [disabled]="!campoAAgregar || cargandoValores">
+                  <lucide-angular name="plus" [size]="14"></lucide-angular>
+                  {{ cargandoValores ? 'Leyendo valores…' : 'Añadir' }}
+                </button>
+              </div>
+              <p class="muted" *ngIf="!agregados.length && campos.length && !cargandoCampos">
+                Sin filtros entra toda la subcartera. Añade un campo para reducirla.
+              </p>
+            </div>
+
+            <!-- ===== …Y A LOS QUE LES TOQUE (los objetivos) ===== -->
+            <p class="frase">…y a los que les toque</p>
+
+            <label class="obj-opcion">
+              <input type="checkbox" [(ngModel)]="objRecordatorio" (ngModelChange)="recalcular()">
+              <span>
+                <strong>Recordar una cuota que está por vencer</strong>
+                <small>No negocia ni ofrece descuentos: solo avisa de la fecha.</small>
+              </span>
+            </label>
+
+            <label class="obj-opcion">
+              <input type="checkbox" [(ngModel)]="objCreacion" (ngModelChange)="recalcular()">
+              <span>
+                <strong>Negociar una cuota que ya venció</strong>
+                <small>Ofrece las rebajas configuradas hasta cerrar una promesa nueva.</small>
+              </span>
+            </label>
+
+            <label class="obj-opcion">
+              <input type="checkbox" [(ngModel)]="objPrimerContacto" (ngModelChange)="recalcular()">
+              <span>
+                <strong>Abrir la primera promesa de un cliente</strong>
+                <small>Clientes de la subcartera que nunca han pactado nada.</small>
+              </span>
+            </label>
+
+            <p class="aviso-pausa" *ngIf="!objRecordatorio && !objCreacion && !objPrimerContacto">
+              <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+              Sin marcar ninguna, la cola no traerá ningún cliente.
+            </p>
+
+            <!-- El ritmo, aquí y no en un bloque aparte: es lo que da valor a las
+                 casillas de arriba. Marcar "negociar vencidas" no dice nada por sí solo
+                 —¿vencidas de cuándo, con cuántos intentos?—; el ritmo lo responde. -->
+            <div class="ritmo-elegido">
+              <div class="grid-form">
+                <label *ngIf="esAdmin">
+                  Ritmo
+                  <select [(ngModel)]="nuevaCola.modoRitmo" (ngModelChange)="recalcular()">
+                    <option value="AUTO">Automático según el día del mes</option>
+                    <option value="MANUAL">Fijo, el que yo elija</option>
+                  </select>
+                  <small class="muted">
+                    Con automático no hay que cambiarlo en quincena: se ajusta solo.
+                  </small>
+                </label>
+                <label *ngIf="esAdmin && nuevaCola.modoRitmo === 'MANUAL'">
+                  Ritmo fijo
+                  <select [(ngModel)]="nuevaCola.idRitmo" (ngModelChange)="recalcular()">
+                    <option [ngValue]="null" disabled>Elige uno…</option>
+                    <option *ngFor="let p of ritmos" [ngValue]="p.id">{{ p.nombre }}</option>
+                  </select>
+                </label>
+              </div>
+              <p class="ritmo-vigente" *ngIf="ritmoVigente">
+                Hoy rige <strong>{{ ritmoVigente.nombre }}</strong>
+                <small>(del {{ ritmoVigente.diaMesDesde }} al {{ ritmoVigente.diaMesHasta }};
+                  el {{ ritmoVigente.diaMesHasta + 1 }} pasa al siguiente)</small>
+                <button type="button" class="btn-link" *ngIf="esAdmin" (click)="irAlCalendario()">
+                  <lucide-angular name="calendar" [size]="14"></lucide-angular>
+                  Editar el calendario
+                </button>
+              </p>
+              <p class="muted" *ngIf="!ritmoVigente">
+                No hay ningún ritmo definido para el día de hoy. Avisa a un administrador:
+                sin ritmo la cola no se puede armar.
+              </p>
+
+              <!-- Lo que significa lo marcado, en frases. No es configurable: si algún
+                   número no gusta, se cambia en el calendario, no aquí. -->
+              <div class="lo-que-hara" *ngIf="loQueHara().length">
+                <span class="etiqueta">Con el ritmo {{ ritmoVigente?.nombre }}, Clara hará esto</span>
+                <ul>
+                  <li *ngFor="let f of loQueHara()">{{ f }}</li>
+                </ul>
+                <small class="muted" *ngIf="!esAdmin">
+                  Estos números los lleva un administrador y son los mismos para todas las
+                  carteras. Lo de tu cola —horario, llamadas a la vez, filtros y tono— sí lo
+                  defines aquí.
+                </small>
+              </div>
+            </div>
+
+            <!-- El único número de la pantalla, y de las dos preguntas a la vez. Sale de
+                 correr el armado en simulación, así que es literalmente lo que entrará.
+                 Antes había tres —los valores de cada chip, el "(N valores)" y un botón
+                 "Ver cuántos entran"— y ninguno contaba este universo. -->
+            <div class="cuantos-entran" *ngIf="nuevaCola.idSubcartera">
+              <lucide-angular name="users" [size]="16"></lucide-angular>
+              <span *ngIf="calculando" class="muted">Contando…</span>
+              <span *ngIf="!calculando && errorPreview" class="aviso">{{ errorPreview }}</span>
+              <span *ngIf="!calculando && !errorPreview && entran !== undefined">
+                Entran <strong>{{ entran }}</strong> cliente(s)
+                <small class="muted" *ngIf="camposFiltrando">
+                  con {{ camposFiltrando }} filtro(s) puesto(s)
+                </small>
+                <small class="muted" *ngIf="!camposFiltrando">
+                  — sin filtros, entra toda la subcartera
+                </small>
+              </span>
+            </div>
+            </div>
+          </section>
+
+          <!-- ===== 3 · CUÁNDO LLAMA =====
+               Solo la ventana horaria y los canales. Los números de intensidad se fueron
+               al bloque 2, pegados a la tarea que los provoca: "reintentos" no significa
+               nada suelto, y sí junto a "recordar" o a "negociar vencidas". -->
+          <section class="bloque">
+            <span class="etiqueta"><span class="paso">3</span> Cuándo llama</span>
+            <div class="grid-form">
+            <label>
+              Empieza a llamar
+              <input type="time" [(ngModel)]="nuevaCola.horaInicio">
+              <small class="muted">Vacío = {{ topeHoraInicio }}, el mínimo legal.</small>
+            </label>
+            <label>
+              Deja de llamar
+              <input type="time" [(ngModel)]="nuevaCola.horaFin">
+              <small class="muted">No puede pasar de {{ topeHoraFin }}: lo fija la Ley 29571.</small>
+            </label>
+            <label>
+              Llamadas a la vez
+              <input type="number" min="1" [max]="topeSimultaneas"
+                     [(ngModel)]="nuevaCola.maxLlamadasSimultaneas"
+                     [placeholder]="'hereda: ' + topeSimultaneas">
+              <small class="muted">
+                Conversaciones que sostiene a la vez esta cola. No puede pasar de
+                {{ topeSimultaneas }}, que es el techo compartido por todas.
+              </small>
+            </label>
+            </div>
+
+            <!-- El techo global, editable por el admin y aquí mismo.
+                 Estaba sembrado en 1 y no había forma de cambiarlo desde ninguna
+                 pantalla: se quitó el PUT /config metiéndolo en el mismo saco que la
+                 ventana de la Ley 29571, y no es lo mismo. La ley no cambia; cuántas
+                 llamadas aguanta la máquina, sí. Es el ÚNICO tope: el micro tenía otro
+                 en su .env y se quitó, porque capaba por debajo de este sin que se
+                 viera. -->
+            <div class="tope-global" *ngIf="esAdmin">
+              <span class="etiqueta">Techo de todas las colas</span>
+              <p class="muted">
+                Cuántas llamadas sostiene el bot a la vez, sumando todas las colas.
+                Ninguna puede pasar de aquí.
+              </p>
+              <div class="linea-tope">
+                <input type="number" min="1" [(ngModel)]="topeGlobalEdit"
+                       [ngModelOptions]="{standalone: true}">
+                <button class="btn-secondary" type="button"
+                        [disabled]="guardandoTope || topeGlobalEdit === topeSimultaneas"
+                        (click)="guardarTopeGlobal()">
+                  {{ guardandoTope ? 'Guardando…' : 'Guardar techo' }}
+                </button>
+                <small class="muted">{{ firma(config) }}</small>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ===== 4 · CÓMO SUENA ===== -->
+          <section class="bloque">
+            <span class="etiqueta"><span class="paso">4</span> Cómo suena</span>
+            <div class="grid-form">
             <label>
               Voz y tono
               <select [(ngModel)]="nuevaCola.idTono">
@@ -366,139 +624,8 @@
                 </label>
               </div>
             </div>
-            <label>
-              Llamadas a la vez
-              <input type="number" min="1" [max]="topeSimultaneas"
-                     [(ngModel)]="nuevaCola.maxLlamadasSimultaneas"
-                     [placeholder]="'hereda: ' + topeSimultaneas">
-              <small class="muted">
-                Conversaciones que sostiene a la vez esta cola. No puede pasar de
-                {{ topeSimultaneas }}: es el techo de canales de la máquina, compartido
-                por todas.
-              </small>
-            </label>
-            <label>
-              Empieza a llamar
-              <input type="time" [(ngModel)]="nuevaCola.horaInicio">
-              <small class="muted">Vacío = {{ topeHoraInicio }}, el mínimo legal.</small>
-            </label>
-            <label>
-              Deja de llamar
-              <input type="time" [(ngModel)]="nuevaCola.horaFin">
-              <small class="muted">No puede pasar de {{ topeHoraFin }}: lo fija la Ley 29571.</small>
-            </label>
-            <!-- Reintentos y ritmo solo los toca el admin. Para el supervisor no es un
-                 campo vacío que pone "hereda": es el número que rige hoy, dicho. -->
-            <label *ngIf="esAdmin">
-              Reintentos por cliente
-              <input type="number" min="1" [(ngModel)]="nuevaCola.maxIntentosPorCuota"
-                     [placeholder]="heredado('maxIntentosPorCuota')">
-            </label>
-            <label *ngIf="esAdmin">
-              Ritmo de llamada
-              <select [(ngModel)]="nuevaCola.modoRitmo">
-                <option value="AUTO">Automático según el día del mes</option>
-                <option value="MANUAL">Fijo, el que yo elija</option>
-              </select>
-              <small class="muted">
-                Con automático no hay que cambiarlo en quincena: se ajusta solo.
-              </small>
-            </label>
-            <label *ngIf="esAdmin && nuevaCola.modoRitmo === 'MANUAL'">
-              Ritmo fijo
-              <select [(ngModel)]="nuevaCola.idRitmo">
-                <option [ngValue]="null" disabled>Elige uno…</option>
-                <option *ngFor="let p of ritmos" [ngValue]="p.id">{{ p.nombre }}</option>
-              </select>
-            </label>
-          </div>
-
-          <!-- ===== RITMO, EN LECTURA =====
-               Antes esto era una pantalla aparte con los mismos campos que este form, y
-               nadie sabía cuál de los dos mandaba. Ahora el ritmo se define en un solo
-               sitio —el calendario, que lleva el admin— y aquí se ve cuál rige y qué
-               significa, sin poder tocarlo. -->
-          <div class="ritmo-lectura" *ngIf="!esAdmin">
-            <div class="lectura-head">
-              <span class="etiqueta">Ritmo de la cola</span>
-              <span class="ritmo-vigente" *ngIf="ritmoVigente">
-                Hoy rige <strong>{{ ritmoVigente.nombre }}</strong>
-                <small>(del {{ ritmoVigente.diaMesDesde }} al {{ ritmoVigente.diaMesHasta }})</small>
-              </span>
             </div>
-            <p class="muted" *ngIf="!ritmoVigente">
-              No hay ningún ritmo definido para el día de hoy. Avisa a un administrador:
-              sin ritmo la cola no se puede armar.
-            </p>
-            <dl class="ritmo-datos" *ngIf="ritmoVigente">
-              <div>
-                <dt>Reintentos por cliente</dt>
-                <dd>{{ ritmoVigente.maxIntentosPorCuota ?? '—' }}</dd>
-              </div>
-              <div>
-                <dt>Cambia solo</dt>
-                <dd>El {{ ritmoVigente.diaMesHasta + 1 }} pasa al siguiente ritmo</dd>
-              </div>
-            </dl>
-            <small class="muted">
-              El ritmo lo lleva un administrador y es el mismo para todas las carteras.
-              Lo de tu cola —horario, llamadas a la vez, objetivos, filtros y tono— sí lo
-              defines aquí.
-            </small>
-          </div>
-
-          <div class="objetivos-bloque">
-            <span class="etiqueta">¿Qué quieres que haga Clara?</span>
-            <p class="muted">
-              Marca al menos una. De esto depende a quién se llama: sin ninguna marcada
-              no entraría ningún cliente en la cola.
-            </p>
-
-            <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objRecordatorio">
-              <span>
-                <strong>Recordar una cuota que está por vencer</strong>
-                <small>No negocia ni ofrece descuentos: solo avisa de la fecha.</small>
-              </span>
-            </label>
-            <label class="obj-sub" *ngIf="objRecordatorio && esAdmin">
-              Con cuántos días de adelanto
-              <input type="number" min="0" [(ngModel)]="nuevaCola.diasAnticipacion"
-                     [placeholder]="heredado('diasAnticipacion')">
-            </label>
-            <p class="obj-nota" *ngIf="objRecordatorio && !esAdmin">
-              Se avisa con <strong>{{ ritmoVigente?.diasAnticipacion ?? '—' }}</strong>
-              día(s) de adelanto, según el ritmo de hoy.
-            </p>
-
-            <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objCreacion">
-              <span>
-                <strong>Negociar una cuota que ya venció</strong>
-                <small>Ofrece las rebajas configuradas hasta cerrar una promesa nueva.</small>
-              </span>
-            </label>
-            <!-- El tope de 3 no es preferencia de la cola, es regla: una cuota vencida
-                 se llama el día que cumple tres, ni antes (son del asesor original por
-                 la Regla B) ni después. El backend lo capa igual venga de donde venga. -->
-            <p class="obj-nota" *ngIf="objCreacion">
-              Se llama a la cuota <strong>el día que cumple 3 días vencida</strong>.
-              Antes es del asesor que la pactó, y más tarde ya no entra.
-            </p>
-
-            <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objPrimerContacto">
-              <span>
-                <strong>Abrir la primera promesa de un cliente</strong>
-                <small>Clientes de la subcartera que nunca han pactado nada.</small>
-              </span>
-            </label>
-
-            <p class="aviso-pausa" *ngIf="!objRecordatorio && !objCreacion && !objPrimerContacto">
-              <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
-              Sin marcar ninguna, la cola no traerá ningún cliente.
-            </p>
-          </div>
+          </section>
 
           <!-- No hay tope de clientes: entran todos los que cumplan los objetivos y
                los filtros. Poner un número encima dejaba fuera a gente sin criterio, y
@@ -534,100 +661,12 @@
     </div>
   </section>
 
-  <!-- ===== FILTROS DE UNA COLA =====
-       En modal, como el alta: antes era un panel suelto debajo de la lista, sin forma
-       de cerrarlo ni de cancelar. Un formulario del que no se puede salir obliga a
-       recargar la pagina para desistir. -->
-  <div class="modal-overlay" *ngIf="filtrosDe" (click)="cerrarFiltros()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>Filtros de la cola</h3>
-        <button class="btn-close" (click)="cerrarFiltros()">
-          <lucide-angular name="x" [size]="18"></lucide-angular>
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <p class="ayuda">
-          Marca los valores que quieres incluir. <strong>Un campo sin nada marcado no
-          filtra</strong>: entran todos. Los números son cuánta gente hay en cada valor
-          dentro de esta cartera.
-        </p>
-
-        <p class="muted" *ngIf="cargandoCampos">Leyendo los campos de la cartera…</p>
-        <p class="muted" *ngIf="!cargandoCampos && !campos.length">
-          Esta cartera no tiene campos con valores agrupables, así que no hay nada por
-          lo que segmentar aquí.
-        </p>
-
-        <!-- Alta de filtro. Igual que en campañas: se elige el campo y se añade. Antes
-             se volcaban los treinta campos con todos sus valores nada más abrir, y
-             había que bajar por la lista entera para encontrar el que interesaba. -->
-        <div class="alta-filtro" *ngIf="!cargandoCampos && campos.length">
-          <label>
-            Campo a filtrar
-            <select [(ngModel)]="campoAAgregar">
-              <option [ngValue]="''" disabled>Elige un campo…</option>
-              <option *ngFor="let c of camposDisponibles()" [ngValue]="c.codigo">
-                {{ c.etiqueta }} ({{ c.valores }} valores)
-              </option>
-            </select>
-          </label>
-          <button class="btn-submit" (click)="agregarFiltro()"
-                  [disabled]="!campoAAgregar || cargandoValores">
-            <lucide-angular name="plus" [size]="15"></lucide-angular>
-            {{ cargandoValores ? 'Leyendo valores…' : 'Agregar filtro' }}
-          </button>
-          <span class="muted" *ngIf="!camposDisponibles().length">
-            Ya añadiste todos los campos disponibles.
-          </span>
-        </div>
-
-        <p class="muted vacio-filtros" *ngIf="!agregados.length && campos.length">
-          Sin filtros: entra toda la cartera. Añade uno para reducirla.
-        </p>
-
-        <div class="campo-filtro" *ngFor="let campo of agregados">
-          <div class="campo-head">
-            <span class="campo-titulo">{{ campo.etiqueta }}</span>
-            <span class="campo-estado" *ngIf="marcadosDe(campo.codigo)">
-              {{ marcadosDe(campo.codigo) }} seleccionado(s)
-            </span>
-            <span class="campo-estado muted" *ngIf="!marcadosDe(campo.codigo)">
-              nada marcado: entran todos
-            </span>
-            <button class="btn-link quitar" (click)="quitarFiltro(campo.codigo)">Quitar</button>
-          </div>
-          <div class="campo-valores">
-            <label class="valor-chip" *ngFor="let v of campo.valores"
-                   [class.on]="estaMarcado(campo.codigo, v.valor)">
-              <input type="checkbox" [checked]="estaMarcado(campo.codigo, v.valor)"
-                     (change)="alternarValor(campo.codigo, v.valor)">
-              <span>{{ v.valor }}</span>
-              <b>{{ v.n }}</b>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <span class="muted" style="margin-right:auto">
-          <ng-container *ngIf="preview">
-            Entran <strong>{{ preview.conFiltros }}</strong> de {{ preview.total }}
-            <span *ngIf="!camposFiltrando"> — sin filtros, entra toda la cartera</span>
-          </ng-container>
-          <ng-container *ngIf="!preview">
-            {{ camposFiltrando ? (camposFiltrando + ' campo(s) filtrando') : 'Sin filtros: entra toda la cartera' }}
-          </ng-container>
-        </span>
-        <button class="btn-secondary" (click)="probarFiltros()" [disabled]="probando">
-          {{ probando ? 'Contando…' : 'Ver cuántos entran' }}
-        </button>
-        <button class="btn-cancel" (click)="cerrarFiltros()">Cancelar</button>
-        <button class="btn-submit" (click)="guardarFiltros()">Guardar filtros</button>
-      </div>
-    </div>
-  </div>
+  <!-- El modal de filtros se elimino. Colgaba de `/colas/{id}`, asi que obligaba a
+       crear la cola y volver despues por otra pantalla para decidir a quien llama:
+       dos pasos para una sola decision. Y llevaba tres numeros calculados sobre el
+       universo equivocado —el conteo de cada chip, el "(N valores)" del desplegable y
+       el boton "Ver cuantos entran"—. Ahora los filtros van en el bloque 2 del alta y
+       el unico numero sale del mismo codigo que arma la cola. -->
 
   <!-- ===== VOCES Y TONOS =====
        Se perdio al reescribir Colas y hay que dejarla escrita entera, no parcheada:

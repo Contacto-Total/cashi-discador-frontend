@@ -25,7 +25,8 @@ export enum AgentState {
   EN_MANUAL = 'EN_MANUAL',
   DESCONECTADO = 'DESCONECTADO',
   GESTION_MANUAL = 'GESTION_MANUAL',
-  SEGUIMIENTO = 'SEGUIMIENTO'
+  SEGUIMIENTO = 'SEGUIMIENTO',
+  WHATSAPP = 'WHATSAPP'
 }
 
 export interface AgentStatusResponse {
@@ -66,7 +67,8 @@ export const AGENT_STATE_LABELS: Record<AgentState, string> = {
   [AgentState.EN_MANUAL]: 'Modo Manual',
   [AgentState.DESCONECTADO]: 'Desconectado',
   [AgentState.GESTION_MANUAL]: 'Gestión Manual',
-  [AgentState.SEGUIMIENTO]: 'Seguimiento'
+  [AgentState.SEGUIMIENTO]: 'Seguimiento',
+  [AgentState.WHATSAPP]: 'WhatsApp'
 };
 
 // Estados que el agente puede cambiar manualmente

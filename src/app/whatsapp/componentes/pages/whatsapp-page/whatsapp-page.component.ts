@@ -20,13 +20,30 @@ import { AgentState } from '../../../../core/models/agent-status.model';
         <app-whatsapp-chat-widget class="hidden h-full min-h-0 min-w-0 sm:block" />
         <app-whatsapp-info-client-widget class="hidden h-full min-h-0 min-w-0 lg:block" />
       </section>
+
+      @if (isInactive) {
+        <section class="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-950/80 p-6" aria-live="assertive">
+          <div class="w-full max-w-sm rounded-xl bg-white p-6 text-center shadow-2xl">
+            <h1 class="text-lg font-semibold text-slate-950">Sesión inactiva</h1>
+            <p class="mt-2 text-sm text-slate-600">Tu estado cambió a desconectado por inactividad.</p>
+            <button
+              type="button"
+              class="mt-5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              (click)="reloadPage()">
+              Recargar página
+            </button>
+          </div>
+        </section>
+      }
     </main>
   `
 })
 export class WhatsappPageComponent implements OnInit, OnDestroy {
+  private static readonly INACTIVITY_TIMEOUT_MS = 60000;
   private routeSub?: Subscription;
   private statusChangedByWhatsapp = false;
-  private previousStatus?: AgentState;
+  private inactivityTimer?: ReturnType<typeof setTimeout>;
+  isInactive = false;
 
   constructor(
     private readonly store: WhatsappMessageStoreService,
@@ -37,6 +54,9 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.setWhatsappAgentStatus();
+    document.addEventListener('pointermove', this.resetInactivityTimer);
+    document.addEventListener('pointerdown', this.resetInactivityTimer);
+    document.addEventListener('keydown', this.resetInactivityTimer);
     this.store.connectRealtime();
     this.routeSub = this.route.queryParamMap.subscribe((params) => {
       const rawConversationId = params.get('conversationId');
@@ -48,7 +68,11 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
-    this.restoreAgentStatus();
+    document.removeEventListener('pointermove', this.resetInactivityTimer);
+    document.removeEventListener('pointerdown', this.resetInactivityTimer);
+    document.removeEventListener('keydown', this.resetInactivityTimer);
+    this.clearInactivityTimer();
+    this.disconnectFromWhatsapp();
     this.store.stopViewingCurrentChat();
     this.store.disconnectRealtime();
   }
@@ -60,21 +84,55 @@ export class WhatsappPageComponent implements OnInit, OnDestroy {
     this.agentStatus.getAgentStatus(user.id).subscribe({
       next: status => {
         const currentStatus = status.estadoActual as AgentState;
-        this.previousStatus = currentStatus;
-        if (currentStatus !== AgentState.DISPONIBLE) return;
-        this.agentStatus.changeStatus(user.id, { estado: AgentState.GESTION_MANUAL }).subscribe({
-          next: () => this.statusChangedByWhatsapp = true
+        if (this.isProtectedStatus(currentStatus)) return;
+        this.agentStatus.changeStatus(user.id, { estado: AgentState.WHATSAPP }).subscribe({
+          next: () => {
+            this.statusChangedByWhatsapp = true;
+            this.resetInactivityTimer();
+          }
         });
       }
     });
   }
 
-  private restoreAgentStatus(): void {
+  private readonly resetInactivityTimer = (): void => {
+    if (!this.statusChangedByWhatsapp || this.isInactive) return;
+    this.clearInactivityTimer();
+    this.inactivityTimer = setTimeout(() => this.disconnectFromWhatsapp(true), WhatsappPageComponent.INACTIVITY_TIMEOUT_MS);
+  };
+
+  private disconnectFromWhatsapp(markInactive = false): void {
     const user = this.auth.getCurrentUser();
     if (!user?.id || !this.statusChangedByWhatsapp) return;
-    this.agentStatus.changeStatus(user.id, {
-      estado: this.previousStatus || AgentState.DISPONIBLE
-    }).subscribe();
-    this.statusChangedByWhatsapp = false;
+
+    this.clearInactivityTimer();
+    this.agentStatus.getAgentStatus(user.id).subscribe({
+      next: status => {
+        if (status.estadoActual !== AgentState.WHATSAPP) {
+          this.statusChangedByWhatsapp = false;
+          return;
+        }
+
+        this.statusChangedByWhatsapp = false;
+        if (markInactive) this.isInactive = true;
+        this.agentStatus.changeStatus(user.id, { estado: AgentState.DESCONECTADO }).subscribe();
+      }
+    });
+  }
+
+  private clearInactivityTimer(): void {
+    if (!this.inactivityTimer) return;
+    clearTimeout(this.inactivityTimer);
+    this.inactivityTimer = undefined;
+  }
+
+  private isProtectedStatus(status: AgentState): boolean {
+    return status === AgentState.EN_LLAMADA ||
+      status === AgentState.TIPIFICANDO ||
+      status === AgentState.SEGUIMIENTO;
+  }
+
+  reloadPage(): void {
+    window.location.reload();
   }
 }
