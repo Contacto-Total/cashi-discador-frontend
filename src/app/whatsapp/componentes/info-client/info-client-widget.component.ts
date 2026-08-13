@@ -261,7 +261,12 @@ const PROMISE_TIPIFICATION_ID = 5;
                     }
                   </div>
                    @if (selectedOffer(); as offer) {
-                     @if (!offerSent()) {
+                      @if (promiseCompleted()) {
+                        <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                          <p class="text-sm font-bold text-emerald-800">Promesa creada</p>
+                          <p class="mt-1 text-xs text-emerald-700">El acuerdo de pago ya fue generado, adjuntado al mensaje y está listo para enviar.</p>
+                        </div>
+                      } @else if (!offerSent()) {
                        <div class="mt-4 px-1">
                         <p class="text-base font-bold text-slate-800">{{ offer.label }}@if (offer.field !== 'personalizado') { · {{ formatCurrency(offer.value) }} }</p>
                         <div class="mt-2 space-y-1.5">
@@ -440,6 +445,7 @@ export class InfoClientWidgetComponent {
   readonly creatingPromise = signal(false);
   readonly offering = signal(false);
   readonly offerSent = signal(false);
+  readonly promiseCompleted = signal(false);
   readonly selectedOffer = signal<OfferDisplay | null>(null);
   readonly discountPercent = signal<number>(0);
   readonly transferFee = signal<number>(0);
@@ -519,6 +525,7 @@ export class InfoClientWidgetComponent {
        this.exceptionAmount.set(0);
        this.exceptionBaseField.set('');
        this.offerSent.set(false);
+       this.promiseCompleted.set(false);
        this.resetFollowUp();
        if (!chat) return;
        this.loadAssignedClientOrSearch(chat, key);
@@ -539,6 +546,7 @@ export class InfoClientWidgetComponent {
     this.exceptionAmount.set(0);
     this.exceptionBaseField.set('');
     this.offerSent.set(false);
+    this.promiseCompleted.set(false);
     this.resetFollowUp();
     const chat = this.chat();
     const agentId = String(this.auth.getCurrentUser()?.id || '');
@@ -726,6 +734,7 @@ export class InfoClientWidgetComponent {
     this.exceptionAmount.set(0);
     this.exceptionBaseField.set('');
     this.offerSent.set(false);
+    this.promiseCompleted.set(false);
   }
 
   backFromPromiseResult(): void {
@@ -1053,6 +1062,7 @@ export class InfoClientWidgetComponent {
 
   editSentOffer(): void {
     this.offerSent.set(false);
+    this.promiseCompleted.set(false);
     this.persistOfferDraft();
   }
 
@@ -1194,9 +1204,9 @@ export class InfoClientWidgetComponent {
     this.management.createPaymentSchedule(request).pipe(finalize(() => this.creatingPromise.set(false))).subscribe({
       next: (created: any) => {
         this.clearStoredOfferDraft();
-        this.offerSent.set(false);
         const management = Array.isArray(created) ? created[0] : created;
         if (management?.estadoPago === 'EN_EVALUACION') {
+          this.offerSent.set(false);
           this.promiseResult.set({
             kind: 'success',
             icon: 'alert',
@@ -1218,7 +1228,11 @@ export class InfoClientWidgetComponent {
         }
         this.agreementLoading.set(true);
         this.cartaAcuerdo.generarCarta(managementId, Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
-          next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' })),
+          next: (blob) => {
+            this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' }));
+            this.offerSent.set(true);
+            this.promiseCompleted.set(true);
+          },
           error: () => this.promiseResult.set({
             kind: 'error',
             title: 'No se pudo generar el acuerdo',
