@@ -116,6 +116,8 @@ export class CampaignFormComponent implements OnInit {
   // Filtros FECHA
   newFilterMinDate: string = '';
   newFilterMaxDate: string = '';
+  availableDueDates: string[] = [];
+  newFilterSelectedDueDates: string[] = [];
 
   // Tipos de contacto y filtro de estado
   tiposContacto = TIPOS_CONTACTO;
@@ -427,6 +429,11 @@ export class CampaignFormComponent implements OnInit {
     return dt === 'BOOLEAN' ? 'TEXTO' : dt;
   }
 
+  isDueDateField(): boolean {
+    const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+    return field?.fieldCode.toLowerCase() === 'fecha_vencimiento';
+  }
+
   onFieldChange(): void {
     const dataType = this.getSelectedFieldDataType();
     // Reset all type-specific inputs
@@ -436,6 +443,8 @@ export class CampaignFormComponent implements OnInit {
     this.distinctValuesForField = [];
     this.newFilterMinDate = '';
     this.newFilterMaxDate = '';
+    this.availableDueDates = [];
+    this.newFilterSelectedDueDates = [];
     this.availableYears = [];
     this.newFilterSelectedYears = [];
 
@@ -452,6 +461,25 @@ export class CampaignFormComponent implements OnInit {
           },
           error: (err) => {
             console.error('Error loading distinct values:', err);
+            this.loadingDistinctValues = false;
+          }
+        });
+      }
+    }
+
+    if (this.isDueDateField() && this.selectedTenantId && this.selectedPortfolioId && this.selectedSubPortfolioId) {
+      const field = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (field) {
+        this.loadingDistinctValues = true;
+        this.campaignService.getDistinctValues(
+          this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId, field.fieldCode
+        ).subscribe({
+          next: (values) => {
+            this.availableDueDates = values;
+            this.loadingDistinctValues = false;
+          },
+          error: (err) => {
+            console.error('Error loading due dates:', err);
             this.loadingDistinctValues = false;
           }
         });
@@ -512,6 +540,16 @@ export class CampaignFormComponent implements OnInit {
     return this.newFilterSelectedValues.includes(value);
   }
 
+  toggleDueDate(value: string): void {
+    const idx = this.newFilterSelectedDueDates.indexOf(value);
+    if (idx >= 0) this.newFilterSelectedDueDates.splice(idx, 1);
+    else this.newFilterSelectedDueDates.push(value);
+  }
+
+  isDueDateSelected(value: string): boolean {
+    return this.newFilterSelectedDueDates.includes(value);
+  }
+
   loadCampaignFilters(campaignId: number): void {
     this.campaignService.getCampaignFilters(campaignId).subscribe({
       next: (filters) => {
@@ -542,7 +580,11 @@ export class CampaignFormComponent implements OnInit {
         this.error = 'Seleccione al menos un valor';
         return;
       }
-      if (dataType === 'FECHA' && !this.newFilterMinDate && !this.newFilterMaxDate) {
+      if (this.isDueDateField() && this.newFilterSelectedDueDates.length === 0) {
+        this.error = 'Seleccione al menos una fecha de vencimiento';
+        return;
+      }
+      if (dataType === 'FECHA' && !this.isDueDateField() && !this.newFilterMinDate && !this.newFilterMaxDate) {
         this.error = 'Ingrese al menos una fecha (desde o hasta)';
         return;
       }
@@ -574,6 +616,31 @@ export class CampaignFormComponent implements OnInit {
       this.selectedFieldId = 0;
       this.newFilterSelectedYears = [];
       this.availableYears = [];
+      this.selectedTipoContacto = null;
+      this.error = null;
+      return;
+    }
+
+    // El importador une los filtros del mismo campo con OR. Guardar cada fecha
+    // como rango de un día permite seleccionar varios vencimientos exactos.
+    if (tieneCampo && this.isDueDateField()) {
+      const selectedField = this.filterableFields.find(f => f.id === this.selectedFieldId);
+      if (selectedField) {
+        for (const date of this.newFilterSelectedDueDates) {
+          this.campaignFilters.push({
+            fieldDefinitionId: selectedField.id,
+            fieldCode: selectedField.fieldCode,
+            fieldName: `${selectedField.fieldName} (${date})`,
+            dataType: 'FECHA',
+            minDate: date,
+            maxDate: date,
+            tipoContacto: this.selectedTipoContacto ?? undefined
+          });
+        }
+      }
+      this.selectedFieldId = 0;
+      this.availableDueDates = [];
+      this.newFilterSelectedDueDates = [];
       this.selectedTipoContacto = null;
       this.error = null;
       return;
@@ -621,6 +688,8 @@ export class CampaignFormComponent implements OnInit {
     this.distinctValuesForField = [];
     this.newFilterMinDate = '';
     this.newFilterMaxDate = '';
+    this.availableDueDates = [];
+    this.newFilterSelectedDueDates = [];
     this.availableYears = [];
     this.newFilterSelectedYears = [];
     this.selectedTipoContacto = null;

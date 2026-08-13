@@ -15,7 +15,8 @@ import { CartaCesionService } from '../../../core/services/carta-cesion.service'
 import { CartaAcuerdoService } from '../../../core/services/carta-acuerdo.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ManagementService, PaymentScheduleRequest } from '../../../collection-management/services/management.service';
-import { PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
+import { CampoOpcionDTO, PaymentScheduleConfig } from '../../../maintenance/models/typification-v2.model';
+import { TypificationV2Service } from '../../../maintenance/services/typification-v2.service';
 
 type SearchMode = 'telefono' | 'documento';
 
@@ -31,6 +32,12 @@ interface OfferDisplay {
   field: string;
   label: string;
   value: number;
+  generaCartaAcuerdo?: boolean;
+  minCuotas?: number;
+  maxCuotas?: number;
+  porcentajeAutoAprobacion?: number;
+  porcentajeAutoAprobacionAumento?: number;
+  porcentajeMaximoPromesa?: number;
 }
 
 interface InstallmentEditor {
@@ -48,6 +55,8 @@ interface StoredOfferDraft {
   transferFee: number;
   installmentCount: number;
   installments: InstallmentEditor[];
+  customAmount?: number;
+  baseField?: string;
   expiresAt: number;
 }
 
@@ -245,25 +254,45 @@ const PROMISE_TIPIFICATION_ID = 5;
                   <div class="mt-4 space-y-2">
                     <p class="text-[10px] font-bold uppercase tracking-wide text-slate-400">Ofertas disponibles</p>
                     @for (offer of offers(); track offer.field) {
-                      <button type="button" class="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition" [class]="selectedOffer()?.field === offer.field ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-300'" (click)="selectOffer(offer)">
-                        <span class="truncate font-medium">{{ offer.label }}</span>
-                        <span class="shrink-0 font-bold">{{ formatCurrency(offer.value) }}</span>
-                      </button>
+                       <button type="button" class="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-xs transition" [class]="selectedOffer()?.field === offer.field ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-300'" (click)="selectOffer(offer)">
+                         <span class="truncate font-medium">{{ offer.label }}</span>
+                         <span class="shrink-0 font-bold">{{ offer.field === 'personalizado' ? 'Monto libre' : formatCurrency(offer.value) }}</span>
+                       </button>
                     }
                   </div>
                    @if (selectedOffer(); as offer) {
-                     @if (!offerSent()) {
+                      @if (promiseCompleted()) {
+                        <div class="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                          <p class="text-sm font-bold text-emerald-800">Promesa creada</p>
+                          <p class="mt-1 text-xs text-emerald-700">El acuerdo de pago ya fue generado, adjuntado al mensaje y está listo para enviar.</p>
+                        </div>
+                      } @else if (!offerSent()) {
                        <div class="mt-4 px-1">
-                       <p class="text-base font-bold text-slate-800">{{ offer.label }} · {{ formatCurrency(offer.value) }}</p>
-                       <div class="mt-2 space-y-1.5">
-                         <div class="flex items-center justify-between gap-3">
-                           <label class="text-xs font-semibold text-slate-500">Descuento %</label>
-                           <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1.5 text-center text-sm font-bold" [ngModel]="discountPercent()" (ngModelChange)="setDiscount($event)" />
+                        <p class="text-base font-bold text-slate-800">{{ offer.label }}@if (offer.field !== 'personalizado') { · {{ formatCurrency(offer.value) }} }</p>
+                        <div class="mt-2 space-y-1.5">
+                          @if (offer.field === 'personalizado') {
+                            <div class="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                              <label class="block text-xs font-semibold text-amber-900">Monto de excepción</label>
+                              <input type="number" min="0.01" step="0.01" class="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-sm font-bold" [ngModel]="exceptionAmount()" (ngModelChange)="setExceptionAmount($event)" />
+                              <label class="block pt-1 text-xs font-semibold text-amber-900">Campo base</label>
+                              <select class="w-full rounded border border-amber-300 bg-white px-2 py-1.5 text-sm" [ngModel]="exceptionBaseField()" (ngModelChange)="setExceptionBaseField($event)">
+                                <option value="">Ninguno (monto libre)</option>
+                                @for (baseOffer of regularOffers(); track baseOffer.field) {
+                                  <option [value]="baseOffer.field">{{ baseOffer.label }} ({{ formatCurrency(baseOffer.value) }})</option>
+                                }
+                              </select>
+                              <p class="text-[11px] text-amber-800">La promesa se enviará a evaluación si no tiene base o excede el margen configurado.</p>
+                            </div>
+                          } @else {
+                          <div class="flex items-center justify-between gap-3">
+                            <label class="text-xs font-semibold text-slate-500">Descuento %</label>
+                            <input type="number" min="0" max="100" step="1" class="w-20 rounded border border-slate-300 px-2 py-1.5 text-center text-sm font-bold" [ngModel]="discountPercent()" (ngModelChange)="setDiscount($event)" />
                          </div>
                          <div class="flex items-center justify-between gap-3">
                            <label class="text-xs font-semibold text-slate-500">Transferencia S/</label>
-                           <input type="number" min="0" max="20" step="0.01" class="w-20 rounded border border-slate-300 px-2 py-1.5 text-center text-sm font-bold" [ngModel]="transferFee()" (ngModelChange)="setTransferFee($event)" />
-                         </div>
+                            <input type="number" min="0" max="20" step="0.01" class="w-20 rounded border border-slate-300 px-2 py-1.5 text-center text-sm font-bold" [ngModel]="transferFee()" (ngModelChange)="setTransferFee($event)" />
+                          </div>
+                          }
                        </div>
                        <p class="mt-3 text-right text-base font-black text-emerald-700">Total: {{ formatCurrency(calculatedPromiseAmount()) }}</p>
                        <div class="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
@@ -290,7 +319,7 @@ const PROMISE_TIPIFICATION_ID = 5;
                         }
                       </div>
                       @if (scheduleConfig()) {
-                         <button type="button" class="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="offering()" (click)="sendOffer()">{{ offering() ? 'Enviando oferta...' : 'Ofertar' }}</button>
+                          <button type="button" class="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="offering() || calculatedPromiseAmount() <= 0" (click)="sendOffer()">{{ offering() ? 'Enviando oferta...' : 'Ofertar' }}</button>
                        }
                      </div>
                      } @else {
@@ -301,7 +330,7 @@ const PROMISE_TIPIFICATION_ID = 5;
                            <button type="button" class="rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50" (click)="editSentOffer()">Cambiar</button>
                            <button type="button" class="rounded-lg border border-rose-200 bg-white px-2 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50" (click)="cancelSentOffer()">Cancelar</button>
                          </div>
-                         <button type="button" class="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise()" (click)="createPromise()">{{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}</button>
+                          <button type="button" class="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300" [disabled]="creatingPromise() || calculatedPromiseAmount() <= 0" (click)="createPromise()">{{ creatingPromise() ? 'Generando...' : 'Generar promesa' }}</button>
                        </div>
                      }
                    }
@@ -416,9 +445,12 @@ export class InfoClientWidgetComponent {
   readonly creatingPromise = signal(false);
   readonly offering = signal(false);
   readonly offerSent = signal(false);
+  readonly promiseCompleted = signal(false);
   readonly selectedOffer = signal<OfferDisplay | null>(null);
   readonly discountPercent = signal<number>(0);
   readonly transferFee = signal<number>(0);
+  readonly exceptionAmount = signal<number>(0);
+  readonly exceptionBaseField = signal('');
   readonly installmentCount = signal(1);
   readonly installments = signal<InstallmentEditor[]>([]);
   readonly activePromiseId = signal<number | null>(null);
@@ -460,6 +492,7 @@ export class InfoClientWidgetComponent {
     private readonly cartaCesion: CartaCesionService,
     private readonly cartaAcuerdo: CartaAcuerdoService,
     private readonly management: ManagementService,
+    private readonly typificationV2: TypificationV2Service,
     private readonly auth: AuthService,
     private readonly http: HttpClient,
     private readonly whatsappApi: WhatsappApiService
@@ -487,9 +520,12 @@ export class InfoClientWidgetComponent {
       this.offersError.set(null);
       this.promiseInProcess.set(false);
       this.scheduleConfig.set(null);
-      this.selectedOffer.set(null);
-      this.installments.set([]);
+       this.selectedOffer.set(null);
+       this.installments.set([]);
+       this.exceptionAmount.set(0);
+       this.exceptionBaseField.set('');
        this.offerSent.set(false);
+       this.promiseCompleted.set(false);
        this.resetFollowUp();
        if (!chat) return;
        this.loadAssignedClientOrSearch(chat, key);
@@ -507,7 +543,10 @@ export class InfoClientWidgetComponent {
     this.scheduleConfig.set(null);
     this.selectedOffer.set(null);
     this.installments.set([]);
+    this.exceptionAmount.set(0);
+    this.exceptionBaseField.set('');
     this.offerSent.set(false);
+    this.promiseCompleted.set(false);
     this.resetFollowUp();
     const chat = this.chat();
     const agentId = String(this.auth.getCurrentUser()?.id || '');
@@ -692,7 +731,10 @@ export class InfoClientWidgetComponent {
     this.customAmount.set(false);
     this.selectedOffer.set(null);
     this.installments.set([]);
+    this.exceptionAmount.set(0);
+    this.exceptionBaseField.set('');
     this.offerSent.set(false);
+    this.promiseCompleted.set(false);
   }
 
   backFromPromiseResult(): void {
@@ -768,7 +810,7 @@ export class InfoClientWidgetComponent {
     this.management.getActiveSchedulesByDocumento(documento).subscribe({
       next: (schedules) => {
         const active = (schedules || []).some((schedule: any) => schedule.installments?.some((item: any) =>
-          item.status === 'PENDIENTE' || item.status === 'PARCIAL'));
+          item.status === 'PENDIENTE' || item.status === 'PARCIAL' || item.status === 'EN_EVALUACION'));
         if (active) {
           this.promiseInProcess.set(true);
           this.offersLoading.set(false);
@@ -781,10 +823,10 @@ export class InfoClientWidgetComponent {
   }
 
   private loadConfiguredOffers(result: GlobalSearchResult): void {
-    this.management.getMontoCabeceras(result.subPortfolioId!).pipe(finalize(() => this.offersLoading.set(false))).subscribe({
+    this.management.getMontoCabeceras(result.subPortfolioId!).subscribe({
       next: (headers) => {
         const raw = result.clientData;
-        const offers = (headers || [])
+        const allOffers = (headers || [])
           .filter((header: any) =>
             (header.esVisibleMonto === 1 || header.esVisibleMonto === undefined || header.esVisibleMonto === null) &&
             !this.isOfferExcluded(header.codigo))
@@ -794,18 +836,84 @@ export class InfoClientWidgetComponent {
             return { field: String(header.codigo), label: header.nombre || this.formatFieldLabel(header.codigo), value };
           })
           .filter((offer: OfferDisplay) => Number.isFinite(offer.value) && offer.value > 0);
-    this.offers.set(offers);
-        this.restoreOfferDraft(result);
+        this.loadConfiguredOfferOptions(result, allOffers);
       },
-      error: () => this.offersError.set('No se pudieron consultar las ofertas del cliente.')
+      error: () => {
+        this.offersLoading.set(false);
+        this.offersError.set('No se pudieron consultar las ofertas del cliente.');
+      }
     });
+  }
+
+  private loadConfiguredOfferOptions(result: GlobalSearchResult, allOffers: OfferDisplay[]): void {
+    const clientId = Number(result.clientData.id || result.clientId);
+    this.typificationV2.getTypificationFieldsWithValues(
+      result.tenantId,
+      PROMISE_TIPIFICATION_ID,
+      result.portfolioId,
+      clientId,
+      result.subPortfolioId
+    ).subscribe({
+      next: response => {
+        const paymentField = response.fields.find(field => String(field.tipoCampo).toUpperCase() === 'PAYMENT_SCHEDULE');
+        if (!paymentField?.id) {
+          this.setOffersFromOptions(allOffers, []);
+          return;
+        }
+        this.typificationV2.getOpcionesCampo(paymentField.id, result.subPortfolioId).subscribe({
+          next: options => this.setOffersFromOptions(allOffers, options),
+          error: () => this.setOffersFromOptions(allOffers, [])
+        });
+      },
+      error: () => this.setOffersFromOptions(allOffers, [])
+    });
+  }
+
+  private setOffersFromOptions(allOffers: OfferDisplay[], options: CampoOpcionDTO[]): void {
+    const hasConfiguration = options.length > 0;
+    const enabled = options.filter(option => option.estaHabilitada);
+    const configuredOffers: OfferDisplay[] = hasConfiguration
+      ? enabled.flatMap(option => {
+          if (option.codigoOpcion === 'personalizado') {
+            return [{
+              field: 'personalizado',
+              label: option.labelOpcion || 'Excepción',
+              value: 0,
+              generaCartaAcuerdo: option.generaCartaAcuerdo,
+              minCuotas: option.minCuotas,
+              maxCuotas: option.maxCuotas,
+              porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+              porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+              porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
+            }];
+          }
+          const offer = allOffers.find(item => item.field.toLowerCase() === String(option.campoTablaDinamica || option.codigoOpcion).toLowerCase());
+          return offer ? [{
+            field: offer.field,
+            label: option.labelOpcion || offer.label,
+            value: offer.value,
+            generaCartaAcuerdo: option.generaCartaAcuerdo,
+            minCuotas: option.minCuotas,
+            maxCuotas: option.maxCuotas,
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
+          }] : [];
+        })
+      : allOffers;
+    this.offers.set(configuredOffers);
+    this.offersLoading.set(false);
+    const result = this.selectedClient();
+    if (result) this.restoreOfferDraft(result);
   }
 
   selectOffer(offer: OfferDisplay): void {
     this.selectedOffer.set(offer);
     this.discountPercent.set(0);
     this.transferFee.set(0);
-    this.customAmount.set(false);
+    this.customAmount.set(offer.field === 'personalizado');
+    this.exceptionAmount.set(0);
+    this.exceptionBaseField.set('');
     this.installmentCount.set(1);
     this.rebuildInstallments();
     this.persistOfferDraft();
@@ -831,7 +939,23 @@ export class InfoClientWidgetComponent {
     const offer = this.selectedOffer();
     const discount = this.discountPercent();
     if (!offer) return 0;
+    if (offer.field === 'personalizado') return this.exceptionAmount();
     return Math.round((offer.value * (1 - discount / 100) + this.transferFee()) * 100) / 100;
+  }
+
+  readonly regularOffers = computed(() => this.offers().filter(offer => offer.field !== 'personalizado'));
+
+  setExceptionAmount(value: number | string): void {
+    const amount = Number(value);
+    this.exceptionAmount.set(Number.isFinite(amount) && amount > 0 ? amount : 0);
+    this.rebuildInstallments();
+    this.persistOfferDraft();
+  }
+
+  setExceptionBaseField(field: string): void {
+    this.exceptionBaseField.set(field);
+    this.refreshScheduleConfig();
+    this.persistOfferDraft();
   }
 
   setInstallmentCount(value: number | string): void {
@@ -908,13 +1032,18 @@ export class InfoClientWidgetComponent {
       this.scheduleConfig.set(null);
       return;
     }
+    const isException = offer.field === 'personalizado';
+    const baseOffer = isException ? this.regularOffers().find(item => item.field === this.exceptionBaseField()) : offer;
     this.scheduleConfig.set({
       montoTotal: this.calculatedPromiseAmount(),
       numeroCuotas: this.installments().length,
       cuotas: this.installments(),
-      campoMontoOrigen: offer.field,
-      montoBase: offer.value,
-      generaCartaAcuerdo: !this.customAmount()
+      campoMontoOrigen: baseOffer?.field,
+      montoBase: baseOffer?.value,
+      generaCartaAcuerdo: offer.generaCartaAcuerdo ?? !isException,
+      porcentajeAutoAprobacion: offer.porcentajeAutoAprobacion,
+      porcentajeAutoAprobacionAumento: offer.porcentajeAutoAprobacionAumento,
+      porcentajeMaximoPromesa: offer.porcentajeMaximoPromesa
     });
   }
 
@@ -922,7 +1051,7 @@ export class InfoClientWidgetComponent {
     const chat = this.chat();
     const result = this.selectedClient();
     const config = this.scheduleConfig();
-    if (!chat?.id || !result || !config || this.offering()) return;
+    if (!chat?.id || !result || !config || config.montoTotal <= 0 || this.offering()) return;
 
     this.offering.set(true);
     this.store.sendText(chat.id, this.buildOfferSummary(config));
@@ -933,6 +1062,7 @@ export class InfoClientWidgetComponent {
 
   editSentOffer(): void {
     this.offerSent.set(false);
+    this.promiseCompleted.set(false);
     this.persistOfferDraft();
   }
 
@@ -965,7 +1095,9 @@ export class InfoClientWidgetComponent {
       discount: this.discountPercent(),
       transferFee: this.transferFee(),
       installmentCount: this.installmentCount(),
-      installments: this.installments(),
+       installments: this.installments(),
+       customAmount: this.exceptionAmount(),
+       baseField: this.exceptionBaseField(),
       expiresAt: Date.now() + 10 * 60 * 1000
     };
     localStorage.setItem(this.offerStorageKey, JSON.stringify(draft));
@@ -992,8 +1124,10 @@ export class InfoClientWidgetComponent {
       this.transferFee.set(draft.transferFee);
        this.installmentCount.set(Math.max(1, Math.min(20, draft.installmentCount)));
        this.installments.set(draft.installments);
+       this.exceptionAmount.set(draft.customAmount || 0);
+       this.exceptionBaseField.set(draft.baseField || '');
        this.normalizeInstallments();
-       this.customAmount.set(draft.discount > 0 || draft.transferFee > 0);
+       this.customAmount.set(offer.field === 'personalizado' || draft.discount > 0 || draft.transferFee > 0);
       this.refreshScheduleConfig();
       this.offerSent.set(true);
     } catch {
@@ -1024,7 +1158,7 @@ export class InfoClientWidgetComponent {
     const chat = this.chat();
     const user = this.auth.getCurrentUser();
     const clientId = Number(result?.clientData.id);
-    if (!result || !config || !chat?.id || !clientId || !user?.id) {
+    if (!result || !config || config.montoTotal <= 0 || !chat?.id || !clientId || !user?.id) {
       this.promiseResult.set({
         kind: 'error',
         title: 'No se pudo crear la promesa de pago.',
@@ -1053,12 +1187,14 @@ export class InfoClientWidgetComponent {
       porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
       porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
       porcentajeMaximoPromesa: config.porcentajeMaximoPromesa,
-      observaciones: this.customAmount() ? 'Excepción generada desde WhatsApp; requiere aprobación.' : 'Promesa generada desde WhatsApp.',
+      observaciones: this.selectedOffer()?.field === 'personalizado'
+        ? 'Excepción generada desde WhatsApp; su evaluación depende del monto base y los límites configurados.'
+        : 'Promesa generada desde WhatsApp.',
       schedule: {
         montoTotal: config.montoTotal,
         numeroCuotas: config.numeroCuotas,
         cuotas: config.cuotas,
-        generaCartaAcuerdo: !this.customAmount(),
+        generaCartaAcuerdo: config.generaCartaAcuerdo,
         porcentajeAutoAprobacion: config.porcentajeAutoAprobacion,
         porcentajeAutoAprobacionAumento: config.porcentajeAutoAprobacionAumento,
         porcentajeMaximoPromesa: config.porcentajeMaximoPromesa
@@ -1068,8 +1204,9 @@ export class InfoClientWidgetComponent {
     this.management.createPaymentSchedule(request).pipe(finalize(() => this.creatingPromise.set(false))).subscribe({
       next: (created: any) => {
         this.clearStoredOfferDraft();
-        this.offerSent.set(false);
-        if (this.customAmount()) {
+        const management = Array.isArray(created) ? created[0] : created;
+        if (management?.estadoPago === 'EN_EVALUACION') {
+          this.offerSent.set(false);
           this.promiseResult.set({
             kind: 'success',
             icon: 'alert',
@@ -1079,7 +1216,7 @@ export class InfoClientWidgetComponent {
           return;
         }
 
-        const managementId = Number(created?.id || created?.managementId || created?.data?.id);
+        const managementId = Number(management?.id || management?.managementId || management?.data?.id);
         if (!managementId) {
           this.promiseResult.set({
             kind: 'error',
@@ -1091,7 +1228,11 @@ export class InfoClientWidgetComponent {
         }
         this.agreementLoading.set(true);
         this.cartaAcuerdo.generarCarta(managementId, Number(user.id)).pipe(finalize(() => this.agreementLoading.set(false))).subscribe({
-          next: (blob) => this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' })),
+          next: (blob) => {
+            this.store.setPendingAttachment(new File([blob], `CARTA_ACUERDO_${result.clientData.documento}.pdf`, { type: 'application/pdf' }));
+            this.offerSent.set(true);
+            this.promiseCompleted.set(true);
+          },
           error: () => this.promiseResult.set({
             kind: 'error',
             title: 'No se pudo generar el acuerdo',
