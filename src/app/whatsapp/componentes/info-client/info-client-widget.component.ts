@@ -863,7 +863,7 @@ export class InfoClientWidgetComponent {
   private setOffersFromOptions(allOffers: OfferDisplay[], options: CampoOpcionDTO[]): void {
     const hasConfiguration = options.length > 0;
     const enabled = options.filter(option => option.estaHabilitada);
-    const configuredOffers = hasConfiguration
+    const configuredOffers: OfferDisplay[] = hasConfiguration
       ? enabled.flatMap(option => {
           if (option.codigoOpcion === 'personalizado') {
             return [{
@@ -879,7 +879,17 @@ export class InfoClientWidgetComponent {
             }];
           }
           const offer = allOffers.find(item => item.field.toLowerCase() === String(option.campoTablaDinamica || option.codigoOpcion).toLowerCase());
-          return offer ? [{ ...offer, ...option }] : [];
+          return offer ? [{
+            field: offer.field,
+            label: option.labelOpcion || offer.label,
+            value: offer.value,
+            generaCartaAcuerdo: option.generaCartaAcuerdo,
+            minCuotas: option.minCuotas,
+            maxCuotas: option.maxCuotas,
+            porcentajeAutoAprobacion: option.porcentajeAutoAprobacion,
+            porcentajeAutoAprobacionAumento: option.porcentajeAutoAprobacionAumento,
+            porcentajeMaximoPromesa: option.porcentajeMaximoPromesa
+          }] : [];
         })
       : allOffers;
     this.offers.set(configuredOffers);
