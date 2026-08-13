@@ -457,8 +457,30 @@
               </div>
             </ng-container>
 
-            <!-- FECHA: Rango de fechas -->
-            <ng-container *ngIf="getSelectedFieldDataType() === 'FECHA'">
+            <!-- FECHA DE VENCIMIENTO: Lista de fechas disponibles en la subcartera -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'FECHA' && isDueDateField()">
+              <div class="form-group texto-values-group" style="grid-column: span 2;">
+                <label>Fechas de Vencimiento Disponibles</label>
+                <div *ngIf="loadingDistinctValues" class="info-message">
+                  <span>Cargando fechas...</span>
+                </div>
+                <div *ngIf="!loadingDistinctValues && availableDueDates.length > 0" class="distinct-values-list">
+                  <label class="distinct-value-item" *ngFor="let date of availableDueDates">
+                    <input type="checkbox" [checked]="isDueDateSelected(date)" (change)="toggleDueDate(date)">
+                    <span>{{ date }}</span>
+                  </label>
+                </div>
+                <div *ngIf="!loadingDistinctValues && availableDueDates.length === 0" class="info-message">
+                  <span>No se encontraron fechas de vencimiento para esta subcartera.</span>
+                </div>
+                <div *ngIf="newFilterSelectedDueDates.length > 0" class="selected-count">
+                  {{ newFilterSelectedDueDates.length }} fecha(s) seleccionada(s)
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- FECHA: Rango de fechas para campos distintos a vencimiento -->
+            <ng-container *ngIf="getSelectedFieldDataType() === 'FECHA' && !isDueDateField()">
               <div class="form-group">
                 <label for="minDate">Fecha Desde</label>
                 <input
