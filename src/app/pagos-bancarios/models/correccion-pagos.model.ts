@@ -52,6 +52,16 @@ export interface CorregirPagoResponse {
   estadoPagoGestion: string;
 }
 
+export interface EliminarPagoResponse {
+  pagoCuotaId: number;
+  transaccionId: number;
+  pagosEliminados: number;
+  gestionId: number;
+  documento: string;
+  estadoPagoGestion: string;
+  montoPagadoReal: number;
+}
+
 export type EstadoCuotaValidaTipificar = 'PENDIENTE' | 'PARCIAL' | 'VENCIDA';
 
 export interface CuotaValidaTipificar {

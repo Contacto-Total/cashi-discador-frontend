@@ -10,6 +10,7 @@ import {
   CorreccionPagoContexto,
   CorregirPagoRequest,
   CorregirPagoResponse,
+  EliminarPagoResponse,
   CrearCancelacionRequest,
   CrearCancelacionResponse,
   CrearPagoVoluntarioSistemaRequest,
@@ -61,6 +62,15 @@ export class CorreccionPagosService {
       .set('subcarteraId', contexto.subcarteraId.toString());
 
     return this.http.put<CorregirPagoResponse>(`${this.baseUrl}/${pagoCuotaId}/corregir`, request, { params });
+  }
+
+  eliminarPago(pagoCuotaId: number, contexto: CorreccionPagoContexto): Observable<EliminarPagoResponse> {
+    const params = new HttpParams()
+      .set('tenantId', contexto.tenantId.toString())
+      .set('carteraId', contexto.carteraId.toString())
+      .set('subcarteraId', contexto.subcarteraId.toString());
+
+    return this.http.delete<EliminarPagoResponse>(`${this.baseUrl}/${pagoCuotaId}`, { params });
   }
 
   crearCancelacion(
