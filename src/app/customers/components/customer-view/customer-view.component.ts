@@ -1335,7 +1335,9 @@ export class CustomerViewComponent implements OnInit {
     const documento = this.customer()?.documentNumber;
     if (!documento) return;
 
-    this.managementService.getManagementsByDocumento(documento).subscribe({
+    // Mismo endpoint que usa Gestión de Cobranza: una sola query, sin gestiones
+    // automáticas del discador (PROGRESIVO/PREDICTIVO/SISTEMA/AUTO-DIALER).
+    this.managementService.getHistorialLigero(documento, 50).subscribe({
       next: (managements) => {
         const historial = managements.map(m => {
           const fechaOnly = m.managementDate ? this.formatDateOnly(m.managementDate) : '-';
@@ -1346,7 +1348,7 @@ export class CustomerViewComponent implements OnInit {
           return {
             id: m.id,
             fecha,
-            nombreAgente: m.nombreAgente || `Agente ${m.advisorId}`,
+            nombreAgente: m.nombreAgente || '-',
             tipificacionCompleta,
             telefono: m.telefonoContacto || '',
             observacion: m.observations || '',
