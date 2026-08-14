@@ -1064,11 +1064,25 @@ export class CustomerViewComponent implements OnInit {
   historialHistoricoTotalPages = signal<number>(0);
   historialHistoricoTotalElements = signal<number>(0);
   historialHistoricoLoading = signal<boolean>(false);
+  // CD/CI viven en la tipificación, no en el canal (canal es LLAMADA_SALIENTE,
+  // WHATSAPP, etc.). Mismo criterio que Gestión de Cobranza.
   historialGestionesFiltrado = computed(() => {
     const filter = this.historialFilter();
     const gestiones = this.historialGestiones();
     if (filter === 'TODOS') return gestiones;
-    return gestiones.filter(g => g.canal?.includes(filter));
+
+    return gestiones.filter(g => {
+      // Se normaliza el "_" a espacio porque las tipificaciones existen con ambas
+      // grafías (CONTACTO DIRECTO / CONTACTO_DIRECTO), igual que en los SP del backend.
+      const tipif = (g.tipificacionCompleta || '').toUpperCase().replace(/_/g, ' ');
+      if (filter === 'CI') {
+        return tipif.includes('[CI]') || tipif.includes('CONTACTO INDIRECTO');
+      }
+      if (filter === 'CD') {
+        return tipif.includes('[CD]') || tipif.includes('CONTACTO DIRECTO');
+      }
+      return true;
+    });
   });
   historialExpandedRow = signal<number | null>(null);
 
@@ -1335,7 +1349,9 @@ export class CustomerViewComponent implements OnInit {
     const documento = this.customer()?.documentNumber;
     if (!documento) return;
 
-    this.managementService.getManagementsByDocumento(documento).subscribe({
+    // Mismo endpoint que usa Gestión de Cobranza: una sola query, sin gestiones
+    // automáticas del discador (PROGRESIVO/PREDICTIVO/SISTEMA/AUTO-DIALER).
+    this.managementService.getHistorialLigero(documento, 50).subscribe({
       next: (managements) => {
         const historial = managements.map(m => {
           const fechaOnly = m.managementDate ? this.formatDateOnly(m.managementDate) : '-';
@@ -1346,7 +1362,7 @@ export class CustomerViewComponent implements OnInit {
           return {
             id: m.id,
             fecha,
-            nombreAgente: m.nombreAgente || `Agente ${m.advisorId}`,
+            nombreAgente: m.nombreAgente || '-',
             tipificacionCompleta,
             telefono: m.telefonoContacto || '',
             observacion: m.observations || '',
