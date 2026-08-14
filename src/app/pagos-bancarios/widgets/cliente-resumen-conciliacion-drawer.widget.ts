@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, injec
 import { FormatService } from '@/shared/services/format.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CuotaResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
+import { CuotaResumenConciliacion, PagoResumenConciliacion, ResumenConciliacionCliente } from '../models/bcp-archivo.model';
 import { CorreccionPagosService } from '../services/correccion-pagos.service';
 import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/correccion-pagos.model';
 
@@ -180,7 +180,14 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
                                   @if (cuota.pagos.length > 0) {
                                     <div class="mt-0.5 space-y-0.5 text-[9px] text-slate-500 dark:text-slate-400">
                                       @for (pago of cuota.pagos; track pago.pagoCuotaId) {
-                                        <p class="truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</p>
+                                        <div class="flex items-center justify-between gap-1">
+                                          <p class="min-w-0 truncate">{{ formatDate(pago.fechaPago) }} · {{ pago.banco }} · S/ {{ formatMoney(pago.montoPago) }}</p>
+                                          @if (canEliminarPago(promesa, pago)) {
+                                            <button type="button" (click)="abrirEliminarPago(pago)" class="shrink-0 rounded-md bg-red-600 px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-red-700">
+                                              Eliminar pago
+                                            </button>
+                                          }
+                                        </div>
                                       }
                                     </div>
                                   }
@@ -422,6 +429,44 @@ import { CuotaValidaTipificar, PagoPendienteConciliacion } from '../models/corre
           </div>
         </div>
       }
+
+      @if (eliminarPagoModalOpen) {
+        <div class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" (click)="cerrarEliminarPago()">
+          <div class="w-full max-w-md rounded-xl border border-red-200 bg-white shadow-2xl dark:border-red-900 dark:bg-slate-900" (click)="$event.stopPropagation()">
+            <div class="border-b border-red-200 bg-red-50 px-4 py-3 dark:border-red-900 dark:bg-red-950/20">
+              <h3 class="text-sm font-black text-red-800 dark:text-red-200">Eliminar pago</h3>
+              <p class="mt-1 text-xs text-red-700 dark:text-red-300">Pago #{{ pagoEliminar?.pagoCuotaId }} · Transacción {{ pagoEliminar?.transaccionId }}</p>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">
+                Se eliminará el pago completo y todas las aplicaciones de su transacción. La promesa se recalculará.
+              </div>
+              <div class="grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-800/60">
+                <div>
+                  <span class="block text-slate-500 dark:text-slate-400">Fecha</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">{{ formatDate(pagoEliminar?.fechaPago) }}</span>
+                </div>
+                <div>
+                  <span class="block text-slate-500 dark:text-slate-400">Monto</span>
+                  <span class="font-semibold text-slate-900 dark:text-white">S/ {{ formatMoney(pagoEliminar?.montoPago) }}</span>
+                </div>
+              </div>
+
+              @if (eliminarPagoError) {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700 dark:border-red-800 dark:bg-red-950/20 dark:text-red-300">{{ eliminarPagoError }}</div>
+              }
+            </div>
+
+            <div class="flex justify-end gap-2 border-t border-red-200 px-4 py-3 dark:border-red-900">
+              <button type="button" (click)="cerrarEliminarPago()" [disabled]="eliminandoPago" class="rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+              <button type="button" (click)="eliminarPago()" [disabled]="!pagoEliminar || eliminandoPago" class="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-400">
+                {{ eliminandoPago ? 'Eliminando...' : 'Eliminar pago' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     }
   `
 })
@@ -485,6 +530,10 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
   regularizarObservaciones = 'Banco registró el pago días después';
   regularizarPagoError: string | null = null;
   regularizandoPago = false;
+  eliminarPagoModalOpen = false;
+  pagoEliminar: PagoResumenConciliacion | null = null;
+  eliminarPagoError: string | null = null;
+  eliminandoPago = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['open'] || changes['resumen'] || changes['documento'] || changes['tenantId'] || changes['carteraId'] || changes['subcarteraId']) {
@@ -571,6 +620,49 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
     if ((promesa.cuotas || []).length !== 1) return false;
     if (String(cuota.estado || '').toUpperCase() !== 'PAGADA') return false;
     return !!this.getPagoModificable(cuota);
+  }
+
+  canEliminarPago(promesa: ResumenConciliacionCliente['promesas'][number], pago: PagoResumenConciliacion): boolean {
+    return pago.verificadoBanco === false
+      && String(promesa.estadoPago || '').toUpperCase() === 'PAGADA';
+  }
+
+  abrirEliminarPago(pago: PagoResumenConciliacion): void {
+    if (!this.hasRequiredContext() || pago.verificadoBanco !== false) return;
+
+    this.pagoEliminar = pago;
+    this.eliminarPagoError = null;
+    this.eliminarPagoModalOpen = true;
+  }
+
+  cerrarEliminarPago(): void {
+    if (this.eliminandoPago) return;
+    this.eliminarPagoModalOpen = false;
+    this.pagoEliminar = null;
+    this.eliminarPagoError = null;
+  }
+
+  eliminarPago(): void {
+    if (!this.pagoEliminar || !this.hasRequiredContext()) return;
+
+    this.eliminandoPago = true;
+    this.eliminarPagoError = null;
+
+    this.correccionPagosService.eliminarPago(this.pagoEliminar.pagoCuotaId, {
+      tenantId: Number(this.tenantId),
+      carteraId: Number(this.carteraId),
+      subcarteraId: Number(this.subcarteraId)
+    }).subscribe({
+      next: () => {
+        this.eliminandoPago = false;
+        this.cerrarEliminarPago();
+        this.refreshRequested.emit();
+      },
+      error: (error) => {
+        this.eliminarPagoError = this.getEliminarPagoError(error);
+        this.eliminandoPago = false;
+      }
+    });
   }
 
   abrirCrearPago(cuota: CuotaResumenConciliacion): void {
@@ -1058,6 +1150,20 @@ export class ClienteResumenConciliacionDrawerWidget implements OnChanges {
 
   private getDocumento(): string {
     return String(this.documento || this.resumen?.documento || '').trim();
+  }
+
+  private getEliminarPagoError(error: any): string {
+    const messages: Record<string, string> = {
+      PAGO_CUOTA_NO_ENCONTRADO: 'El pago ya no existe o fue eliminado.',
+      PAGO_CUOTA_FUERA_DE_CONTEXTO: 'El pago no pertenece a la cartera o subcartera seleccionada.',
+      PAGO_CUOTA_SIN_GESTION_ASOCIADA: 'El pago no tiene una promesa asociada y no puede eliminarse.',
+      ELIMINACION_SOLO_PERMITIDA_PARA_PROMESA_PAGADA: 'Solo se pueden eliminar pagos de promesas que están pagadas.',
+      PAGO_VERIFICADO_POR_BANCO_NO_ELIMINABLE: 'No se puede eliminar porque el pago ya fue validado por banco.',
+      TRANSACCION_CON_PAGOS_FUERA_DE_GESTION: 'La transacción tiene aplicaciones inconsistentes y no puede eliminarse.'
+    };
+    const code = error?.error?.message;
+
+    return messages[code] || 'No se pudo eliminar el pago. Intenta actualizar la información.';
   }
 
   private toDateInputValue(value: string | null | undefined): string {
