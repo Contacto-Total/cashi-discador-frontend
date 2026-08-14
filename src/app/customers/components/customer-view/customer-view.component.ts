@@ -1064,11 +1064,25 @@ export class CustomerViewComponent implements OnInit {
   historialHistoricoTotalPages = signal<number>(0);
   historialHistoricoTotalElements = signal<number>(0);
   historialHistoricoLoading = signal<boolean>(false);
+  // CD/CI viven en la tipificación, no en el canal (canal es LLAMADA_SALIENTE,
+  // WHATSAPP, etc.). Mismo criterio que Gestión de Cobranza.
   historialGestionesFiltrado = computed(() => {
     const filter = this.historialFilter();
     const gestiones = this.historialGestiones();
     if (filter === 'TODOS') return gestiones;
-    return gestiones.filter(g => g.canal?.includes(filter));
+
+    return gestiones.filter(g => {
+      // Se normaliza el "_" a espacio porque las tipificaciones existen con ambas
+      // grafías (CONTACTO DIRECTO / CONTACTO_DIRECTO), igual que en los SP del backend.
+      const tipif = (g.tipificacionCompleta || '').toUpperCase().replace(/_/g, ' ');
+      if (filter === 'CI') {
+        return tipif.includes('[CI]') || tipif.includes('CONTACTO INDIRECTO');
+      }
+      if (filter === 'CD') {
+        return tipif.includes('[CD]') || tipif.includes('CONTACTO DIRECTO');
+      }
+      return true;
+    });
   });
   historialExpandedRow = signal<number | null>(null);
 
