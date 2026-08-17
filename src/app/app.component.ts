@@ -514,6 +514,31 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         if (message.type === 'PREDICTIVE_CALL_CONNECTED' && message.payload) {
           console.log('📞 [App] PREDICTIVE_CALL_CONNECTED recibido:', message.payload);
           sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
+
+          // Segundo disparador de la pantalla de tipificación, independiente del softphone.
+          // El backend manda este mensaje DESPUÉS de confirmar el bridge, así que es
+          // información real; el ACTIVE del softphone sale cuando el asesor descuelga
+          // estando parqueado, antes de que el puente exista. Si el aviso del softphone
+          // no llega o se filtra, la pantalla igual abre por acá.
+          const yaEnTipificacion = this.router.url.startsWith('/collection-management');
+          const currentUser = this.authService.getCurrentUser();
+          const agentRoles = ['AGENT', 'ASESOR'];
+          const esAsesor = !!currentUser && agentRoles.includes(currentUser.role);
+
+          if (!yaEnTipificacion && esAsesor && !this.supervisionService.isSupervisionActive()) {
+            // Dejar el mismo estado interno que deja el camino del softphone. Sin esto, el
+            // manejador de fin de llamada ve "temporizador pendiente + nunca navegué",
+            // cree que fue llamada fantasma y devuelve al asesor a DISPONIBLE estando
+            // en la pantalla de tipificación (el discador le mandaría otra llamada encima).
+            if (this.navigationTimeout) {
+              clearTimeout(this.navigationTimeout);
+              this.navigationTimeout = null;
+            }
+            this.hasNavigatedToTypification = true;
+
+            console.log('📞 [App] Navegando a tipificación por aviso del backend (bridge confirmado)');
+            this.router.navigate(['/collection-management']);
+          }
         }
 
         // Agenda de rellamada del bot (F1f). El backend ya emitía estos eventos,
