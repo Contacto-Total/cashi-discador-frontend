@@ -40,6 +40,7 @@ interface DetectedColumn {
   matchedFieldDefinition?: FieldDefinition;
   matchStatus: 'matched' | 'review' | 'no-match';
   matchScore?: number; // Similarity score (0-100)
+  importedHeader?: HeaderConfigurationItem;
 }
 
 @Component({
@@ -732,6 +733,7 @@ interface DetectedColumn {
                           Campo Origen
                         </label>
                         <select [(ngModel)]="formData.sourceField"
+                                [disabled]="!!formData.id"
                                 class="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
                           <option value="">Seleccione un campo origen...</option>
                           @for (header of availableSourceHeaders(); track header.headerName) {
@@ -1661,7 +1663,10 @@ export class HeaderConfigurationComponent implements OnInit {
 
     // Clasificar cabeceras
     const newHeaders = currentHeaders.filter(h => !h.id);
-    const existingHeaders = currentHeaders.filter(h => h.id);
+    const savedById = new Map(this.savedHeaders().map(header => [header.id, header]));
+    const existingHeaders = currentHeaders.filter(header =>
+      header.id !== undefined && this.hasPersistedHeaderChanges(header, savedById.get(header.id))
+    );
     const currentIds = new Set(currentHeaders.filter(h => h.id).map(h => h.id));
     const headersToDelete = this.savedHeaders().filter(h => !currentIds.has(h.id));
 
@@ -1694,6 +1699,23 @@ export class HeaderConfigurationComponent implements OnInit {
     if (!confirmed) return;
 
     this.saveConfigurationWithSmartLogic(newHeaders, existingHeaders, headersToDelete);
+  }
+
+  private hasPersistedHeaderChanges(
+    current: HeaderConfigurationItem,
+    saved: HeaderConfiguration | undefined
+  ): boolean {
+    if (!saved) return true;
+
+    return current.displayLabel.trim() !== saved.displayLabel.trim()
+      || this.normalizeOptionalValue(current.format) !== this.normalizeOptionalValue(saved.format)
+      || !!current.required !== !!saved.required
+      || this.normalizeOptionalValue(current.regexPattern) !== this.normalizeOptionalValue(saved.regexPattern);
+  }
+
+  private normalizeOptionalValue(value: string | undefined): string | undefined {
+    const normalized = value?.trim();
+    return normalized ? normalized : undefined;
   }
 
   private async saveConfigurationWithSmartLogic(
@@ -1854,12 +1876,11 @@ export class HeaderConfigurationComponent implements OnInit {
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
 
-        // Convertir a CSV usando el separador seleccionado
-        const csvData = XLSX.utils.sheet_to_csv(worksheet, {
-          FS: this.csvSeparator
-        });
-
-        this.parseCSV(csvData);
+        const rows = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+          defval: ''
+        }) as unknown[][];
+        this.parseHeaderConfigurationRows(rows.map(row => row.map(value => String(value ?? ''))));
       } catch (error) {
         console.error('Error al procesar Excel:', error);
         this.notificationService.error('Error al procesar Excel', 'Verifique que el formato del archivo sea correcto');
@@ -1900,8 +1921,12 @@ export class HeaderConfigurationComponent implements OnInit {
       const char = line[i];
 
       if (char === '"') {
-        // Toggle estado de comillas
-        inQuotes = !inQuotes;
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
       } else if (char === separator && !inQuotes) {
         // Si es el separador y no estamos dentro de comillas, guardamos el campo
         result.push(current.trim());
@@ -2079,96 +2104,108 @@ export class HeaderConfigurationComponent implements OnInit {
   }
 
   parseCSV(csv: string) {
-    const lines = csv.split('\n').filter(line => line.trim());
-    if (lines.length < 2) {
-      this.notificationService.error('Archivo vacío', 'El archivo CSV está vacío o no tiene datos');
+    const rows = csv
+      .replace(/^\uFEFF/, '')
+      .split(/\r?\n/)
+      .filter(line => line.trim())
+      .map(line => this.parseCsvLine(line, this.csvSeparator));
+    this.parseHeaderConfigurationRows(rows);
+  }
+
+  /**
+   * La plantilla de configuración representa una cabecera por fila. No debe tratarse
+   * como un archivo de cartera, donde la primera fila sí define las columnas de datos.
+   */
+  private parseHeaderConfigurationRows(rows: string[][]) {
+    if (rows.length < 2) {
+      this.notificationService.error('Archivo vacío', 'El archivo debe incluir una fila de títulos y al menos una cabecera');
       return;
     }
 
-    // Primera línea contiene los nombres de las columnas
-    const columnNames = this.parseCsvLine(lines[0], this.csvSeparator);
+    const columnIndexes = new Map<string, number>();
+    rows[0].forEach((name, index) => columnIndexes.set(this.normalizeForMatching(name), index));
+    const getColumn = (row: string[], ...names: string[]) => {
+      const index = names
+        .map(name => columnIndexes.get(this.normalizeForMatching(name)))
+        .find((value): value is number => value !== undefined);
+      return index === undefined ? '' : (row[index] || '').trim();
+    };
 
-    if (columnNames.length === 0) {
-      this.notificationService.error('Sin columnas', 'No se encontraron columnas en el archivo');
-      return;
-    }
+    const detected: DetectedColumn[] = [];
+    const errors: string[] = [];
+    const names = new Set<string>();
 
-    // Recopilar hasta 5 registros de muestra para cada columna
-    const sampleSize = Math.min(5, lines.length - 1);
-    const columnSamples: string[][] = columnNames.map(() => []);
+    rows.slice(1).forEach((row, rowIndex) => {
+      const line = rowIndex + 2;
+      const headerName = getColumn(row, 'nombreCabecera', 'headerName');
+      const displayLabel = getColumn(row, 'etiquetaVisual', 'displayLabel');
+      const dataType = getColumn(row, 'tipoDato', 'dataType').toUpperCase() as DataType;
+      const fieldCode = getColumn(row, 'codigoCampo', 'fieldCode');
+      const format = getColumn(row, 'formato', 'format');
+      const requiredValue = getColumn(row, 'obligatorio', 'required').toLowerCase();
+      const sourceField = getColumn(row, 'campoAsociado', 'sourceField');
+      const regexPattern = getColumn(row, 'regEx', 'regexPattern');
 
-    for (let i = 1; i <= sampleSize; i++) {
-      const rowValues = this.parseCsvLine(lines[i], this.csvSeparator);
-      rowValues.forEach((value, colIndex) => {
-        if (colIndex < columnNames.length) {
-          columnSamples[colIndex].push(value);
-        }
-      });
-    }
-
-    // Crear lista de columnas detectadas para mostrar en el diálogo de selección
-    const detectedCols: DetectedColumn[] = [];
-
-    // Log para debug: verificar cuántos campos hay disponibles para matching
-    console.log(`Auto-matching: ${this.fieldDefinitions().length} campos cargados para matching`);
-
-    for (let colIndex = 0; colIndex < columnNames.length; colIndex++) {
-      const headerName = columnNames[colIndex].trim();
-
-      if (!headerName) continue;
-
-      // Detectar tipo de dato analizando los valores de muestra
-      const { dataType, format } = this.detectDataType(columnSamples[colIndex]);
-
-      // Generar etiqueta visual legible
-      const displayLabel = this.generateDisplayLabel(headerName);
-
-      // Auto-matching: buscar el FieldDefinition que mejor coincide
-      const matchResult = this.findMatchingFieldDefinition(headerName);
-
-      let matchStatus: 'matched' | 'review' | 'no-match';
-      if (matchResult && matchResult.score >= 80) {
-        matchStatus = 'matched';
-      } else if (matchResult && matchResult.score >= 60) {
-        matchStatus = 'review';
-      } else {
-        matchStatus = 'no-match';
+      if (!headerName && !displayLabel && !dataType) return;
+      if (!headerName || !displayLabel || !['TEXTO', 'NUMERICO', 'FECHA', 'BOOLEANO'].includes(dataType)) {
+        errors.push(`Fila ${line}: nombre, etiqueta y tipo de dato válido son obligatorios`);
+        return;
+      }
+      if ((sourceField && !regexPattern) || (!sourceField && regexPattern)) {
+        errors.push(`Fila ${line}: campo asociado y regex deben configurarse juntos`);
+        return;
       }
 
-      detectedCols.push({
-        name: headerName,
-        dataType: dataType,
-        format: format,
-        displayLabel: displayLabel,
-        sampleValues: columnSamples[colIndex].filter(v => v.trim() !== ''),
-        selected: true, // Por defecto todas seleccionadas
-        matchedFieldDefinition: matchResult?.field,
-        matchStatus: matchStatus,
-        matchScore: matchResult?.score
-      });
-    }
+      const normalizedName = this.normalizeForMatching(headerName);
+      if (names.has(normalizedName)) {
+        errors.push(`Fila ${line}: la cabecera "${headerName}" está duplicada en el archivo`);
+        return;
+      }
+      names.add(normalizedName);
 
-    if (detectedCols.length === 0) {
-      this.notificationService.error('Sin cabeceras válidas', 'No se encontraron cabeceras válidas en el archivo');
+      const matchedFieldDefinition = fieldCode
+        ? this.fieldDefinitions().find(field => this.normalizeForMatching(field.fieldCode) === this.normalizeForMatching(fieldCode))
+        : undefined;
+      if (fieldCode && !matchedFieldDefinition) {
+        errors.push(`Fila ${line}: el código de campo "${fieldCode}" no existe en el catálogo`);
+        return;
+      }
+
+      const importedHeader: HeaderConfigurationItem = {
+        fieldDefinitionId: matchedFieldDefinition?.id ?? 0,
+        headerName,
+        dataType,
+        displayLabel,
+        format: format || undefined,
+        required: ['1', 'true', 'si', 'sí'].includes(requiredValue),
+        sourceField: sourceField || undefined,
+        regexPattern: regexPattern || undefined
+      };
+      detected.push({
+        name: headerName,
+        dataType,
+        format: importedHeader.format,
+        displayLabel,
+        sampleValues: [fieldCode || 'Campo personalizado'],
+        selected: true,
+        matchedFieldDefinition,
+        matchStatus: matchedFieldDefinition ? 'matched' : 'no-match',
+        matchScore: matchedFieldDefinition ? 100 : undefined,
+        importedHeader
+      });
+    });
+
+    if (errors.length > 0) {
+      this.notificationService.error('Archivo de configuración inválido', errors.slice(0, 5).join('\n'));
+      return;
+    }
+    if (detected.length === 0) {
+      this.notificationService.error('Sin cabeceras válidas', 'No se encontraron filas de configuración válidas');
       return;
     }
 
-    // Calcular estadísticas de matching
-    const matchedCount = detectedCols.filter(c => c.matchStatus === 'matched').length;
-    const reviewCount = detectedCols.filter(c => c.matchStatus === 'review').length;
-    const noMatchCount = detectedCols.filter(c => c.matchStatus === 'no-match').length;
-
-    // Mostrar diálogo de selección de columnas
-    this.detectedColumns.set(detectedCols);
+    this.detectedColumns.set(detected);
     this.showColumnSelectionDialog.set(true);
-
-    // Notificar sobre el resultado del auto-matching
-    if (reviewCount > 0 || noMatchCount > 0) {
-      this.notificationService.info(
-        'Auto-matching completado',
-        `${matchedCount} coincidencias exactas, ${reviewCount} para revisar, ${noMatchCount} sin coincidencia`
-      );
-    }
   }
 
   // ==================== Métodos para selección de columnas ====================
@@ -2232,7 +2269,7 @@ export class HeaderConfigurationComponent implements OnInit {
 
     // Crear cabeceras a partir de las columnas seleccionadas
     // Usar el FieldDefinition matched si existe, sino fieldDefinitionId = 0
-    const newHeaders: HeaderConfigurationItem[] = selectedColumns.map(col => ({
+    const newHeaders: HeaderConfigurationItem[] = selectedColumns.map(col => col.importedHeader ?? ({
       fieldDefinitionId: col.matchedFieldDefinition?.id ?? 0,
       headerName: col.name,
       dataType: col.dataType,
@@ -2243,10 +2280,10 @@ export class HeaderConfigurationComponent implements OnInit {
 
     // Agregar a las cabeceras existentes (no reemplazar)
     const currentHeaders = this.previewHeaders();
-    const existingNames = new Set(currentHeaders.map(h => h.headerName.toLowerCase()));
+    const existingNames = new Set(currentHeaders.map(h => this.normalizeForMatching(h.headerName)));
 
     // Filtrar cabeceras que ya existen
-    const uniqueNewHeaders = newHeaders.filter(h => !existingNames.has(h.headerName.toLowerCase()));
+    const uniqueNewHeaders = newHeaders.filter(h => !existingNames.has(this.normalizeForMatching(h.headerName)));
     const duplicateCount = newHeaders.length - uniqueNewHeaders.length;
 
     if (uniqueNewHeaders.length > 0) {

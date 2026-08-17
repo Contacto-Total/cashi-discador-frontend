@@ -965,9 +965,10 @@ import {
                                          [class.dark:!border-emerald-600]="col.selected">
                                       <!-- Fila principal: checkbox + nombre + badges de tablas + ejemplos -->
                                       <div class="flex items-center gap-3">
-                                        <input type="checkbox"
-                                               [(ngModel)]="col.selected"
-                                               class="w-4 h-4 rounded !border-gray-400 dark:!border-slate-500 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
+                                         <input type="checkbox"
+                                                [(ngModel)]="col.selected"
+                                                (ngModelChange)="onColumnSelectionChange(file, col)"
+                                                class="w-4 h-4 rounded !border-gray-400 dark:!border-slate-500 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
                                         <div class="flex-1 min-w-0">
                                           <div class="flex items-center gap-2 flex-wrap">
                                             <code class="font-mono text-sm !text-amber-700 dark:!text-amber-400 !bg-amber-100 dark:!bg-amber-900/30 px-1.5 py-0.5 rounded">{{ col.name }}</code>
@@ -997,9 +998,28 @@ import {
                                       </div>
 
                                       <!-- Fila de configuración: tipo de dato + formato (solo si está seleccionada) -->
-                                      @if (col.selected) {
-                                        <div class="mt-3 pt-3 border-t !border-gray-200 dark:!border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                          <!-- Tipo de dato -->
+                                       @if (col.selected) {
+                                         <div class="mt-3 pt-3 border-t !border-gray-200 dark:!border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                           @if (selectedLoadMode() === 'DAILY') {
+                                             <div class="sm:col-span-2">
+                                               <p class="block text-xs font-medium !text-gray-600 dark:!text-gray-400 mb-2">Crear cabecera en</p>
+                                               <div class="flex flex-wrap gap-4">
+                                                 @if (col.missingInActualizacion) {
+                                                   <label class="flex items-center gap-2 text-xs !text-gray-700 dark:!text-gray-300">
+                                                     <input type="checkbox" [(ngModel)]="col.createInActualizacion" (ngModelChange)="onColumnTargetChange(file, col)" class="w-4 h-4 rounded !border-gray-400 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
+                                                     Carga diaria
+                                                   </label>
+                                                 }
+                                                 @if (col.missingInInicial) {
+                                                   <label class="flex items-center gap-2 text-xs !text-gray-700 dark:!text-gray-300">
+                                                     <input type="checkbox" [(ngModel)]="col.createInInicial" (ngModelChange)="onColumnTargetChange(file, col)" class="w-4 h-4 rounded !border-gray-400 text-emerald-500 focus:ring-emerald-500 cursor-pointer">
+                                                     Carga inicial
+                                                   </label>
+                                                 }
+                                               </div>
+                                             </div>
+                                           }
+                                           <!-- Tipo de dato -->
                                           <div>
                                             <label class="block text-xs font-medium !text-gray-600 dark:!text-gray-400 mb-1">
                                               Tipo de dato
@@ -1048,8 +1068,8 @@ import {
 
                                 <p class="text-xs !text-gray-600 dark:!text-gray-400 mt-3 p-2 !bg-blue-50 dark:!bg-blue-900/20 rounded-lg border !border-blue-200 dark:!border-blue-800/50">
                                   <lucide-angular name="info" [size]="12" class="inline mr-1 !text-blue-600 dark:!text-blue-400"></lucide-angular>
-                                  @if (selectedLoadMode() === 'DAILY') {
-                                    Las columnas seleccionadas se crearán en las tablas donde falten (Diaria y/o Inicial). Las no seleccionadas serán ignoradas.
+                                   @if (selectedLoadMode() === 'DAILY') {
+                                     Seleccione explícitamente el esquema donde se creará cada cabecera. Las no seleccionadas serán ignoradas.
                                   } @else {
                                     Las columnas seleccionadas se crearán como nuevas cabeceras. Las no seleccionadas serán ignoradas.
                                   }
@@ -1949,8 +1969,8 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
 
       // Si tiene datos y no hay columnas no registradas pendientes, puede estar listo
       if (file.data && file.headers) {
-        const hasUnregisteredSelected = file.unregisteredColumns?.some(c => c.selected);
-        if (!hasUnregisteredSelected && file.selectedSheet) {
+        const hasUnregisteredColumns = (file.unregisteredColumns?.length || 0) > 0;
+        if (!hasUnregisteredColumns && file.selectedSheet) {
           file.configState = FILE_CONFIG_STATES.READY;
           file.isExpanded = false;
           file.validated = true;
@@ -2111,11 +2131,13 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
             name: headerName,
             sampleValues,
             detectedType,
-            selected: true,  // Por defecto, seleccionada para crear
+            selected: false,
             displayLabel: this.generateDisplayLabel(headerName),
             format: detectedType === DATA_TYPES.DATE ? 'dd/MM/yyyy' : undefined,
             missingInActualizacion,
-            missingInInicial
+            missingInInicial,
+            createInActualizacion: false,
+            createInInicial: false
           });
         }
       } else {
@@ -2128,7 +2150,7 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
             name: headerName,
             sampleValues,
             detectedType,
-            selected: true,
+            selected: false,
             displayLabel: this.generateDisplayLabel(headerName),
             format: detectedType === DATA_TYPES.DATE ? 'dd/MM/yyyy' : undefined
           });
@@ -2344,7 +2366,25 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     if (!file.unregisteredColumns) return;
 
     const allSelected = file.unregisteredColumns.every(c => c.selected);
-    file.unregisteredColumns.forEach(c => c.selected = !allSelected);
+    const shouldSelect = !allSelected;
+    file.unregisteredColumns.forEach(col => {
+      col.selected = shouldSelect;
+      col.createInActualizacion = false;
+      col.createInInicial = false;
+    });
+    this.updateFilesSignal();
+  }
+
+  onColumnSelectionChange(file: FileToProcess, col: UnregisteredColumn) {
+    if (this.selectedLoadMode() === 'DAILY') {
+      col.createInActualizacion = false;
+      col.createInInicial = false;
+    }
+    this.updateFilesSignal();
+  }
+
+  onColumnTargetChange(file: FileToProcess, col: UnregisteredColumn) {
+    col.selected = !!(col.createInActualizacion || col.createInInicial);
     this.updateFilesSignal();
   }
 
@@ -2385,6 +2425,13 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
 
     // Debe tener datos cargados
     if (!file.headers || !file.data) {
+      return false;
+    }
+
+    // En carga diaria, una columna marcada para crear debe tener al menos un destino explícito.
+    if (this.selectedLoadMode() === 'DAILY' && file.unregisteredColumns?.some(
+      col => col.selected && !col.createInActualizacion && !col.createInInicial
+    )) {
       return false;
     }
 
@@ -2450,10 +2497,10 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
         if (isDaily) {
           // Para DAILY: crear columnas solo en las tablas donde REALMENTE falten (estado fresco)
           const colsForActualizacion = selectedColumns.filter(
-            c => !freshActualizacionSet.has(c.name.trim().toLowerCase())
+            c => c.createInActualizacion && !freshActualizacionSet.has(c.name.trim().toLowerCase())
           );
           const colsForInicial = selectedColumns.filter(
-            c => !freshInicialSet.has(c.name.trim().toLowerCase())
+            c => c.createInInicial && !freshInicialSet.has(c.name.trim().toLowerCase())
           );
 
           // Crear en tabla ACTUALIZACION
@@ -2795,13 +2842,15 @@ export class ConsolidatedLoadComponent implements OnInit, OnDestroy {
     this.filesToProcess().forEach(file => {
       if (file.unregisteredColumns) {
         const selected = file.unregisteredColumns.filter(c => c.selected);
-        total += selected.length;
 
         if (this.selectedLoadMode() === 'DAILY') {
           selected.forEach(col => {
-            if (col.missingInActualizacion) actualizacion++;
-            if (col.missingInInicial) inicial++;
+            if (col.createInActualizacion) actualizacion++;
+            if (col.createInInicial) inicial++;
+            if (col.createInActualizacion || col.createInInicial) total++;
           });
+        } else {
+          total += selected.length;
         }
       }
     });
