@@ -8,7 +8,11 @@ import { RecordingDownloadRequest } from '../models/recording-download.request';
   providedIn: 'root'
 })
 export class RecordingDownloadService {
-  baseUrl = environment.webServiceUrl + '/recording';
+  // apiUrl (cashi-discador-backend): los audios históricos ahora se sirven desde
+  // S3 y no desde el FTP interno, que al ser una IP privada solo se alcanzaba
+  // desde la red de la oficina. La ruta va en singular ('/recording') porque es
+  // la que ya usaba el backend antiguo; no se pisa con '/recordings' del discador.
+  baseUrl = environment.apiUrl + '/recording';
 
   constructor(private http: HttpClient) { }
 

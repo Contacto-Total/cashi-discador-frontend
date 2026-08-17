@@ -8,7 +8,10 @@ import { CreateRecordingEvaluationReportRequest } from '../models/create-recordi
   providedIn: 'root'
 })
 export class RecordingEvaluationReportService {
-  baseUrl = environment.webServiceUrl + '/audio/evaluation';
+  // apiUrl (cashi-discador-backend): el XLSX lo genera ahora el discador con la
+  // misma plantilla que usa para las gestiones de Cashi, alimentada desde
+  // foh-prd.AUDIOS_EVALUACIONES.
+  baseUrl = environment.apiUrl + '/audio/evaluation';
 
   constructor(private http: HttpClient) { }
 
