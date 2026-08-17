@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule, CurrencyPipe } from '@angular/common';
 import { Workbook } from 'exceljs';
 import { saveAs } from 'file-saver';
@@ -28,15 +28,31 @@ import { ReportePagosBancarios } from '../models/reporte-pagos-bancarios.model';
           @for (pago of reporte.pagos; track pago.id) {
             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30"><td class="whitespace-nowrap px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.fechaBanco || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.documento || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.numeroOperacion || '-' }}</td><td class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300">{{ pago.medioAtencion || '-' }}</td><td class="whitespace-nowrap px-4 py-3 text-right text-sm font-medium text-emerald-600 dark:text-emerald-400">{{ (pago.montoBanco || 0) | currency:'PEN':'symbol-narrow':'1.2-2' }}</td><td class="px-4 py-3 text-center"><span class="rounded-full px-2 py-1 text-xs font-medium" [class]="pago.procesado ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'">{{ pago.procesado ? 'Conciliado' : 'Pendiente' }}</span></td></tr>
           }
-        </tbody></table></div>
+       </tbody></table></div>
+        @if (reporte.totalPaginas > 1) {
+          <div class="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm dark:border-slate-700">
+            <span class="text-slate-600 dark:text-slate-400">Página {{ reporte.pagina + 1 }} de {{ reporte.totalPaginas }}</span>
+            <div class="flex gap-2">
+              <button type="button" (click)="cambiarPagina(reporte.pagina - 1)" [disabled]="reporte.pagina === 0" class="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">Anterior</button>
+              <button type="button" (click)="cambiarPagina(reporte.pagina + 1)" [disabled]="reporte.pagina + 1 >= reporte.totalPaginas" class="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">Siguiente</button>
+            </div>
+          </div>
+        }
       }
     </section>
   `
 })
 export class ReportePagosBancariosResultadosWidget {
   @Input({ required: true }) reporte!: ReportePagosBancarios;
+  @Output() paginaCambiada = new EventEmitter<number>();
 
   descargando = false;
+
+  cambiarPagina(pagina: number): void {
+    if (pagina >= 0 && pagina < this.reporte.totalPaginas) {
+      this.paginaCambiada.emit(pagina);
+    }
+  }
 
   async descargarExcel(): Promise<void> {
     if (this.descargando || this.reporte.pagos.length === 0) return;
