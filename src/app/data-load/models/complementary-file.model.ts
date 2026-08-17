@@ -99,6 +99,8 @@ export interface UnregisteredColumn {
   // Para carga diaria: indica en qué tabla(s) falta la columna
   missingInActualizacion?: boolean;  // Falta en tabla de actualización diaria
   missingInInicial?: boolean;        // Falta en tabla inicial (maestra)
+  createInActualizacion?: boolean;  // Destino elegido explícitamente para creación
+  createInInicial?: boolean;        // Destino elegido explícitamente para creación
 }
 
 /**
