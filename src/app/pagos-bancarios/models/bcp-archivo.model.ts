@@ -89,6 +89,9 @@ export interface AprobarArchivoBcpRequest {
   cabecera: BcpArchivoCabecera | null;
   detalles: BcpArchivoDetalle[];
   prevalidacion: PrevalidacionArchivoBcp[];
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
   aprobadoPorId: number;
   aprobadoPorNombre: string;
   observacion?: string;
@@ -286,6 +289,9 @@ export interface BcpPagoManualRequest {
   observaciones?: string;
   /** Banco donde se realizó el pago: BCP, INTERBANK, BBVA, SCOTIABANK, BANBIF, OTRO */
   banco?: string;
+  tenantId: number;
+  carteraId: number;
+  subcarteraId: number;
 }
 
 /**
@@ -317,6 +323,9 @@ export interface BcpPagoManual {
   medioAtencion?: string;
   horaAtencion?: string;
   banco: string;
+  tenantId: number | null;
+  carteraId: number | null;
+  subcarteraId: number | null;
   procesado: boolean;
   cuotaAplicadaId?: number;
   referencia?: string;

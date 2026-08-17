@@ -10,8 +10,12 @@ export class ReportePagosBancariosService {
 
   constructor(private readonly http: HttpClient) {}
 
-  obtenerReporte(periodo: string, banco: string): Observable<ReportePagosBancarios> {
-    const params = new HttpParams().set('periodo', periodo).set('banco', banco);
+  obtenerReporte(periodo: string, tenantId: number, carteraId: number, subcarteraId: number): Observable<ReportePagosBancarios> {
+    const params = new HttpParams()
+      .set('periodo', periodo)
+      .set('tenantId', tenantId.toString())
+      .set('carteraId', carteraId.toString())
+      .set('subcarteraId', subcarteraId.toString());
     return this.http.get<ReportePagosBancarios>(this.baseUrl, { params });
   }
 }

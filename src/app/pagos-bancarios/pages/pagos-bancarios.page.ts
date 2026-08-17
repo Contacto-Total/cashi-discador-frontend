@@ -341,6 +341,37 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
             <div class="px-6 pb-6 border-t border-slate-200 dark:border-slate-700">
               <form (ngSubmit)="editingPago() ? actualizarPago() : registrarPagoManual()" class="space-y-4 pt-4">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Contexto del pago -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Proveedor <span class="text-red-500">*</span></label>
+                <select [(ngModel)]="pagoManual.tenantId" (ngModelChange)="onManualTenantChange($event)" name="manualTenant" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option [ngValue]="0">Seleccionar...</option>
+                  @for (tenant of tenants(); track tenant.id) {
+                    <option [ngValue]="tenant.id">{{ tenant.tenantCode }} - {{ tenant.tenantName }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Cartera <span class="text-red-500">*</span></label>
+                <select [(ngModel)]="pagoManual.carteraId" (ngModelChange)="onManualPortfolioChange($event)" [disabled]="pagoManual.tenantId === 0" name="manualCartera" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800">
+                  <option [ngValue]="0">Seleccionar...</option>
+                  @for (portfolio of manualPortfolios(); track portfolio.id) {
+                    <option [ngValue]="portfolio.id">{{ portfolio.portfolioCode }} - {{ portfolio.portfolioName }}</option>
+                  }
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Subcartera <span class="text-red-500">*</span></label>
+                <select [(ngModel)]="pagoManual.subcarteraId" [disabled]="pagoManual.carteraId === 0" name="manualSubcartera" required class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-800">
+                  <option [ngValue]="0">Seleccionar...</option>
+                  @for (subPortfolio of manualSubPortfolios(); track subPortfolio.id) {
+                    <option [ngValue]="subPortfolio.id">{{ subPortfolio.subPortfolioCode }} - {{ subPortfolio.subPortfolioName }}</option>
+                  }
+                </select>
+              </div>
+
               <!-- Documento -->
               <div>
                 <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
@@ -471,7 +502,7 @@ import { HistorialCargasBcpWidget } from '../widgets/historial-cargas-bcp.widget
               }
               <button
                 type="submit"
-                [disabled]="isLoadingManual() || !pagoManual.documento || !pagoManual.fechaPago || !pagoManual.monto || !pagoManual.numeroOperacion"
+                [disabled]="isLoadingManual() || !pagoManual.documento || !pagoManual.fechaPago || !pagoManual.monto || !pagoManual.numeroOperacion || !pagoManual.tenantId || !pagoManual.carteraId || !pagoManual.subcarteraId"
                 class="px-6 py-2.5 text-white rounded-lg font-medium disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                 [class]="editingPago() ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'"
               >
@@ -1002,7 +1033,10 @@ export class PagosBancariosPage implements OnInit {
     numeroOperacion: '',
     medioAtencion: '',
     observaciones: '',
-    banco: 'BCP'
+    banco: 'BCP',
+    tenantId: 0,
+    carteraId: 0,
+    subcarteraId: 0
   };
   isLoadingManual = signal(false);
   resultadoManual = signal<BcpPagoManualResponse | null>(null);
@@ -1048,6 +1082,8 @@ export class PagosBancariosPage implements OnInit {
   selectedTenantIdOh = 0;
   selectedPortfolioIdOh = 0;
   selectedSubPortfolioIdOh = 0;
+  manualPortfolios = signal<Portfolio[]>([]);
+  manualSubPortfolios = signal<SubPortfolio[]>([]);
 
   private fmt = inject(FormatService);
 
@@ -1148,6 +1184,34 @@ export class PagosBancariosPage implements OnInit {
   onSubPortfolioChangeOh(subPortfolioId: number): void {
     this.selectedSubPortfolioIdOh = Number(subPortfolioId) || 0;
     this.clearOhCargaResult();
+  }
+
+  onManualTenantChange(tenantId: number): void {
+    this.pagoManual.tenantId = Number(tenantId) || 0;
+    this.pagoManual.carteraId = 0;
+    this.pagoManual.subcarteraId = 0;
+    this.manualPortfolios.set([]);
+    this.manualSubPortfolios.set([]);
+
+    if (this.pagoManual.tenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.pagoManual.tenantId).subscribe({
+        next: (portfolios) => this.manualPortfolios.set(portfolios),
+        error: (error) => console.error('Error cargando carteras manuales:', error)
+      });
+    }
+  }
+
+  onManualPortfolioChange(carteraId: number): void {
+    this.pagoManual.carteraId = Number(carteraId) || 0;
+    this.pagoManual.subcarteraId = 0;
+    this.manualSubPortfolios.set([]);
+
+    if (this.pagoManual.carteraId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.pagoManual.carteraId).subscribe({
+        next: (subPortfolios) => this.manualSubPortfolios.set(subPortfolios),
+        error: (error) => console.error('Error cargando subcarteras manuales:', error)
+      });
+    }
   }
 
   hasRequiredOhContext(): boolean {
@@ -1351,6 +1415,9 @@ export class PagosBancariosPage implements OnInit {
       cabecera: resultado.cabecera,
       detalles: paresAprobados.map(par => par.detalle),
       prevalidacion: paresAprobados.map(par => par.prevalidacion),
+      tenantId: this.selectedTenantId,
+      carteraId: this.selectedPortfolioId,
+      subcarteraId: this.selectedSubPortfolioId,
       aprobadoPorId: user.id,
       aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
     }).subscribe({
@@ -1567,6 +1634,9 @@ export class PagosBancariosPage implements OnInit {
       cabecera: resultado.cabecera,
       detalles: paresAprobados.map(par => par.detalle),
       prevalidacion: paresAprobados.map(par => par.prevalidacion),
+      tenantId: this.selectedTenantIdOh,
+      carteraId: this.selectedPortfolioIdOh,
+      subcarteraId: this.selectedSubPortfolioIdOh,
       aprobadoPorId: user.id,
       aprobadoPorNombre: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username
     }).subscribe({
@@ -1607,7 +1677,8 @@ export class PagosBancariosPage implements OnInit {
   }
 
   registrarPagoManual(): void {
-    if (!this.pagoManual.documento || !this.pagoManual.fechaPago || !this.pagoManual.monto || !this.pagoManual.numeroOperacion) {
+    if (!this.pagoManual.documento || !this.pagoManual.fechaPago || !this.pagoManual.monto || !this.pagoManual.numeroOperacion
+      || !this.pagoManual.tenantId || !this.pagoManual.carteraId || !this.pagoManual.subcarteraId) {
       return;
     }
 
@@ -1714,8 +1785,24 @@ export class PagosBancariosPage implements OnInit {
       numeroOperacion: pago.numeroOperacion,
       banco: pago.banco || 'BCP',
       medioAtencion: pago.medioAtencion || '',
-      observaciones: pago.referencia || ''
+      observaciones: pago.referencia || '',
+      tenantId: pago.tenantId || 0,
+      carteraId: pago.carteraId || 0,
+      subcarteraId: pago.subcarteraId || 0
     };
+
+    this.manualPortfolios.set([]);
+    this.manualSubPortfolios.set([]);
+    if (this.pagoManual.tenantId > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.pagoManual.tenantId).subscribe({
+        next: (portfolios) => this.manualPortfolios.set(portfolios)
+      });
+    }
+    if (this.pagoManual.carteraId > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.pagoManual.carteraId).subscribe({
+        next: (subPortfolios) => this.manualSubPortfolios.set(subPortfolios)
+      });
+    }
 
     this.resultadoManual.set(null);
 
@@ -1772,8 +1859,13 @@ export class PagosBancariosPage implements OnInit {
       numeroOperacion: '',
       medioAtencion: '',
       observaciones: '',
-      banco: 'BCP'
+      banco: 'BCP',
+      tenantId: 0,
+      carteraId: 0,
+      subcarteraId: 0
     };
+    this.manualPortfolios.set([]);
+    this.manualSubPortfolios.set([]);
   }
 
   // === Eliminación ===

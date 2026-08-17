@@ -25,11 +25,11 @@ export class ReportesPagosBancariosPage {
 
   constructor(private readonly reportePagosBancariosService: ReportePagosBancariosService) {}
 
-  consultar({ periodo, banco }: { periodo: string; banco: string }): void {
+   consultar({ periodo, tenantId, carteraId, subcarteraId }: { periodo: string; tenantId: number; carteraId: number; subcarteraId: number }): void {
     this.loading.set(true);
     this.error.set(null);
     this.reporte.set(null);
-    this.reportePagosBancariosService.obtenerReporte(periodo, banco).subscribe({
+    this.reportePagosBancariosService.obtenerReporte(periodo, tenantId, carteraId, subcarteraId).subscribe({
       next: (reporte) => { this.reporte.set(reporte); this.loading.set(false); },
       error: (error) => { this.error.set(error.error?.mensaje || error.error?.message || 'No se pudo consultar el reporte de pagos bancarios.'); this.loading.set(false); }
     });
