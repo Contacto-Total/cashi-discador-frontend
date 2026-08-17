@@ -2204,7 +2204,28 @@ export class HeaderConfigurationComponent implements OnInit {
       return;
     }
 
-    this.detectedColumns.set(detected);
+    const configuredNames = new Set(this.previewHeaders().map(header =>
+      this.normalizeForMatching(header.headerName)
+    ));
+    const newHeaders = detected.filter(header => !configuredNames.has(this.normalizeForMatching(header.name)));
+    const duplicateCount = detected.length - newHeaders.length;
+
+    if (newHeaders.length === 0) {
+      this.notificationService.info(
+        'Sin cabeceras nuevas',
+        `Las ${duplicateCount} cabecera(s) del archivo ya están configuradas para esta subcartera y tipo de carga.`
+      );
+      return;
+    }
+
+    if (duplicateCount > 0) {
+      this.notificationService.info(
+        'Cabeceras existentes omitidas',
+        `${duplicateCount} cabecera(s) ya configurada(s) fueron omitidas. Seleccione las ${newHeaders.length} cabecera(s) nueva(s).`
+      );
+    }
+
+    this.detectedColumns.set(newHeaders);
     this.showColumnSelectionDialog.set(true);
   }
 
