@@ -3,6 +3,9 @@ export interface ReportePagosBancarios {
   banco: string;
   totalRegistros: number;
   montoTotal: number;
+  pagina: number;
+  tamanoPagina: number;
+  totalPaginas: number;
   pagos: DetallePagoBancario[];
 }
 

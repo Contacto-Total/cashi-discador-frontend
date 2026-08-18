@@ -737,7 +737,14 @@ export class ManagementService {
   // ==================== HISTORIAL HISTÓRICO (Base de datos antigua) ====================
 
   /**
-   * Obtiene gestiones históricas de un cliente desde la base de datos antigua (Web-Service)
+   * Obtiene gestiones históricas de un cliente (pestaña "Histórico").
+   *
+   * Antes salía por el gateway al Web-Service (puerto 8086), que leía en
+   * caliente `foh-prd` en 52.15.152.94. Ahora lo sirve el discador desde la
+   * copia local `cashi_discador_db.GESTION_HISTORICA_BACKUP`, con Tramo 3,
+   * Tramo 5 y cartera propia. La respuesta tiene la misma forma, por eso solo
+   * cambió la URL y el mapeo de las pantallas se quedó igual.
+   *
    * @param documento Documento del cliente
    * @param page Número de página (0-indexed)
    * @param size Tamaño de página
@@ -745,7 +752,7 @@ export class ManagementService {
   getGestionesHistoricas(documento: string, page: number = 0, size: number = 10): Observable<PageResponse<GestionHistoricaResponse>> {
     console.log('[HISTORICO] Fetching historical managements for documento:', documento, { page, size });
     return this.http.get<PageResponse<GestionHistoricaResponse>>(
-      `${environment.gatewayUrl.replace('/api', '')}/web-service/gestion/historica/cliente/${documento}`,
+      `${this.baseUrl}/documento/${documento}/historico`,
       { params: { page: page.toString(), size: size.toString() } }
     );
   }

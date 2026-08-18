@@ -11,7 +11,12 @@ import { HistoricalRecordingsByTractRequest } from '../models/historical-recordi
   providedIn: 'root'
 })
 export class HistoricalRecordingsService {
-  baseUrl = environment.webServiceUrl + '/gestion/historica/audios';
+  // apiUrl (cashi-discador-backend) y no webServiceUrl (backend antiguo): estas
+  // búsquedas las atiende ahora el discador, leyendo de foh-prd. El backend
+  // antiguo sigue en pie para sus otros consumidores; solo dejó de servir a esta
+  // pantalla. No cambiar la clave webServiceUrl en el environment: la comparten
+  // ocho servicios más que sí dependen del sistema anterior.
+  baseUrl = environment.apiUrl + '/gestion/historica/audios';
 
   constructor(private http: HttpClient) { }
 
