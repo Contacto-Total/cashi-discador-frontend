@@ -12,11 +12,22 @@ import { ToastService } from '../../shared/services/toast.service';
 
 type Rubrica = 'CD' | 'PDP';
 
+type Seccion = 'PRESENTACION' | 'NEGOCIACION' | 'CIERRE';
+
 interface CriterioSpeech {
   campo: string;
   etiqueta: string;
   seccion: string;
   activo: boolean;
+  /** Si lo agregó calidad, en vez de venir en la rúbrica. Solo decora la fila. */
+  personalizado: boolean;
+  /**
+   * false en pres_asert, cuya descripción la decide el interruptor
+   * RIGIDO / NO RIGIDO de esta misma pantalla.
+   */
+  descripcionEditable: boolean;
+  descripcion: string | null;
+  ejemplo: string | null;
 }
 
 interface ConfigSpeech {
@@ -146,9 +157,16 @@ interface ConfigSpeech {
                     <span class="px-2 py-0.5 bg-slate-700 text-gray-400 rounded text-xs font-normal">Sin configurar</span>
                   }
                 </h2>
-                <span class="text-sm text-gray-400">
-                  {{ activos() }} de {{ criterios().length }} activos
-                </span>
+                <div class="flex items-center gap-3">
+                  <span class="text-sm text-gray-400">
+                    {{ activos() }} de {{ criterios().length }} activos
+                  </span>
+                  <button type="button" (click)="abrirModal()"
+                          class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-purple-500/60 text-white rounded-lg text-sm flex items-center gap-1.5 transition-colors">
+                    <lucide-angular name="plus" [size]="16" class="text-purple-400"></lucide-angular>
+                    Agregar campo
+                  </button>
+                </div>
               </div>
 
               <!-- Pestañas CD / PDP -->
@@ -177,10 +195,19 @@ interface ConfigSpeech {
                   </span>
 
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium" [class]="criterio.activo ? 'text-white' : 'text-gray-500 line-through'">
+                    <p class="text-sm font-medium flex items-center gap-2" [class]="criterio.activo ? 'text-white' : 'text-gray-500 line-through'">
                       {{ criterio.etiqueta }}
+                      @if (criterio.personalizado) {
+                        <span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-600/20 text-purple-300 no-underline shrink-0">PROPIO</span>
+                      }
                     </p>
                     <p class="text-xs text-gray-500 font-mono">{{ criterio.campo }}</p>
+                    @if (criterio.descripcionEditable && !criterio.descripcion) {
+                      <p class="text-xs text-amber-400 flex items-center gap-1 mt-0.5">
+                        <lucide-angular name="alert-triangle" [size]="12"></lucide-angular>
+                        Sin descripción: no se va a evaluar, saldrá vacío
+                      </p>
+                    }
                   </div>
 
                   <span class="px-2 py-0.5 rounded text-xs shrink-0" [class]="colorSeccion(criterio.seccion)">
@@ -194,6 +221,14 @@ interface ConfigSpeech {
                            class="sr-only peer">
                     <div class="w-11 h-6 bg-slate-700 transition-all peer-hover:ring-4 peer-hover:ring-purple-500/25 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                   </label>
+
+                  <!-- Todos se editan, de la rúbrica o propios: las descripciones
+                       de la rúbrica también viven en la BD. -->
+                  <button type="button" title="Editar este criterio"
+                          class="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-gray-500 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+                          (click)="abrirModal(criterio)">
+                    <lucide-angular name="pencil" [size]="16"></lucide-angular>
+                  </button>
                 </div>
               }
             </div>
@@ -223,6 +258,153 @@ interface ConfigSpeech {
         </div>
       }
 
+      <!-- Agregar campo -->
+      @if (modalAbierto()) {
+        <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 py-10"
+             (click)="cerrarModal()">
+          <div class="bg-slate-900 rounded-xl border border-slate-700 shadow-2xl w-full max-w-3xl"
+               (click)="$event.stopPropagation()">
+
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                <lucide-angular [name]="editando() ? 'pencil' : 'plus'" [size]="20" class="text-purple-400"></lucide-angular>
+                {{ editando() ? 'Editar campo de' : 'Agregar campo a' }}
+                {{ rubrica() === 'CD' ? 'CONTACTO DIRECTO' : 'PROMESA DE PAGO' }}
+              </h3>
+              <button type="button" (click)="cerrarModal()"
+                      class="text-gray-500 hover:text-white transition-colors">
+                <lucide-angular name="x" [size]="20"></lucide-angular>
+              </button>
+            </div>
+
+            <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                    Etiqueta
+                  </label>
+                  <input type="text" [(ngModel)]="nuevoEtiqueta" maxlength="150"
+                         placeholder="Valida identidad del titular"
+                         class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                  <p class="text-xs text-gray-500 mt-1">
+                    Es el texto que aparece en el criterio al descargar el reporte de
+                    evaluación, y en esta misma lista.
+                  </p>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                    Sección
+                  </label>
+                  <select [(ngModel)]="nuevoSeccion"
+                          class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <option value="PRESENTACION">PRESENTACIÓN</option>
+                    <option value="NEGOCIACION">NEGOCIACIÓN</option>
+                    <option value="CIERRE">CIERRE</option>
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">
+                    El campo se agrega al final de esa sección y suma en su subtotal.
+                  </p>
+                </div>
+
+                @if (descripcionBloqueada()) {
+                  <!-- pres_asert: su descripción la decide el interruptor de arriba,
+                       así que un texto fijo acá lo dejaría sin efecto. -->
+                  <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                      La instrucción de este criterio la define el modo
+                      <span class="text-gray-300">RIGIDO / NO RIGIDO</span> que se elige
+                      arriba en esta misma pantalla, porque cambia según cómo se espera
+                      que el asesor abra la llamada. Acá solo se editan la etiqueta y la
+                      sección.
+                    </p>
+                  </div>
+                } @else {
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                      Qué debe hacer el asesor
+                    </label>
+                    <textarea [(ngModel)]="nuevoDescripcion" rows="4" maxlength="400"
+                              placeholder="Se espera que el asesor confirme que habla con el titular, pidiendo un dato que solo esa persona pueda saber."
+                              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">
+                      {{ (nuevoDescripcion || '').length }}/400
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                      Frase de ejemplo
+                    </label>
+                    <textarea [(ngModel)]="nuevoEjemplo" rows="2" maxlength="400"
+                              placeholder="&quot;Para validar sus datos, ¿me confirma su fecha de nacimiento?&quot;"
+                              class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"></textarea>
+                  </div>
+                }
+              </div>
+
+              <!-- Guía. Está al lado y no escondida en un tooltip a propósito:
+                   la calidad de la evaluación depende de cómo se redacte esto. -->
+              <div class="space-y-4">
+                <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                  <p class="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
+                    Ejemplo de una descripción que funciona
+                  </p>
+                  <p class="text-xs text-gray-400 leading-relaxed italic">
+                    "Se espera que el asesor pregunte el motivo de no pago del cliente. A
+                    veces el cliente lo menciona sin que el asesor lo pregunte; en ese caso,
+                    considerar este campo como cumplido."
+                  </p>
+                  <p class="text-xs text-gray-500 mt-2 leading-relaxed">
+                    <span class="text-gray-300">Ejemplo:</span>
+                    "¿A qué se debe que no pudo realizar el pago de la deuda?"
+                  </p>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                  <p class="text-xs font-semibold text-amber-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
+                    Qué evitar
+                  </p>
+                  <p class="text-xs text-gray-400 leading-relaxed">
+                    <span class="text-gray-300">Que se pise con otro criterio.</span>
+                    Si describe algo que ya mide un criterio existente, la evaluación puede
+                    dar por cumplido uno y no el otro.
+                  </p>
+                </div>
+
+                @if (editando()) {
+                  <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-4">
+                    <p class="text-xs text-gray-400 leading-relaxed">
+                      Los cambios se aplican a las evaluaciones
+                      <span class="text-gray-300">nuevas</span>. Las que ya se hicieron
+                      se calificaron con el texto anterior y no se recalculan.
+                    </p>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button type="button" (click)="cerrarModal()"
+                      class="px-4 py-2 text-gray-400 hover:text-white text-sm transition-colors">
+                Cancelar
+              </button>
+              <button type="button" (click)="guardarCriterio()"
+                      [disabled]="creando() || !formularioCompleto()"
+                      class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                @if (creando()) {
+                  <lucide-angular name="loader-2" [size]="16" class="animate-spin"></lucide-angular>
+                } @else {
+                  <lucide-angular name="save" [size]="16"></lucide-angular>
+                }
+                Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
     </div>
   `
 })
@@ -247,6 +429,16 @@ export class PlantillasSpeechComponent implements OnInit {
 
   loadingConfig = signal(false);
   saving = signal(false);
+
+  // === Ventana de agregar / editar campo ===
+  modalAbierto = signal(false);
+  creando = signal(false);
+  /** El criterio que se está editando, o null si se está creando uno nuevo. */
+  editando = signal<CriterioSpeech | null>(null);
+  nuevoEtiqueta = '';
+  nuevoSeccion: Seccion = 'PRESENTACION';
+  nuevoDescripcion = '';
+  nuevoEjemplo = '';
 
   /** Criterios de la pestaña activa, en el orden en que salen en el Excel. */
   criterios = computed<CriterioSpeech[]>(() => {
@@ -375,6 +567,114 @@ export class PlantillasSpeechComponent implements OnInit {
       return rubrica === 'CD'
         ? { ...cfg, cd: invertir(cfg.cd) }
         : { ...cfg, pdp: invertir(cfg.pdp) };
+    });
+  }
+
+  // === Criterios propios ===
+
+  /** Sin argumento crea uno nuevo; con un criterio, lo edita. */
+  abrirModal(criterio?: CriterioSpeech): void {
+    this.editando.set(criterio ?? null);
+    this.nuevoEtiqueta = criterio?.etiqueta ?? '';
+    this.nuevoSeccion = (criterio?.seccion as Seccion) ?? 'PRESENTACION';
+    this.nuevoDescripcion = criterio?.descripcion ?? '';
+    this.nuevoEjemplo = criterio?.ejemplo ?? '';
+    this.modalAbierto.set(true);
+  }
+
+  cerrarModal(): void {
+    if (this.creando()) return;
+    this.modalAbierto.set(false);
+    this.editando.set(null);
+  }
+
+  /**
+   * pres_asert: la instrucción sale del modo RIGIDO / NO RIGIDO, no de un texto
+   * guardado. Se ocultan los dos campos en vez de mostrarlos deshabilitados
+   * para no dar a entender que hay algo que desbloquear.
+   */
+  descripcionBloqueada(): boolean {
+    const criterio = this.editando();
+    return !!criterio && !criterio.descripcionEditable;
+  }
+
+  /** Los cuatro datos son obligatorios; en pres_asert solo aplican dos. */
+  formularioCompleto(): boolean {
+    if (!(this.nuevoEtiqueta || '').trim() || !this.nuevoSeccion) return false;
+    if (this.descripcionBloqueada()) return true;
+    return !!(this.nuevoDescripcion || '').trim() && !!(this.nuevoEjemplo || '').trim();
+  }
+
+  /**
+   * Aplica una configuración que devolvió el servidor conservando los
+   * interruptores que se movieron y todavía no se guardaron.
+   *
+   * Agregar y editar un criterio son operaciones inmediatas contra la BD, y la
+   * respuesta trae la configuración tal como está guardada. Volcarla tal cual
+   * pisaría los toggles que el usuario movió antes de presionar Guardar, y
+   * desde la pantalla se vería como que "se revirtieron solos".
+   */
+  private aplicarConfig(nueva: ConfigSpeech): void {
+    const previa = this.config();
+    if (!previa) {
+      this.config.set(nueva);
+      return;
+    }
+
+    const conservar = (lista: CriterioSpeech[], anterior: CriterioSpeech[]) => {
+      const activoPrevio = new Map(anterior.map(c => [c.campo, c.activo]));
+      return lista.map(c => activoPrevio.has(c.campo)
+        ? { ...c, activo: activoPrevio.get(c.campo)! }
+        : c);
+    };
+
+    this.config.set({
+      ...nueva,
+      rigido: previa.rigido,
+      cd: conservar(nueva.cd, previa.cd),
+      pdp: conservar(nueva.pdp, previa.pdp)
+    });
+  }
+
+  guardarCriterio(): void {
+    const cfg = this.config();
+    if (!cfg || !this.formularioCompleto()) return;
+
+    const cuerpo = {
+      etiqueta: (this.nuevoEtiqueta || '').trim(),
+      seccion: this.nuevoSeccion,
+      descripcion: (this.nuevoDescripcion || '').trim() || null,
+      ejemplo: (this.nuevoEjemplo || '').trim() || null
+    };
+
+    const criterio = this.editando();
+    // Al editar, el criterio se identifica por (subcartera, rúbrica, campo) y
+    // no por un id: uno de la rúbrica que esta subcartera todavía no tocó no
+    // tiene fila propia todavía, así que no habría id al que apuntar.
+    const peticion = criterio
+      ? this.http.put<any>(
+          `${this.apiUrl}/subcartera/${cfg.idSubcartera}/criterio/${this.rubrica()}/${criterio.campo}`,
+          cuerpo)
+      : this.http.post<any>(`${this.apiUrl}/subcartera/${cfg.idSubcartera}/criterio`,
+          { ...cuerpo, rubrica: this.rubrica() });
+
+    this.creando.set(true);
+    peticion.subscribe({
+      next: (res) => {
+        this.aplicarConfig(res.data);
+        this.creando.set(false);
+        this.modalAbierto.set(false);
+        this.editando.set(null);
+        this.toastService.success(criterio ? 'Campo actualizado' : 'Campo agregado');
+      },
+      error: (err) => {
+        console.error('Error guardando el criterio:', err);
+        this.creando.set(false);
+        // El backend devuelve el motivo real en los 400 (nombre repetido, nombre
+        // que no da un identificador válido): es lo único accionable que tiene
+        // el usuario, así que se muestra tal cual.
+        this.toastService.error(err?.error?.message ?? 'No se pudo guardar el campo');
+      }
     });
   }
 
