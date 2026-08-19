@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -359,7 +359,18 @@ export class BotVozService {
     return this.http.get<any[]>(`${this.apiUrl}/cola/descartes${q}`);
   }
 
-  getSesiones(): Observable<BotSesion[]> { return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`); }
+  /**
+   * Las últimas llamadas. Con `estados`/`resultados` el backend devuelve solo esas.
+   *
+   * El filtro va al servidor y no al navegador porque aquí solo hay 100 filas: al
+   * clicar una pastilla que cuenta 7 salían 2, y parecía que faltaban cinco.
+   */
+  getSesiones(estados?: string[], resultados?: string[]): Observable<BotSesion[]> {
+    let p = new HttpParams();
+    (estados ?? []).forEach((e) => (p = p.append('estados', e)));
+    (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
+    return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
+  }
 
   /**
    * Los totales del día, contados en la base.

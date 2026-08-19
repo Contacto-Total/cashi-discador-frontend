@@ -342,21 +342,27 @@ export class BotVozComponent implements OnInit, OnDestroy {
   alternarPill(clave: string): void {
     this.pillLlamadas = this.pillLlamadas === clave ? null : clave;
     this.paginaSesiones = 1;
+    // Se vuelve a pedir la lista al backend en vez de filtrar lo que ya hay: aqui solo
+    // estan las 100 ultimas, y una pastilla que cuenta 7 enseñaba 2 porque las otras
+    // cinco se habian salido de la ventana.
+    this.cargarSesiones();
   }
 
-  /** Las llamadas que coinciden con la busqueda y con la pastilla activa. */
+  /**
+   * Las llamadas que coinciden con el buscador.
+   *
+   * La pastilla ya NO se filtra aquí: la lista llega filtrada del backend. Filtrarla
+   * otra vez no cambiaría nada, pero dejaría dos sitios donde decidir lo mismo, que es
+   * como se acaba con dos criterios distintos.
+   */
   get sesionesFiltradas(): BotSesion[] {
     const q = this.busquedaLlamadas.trim().toLowerCase();
-    const pill = this.pillLlamadas;
-    if (!q && !pill) return this.sesiones;
-    return this.sesiones.filter((s) => {
-      if (pill && !this.encaja(s, pill)) return false;
-      if (!q) return true;
-      return (s.documento || '').toLowerCase().includes(q)
-        || (s.nombreCliente || '').toLowerCase().includes(q)
-        || (s.telefono || '').includes(q)
-        || (s.resultadoNegocio || '').toLowerCase().includes(q);
-    });
+    if (!q) return this.sesiones;
+    return this.sesiones.filter((s) =>
+      (s.documento || '').toLowerCase().includes(q)
+      || (s.nombreCliente || '').toLowerCase().includes(q)
+      || (s.telefono || '').includes(q)
+      || (s.resultadoNegocio || '').toLowerCase().includes(q));
   }
 
   get sesionesPagina(): BotSesion[] {
@@ -1538,7 +1544,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
-    this.svc.getSesiones().subscribe({
+    const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
+    this.svc.getSesiones(g?.estados, g?.resultados).subscribe({
       next: (s) => { this.sesiones = s; this.errorSesiones = false; },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
     });
