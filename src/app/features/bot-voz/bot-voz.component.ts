@@ -282,6 +282,22 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** La pastilla clicada, o null cuando se ven todas las llamadas. */
   pillLlamadas: string | null = null;
 
+  /**
+   * La cola cuyas llamadas se están viendo. null = todas.
+   *
+   * Con una sola cola daba igual; con castigo y propia discando a la vez, la tabla las
+   * mezclaba y no se podía leer ninguna: son dos guiones distintos, dos importes
+   * distintos y dos canales de pago distintos. El filtro va al servidor, como el de las
+   * pastillas, para que el contador y las filas hablen de lo mismo.
+   */
+  colaLlamadas: number | null = null;
+
+  cambiarColaLlamadas(id: number | null): void {
+    this.colaLlamadas = id;
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
   private encaja(s: BotSesion, clave: string): boolean {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === clave);
     if (!g) return true;
@@ -1545,14 +1561,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
-    this.svc.getSesiones(g?.estados, g?.resultados).subscribe({
+    this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas).subscribe({
       next: (s) => { this.sesiones = s; this.errorSesiones = false; },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
     });
     // Los contadores van aparte porque son de TODO el día y la tabla solo de las 100
     // últimas. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
     // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.svc.getResumenSesiones().subscribe({
+    this.svc.getResumenSesiones(this.colaLlamadas).subscribe({
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });

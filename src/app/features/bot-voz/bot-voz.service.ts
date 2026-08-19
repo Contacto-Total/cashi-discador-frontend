@@ -173,6 +173,9 @@ export interface BotContacto {
 export interface BotSesion {
   id: number;
   uuidLlamada: string;
+  /** De qué cola salió. Se resuelve en el backend por `id_contacto`. */
+  idCola?: number | null;
+  nombreCola?: string | null;
   idCliente?: number;
   documento?: string;
   nombreCliente?: string;
@@ -365,10 +368,12 @@ export class BotVozService {
    * El filtro va al servidor y no al navegador porque aquí solo hay 100 filas: al
    * clicar una pastilla que cuenta 7 salían 2, y parecía que faltaban cinco.
    */
-  getSesiones(estados?: string[], resultados?: string[]): Observable<BotSesion[]> {
+  getSesiones(estados?: string[], resultados?: string[],
+              idCola?: number | null): Observable<BotSesion[]> {
     let p = new HttpParams();
     (estados ?? []).forEach((e) => (p = p.append('estados', e)));
     (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
+    if (idCola) p = p.set('idCola', String(idCola));
     return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
   }
 
@@ -379,7 +384,8 @@ export class BotVozService {
    * para contar—. Las pastillas salen de aquí para que no encojan solas según entran
    * llamadas nuevas.
    */
-  getResumenSesiones(): Observable<ResumenLlamadas> {
-    return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`);
+  getResumenSesiones(idCola?: number | null): Observable<ResumenLlamadas> {
+    const p = idCola ? new HttpParams().set('idCola', String(idCola)) : undefined;
+    return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`, { params: p });
   }
 }

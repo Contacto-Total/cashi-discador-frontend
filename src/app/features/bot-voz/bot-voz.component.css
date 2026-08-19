@@ -847,6 +847,17 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .cuantos-entran strong { font-size: 17px; color: #1d4ed8; font-variant-numeric: tabular-nums; }
 .cuantos-entran .aviso { color: #b45309; font-size: 13px; }
 
+/* Selector de cola de la pantalla de llamadas. Solo se pinta con mas de una. */
+.selector-cola {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--texto-suave, #64748b);
+}
+.selector-cola select {
+  min-height: 34px; padding: 4px 10px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
+  background: var(--fondo, #fff); color: var(--texto, #0f172a);
+}
+
 /* ===== PASTILLAS DE LA PANTALLA DE LLAMADAS =====
    Contadores clicables: cada uno filtra la tabla y se vuelve a clicar para quitarlo.
    El tono es semantico — verde lo que sirve, ambar lo que pide que alguien haga algo,
