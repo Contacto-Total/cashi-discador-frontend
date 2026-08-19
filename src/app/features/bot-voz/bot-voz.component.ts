@@ -551,7 +551,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // formulario de la cola sin efecto. Ahora cada cola dice cuántas sostiene, entre
   // MIN_SIMULTANEAS y MAX_SIMULTANEAS, y no se resta de ningún bolsón común.
   readonly MIN_SIMULTANEAS = 1;
-  readonly MAX_SIMULTANEAS = 5;
+  readonly MAX_SIMULTANEAS = 20;
 
   /**
    * El `max` del input frena las flechas, no lo que se teclea ni lo que se pega. El
