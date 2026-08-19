@@ -11,9 +11,9 @@ export interface BotConfig {
   horaInicio: string;             // HH:mm:ss
   horaFin: string;
   diasSemana: string;
-  /** El techo de llamadas a la vez, sumando todas las colas. Lo edita el admin. */
-  maxLlamadasSimultaneas: number;
-  /** Quién tocó el techo por última vez. Lo devuelve el backend; no se envía. */
+  // `maxLlamadasSimultaneas` se quitó de aquí: las llamadas a la vez son de cada cola
+  // (BotCola), no un cupo global que repartir. Con tres colas discando, un techo común
+  // obligaba a repartir a ojo, y sembrado en 1 dejaba sin efecto lo que dijera la cola.
   actualizadoPor?: string | null;
   fechaActualizacion?: string | null;
 }
@@ -64,7 +64,10 @@ export interface BotCola {
   /** AUTO = el ritmo lo decide el día del mes. MANUAL = el ritmo fijado arriba. */
   modoRitmo?: string;
   /**
-   * Lo de abajo hereda de la configuración global cuando va vacío.
+   * El horario vacío se queda en la ventana legal; una cola solo puede estrecharla.
+   *
+   * `maxLlamadasSimultaneas` NO hereda de nadie: es el número de esta cola, entre 1 y
+   * 5. Vacío vale 1.
    *
    * Los números de intensidad —días de anticipación, ancho de vencidas e intentos— ya
    * no están aquí: los pone el ritmo, y por tarea. La cola dice a quién se llama.
@@ -204,17 +207,9 @@ export class BotVozService {
 
   getConfig(): Observable<BotConfig> { return this.http.get<BotConfig>(`${this.apiUrl}/config`); }
 
-  /**
-   * Lo único editable de la configuración global: el techo de llamadas simultáneas.
-   *
-   * La ventana horaria no se toca desde aquí a propósito —es el límite de la Ley
-   * 29571— y una cola solo puede estrecharla desde su propio formulario.
-   */
-  actualizarConfig(cambios: Partial<BotConfig>): Observable<BotConfig> {
-    return this.http.put<BotConfig>(`${this.apiUrl}/config`, cambios);
-  }
-  // updateConfig se quitó: `bot_config` ya no es configuración editable, son los
-  // límites del sistema (ventana legal y techo de canales). Se leen, no se tocan aquí.
+  // No hay PUT de configuración: `bot_config` ya no es configuración editable, son los
+  // límites del sistema. Y de esos solo queda la ventana legal (Ley 29571), que no se
+  // negocia. El techo de llamadas simultáneas se quitó de aquí: es de cada cola.
 
   // `activar`/`desactivar` se quitaron: escribian en bot_config.activo, que ya no
   // gobierna el discado. Cada cola tiene su propio Iniciar/Detener.

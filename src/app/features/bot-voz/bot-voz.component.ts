@@ -236,15 +236,92 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Lo escrito en el buscador de llamadas. */
   busquedaLlamadas = '';
 
-  /** Las llamadas que coinciden con la busqueda. Sin nada escrito, todas. */
+  // ----- Las pastillas de la pantalla de llamadas -----
+  //
+  // La tabla contesta "que paso en ESTA llamada" y no contesta lo primero que se
+  // pregunta al abrirla: cuantas contestaron y cuantas dejaron algo. Eso estaba solo
+  // en el total entre parentesis del titulo.
+  //
+  // Dos familias, y no una lista de dieciseis contadores:
+  //   - COMO ACABO la llamada, que sale de `estado` y lo pone el micro.
+  //   - QUE SE SACO, que sale de `resultadoNegocio` (la taxonomia del clasificador).
+  // Una llamada contestada cuenta en las dos, a proposito: son dos preguntas, no dos
+  // trozos de la misma tarta.
+  //
+  // Se pintan clicando: una pastilla que solo enseña un numero es justo lo que se
+  // quito de los filtros de la cola por confuso. Clicando filtra la tabla, y vuelve a
+  // clicarse para quitarlo.
+  //
+  // Las que salen a cero no se pintan. Con seis resultados posibles y llamadas de una
+  // sola clase, la fila se llenaria de ceros que no dicen nada.
+  private static readonly GRUPOS: { clave: string; etiqueta: string; tono: string;
+                                    estados?: string[]; resultados?: string[] }[] = [
+    // Como acabo
+    { clave: 'contesto',   etiqueta: 'Contestó',      tono: 'ok',
+      estados: ['COMPLETADA', 'COLGO_CLIENTE'] },
+    { clave: 'nocontesto', etiqueta: 'No contestó',   tono: 'gris',
+      estados: ['NO_CONTESTA', 'OCUPADO'] },
+    { clave: 'buzon',      etiqueta: 'Buzón',         tono: 'gris',   estados: ['BUZON'] },
+    { clave: 'error',      etiqueta: 'Falló',         tono: 'malo',   estados: ['ERROR'] },
+    // Que se saco
+    { clave: 'promesa',    etiqueta: 'Con promesa',   tono: 'ok',
+      resultados: ['ACUERDA_PAGO', 'CONFIRMA_PAGO'] },
+    { clave: 'yapago',     etiqueta: 'Ya pagó',       tono: 'ok',     resultados: ['YA_PAGO'] },
+    { clave: 'asesor',     etiqueta: 'Pide asesor',   tono: 'aviso',  resultados: ['PIDE_ASESOR'] },
+    { clave: 'reclamo',    etiqueta: 'Reclamo',       tono: 'aviso',  resultados: ['RECLAMO'] },
+    { clave: 'reprograma', etiqueta: 'Reprogramar',   tono: 'aviso',
+      resultados: ['PIDE_REPROGRAMAR', 'PIDE_CANCELAR'] },
+    { clave: 'nopuede',    etiqueta: 'No puede',      tono: 'gris',   resultados: ['NO_PUEDE'] },
+    { clave: 'notitular',  etiqueta: 'No es titular', tono: 'gris',   resultados: ['NO_ES_TITULAR'] },
+    { clave: 'sinnada',    etiqueta: 'Sin compromiso', tono: 'gris',  resultados: ['SIN_COMPROMISO'] },
+  ];
+
+  /** La pastilla clicada, o null cuando se ven todas las llamadas. */
+  pillLlamadas: string | null = null;
+
+  private encaja(s: BotSesion, clave: string): boolean {
+    const g = BotVozComponent.GRUPOS.find((x) => x.clave === clave);
+    if (!g) return true;
+    if (g.estados) return g.estados.includes((s.estado || '').toUpperCase());
+    return (g.resultados || []).includes((s.resultadoNegocio || '').toUpperCase());
+  }
+
+  /** Las pastillas con su cuenta, ya sin las que salen a cero. */
+  get pastillasLlamadas(): { clave: string; etiqueta: string; tono: string; n: number }[] {
+    return BotVozComponent.GRUPOS
+      .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, tono: g.tono,
+                     n: this.sesiones.filter((s) => this.encaja(s, g.clave)).length }))
+      .filter((p) => p.n > 0);
+  }
+
+  /** Duración media y coste, del lote cargado. Van juntos: cuánto habla y cuánto cuesta. */
+  get costeLlamadas(): { segundos: number; usd: number } {
+    const conDuracion = this.sesiones.filter((s) => s.duracionSeg);
+    const total = conDuracion.reduce((a, s) => a + (s.duracionSeg || 0), 0);
+    return {
+      segundos: conDuracion.length ? Math.round(total / conDuracion.length) : 0,
+      usd: this.sesiones.reduce((a, s) => a + (s.costoEstimadoUsd || 0), 0),
+    };
+  }
+
+  alternarPill(clave: string): void {
+    this.pillLlamadas = this.pillLlamadas === clave ? null : clave;
+    this.paginaSesiones = 1;
+  }
+
+  /** Las llamadas que coinciden con la busqueda y con la pastilla activa. */
   get sesionesFiltradas(): BotSesion[] {
     const q = this.busquedaLlamadas.trim().toLowerCase();
-    if (!q) return this.sesiones;
-    return this.sesiones.filter((s) =>
-      (s.documento || '').toLowerCase().includes(q)
-      || (s.nombreCliente || '').toLowerCase().includes(q)
-      || (s.telefono || '').includes(q)
-      || (s.resultadoNegocio || '').toLowerCase().includes(q));
+    const pill = this.pillLlamadas;
+    if (!q && !pill) return this.sesiones;
+    return this.sesiones.filter((s) => {
+      if (pill && !this.encaja(s, pill)) return false;
+      if (!q) return true;
+      return (s.documento || '').toLowerCase().includes(q)
+        || (s.nombreCliente || '').toLowerCase().includes(q)
+        || (s.telefono || '').includes(q)
+        || (s.resultadoNegocio || '').toLowerCase().includes(q);
+    });
   }
 
   get sesionesPagina(): BotSesion[] {
@@ -432,7 +509,26 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // Topes del sistema. No son configuración de negocio —son la ley y el techo de
   // canales de la máquina— así que no se editan en el panel: se enseñan como límite.
-  get topeSimultaneas(): number { return this.config?.maxLlamadasSimultaneas ?? 1; }
+  //
+  // Las llamadas a la vez NO están aquí: son de cada cola. Hubo un techo global en
+  // `bot_config` que ninguna cola podía pasar, y con tres colas discando obligaba a
+  // repartir un cupo que nadie sabía de dónde salía; peor, sembrado en 1 dejaba el
+  // formulario de la cola sin efecto. Ahora cada cola dice cuántas sostiene, entre
+  // MIN_SIMULTANEAS y MAX_SIMULTANEAS, y no se resta de ningún bolsón común.
+  readonly MIN_SIMULTANEAS = 1;
+  readonly MAX_SIMULTANEAS = 5;
+
+  /**
+   * El `max` del input frena las flechas, no lo que se teclea ni lo que se pega. El
+   * backend vuelve a topar esto mismo; aqui se hace ademas para que lo que se guarda
+   * sea lo que el formulario ensena, y no un numero que el servidor corrige a la
+   * callada.
+   */
+  private simultaneasEnRango(n: number | null | undefined): number {
+    const v = Math.floor(Number(n));
+    if (!Number.isFinite(v) || v < this.MIN_SIMULTANEAS) return this.MIN_SIMULTANEAS;
+    return Math.min(v, this.MAX_SIMULTANEAS);
+  }
   /**
    * "Modificado por jperez · 10/08 14:32". Vacío si nadie lo ha tocado todavía.
    *
@@ -629,6 +725,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // clientes sin promesa.
     this.guardarCola({
       ...this.nuevaCola, objetivos, ...porObjetivo,
+      maxLlamadasSimultaneas: this.simultaneasEnRango(this.nuevaCola.maxLlamadasSimultaneas),
       idInquilino: this.idInquilinoSel || undefined,
       idCartera: this.idCarteraSel || undefined,
     });
@@ -1306,40 +1403,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     c.horaInicio = this.hhmm(c.horaInicio);
     c.horaFin = this.hhmm(c.horaFin);
     this.config = c;
-    this.topeGlobalEdit = c.maxLlamadasSimultaneas ?? 1;
     // La copia de referencia se toma ya normalizada: si no, el recorte de los
     // segundos contaria como un cambio sin guardar apenas abres la pantalla.
     this.configGuardada = JSON.stringify(c);
-  }
-
-  // ----- El techo de llamadas simultáneas -----
-  //
-  // Es el único tope de concurrencia que existe. Estaba sembrado en 1 y sin forma de
-  // cambiarlo: se había quitado el PUT /config metiendo este campo en el mismo saco que
-  // la ventana de la Ley 29571, y no es lo mismo —la ley no cambia, los canales de la
-  // máquina sí—. El micro tenía además otro tope en su .env que se quitó, porque se
-  // aplicaba antes de preguntar y capaba por debajo de esto sin que nadie lo viera.
-
-  topeGlobalEdit = 1;
-  guardandoTope = false;
-
-  guardarTopeGlobal(): void {
-    if (this.guardandoTope || !this.config) return;
-    const n = Math.max(1, Math.floor(this.topeGlobalEdit || 1));
-    this.guardandoTope = true;
-    this.svc.actualizarConfig({ maxLlamadasSimultaneas: n }).subscribe({
-      next: (c) => {
-        this.guardandoTope = false;
-        this.fijarConfig(c);
-        this.flash(`El bot sostendrá hasta ${n} llamada(s) a la vez`);
-      },
-      error: (e) => {
-        this.guardandoTope = false;
-        this.flash(e?.status === 403
-          ? 'Solo un administrador puede cambiar el techo'
-          : 'No se pudo guardar el techo', true);
-      },
-    });
   }
 
 

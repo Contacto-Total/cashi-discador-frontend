@@ -847,22 +847,38 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .cuantos-entran strong { font-size: 17px; color: #1d4ed8; font-variant-numeric: tabular-nums; }
 .cuantos-entran .aviso { color: #b45309; font-size: 13px; }
 
-/* El techo compartido por todas las colas, editable solo por el admin. */
-.tope-global {
-  margin-top: 16px; padding: 12px 14px;
-  border-radius: 8px; border: 1px dashed var(--borde, #e2e8f0);
+/* ===== PASTILLAS DE LA PANTALLA DE LLAMADAS =====
+   Contadores clicables: cada uno filtra la tabla y se vuelve a clicar para quitarlo.
+   El tono es semantico y no decorativo — verde lo que sirve, ambar lo que pide que
+   alguien haga algo, rojo lo que se rompio, gris lo que no dejo nada. */
+.pills-llamadas {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0 0 14px;
+}
+.pills-llamadas .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  font-family: inherit; font-size: 13px; line-height: 1.4;
+  border: 1px solid var(--borde, #e2e8f0);
   background: var(--fondo-suave, #f8fafc);
+  color: var(--texto, #334155);
+  transition: border-color .12s, box-shadow .12s;
 }
-.tope-global .etiqueta {
-  display: block; margin-bottom: 4px;
-  font-size: 13px; font-weight: 600; color: var(--texto, #374151);
+.pills-llamadas .pill b { font-variant-numeric: tabular-nums; font-weight: 700; }
+.pills-llamadas .pill:hover { border-color: #94a3b8; }
+/* Activa: el borde marca la seleccion. Se evita rellenar el fondo porque el color ya
+   lo usa el tono, y dos codigos de color en la misma pastilla no se leen. */
+.pills-llamadas .pill.on {
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, .15);
 }
-.tope-global > .muted { margin: 0 0 10px; }
-.linea-tope { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.linea-tope input {
-  width: 90px; min-height: 38px; padding: 6px 10px; font-size: 14px; font-family: inherit;
-  border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
-}
+.pills-llamadas .pill.t-ok    { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.pills-llamadas .pill.t-aviso { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+.pills-llamadas .pill.t-malo  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.pills-llamadas .pill.t-ok.on,
+.pills-llamadas .pill.t-aviso.on,
+.pills-llamadas .pill.t-malo.on { border-color: #1d4ed8; }
+.pills-cola { font-size: 12.5px; margin-left: 4px; }
 
 /* ===== TONO POR OBJETIVO =====
    Va plegado dentro del form de la cola. Cerrado no ocupa nada; abierto son tres

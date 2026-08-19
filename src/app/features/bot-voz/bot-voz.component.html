@@ -291,9 +291,9 @@
 
         <div class="modal-body">
           <p class="ayuda">
-            Lo que dejes <strong>vacío</strong> lo hereda de la configuración global. La
-            ventana horaria es el tope legal — una cola solo puede estrecharla, nunca
-            ampliarla.
+            El <strong>horario vacío</strong> se queda en la ventana legal de 08:00 a
+            20:00: una cola solo puede estrecharla, nunca ampliarla. Las llamadas a la
+            vez son de cada cola, no un cupo repartido.
           </p>
 
           <!-- El formulario va en cuatro bloques, en el orden en que se piensa una cola:
@@ -538,40 +538,17 @@
             </label>
             <label>
               Llamadas a la vez
-              <input type="number" min="1" [max]="topeSimultaneas"
+              <input type="number" [min]="MIN_SIMULTANEAS" [max]="MAX_SIMULTANEAS"
                      [(ngModel)]="nuevaCola.maxLlamadasSimultaneas"
-                     [placeholder]="'hereda: ' + topeSimultaneas">
+                     [placeholder]="MIN_SIMULTANEAS">
               <small class="muted">
-                Conversaciones que sostiene a la vez esta cola. No puede pasar de
-                {{ topeSimultaneas }}, que es el techo compartido por todas.
+                Conversaciones que sostiene a la vez ESTA cola, de
+                {{ MIN_SIMULTANEAS }} a {{ MAX_SIMULTANEAS }}. Cada cola lleva la suya;
+                no se reparte ningún cupo con las demás.
               </small>
             </label>
             </div>
 
-            <!-- El techo global, editable por el admin y aquí mismo.
-                 Estaba sembrado en 1 y no había forma de cambiarlo desde ninguna
-                 pantalla: se quitó el PUT /config metiéndolo en el mismo saco que la
-                 ventana de la Ley 29571, y no es lo mismo. La ley no cambia; cuántas
-                 llamadas aguanta la máquina, sí. Es el ÚNICO tope: el micro tenía otro
-                 en su .env y se quitó, porque capaba por debajo de este sin que se
-                 viera. -->
-            <div class="tope-global" *ngIf="esAdmin">
-              <span class="etiqueta">Techo de todas las colas</span>
-              <p class="muted">
-                Cuántas llamadas sostiene el bot a la vez, sumando todas las colas.
-                Ninguna puede pasar de aquí.
-              </p>
-              <div class="linea-tope">
-                <input type="number" min="1" [(ngModel)]="topeGlobalEdit"
-                       [ngModelOptions]="{standalone: true}">
-                <button class="btn-secondary" type="button"
-                        [disabled]="guardandoTope || topeGlobalEdit === topeSimultaneas"
-                        (click)="guardarTopeGlobal()">
-                  {{ guardandoTope ? 'Guardando…' : 'Guardar techo' }}
-                </button>
-                <small class="muted">{{ firma(config) }}</small>
-              </div>
-            </div>
 
           </section>
 
@@ -915,8 +892,25 @@
              (ngModelChange)="alBuscarLlamadas()"
              placeholder="Buscar por documento, nombre, teléfono o resultado">
     </div>
-    <p class="muted" *ngIf="!sesionesFiltradas.length && busquedaLlamadas">
-      Ninguna llamada coincide con «{{ busquedaLlamadas }}».
+    <!-- Los contadores. Cuentan sobre las llamadas cargadas —las 100 últimas, que es
+         lo que devuelve el endpoint—, y lo dice el pie: un contador que parece de todo
+         el histórico y es de un lote miente sin que se note. -->
+    <div class="pills-llamadas" *ngIf="pastillasLlamadas.length">
+      <button *ngFor="let p of pastillasLlamadas" type="button"
+              class="pill" [ngClass]="'t-' + p.tono"
+              [class.on]="pillLlamadas === p.clave"
+              (click)="alternarPill(p.clave)"
+              [title]="pillLlamadas === p.clave ? 'Quitar este filtro' : 'Ver solo estas'">
+        {{ p.etiqueta }} <b>{{ p.n }}</b>
+      </button>
+      <span class="pills-cola muted" *ngIf="costeLlamadas.segundos">
+        {{ costeLlamadas.segundos }} s de media · ${{ costeLlamadas.usd | number:'1.2-2' }}
+        en {{ sesiones.length }} llamada(s)
+      </span>
+    </div>
+
+    <p class="muted" *ngIf="!sesionesFiltradas.length && (busquedaLlamadas || pillLlamadas)">
+      Ninguna llamada coincide con lo que has pedido.
     </p>
     <div class="table-card">
       <div class="table-wrapper">
