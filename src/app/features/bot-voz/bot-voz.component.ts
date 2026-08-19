@@ -290,17 +290,30 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   /** Los totales del día que devuelve el backend. Null mientras no hayan llegado. */
-  resumenLlamadas: ResumenLlamadas | null = null;
+  private _resumenLlamadas: ResumenLlamadas | null = null;
+
+  get resumenLlamadas(): ResumenLlamadas | null { return this._resumenLlamadas; }
+  set resumenLlamadas(r: ResumenLlamadas | null) {
+    this._resumenLlamadas = r;
+    this.pastillasLlamadas = this.calcularPastillas(r);
+  }
 
   /**
    * Las pastillas con su cuenta, ya sin las que salen a cero.
    *
-   * Los números salen del RESUMEN del día, no de las llamadas cargadas. Contando sobre
-   * las 100 de la tabla, el número encogía solo según entraban llamadas nuevas y las
-   * viejas se salían de la ventana: parecía que se borraban datos.
+   * Es un CAMPO y no un getter, y esa es la diferencia entre que se pueda clicar o no.
+   * Como getter devolvía un array nuevo en cada detección de cambios, así que el
+   * *ngFor destruía y recreaba los botones continuamente —también al pasar el ratón
+   * por encima, que ya dispara un ciclo—. Si el elemento se recrea entre el mousedown
+   * y el mouseup, el navegador no llega a emitir el click: las pastillas se pintaban,
+   * se veían como botones y no hacían absolutamente nada.
+   *
+   * Los números salen del RESUMEN del día, no de las llamadas cargadas: contando sobre
+   * las 100 de la tabla, el número encogía solo según entraban llamadas nuevas.
    */
-  get pastillasLlamadas(): { clave: string; etiqueta: string; tono: string; n: number }[] {
-    const r = this.resumenLlamadas;
+  pastillasLlamadas: { clave: string; etiqueta: string; tono: string; n: number }[] = [];
+
+  private calcularPastillas(r: ResumenLlamadas | null) {
     if (!r) return [];
     return BotVozComponent.GRUPOS
       .map((g) => {
@@ -311,6 +324,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
       })
       .filter((p) => p.n > 0);
   }
+
+  /** Sin esto el *ngFor tampoco reutiliza las filas aunque el array no cambie. */
+  trackPastilla(_: number, p: { clave: string }): string { return p.clave; }
 
   /** Cuántas descolgaron: la persona y el buzón, que también descolgó. */
   get descolgaron(): number {

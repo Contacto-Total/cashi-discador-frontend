@@ -898,7 +898,7 @@
          lo que devuelve el endpoint—, y lo dice el pie: un contador que parece de todo
          el histórico y es de un lote miente sin que se note. -->
     <div class="pills-llamadas" *ngIf="pastillasLlamadas.length">
-      <button *ngFor="let p of pastillasLlamadas" type="button"
+      <button *ngFor="let p of pastillasLlamadas; trackBy: trackPastilla" type="button"
               class="pill" [ngClass]="'t-' + p.tono"
               [class.on]="pillLlamadas === p.clave"
               (click)="alternarPill(p.clave)"
