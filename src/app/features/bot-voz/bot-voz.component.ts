@@ -674,7 +674,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       next: (f) => {
         for (const x of f) {
           if (!x.selectedValues) continue;
-          this.marcados[x.fieldCode] = new Set(x.selectedValues.split(',').map((v) => v.trim()));
+          this.marcados[x.fieldCode] = new Set(this.valoresDe(x.selectedValues));
         }
         this.pintarFiltrosGuardados();
         this.recalcular();
@@ -1267,8 +1267,30 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return Object.entries(this.marcados)
       .filter(([, vals]) => vals.size > 0)
       .map(([fieldCode, vals]) => ({
-        fieldCode, dataType: 'TEXTO', selectedValues: [...vals].join(','),
+        fieldCode, dataType: 'TEXTO', selectedValues: JSON.stringify([...vals]),
       }));
+  }
+
+  /**
+   * Los valores marcados de un filtro, vengan como vengan.
+   *
+   * Se guardan en JSON y NO separados por comas, porque los valores de la cartera las
+   * llevan dentro: marcar "2.<500 - 1,000]" se partia en "2.<500 - 1" y "000]", y el
+   * filtro no encontraba a nadie. Toda la columna `rango_capital` estaba rota asi, y
+   * el formulario lo enseñaba como "Entran 0" sin decir por que.
+   *
+   * Se sigue leyendo el formato viejo: las colas ya guardadas no se migran solas.
+   */
+  private valoresDe(s: string | null | undefined): string[] {
+    const t = (s || '').trim();
+    if (!t) return [];
+    if (t.startsWith('[')) {
+      try {
+        const a = JSON.parse(t);
+        if (Array.isArray(a)) return a.map((v) => String(v));
+      } catch { /* no era JSON: se lee como lista separada por comas */ }
+    }
+    return t.split(',').map((v) => v.trim()).filter(Boolean);
   }
 
   // ----- Tonos -----
