@@ -129,7 +129,8 @@ export interface BotRegla {
   /** Meses de cada opción, en orden: "12,5,3,1". Vacío = los calcula el sistema. */
   curvaMeses?: string | null;
   /** La última opción de la escalera solo se acepta con pago el mismo día. */
-  ultimoEscalonSoloHoy?: boolean | null;
+  // `ultimoEscalonSoloHoy` se quitó: la condición del último escalón es fija y vive en
+  // el backend (BotOfertaService). No se configura por subcartera.
   activo?: boolean;
   actualizadoPor?: string | null;
   fechaActualizacion?: string | null;

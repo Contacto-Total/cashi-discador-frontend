@@ -864,10 +864,10 @@
             Meses de cada rebaja, en orden. Vacío = los calcula el sistema.
           </small>
         </label>
-        <label class="check" style="align-self: end;">
-          <input type="checkbox" [(ngModel)]="r.ultimoEscalonSoloHoy">
-          La última opción, solo con pago hoy
-        </label>
+        <!-- La casilla "La última opción, solo con pago hoy" se quitó: la condición es
+             fija y vive en el código (BotOfertaService). No era una preferencia por
+             subcartera sino lo que define al último escalón, y sembrada en 0 hacía que
+             la escalera diera su mayor descuento sin pedir el pago del día. -->
       </div>
 
       <div class="acciones">
