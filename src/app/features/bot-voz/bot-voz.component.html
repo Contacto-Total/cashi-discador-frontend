@@ -887,7 +887,9 @@
   <!-- ===== LLAMADAS ===== -->
   <section *ngIf="vista === 'llamadas'">
     <div class="detalle-head">
-      <h3>Llamadas del bot <span class="muted">({{ sesionesFiltradas.length }})</span></h3>
+      <h3>Llamadas del bot
+        <span class="muted">({{ resumenLlamadas ? resumenLlamadas.total : sesiones.length }} hoy)</span>
+      </h3>
       <input class="buscador" type="search" [(ngModel)]="busquedaLlamadas"
              (ngModelChange)="alBuscarLlamadas()"
              placeholder="Buscar por documento, nombre, teléfono o resultado">
@@ -902,11 +904,25 @@
               (click)="alternarPill(p.clave)"
               [title]="pillLlamadas === p.clave ? 'Quitar este filtro' : 'Ver solo estas'">
         {{ p.etiqueta }} <b>{{ p.n }}</b>
+        <span class="quitar" *ngIf="pillLlamadas === p.clave" aria-hidden="true">&times;</span>
       </button>
-      <span class="pills-cola muted" *ngIf="costeLlamadas.segundos">
-        {{ costeLlamadas.segundos }} s de media · ${{ costeLlamadas.usd | number:'1.2-2' }}
-        en {{ sesiones.length }} llamada(s)
+      <span class="pills-cola muted" *ngIf="resumenLlamadas as r">
+        Descolgaron <strong>{{ descolgaron }}</strong> de {{ r.total }} ·
+        {{ r.duracionMediaSeg }} s de media · ${{ r.costoUsd | number:'1.2-2' }}
       </span>
+    </div>
+
+    <!-- Lo que se esta viendo, dicho con palabras. El color de la pastilla solo lo sabe
+         quien ya sabe que significa; esto lo lee cualquiera. -->
+    <div class="pills-estado" *ngIf="pillLlamadas">
+      <!-- Se dice "de las N cargadas" y no "del día" a proposito: los contadores de las
+           pastillas son del día entero, pero la tabla solo tiene las 100 últimas y solo
+           puede filtrar sobre esas. Decir "3 de 218" seria mentir sobre lo que se ve. -->
+      <span>Viendo solo <strong>{{ etiquetaDelPill(pillLlamadas) }}</strong>:
+        {{ sesionesFiltradas.length }} de las {{ sesiones.length }} llamadas cargadas.</span>
+      <button class="btn-link" type="button" (click)="alternarPill(pillLlamadas)">
+        Ver todas
+      </button>
     </div>
 
     <p class="muted" *ngIf="!sesionesFiltradas.length && (busquedaLlamadas || pillLlamadas)">
@@ -949,7 +965,8 @@
           <button class="btn-link" [disabled]="paginaSesiones === 1" (click)="irA('sesiones', paginaSesiones - 1)">
             <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
           </button>
-          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} · {{ sesionesFiltradas.length }} llamadas</span>
+          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} ·
+            {{ sesionesFiltradas.length }} de las 100 últimas</span>
           <button class="btn-link" [disabled]="paginaSesiones === totalPaginas(sesionesFiltradas)" (click)="irA('sesiones', paginaSesiones + 1)">
             <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
           </button>

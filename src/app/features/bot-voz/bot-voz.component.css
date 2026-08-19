@@ -849,8 +849,8 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 
 /* ===== PASTILLAS DE LA PANTALLA DE LLAMADAS =====
    Contadores clicables: cada uno filtra la tabla y se vuelve a clicar para quitarlo.
-   El tono es semantico y no decorativo — verde lo que sirve, ambar lo que pide que
-   alguien haga algo, rojo lo que se rompio, gris lo que no dejo nada. */
+   El tono es semantico — verde lo que sirve, ambar lo que pide que alguien haga algo,
+   rojo lo que se rompio, gris lo que no dejo nada. */
 .pills-llamadas {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   margin: 0 0 14px;
@@ -862,22 +862,33 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border: 1px solid var(--borde, #e2e8f0);
   background: var(--fondo-suave, #f8fafc);
   color: var(--texto, #334155);
-  transition: border-color .12s, box-shadow .12s;
+  transition: background .12s, color .12s, border-color .12s;
 }
 .pills-llamadas .pill b { font-variant-numeric: tabular-nums; font-weight: 700; }
 .pills-llamadas .pill:hover { border-color: #94a3b8; }
-/* Activa: el borde marca la seleccion. Se evita rellenar el fondo porque el color ya
-   lo usa el tono, y dos codigos de color en la misma pastilla no se leen. */
-.pills-llamadas .pill.on {
-  border-color: #1d4ed8;
-  box-shadow: 0 0 0 2px rgba(29, 78, 216, .15);
-}
 .pills-llamadas .pill.t-ok    { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
 .pills-llamadas .pill.t-aviso { background: #fffbeb; border-color: #fde68a; color: #92400e; }
 .pills-llamadas .pill.t-malo  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-.pills-llamadas .pill.t-ok.on,
-.pills-llamadas .pill.t-aviso.on,
-.pills-llamadas .pill.t-malo.on { border-color: #1d4ed8; }
+
+/* ACTIVA: se INVIERTE — fondo solido y texto blanco.
+   El estado activo era un borde azul con una sombra al 15%, y sobre una pastilla que
+   ya venia con fondo de color no se distinguia de la inactiva: parecia que el clic no
+   hacia nada, se volvia a clicar y se apagaba el filtro. Un cambio de borde no basta
+   cuando el color de fondo ya esta ocupado por otra cosa. */
+.pills-llamadas .pill.on,
+.pills-llamadas .pill.on:hover {
+  background: #1e293b; border-color: #1e293b; color: #fff; font-weight: 600;
+}
+.pills-llamadas .pill.on b { color: #fff; }
+.pills-llamadas .pill .quitar { font-size: 15px; line-height: 1; opacity: .75; }
+
+/* Lo que se esta viendo, en palabras. Sin esto hay que deducir del color por que la
+   tabla enseña 3 filas de 100. */
+.pills-estado {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: -4px 0 14px; font-size: 13px; color: var(--texto-suave, #64748b);
+}
+.pills-estado .btn-link { font-size: 13px; }
 .pills-cola { font-size: 12.5px; margin-left: 4px; }
 
 /* ===== TONO POR OBJETIVO =====

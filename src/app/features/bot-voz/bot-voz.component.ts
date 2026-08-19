@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   BotVozService, BotConfig, BotRitmo, BotContacto, BotSesion, BotTurno,
-  BotCola, BotTono, BotRegla, BotColaFiltro,
+  BotCola, BotTono, BotRegla, BotColaFiltro, ResumenLlamadas,
 } from './bot-voz.service';
 
 @Component({
@@ -256,8 +256,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // sola clase, la fila se llenaria de ceros que no dicen nada.
   private static readonly GRUPOS: { clave: string; etiqueta: string; tono: string;
                                     estados?: string[]; resultados?: string[] }[] = [
-    // Como acabo
-    { clave: 'contesto',   etiqueta: 'Contestó',      tono: 'ok',
+    // Como acabo. La primera se llamaba "Contestó" y dejaba fuera los buzones, que
+    // TAMBIEN descolgaron: la pantalla decia "Contestó 3" cuando 65 lineas habian
+    // descolgado. Ahora dice lo que cuenta —que habló una persona— y el dato de
+    // cuantas descolgaron va aparte, en la linea de totales.
+    { clave: 'hablo',      etiqueta: 'Habló una persona', tono: 'ok',
       estados: ['COMPLETADA', 'COLGO_CLIENTE'] },
     { clave: 'nocontesto', etiqueta: 'No contestó',   tono: 'gris',
       estados: ['NO_CONTESTA', 'OCUPADO'] },
@@ -286,22 +289,38 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return (g.resultados || []).includes((s.resultadoNegocio || '').toUpperCase());
   }
 
-  /** Las pastillas con su cuenta, ya sin las que salen a cero. */
+  /** Los totales del día que devuelve el backend. Null mientras no hayan llegado. */
+  resumenLlamadas: ResumenLlamadas | null = null;
+
+  /**
+   * Las pastillas con su cuenta, ya sin las que salen a cero.
+   *
+   * Los números salen del RESUMEN del día, no de las llamadas cargadas. Contando sobre
+   * las 100 de la tabla, el número encogía solo según entraban llamadas nuevas y las
+   * viejas se salían de la ventana: parecía que se borraban datos.
+   */
   get pastillasLlamadas(): { clave: string; etiqueta: string; tono: string; n: number }[] {
+    const r = this.resumenLlamadas;
+    if (!r) return [];
     return BotVozComponent.GRUPOS
-      .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, tono: g.tono,
-                     n: this.sesiones.filter((s) => this.encaja(s, g.clave)).length }))
+      .map((g) => {
+        const fuente = g.estados ? r.porEstado : r.porResultado;
+        const claves = g.estados ?? g.resultados ?? [];
+        const n = claves.reduce((a, k) => a + (fuente?.[k] ?? 0), 0);
+        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, n };
+      })
       .filter((p) => p.n > 0);
   }
 
-  /** Duración media y coste, del lote cargado. Van juntos: cuánto habla y cuánto cuesta. */
-  get costeLlamadas(): { segundos: number; usd: number } {
-    const conDuracion = this.sesiones.filter((s) => s.duracionSeg);
-    const total = conDuracion.reduce((a, s) => a + (s.duracionSeg || 0), 0);
-    return {
-      segundos: conDuracion.length ? Math.round(total / conDuracion.length) : 0,
-      usd: this.sesiones.reduce((a, s) => a + (s.costoEstimadoUsd || 0), 0),
-    };
+  /** Cuántas descolgaron: la persona y el buzón, que también descolgó. */
+  get descolgaron(): number {
+    const e = this.resumenLlamadas?.porEstado ?? {};
+    return ['COMPLETADA', 'COLGO_CLIENTE', 'BUZON'].reduce((a, k) => a + (e[k] ?? 0), 0);
+  }
+
+  /** El nombre legible de una pastilla, para decir por que esta filtrada la tabla. */
+  etiquetaDelPill(clave: string): string {
+    return BotVozComponent.GRUPOS.find((g) => g.clave === clave)?.etiqueta ?? clave;
   }
 
   alternarPill(clave: string): void {
@@ -1506,6 +1525,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.svc.getSesiones().subscribe({
       next: (s) => { this.sesiones = s; this.errorSesiones = false; },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
+    });
+    // Los contadores van aparte porque son de TODO el día y la tabla solo de las 100
+    // últimas. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
+    // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
+    this.svc.getResumenSesiones().subscribe({
+      next: (r) => (this.resumenLlamadas = r),
+      error: () => (this.resumenLlamadas = null),
     });
   }
 

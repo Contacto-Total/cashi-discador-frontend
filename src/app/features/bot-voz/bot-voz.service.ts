@@ -189,6 +189,16 @@ export interface BotSesion {
   idGestion?: number;
 }
 
+/** Los totales de un día de llamadas, tal y como los cuenta la base. */
+export interface ResumenLlamadas {
+  fecha: string;
+  total: number;
+  porEstado: Record<string, number>;
+  porResultado: Record<string, number>;
+  duracionMediaSeg: number;
+  costoUsd: number;
+}
+
 /** Un turno de la conversacion, para el detalle de una llamada. */
 export interface BotTurno {
   id: number;
@@ -349,4 +359,15 @@ export class BotVozService {
   }
 
   getSesiones(): Observable<BotSesion[]> { return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`); }
+
+  /**
+   * Los totales del día, contados en la base.
+   *
+   * `getSesiones` devuelve solo las 100 últimas —suficiente para la tabla, insuficiente
+   * para contar—. Las pastillas salen de aquí para que no encojan solas según entran
+   * llamadas nuevas.
+   */
+  getResumenSesiones(): Observable<ResumenLlamadas> {
+    return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`);
+  }
 }
