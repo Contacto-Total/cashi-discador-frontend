@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { tap, catchError, of, Observable } from 'rxjs';
+import { tap, catchError, of, Observable, throwError } from 'rxjs';
 import { ClassificationFieldsResponse } from '../models/dynamic-field.model';
 
 export interface ContactClassificationResource {
@@ -410,7 +410,7 @@ export class ApiSystemConfigService {
    */
   getClassificationFields(typificationId: number): Observable<ClassificationFieldsResponse> {
     if (!this.currentTenantId) {
-      throw new Error('No hay tenant configurado');
+      return throwError(() => new Error('No hay tenant Configurado'));
     }
 
     // Llamar al endpoint V2 del backend discador a través del gateway
@@ -428,11 +428,7 @@ export class ApiSystemConfigService {
       catchError(error => {
         console.error('[V2] Error cargando campos dinámicos:', error);
         // Retornar respuesta vacía en caso de error
-        return of({
-          typificationId,
-          isLeaf: false,
-          fields: []
-        } as ClassificationFieldsResponse);
+        return throwError(() => error);
       })
     );
   }
