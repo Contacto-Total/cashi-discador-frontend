@@ -347,22 +347,40 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   trackCola(_: number, c: { id: number }): number { return c.id; }
 
-  /** Apunta las colas que van apareciendo en el historico y rehace la lista. */
-  private refrescarColasFiltro(sesiones: BotSesion[] = []): void {
-    for (const s of sesiones) {
-      // idCola null es el armado global viejo, anterior a las colas: no es ninguna.
-      if (s.idCola == null) continue;
-      // El backend hace LEFT JOIN con bot_cola, asi que nombreCola llega null si la
-      // cola se borro. Se conserva el nombre que ya se conocia y, si no hay ninguno,
-      // se la llama por su id: sin nombre la opcion seria una linea en blanco.
-      const nombre = s.nombreCola || this.colasVistas.get(s.idCola) || `Cola ${s.idCola}`;
-      this.colasVistas.set(s.idCola, nombre);
-    }
-    // El nombre de una cola viva manda sobre el que quedo guardado: si la renombraron,
-    // el selector tiene que decir el nombre de ahora.
+  /**
+   * Rehace el selector de colas de la pantalla de Llamadas.
+   *
+   * Las colas salen de una CONSULTA PROPIA al histórico, no de las sesiones cargadas.
+   * Deducirlas de la tabla estaba mal y se vio en cuanto hubo datos: la tabla trae las
+   * 100 últimas y el desplegable solo se enteraba de las colas presentes en esas 100.
+   * En QAS eso dejó fuera la cola 4 entera —1.775 llamadas— porque su última sesión es
+   * más vieja que las 100 últimas, y el selector enseñaba únicamente la cola 5.
+   */
+  private refrescarColasFiltro(): void {
+    this.svc.getColasDelHistorico().subscribe({
+      next: (filas) => {
+        for (const f of filas) {
+          if (f.idCola == null) continue;
+          // El nombre puede venir null si la cola se borró ANTES de que las sesiones
+          // empezaran a guardarlo. Se la llama por su id: sin nombre la opción sería
+          // una línea en blanco y no se podría elegir a ciegas.
+          this.colasVistas.set(f.idCola, f.nombreCola || `Cola ${f.idCola}`);
+        }
+        this.componerColasFiltro();
+      },
+      // Sin el histórico se pinta al menos lo que hay vivo: un selector vacío deja al
+      // supervisor sin poder filtrar nada.
+      error: () => this.componerColasFiltro(),
+    });
+  }
+
+  /** El nombre de una cola VIVA manda sobre el guardado: si la renombraron, el
+   *  selector tiene que decir el de ahora, no el del día de la llamada. */
+  private componerColasFiltro(): void {
     const m = new Map(this.colasVistas);
     for (const c of this.colas) if (c.id != null) m.set(c.id, c.nombre);
-    this.colasFiltro = [...m].map(([id, nombre]) => ({ id, nombre }));
+    this.colasFiltro = [...m].map(([id, nombre]) => ({ id, nombre }))
+        .sort((a, b) => a.id - b.id);
   }
 
   /** Como se llama la cola de una sesion, ya este borrada o ya no tenga. */
@@ -1780,7 +1798,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.errorSesiones = false;
         // De aqui salen las opciones del filtro de cola: del historico, no de las
         // colas que existen hoy.
-        this.refrescarColasFiltro(s);
+        this.componerColasFiltro();
       },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
     });

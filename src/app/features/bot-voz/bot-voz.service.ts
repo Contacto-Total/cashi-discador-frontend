@@ -405,6 +405,17 @@ export class BotVozService {
    * El filtro va al servidor y no al navegador porque aquí solo hay 100 filas: al
    * clicar una pastilla que cuenta 7 salían 2, y parecía que faltaban cinco.
    */
+  /**
+   * Las colas que aparecen en el histórico de llamadas, con el nombre que tenían.
+   *
+   * Endpoint propio y no deducirlo de `getSesiones`: esa devuelve las 100 últimas y el
+   * selector se quedaba solo con las colas presentes en esas 100.
+   */
+  getColasDelHistorico(): Observable<{ idCola: number; nombreCola: string | null }[]> {
+    return this.http.get<{ idCola: number; nombreCola: string | null }[]>(
+      `${this.apiUrl}/sesiones/colas`);
+  }
+
   getSesiones(estados?: string[], resultados?: string[],
               idCola?: number | null): Observable<BotSesion[]> {
     let p = new HttpParams();
