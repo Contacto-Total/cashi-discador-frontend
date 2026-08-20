@@ -978,6 +978,17 @@
            no de las que existen hoy: antes iba atado a `colas.length > 1` y al borrar
            colas el selector se esfumaba, dejando las llamadas de las borradas sin
            forma de mirarse. -->
+      <!-- El día que se mira. Los contadores y la tabla van los dos por aquí: antes los
+           contadores decían "hoy" y la tabla enseñaba las 100 últimas de siempre, así
+           que un día sin llamadas salía con todo a cero al lado de una tabla llena de
+           llamadas de ayer, y al elegir una cola seguía en cero porque sus llamadas
+           eran de otro día. -->
+      <label class="selector-cola">
+        Día
+        <input type="date" [ngModel]="fechaLlamadas"
+               (ngModelChange)="cambiarFechaLlamadas($event)">
+      </label>
+
       <label class="selector-cola" *ngIf="colasFiltro.length">
         Cola
         <select [ngModel]="colaLlamadas" (ngModelChange)="cambiarColaLlamadas($event)">

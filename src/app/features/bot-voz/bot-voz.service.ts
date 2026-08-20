@@ -417,11 +417,14 @@ export class BotVozService {
   }
 
   getSesiones(estados?: string[], resultados?: string[],
-              idCola?: number | null): Observable<BotSesion[]> {
+              idCola?: number | null, fecha?: string | null): Observable<BotSesion[]> {
     let p = new HttpParams();
     (estados ?? []).forEach((e) => (p = p.append('estados', e)));
     (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
     if (idCola) p = p.set('idCola', String(idCola));
+    // La MISMA fecha que el resumen, o los contadores y las filas hablan de días
+    // distintos. Vacía = hoy, que es lo que decide el backend.
+    if (fecha) p = p.set('fecha', fecha);
     return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
   }
 
@@ -432,8 +435,10 @@ export class BotVozService {
    * para contar—. Las pastillas salen de aquí para que no encojan solas según entran
    * llamadas nuevas.
    */
-  getResumenSesiones(idCola?: number | null): Observable<ResumenLlamadas> {
-    const p = idCola ? new HttpParams().set('idCola', String(idCola)) : undefined;
+  getResumenSesiones(idCola?: number | null, fecha?: string | null): Observable<ResumenLlamadas> {
+    let p = new HttpParams();
+    if (idCola) p = p.set('idCola', String(idCola));
+    if (fecha) p = p.set('fecha', fecha);
     return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`, { params: p });
   }
 }

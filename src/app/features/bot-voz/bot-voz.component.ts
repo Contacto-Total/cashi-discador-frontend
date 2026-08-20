@@ -321,8 +321,27 @@ export class BotVozComponent implements OnInit, OnDestroy {
    */
   colaLlamadas: number | null = null;
 
+  /**
+   * El dia que se esta mirando. Hoy por defecto.
+   *
+   * Existe porque sin el la pantalla se contradecia: las pastillas contaban HOY y la
+   * tabla enseñaba las 100 ultimas de siempre, asi que un dia sin llamadas salia con
+   * todos los contadores a cero al lado de una tabla llena de llamadas de ayer. Las dos
+   * cosas eran ciertas y aun asi parecia rota. Y al elegir una cola seguia en cero,
+   * porque sus llamadas eran de otro dia.
+   */
+  fechaLlamadas = new Date().toISOString().slice(0, 10);
+
   cambiarColaLlamadas(id: number | null): void {
     this.colaLlamadas = id;
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
+  cambiarFechaLlamadas(fecha: string): void {
+    // Vacio vuelve a hoy en vez de dejar la pantalla sin dia: un input de fecha se
+    // puede borrar entero y quedaria pidiendo `fecha=` al backend.
+    this.fechaLlamadas = fecha || new Date().toISOString().slice(0, 10);
     this.paginaSesiones = 1;
     this.cargarSesiones();
   }
@@ -1792,7 +1811,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
-    this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas).subscribe({
+    this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
+                         this.fechaLlamadas).subscribe({
       next: (s) => {
         this.sesiones = s;
         this.errorSesiones = false;
@@ -1802,10 +1822,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
       },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
     });
-    // Los contadores van aparte porque son de TODO el día y la tabla solo de las 100
-    // últimas. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
+    // Los contadores van aparte porque cuentan el día ENTERO en la base y la tabla
+    // solo trae las 100 últimas de ese mismo día. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
     // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.svc.getResumenSesiones(this.colaLlamadas).subscribe({
+    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas).subscribe({
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });
