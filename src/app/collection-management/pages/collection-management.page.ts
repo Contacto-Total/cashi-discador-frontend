@@ -3229,7 +3229,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    *
    * PRIORIDAD: Si hay un recordatorio en curso, usa esos datos primero
    */
-  private autoLoadCustomerByPhone(phoneNumber: string) {
+  private autoLoadCustomerByPhone(phoneNumber: string, onNotFound?: () => void) {
     this.isLoadingCustomer.set(true);
     console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
 
@@ -3259,11 +3259,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           this.loadCustomerFromResource(customers[0]);
         } else {
           console.warn('⚠️ [AUTO-LOAD] No se encontró cliente con teléfono:', phoneNumber);
-          // Opcional: mostrar notificación al usuario
+          // [FIX] Si no matchea por teléfono, caer al endpoint confiable por contactId.
+          // Solo el flujo predictivo pasa onNotFound; los demás (entrante/saliente/manual) quedan igual.
+          if (onNotFound) onNotFound();
         }
       },
       error: (error) => {
         console.error('❌ [AUTO-LOAD] Error buscando cliente:', error);
+        if (onNotFound) onNotFound();
       }
     });
   }
@@ -3731,7 +3734,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             if (predictiveData.llamadaId) {
               this.activeCallId.set(predictiveData.llamadaId);
             }
-            this.autoLoadCustomerByPhone(predictiveData.phoneNumber);
+            this.autoLoadCustomerByPhone(predictiveData.phoneNumber, () => {
+              console.warn('⚠️ [FAST-PATH] Teléfono no matcheó — cayendo a customer-full-data por contactId');
+              this.loadFirstCustomer(0, true);
+            });
             return;
           }
         } catch (e) {

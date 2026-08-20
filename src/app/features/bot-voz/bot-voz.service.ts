@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
@@ -11,9 +11,9 @@ export interface BotConfig {
   horaInicio: string;             // HH:mm:ss
   horaFin: string;
   diasSemana: string;
-  /** El techo de llamadas a la vez, sumando todas las colas. Lo edita el admin. */
-  maxLlamadasSimultaneas: number;
-  /** Quién tocó el techo por última vez. Lo devuelve el backend; no se envía. */
+  // `maxLlamadasSimultaneas` se quitó de aquí: las llamadas a la vez son de cada cola
+  // (BotCola), no un cupo global que repartir. Con tres colas discando, un techo común
+  // obligaba a repartir a ojo, y sembrado en 1 dejaba sin efecto lo que dijera la cola.
   actualizadoPor?: string | null;
   fechaActualizacion?: string | null;
 }
@@ -64,7 +64,10 @@ export interface BotCola {
   /** AUTO = el ritmo lo decide el día del mes. MANUAL = el ritmo fijado arriba. */
   modoRitmo?: string;
   /**
-   * Lo de abajo hereda de la configuración global cuando va vacío.
+   * El horario vacío se queda en la ventana legal; una cola solo puede estrecharla.
+   *
+   * `maxLlamadasSimultaneas` NO hereda de nadie: es el número de esta cola, entre 1 y
+   * 5. Vacío vale 1.
    *
    * Los números de intensidad —días de anticipación, ancho de vencidas e intentos— ya
    * no están aquí: los pone el ritmo, y por tarea. La cola dice a quién se llama.
@@ -126,7 +129,8 @@ export interface BotRegla {
   /** Meses de cada opción, en orden: "12,5,3,1". Vacío = los calcula el sistema. */
   curvaMeses?: string | null;
   /** La última opción de la escalera solo se acepta con pago el mismo día. */
-  ultimoEscalonSoloHoy?: boolean | null;
+  // `ultimoEscalonSoloHoy` se quitó: la condición del último escalón es fija y vive en
+  // el backend (BotOfertaService). No se configura por subcartera.
   activo?: boolean;
   actualizadoPor?: string | null;
   fechaActualizacion?: string | null;
@@ -169,6 +173,9 @@ export interface BotContacto {
 export interface BotSesion {
   id: number;
   uuidLlamada: string;
+  /** De qué cola salió. Se resuelve en el backend por `id_contacto`. */
+  idCola?: number | null;
+  nombreCola?: string | null;
   idCliente?: number;
   documento?: string;
   nombreCliente?: string;
@@ -184,6 +191,16 @@ export interface BotSesion {
   costoEstimadoUsd?: number;
   inicio?: string;
   idGestion?: number;
+}
+
+/** Los totales de un día de llamadas, tal y como los cuenta la base. */
+export interface ResumenLlamadas {
+  fecha: string;
+  total: number;
+  porEstado: Record<string, number>;
+  porResultado: Record<string, number>;
+  duracionMediaSeg: number;
+  costoUsd: number;
 }
 
 /** Un turno de la conversacion, para el detalle de una llamada. */
@@ -204,17 +221,9 @@ export class BotVozService {
 
   getConfig(): Observable<BotConfig> { return this.http.get<BotConfig>(`${this.apiUrl}/config`); }
 
-  /**
-   * Lo único editable de la configuración global: el techo de llamadas simultáneas.
-   *
-   * La ventana horaria no se toca desde aquí a propósito —es el límite de la Ley
-   * 29571— y una cola solo puede estrecharla desde su propio formulario.
-   */
-  actualizarConfig(cambios: Partial<BotConfig>): Observable<BotConfig> {
-    return this.http.put<BotConfig>(`${this.apiUrl}/config`, cambios);
-  }
-  // updateConfig se quitó: `bot_config` ya no es configuración editable, son los
-  // límites del sistema (ventana legal y techo de canales). Se leen, no se tocan aquí.
+  // No hay PUT de configuración: `bot_config` ya no es configuración editable, son los
+  // límites del sistema. Y de esos solo queda la ventana legal (Ley 29571), que no se
+  // negocia. El techo de llamadas simultáneas se quitó de aquí: es de cada cola.
 
   // `activar`/`desactivar` se quitaron: escribian en bot_config.activo, que ya no
   // gobierna el discado. Cada cola tiene su propio Iniciar/Detener.
@@ -353,5 +362,30 @@ export class BotVozService {
     return this.http.get<any[]>(`${this.apiUrl}/cola/descartes${q}`);
   }
 
-  getSesiones(): Observable<BotSesion[]> { return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`); }
+  /**
+   * Las últimas llamadas. Con `estados`/`resultados` el backend devuelve solo esas.
+   *
+   * El filtro va al servidor y no al navegador porque aquí solo hay 100 filas: al
+   * clicar una pastilla que cuenta 7 salían 2, y parecía que faltaban cinco.
+   */
+  getSesiones(estados?: string[], resultados?: string[],
+              idCola?: number | null): Observable<BotSesion[]> {
+    let p = new HttpParams();
+    (estados ?? []).forEach((e) => (p = p.append('estados', e)));
+    (resultados ?? []).forEach((r) => (p = p.append('resultados', r)));
+    if (idCola) p = p.set('idCola', String(idCola));
+    return this.http.get<BotSesion[]>(`${this.apiUrl}/sesiones`, { params: p });
+  }
+
+  /**
+   * Los totales del día, contados en la base.
+   *
+   * `getSesiones` devuelve solo las 100 últimas —suficiente para la tabla, insuficiente
+   * para contar—. Las pastillas salen de aquí para que no encojan solas según entran
+   * llamadas nuevas.
+   */
+  getResumenSesiones(idCola?: number | null): Observable<ResumenLlamadas> {
+    const p = idCola ? new HttpParams().set('idCola', String(idCola)) : undefined;
+    return this.http.get<ResumenLlamadas>(`${this.apiUrl}/sesiones/resumen`, { params: p });
+  }
 }

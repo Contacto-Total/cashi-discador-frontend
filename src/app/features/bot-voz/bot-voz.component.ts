@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   BotVozService, BotConfig, BotRitmo, BotContacto, BotSesion, BotTurno,
-  BotCola, BotTono, BotRegla, BotColaFiltro,
+  BotCola, BotTono, BotRegla, BotColaFiltro, ResumenLlamadas,
 } from './bot-voz.service';
 
 @Component({
@@ -236,7 +236,141 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Lo escrito en el buscador de llamadas. */
   busquedaLlamadas = '';
 
-  /** Las llamadas que coinciden con la busqueda. Sin nada escrito, todas. */
+  // ----- Las pastillas de la pantalla de llamadas -----
+  //
+  // La tabla contesta "que paso en ESTA llamada" y no contesta lo primero que se
+  // pregunta al abrirla: cuantas contestaron y cuantas dejaron algo. Eso estaba solo
+  // en el total entre parentesis del titulo.
+  //
+  // Dos familias, y no una lista de dieciseis contadores:
+  //   - COMO ACABO la llamada, que sale de `estado` y lo pone el micro.
+  //   - QUE SE SACO, que sale de `resultadoNegocio` (la taxonomia del clasificador).
+  // Una llamada contestada cuenta en las dos, a proposito: son dos preguntas, no dos
+  // trozos de la misma tarta.
+  //
+  // Se pintan clicando: una pastilla que solo enseña un numero es justo lo que se
+  // quito de los filtros de la cola por confuso. Clicando filtra la tabla, y vuelve a
+  // clicarse para quitarlo.
+  //
+  // Las que salen a cero no se pintan. Con seis resultados posibles y llamadas de una
+  // sola clase, la fila se llenaria de ceros que no dicen nada.
+  private static readonly GRUPOS: { clave: string; etiqueta: string; tono: string;
+                                    estados?: string[]; resultados?: string[] }[] = [
+    // Como acabo. La primera se llamaba "Contestó" y dejaba fuera los buzones, que
+    // TAMBIEN descolgaron: la pantalla decia "Contestó 3" cuando 65 lineas habian
+    // descolgado. Ahora dice lo que cuenta —que habló una persona— y el dato de
+    // cuantas descolgaron va aparte, en la linea de totales.
+    { clave: 'hablo',      etiqueta: 'Habló una persona', tono: 'ok',
+      estados: ['COMPLETADA', 'COLGO_CLIENTE'] },
+    { clave: 'nocontesto', etiqueta: 'No contestó',   tono: 'gris',
+      estados: ['NO_CONTESTA', 'OCUPADO'] },
+    { clave: 'buzon',      etiqueta: 'Buzón',         tono: 'gris',   estados: ['BUZON'] },
+    { clave: 'error',      etiqueta: 'Falló',         tono: 'malo',   estados: ['ERROR'] },
+    // Que se saco
+    { clave: 'promesa',    etiqueta: 'Con promesa',   tono: 'ok',
+      resultados: ['ACUERDA_PAGO', 'CONFIRMA_PAGO'] },
+    { clave: 'yapago',     etiqueta: 'Ya pagó',       tono: 'ok',     resultados: ['YA_PAGO'] },
+    { clave: 'asesor',     etiqueta: 'Pide asesor',   tono: 'aviso',  resultados: ['PIDE_ASESOR'] },
+    { clave: 'reclamo',    etiqueta: 'Reclamo',       tono: 'aviso',  resultados: ['RECLAMO'] },
+    { clave: 'reprograma', etiqueta: 'Reprogramar',   tono: 'aviso',
+      resultados: ['PIDE_REPROGRAMAR', 'PIDE_CANCELAR'] },
+    { clave: 'nopuede',    etiqueta: 'No puede',      tono: 'gris',   resultados: ['NO_PUEDE'] },
+    { clave: 'notitular',  etiqueta: 'No es titular', tono: 'gris',   resultados: ['NO_ES_TITULAR'] },
+    { clave: 'sinnada',    etiqueta: 'Sin compromiso', tono: 'gris',  resultados: ['SIN_COMPROMISO'] },
+  ];
+
+  /** La pastilla clicada, o null cuando se ven todas las llamadas. */
+  pillLlamadas: string | null = null;
+
+  /**
+   * La cola cuyas llamadas se están viendo. null = todas.
+   *
+   * Con una sola cola daba igual; con castigo y propia discando a la vez, la tabla las
+   * mezclaba y no se podía leer ninguna: son dos guiones distintos, dos importes
+   * distintos y dos canales de pago distintos. El filtro va al servidor, como el de las
+   * pastillas, para que el contador y las filas hablen de lo mismo.
+   */
+  colaLlamadas: number | null = null;
+
+  cambiarColaLlamadas(id: number | null): void {
+    this.colaLlamadas = id;
+    this.paginaSesiones = 1;
+    this.cargarSesiones();
+  }
+
+  private encaja(s: BotSesion, clave: string): boolean {
+    const g = BotVozComponent.GRUPOS.find((x) => x.clave === clave);
+    if (!g) return true;
+    if (g.estados) return g.estados.includes((s.estado || '').toUpperCase());
+    return (g.resultados || []).includes((s.resultadoNegocio || '').toUpperCase());
+  }
+
+  /** Los totales del día que devuelve el backend. Null mientras no hayan llegado. */
+  private _resumenLlamadas: ResumenLlamadas | null = null;
+
+  get resumenLlamadas(): ResumenLlamadas | null { return this._resumenLlamadas; }
+  set resumenLlamadas(r: ResumenLlamadas | null) {
+    this._resumenLlamadas = r;
+    this.pastillasLlamadas = this.calcularPastillas(r);
+  }
+
+  /**
+   * Las pastillas con su cuenta, ya sin las que salen a cero.
+   *
+   * Es un CAMPO y no un getter, y esa es la diferencia entre que se pueda clicar o no.
+   * Como getter devolvía un array nuevo en cada detección de cambios, así que el
+   * *ngFor destruía y recreaba los botones continuamente —también al pasar el ratón
+   * por encima, que ya dispara un ciclo—. Si el elemento se recrea entre el mousedown
+   * y el mouseup, el navegador no llega a emitir el click: las pastillas se pintaban,
+   * se veían como botones y no hacían absolutamente nada.
+   *
+   * Los números salen del RESUMEN del día, no de las llamadas cargadas: contando sobre
+   * las 100 de la tabla, el número encogía solo según entraban llamadas nuevas.
+   */
+  pastillasLlamadas: { clave: string; etiqueta: string; tono: string; n: number }[] = [];
+
+  private calcularPastillas(r: ResumenLlamadas | null) {
+    if (!r) return [];
+    return BotVozComponent.GRUPOS
+      .map((g) => {
+        const fuente = g.estados ? r.porEstado : r.porResultado;
+        const claves = g.estados ?? g.resultados ?? [];
+        const n = claves.reduce((a, k) => a + (fuente?.[k] ?? 0), 0);
+        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, n };
+      })
+      .filter((p) => p.n > 0);
+  }
+
+  /** Sin esto el *ngFor tampoco reutiliza las filas aunque el array no cambie. */
+  trackPastilla(_: number, p: { clave: string }): string { return p.clave; }
+
+  /** Cuántas descolgaron: la persona y el buzón, que también descolgó. */
+  get descolgaron(): number {
+    const e = this.resumenLlamadas?.porEstado ?? {};
+    return ['COMPLETADA', 'COLGO_CLIENTE', 'BUZON'].reduce((a, k) => a + (e[k] ?? 0), 0);
+  }
+
+  /** El nombre legible de una pastilla, para decir por que esta filtrada la tabla. */
+  etiquetaDelPill(clave: string): string {
+    return BotVozComponent.GRUPOS.find((g) => g.clave === clave)?.etiqueta ?? clave;
+  }
+
+  alternarPill(clave: string): void {
+    this.pillLlamadas = this.pillLlamadas === clave ? null : clave;
+    this.paginaSesiones = 1;
+    // Se vuelve a pedir la lista al backend en vez de filtrar lo que ya hay: aqui solo
+    // estan las 100 ultimas, y una pastilla que cuenta 7 enseñaba 2 porque las otras
+    // cinco se habian salido de la ventana.
+    this.cargarSesiones();
+  }
+
+  /**
+   * Las llamadas que coinciden con el buscador.
+   *
+   * La pastilla ya NO se filtra aquí: la lista llega filtrada del backend. Filtrarla
+   * otra vez no cambiaría nada, pero dejaría dos sitios donde decidir lo mismo, que es
+   * como se acaba con dos criterios distintos.
+   */
   get sesionesFiltradas(): BotSesion[] {
     const q = this.busquedaLlamadas.trim().toLowerCase();
     if (!q) return this.sesiones;
@@ -432,7 +566,26 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // Topes del sistema. No son configuración de negocio —son la ley y el techo de
   // canales de la máquina— así que no se editan en el panel: se enseñan como límite.
-  get topeSimultaneas(): number { return this.config?.maxLlamadasSimultaneas ?? 1; }
+  //
+  // Las llamadas a la vez NO están aquí: son de cada cola. Hubo un techo global en
+  // `bot_config` que ninguna cola podía pasar, y con tres colas discando obligaba a
+  // repartir un cupo que nadie sabía de dónde salía; peor, sembrado en 1 dejaba el
+  // formulario de la cola sin efecto. Ahora cada cola dice cuántas sostiene, entre
+  // MIN_SIMULTANEAS y MAX_SIMULTANEAS, y no se resta de ningún bolsón común.
+  readonly MIN_SIMULTANEAS = 1;
+  readonly MAX_SIMULTANEAS = 20;
+
+  /**
+   * El `max` del input frena las flechas, no lo que se teclea ni lo que se pega. El
+   * backend vuelve a topar esto mismo; aqui se hace ademas para que lo que se guarda
+   * sea lo que el formulario ensena, y no un numero que el servidor corrige a la
+   * callada.
+   */
+  private simultaneasEnRango(n: number | null | undefined): number {
+    const v = Math.floor(Number(n));
+    if (!Number.isFinite(v) || v < this.MIN_SIMULTANEAS) return this.MIN_SIMULTANEAS;
+    return Math.min(v, this.MAX_SIMULTANEAS);
+  }
   /**
    * "Modificado por jperez · 10/08 14:32". Vacío si nadie lo ha tocado todavía.
    *
@@ -578,7 +731,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
       next: (f) => {
         for (const x of f) {
           if (!x.selectedValues) continue;
-          this.marcados[x.fieldCode] = new Set(x.selectedValues.split(',').map((v) => v.trim()));
+          this.marcados[x.fieldCode] = new Set(this.valoresDe(x.selectedValues));
         }
         this.pintarFiltrosGuardados();
         this.recalcular();
@@ -629,6 +782,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // clientes sin promesa.
     this.guardarCola({
       ...this.nuevaCola, objetivos, ...porObjetivo,
+      maxLlamadasSimultaneas: this.simultaneasEnRango(this.nuevaCola.maxLlamadasSimultaneas),
       idInquilino: this.idInquilinoSel || undefined,
       idCartera: this.idCarteraSel || undefined,
     });
@@ -1170,8 +1324,30 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return Object.entries(this.marcados)
       .filter(([, vals]) => vals.size > 0)
       .map(([fieldCode, vals]) => ({
-        fieldCode, dataType: 'TEXTO', selectedValues: [...vals].join(','),
+        fieldCode, dataType: 'TEXTO', selectedValues: JSON.stringify([...vals]),
       }));
+  }
+
+  /**
+   * Los valores marcados de un filtro, vengan como vengan.
+   *
+   * Se guardan en JSON y NO separados por comas, porque los valores de la cartera las
+   * llevan dentro: marcar "2.<500 - 1,000]" se partia en "2.<500 - 1" y "000]", y el
+   * filtro no encontraba a nadie. Toda la columna `rango_capital` estaba rota asi, y
+   * el formulario lo enseñaba como "Entran 0" sin decir por que.
+   *
+   * Se sigue leyendo el formato viejo: las colas ya guardadas no se migran solas.
+   */
+  private valoresDe(s: string | null | undefined): string[] {
+    const t = (s || '').trim();
+    if (!t) return [];
+    if (t.startsWith('[')) {
+      try {
+        const a = JSON.parse(t);
+        if (Array.isArray(a)) return a.map((v) => String(v));
+      } catch { /* no era JSON: se lee como lista separada por comas */ }
+    }
+    return t.split(',').map((v) => v.trim()).filter(Boolean);
   }
 
   // ----- Tonos -----
@@ -1306,40 +1482,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     c.horaInicio = this.hhmm(c.horaInicio);
     c.horaFin = this.hhmm(c.horaFin);
     this.config = c;
-    this.topeGlobalEdit = c.maxLlamadasSimultaneas ?? 1;
     // La copia de referencia se toma ya normalizada: si no, el recorte de los
     // segundos contaria como un cambio sin guardar apenas abres la pantalla.
     this.configGuardada = JSON.stringify(c);
-  }
-
-  // ----- El techo de llamadas simultáneas -----
-  //
-  // Es el único tope de concurrencia que existe. Estaba sembrado en 1 y sin forma de
-  // cambiarlo: se había quitado el PUT /config metiendo este campo en el mismo saco que
-  // la ventana de la Ley 29571, y no es lo mismo —la ley no cambia, los canales de la
-  // máquina sí—. El micro tenía además otro tope en su .env que se quitó, porque se
-  // aplicaba antes de preguntar y capaba por debajo de esto sin que nadie lo viera.
-
-  topeGlobalEdit = 1;
-  guardandoTope = false;
-
-  guardarTopeGlobal(): void {
-    if (this.guardandoTope || !this.config) return;
-    const n = Math.max(1, Math.floor(this.topeGlobalEdit || 1));
-    this.guardandoTope = true;
-    this.svc.actualizarConfig({ maxLlamadasSimultaneas: n }).subscribe({
-      next: (c) => {
-        this.guardandoTope = false;
-        this.fijarConfig(c);
-        this.flash(`El bot sostendrá hasta ${n} llamada(s) a la vez`);
-      },
-      error: (e) => {
-        this.guardandoTope = false;
-        this.flash(e?.status === 403
-          ? 'Solo un administrador puede cambiar el techo'
-          : 'No se pudo guardar el techo', true);
-      },
-    });
   }
 
 
@@ -1415,9 +1560,17 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
-    this.svc.getSesiones().subscribe({
+    const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
+    this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas).subscribe({
       next: (s) => { this.sesiones = s; this.errorSesiones = false; },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
+    });
+    // Los contadores van aparte porque son de TODO el día y la tabla solo de las 100
+    // últimas. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
+    // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
+    this.svc.getResumenSesiones(this.colaLlamadas).subscribe({
+      next: (r) => (this.resumenLlamadas = r),
+      error: () => (this.resumenLlamadas = null),
     });
   }
 

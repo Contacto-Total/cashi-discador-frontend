@@ -291,9 +291,9 @@
 
         <div class="modal-body">
           <p class="ayuda">
-            Lo que dejes <strong>vacío</strong> lo hereda de la configuración global. La
-            ventana horaria es el tope legal — una cola solo puede estrecharla, nunca
-            ampliarla.
+            El <strong>horario vacío</strong> se queda en la ventana legal de 08:00 a
+            20:00: una cola solo puede estrecharla, nunca ampliarla. Las llamadas a la
+            vez son de cada cola, no un cupo repartido.
           </p>
 
           <!-- El formulario va en cuatro bloques, en el orden en que se piensa una cola:
@@ -538,40 +538,17 @@
             </label>
             <label>
               Llamadas a la vez
-              <input type="number" min="1" [max]="topeSimultaneas"
+              <input type="number" [min]="MIN_SIMULTANEAS" [max]="MAX_SIMULTANEAS"
                      [(ngModel)]="nuevaCola.maxLlamadasSimultaneas"
-                     [placeholder]="'hereda: ' + topeSimultaneas">
+                     [placeholder]="MIN_SIMULTANEAS">
               <small class="muted">
-                Conversaciones que sostiene a la vez esta cola. No puede pasar de
-                {{ topeSimultaneas }}, que es el techo compartido por todas.
+                Conversaciones que sostiene a la vez ESTA cola, de
+                {{ MIN_SIMULTANEAS }} a {{ MAX_SIMULTANEAS }}. Cada cola lleva la suya;
+                no se reparte ningún cupo con las demás.
               </small>
             </label>
             </div>
 
-            <!-- El techo global, editable por el admin y aquí mismo.
-                 Estaba sembrado en 1 y no había forma de cambiarlo desde ninguna
-                 pantalla: se quitó el PUT /config metiéndolo en el mismo saco que la
-                 ventana de la Ley 29571, y no es lo mismo. La ley no cambia; cuántas
-                 llamadas aguanta la máquina, sí. Es el ÚNICO tope: el micro tenía otro
-                 en su .env y se quitó, porque capaba por debajo de este sin que se
-                 viera. -->
-            <div class="tope-global" *ngIf="esAdmin">
-              <span class="etiqueta">Techo de todas las colas</span>
-              <p class="muted">
-                Cuántas llamadas sostiene el bot a la vez, sumando todas las colas.
-                Ninguna puede pasar de aquí.
-              </p>
-              <div class="linea-tope">
-                <input type="number" min="1" [(ngModel)]="topeGlobalEdit"
-                       [ngModelOptions]="{standalone: true}">
-                <button class="btn-secondary" type="button"
-                        [disabled]="guardandoTope || topeGlobalEdit === topeSimultaneas"
-                        (click)="guardarTopeGlobal()">
-                  {{ guardandoTope ? 'Guardando…' : 'Guardar techo' }}
-                </button>
-                <small class="muted">{{ firma(config) }}</small>
-              </div>
-            </div>
 
           </section>
 
@@ -887,10 +864,10 @@
             Meses de cada rebaja, en orden. Vacío = los calcula el sistema.
           </small>
         </label>
-        <label class="check" style="align-self: end;">
-          <input type="checkbox" [(ngModel)]="r.ultimoEscalonSoloHoy">
-          La última opción, solo con pago hoy
-        </label>
+        <!-- La casilla "La última opción, solo con pago hoy" se quitó: la condición es
+             fija y vive en el código (BotOfertaService). No era una preferencia por
+             subcartera sino lo que define al último escalón, y sembrada en 0 hacía que
+             la escalera diera su mayor descuento sin pedir el pago del día. -->
       </div>
 
       <div class="acciones">
@@ -910,20 +887,64 @@
   <!-- ===== LLAMADAS ===== -->
   <section *ngIf="vista === 'llamadas'">
     <div class="detalle-head">
-      <h3>Llamadas del bot <span class="muted">({{ sesionesFiltradas.length }})</span></h3>
+      <h3>Llamadas del bot
+        <span class="muted">({{ resumenLlamadas ? resumenLlamadas.total : sesiones.length }} hoy)</span>
+      </h3>
+      <!-- Con dos colas discando —castigo y propia— la tabla las mezclaba y no se podía
+           leer ninguna: son dos guiones, dos importes y dos canales de pago distintos.
+           Solo aparece cuando hay más de una: con una sola no decide nada. -->
+      <label class="selector-cola" *ngIf="colas.length > 1">
+        Cola
+        <select [ngModel]="colaLlamadas" (ngModelChange)="cambiarColaLlamadas($event)">
+          <option [ngValue]="null">Todas</option>
+          <option *ngFor="let c of colas" [ngValue]="c.id">{{ c.nombre }}</option>
+        </select>
+      </label>
       <input class="buscador" type="search" [(ngModel)]="busquedaLlamadas"
              (ngModelChange)="alBuscarLlamadas()"
              placeholder="Buscar por documento, nombre, teléfono o resultado">
     </div>
-    <p class="muted" *ngIf="!sesionesFiltradas.length && busquedaLlamadas">
-      Ninguna llamada coincide con «{{ busquedaLlamadas }}».
+    <!-- Los contadores. Cuentan sobre las llamadas cargadas —las 100 últimas, que es
+         lo que devuelve el endpoint—, y lo dice el pie: un contador que parece de todo
+         el histórico y es de un lote miente sin que se note. -->
+    <div class="pills-llamadas" *ngIf="pastillasLlamadas.length">
+      <button *ngFor="let p of pastillasLlamadas; trackBy: trackPastilla" type="button"
+              class="pill" [ngClass]="'t-' + p.tono"
+              [class.on]="pillLlamadas === p.clave"
+              (click)="alternarPill(p.clave)"
+              [title]="pillLlamadas === p.clave ? 'Quitar este filtro' : 'Ver solo estas'">
+        {{ p.etiqueta }} <b>{{ p.n }}</b>
+        <span class="quitar" *ngIf="pillLlamadas === p.clave" aria-hidden="true">&times;</span>
+      </button>
+      <span class="pills-cola muted" *ngIf="resumenLlamadas as r">
+        Descolgaron <strong>{{ descolgaron }}</strong> de {{ r.total }} ·
+        {{ r.duracionMediaSeg }} s de media · ${{ r.costoUsd | number:'1.2-2' }}
+      </span>
+    </div>
+
+    <!-- Lo que se esta viendo, dicho con palabras. El color de la pastilla solo lo sabe
+         quien ya sabe que significa; esto lo lee cualquiera. -->
+    <div class="pills-estado" *ngIf="pillLlamadas">
+      <!-- Se dice "de las N cargadas" y no "del día" a proposito: los contadores de las
+           pastillas son del día entero, pero la tabla solo tiene las 100 últimas y solo
+           puede filtrar sobre esas. Decir "3 de 218" seria mentir sobre lo que se ve. -->
+      <span>Viendo solo <strong>{{ etiquetaDelPill(pillLlamadas) }}</strong>:
+        {{ sesionesFiltradas.length }} llamada(s).</span>
+      <button class="btn-link" type="button" (click)="alternarPill(pillLlamadas)">
+        Ver todas
+      </button>
+    </div>
+
+    <p class="muted" *ngIf="!sesionesFiltradas.length && (busquedaLlamadas || pillLlamadas)">
+      Ninguna llamada coincide con lo que has pedido.
     </p>
     <div class="table-card">
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>Inicio</th><th>Cliente</th><th>Cuota</th><th>Estado</th>
+              <th>Inicio</th><th *ngIf="colas.length > 1">Cola</th>
+              <th>Cliente</th><th>Cuota</th><th>Estado</th>
               <th>Resultado</th><th>AMD</th><th>Duración</th><th>Costo</th><th></th>
             </tr>
           </thead>
@@ -931,6 +952,7 @@
             <tr *ngFor="let s of sesionesPagina" class="fila-clicable" (click)="abrirDetalle(s)"
                 title="Ver la transcripción de esta llamada">
               <td>{{ s.inicio | date:'dd/MM HH:mm' }}</td>
+              <td *ngIf="colas.length > 1" class="celda-sub">{{ s.nombreCola || '—' }}</td>
               <td>
                 <div class="celda-principal">{{ s.nombreCliente || ('Cliente ' + s.idCliente) }}</div>
                 <div class="celda-sub">{{ s.documento || s.telefono || '—' }}</div>
@@ -955,7 +977,8 @@
           <button class="btn-link" [disabled]="paginaSesiones === 1" (click)="irA('sesiones', paginaSesiones - 1)">
             <lucide-angular name="chevron-left" [size]="16"></lucide-angular>
           </button>
-          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} · {{ sesionesFiltradas.length }} llamadas</span>
+          <span>Página {{ paginaSesiones }} de {{ totalPaginas(sesionesFiltradas) }} ·
+            {{ sesionesFiltradas.length }} de las 100 últimas</span>
           <button class="btn-link" [disabled]="paginaSesiones === totalPaginas(sesionesFiltradas)" (click)="irA('sesiones', paginaSesiones + 1)">
             <lucide-angular name="chevron-right" [size]="16"></lucide-angular>
           </button>

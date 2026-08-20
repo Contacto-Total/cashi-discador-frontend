@@ -847,22 +847,60 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .cuantos-entran strong { font-size: 17px; color: #1d4ed8; font-variant-numeric: tabular-nums; }
 .cuantos-entran .aviso { color: #b45309; font-size: 13px; }
 
-/* El techo compartido por todas las colas, editable solo por el admin. */
-.tope-global {
-  margin-top: 16px; padding: 12px 14px;
-  border-radius: 8px; border: 1px dashed var(--borde, #e2e8f0);
-  background: var(--fondo-suave, #f8fafc);
+/* Selector de cola de la pantalla de llamadas. Solo se pinta con mas de una. */
+.selector-cola {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--texto-suave, #64748b);
 }
-.tope-global .etiqueta {
-  display: block; margin-bottom: 4px;
-  font-size: 13px; font-weight: 600; color: var(--texto, #374151);
-}
-.tope-global > .muted { margin: 0 0 10px; }
-.linea-tope { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.linea-tope input {
-  width: 90px; min-height: 38px; padding: 6px 10px; font-size: 14px; font-family: inherit;
+.selector-cola select {
+  min-height: 34px; padding: 4px 10px; font-size: 13px; font-family: inherit;
   border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
+  background: var(--fondo, #fff); color: var(--texto, #0f172a);
 }
+
+/* ===== PASTILLAS DE LA PANTALLA DE LLAMADAS =====
+   Contadores clicables: cada uno filtra la tabla y se vuelve a clicar para quitarlo.
+   El tono es semantico — verde lo que sirve, ambar lo que pide que alguien haga algo,
+   rojo lo que se rompio, gris lo que no dejo nada. */
+.pills-llamadas {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 0 0 14px;
+}
+.pills-llamadas .pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border-radius: 999px; cursor: pointer;
+  font-family: inherit; font-size: 13px; line-height: 1.4;
+  border: 1px solid var(--borde, #e2e8f0);
+  background: var(--fondo-suave, #f8fafc);
+  color: var(--texto, #334155);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.pills-llamadas .pill b { font-variant-numeric: tabular-nums; font-weight: 700; }
+.pills-llamadas .pill:hover { border-color: #94a3b8; }
+.pills-llamadas .pill.t-ok    { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
+.pills-llamadas .pill.t-aviso { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+.pills-llamadas .pill.t-malo  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+
+/* ACTIVA: se INVIERTE — fondo solido y texto blanco.
+   El estado activo era un borde azul con una sombra al 15%, y sobre una pastilla que
+   ya venia con fondo de color no se distinguia de la inactiva: parecia que el clic no
+   hacia nada, se volvia a clicar y se apagaba el filtro. Un cambio de borde no basta
+   cuando el color de fondo ya esta ocupado por otra cosa. */
+.pills-llamadas .pill.on,
+.pills-llamadas .pill.on:hover {
+  background: #1e293b; border-color: #1e293b; color: #fff; font-weight: 600;
+}
+.pills-llamadas .pill.on b { color: #fff; }
+.pills-llamadas .pill .quitar { font-size: 15px; line-height: 1; opacity: .75; }
+
+/* Lo que se esta viendo, en palabras. Sin esto hay que deducir del color por que la
+   tabla enseña 3 filas de 100. */
+.pills-estado {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: -4px 0 14px; font-size: 13px; color: var(--texto-suave, #64748b);
+}
+.pills-estado .btn-link { font-size: 13px; }
+.pills-cola { font-size: 12.5px; margin-left: 4px; }
 
 /* ===== TONO POR OBJETIVO =====
    Va plegado dentro del form de la cola. Cerrado no ocupa nada; abierto son tres
