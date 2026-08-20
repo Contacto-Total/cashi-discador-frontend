@@ -740,6 +740,36 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 /* Dentro de un bloque, el separador ya lo pone el bloque. */
 .bloque .objetivos-bloque { padding: 0; border-top: none; }
 
+/* ===== BLOQUE 5 · CONDICIONES DE NEGOCIACIÓN =====
+   Que la cola no tenga condiciones propias es lo normal, no un problema: por eso el
+   aviso va en azul de informacion y no en el ambar de los que piden hacer algo. */
+.aviso-hereda {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin: 0 0 14px; padding: 9px 12px;
+  background: rgba(59, 130, 246, .07);
+  border-left: 3px solid rgba(59, 130, 246, .45);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px; color: var(--texto, #374151);
+}
+.aviso-hereda lucide-angular { flex-shrink: 0; color: #2563eb; margin-top: 1px; }
+
+/* El fallo del campo, debajo de SU campo. Va antes que la ayuda para que se lea
+   primero lo que hay que corregir y despues como se corrige. */
+.error-campo { color: #b91c1c; font-weight: 500; }
+.grid-form input.campo-malo,
+label.ancho input.campo-malo { border-color: #ef4444; }
+
+/* Una casilla con su explicacion al lado. `label.ancho` apila en columna, y aqui el
+   texto tiene que ir a la derecha del cuadradito, no debajo. */
+.grid-form label.check-linea {
+  flex-direction: row; align-items: flex-start; gap: 10px; cursor: pointer;
+}
+.check-linea input[type="checkbox"] {
+  width: 15px; height: 15px; padding: 0; margin-top: 2px;
+  flex-shrink: 0; cursor: pointer;
+}
+.check-linea > span { display: flex; flex-direction: column; gap: 3px; }
+
 
 /* Un descarte que no es rutina —blacklist, sin teléfono— pintado distinto: son los
    que explican por qué la cola salió más corta de lo que se esperaba. */

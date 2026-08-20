@@ -136,6 +136,27 @@ export interface BotRegla {
   fechaActualizacion?: string | null;
 }
 
+/**
+ * Las condiciones con las que Clara negocia en UNA cola concreta.
+ *
+ * No es lo mismo que `BotRegla`: aquella va por subcartera y habla de enganche y
+ * cuotas —el trato de castigo—, y esta es el trato de cartera propia, un pago con
+ * descuento. Si la cola tiene su fila, manda sobre la de su subcartera; si no la
+ * tiene, hereda (y el GET responde 204, no 404: no tenerla es lo normal).
+ *
+ * Hasta hoy solo se podían poner por SQL, y son justo lo que se retoca cada semana.
+ */
+export interface BotColaRegla {
+  /** Columna sobre la que se calcula el descuento: capital o deuda total. */
+  campoBase: string;
+  /** Los descuentos que ofrece, en orden y separados por comas: "70,80,90". */
+  curvaDescuento: string;
+  pagoMinimo: number | null;
+  diasMaxPago: number | null;
+  ultimoTramoSoloHoy: boolean;
+  maxCuotasBot: number | null;
+}
+
 /** Una condición sobre una columna de la tabla de la subcartera. Igual que en campañas. */
 export interface BotColaFiltro {
   id?: number;
@@ -256,6 +277,22 @@ export class BotVozService {
   /** El boton. Arrancar y parar no pierden lo encolado. */
   iniciarCola(id: number): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas/${id}/iniciar`, {}); }
   detenerCola(id: number): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas/${id}/detener`, {}); }
+
+  /**
+   * Las condiciones de negociación de esta cola, o null si no tiene propias.
+   *
+   * El backend contesta 204 SIN CUERPO cuando la cola hereda las de su subcartera, y
+   * un 204 llega aquí como `null`. No es un fallo: es el caso normal de una cola
+   * recién creada, así que quien lo consuma no debe tratarlo como error.
+   */
+  getReglaDeCola(id: number): Observable<BotColaRegla | null> {
+    return this.http.get<BotColaRegla | null>(`${this.apiUrl}/colas/${id}/regla`);
+  }
+
+  /** Devuelve 400 si `curvaDescuento` no es una lista de números de 0 a 100. */
+  guardarReglaDeCola(id: number, r: BotColaRegla): Observable<BotColaRegla> {
+    return this.http.put<BotColaRegla>(`${this.apiUrl}/colas/${id}/regla`, r);
+  }
 
   // ---- Tonos: el catalogo que elige el supervisor y edita el administrador ----
 

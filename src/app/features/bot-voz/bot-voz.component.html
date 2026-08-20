@@ -608,6 +608,88 @@
                los filtros. Poner un número encima dejaba fuera a gente sin criterio, y
                quien se quedaba dentro lo decidía el orden de la tabla. -->
 
+          <!-- ===== 5 · CON QUÉ CONDICIONES CIERRA =====
+               Bloque propio y no un par de campos sueltos en "Cuándo llama": los cuatro
+               anteriores configuran el DISCADOR —a quién marca, cuándo y con qué voz— y
+               este configura lo que Clara puede OFRECER cuando el cliente descuelga. Son
+               dos decisiones de gente distinta y con otro ritmo: el horario se pone una
+               vez, la curva de descuento cambia cada semana. Hasta hoy esto solo se
+               tocaba por SQL. -->
+          <section class="bloque">
+            <span class="etiqueta"><span class="paso">5</span> Condiciones de negociación</span>
+
+            <p class="aviso-hereda" *ngIf="reglaHeredada">
+              <lucide-angular name="info" [size]="15"></lucide-angular>
+              <span>
+                Esta cola no tiene condiciones propias: hereda las de su subcartera.
+                Lo que escribas aquí rige <strong>solo para esta cola</strong>.
+              </span>
+            </p>
+
+            <div class="grid-form">
+              <label class="ancho">
+                Descuentos que ofrece
+                <input type="text" [(ngModel)]="reglaCola.curvaDescuento"
+                       placeholder="70,80,90" [class.campo-malo]="!!errorCurva"
+                       (ngModelChange)="errorCurva = ''">
+                <small class="error-campo" *ngIf="errorCurva">{{ errorCurva }}</small>
+                <small class="muted">
+                  Los porcentajes que Clara va ofreciendo, en orden y separados por comas.
+                  Un solo valor (<em>90</em>) es una única oferta: si la rechazan, se cierra.
+                  Varios (<em>70,80,90</em>) abren por el primero y van bajando conforme
+                  el cliente rechaza.
+                </small>
+              </label>
+
+              <label>
+                Se descuenta sobre
+                <select [(ngModel)]="reglaCola.campoBase">
+                  <option *ngFor="let c of CAMPOS_BASE" [ngValue]="c.valor">{{ c.nombre }}</option>
+                </select>
+                <small class="muted">
+                  La columna sobre la que se calcula el descuento. En cartera propia, el capital.
+                </small>
+              </label>
+
+              <label>
+                Pago mínimo (S/)
+                <input type="number" min="0" step="0.01" [(ngModel)]="reglaCola.pagoMinimo"
+                       placeholder="200">
+                <small class="muted">
+                  Lo menos que se le puede pedir. Si el descuento deja un importe por
+                  debajo, se ofrece este.
+                </small>
+              </label>
+
+              <label>
+                Plazo máximo para pagar
+                <input type="number" min="0" step="1" [(ngModel)]="reglaCola.diasMaxPago"
+                       placeholder="2">
+                <small class="muted">
+                  Días contados desde hoy. <em>2</em> = hoy, mañana o pasado.
+                </small>
+              </label>
+
+              <label>
+                Cuotas máximas
+                <input type="number" min="1" step="1" [(ngModel)]="reglaCola.maxCuotasBot"
+                       placeholder="1">
+                <small class="muted">En cartera propia es pago único, o sea 1.</small>
+              </label>
+
+              <label class="ancho check-linea">
+                <input type="checkbox" [(ngModel)]="reglaCola.ultimoTramoSoloHoy">
+                <span>
+                  El mayor descuento, solo pagando hoy
+                  <small class="muted">
+                    El último tramo de la curva deja de aceptarse si el cliente pide
+                    pagar otro día.
+                  </small>
+                </span>
+              </label>
+            </div>
+          </section>
+
           <div class="reglas-resumen" *ngIf="reglasEfectivas">
             <span class="etiqueta">Con qué condiciones puede cerrar</span>
             <p class="muted">
@@ -892,12 +974,17 @@
       </h3>
       <!-- Con dos colas discando —castigo y propia— la tabla las mezclaba y no se podía
            leer ninguna: son dos guiones, dos importes y dos canales de pago distintos.
-           Solo aparece cuando hay más de una: con una sola no decide nada. -->
-      <label class="selector-cola" *ngIf="colas.length > 1">
+           Las opciones salen de las colas que aparecen en el HISTÓRICO (`colasFiltro`),
+           no de las que existen hoy: antes iba atado a `colas.length > 1` y al borrar
+           colas el selector se esfumaba, dejando las llamadas de las borradas sin
+           forma de mirarse. -->
+      <label class="selector-cola" *ngIf="colasFiltro.length">
         Cola
         <select [ngModel]="colaLlamadas" (ngModelChange)="cambiarColaLlamadas($event)">
           <option [ngValue]="null">Todas</option>
-          <option *ngFor="let c of colas" [ngValue]="c.id">{{ c.nombre }}</option>
+          <option *ngFor="let c of colasFiltro; trackBy: trackCola" [ngValue]="c.id">
+            {{ c.nombre }}
+          </option>
         </select>
       </label>
       <input class="buscador" type="search" [(ngModel)]="busquedaLlamadas"
@@ -907,7 +994,10 @@
     <!-- Los contadores. Cuentan sobre las llamadas cargadas —las 100 últimas, que es
          lo que devuelve el endpoint—, y lo dice el pie: un contador que parece de todo
          el histórico y es de un lote miente sin que se note. -->
-    <div class="pills-llamadas" *ngIf="pastillasLlamadas.length">
+    <!-- Se pinta en cuanto hay resumen del día, aunque venga a cero: colgarlo de
+         `pastillasLlamadas.length` hacía desaparecer los contadores —y la línea de
+         totales— los días sin llamadas, que es cuando se abre esto a comprobar. -->
+    <div class="pills-llamadas" *ngIf="resumenLlamadas">
       <button *ngFor="let p of pastillasLlamadas; trackBy: trackPastilla" type="button"
               class="pill" [ngClass]="'t-' + p.tono"
               [class.on]="pillLlamadas === p.clave"
@@ -943,7 +1033,7 @@
         <table>
           <thead>
             <tr>
-              <th>Inicio</th><th *ngIf="colas.length > 1">Cola</th>
+              <th>Inicio</th><th *ngIf="colasFiltro.length > 1">Cola</th>
               <th>Cliente</th><th>Cuota</th><th>Estado</th>
               <th>Resultado</th><th>AMD</th><th>Duración</th><th>Costo</th><th></th>
             </tr>
@@ -952,7 +1042,9 @@
             <tr *ngFor="let s of sesionesPagina" class="fila-clicable" (click)="abrirDetalle(s)"
                 title="Ver la transcripción de esta llamada">
               <td>{{ s.inicio | date:'dd/MM HH:mm' }}</td>
-              <td *ngIf="colas.length > 1" class="celda-sub">{{ s.nombreCola || '—' }}</td>
+              <!-- `nombreDeCola` y no `s.nombreCola`: el backend hace LEFT JOIN, así
+                   que la cola borrada llega sin nombre y la celda salía en blanco. -->
+              <td *ngIf="colasFiltro.length > 1" class="celda-sub">{{ nombreDeCola(s) }}</td>
               <td>
                 <div class="celda-principal">{{ s.nombreCliente || ('Cliente ' + s.idCliente) }}</div>
                 <div class="celda-sub">{{ s.documento || s.telefono || '—' }}</div>

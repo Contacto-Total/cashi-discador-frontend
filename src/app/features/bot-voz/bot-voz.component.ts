@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
   BotVozService, BotConfig, BotRitmo, BotContacto, BotSesion, BotTurno,
-  BotCola, BotTono, BotRegla, BotColaFiltro, ResumenLlamadas,
+  BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas,
 } from './bot-voz.service';
 
 @Component({
@@ -66,6 +66,35 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** El fallo al guardar, DENTRO del formulario. El aviso de arriba queda detrás del
    *  modal y no se ve: el error tiene que estar donde está el usuario. */
   errorModal = '';
+
+  // ----- Condiciones de negociación de la cola (bloque 5 del formulario) -----
+  //
+  // Van en el alta de la cola y no en la pantalla de reglas porque son de ESTA cola:
+  // las de la pantalla de reglas son de la subcartera entera. Hasta ahora solo se
+  // tocaban por SQL y son lo que cambia cada semana, así que un cambio de curva
+  // obligaba a pedirle a alguien que entrara a la base.
+
+  /** Sobre qué saldo se calcula el descuento. Es un desplegable y no un campo libre:
+   *  el nombre de la columna se lo inventa nadie, y una errata deja a Clara sin base
+   *  sobre la que descontar. */
+  readonly CAMPOS_BASE = [
+    { valor: 'sld_capital_asig', nombre: 'Capital' },
+    { valor: 'sld_total_asig', nombre: 'Deuda total' },
+  ];
+
+  reglaCola: BotColaRegla = this.reglaColaVacia();
+
+  /** La cola no tiene condiciones propias y usa las de su subcartera: el GET devolvió
+   *  204. Solo sirve para avisarlo; no bloquea nada. */
+  reglaHeredada = false;
+
+  /** El fallo de la curva, pegado a SU campo. Un error de formato en un texto que se
+   *  teclea a mano tiene que señalar dónde está, no salir en el pie del modal. */
+  errorCurva = '';
+
+  /** El mismo criterio que aplica el backend antes de devolver 400. */
+  static readonly ERROR_CURVA =
+    'Escribe porcentajes entre 0 y 100 separados por comas, por ejemplo 70,80,90';
 
   /**
    * Estilos que se pueden elegir. Es un selector y no un campo libre a proposito: este
@@ -298,6 +327,50 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.cargarSesiones();
   }
 
+  /**
+   * Las colas que se pueden elegir en el filtro, id -> nombre.
+   *
+   * NO sale de `colas` —las que existen hoy— sino de las que aparecen en las sesiones
+   * ya cargadas, mas las vivas. Al borrar una cola sus llamadas siguen en el
+   * historico, y atando el selector a las colas vivas desaparecia justo cuando mas
+   * falta hacia: quedaba una sola cola y ya no habia forma de mirar lo de la borrada.
+   *
+   * Es acumulativo a proposito: cuando se filtra por una cola la respuesta solo trae
+   * sesiones de esa cola, y recalcularlo desde cero dejaria el selector con una unica
+   * opcion —la elegida— y sin manera de volver.
+   */
+  private colasVistas = new Map<number, string>();
+
+  /** Lo anterior ya resuelto para el <select>. Es un CAMPO, no un getter: un array
+   *  nuevo en cada deteccion de cambios recrea las <option> mientras se despliegan. */
+  colasFiltro: { id: number; nombre: string }[] = [];
+
+  trackCola(_: number, c: { id: number }): number { return c.id; }
+
+  /** Apunta las colas que van apareciendo en el historico y rehace la lista. */
+  private refrescarColasFiltro(sesiones: BotSesion[] = []): void {
+    for (const s of sesiones) {
+      // idCola null es el armado global viejo, anterior a las colas: no es ninguna.
+      if (s.idCola == null) continue;
+      // El backend hace LEFT JOIN con bot_cola, asi que nombreCola llega null si la
+      // cola se borro. Se conserva el nombre que ya se conocia y, si no hay ninguno,
+      // se la llama por su id: sin nombre la opcion seria una linea en blanco.
+      const nombre = s.nombreCola || this.colasVistas.get(s.idCola) || `Cola ${s.idCola}`;
+      this.colasVistas.set(s.idCola, nombre);
+    }
+    // El nombre de una cola viva manda sobre el que quedo guardado: si la renombraron,
+    // el selector tiene que decir el nombre de ahora.
+    const m = new Map(this.colasVistas);
+    for (const c of this.colas) if (c.id != null) m.set(c.id, c.nombre);
+    this.colasFiltro = [...m].map(([id, nombre]) => ({ id, nombre }));
+  }
+
+  /** Como se llama la cola de una sesion, ya este borrada o ya no tenga. */
+  nombreDeCola(s: BotSesion): string {
+    if (s.idCola == null) return '—';
+    return s.nombreCola || this.colasVistas.get(s.idCola) || `Cola ${s.idCola}`;
+  }
+
   private encaja(s: BotSesion, clave: string): boolean {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === clave);
     if (!g) return true;
@@ -327,7 +400,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * Los números salen del RESUMEN del día, no de las llamadas cargadas: contando sobre
    * las 100 de la tabla, el número encogía solo según entraban llamadas nuevas.
    */
-  pastillasLlamadas: { clave: string; etiqueta: string; tono: string; n: number }[] = [];
+  pastillasLlamadas: { clave: string; etiqueta: string; tono: string; n: number;
+                       fijo: boolean }[] = [];
 
   private calcularPastillas(r: ResumenLlamadas | null) {
     if (!r) return [];
@@ -336,9 +410,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
         const fuente = g.estados ? r.porEstado : r.porResultado;
         const claves = g.estados ?? g.resultados ?? [];
         const n = claves.reduce((a, k) => a + (fuente?.[k] ?? 0), 0);
-        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, n };
+        // `fijo`: las de COMO ACABO se pintan siempre, tambien a cero. Con las colas
+        // paradas el dia entero salian todas a cero, se filtraban todas y la fila de
+        // pastillas desaparecia entera —con ella el resumen del dia—, que es justo lo
+        // que el supervisor abre a mirar cuando el discador no esta marcando. Son
+        // cuatro y son excluyentes: cuatro ceros se leen como "hoy no se llamo".
+        // Las de QUE SE SACO siguen ocultandose a cero: ahi si serian ruido.
+        return { clave: g.clave, etiqueta: g.etiqueta, tono: g.tono, n, fijo: !!g.estados };
       })
-      .filter((p) => p.n > 0);
+      .filter((p) => p.fijo || p.n > 0);
   }
 
   /** Sin esto el *ngFor tampoco reutiliza las filas aunque el array no cambie. */
@@ -612,7 +692,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   cargarColas(): void {
     this.svc.getColas().subscribe({
-      next: (c) => (this.colas = c),
+      next: (c) => { this.colas = c; this.refrescarColasFiltro(); },
       error: () => this.flash('No se pudieron cargar las colas', true),
     });
   }
@@ -809,19 +889,57 @@ export class BotVozComponent implements OnInit, OnDestroy {
         const terminar = () => {
           this.guardandoCola = false;
           this.nuevaCola = this.colaVacia();
+          this.reglaCola = this.reglaColaVacia();
+          this.errorCurva = '';
           this.olvidarFiltros();
           this.modalCola = false;
           this.editandoCola = undefined;
           this.cargarColas();
           this.flash(editaba ? 'Cola actualizada' : 'Cola creada');
         };
+
+        /**
+         * Tercer paso: las condiciones de negociación. Van al final por lo mismo que
+         * los filtros —cuelgan del id de la cola, que al crear no existe hasta que
+         * responde el backend— y solo se mandan si alguien rellenó el bloque: sin eso
+         * la cola sigue heredando las de su subcartera.
+         */
+        const guardarRegla = () => {
+          if (!idCola || this.sinCondiciones()) { terminar(); return; }
+          this.svc.guardarReglaDeCola(idCola, this.reglaCola).subscribe({
+            next: () => { this.reglaHeredada = false; terminar(); },
+            error: (e) => {
+              // La cola YA está guardada. Se apunta su id como "editando" para que el
+              // siguiente clic en Guardar la actualice en vez de intentar crearla otra
+              // vez, que chocaría con el 409 de "esa subcartera ya tiene una cola".
+              this.editandoCola = idCola;
+              // El botón vuelve a estar disponible: dejarlo en "Guardando…" tras fallar
+              // el segundo paso deja la pantalla colgada sin nada que la desbloquee.
+              this.guardandoCola = false;
+              this.cargarColas();
+              if (e?.status === 400) {
+                // El modal se queda abierto y con lo tecleado: la curva es justo lo que
+                // el usuario acaba de escribir a mano y hacérsela repetir sería el peor
+                // castigo posible por una coma de más.
+                this.errorCurva = BotVozComponent.ERROR_CURVA;
+                // Además en el pie, porque el bloque 5 puede haber quedado fuera de la
+                // parte visible del modal y el botón no diría por qué no cerró.
+                this.errorModal = 'La cola se guardó. Revisa las condiciones de negociación.';
+              } else {
+                this.errorModal = 'La cola se guardó, pero no se pudieron guardar sus '
+                  + 'condiciones de negociación. Vuelve a intentarlo.';
+              }
+            },
+          });
+        };
+
         if (!idCola) { terminar(); return; }
         this.svc.guardarFiltros(idCola, this.filtrosDeLoMarcado()).subscribe({
-          next: () => terminar(),
+          next: () => guardarRegla(),
           error: () => {
             // La cola sí quedó guardada: decirlo es más útil que un "no se pudo" a
             // secas, que haría pensar que hay que volver a crearla.
-            terminar();
+            guardarRegla();
             this.flash('La cola se guardó, pero no se pudieron guardar sus filtros', true);
           },
         });
@@ -1562,7 +1680,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   cargarSesiones(): void {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
     this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas).subscribe({
-      next: (s) => { this.sesiones = s; this.errorSesiones = false; },
+      next: (s) => {
+        this.sesiones = s;
+        this.errorSesiones = false;
+        // De aqui salen las opciones del filtro de cola: del historico, no de las
+        // colas que existen hoy.
+        this.refrescarColasFiltro(s);
+      },
       error: () => { this.errorSesiones = true; this.flash('No se pudieron cargar las llamadas', true); },
     });
     // Los contadores van aparte porque son de TODO el día y la tabla solo de las 100
