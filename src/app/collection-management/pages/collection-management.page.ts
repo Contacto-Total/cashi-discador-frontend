@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, firstValueFrom, of, Subscription } from 'rxjs';
+import { catchError, finalize, firstValueFrom, of, Subscription } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 import { SystemConfigService } from '../services/system-config.service';
@@ -1334,7 +1334,25 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
               </div>
             }
 
-            @if (!isLoadingDynamicFields() && isLeafClassification() && dynamicFields().length === 0 && shouldShowDynamicForm()) {
+            <!-- Fallo al cargar: NO depende de isLeafClassification(), porque cuando la
+                 carga falla el backend no llega a decir si es hoja y el aviso quedaría oculto. -->
+            @if (!isLoadingDynamicFields() && dynamicFieldsError() && shouldShowDynamicForm()) {
+              <div class="bg-red-50 dark:bg-red-950/20 border border-red-300 dark:border-red-900/50 rounded-lg shadow-md p-3">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs text-red-700 dark:text-red-300">
+                    No se pudieron cargar los campos adicionales. No guardes la gestión hasta reintentar.
+                  </span>
+                  <button
+                    type="button"
+                    (click)="reintentarCamposDinamicos()"
+                    class="px-3 py-1 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded transition-colors">
+                    Reintentar
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (!isLoadingDynamicFields() && !dynamicFieldsError() && isLeafClassification() && dynamicFields().length === 0 && shouldShowDynamicForm()) {
               <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
                   <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
@@ -2190,6 +2208,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   isLoadingDynamicFields = signal(false);
   isLeafClassification = signal(false);
   dynamicFieldsSchema = signal<MetadataSchema | null>(null);
+  // Error al cargar los campos dinámicos. Antes un fallo se disfrazaba de
+  // "esta clasificación no tiene campos": el asesor no veía nada y el error
+  // recién aparecía al guardar. Ahora se muestra y se puede reintentar.
+  dynamicFieldsError = signal<string | null>(null);
+  private lastDynamicFieldsTypificationId: number | null = null;
   externalFieldUpdates = signal<any>({}); // Para comunicar actualizaciones externas al componente hijo
 
   // ViewChild para acceder al componente de campos dinámicos
@@ -2262,6 +2285,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       if (!this.managementForm.resultadoContacto) {
         return false;
       }
+    }
+
+    // 1.5 Si los campos dinámicos no se pudieron cargar, NO dejar guardar.
+    // Antes el schema quedaba vacío, el bucle de requeridos de abajo no corría y
+    // la gestión se enviaba sin un campo obligatorio: el error saltaba recién al guardar.
+    if (this.dynamicFieldsError()) {
+      console.log('[isFormValid] ❌ Bloqueado: los campos adicionales no cargaron');
+      return false;
     }
 
     // 2. Verificar campos dinámicos requeridos
@@ -4844,11 +4875,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     });
   }
 
+  private dynamicFieldsReqId = 0;
+
   private loadDynamicFields(typificationId: number) {
+    const reqId = ++this.dynamicFieldsReqId;
     // Cargar campos dinámicos desde el backend
+    this.lastDynamicFieldsTypificationId = typificationId;
+    this.dynamicFieldsError.set(null);
     this.isLoadingDynamicFields.set(true);
-    this.apiSystemConfigService.getClassificationFields(typificationId).subscribe({
+    this.apiSystemConfigService.getClassificationFields(typificationId)
+      .pipe(
+        // El flag baja SIEMPRE: si no, una excepción dentro del next dejaba el
+        // "Cargando campos adicionales..." colgado para siempre.
+        finalize(() => {
+          if (reqId === this.dynamicFieldsReqId) {
+            this.isLoadingDynamicFields.set(false);
+          }
+        })
+      )
+      .subscribe({
       next: (response) => {
+        // Respuesta obsoleta (el asesor ya cambió de nivel): descartarla para que
+        // no pise el schema del nivel actual.
+        if (reqId !== this.dynamicFieldsReqId) { return; }
         this.isLeafClassification.set(response.isLeaf);
         this.dynamicFields.set(response.fields || []);
 
@@ -4902,7 +4951,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         };
 
         this.dynamicFieldsSchema.set(schema);
-        this.isLoadingDynamicFields.set(false);
 
         // Check if there's a payment_schedule field and load its enabled options
         const paymentScheduleField = (response.fields || []).find((f: any) =>
@@ -4921,13 +4969,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.checkAndLoadPaymentSchedules();
       },
       error: (error) => {
+        if (reqId !== this.dynamicFieldsReqId) { return; }
         console.error('Error cargando campos dinámicos:', error);
-        this.isLoadingDynamicFields.set(false);
         this.isLeafClassification.set(false);
         this.dynamicFields.set([]);
         this.dynamicFieldsSchema.set(null);
+        this.dynamicFieldsError.set(
+          error?.error?.message || error?.message || 'No se pudo contactar al servidor.'
+        );
       }
     });
+  }
+
+  /**
+   * Reintenta la carga de los campos dinámicos de la última tipificación seleccionada.
+   */
+  reintentarCamposDinamicos() {
+    if (this.lastDynamicFieldsTypificationId !== null) {
+      this.loadDynamicFields(this.lastDynamicFieldsTypificationId);
+    }
   }
 
   /**
@@ -6721,6 +6781,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         next: (clienteCompleto) => {
           if (clienteCompleto) {
             console.log('✅ [RESOURCE] Datos dinámicos obtenidos, actualizando con datos reales de deuda');
+            // El contexto se toma del cliente cargado. Si el usuario no tiene
+            // tenant/cartera/subcartera en su ficha, loadTenants() no lo establece y
+            // reloadTypifications() se salía sin hacer nada: sin contexto, la carga de
+            // campos dinámicos fallaba en cada selección de tipificación.
+            this.selectedTenantId = customer.tenantId;
+            this.selectedPortfolioId = customer.portfolioId;
+            this.selectedSubPortfolioId = customer.subPortfolioId;
             this.reloadTypifications();
             this.loadCustomerOutputConfig();
             this.loadFirstInstallmentConfig();
