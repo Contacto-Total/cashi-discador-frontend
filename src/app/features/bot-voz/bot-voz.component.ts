@@ -556,6 +556,87 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * Rellenarlos con 08:00 y 1 seria peor que dejarlos vacios — la cola se llevaria
    * una copia congelada del horario y cambiar el global dejaria de servir de nada.
    */
+  // ---- Condiciones de negociacion de la cola ----
+  //
+  // Cuelgan de la cola y no de la subcartera porque son lo que cambia cada semana:
+  // "esta semana bajamos el minimo de quinientos a cuatrocientos". Antes esto solo se
+  // podia tocar por SQL.
+
+  /** Una regla en blanco. `campoBase` viene puesto porque en propia siempre es el
+   *  capital, y dejarlo vacio obligaria a elegirlo cada vez para poner lo mismo. */
+  private reglaColaVacia(): BotColaRegla {
+    return {
+      campoBase: 'sld_capital_asig',
+      curvaDescuento: '',
+      pagoMinimo: null,
+      diasMaxPago: null,
+      ultimoTramoSoloHoy: false,
+      maxCuotasBot: null,
+    };
+  }
+
+  /**
+   * El bloque esta vacio y la cola tiene que seguir heredando de su subcartera.
+   *
+   * `campoBase` NO cuenta: viene preseleccionado, asi que si contara, abrir el
+   * formulario para cambiar el horario le escribiria a la cola una regla propia sin
+   * que nadie lo pidiera — y dejaria de heredar sin que se note.
+   */
+  sinCondiciones(): boolean {
+    const r = this.reglaCola;
+    return !r.curvaDescuento?.trim()
+        && r.pagoMinimo == null
+        && r.diasMaxPago == null
+        && r.maxCuotasBot == null
+        && !r.ultimoTramoSoloHoy;
+  }
+
+  /**
+   * El mismo criterio que el backend antes de devolver 400: numeros entre 0 y 100
+   * separados por comas. Se comprueba tambien aqui para que el error salga sin ida y
+   * vuelta, no porque el servidor sobre.
+   *
+   * Vacia es valida: significa que la cola no fija curva y hereda.
+   */
+  curvaValida(): boolean {
+    const curva = (this.reglaCola.curvaDescuento || '').trim();
+    if (!curva) return true;
+    return curva.split(',').every((t) => {
+      const v = Number(t.trim());
+      return t.trim() !== '' && Number.isFinite(v) && v > 0 && v < 100;
+    });
+  }
+
+  /**
+   * Carga las condiciones de una cola al abrirla.
+   *
+   * El 204 llega como cuerpo null y NO es un error: quiere decir que la cola no tiene
+   * regla propia y usa la de su subcartera. Se avisa y se dejan los campos en blanco,
+   * que es justo lo que hay que ver.
+   */
+  private cargarReglaDeCola(id: number): void {
+    this.reglaCola = this.reglaColaVacia();
+    this.reglaHeredada = false;
+    this.errorCurva = '';
+    this.svc.getReglaDeCola(id).subscribe({
+      next: (r) => {
+        if (!r) { this.reglaHeredada = true; return; }
+        this.reglaCola = {
+          campoBase: r.campoBase || 'sld_capital_asig',
+          curvaDescuento: r.curvaDescuento || '',
+          pagoMinimo: r.pagoMinimo ?? null,
+          diasMaxPago: r.diasMaxPago ?? null,
+          ultimoTramoSoloHoy: !!r.ultimoTramoSoloHoy,
+          maxCuotasBot: r.maxCuotasBot ?? null,
+        };
+      },
+      // Sin condiciones a la vista es preferible a un formulario a medio rellenar: si
+      // falla la lectura, se deja en blanco y marcado como heredado, que es el estado
+      // mas conservador —guardar asi no le escribe una regla propia—.
+      error: () => { this.reglaHeredada = true; },
+    });
+  }
+
   private colaVacia(): BotCola {
     return {
       nombre: '', idSubcartera: undefined as any, objetivos: '',
@@ -765,6 +846,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.carteras = [];
     this.subcarteras = [];
     this.olvidarFiltros();
+    // Una cola nueva arranca sin condiciones propias: heredara las de su subcartera
+    // salvo que aqui se rellene el bloque.
+    this.reglaCola = this.reglaColaVacia();
+    this.reglaHeredada = true;
+    this.errorCurva = '';
     this.modalCola = true;
     this.cargarSubcarteras();
     this.cargarRitmos();
@@ -798,6 +884,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // otra cartera, con las filas de la anterior dentro. Para eso se borra y se crea.
     this.cargarRitmos();
     if (c.idSubcartera) this.verEfectivas(c.idSubcartera);
+    if (c.id) this.cargarReglaDeCola(c.id);
 
     // Los filtros guardados se pintan como marcados: editar parte de lo que hay, no de
     // cero. El catalogo de campos y las marcas llegan por separado y en el orden que
@@ -844,6 +931,14 @@ export class BotVozComponent implements OnInit, OnDestroy {
       this.errorModal = 'Marca al menos una cosa que deba hacer Clara.';
       return;
     }
+    // La curva se comprueba antes de tocar nada. Si se dejara para el tercer paso, la
+    // cola y sus filtros quedarian escritos y las condiciones no, por una coma de mas.
+    if (!this.curvaValida()) {
+      this.errorCurva = BotVozComponent.ERROR_CURVA;
+      this.errorModal = 'Revisa las condiciones de negociación.';
+      return;
+    }
+    this.errorCurva = '';
     this.errorModal = '';
     this.guardandoCola = true;
     // Con el bloque cerrado se limpian los tres: si no, quien lo abre, elige tonos y
