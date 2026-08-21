@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { LucideAngularModule, Volume2, FileSpreadsheet, Download, Search, Calendar, X } from 'lucide-angular';
+import { LucideAngularModule, Volume2, FileSpreadsheet, FileText, Download, ChevronDown, Search, Calendar, X } from 'lucide-angular';
 
 import { CustomSelectComponent, SelectOption } from '../../../../../shared/components/custom-ui/custom-select/custom-select.component';
 import { ToastService } from '../../../../../shared/services/toast.service';
@@ -13,6 +13,7 @@ import { HistoricalRecordingsByDocumentRequest } from '../../models/historical-r
 import { HistoricalRecordingsByPhoneRequest } from '../../models/historical-recordings-by-phone.request';
 import { HistoricalRecordingsByDateRangeRequest } from '../../models/historical-recordings-by-date-range.request';
 import { CreateRecordingEvaluationReportRequest } from '../../models/create-recording-evaluation-report.request';
+import { Transcription } from '../../models/transcription.model';
 
 interface Recording {
   idx: number;
@@ -28,7 +29,25 @@ interface Recording {
   anio: string;
   mes: string;
   dia: string;
+  /** Uno o varios WAV separados por coma. DURACION viene partida igual; ANIO/MES/DIA no. */
   nombre: string;
+  /** Segundos con decimales por archivo: '179.96' o '8.04,8.12,45.92'. */
+  duracion: string;
+}
+
+/**
+ * Un WAV concreto de una gestión, ya separado de sus hermanos.
+ *
+ * La fila de la grilla sigue siendo una por gestión; esto es lo que se despliega
+ * debajo cuando tiene más de una grabación.
+ */
+interface AudioDeGestion {
+  nombre: string;
+  anio: string;
+  mes: string;
+  dia: string;
+  /** Ya formateada como m:ss. Vacía si DURACION no traía valor. */
+  duracion: string;
 }
 
 @Component({
@@ -42,7 +61,9 @@ export class RecordingsTrackerComponent implements OnInit {
   // Lucide icons
   readonly Volume2 = Volume2;
   readonly FileSpreadsheet = FileSpreadsheet;
+  readonly FileText = FileText;
   readonly Download = Download;
+  readonly ChevronDown = ChevronDown;
   readonly Search = Search;
   readonly Calendar = Calendar;
   readonly X = X;
@@ -259,6 +280,11 @@ export class RecordingsTrackerComponent implements OnInit {
   }
 
   applyFilters(): void {
+    // Los despliegues abiertos no sobreviven a un cambio de resultados: la fila
+    // que estaba abierta puede no estar en la lista nueva, y dejar el idx marcado
+    // haría que se abriera sola una gestión distinta que reutilice la posición.
+    this.gestionesDesplegadas.clear();
+
     let filtered = [...this.gestiones];
 
     if (this.filterDocumento) {
@@ -370,50 +396,201 @@ export class RecordingsTrackerComponent implements OnInit {
     return pages;
   }
 
-  downloadAudio(gestion: Recording): void {
-    const anio_chain = typeof gestion.anio === 'string' ? gestion.anio.split(',') : [gestion.anio];
-    const mes_chain = typeof gestion.mes === 'string' ? gestion.mes.split(',') : [gestion.mes];
-    const dia_chain = typeof gestion.dia === 'string' ? gestion.dia.split(',') : [gestion.dia];
-    const nombre_chain = typeof gestion.nombre === 'string' ? gestion.nombre.split(',') : [gestion.nombre];
+  // ------------------------------------------------------------------ audios de la gestión
 
-    for (let i = 0; i < anio_chain.length; i++) {
-      const newFechaGestion = gestion.fechagestion.replace(/-/g, '');
+  /** Las gestiones desplegadas, por idx. Se cierra todo al hacer una búsqueda nueva. */
+  gestionesDesplegadas = new Set<number>();
 
-      const downloadHistoricoAudioRequest: RecordingDownloadRequest = {
-        anio: anio_chain[i],
-        mes: mes_chain[i],
-        dia: dia_chain[i],
-        nombre: nombre_chain[i],
-        fecha: newFechaGestion,
-        resultado: gestion.resultado,
-        telefono: gestion.telefono,
-        documento: gestion.documento,
-        cliente: gestion.cliente,
-        asesor: gestion.usuarioregistra
-      };
+  /**
+   * Los WAV de una gestión, ya separados.
+   *
+   * NOMBRE y DURACION traen un valor por archivo separado por coma; ANIO, MES y
+   * DIA traen UNO SOLO para toda la gestión aunque tenga varias grabaciones.
+   * Verificado sobre producción: de las 755 gestiones con más de un WAV, cero
+   * tienen DURACION desalineada de NOMBRE, y las 755 tienen ANIO sin partir.
+   *
+   * De ahí la regla de `alineado`: un valor único vale para todos los audios
+   * —son del mismo día, por definición—, y varios valores se toman por posición.
+   */
+  audiosDe(gestion: Recording): AudioDeGestion[] {
+    const nombres = this.partir(gestion.nombre);
+    const anios = this.partir(gestion.anio);
+    const meses = this.partir(gestion.mes);
+    const dias = this.partir(gestion.dia);
+    const duraciones = this.partir(gestion.duracion);
 
-      this.ftpService.downloadGestionHistoricaAudioFileByName(downloadHistoricoAudioRequest).subscribe({
-        next: (data: Blob) => {
-          const url = window.URL.createObjectURL(data);
-          const a = document.createElement('a');
-          a.href = url;
-          if (i > 0) {
-            a.download = `audio-${newFechaGestion}-${gestion.resultado}-${gestion.telefono}-${gestion.documento}-${gestion.cliente}-${gestion.usuarioregistra}(${i}).WAV`;
-          } else {
-            a.download = `audio-${newFechaGestion}-${gestion.resultado}-${gestion.telefono}-${gestion.documento}-${gestion.cliente}-${gestion.usuarioregistra}.WAV`;
-          }
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          this.toastService.success('Audio descargado correctamente.');
-        },
-        error: (error: any) => {
-          this.toastService.error('No se encontró el audio.');
-          console.log(error);
-        }
-      });
+    return nombres.map((nombre, i) => ({
+      nombre,
+      anio: this.alineado(anios, i),
+      mes: this.alineado(meses, i),
+      dia: this.alineado(dias, i),
+      duracion: this.formatearDuracion(this.alineado(duraciones, i))
+    }));
+  }
+
+  /**
+   * El valor que le toca al audio i.
+   *
+   * Un valor único se aplica a todos —es el caso de ANIO/MES/DIA, que describen
+   * la gestión y no el archivo—; con varios se toma el de la posición. Devolver
+   * vacío al segundo audio, como hacía antes, obligaba al backend a resolverlo
+   * por su índice global de S3 en vez de ir directo a la carpeta del día.
+   */
+  private alineado(valores: string[], i: number): string {
+    if (valores.length === 0) {
+      return '';
     }
+    return valores.length === 1 ? valores[0] : (valores[i] ?? '');
+  }
+
+  /**
+   * DURACION viene en segundos con decimales ('179.96', '1225.40'), que no le
+   * dice nada a nadie. Se muestra como m:ss.
+   */
+  private formatearDuracion(segundos: string): string {
+    const valor = Number(segundos);
+    if (!segundos || Number.isNaN(valor)) {
+      return '';
+    }
+    const total = Math.round(valor);
+    const minutos = Math.floor(total / 60);
+    const resto = total % 60;
+    return `${minutos}:${resto.toString().padStart(2, '0')}`;
+  }
+
+  private partir(valor: string): string[] {
+    if (!valor) {
+      return [];
+    }
+    return String(valor).split(',').map(parte => parte.trim()).filter(parte => parte.length > 0);
+  }
+
+  /** Cuántas grabaciones tiene la gestión. Decide si la fila se puede desplegar. */
+  cantidadAudios(gestion: Recording): number {
+    return this.partir(gestion.nombre).length;
+  }
+
+  estaDesplegada(gestion: Recording): boolean {
+    return this.gestionesDesplegadas.has(gestion.idx);
+  }
+
+  alternarDespliegue(gestion: Recording): void {
+    if (this.gestionesDesplegadas.has(gestion.idx)) {
+      this.gestionesDesplegadas.delete(gestion.idx);
+    } else {
+      this.gestionesDesplegadas.add(gestion.idx);
+    }
+  }
+
+  /**
+   * Descarga TODOS los audios de la gestión, uno por archivo.
+   *
+   * Es el botón de la fila. El asesor que quiera solo uno lo baja desde el
+   * desplegable con `downloadAudioSuelto`.
+   */
+  downloadAudio(gestion: Recording): void {
+    const audios = this.audiosDe(gestion);
+    audios.forEach((audio, i) => this.descargar(gestion, audio, i));
+  }
+
+  /** Descarga un solo WAV, el que el asesor eligió en el desplegable. */
+  downloadAudioSuelto(gestion: Recording, audio: AudioDeGestion, indice: number): void {
+    this.descargar(gestion, audio, indice);
+  }
+
+  /**
+   * El sufijo `(n)` va por POSICIÓN dentro de la gestión, no por orden de
+   * descarga: así el segundo audio se llama siempre igual, lo baje suelto o
+   * dentro de la descarga completa.
+   */
+  private descargar(gestion: Recording, audio: AudioDeGestion, indice: number): void {
+    const newFechaGestion = gestion.fechagestion.replace(/-/g, '');
+    const base = `audio-${newFechaGestion}-${gestion.resultado}-${gestion.telefono}-${gestion.documento}-${gestion.cliente}-${gestion.usuarioregistra}`;
+
+    const downloadHistoricoAudioRequest: RecordingDownloadRequest = {
+      anio: audio.anio,
+      mes: audio.mes,
+      dia: audio.dia,
+      nombre: audio.nombre,
+      fecha: newFechaGestion,
+      resultado: gestion.resultado,
+      telefono: gestion.telefono,
+      documento: gestion.documento,
+      cliente: gestion.cliente,
+      asesor: gestion.usuarioregistra
+    };
+
+    this.ftpService.downloadGestionHistoricaAudioFileByName(downloadHistoricoAudioRequest).subscribe({
+      next: (data: Blob) => {
+        const url = window.URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = indice > 0 ? `${base}(${indice}).WAV` : `${base}.WAV`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        this.toastService.success('Audio descargado correctamente.');
+      },
+      error: (error: any) => {
+        this.toastService.error('No se encontró el audio.');
+        console.log(error);
+      }
+    });
+  }
+
+  // ------------------------------------------------------------------ transcripción
+
+  /**
+   * El modal de transcripción.
+   *
+   * Los cuatro campos son estados excluyentes de la misma vista: cargando, error,
+   * sin texto (`partes` vacío) o con texto. Se separan `isLoading` y `error`
+   * porque "todavía no llegó" y "no se pudo traer" no pueden verse igual.
+   */
+  transcripcionAbierta: boolean = false;
+  transcripcionCargando: boolean = false;
+  transcripcionError: boolean = false;
+  transcripcionPartes: Transcription[] = [];
+  transcripcionGestion: Recording | null = null;
+
+  /**
+   * Abre el modal y pide el texto de la gestión.
+   *
+   * Se pide por idx y sin nombre de archivo: el botón es uno por gestión, así
+   * que trae todas las partes que haya en `audios_transcripcion` y el modal las
+   * apila rotuladas con su título.
+   *
+   * El modal se abre ANTES de que responda el backend, mostrando el estado de
+   * carga: la consulta va contra la base de producción y puede demorar, y abrir
+   * al final dejaría al supervisor sin saber si su click hizo algo.
+   */
+  verTranscripcion(gestion: Recording): void {
+    this.transcripcionGestion = gestion;
+    this.transcripcionPartes = [];
+    this.transcripcionError = false;
+    this.transcripcionCargando = true;
+    this.transcripcionAbierta = true;
+
+    this.gestionHistoricaAudiosService.getTranscripcionByIdx(gestion.idx).subscribe({
+      next: (partes: any) => {
+        this.transcripcionPartes = partes ?? [];
+        this.transcripcionCargando = false;
+      },
+      error: (error: any) => {
+        console.log(error);
+        this.transcripcionError = true;
+        this.transcripcionCargando = false;
+      }
+    });
+  }
+
+  cerrarTranscripcion(): void {
+    this.transcripcionAbierta = false;
+    this.transcripcionGestion = null;
+    this.transcripcionPartes = [];
+    this.transcripcionError = false;
+    this.transcripcionCargando = false;
   }
 
   downloadReport(gestion: Recording): void {
@@ -461,30 +638,25 @@ export class RecordingsTrackerComponent implements OnInit {
 
     const downloadHistoricoAudioRequests: RecordingDownloadRequest[] = [];
 
+    // Una petición por ARCHIVO: la masiva se lleva todas las grabaciones de cada
+    // gestión, sin importar si la fila está desplegada o no.
     audiosToDownload.forEach((gestion: Recording) => {
-      const anio_chain = typeof gestion.anio === 'string' ? gestion.anio.split(',') : [gestion.anio];
-      const mes_chain = typeof gestion.mes === 'string' ? gestion.mes.split(',') : [gestion.mes];
-      const dia_chain = typeof gestion.dia === 'string' ? gestion.dia.split(',') : [gestion.dia];
-      const nombre_chain = typeof gestion.nombre === 'string' ? gestion.nombre.split(',') : [gestion.nombre];
+      const newFechaGestion = gestion.fechagestion.replace(/-/g, '');
 
-      for (let i = 0; i < anio_chain.length; i++) {
-        const newFechaGestion = gestion.fechagestion.replace(/-/g, '');
-
-        const downloadHistoricoAudioRequest: RecordingDownloadRequest = {
-          anio: anio_chain[i],
-          mes: mes_chain[i],
-          dia: dia_chain[i],
-          nombre: nombre_chain[i],
+      this.audiosDe(gestion).forEach((audio: AudioDeGestion) => {
+        downloadHistoricoAudioRequests.push({
+          anio: audio.anio,
+          mes: audio.mes,
+          dia: audio.dia,
+          nombre: audio.nombre,
           fecha: newFechaGestion,
           resultado: gestion.resultado,
           telefono: gestion.telefono,
           documento: gestion.documento,
           cliente: gestion.cliente,
           asesor: gestion.usuarioregistra
-        };
-
-        downloadHistoricoAudioRequests.push(downloadHistoricoAudioRequest);
-      }
+        });
+      });
     });
 
     this.ftpService.downloadGestionHistoricaAudioFiles(downloadHistoricoAudioRequests).subscribe({
