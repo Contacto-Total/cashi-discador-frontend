@@ -432,30 +432,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           // Marcar timestamp cuando la llamada se activa
           this.callActivatedTimestamp = Date.now();
 
-          // [FIX] PREDICTIVA: el ACTIVE del SIP pasa ANTES del bridge real (el asesor descuelga
-          // estando parqueado). NO navegar por acá — navegar SOLO cuando el backend confirme
-          // (PREDICTIVE_CALL_CONNECTED). Si no confirma en la ventana de gracia = conexión fantasma:
-          // no navega, no cambia a TIPIFICANDO, cuelga el fantasma y deja al asesor DISPONIBLE.
-          if (this.sipService.isCurrentCallIncoming()) {
-            console.log('📞 [App] Predictiva ACTIVA — esperando confirmación del backend, NO navego por SIP');
-            this.navigationTimeout = setTimeout(() => {
-              if (!this.hasNavigatedToTypification) {
-                console.warn('👻 [App] Predictiva SIN confirmación del backend = conexión fantasma → no navego, limpio');
-                this.navigationTimeout = null;
-                this.sipService.hangup();
-                const uFantasma = this.authService.getCurrentUser();
-                const agentRolesFantasma = ['AGENT', 'ASESOR'];
-                if (uFantasma && agentRolesFantasma.includes(uFantasma.role)) {
-                  this.agentStatusService.finalizarTipificacion(uFantasma.id).subscribe({
-                    next: () => console.log('✅ [App] Fantasma: asesor de vuelta a DISPONIBLE'),
-                    error: (err) => console.error('❌ [App] Fantasma: error restaurando estado:', err)
-                  });
-                }
-              }
-            }, 8000);
-            return; // NO navegar por el ACTIVE del SIP en predictivas
-          }
-
           console.log('📞 [App] Llamada ACTIVA, esperando 1s para confirmar conexión estable...');
 
           // DELAY DE 1 SEGUNDO: Esperar a que el audio WebRTC se establezca completamente
