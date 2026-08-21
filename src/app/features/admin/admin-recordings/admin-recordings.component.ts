@@ -69,9 +69,6 @@ export class AdminRecordingsComponent implements OnInit {
   filterAgente: string = '';
   filterTipificacion: string = '';
 
-  // Search type
-  selectedTipoBusqueda: string = 'fechas';
-
   // Sort
   sortField: string = '';
   sortOrder: number = 0;
@@ -132,7 +129,7 @@ export class AdminRecordingsComponent implements OnInit {
 
   // === Search ===
 
-  changeTypeSearch(): void {
+  limpiarBusqueda(): void {
     this.startDate = '';
     this.endDate = '';
     this.documento = '';
@@ -183,10 +180,24 @@ export class AdminRecordingsComponent implements OnInit {
     return true;
   }
 
-  searchByDates(): void {
+  /**
+   * Los criterios se combinan: fecha, documento, telefono o cualquier mezcla.
+   * Basta con uno. El rango de fechas exige ambos extremos porque un rango a
+   * medias no es un rango; documento y telefono sueltos si buscan todo el historico.
+   */
+  buscar(): void {
     if (!this.validatePortfolioSelection()) return;
-    if (!this.startDate || !this.endDate) {
-      this.toastService.error('Por favor, selecciona ambas fechas.');
+
+    const doc = this.documento.trim();
+    const tel = this.telefono.trim();
+    const hayFecha = !!(this.startDate || this.endDate);
+
+    if (!hayFecha && !doc && !tel) {
+      this.toastService.error('Ingresa al menos un criterio: fechas, documento o teléfono.');
+      return;
+    }
+    if (hayFecha && !(this.startDate && this.endDate)) {
+      this.toastService.error('Para buscar por fechas indica ambas: Desde y Hasta.');
       return;
     }
     if (this.errorMessage) {
@@ -196,65 +207,14 @@ export class AdminRecordingsComponent implements OnInit {
 
     this.resetTableFilters();
     this.isLoading = true;
-    this.recordingsService.searchByDates(
+    this.recordingsService.search(
       this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
-      this.startDate, this.endDate
-    ).subscribe({
-      next: (data) => {
-        this.recordings = data;
-        this.hasSearched = true;
-        this.applyFilters();
-        this.isLoading = false;
-        this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
-      },
-      error: (err) => {
-        console.error(err);
-        this.toastService.error('No se pudo cargar los datos.');
-        this.isLoading = false;
+      {
+        fechaDesde: this.startDate || undefined,
+        fechaHasta: this.endDate || undefined,
+        documento: doc || undefined,
+        telefono: tel || undefined
       }
-    });
-  }
-
-  searchByDocumento(): void {
-    if (!this.validatePortfolioSelection()) return;
-    if (!this.documento) {
-      this.toastService.error('Por favor, ingresa un documento.');
-      return;
-    }
-
-    this.resetTableFilters();
-    this.isLoading = true;
-    this.recordingsService.searchByDocumento(
-      this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
-      this.documento
-    ).subscribe({
-      next: (data) => {
-        this.recordings = data;
-        this.hasSearched = true;
-        this.applyFilters();
-        this.isLoading = false;
-        this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
-      },
-      error: (err) => {
-        console.error(err);
-        this.toastService.error('No se pudo cargar los datos.');
-        this.isLoading = false;
-      }
-    });
-  }
-
-  searchByTelefono(): void {
-    if (!this.validatePortfolioSelection()) return;
-    if (!this.telefono) {
-      this.toastService.error('Por favor, ingresa un teléfono.');
-      return;
-    }
-
-    this.resetTableFilters();
-    this.isLoading = true;
-    this.recordingsService.searchByTelefono(
-      this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId,
-      this.telefono
     ).subscribe({
       next: (data) => {
         this.recordings = data;

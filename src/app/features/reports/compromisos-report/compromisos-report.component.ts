@@ -149,13 +149,18 @@ import { AppDatePipe, AppNumberPipe } from '@/shared/pipes/format.pipes';
                      focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
           </div>
 
-          <!-- Nombre -->
+          <!-- Tipo de Promesa -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
-            <input type="text" [(ngModel)]="filtros.nombre" placeholder="Buscar por nombre..."
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo de Promesa</label>
+            <select [(ngModel)]="filtros.tipoPromesa"
+              title="Convenios: el cronograma se reparte en 2 o mas meses. Dentro del Mes: todas las cuotas caen en un solo mes."
               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500" />
+                     focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+              <option value="">Todos</option>
+              <option value="CONVENIO">Convenios</option>
+              <option value="DENTRO_MES">Dentro del Mes</option>
+            </select>
           </div>
 
           <!-- Botones -->
@@ -431,7 +436,7 @@ export class CompromisosReportComponent implements OnInit {
     estadoPago: '',
     rutaNivel2: '',
     documento: '',
-    nombre: ''
+    tipoPromesa: ''
   };
 
   constructor(
@@ -524,7 +529,7 @@ export class CompromisosReportComponent implements OnInit {
       this.filtros.estadoPago || undefined,
       this.filtros.rutaNivel2 || undefined,
       this.filtros.documento || undefined,
-      this.filtros.nombre || undefined,
+      this.filtros.tipoPromesa || undefined,
       page,
       this.pageSize
     ).subscribe({
@@ -573,7 +578,7 @@ export class CompromisosReportComponent implements OnInit {
       this.filtros.estadoPago || undefined,
       this.filtros.rutaNivel2 || undefined,
       this.filtros.documento || undefined,
-      this.filtros.nombre || undefined
+      this.filtros.tipoPromesa || undefined
     ).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
