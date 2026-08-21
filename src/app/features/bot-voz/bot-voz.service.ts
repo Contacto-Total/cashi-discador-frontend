@@ -7,7 +7,8 @@ export interface BotConfig {
   id?: number;
   activo: boolean;
   // `modoRitmo` e `idRitmoActivo` se quitaron: elegian el ritmo del armado GLOBAL,
-  // que ya no existe. Cada cola elige el suyo con su propio `modoRitmo`.
+  // que ya no existe. Y el calendario de ritmos entero murio despues: cada cola lleva
+  // ahora su propio `intentosMaximos`.
   horaInicio: string;             // HH:mm:ss
   horaFin: string;
   diasSemana: string;
@@ -18,28 +19,11 @@ export interface BotConfig {
   fechaActualizacion?: string | null;
 }
 
-/**
- * El calendario de intensidad, global para todas las carteras. Sus números van POR
- * TAREA, porque cada uno solo significa algo en una de ellas:
- *
- *   TAREA                    diasAnticipacion   maxDiasVencida   intentos
- *   Recordatorio                    sí                --            sí
- *   PDP de cuota vencida            --                sí            sí
- *   1ª PDP                          --                --            sí
- */
-export interface BotRitmo {
-  id: number;
-  nombre: string;
-  diaMesDesde: number;
-  diaMesHasta: number;
-  /** Solo recordatorios: con cuántos días de adelanto se avisa. */
-  diasAnticipacion: number;
-  /** Solo vencidas: ancho de la ventana hacia atrás, en días. Techo 3. */
-  maxDiasVencida: number;
-  intentosRecordatorio: number;
-  intentosVencida: number;
-  intentosPrimera: number;
-}
+// `BotRitmo` se elimino junto con la tabla `bot_ritmo`. Elegia cuanto apretar POR EL
+// DIA DEL MES y era uno solo para todas las carteras: bajar los intentos de una cola
+// se los bajaba a las de los demas, y nadie habia decidido nada para esa cartera. Los
+// numeros que de verdad hacian falta —intentos, dias de anticipacion y ancho de la
+// ventana de vencidas— viven ahora en cada `BotCola`.
 
 /**
  * Una cola de discado del bot: se crea eligiendo una subcartera y se arranca con un
@@ -53,30 +37,59 @@ export interface BotCola {
   idInquilino?: number;
   idCartera?: number;
   idSubcartera: number;
-  /** Coma-separados: RECORDATORIO | CREACION | PRIMER_CONTACTO */
+  /**
+   * El UNICO objetivo: RECORDATORIO | CREACION | PRIMER_CONTACTO.
+   *
+   * El campo se sigue llamando `objetivos` y sigue siendo texto —renombrarlo obligaba
+   * a migrar datos para no ganar nada—, pero ya no es una lista separada por comas: el
+   * backend devuelve 400 si llega mas de uno. Con varios no habia forma de decir
+   * cuantos intentos tocaban, porque los intentos son UNO por cola desde que murio el
+   * calendario de ritmos.
+   */
   objetivos: string;
-  /** Tono de respaldo: se usa en los objetivos que no tengan uno propio. */
+  /**
+   * Con que voz habla. Los tres tonos por objetivo (`idTonoRecordatorio`, `idTonoVencida`
+   * e `idTonoPrimera`) se fueron con los objetivos multiples: su bloque del formulario
+   * pedia dos objetivos o mas para pintarse, asi que con uno por cola era una pantalla
+   * que no se podia alcanzar ni para quitar lo que ya tuviera guardado.
+   */
   idTono?: number | null;
-  idTonoRecordatorio?: number | null;
-  idTonoVencida?: number | null;
-  idTonoPrimera?: number | null;
-  idRitmo?: number | null;
-  /** AUTO = el ritmo lo decide el día del mes. MANUAL = el ritmo fijado arriba. */
-  modoRitmo?: string;
+  /**
+   * Los tres numeros de esta cola. Estaban en el calendario de ritmos, que era unico
+   * para todas las carteras y elegia por el dia del mes: la cola apretaba "porque
+   * estamos a 21" y no porque nadie lo hubiera decidido para ella.
+   *
+   * Vacio NO significa "hereda" —ya no hay de quien heredar—, significa "el de por
+   * defecto", y el backend los rellena al guardar porque en la base son NOT NULL.
+   * `diasAnticipacion` solo cuenta con RECORDATORIO y `maxDiasVencida` solo con
+   * CREACION; por eso el formulario ensena cada uno solo cuando toca.
+   */
+  intentosMaximos?: number | null;
+  diasAnticipacion?: number | null;
+  maxDiasVencida?: number | null;
+  /**
+   * Cuando se armo por PRIMERA vez, y el criterio con el que el backend ordena la
+   * lista. Puede venir null: una cola creada y nunca armada no ha empezado a trabajar.
+   */
+  fechaLanzamiento?: string | null;
   /**
    * El horario vacío se queda en la ventana legal; una cola solo puede estrecharla.
    *
    * `maxLlamadasSimultaneas` NO hereda de nadie: es el número de esta cola, entre 1 y
    * 5. Vacío vale 1.
-   *
-   * Los números de intensidad —días de anticipación, ancho de vencidas e intentos— ya
-   * no están aquí: los pone el ritmo, y por tarea. La cola dice a quién se llama.
    */
   horaInicio?: string | null;
   horaFin?: string | null;
   diasSemana?: string | null;
   maxLlamadasSimultaneas?: number | null;
-  estado?: string;               // BORRADOR | LISTA | CERRADA
+  /**
+   * BORRADOR | LISTA | PAUSADA | FINALIZADA.
+   *
+   * FINALIZADA la pone el SISTEMA, nunca un usuario: la escribe el discador cuando a
+   * la cola no le queda ni una fila viva. Por eso hay que recargar las colas cada pocos
+   * segundos — sin recargar, la tarjeta se queda diciendo "Discando" para siempre.
+   */
+  estado?: string;
   estaDiscando?: boolean;
   /** Por qué dejó de discar. Vacío = la paró una persona. */
   motivoPausa?: string | null;
@@ -182,11 +195,18 @@ export interface BotContacto {
   fechaPromesa?: string;
   estadoCuota?: string;
   telefono: string;
-  idRitmo?: number;
   idCola?: number;
   tipoObjetivo?: string;
   estado: string;
   intentos: number;
+  /**
+   * Con cuantos intentos nacio la fila, copiados de la cola al armar.
+   *
+   * Sin esto, "3 veces marcado" no dice si le quedan intentos o si ya se agoto: el
+   * tope estaba en el ritmo, que es global, y podia haber cambiado entre el armado y
+   * la llamada.
+   */
+  maxIntentos?: number;
   resultado?: string;
   proximoIntentoAt?: string;
 }
@@ -253,8 +273,8 @@ export class BotVozService {
     return this.http.get<BotTurno[]>(`${this.apiUrl}/sesiones/${idSesion}/turnos`);
   }
 
-  getRitmos(): Observable<BotRitmo[]> { return this.http.get<BotRitmo[]>(`${this.apiUrl}/ritmos`); }
-  actualizarRitmo(id: number, p: Partial<BotRitmo>): Observable<BotRitmo> { return this.http.put<BotRitmo>(`${this.apiUrl}/ritmos/${id}`, p); }
+  // `getRitmos`/`actualizarRitmo` se fueron con la tabla: los dos endpoints devuelven
+  // 404. Los numeros que editaban se guardan hoy en cada cola.
 
   // ---- Colas: definir, armar, iniciar y detener ----
 
@@ -264,19 +284,55 @@ export class BotVozService {
     return this.http.get<any>(`${this.apiUrl}/permisos`);
   }
 
+  /** Ya llegan ORDENADAS por fecha de lanzamiento, la ultima arriba. Aqui no se
+   *  reordenan: dos criterios de orden es como se acaba viendo una lista distinta
+   *  segun por donde entres. Lo unico que hace el navegador es filtrar. */
   getColas(): Observable<BotCola[]> { return this.http.get<BotCola[]>(`${this.apiUrl}/colas`); }
+  /** 400 con `{error}` si `objetivos` no trae exactamente uno de los tres valores:
+   *  una cola con dos no sabria cuantos intentos aplicarle a cada tarea. */
   crearCola(c: BotCola): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas`, c); }
+  /** Mismo 400 con `{error}` que al crear cuando llega mas de un objetivo. */
   actualizarCola(id: number, c: Partial<BotCola>): Observable<BotCola> {
     return this.http.put<BotCola>(`${this.apiUrl}/colas/${id}`, c);
   }
-  /** Rellena la cola del dia con los clientes de SU subcartera. */
+  /**
+   * Anade a la cola los clientes de SU subcartera que todavia no estan dentro.
+   *
+   * Rearmar ya no borra ni rehace lo pendiente: solo ANADE. Un telefono entra en una
+   * cola una vez en toda su vida, asi que rearmar no duplica ni pone a cero los
+   * intentos ya gastados. Devuelve 409 con `{error}` si la cola tiene mas de un
+   * objetivo guardado de antes: es un dato que hay que arreglar, no una averia.
+   */
   armarColaDe(id: number): Observable<any> { return this.http.post<any>(`${this.apiUrl}/colas/${id}/armar`, {}); }
   eliminarCola(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/colas/${id}`);
   }
-  /** El boton. Arrancar y parar no pierden lo encolado. */
+  /**
+   * El boton. Arrancar y parar no pierden lo encolado.
+   *
+   * Devuelve 409 SIN CUERPO si la cola esta FINALIZADA, y no toca nada: el sistema la
+   * cerro porque no le quedaba ni una fila viva, asi que encenderla no marcaria a
+   * nadie y la pantalla diria "Discando" sobre una cola vacia. La unica salida de
+   * FINALIZADA es volver a armarla.
+   */
   iniciarCola(id: number): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas/${id}/iniciar`, {}); }
+  /** Pausa. No cierra nada: se retoma donde quedo, con los intentos ya gastados. */
   detenerCola(id: number): Observable<BotCola> { return this.http.post<BotCola>(`${this.apiUrl}/colas/${id}/detener`, {}); }
+
+  /**
+   * Como esta cada cola, contado en la base: seis numeros por cola en una consulta.
+   *
+   * La pantalla contaba los pendientes de cada tarjeta bajandose la cola entera y
+   * filtrando en el navegador. Eso se sostenia mientras "la cola" fuera la del dia;
+   * sin dias seria traerse todas las filas de todas las colas cada cinco segundos
+   * para pintar un numero.
+   */
+  getContadores(): Observable<Array<{ idCola: number; pendientes: number; enLlamada: number;
+                                      completadas: number; descartadas: number; total: number }>> {
+    return this.http.get<Array<{ idCola: number; pendientes: number; enLlamada: number;
+                                 completadas: number; descartadas: number; total: number }>>(
+      `${this.apiUrl}/colas/contadores`);
+  }
 
   /**
    * Las condiciones de negociación de esta cola, o null si no tiene propias.
@@ -375,7 +431,9 @@ export class BotVozService {
    */
   preview(idSubcartera: number, req: {
     idCola?: number | null; idInquilino: number; idCartera: number;
-    objetivos: string; modoRitmo?: string; idRitmo?: number | null;
+    objetivos: string;
+    intentosMaximos?: number | null; diasAnticipacion?: number | null;
+    maxDiasVencida?: number | null;
     filtros: BotColaFiltro[];
   }): Observable<{ entran?: number; candidatos?: number; error?: string }> {
     return this.http.post<any>(`${this.apiUrl}/subcarteras/${idSubcartera}/preview`, req);
@@ -390,13 +448,19 @@ export class BotVozService {
   }
 
 
-  getCola(fecha?: string): Observable<BotContacto[]> {
-    const q = fecha ? `?fecha=${fecha}` : '';
-    return this.http.get<BotContacto[]>(`${this.apiUrl}/cola${q}`);
+  /**
+   * Las filas de UNA cola. `idCola` es obligatorio: sin el, el backend responde 400.
+   *
+   * Antes esto era "la cola del dia" y el dia lo ponia el servidor, asi que se podia
+   * pedir a secas. Sin dias, pedirlo todo seria bajarse las filas de todas las colas
+   * que han existido para pintar el detalle de una.
+   */
+  getCola(idCola: number): Observable<BotContacto[]> {
+    return this.http.get<BotContacto[]>(`${this.apiUrl}/cola?idCola=${idCola}`);
   }
-  getDescartes(fecha?: string): Observable<any[]> {
-    const q = fecha ? `?fecha=${fecha}` : '';
-    return this.http.get<any[]>(`${this.apiUrl}/cola/descartes${q}`);
+  /** Los descartes de esa cola. Tambien exige `idCola`, y por lo mismo. */
+  getDescartes(idCola: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/cola/descartes?idCola=${idCola}`);
   }
 
   /**
