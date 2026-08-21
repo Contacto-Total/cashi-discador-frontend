@@ -6763,6 +6763,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     });
     this.syncEmailsMetodoFromCurrentData();
+    // [FIX] Datos básicos ya mostrables: apagar el spinner acá para que NUNCA quede colgado.
+    // El lookup dinámico de abajo solo enriquece; si viene null/error no debe dejar el overlay tapando la ficha.
+    this.isLoadingCustomer.set(false);
 
     // Cargar historial de gestiones del cliente
     this.loadManagementHistory();

@@ -192,6 +192,9 @@
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
               </button>
             </th>
+            <!-- Texto -->
+            <th class="px-2 py-2"></th>
+            <!-- Reporte -->
             <th class="px-2 py-2"></th>
           </tr>
 
@@ -247,11 +250,13 @@
             </th>
             <th class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap">Solución</th>
             <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Audio</th>
+            <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Transcripciones</th>
             <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Reporte</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let gestion of paginatedGestiones" class="transition-colors even:bg-slate-900/30 hover:bg-blue-500/10">
+          <ng-container *ngFor="let gestion of paginatedGestiones">
+          <tr class="transition-colors even:bg-slate-900/30 hover:bg-blue-500/10">
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.documento }}</td>
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.cartera }}</td>
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.telefono }}</td>
@@ -264,11 +269,50 @@
             </td>
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.solucion }}</td>
             <td class="px-2 py-2 text-center border-b border-slate-700">
+              <!--
+                Una fila = una gestion. El boton baja TODAS sus grabaciones; el
+                chevron de al lado despliega la lista para elegir de a una.
+              -->
+              <div class="inline-flex items-center gap-1">
+                <button
+                  (click)="downloadAudio(gestion)"
+                  class="relative inline-flex items-center justify-center w-7 h-7 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
+                  [title]="cantidadAudios(gestion) > 1
+                    ? 'Descargar los ' + cantidadAudios(gestion) + ' audios de la gestión'
+                    : 'Descargar audio'">
+                  <lucide-angular [img]="Volume2" [size]="14"></lucide-angular>
+                  <span
+                    *ngIf="cantidadAudios(gestion) > 1"
+                    class="absolute -top-1.5 -right-1.5 min-w-[15px] h-[15px] px-1 flex items-center justify-center bg-indigo-500 text-white text-[9px] font-bold leading-none rounded-full ring-1 ring-slate-900">
+                    {{ cantidadAudios(gestion) }}
+                  </span>
+                </button>
+
+                <button
+                  *ngIf="cantidadAudios(gestion) > 1"
+                  (click)="alternarDespliegue(gestion)"
+                  class="inline-flex items-center justify-center w-5 h-7 text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                  [title]="estaDesplegada(gestion) ? 'Ocultar audios' : 'Ver audios por separado'">
+                  <lucide-angular
+                    [img]="ChevronDown"
+                    [size]="14"
+                    class="transition-transform"
+                    [class.rotate-180]="estaDesplegada(gestion)"></lucide-angular>
+                </button>
+              </div>
+            </td>
+            <td class="px-2 py-2 text-center border-b border-slate-700">
+              <!--
+                Uno por gestion, igual que el reporte. Siempre visible: el listado
+                no sabe cuales tienen texto, y averiguarlo obligaria a cruzar
+                audios_transcripcion en las cuatro busquedas, que ya recorren la
+                tabla sin indices. El modal se encarga de decir cuando no hay nada.
+              -->
               <button
-                (click)="downloadAudio(gestion)"
-                class="inline-flex items-center justify-center w-7 h-7 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
-                title="Descargar audio">
-                <lucide-angular [img]="Volume2" [size]="14"></lucide-angular>
+                (click)="verTranscripcion(gestion)"
+                class="inline-flex items-center justify-center w-7 h-7 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-500/30 cursor-pointer"
+                title="Ver transcripción">
+                <lucide-angular [img]="FileText" [size]="14"></lucide-angular>
               </button>
             </td>
             <td class="px-2 py-2 text-center border-b border-slate-700">
@@ -281,6 +325,40 @@
               </button>
             </td>
           </tr>
+
+          <!--
+            Desplegable de audios. Solo existe cuando la gestion tiene mas de una
+            grabacion; ahi el asesor elige cual bajar en vez de llevarse todas.
+            El colspan abarca la tabla entera para que la sub-fila no herede el
+            ancho de las columnas de arriba.
+          -->
+          <tr *ngIf="estaDesplegada(gestion)" class="bg-slate-900/60">
+            <td colspan="10" class="px-3 py-2 border-b border-slate-700">
+              <p class="text-slate-400 text-[11px] font-medium mb-1.5">
+                {{ cantidadAudios(gestion) }} grabaciones de esta gestión
+              </p>
+              <div class="flex flex-col gap-1">
+                <div
+                  *ngFor="let audio of audiosDe(gestion); let i = index"
+                  class="flex items-center gap-2 px-2 py-1 bg-slate-800/70 border border-slate-700 rounded">
+                  <span class="text-slate-500 text-[10px] w-4 shrink-0">{{ i + 1 }}</span>
+                  <span class="text-slate-200 text-[11px] font-mono truncate flex-1" [title]="audio.nombre">
+                    {{ audio.nombre }}
+                  </span>
+                  <span *ngIf="audio.duracion" class="text-slate-400 text-[11px] font-mono whitespace-nowrap shrink-0">
+                    {{ audio.duracion }}
+                  </span>
+                  <button
+                    (click)="downloadAudioSuelto(gestion, audio, i)"
+                    class="shrink-0 inline-flex items-center justify-center w-6 h-6 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-colors cursor-pointer"
+                    title="Descargar este audio">
+                    <lucide-angular [img]="Download" [size]="12"></lucide-angular>
+                  </button>
+                </div>
+              </div>
+            </td>
+          </tr>
+          </ng-container>
         </tbody>
       </table>
     </div>
@@ -351,5 +429,82 @@
   <!-- Empty State -->
   <div *ngIf="gestiones.length === 0 && !isLoading" class="bg-slate-800 p-8 rounded-lg text-center">
     <p class="text-slate-400 text-sm">No hay grabaciones para mostrar. Realiza una búsqueda para ver resultados.</p>
+  </div>
+
+  <!--
+    Modal de transcripción.
+
+    El click en el fondo cierra; el del panel no, por eso el $event.stopPropagation().
+    Sin eso, seleccionar texto dentro del panel cerraría el modal a mitad del arrastre.
+  -->
+  <div
+    *ngIf="transcripcionAbierta"
+    (click)="cerrarTranscripcion()"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div
+      (click)="$event.stopPropagation()"
+      class="bg-slate-800 border border-slate-700 rounded-lg shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+
+      <!-- Cabecera -->
+      <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-700">
+        <div class="min-w-0">
+          <h3 class="text-slate-100 text-sm font-semibold flex items-center gap-2">
+            <lucide-angular [img]="FileText" [size]="16" class="text-sky-300"></lucide-angular>
+            Transcripción
+          </h3>
+          <div *ngIf="transcripcionGestion" class="mt-1">
+            <p class="text-slate-400 text-xs truncate">
+              {{ transcripcionGestion.cliente }} · DNI {{ transcripcionGestion.documento }} ·
+              {{ transcripcionGestion.fechagestion }} {{ transcripcionGestion.horagestion }} ·
+              {{ transcripcionGestion.usuarioregistra }}
+            </p>
+            <!-- Los WAV de la gestión, para saber sobre qué audios corre el texto. -->
+            <p class="text-slate-500 text-[11px] font-mono truncate mt-0.5">
+              {{ transcripcionGestion.nombre }}
+            </p>
+          </div>
+        </div>
+        <button
+          (click)="cerrarTranscripcion()"
+          class="shrink-0 inline-flex items-center justify-center w-7 h-7 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors cursor-pointer"
+          title="Cerrar">
+          <lucide-angular [img]="X" [size]="14"></lucide-angular>
+        </button>
+      </div>
+
+      <!-- Cuerpo: cargando / error / sin texto / con texto -->
+      <div class="p-4 overflow-y-auto">
+        <p *ngIf="transcripcionCargando" class="text-slate-400 text-sm text-center py-6">
+          Cargando transcripción...
+        </p>
+
+        <div
+          *ngIf="!transcripcionCargando && transcripcionError"
+          class="p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded text-xs">
+          No se pudo obtener la transcripción. Intenta nuevamente.
+        </div>
+
+        <p
+          *ngIf="!transcripcionCargando && !transcripcionError && transcripcionPartes.length === 0"
+          class="text-slate-400 text-sm text-center py-6">
+          Esta gestión no tiene transcripción registrada.
+        </p>
+
+        <div *ngIf="!transcripcionCargando && !transcripcionError && transcripcionPartes.length > 0" class="space-y-4">
+          <div *ngFor="let parte of transcripcionPartes; let i = index">
+            <!-- El título solo aporta cuando hay varias partes: es el WAV de origen. -->
+            <p *ngIf="transcripcionPartes.length > 1" class="text-slate-400 text-[11px] font-medium mb-1 truncate">
+              Parte {{ i + 1 }} de {{ transcripcionPartes.length }} · {{ parte.titulo }}
+            </p>
+            <!--
+              whitespace-pre-wrap conserva los saltos de línea con los que el
+              pipeline separa los turnos de habla; sin eso el diálogo entero se
+              ve como un único párrafo.
+            -->
+            <p class="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900/50 border border-slate-700 rounded p-3">{{ parte.transcripcion }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
