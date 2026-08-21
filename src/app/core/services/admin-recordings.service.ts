@@ -29,38 +29,24 @@ export class AdminRecordingsService {
 
   constructor(private http: HttpClient) {}
 
-  searchByDates(tenantId: number, portfolioId: number, subPortfolioId: number,
-                fechaDesde: string, fechaHasta: string): Observable<RecordingDTO[]> {
-    const params = new HttpParams()
+  /**
+   * Busqueda combinable: fecha, documento, telefono o cualquier mezcla de los tres.
+   * Los criterios vacios no se mandan; el backend exige al menos uno.
+   */
+  search(tenantId: number, portfolioId: number, subPortfolioId: number,
+         criterios: { fechaDesde?: string; fechaHasta?: string; documento?: string; telefono?: string }
+        ): Observable<RecordingDTO[]> {
+    let params = new HttpParams()
       .set('tenantId', tenantId.toString())
       .set('portfolioId', portfolioId.toString())
-      .set('subPortfolioId', subPortfolioId.toString())
-      .set('fechaDesde', fechaDesde)
-      .set('fechaHasta', fechaHasta);
+      .set('subPortfolioId', subPortfolioId.toString());
 
-    return this.http.get<RecordingDTO[]>(`${this.apiUrl}/search/dates`, { params });
-  }
+    if (criterios.fechaDesde) params = params.set('fechaDesde', criterios.fechaDesde);
+    if (criterios.fechaHasta) params = params.set('fechaHasta', criterios.fechaHasta);
+    if (criterios.documento)  params = params.set('documento', criterios.documento);
+    if (criterios.telefono)   params = params.set('telefono', criterios.telefono);
 
-  searchByDocumento(tenantId: number, portfolioId: number, subPortfolioId: number,
-                    documento: string): Observable<RecordingDTO[]> {
-    const params = new HttpParams()
-      .set('tenantId', tenantId.toString())
-      .set('portfolioId', portfolioId.toString())
-      .set('subPortfolioId', subPortfolioId.toString())
-      .set('documento', documento);
-
-    return this.http.get<RecordingDTO[]>(`${this.apiUrl}/search/documento`, { params });
-  }
-
-  searchByTelefono(tenantId: number, portfolioId: number, subPortfolioId: number,
-                   telefono: string): Observable<RecordingDTO[]> {
-    const params = new HttpParams()
-      .set('tenantId', tenantId.toString())
-      .set('portfolioId', portfolioId.toString())
-      .set('subPortfolioId', subPortfolioId.toString())
-      .set('telefono', telefono);
-
-    return this.http.get<RecordingDTO[]>(`${this.apiUrl}/search/telefono`, { params });
+    return this.http.get<RecordingDTO[]>(`${this.apiUrl}/search`, { params });
   }
 
   downloadAudio(uuid: string): Observable<Blob> {

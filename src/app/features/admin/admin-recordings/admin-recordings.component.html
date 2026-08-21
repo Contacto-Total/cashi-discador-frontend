@@ -50,48 +50,40 @@
 
       <div class="filter-divider"></div>
 
-      <!-- Tipo de busqueda -->
+      <!-- Criterios de busqueda: se combinan entre si, basta con uno -->
       <div class="filter-group">
-        <label>Buscar por</label>
-        <select [(ngModel)]="selectedTipoBusqueda" (change)="changeTypeSearch()">
-          <option value="fechas">Fechas</option>
-          <option value="documento">Documento</option>
-          <option value="telefono">Teléfono</option>
-        </select>
+        <label>Desde</label>
+        <input type="date" [(ngModel)]="startDate" (change)="validateDates()">
+      </div>
+      <div class="filter-group">
+        <label>Hasta</label>
+        <input type="date" [(ngModel)]="endDate" (change)="validateDates()">
       </div>
 
-      <!-- Search by Dates -->
-      <ng-container *ngIf="selectedTipoBusqueda === 'fechas'">
-        <div class="filter-group">
-          <label>Desde</label>
-          <input type="date" [(ngModel)]="startDate" (change)="validateDates()">
-        </div>
-        <div class="filter-group">
-          <label>Hasta</label>
-          <input type="date" [(ngModel)]="endDate" (change)="validateDates()">
-        </div>
-      </ng-container>
-
-      <!-- Search by Document -->
-      <div class="filter-group" *ngIf="selectedTipoBusqueda === 'documento'">
+      <div class="filter-group">
         <label>Documento</label>
-        <input type="text" [(ngModel)]="documento" placeholder="Ingrese documento"
-               (keyup.enter)="searchByDocumento()">
+        <input type="text" [(ngModel)]="documento" placeholder="Opcional"
+               (keyup.enter)="buscar()">
       </div>
 
-      <!-- Search by Phone -->
-      <div class="filter-group" *ngIf="selectedTipoBusqueda === 'telefono'">
+      <div class="filter-group">
         <label>Teléfono</label>
-        <input type="text" [(ngModel)]="telefono" placeholder="Ingrese teléfono"
-               (keyup.enter)="searchByTelefono()">
+        <input type="text" [(ngModel)]="telefono" placeholder="Opcional"
+               (keyup.enter)="buscar()">
       </div>
 
       <!-- Search Button -->
       <div class="filter-group filter-action">
-        <button class="btn-primary" [disabled]="isLoading"
-                (click)="selectedTipoBusqueda === 'fechas' ? searchByDates() : selectedTipoBusqueda === 'documento' ? searchByDocumento() : searchByTelefono()">
+        <button class="btn-primary" [disabled]="isLoading" (click)="buscar()">
           <lucide-angular [img]="isLoading ? Loader : Search" [size]="16" [class.spin]="isLoading"></lucide-angular>
           <span>{{ isLoading ? 'Buscando...' : 'Buscar' }}</span>
+        </button>
+      </div>
+
+      <div class="filter-group filter-action">
+        <button class="btn-secondary" [disabled]="isLoading" (click)="limpiarBusqueda()">
+          <lucide-angular [img]="X" [size]="16"></lucide-angular>
+          <span>Limpiar</span>
         </button>
       </div>
 
