@@ -11,6 +11,13 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 
+/**
+ * Tope del rango de fechas de la busqueda. Es el unico freno que existe hoy:
+ * el backend no valida el rango, asi que este numero es la unica proteccion
+ * contra una consulta de meses sobre una subcartera con volumen.
+ */
+const MAX_DIAS_RANGO = 31;
+
 @Component({
   selector: 'app-admin-recordings',
   standalone: true,
@@ -165,8 +172,8 @@ export class AdminRecordingsComponent implements OnInit {
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays > 7) {
-        this.errorMessage = 'La diferencia entre las fechas no puede ser mayor a 7 días.';
+      if (diffDays > MAX_DIAS_RANGO) {
+        this.errorMessage = `La diferencia entre las fechas no puede ser mayor a ${MAX_DIAS_RANGO} días.`;
       }
     }
   }
