@@ -33,6 +33,11 @@ interface Recording {
   nombre: string;
   /** Segundos con decimales por archivo: '179.96' o '8.04,8.12,45.92'. */
   duracion: string;
+  /**
+   * Si hay texto en `audios_transcripcion` para esta gestión. Lo calcula el
+   * backend al armar el listado; decide si se dibuja el botón de transcripción.
+   */
+  tieneTranscripcion: boolean;
 }
 
 /**
@@ -547,6 +552,11 @@ export class RecordingsTrackerComponent implements OnInit {
    * Los cuatro campos son estados excluyentes de la misma vista: cargando, error,
    * sin texto (`partes` vacío) o con texto. Se separan `isLoading` y `error`
    * porque "todavía no llegó" y "no se pudo traer" no pueden verse igual.
+   *
+   * El estado "sin texto" sigue existiendo aunque el botón ya solo aparezca en las
+   * gestiones que tienen transcripción: `tieneTranscripcion` es una foto del
+   * momento en que se cargó la grilla, y el pipeline puede rehacer esa fila
+   * mientras el supervisor mira la pantalla.
    */
   transcripcionAbierta: boolean = false;
   transcripcionCargando: boolean = false;
