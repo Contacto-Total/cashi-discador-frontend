@@ -60,7 +60,11 @@ export class AdminRecordingsComponent implements OnInit {
   endDate: string = '';
   documento: string = '';
   telefono: string = '';
+  rutaNivel1: string = '';
   errorMessage: string = '';
+
+  /** Tipificaciones de nivel 1 para el combo del filtro. */
+  tipificaciones: string[] = [];
 
   // Filter fields
   filterDocumento: string = '';
@@ -90,6 +94,14 @@ export class AdminRecordingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTenants();
+    this.loadTipificaciones();
+  }
+
+  private loadTipificaciones(): void {
+    this.recordingsService.getTipificaciones().subscribe({
+      next: (data) => this.tipificaciones = data,
+      error: (err) => console.error('No se pudieron cargar las tipificaciones', err)
+    });
   }
 
   // === Cascade selectors ===
@@ -134,6 +146,7 @@ export class AdminRecordingsComponent implements OnInit {
     this.endDate = '';
     this.documento = '';
     this.telefono = '';
+    this.rutaNivel1 = '';
     this.errorMessage = '';
   }
 
@@ -190,10 +203,11 @@ export class AdminRecordingsComponent implements OnInit {
 
     const doc = this.documento.trim();
     const tel = this.telefono.trim();
+    const ruta = this.rutaNivel1.trim();
     const hayFecha = !!(this.startDate || this.endDate);
 
-    if (!hayFecha && !doc && !tel) {
-      this.toastService.error('Ingresa al menos un criterio: fechas, documento o teléfono.');
+    if (!hayFecha && !doc && !tel && !ruta) {
+      this.toastService.error('Ingresa al menos un criterio: fechas, documento, teléfono o tipificación.');
       return;
     }
     if (hayFecha && !(this.startDate && this.endDate)) {
@@ -213,7 +227,8 @@ export class AdminRecordingsComponent implements OnInit {
         fechaDesde: this.startDate || undefined,
         fechaHasta: this.endDate || undefined,
         documento: doc || undefined,
-        telefono: tel || undefined
+        telefono: tel || undefined,
+        rutaNivel1: ruta || undefined
       }
     ).subscribe({
       next: (data) => {

@@ -34,7 +34,7 @@ export class AdminRecordingsService {
    * Los criterios vacios no se mandan; el backend exige al menos uno.
    */
   search(tenantId: number, portfolioId: number, subPortfolioId: number,
-         criterios: { fechaDesde?: string; fechaHasta?: string; documento?: string; telefono?: string }
+         criterios: { fechaDesde?: string; fechaHasta?: string; documento?: string; telefono?: string; rutaNivel1?: string }
         ): Observable<RecordingDTO[]> {
     let params = new HttpParams()
       .set('tenantId', tenantId.toString())
@@ -45,8 +45,14 @@ export class AdminRecordingsService {
     if (criterios.fechaHasta) params = params.set('fechaHasta', criterios.fechaHasta);
     if (criterios.documento)  params = params.set('documento', criterios.documento);
     if (criterios.telefono)   params = params.set('telefono', criterios.telefono);
+    if (criterios.rutaNivel1) params = params.set('rutaNivel1', criterios.rutaNivel1);
 
     return this.http.get<RecordingDTO[]>(`${this.apiUrl}/search`, { params });
+  }
+
+  /** Tipificaciones de nivel 1 activas, para el combo del filtro. */
+  getTipificaciones(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/tipificaciones`);
   }
 
   downloadAudio(uuid: string): Observable<Blob> {
