@@ -142,7 +142,13 @@
           <!-- Filter Row -->
           <tr class="border-b border-slate-700">
             <th class="px-2 py-2">
-              <div class="relative">
+              <!--
+                min-w: el input es w-full, asi que sin un minimo se encoge a lo
+                que la tabla le quiera dar a la columna. Como el ancho lo fija
+                el contenido —un DNI de 8 digitos—, la caja quedaba tan angosta
+                que la lupa se comia el placeholder y no se leia ni lo tipeado.
+              -->
+              <div class="relative min-w-[130px]">
                 <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
                 <input
                   type="text"
@@ -162,7 +168,8 @@
               </app-custom-select>
             </th>
             <th class="px-2 py-2">
-              <div class="relative">
+              <!-- Mismo minimo que el de DNI; ver la nota de esa columna. -->
+              <div class="relative min-w-[130px]">
                 <lucide-angular [img]="Search" [size]="14" class="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></lucide-angular>
                 <input
                   type="text"
@@ -184,15 +191,17 @@
               </app-custom-select>
             </th>
             <th class="px-2 py-2"></th>
+            <!-- Asesor -->
+            <th class="px-2 py-2"></th>
             <th class="px-2 py-2 text-center">
               <button
                 (click)="clearFilters()"
-                class="inline-flex items-center justify-center w-full px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs rounded transition-colors cursor-pointer"
+                class="inline-flex items-center justify-center w-full px-2 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-700 dark:text-slate-300 text-xs rounded transition-colors cursor-pointer"
                 title="Limpiar filtros">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
               </button>
             </th>
-            <!-- Texto -->
+            <!-- Transcripciones -->
             <th class="px-2 py-2"></th>
             <!-- Reporte -->
             <th class="px-2 py-2"></th>
@@ -249,14 +258,34 @@
               </span>
             </th>
             <th class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap">Solución</th>
+            <th
+              (click)="sort('usuarioregistra')"
+              class="px-2 py-2.5 text-left text-slate-400 font-semibold border-b-2 border-slate-700 whitespace-nowrap cursor-pointer select-none hover:text-blue-400 transition-colors">
+              Asesor
+              <span *ngIf="sortField === 'usuarioregistra'" class="ml-1 text-[10px] text-blue-400">
+                {{ sortOrder === 1 ? '▲' : '▼' }}
+              </span>
+            </th>
             <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Audio</th>
             <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Transcripciones</th>
             <th class="px-2 py-2.5 text-center text-slate-400 font-semibold border-b-2 border-slate-700 w-12">Reporte</th>
           </tr>
         </thead>
         <tbody>
-          <ng-container *ngFor="let gestion of paginatedGestiones">
-          <tr class="transition-colors even:bg-slate-900/30 hover:bg-blue-500/10">
+          <ng-container *ngFor="let gestion of paginatedGestiones; let i = index">
+          <!--
+            El rayado va por el indice del *ngFor y no con `even:`, que es
+            :nth-child(even) sobre el <tbody>: como cada gestion puede aportar
+            DOS <tr> (la fila y su desplegable), al abrir una se corria el
+            rayado de todas las de abajo.
+            En claro es stone-100, que acompana el #fefdfb calido que
+            styles.css le pone a las tablas; el slate-900/30 de antes se veia
+            como una banda gris oscura, porque a los colores con transparencia
+            no los alcanza el remapeo de tema.
+          -->
+          <tr
+            [ngClass]="i % 2 === 1 ? 'bg-stone-100 dark:bg-slate-900/30' : ''"
+            class="transition-colors hover:bg-blue-500/10">
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.documento }}</td>
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.cartera }}</td>
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.telefono }}</td>
@@ -268,6 +297,9 @@
               </span>
             </td>
             <td class="px-2 py-2 text-slate-200 border-b border-slate-700">{{ gestion.solucion }}</td>
+            <!-- Quien hizo la gestion. Ya viajaba en el DTO: lo usan el nombre del
+                 archivo de descarga y la cabecera del modal de transcripcion. -->
+            <td class="px-2 py-2 text-slate-200 border-b border-slate-700 whitespace-nowrap">{{ gestion.usuarioregistra }}</td>
             <td class="px-2 py-2 text-center border-b border-slate-700">
               <!--
                 Una fila = una gestion. El boton baja TODAS sus grabaciones; el
@@ -276,7 +308,7 @@
               <div class="inline-flex items-center gap-1">
                 <button
                   (click)="downloadAudio(gestion)"
-                  class="relative inline-flex items-center justify-center w-7 h-7 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
+                  class="relative inline-flex items-center justify-center w-7 h-7 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-indigo-500/30 cursor-pointer"
                   [title]="cantidadAudios(gestion) > 1
                     ? 'Descargar los ' + cantidadAudios(gestion) + ' audios de la gestión'
                     : 'Descargar audio'">
@@ -291,7 +323,7 @@
                 <button
                   *ngIf="cantidadAudios(gestion) > 1"
                   (click)="alternarDespliegue(gestion)"
-                  class="inline-flex items-center justify-center w-5 h-7 text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                  class="inline-flex items-center justify-center w-5 h-7 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors cursor-pointer"
                   [title]="estaDesplegada(gestion) ? 'Ocultar audios' : 'Ver audios por separado'">
                   <lucide-angular
                     [img]="ChevronDown"
@@ -303,14 +335,16 @@
             </td>
             <td class="px-2 py-2 text-center border-b border-slate-700">
               <!--
-                Uno por gestion, igual que el reporte. Siempre visible: el listado
-                no sabe cuales tienen texto, y averiguarlo obligaria a cruzar
-                audios_transcripcion en las cuatro busquedas, que ya recorren la
-                tabla sin indices. El modal se encarga de decir cuando no hay nada.
+                Uno por gestion, igual que el reporte, y solo donde hay texto: el
+                backend manda tieneTranscripcion junto con la fila. Sin ese dato el
+                boton aparecia en las cuatro de cada cinco gestiones que no tienen
+                nada, y el unico modo de enterarse era abrir el modal y leer que no
+                habia nada.
               -->
               <button
+                *ngIf="gestion.tieneTranscripcion"
                 (click)="verTranscripcion(gestion)"
-                class="inline-flex items-center justify-center w-7 h-7 bg-sky-500/10 hover:bg-sky-500/20 text-sky-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-500/30 cursor-pointer"
+                class="inline-flex items-center justify-center w-7 h-7 bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-sky-500/30 cursor-pointer"
                 title="Ver transcripción">
                 <lucide-angular [img]="FileText" [size]="14"></lucide-angular>
               </button>
@@ -319,7 +353,7 @@
               <button
                 *ngIf="canDownloadReport(gestion.resultado)"
                 (click)="downloadReport(gestion)"
-                class="inline-flex items-center justify-center w-7 h-7 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/30 cursor-pointer"
+                class="inline-flex items-center justify-center w-7 h-7 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 rounded transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/30 cursor-pointer"
                 title="Descargar reporte">
                 <lucide-angular [img]="FileSpreadsheet" [size]="14"></lucide-angular>
               </button>
@@ -332,25 +366,25 @@
             El colspan abarca la tabla entera para que la sub-fila no herede el
             ancho de las columnas de arriba.
           -->
-          <tr *ngIf="estaDesplegada(gestion)" class="bg-slate-900/60">
-            <td colspan="10" class="px-3 py-2 border-b border-slate-700">
-              <p class="text-slate-400 text-[11px] font-medium mb-1.5">
+          <tr *ngIf="estaDesplegada(gestion)" class="bg-stone-100 dark:bg-slate-900/60">
+            <td colspan="11" class="px-3 py-2 border-b border-slate-700">
+              <p class="text-slate-600 dark:text-slate-400 text-[11px] font-medium mb-1.5">
                 {{ cantidadAudios(gestion) }} grabaciones de esta gestión
               </p>
               <div class="flex flex-col gap-1">
                 <div
                   *ngFor="let audio of audiosDe(gestion); let i = index"
-                  class="flex items-center gap-2 px-2 py-1 bg-slate-800/70 border border-slate-700 rounded">
+                  class="flex items-center gap-2 px-2 py-1 bg-white dark:bg-slate-800/70 border border-slate-700 rounded">
                   <span class="text-slate-500 text-[10px] w-4 shrink-0">{{ i + 1 }}</span>
-                  <span class="text-slate-200 text-[11px] font-mono truncate flex-1" [title]="audio.nombre">
+                  <span class="text-slate-700 dark:text-slate-200 text-[11px] font-mono truncate flex-1" [title]="audio.nombre">
                     {{ audio.nombre }}
                   </span>
-                  <span *ngIf="audio.duracion" class="text-slate-400 text-[11px] font-mono whitespace-nowrap shrink-0">
+                  <span *ngIf="audio.duracion" class="text-slate-600 dark:text-slate-400 text-[11px] font-mono whitespace-nowrap shrink-0">
                     {{ audio.duracion }}
                   </span>
                   <button
                     (click)="downloadAudioSuelto(gestion, audio, i)"
-                    class="shrink-0 inline-flex items-center justify-center w-6 h-6 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 rounded transition-colors cursor-pointer"
+                    class="shrink-0 inline-flex items-center justify-center w-6 h-6 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 rounded transition-colors cursor-pointer"
                     title="Descargar este audio">
                     <lucide-angular [img]="Download" [size]="12"></lucide-angular>
                   </button>
@@ -365,7 +399,7 @@
 
     <!-- Pagination -->
     <div class="flex justify-between items-center mt-3 gap-3 overflow-x-auto">
-      <div class="text-slate-400 text-xs whitespace-nowrap flex-shrink-0">
+      <div class="text-slate-600 dark:text-slate-400 text-xs whitespace-nowrap flex-shrink-0">
         Mostrando {{ (currentPage - 1) * pageSize + 1 }} a
         {{ Math.min(currentPage * pageSize, filteredGestiones.length) }} de
         {{ filteredGestiones.length }} registros
@@ -375,46 +409,44 @@
         <button
           (click)="goToPage(1)"
           [disabled]="currentPage === 1"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-100 text-xs rounded transition-colors cursor-pointer">
           «
         </button>
 
         <button
           (click)="goToPage(currentPage - 1)"
           [disabled]="currentPage === 1"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-100 text-xs rounded transition-colors cursor-pointer">
           ‹
         </button>
 
         <button
           *ngFor="let page of getPageNumbers()"
           (click)="goToPage(page)"
-          [class.bg-blue-600]="page === currentPage"
-          [class.border-blue-600]="page === currentPage"
-          [class.bg-slate-700]="page !== currentPage"
-          [class.border-slate-600]="page !== currentPage"
-          [class.hover:bg-slate-600]="page !== currentPage"
-          class="min-w-[28px] px-2 py-1 border text-white text-xs rounded transition-colors cursor-pointer">
+          [ngClass]="page === currentPage
+            ? 'bg-blue-600 border-blue-600 text-white'
+            : 'bg-slate-700 border-slate-600 hover:bg-slate-600 text-slate-700 dark:text-slate-100'"
+          class="min-w-[28px] px-2 py-1 border text-xs rounded transition-colors cursor-pointer">
           {{ page }}
         </button>
 
         <button
           (click)="goToPage(currentPage + 1)"
           [disabled]="currentPage === totalPages"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-100 text-xs rounded transition-colors cursor-pointer">
           ›
         </button>
 
         <button
           (click)="goToPage(totalPages)"
           [disabled]="currentPage === totalPages"
-          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-100 text-xs rounded transition-colors cursor-pointer">
+          class="min-w-[28px] px-2 py-1 bg-slate-700 hover:bg-slate-600 border border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 dark:text-slate-100 text-xs rounded transition-colors cursor-pointer">
           »
         </button>
       </div>
 
       <div class="flex items-center gap-2 flex-shrink-0">
-        <label class="text-slate-400 text-xs whitespace-nowrap">Filas por página:</label>
+        <label class="text-slate-600 dark:text-slate-400 text-xs whitespace-nowrap">Filas por página:</label>
         <div class="w-16">
           <app-custom-select
             [options]="pageSizeOptions"
@@ -428,7 +460,7 @@
 
   <!-- Empty State -->
   <div *ngIf="gestiones.length === 0 && !isLoading" class="bg-slate-800 p-8 rounded-lg text-center">
-    <p class="text-slate-400 text-sm">No hay grabaciones para mostrar. Realiza una búsqueda para ver resultados.</p>
+    <p class="text-slate-600 dark:text-slate-400 text-sm">No hay grabaciones para mostrar. Realiza una búsqueda para ver resultados.</p>
   </div>
 
   <!--
@@ -448,25 +480,25 @@
       <!-- Cabecera -->
       <div class="flex items-start justify-between gap-3 px-4 py-3 border-b border-slate-700">
         <div class="min-w-0">
-          <h3 class="text-slate-100 text-sm font-semibold flex items-center gap-2">
-            <lucide-angular [img]="FileText" [size]="16" class="text-sky-300"></lucide-angular>
+          <h3 class="text-slate-900 dark:text-slate-100 text-sm font-semibold flex items-center gap-2">
+            <lucide-angular [img]="FileText" [size]="16" class="text-sky-600 dark:text-sky-300"></lucide-angular>
             Transcripción
           </h3>
           <div *ngIf="transcripcionGestion" class="mt-1">
-            <p class="text-slate-400 text-xs truncate">
+            <p class="text-slate-600 dark:text-slate-400 text-xs truncate">
               {{ transcripcionGestion.cliente }} · DNI {{ transcripcionGestion.documento }} ·
               {{ transcripcionGestion.fechagestion }} {{ transcripcionGestion.horagestion }} ·
               {{ transcripcionGestion.usuarioregistra }}
             </p>
             <!-- Los WAV de la gestión, para saber sobre qué audios corre el texto. -->
-            <p class="text-slate-500 text-[11px] font-mono truncate mt-0.5">
+            <p class="text-slate-500 dark:text-slate-500 text-[11px] font-mono truncate mt-0.5">
               {{ transcripcionGestion.nombre }}
             </p>
           </div>
         </div>
         <button
           (click)="cerrarTranscripcion()"
-          class="shrink-0 inline-flex items-center justify-center w-7 h-7 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition-colors cursor-pointer"
+          class="shrink-0 inline-flex items-center justify-center w-7 h-7 bg-slate-700 hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded transition-colors cursor-pointer"
           title="Cerrar">
           <lucide-angular [img]="X" [size]="14"></lucide-angular>
         </button>
@@ -474,7 +506,7 @@
 
       <!-- Cuerpo: cargando / error / sin texto / con texto -->
       <div class="p-4 overflow-y-auto">
-        <p *ngIf="transcripcionCargando" class="text-slate-400 text-sm text-center py-6">
+        <p *ngIf="transcripcionCargando" class="text-slate-600 dark:text-slate-400 text-sm text-center py-6">
           Cargando transcripción...
         </p>
 
@@ -486,14 +518,14 @@
 
         <p
           *ngIf="!transcripcionCargando && !transcripcionError && transcripcionPartes.length === 0"
-          class="text-slate-400 text-sm text-center py-6">
+          class="text-slate-600 dark:text-slate-400 text-sm text-center py-6">
           Esta gestión no tiene transcripción registrada.
         </p>
 
         <div *ngIf="!transcripcionCargando && !transcripcionError && transcripcionPartes.length > 0" class="space-y-4">
           <div *ngFor="let parte of transcripcionPartes; let i = index">
             <!-- El título solo aporta cuando hay varias partes: es el WAV de origen. -->
-            <p *ngIf="transcripcionPartes.length > 1" class="text-slate-400 text-[11px] font-medium mb-1 truncate">
+            <p *ngIf="transcripcionPartes.length > 1" class="text-slate-600 dark:text-slate-400 text-[11px] font-medium mb-1 truncate">
               Parte {{ i + 1 }} de {{ transcripcionPartes.length }} · {{ parte.titulo }}
             </p>
             <!--
@@ -501,7 +533,10 @@
               pipeline separa los turnos de habla; sin eso el diálogo entero se
               ve como un único párrafo.
             -->
-            <p class="text-slate-200 text-xs leading-relaxed whitespace-pre-wrap break-words bg-slate-900/50 border border-slate-700 rounded p-3">{{ parte.transcripcion }}</p>
+            <!-- bg-white y no slate-50: en claro styles.css pinta el panel del
+                 modal de #f8fafc, asi que un slate-50 seria el mismo color y el
+                 recuadro del texto desapareceria contra el fondo. -->
+            <p class="text-slate-800 dark:text-slate-200 text-xs leading-relaxed whitespace-pre-wrap break-words bg-white dark:bg-slate-900/50 border border-slate-700 rounded p-3">{{ parte.transcripcion }}</p>
           </div>
         </div>
       </div>
