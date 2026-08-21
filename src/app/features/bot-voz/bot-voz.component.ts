@@ -352,15 +352,22 @@ export class BotVozComponent implements OnInit, OnDestroy {
   colaLlamadas: number | null = null;
 
   /**
-   * El dia que se esta mirando. Hoy por defecto.
+   * El selector de dia se retiro, y con el `fechaLlamadas` y su setter.
    *
-   * Existe porque sin el la pantalla se contradecia: las pastillas contaban HOY y la
-   * tabla enseñaba las 100 ultimas de siempre, asi que un dia sin llamadas salia con
-   * todos los contadores a cero al lado de una tabla llena de llamadas de ayer. Las dos
-   * cosas eran ciertas y aun asi parecia rota. Y al elegir una cola seguia en cero,
-   * porque sus llamadas eran de otro dia.
+   * Existia porque las pastillas contaban HOY y la tabla enseñaba las 100 ultimas de
+   * siempre, y la pantalla se contradecia sola. La solucion de entonces fue atar las
+   * dos a un dia; la de ahora es quitar el dia de en medio: una cola vive hasta que se
+   * acaba, asi que sus llamadas son suyas venga el dia que venga. Contadores y tabla
+   * miran lo mismo —todo lo de la cola elegida— y siguen sin contradecirse.
    */
-  fechaLlamadas = new Date().toISOString().slice(0, 10);
+  /**
+   * El dia que se mira, VACIO por defecto = todos.
+   *
+   * Ponerlo en hoy dejaba la pantalla en cero casi cada mañana: no hay una cola
+   * discando todos los dias, asi que lo normal era abrir Llamadas y no ver nada
+   * teniendo miles de llamadas dentro. Se abre con todo y se acota si hace falta.
+   */
+  fechaLlamadas: string = '';
 
   cambiarColaLlamadas(id: number | null): void {
     this.colaLlamadas = id;
@@ -369,9 +376,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   cambiarFechaLlamadas(fecha: string): void {
-    // Vacio vuelve a hoy en vez de dejar la pantalla sin dia: un input de fecha se
-    // puede borrar entero y quedaria pidiendo `fecha=` al backend.
-    this.fechaLlamadas = fecha || new Date().toISOString().slice(0, 10);
+    this.fechaLlamadas = fecha || '';
+    // El desplegable de colas se rehace con el dia: las que no llamaron ese dia dejan
+    // de ofrecerse. Y si la que estaba elegida no esta entre ellas, se suelta el filtro
+    // en vez de dejar seleccionada una cola que ya no sale en la lista.
+    this.refrescarColasFiltro();
     this.paginaSesiones = 1;
     this.cargarSesiones();
   }
@@ -406,7 +415,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * más vieja que las 100 últimas, y el selector enseñaba únicamente la cola 5.
    */
   private refrescarColasFiltro(): void {
-    this.svc.getColasDelHistorico().subscribe({
+    // Con un dia elegido se parte de cero: lo visto en otros dias no vale, o el
+    // desplegable acumularia colas que ese dia no llamaron.
+    if (this.fechaLlamadas) this.colasVistas.clear();
+    this.svc.getColasDelHistorico(this.fechaLlamadas || null).subscribe({
       next: (filas) => {
         for (const f of filas) {
           if (f.idCola == null) continue;
@@ -416,6 +428,12 @@ export class BotVozComponent implements OnInit, OnDestroy {
           this.colasVistas.set(f.idCola, f.nombreCola || `Cola ${f.idCola}`);
         }
         this.componerColasFiltro();
+        // La cola elegida puede no haber llamado el dia nuevo: se suelta el filtro en
+        // vez de dejar un desplegable enseñando algo que ya no esta entre sus opciones.
+        if (this.fechaLlamadas && this.colaLlamadas != null
+            && !this.colasFiltro.some((c) => c.id === this.colaLlamadas)) {
+          this.colaLlamadas = null;
+        }
       },
       // Sin el histórico se pinta al menos lo que hay vivo: un selector vacío deja al
       // supervisor sin poder filtrar nada.
@@ -1163,6 +1181,30 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   /** Filas de HOY de esa cola que todavía se pueden marcar. */
+  /**
+   * Cuanta gente de la cola ya se trabajo, y cuanta entro en total.
+   *
+   * Gestionado = COMPLETADA + DESCARTADA: las dos estan cerradas y no se van a marcar
+   * mas. Contar solo las completadas dejaba la barra congelada por debajo del 100% en
+   * cuanto una cola tenia descartes, que las tiene siempre.
+   */
+  totalDe(c: BotCola): number {
+    return c.id != null ? (this.contadores[c.id]?.total ?? 0) : 0;
+  }
+
+  gestionadosDe(c: BotCola): number {
+    if (c.id == null) return 0;
+    const x = this.contadores[c.id];
+    return x ? x.completadas + x.descartadas : 0;
+  }
+
+  /** El porcentaje, entero. Sin total no hay avance que ensenar: devuelve 0 y la
+   *  barra no se pinta (el *ngIf de la plantilla mira `totalDe`). */
+  avanceDe(c: BotCola): number {
+    const total = this.totalDe(c);
+    return total ? Math.round((this.gestionadosDe(c) / total) * 100) : 0;
+  }
+
   pendientesDe(c: BotCola): number {
     return this.cola.filter((f) => f.idCola === c.id &&
       (f.estado === 'PENDIENTE' || f.estado === 'EN_LLAMADA')).length;
@@ -1812,8 +1854,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
+    // Fecha vacia = todas las llamadas de la cola elegida, del dia que sean.
     this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
-                         this.fechaLlamadas).subscribe({
+                         this.fechaLlamadas || null).subscribe({
       next: (s) => {
         this.sesiones = s;
         this.errorSesiones = false;
@@ -1826,7 +1869,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // Los contadores van aparte porque cuentan el día ENTERO en la base y la tabla
     // solo trae las 100 últimas de ese mismo día. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
     // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas).subscribe({
+    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null).subscribe({
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });

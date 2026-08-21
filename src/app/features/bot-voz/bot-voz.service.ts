@@ -475,9 +475,12 @@ export class BotVozService {
    * Endpoint propio y no deducirlo de `getSesiones`: esa devuelve las 100 últimas y el
    * selector se quedaba solo con las colas presentes en esas 100.
    */
-  getColasDelHistorico(): Observable<{ idCola: number; nombreCola: string | null }[]> {
+  getColasDelHistorico(fecha?: string | null): Observable<{ idCola: number; nombreCola: string | null }[]> {
+    // Con dia elegido solo se ofrecen las colas que llamaron ESE dia: si no, se puede
+    // elegir una cola que no disco y la pantalla sale en cero sin decir por que.
+    const q = fecha ? `?fecha=${fecha}` : '';
     return this.http.get<{ idCola: number; nombreCola: string | null }[]>(
-      `${this.apiUrl}/sesiones/colas`);
+      `${this.apiUrl}/sesiones/colas${q}`);
   }
 
   getSesiones(estados?: string[], resultados?: string[],

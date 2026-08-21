@@ -116,6 +116,19 @@
             {{ c.motivoPausa }}<span *ngIf="c.pausadaAt"> · {{ c.pausadaAt | date:'dd/MM HH:mm' }}</span>
           </p>
 
+          <!-- El avance de la cola. Faltaba, y es lo primero que se mira: sin el, una
+               cola con mil llamadas hechas y una recien armada se ven exactamente igual,
+               y no hay forma de saber si va por la mitad o si ya no le queda nadie. -->
+          <div class="avance-cola" *ngIf="totalDe(c)">
+            <div class="avance-barra" [title]="gestionadosDe(c) + ' de ' + totalDe(c)">
+              <span class="avance-hecho" [style.width.%]="avanceDe(c)"></span>
+            </div>
+            <p class="progreso-cola">
+              {{ gestionadosDe(c) }} de {{ totalDe(c) }} gestionados
+              <span class="muted">· {{ avanceDe(c) }}%</span>
+            </p>
+          </div>
+
           <div class="card-bottom">
             <div class="card-meta">
               <span class="meta-tag" *ngFor="let o of objetivosDe(c)">{{ o }}</span>
@@ -857,15 +870,21 @@
            no de las que existen hoy: antes iba atado a `colas.length > 1` y al borrar
            colas el selector se esfumaba, dejando las llamadas de las borradas sin
            forma de mirarse. -->
-      <!-- El día que se mira. Los contadores y la tabla van los dos por aquí: antes los
-           contadores decían "hoy" y la tabla enseñaba las 100 últimas de siempre, así
-           que un día sin llamadas salía con todo a cero al lado de una tabla llena de
-           llamadas de ayer, y al elegir una cola seguía en cero porque sus llamadas
-           eran de otro día. -->
+      <!-- El dia, VACIO por defecto. Antes abria en hoy y la pantalla salia en cero
+           casi cada mañana: no hay una cola discando todos los dias, asi que lo normal
+           era entrar y no ver nada teniendo miles de llamadas dentro. Se abre con todo
+           y se acota si hace falta.
+
+           Al cambiarlo se rehace tambien el desplegable de colas: solo se ofrecen las
+           que llamaron ESE dia. -->
       <label class="selector-cola">
         Día
         <input type="date" [ngModel]="fechaLlamadas"
                (ngModelChange)="cambiarFechaLlamadas($event)">
+        <button type="button" class="btn-link" *ngIf="fechaLlamadas"
+                (click)="cambiarFechaLlamadas('')" title="Ver todos los días">
+          Todos
+        </button>
       </label>
 
       <label class="selector-cola" *ngIf="colasFiltro.length">

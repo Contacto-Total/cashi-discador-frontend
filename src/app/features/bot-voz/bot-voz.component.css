@@ -212,6 +212,27 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
 }
+/* El avance de la cola. La barra va antes que el numero a proposito: de un vistazo se
+   ve si va por la mitad o si ya no le queda nadie, y el numero exacto solo hace falta
+   cuando ya te fijaste. */
+.avance-cola { margin: 0.6rem 0 0; }
+.avance-barra {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-3, #e2e8f0);
+  overflow: hidden;
+}
+.avance-hecho {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--primary, #2563eb);
+  transition: width 0.4s ease;
+}
+/* La cola que esta discando se distingue tambien aqui, no solo por la barra lateral:
+   quien mira la lista busca "cual se esta moviendo" antes que "cual va mas avanzada". */
+.cola-card.is-dialing .avance-hecho { background: var(--success, #16a34a); }
+
 .progreso-cola { font-size: 0.8rem; font-weight: 600; color: var(--text-primary, #1e293b); margin: 0.35rem 0 0; }
 .control-buttons { align-items: center; }
 /* Detalle de una llamada: panel lateral con la transcripcion. */
