@@ -124,8 +124,11 @@
               <span class="avance-hecho" [style.width.%]="avanceDe(c)"></span>
             </div>
             <p class="progreso-cola">
-              {{ gestionadosDe(c) }} de {{ totalDe(c) }} gestionados
+              {{ gestionadosDe(c) }} de {{ totalDe(c) }} llamados
               <span class="muted">· {{ avanceDe(c) }}%</span>
+              <span class="muted" *ngIf="descartadasDe(c)">
+                · {{ descartadasDe(c) }} fuera
+              </span>
             </p>
           </div>
 

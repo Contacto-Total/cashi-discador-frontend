@@ -1182,20 +1182,30 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   /** Filas de HOY de esa cola que todavía se pueden marcar. */
   /**
-   * Cuanta gente de la cola ya se trabajo, y cuanta entro en total.
+   * El avance mide LO QUE SE VA A LLAMAR, no las filas de la tabla.
    *
-   * Gestionado = COMPLETADA + DESCARTADA: las dos estan cerradas y no se van a marcar
-   * mas. Contar solo las completadas dejaba la barra congelada por debajo del 100% en
-   * cuanto una cola tenia descartes, que las tiene siempre.
+   * La primera version contaba descartada como gestionada —"las dos estan cerradas"— y
+   * salio mal a la primera prueba: una cola de 8.030 con 8.024 descartadas y ni una
+   * llamada hecha marcaba 100%. Y es que una descartada no se trabajo, se quito de en
+   * medio: la blacklist, el sin telefono o el "hoy ya le llamaron" no son gestion.
+   *
+   * Asi que la descartada sale del DENOMINADOR en vez de llenar la barra. Con eso, esa
+   * misma cola marca 0 de 6, que es la verdad.
    */
   totalDe(c: BotCola): number {
-    return c.id != null ? (this.contadores[c.id]?.total ?? 0) : 0;
+    if (c.id == null) return 0;
+    const x = this.contadores[c.id];
+    return x ? Math.max(0, x.total - x.descartadas) : 0;
   }
 
   gestionadosDe(c: BotCola): number {
-    if (c.id == null) return 0;
-    const x = this.contadores[c.id];
-    return x ? x.completadas + x.descartadas : 0;
+    return c.id != null ? (this.contadores[c.id]?.completadas ?? 0) : 0;
+  }
+
+  /** Los que se quitaron de en medio. Se dicen aparte, no se esconden: si de 8.030
+   *  entran 6, quien mira la cola tiene que ver por que. */
+  descartadasDe(c: BotCola): number {
+    return c.id != null ? (this.contadores[c.id]?.descartadas ?? 0) : 0;
   }
 
   /** El porcentaje, entero. Sin total no hay avance que ensenar: devuelve 0 y la

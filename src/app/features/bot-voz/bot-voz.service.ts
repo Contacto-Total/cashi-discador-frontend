@@ -236,7 +236,8 @@ export interface BotSesion {
 
 /** Los totales de un día de llamadas, tal y como los cuenta la base. */
 export interface ResumenLlamadas {
-  fecha: string;
+  /** null cuando no se pidio dia: el resumen es de TODO el historico de esa cola. */
+  fecha: string | null;
   total: number;
   porEstado: Record<string, number>;
   porResultado: Record<string, number>;
