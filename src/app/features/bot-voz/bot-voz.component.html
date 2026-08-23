@@ -118,18 +118,26 @@
 
           <!-- El avance de la cola. Faltaba, y es lo primero que se mira: sin el, una
                cola con mil llamadas hechas y una recien armada se ven exactamente igual,
-               y no hay forma de saber si va por la mitad o si ya no le queda nadie. -->
-          <div class="avance-cola" *ngIf="totalDe(c)">
-            <div class="avance-barra" [title]="gestionadosDe(c) + ' de ' + totalDe(c)">
-              <span class="avance-hecho" [style.width.%]="avanceDe(c)"></span>
-            </div>
-            <p class="progreso-cola">
+               y no hay forma de saber si va por la mitad o si ya no le queda nadie.
+               Va corto y en una sola linea: la card ocupa todo el ancho de la pantalla y
+               una barra de lado a lado se lee como si la pagina estuviera cargando, no
+               como el avance de la cola. Verde solo mientras esta discando, igual que la
+               franja del lateral. -->
+          <div class="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+               *ngIf="totalDe(c)">
+            <span class="h-1.5 w-32 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                  [title]="gestionadosDe(c) + ' de ' + totalDe(c) + ' llamados'">
+              <span class="block h-full rounded-full transition-[width] duration-500"
+                    [ngClass]="estadoCola(c).clase === 'st-discando' ? 'bg-emerald-500' : 'bg-blue-600'"
+                    [style.width.%]="avanceDe(c)"></span>
+            </span>
+            <span class="font-semibold tabular-nums text-slate-700 dark:text-slate-200">
               {{ gestionadosDe(c) }} de {{ totalDe(c) }} llamados
-              <span class="muted">· {{ avanceDe(c) }}%</span>
-              <span class="muted" *ngIf="descartadasDe(c)">
-                · {{ descartadasDe(c) }} fuera
-              </span>
-            </p>
+            </span>
+            <span class="tabular-nums text-slate-500 dark:text-slate-400">· {{ avanceDe(c) }}%</span>
+            <span class="tabular-nums text-slate-400 dark:text-slate-500" *ngIf="descartadasDe(c)">
+              · {{ descartadasDe(c) }} fuera
+            </span>
           </div>
 
           <div class="card-bottom">
