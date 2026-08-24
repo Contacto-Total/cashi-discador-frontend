@@ -799,6 +799,57 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.escalones.filter((_, i) => !this.escalonAplastado(i)).length;
   }
 
+  // ----- Castigo: los escalones ya existen -----
+  //
+  // En propia nosotros proponemos la curva de descuentos; en castigo esos escalones ya
+  // vienen calculados por cliente en la tabla, asi que aqui no se propone nada: se
+  // marca cuales entran en la cola. Por eso el bloque de condiciones cambia de forma
+  // segun la subcartera elegida.
+
+  /** Los escalones que existen en esta subcartera, con su importe de ejemplo. */
+  escalonesCastigo: { campo: string; etiqueta: string; n: number; mediana?: number;
+               minimo?: number; maximo?: number }[] = [];
+
+  /** Los que el usuario marco para esta cola. Viajan en `curvaDescuento`, separados
+   *  por comas, igual que la curva de propia: el backend no cambia de contrato. */
+  escalonesElegidos: string[] = [];
+
+  /** True si la subcartera elegida es de castigo. Decide la forma del formulario. */
+  get esCastigo(): boolean {
+    const n = (this.nombreSubcartera(this.nuevaCola.idSubcartera) || '').toUpperCase();
+    return n.includes('CASTIG');
+  }
+
+  alternarEscalon(campo: string): void {
+    const i = this.escalonesElegidos.indexOf(campo);
+    if (i >= 0) this.escalonesElegidos.splice(i, 1);
+    else this.escalonesElegidos.push(campo);
+    // Se respeta el orden en que los devuelve el backend —de mas caro a mas barato—,
+    // que es el orden en que Clara los ofrece. Dejarlo al orden de los clics haria que
+    // la escalera empezara por la rebaja mas grande.
+    this.escalonesElegidos.sort(
+      (a: string, b: string) => this.escalonesCastigo.findIndex((e) => e.campo === a)
+                              - this.escalonesCastigo.findIndex((e) => e.campo === b));
+    this.reglaCola.curvaDescuento = this.escalonesElegidos.join(',');
+  }
+
+  /** Pide los escalones de la subcartera. Silencioso: es una ayuda, no un requisito. */
+  cargarEscalones(): void {
+    const sub = this.nuevaCola.idSubcartera;
+    const inq = this.idInquilinoSel || this.nuevaCola.idInquilino;
+    const cart = this.idCarteraSel || this.nuevaCola.idCartera;
+    if (!sub || !inq || !cart || !this.esCastigo) { this.escalonesCastigo = []; return; }
+    this.svc.getEscalones(inq, cart, sub).subscribe({
+      next: (e) => {
+        this.escalonesCastigo = e || [];
+        this.escalonesElegidos = (this.reglaCola.curvaDescuento || '')
+          .split(',').map((x) => x.trim())
+          .filter((x) => this.escalonesCastigo.some((s) => s.campo === x));
+      },
+      error: () => (this.escalonesCastigo = []),
+    });
+  }
+
   /** El nombre legible de la columna sobre la que se descuenta, para los avisos. */
   nombreCampoBase(): string {
     const c = this.CAMPOS_BASE.find((x) => x.valor === this.reglaCola.campoBase);
@@ -1023,6 +1074,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.verEfectivas(this.nuevaCola.idSubcartera);
     this.cargarCampos(this.nuevaCola.idSubcartera);
     this.cargarMuestra();
+    this.cargarEscalones();
     this.recalcular();
   }
 
