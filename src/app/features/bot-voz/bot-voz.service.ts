@@ -170,8 +170,13 @@ export interface BotRegla {
 export interface BotColaRegla {
   /** Columna sobre la que se calcula el descuento: capital o deuda total. */
   campoBase: string;
-  /** Los descuentos que ofrece, en orden y separados por comas: "70,80,90". */
+  /** PROPIA: los descuentos que ofrece, en orden y separados por comas: "70,80,90". */
   curvaDescuento: string;
+  /** CASTIGO: las columnas con el importe ya calculado, de más caro a más barato
+   *  ("ltd,ltd_especial_feria,ltd_plus"). Campo aparte de `curvaDescuento` a propósito:
+   *  son dos cosas distintas, y compartirlo hacía que el formulario de propia vaciara
+   *  los escalones de castigo al editar la cola. */
+  escalonesCastigo?: string | null;
   pagoMinimo: number | null;
   diasMaxPago: number | null;
   ultimoTramoSoloHoy: boolean;

@@ -651,6 +651,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return {
       campoBase: 'sld_capital_asig',
       curvaDescuento: '',
+      escalonesCastigo: '',
       pagoMinimo: null,
       diasMaxPago: null,
       ultimoTramoSoloHoy: false,
@@ -690,10 +691,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // quedaba bloqueado con «Revisa las condiciones de negociación» sin decir cuál.
     // Se validan contra los escalones que el backend dijo que existen, que además
     // impide guardar el nombre de una columna vacía.
-    if (this.esCastigo) {
-      return curva.split(',').every(
-        (t) => this.escalonesCastigo.some((e) => e.campo === t.trim()));
-    }
+    if (this.esCastigo) return true;   // en castigo la curva no se usa
     return curva.split(',').every((t) => {
       const v = Number(t.trim());
       return t.trim() !== '' && Number.isFinite(v) && v > 0 && v < 100;
@@ -820,8 +818,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
   escalonesCastigo: { campo: string; etiqueta: string; n: number; mediana?: number;
                minimo?: number; maximo?: number }[] = [];
 
-  /** Los que el usuario marco para esta cola. Viajan en `curvaDescuento`, separados
-   *  por comas, igual que la curva de propia: el backend no cambia de contrato. */
+  /** Los que el usuario marco para esta cola. Viajan en `escalonesCastigo`, que es su
+   *  campo propio: la curva de porcentajes es de propia y aqui no significa nada. */
   escalonesElegidos: string[] = [];
 
   /** True si la subcartera elegida es de castigo. Decide la forma del formulario. */
@@ -840,7 +838,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.escalonesElegidos.sort(
       (a: string, b: string) => this.escalonesCastigo.findIndex((e) => e.campo === a)
                               - this.escalonesCastigo.findIndex((e) => e.campo === b));
-    this.reglaCola.curvaDescuento = this.escalonesElegidos.join(',');
+    this.reglaCola.escalonesCastigo = this.escalonesElegidos.join(',');
     this.normalizarReglaCastigo();
   }
 
@@ -859,6 +857,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.reglaCola.campoBase = undefined as any;
     this.reglaCola.diasMaxPago = null;
     this.reglaCola.maxCuotasBot = null;
+    // La curva de porcentajes es de propia y aqui no significa nada. Dejarla con el
+    // valor heredado del formulario mandaba a castigo por el camino equivocado.
+    this.reglaCola.curvaDescuento = '';
   }
 
   /** Pide los escalones de la subcartera. Silencioso: es una ayuda, no un requisito. */
@@ -870,9 +871,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.svc.getEscalones(inq, cart, sub).subscribe({
       next: (e) => {
         this.escalonesCastigo = e || [];
-        this.escalonesElegidos = (this.reglaCola.curvaDescuento || '')
-          .split(',').map((x) => x.trim())
-          .filter((x) => this.escalonesCastigo.some((s) => s.campo === x));
+        this.escalonesElegidos = (this.reglaCola.escalonesCastigo || '')
+          .split(',').map((x: string) => x.trim())
+          .filter((x: string) => this.escalonesCastigo.some((e) => e.campo === x));
       },
       error: () => (this.escalonesCastigo = []),
     });
@@ -919,6 +920,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.reglaCola = {
           campoBase: r.campoBase || 'sld_capital_asig',
           curvaDescuento: r.curvaDescuento || '',
+          // Sin esto los escalones de castigo se perdian al abrir la cola para editarla:
+          // el formulario se rellenaba sin ellos y al guardar los borraba.
+          escalonesCastigo: r.escalonesCastigo || '',
           pagoMinimo: r.pagoMinimo ?? null,
           diasMaxPago: r.diasMaxPago ?? null,
           ultimoTramoSoloHoy: !!r.ultimoTramoSoloHoy,
@@ -926,6 +930,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         };
         this.leerEscalones();
         this.cargarMuestra();
+        this.cargarEscalones();
       },
       // Sin condiciones a la vista es preferible a un formulario a medio rellenar: si
       // falla la lectura, se deja en blanco y marcado como heredado, que es el estado
