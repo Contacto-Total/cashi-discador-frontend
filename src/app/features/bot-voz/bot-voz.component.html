@@ -14,13 +14,6 @@
         <span class="stat-number">{{ colas.length }}</span>
         <span class="stat-label">{{ colas.length === 1 ? 'Cola' : 'Colas' }}</span>
       </div>
-      <!-- Ritmo es del admin. Para el supervisor era una segunda pantalla con los
-           mismos campos que el formulario de la cola, y ninguna de las dos decía cuál
-           mandaba. Ahora lo ve dentro del formulario, en lectura. -->
-      <button class="btn-header" *ngIf="esAdmin"
-              [class.on]="vista === 'ritmo'" (click)="abrir('ritmo')">
-        <lucide-angular name="sliders" [size]="17"></lucide-angular> Ritmo
-      </button>
       <button class="btn-header" [class.on]="vista === 'tonos'" (click)="abrir('tonos')">
         <lucide-angular name="mic" [size]="17"></lucide-angular> Voces y tonos
       </button>
@@ -50,84 +43,13 @@
        ventana de la Ley 29571 y el techo de canales de la máquina. No se editan aquí;
        se enseñan en el formulario de la cola como tope. -->
 
-  <!-- ===== RITMO DE LLAMADA (antes "ritmos") =====
-       Se le quitaron dos campos: "Tono", que no lo leia nadie y ahora vive junto a la
-       voz; e "Incluir vencidas", que era decir dos veces lo mismo — eso lo decide la
-       casilla "Generar promesa de una cuota vencida" de cada cola. -->
-  <section *ngIf="vista === 'ritmo'">
-    <div class="panel">
-      <h3>Ritmo de llamada</h3>
-      <p class="ayuda">
-        Cuánto llama el bot según el día del mes. Al principio se va con calma y al
-        cierre se aprieta. Cada cola elige si sigue este calendario sola —lo normal— o
-        si se queda fija en un ritmo.
-      </p>
-      <p class="ayuda">
-        <strong>A quién llama no se decide aquí</strong>, sino en cada cola, con las
-        casillas de qué debe hacer Clara.
-      </p>
-    </div>
+  <!-- La pantalla de Ritmo se retiro entera. Decidia cuanto insistir por el DIA DEL
+       MES —INICIO_MES 1-14, AJUSTE 15-24, CIERRE_MES 25-31— asi que una cola apretaba
+       dos veces "porque estamos a 21 de agosto" y no porque nadie lo hubiera decidido
+       para esa cartera. Ademas era un calendario UNICO: bajar los intentos de una cola
+       se los bajaba a las de todos los demas.
 
-    <div class="ritmo-card" *ngFor="let p of ritmos">
-      <div class="ritmo-head">
-        <h3>{{ p.nombre }}</h3>
-        <span class="muted">se aplica del día {{ p.diaMesDesde }} al {{ p.diaMesHasta }} del mes</span>
-      </div>
-      <!-- "Llamadas al día" (max_llamadas_dia) estaba aquí y se quitó: no limita nada.
-           Se lee en un solo punto del backend, `BotColaService:187`, y está detrás de
-           `idCola == null` —el armado global, anterior a las colas—, que hoy no llama
-           nadie. Cuántos clientes entran lo deciden los filtros de la cola.
-
-           Lo que queda va POR TAREA. Antes eran tres números sueltos por ritmo y no
-           había forma de saber a cuál de las tres cosas que hace Clara afectaba cada
-           uno: "días de anticipación" solo significa algo recordando, y "hasta cuántos
-           días de vencida" solo negociando. -->
-      <div class="tarea" *ngFor="let t of TAREAS">
-        <div class="tarea-head">
-          <lucide-angular [name]="t.icono" [size]="15"></lucide-angular>
-          <strong>{{ t.titulo }}</strong>
-          <span class="muted">{{ t.subtitulo }}</span>
-        </div>
-        <div class="grid-form">
-          <label *ngIf="t.clave === 'RECORDATORIO'">
-            Días de anticipación
-            <input type="number" min="0" [(ngModel)]="p.diasAnticipacion" />
-            <small class="muted">
-              Con cuántos días de adelanto se avisa de una cuota antes de que venza.
-            </small>
-          </label>
-          <label *ngIf="t.clave === 'CREACION'">
-            Hasta cuántos días de vencida
-            <input type="number" min="1" [max]="TOPE_VENCIDA" [(ngModel)]="p.maxDiasVencida" />
-            <small class="muted">
-              Ancho de la ventana hacia atrás. Máximo <strong>{{ TOPE_VENCIDA }}</strong>,
-              y el backend lo topa aunque aquí se escriba más. No cuenta el periodo de
-              gracia: las cuotas cuyo cliente siga en gracia de su asesor no entran,
-              tengan la antigüedad que tengan.
-            </small>
-          </label>
-          <label>
-            Intentos por cliente
-            <input type="number" min="1" [(ngModel)]="p[t.campoIntentos]" />
-            <small class="muted">Cuántas veces se vuelve a marcar si no contesta.</small>
-          </label>
-        </div>
-      </div>
-
-      <div class="aviso-no-guardado" *ngIf="ritmoSinGuardar(p)">
-        <lucide-angular name="alert-triangle" [size]="16"></lucide-angular>
-        <span>Tienes cambios sin guardar en este ritmo.</span>
-      </div>
-      <div class="acciones">
-        <button [class.btn-secondary]="!ritmoSinGuardar(p)"
-                [class.btn-primary]="ritmoSinGuardar(p)"
-                (click)="guardarRitmo(p)">
-          <lucide-angular name="save" [size]="16"></lucide-angular>
-          {{ ritmoSinGuardar(p) ? 'Guardar cambios' : 'Guardado' }}
-        </button>
-      </div>
-    </div>
-  </section>
+       Ahora cada cola lleva su propio numero, en su formulario. -->
 
   <!-- ===== COLAS =====
        Misma forma que la gestion de campañas: primero la LISTA de lo que hay, con sus
@@ -194,6 +116,30 @@
             {{ c.motivoPausa }}<span *ngIf="c.pausadaAt"> · {{ c.pausadaAt | date:'dd/MM HH:mm' }}</span>
           </p>
 
+          <!-- El avance de la cola. Faltaba, y es lo primero que se mira: sin el, una
+               cola con mil llamadas hechas y una recien armada se ven exactamente igual,
+               y no hay forma de saber si va por la mitad o si ya no le queda nadie.
+               Va corto y en una sola linea: la card ocupa todo el ancho de la pantalla y
+               una barra de lado a lado se lee como si la pagina estuviera cargando, no
+               como el avance de la cola. Verde solo mientras esta discando, igual que la
+               franja del lateral. -->
+          <div class="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+               *ngIf="totalDe(c)">
+            <span class="h-1.5 w-32 shrink-0 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700"
+                  [title]="gestionadosDe(c) + ' de ' + totalDe(c) + ' llamados'">
+              <span class="block h-full rounded-full transition-[width] duration-500"
+                    [ngClass]="estadoCola(c).clase === 'st-discando' ? 'bg-emerald-500' : 'bg-blue-600'"
+                    [style.width.%]="avanceDe(c)"></span>
+            </span>
+            <span class="font-semibold tabular-nums text-slate-700 dark:text-slate-200">
+              {{ gestionadosDe(c) }} de {{ totalDe(c) }} llamados
+            </span>
+            <span class="tabular-nums text-slate-500 dark:text-slate-400">· {{ avanceDe(c) }}%</span>
+            <span class="tabular-nums text-slate-400 dark:text-slate-500" *ngIf="descartadasDe(c)">
+              · {{ descartadasDe(c) }} fuera
+            </span>
+          </div>
+
           <div class="card-bottom">
             <div class="card-meta">
               <span class="meta-tag" *ngFor="let o of objetivosDe(c)">{{ o }}</span>
@@ -202,7 +148,7 @@
                 {{ c.horaInicio ? (c.horaInicio + ' a ' + c.horaFin) : 'Horario general' }}
               </span>
               <span class="meta-tag">
-                {{ c.modoRitmo === 'MANUAL' ? 'Ritmo fijo' : 'Ritmo automático' }}
+                {{ c.intentosMaximos }} {{ c.intentosMaximos === 1 ? 'intento' : 'intentos' }}
               </span>
               <span class="meta-tag meta-date" *ngIf="c.ultimaArmadaAt">
                 Armada {{ c.ultimaArmadaAt | date:'dd/MM HH:mm' }} · {{ pendientesDe(c) }} por marcar
@@ -414,11 +360,18 @@
               </p>
             </div>
 
-            <!-- ===== …Y A LOS QUE LES TOQUE (los objetivos) ===== -->
+            <!-- ===== …Y A LOS QUE LES TOQUE (el objetivo) ===== -->
+            <!-- Una cola hace UNA cosa. Antes eran tres casillas marcables a la vez, y de
+                 ahi salia el lio: los intentos y las ventanas tenian que abrirse por
+                 tarea, el avance de la cola mezclaba dos poblaciones, y la mezcla no la
+                 uso nadie nunca —jamas hubo una cola con dos objetivos—. Si hacen falta
+                 las dos cosas sobre la misma cartera son dos colas: son llamadas
+                 distintas, con tono, horario y reglas distintas. -->
             <p class="frase">…y a los que les toque</p>
 
             <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objRecordatorio" (ngModelChange)="recalcular()">
+              <input type="radio" name="objetivo" value="RECORDATORIO"
+                     [(ngModel)]="objetivo" (ngModelChange)="recalcular()">
               <span>
                 <strong>Recordar una cuota que está por vencer</strong>
                 <small>No negocia ni ofrece descuentos: solo avisa de la fecha.</small>
@@ -426,7 +379,8 @@
             </label>
 
             <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objCreacion" (ngModelChange)="recalcular()">
+              <input type="radio" name="objetivo" value="CREACION"
+                     [(ngModel)]="objetivo" (ngModelChange)="recalcular()">
               <span>
                 <strong>Negociar una cuota que ya venció</strong>
                 <small>Ofrece las rebajas configuradas hasta cerrar una promesa nueva.</small>
@@ -434,68 +388,48 @@
             </label>
 
             <label class="obj-opcion">
-              <input type="checkbox" [(ngModel)]="objPrimerContacto" (ngModelChange)="recalcular()">
+              <input type="radio" name="objetivo" value="PRIMER_CONTACTO"
+                     [(ngModel)]="objetivo" (ngModelChange)="recalcular()">
               <span>
                 <strong>Abrir la primera promesa de un cliente</strong>
                 <small>Clientes de la subcartera que nunca han pactado nada.</small>
               </span>
             </label>
 
-            <p class="aviso-pausa" *ngIf="!objRecordatorio && !objCreacion && !objPrimerContacto">
+            <p class="aviso-pausa" *ngIf="!objetivo">
               <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
-              Sin marcar ninguna, la cola no traerá ningún cliente.
+              Elige qué hace esta cola: sin objetivo no traerá ningún cliente.
             </p>
 
-            <!-- El ritmo, aquí y no en un bloque aparte: es lo que da valor a las
-                 casillas de arriba. Marcar "negociar vencidas" no dice nada por sí solo
-                 —¿vencidas de cuándo, con cuántos intentos?—; el ritmo lo responde. -->
-            <div class="ritmo-elegido">
-              <div class="grid-form">
-                <label *ngIf="esAdmin">
-                  Ritmo
-                  <select [(ngModel)]="nuevaCola.modoRitmo" (ngModelChange)="recalcular()">
-                    <option value="AUTO">Automático según el día del mes</option>
-                    <option value="MANUAL">Fijo, el que yo elija</option>
-                  </select>
-                  <small class="muted">
-                    Con automático no hay que cambiarlo en quincena: se ajusta solo.
-                  </small>
-                </label>
-                <label *ngIf="esAdmin && nuevaCola.modoRitmo === 'MANUAL'">
-                  Ritmo fijo
-                  <select [(ngModel)]="nuevaCola.idRitmo" (ngModelChange)="recalcular()">
-                    <option [ngValue]="null" disabled>Elige uno…</option>
-                    <option *ngFor="let p of ritmos" [ngValue]="p.id">{{ p.nombre }}</option>
-                  </select>
-                </label>
-              </div>
-              <p class="ritmo-vigente" *ngIf="ritmoVigente">
-                Hoy rige <strong>{{ ritmoVigente.nombre }}</strong>
-                <small>(del {{ ritmoVigente.diaMesDesde }} al {{ ritmoVigente.diaMesHasta }};
-                  el {{ ritmoVigente.diaMesHasta + 1 }} pasa al siguiente)</small>
-                <button type="button" class="btn-link" *ngIf="esAdmin" (click)="irAlCalendario()">
-                  <lucide-angular name="calendar" [size]="14"></lucide-angular>
-                  Editar el calendario
-                </button>
-              </p>
-              <p class="muted" *ngIf="!ritmoVigente">
-                No hay ningún ritmo definido para el día de hoy. Avisa a un administrador:
-                sin ritmo la cola no se puede armar.
-              </p>
-
-              <!-- Lo que significa lo marcado, en frases. No es configurable: si algún
-                   número no gusta, se cambia en el calendario, no aquí. -->
-              <div class="lo-que-hara" *ngIf="loQueHara().length">
-                <span class="etiqueta">Con el ritmo {{ ritmoVigente?.nombre }}, Clara hará esto</span>
-                <ul>
-                  <li *ngFor="let f of loQueHara()">{{ f }}</li>
-                </ul>
-                <small class="muted" *ngIf="!esAdmin">
-                  Estos números los lleva un administrador y son los mismos para todas las
-                  carteras. Lo de tu cola —horario, llamadas a la vez, filtros y tono— sí lo
-                  defines aquí.
+            <!-- Cuanto se insiste, y hasta donde mira. Estos numeros vivian en la tabla
+                 `bot_ritmo`, que los elegia por el DIA DEL MES y era la misma para todas
+                 las colas: bajarlos aqui se los bajaba a las colas de los demas. Ahora
+                 son de esta cola, y cada campo sale solo donde significa algo — no tiene
+                 sentido preguntar "dias de anticipacion" a una cola que abre primeras
+                 promesas, porque ahi no hay ninguna fecha delante. -->
+            <div class="grid-form ancho">
+              <label>
+                Cuántas veces se le llama
+                <input type="number" min="1" max="10"
+                       [(ngModel)]="nuevaCola.intentosMaximos" (ngModelChange)="recalcular()">
+                <small class="muted">
+                  Solo cuenta si no contestó. En cuanto el cliente habla, la ficha se
+                  cierra y no se le vuelve a llamar.
                 </small>
-              </div>
+              </label>
+
+              <label *ngIf="objetivo === 'RECORDATORIO'">
+                Con cuántos días de adelanto se avisa
+                <input type="number" min="0" max="15"
+                       [(ngModel)]="nuevaCola.diasAnticipacion" (ngModelChange)="recalcular()">
+              </label>
+
+              <label *ngIf="objetivo === 'CREACION'">
+                Hasta cuántos días después del vencimiento
+                <input type="number" min="1" max="3"
+                       [(ngModel)]="nuevaCola.maxDiasVencida" (ngModelChange)="recalcular()">
+                <small class="muted">Tope de 3 días, no se puede abrir más.</small>
+              </label>
             </div>
 
             <!-- El único número de la pantalla, y de las dos preguntas a la vez. Sale de
@@ -566,41 +500,10 @@
               </small>
             </label>
 
-            <!-- Tono por objetivo. No se pide: quien no lo toque usa el de arriba
-                 para las tres, que es como funcionaba antes. -->
-            <div class="ancho tonos-objetivo" *ngIf="hayVariosObjetivos()">
-              <button type="button" class="btn-link" (click)="afinarTonos = !afinarTonos">
-                {{ afinarTonos ? 'Usar el mismo tono para todo' : 'Afinar el tono según el objetivo' }}
-              </button>
-              <small class="muted" *ngIf="!afinarTonos">
-                Ahora los tres objetivos de esta cola hablan igual. No es lo mismo
-                recordar una cuota que aún no vence que cobrar una vencida.
-              </small>
-
-              <div class="rejilla-tonos" *ngIf="afinarTonos">
-                <label *ngIf="objRecordatorio">
-                  Recordar cuota por vencer
-                  <select [(ngModel)]="nuevaCola.idTonoRecordatorio">
-                    <option [ngValue]="null">El mismo de arriba</option>
-                    <option *ngFor="let t of tonos" [ngValue]="t.id">{{ t.nombre }}</option>
-                  </select>
-                </label>
-                <label *ngIf="objCreacion">
-                  Negociar cuota vencida
-                  <select [(ngModel)]="nuevaCola.idTonoVencida">
-                    <option [ngValue]="null">El mismo de arriba</option>
-                    <option *ngFor="let t of tonos" [ngValue]="t.id">{{ t.nombre }}</option>
-                  </select>
-                </label>
-                <label *ngIf="objPrimerContacto">
-                  Abrir primera promesa
-                  <select [(ngModel)]="nuevaCola.idTonoPrimera">
-                    <option [ngValue]="null">El mismo de arriba</option>
-                    <option *ngFor="let t of tonos" [ngValue]="t.id">{{ t.nombre }}</option>
-                  </select>
-                </label>
-              </div>
-            </div>
+            <!-- El tono por objetivo se retiro: existia para que una cola que hacia
+                 tres cosas no hablara igual recordando una cuota que cobrando una
+                 vencida. Con un objetivo por cola, el tono de arriba ya es el de esa
+                 unica cosa, y tres selectores para elegir lo mismo solo confunden. -->
             </div>
           </section>
 
@@ -627,23 +530,89 @@
             </p>
 
             <div class="grid-form">
-              <label class="ancho">
-                Descuentos que ofrece
-                <input type="text" [(ngModel)]="reglaCola.curvaDescuento"
-                       placeholder="70,80,90" [class.campo-malo]="!!errorCurva"
-                       (ngModelChange)="errorCurva = ''">
+              <!-- La curva, por escalones. Era un campo de texto con comas: no validaba al
+                   escribir, no dejaba ver el orden y, sobre todo, escondia lo unico que
+                   importa —el importe que Clara va a DECIR—. El suelo aplasta mucho mas
+                   de lo que parece, asi que una curva de tres podia ser una oferta de
+                   una sin que nadie lo supiera hasta oir la grabacion. -->
+              <div class="ancho curva-editor">
+                <span class="curva-titulo">Descuentos que ofrece Clara, en orden</span>
+
+                <p class="muted curva-vacia" *ngIf="!escalones.length">
+                  Sin escalones, esta cola hereda la curva de su subcartera.
+                </p>
+
+                <div class="escalon" *ngFor="let e of escalones; let i = index"
+                     [class.aplastado]="escalonAplastado(i)">
+                  <span class="escalon-orden">{{ i + 1 }}º</span>
+
+                  <input class="escalon-rango" type="range" min="1" max="99" step="1"
+                         [value]="e" (input)="cambiarEscalon(i, $any($event.target).value)">
+
+                  <input class="escalon-pct" type="number" min="1" max="99" step="1"
+                         [value]="e" (change)="cambiarEscalon(i, $any($event.target).value)">
+                  <span class="escalon-signo">%</span>
+
+                  <span class="escalon-importe" *ngIf="importeDe(e) !== null">
+                    → S/ {{ importeDe(e) | number:'1.0-0' }}
+                    <small *ngIf="escalonAplastado(i)" title="El suelo lo dejó en el mismo importe que el escalón anterior, así que Clara no lo dirá">
+                      mismo importe
+                    </small>
+                  </span>
+
+                  <span class="escalon-botones">
+                    <button type="button" (click)="moverEscalon(i, -1)" [disabled]="i === 0"
+                            title="Subir">↑</button>
+                    <button type="button" (click)="moverEscalon(i, 1)"
+                            [disabled]="i === escalones.length - 1" title="Bajar">↓</button>
+                    <button type="button" class="quitar" (click)="quitarEscalon(i)"
+                            title="Quitar este escalón">×</button>
+                  </span>
+                </div>
+
+                <div class="curva-pie">
+                  <button type="button" class="btn-anadir-escalon" (click)="anadirEscalon()"
+                          [disabled]="escalones.length >= 6">+ añadir escalón</button>
+
+                  <small class="muted" *ngIf="muestra?.n">
+                    Importes calculados sobre el valor mediano de la subcartera
+                    (S/ {{ muestra?.mediana | number:'1.0-0' }} en {{ muestra?.n | number }} clientes)
+                    y con el pago mínimo ya aplicado.
+                  </small>
+                </div>
+
+                <!-- La lista de columnas sobre las que se descuenta esta fijada en el
+                     front. Hoy es correcta, pero si esa columna se renombra o entra otra
+                     cartera el desplegable la seguiria ofreciendo y Clara se quedaria sin
+                     ofertas con un aviso en el log y nada mas. Esto lo saca a la cara:
+                     la muestra ya sabe si la columna trae dato. -->
+                <p class="curva-aviso" *ngIf="muestra && !muestra.n">
+                  <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+                  <span>
+                    <strong>{{ nombreCampoBase() }}</strong> no tiene ningún valor en esta
+                    subcartera. Clara no podrá calcular ningún descuento sobre ella: la
+                    llamada se quedará sin ofertas que hacer.
+                  </span>
+                </p>
+                <!-- Lo que de verdad va a oir el cliente. Una curva de tres escalones que
+                     el suelo deja en uno es el fallo mas caro de esta pantalla. -->
+                <p class="curva-aviso" *ngIf="escalones.length > 1 && escalonesUtiles < escalones.length">
+                  <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+                  De {{ escalones.length }} escalones el cliente solo oirá
+                  <strong>{{ escalonesUtiles }}</strong>: el pago mínimo aplasta a los demás
+                  contra el importe anterior. Baja el mínimo o quita los escalones de más.
+                </p>
+
                 <small class="error-campo" *ngIf="errorCurva">{{ errorCurva }}</small>
                 <small class="muted">
-                  Los porcentajes que Clara va ofreciendo, en orden y separados por comas.
-                  Un solo valor (<em>90</em>) es una única oferta: si la rechazan, se cierra.
-                  Varios (<em>70,80,90</em>) abren por el primero y van bajando conforme
-                  el cliente rechaza.
+                  Clara abre por el primero y va bajando el importe conforme el cliente
+                  rechaza. Un solo escalón es una única oferta: si la rechazan, se cierra.
                 </small>
-              </label>
+              </div>
 
               <label>
                 Se descuenta sobre
-                <select [(ngModel)]="reglaCola.campoBase">
+                <select [(ngModel)]="reglaCola.campoBase" (ngModelChange)="cargarMuestra()">
                   <option *ngFor="let c of CAMPOS_BASE" [ngValue]="c.valor">{{ c.nombre }}</option>
                 </select>
                 <small class="muted">
@@ -892,10 +861,24 @@
       </p>
     </div>
 
-    <div class="tono-card" *ngFor="let r of reglas">
+    <!-- Solo las reglas de SUBCARTERA. Las de cola se caian aqui dentro y se pintaban
+         con el mismo titulo —cinco tarjetas diciendo "TRAMO PROPIO"— y ademas con los
+         campos equivocados: aqui hay enganche y cuotas, que es castigo, y una regla de
+         cola de propia negocia con curva, suelo y plazo. Se editan en el alta de la
+         cola, que es donde ademas se elige la antiguedad a la que aplican. -->
+    <div class="tono-card" *ngFor="let r of reglasDeSubcartera"
+         [class.regla-inactiva]="r.activo === false">
       <div class="card-title-row" style="margin-bottom: 14px;">
         <h3>{{ r.idSubcartera ? nombreSubcartera(r.idSubcartera) : 'Por defecto (todas)' }}</h3>
+        <span class="status-badge" *ngIf="carteraDeSubcartera(r.idSubcartera)">
+          {{ carteraDeSubcartera(r.idSubcartera) }}
+        </span>
         <span class="status-badge" *ngIf="!r.idSubcartera">se aplica si no hay una propia</span>
+        <!-- Una regla desactivada se veia igual que una activa, asi que se podia estar
+             ajustando numeros que no rigen nada. -->
+        <span class="estado-pill st-alerta" *ngIf="r.activo === false"
+              title="Está guardada pero no se aplica en ninguna llamada">inactiva</span>
+        <span class="muted regla-nombre" *ngIf="r.nombre">{{ r.nombre }}</span>
       </div>
 
       <div class="grid-form">
@@ -978,15 +961,21 @@
            no de las que existen hoy: antes iba atado a `colas.length > 1` y al borrar
            colas el selector se esfumaba, dejando las llamadas de las borradas sin
            forma de mirarse. -->
-      <!-- El día que se mira. Los contadores y la tabla van los dos por aquí: antes los
-           contadores decían "hoy" y la tabla enseñaba las 100 últimas de siempre, así
-           que un día sin llamadas salía con todo a cero al lado de una tabla llena de
-           llamadas de ayer, y al elegir una cola seguía en cero porque sus llamadas
-           eran de otro día. -->
+      <!-- El dia, VACIO por defecto. Antes abria en hoy y la pantalla salia en cero
+           casi cada mañana: no hay una cola discando todos los dias, asi que lo normal
+           era entrar y no ver nada teniendo miles de llamadas dentro. Se abre con todo
+           y se acota si hace falta.
+
+           Al cambiarlo se rehace tambien el desplegable de colas: solo se ofrecen las
+           que llamaron ESE dia. -->
       <label class="selector-cola">
         Día
         <input type="date" [ngModel]="fechaLlamadas"
                (ngModelChange)="cambiarFechaLlamadas($event)">
+        <button type="button" class="btn-link" *ngIf="fechaLlamadas"
+                (click)="cambiarFechaLlamadas('')" title="Ver todos los días">
+          Todos
+        </button>
       </label>
 
       <label class="selector-cola" *ngIf="colasFiltro.length">

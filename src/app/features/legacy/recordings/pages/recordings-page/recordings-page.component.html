@@ -1,14 +1,45 @@
-<div class="min-h-screen bg-slate-950 p-4">
+<div class="min-h-screen bg-slate-950 p-4 sm:p-6">
   <!-- Header -->
-  <div class="flex items-center gap-2 mb-3">
-    <div class="w-8 h-8 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-lg flex items-center justify-center">
-      <lucide-angular name="headphones" [size]="16" class="text-white!"></lucide-angular>
+  <div class="flex items-center gap-3 mb-5">
+    <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700
+                grid place-items-center shadow-lg shadow-indigo-950/50">
+      <lucide-angular [img]="Headphones" [size]="17" class="text-white!"></lucide-angular>
     </div>
     <div>
-      <h1 class="text-lg font-bold text-white">Grabaciones Históricas</h1>
-      <p class="text-xs text-gray-400">Búsqueda y descarga de grabaciones de llamadas</p>
+      <h1 class="text-[19px] font-semibold text-white tracking-[-0.015em]">Grabaciones Históricas</h1>
+      <p class="text-[12.5px] text-slate-500">Búsqueda, descarga y monitoreo de calidad</p>
     </div>
   </div>
 
-  <app-recordings-tracker></app-recordings-tracker>
+  <!--
+    Pestañas como segmentado y no como subrayado: son dos vistas hermanas del
+    mismo módulo, no una jerarquía. El fondo agrupa las dos y la activa se
+    levanta con material, sin necesidad de una línea de color.
+  -->
+  <div class="inline-flex gap-1 p-1 mb-5 rounded-full bg-white/[0.04] ring-1 ring-white/[0.06]">
+    <button
+      (click)="seleccionar('grabaciones')"
+      [class]="'inline-flex items-center gap-2 h-9 px-4 rounded-full text-[13px] font-medium '
+               + 'transition-all duration-200 cursor-pointer '
+               + (pestana === 'grabaciones'
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200')">
+      <lucide-angular [img]="Search" [size]="15"></lucide-angular>
+      Grabaciones
+    </button>
+
+    <button
+      (click)="seleccionar('monitoreo')"
+      [class]="'inline-flex items-center gap-2 h-9 px-4 rounded-full text-[13px] font-medium '
+               + 'transition-all duration-200 cursor-pointer '
+               + (pestana === 'monitoreo'
+                  ? 'bg-white/10 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200')">
+      <lucide-angular [img]="BarChart3" [size]="15"></lucide-angular>
+      Monitoreo
+    </button>
+  </div>
+
+  <app-recordings-tracker *ngIf="pestana === 'grabaciones'"></app-recordings-tracker>
+  <app-quality-monitor *ngIf="pestana === 'monitoreo'"></app-quality-monitor>
 </div>

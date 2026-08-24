@@ -2,7 +2,6 @@
 /* Mismo ancho que Gestión de Campañas: la lista de colas y sus tablas necesitan el
    sitio, y con 1200 px quedaba una franja vacía a los lados en pantallas normales. */
 .bot-voz { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
-
 /* Header */
 .page-header {
   display: flex; justify-content: space-between; align-items: center;
@@ -22,28 +21,15 @@
 }
 .header-content h1 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary, #1e293b); margin: 0; }
 .header-content p { font-size: 0.875rem; color: var(--text-secondary, #64748b); margin: 0.25rem 0 0 0; }
-
 .estado-bot { display: flex; align-items: center; gap: 0.5rem; font-weight: 600; color: var(--text-secondary, #64748b); font-size: 0.875rem; }
 .estado-bot .dot { width: 10px; height: 10px; border-radius: 50%; background: #cbd5e1; }
 .estado-bot .dot.on { background: #22c55e; box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2); }
-
 .flash {
   background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);
   color: #16a34a; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem;
 }
-
 /* Aviso de por que "Iniciar" esta bloqueado: cambios sin guardar o cola vacia.
    Mismo formato que .flash pero en ambar, porque no es un exito ni un error. */
-.aviso-no-guardado {
-  display: flex; align-items: center; gap: 0.5rem;
-  background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #b45309; padding: 0.75rem 1rem; border-radius: 8px;
-  margin-bottom: 1rem; font-size: 0.875rem;
-}
-.aviso-no-guardado .btn-link {
-  margin-left: auto; background: none; border: none; cursor: pointer;
-  color: #b45309; font-weight: 600; font-size: 0.875rem; text-decoration: underline;
-}
 .btn-primary.pendiente {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   animation: pulso-pendiente 2s ease-in-out infinite;
@@ -52,7 +38,6 @@
   0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
   50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
 }
-
 /* Tabs */
 .tabs-container {
   display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
@@ -66,17 +51,15 @@
 }
 .tab-btn:hover { color: var(--text-primary, #1e293b); background: var(--bg-secondary, #f8fafc); border-radius: 8px 8px 0 0; }
 .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; font-weight: 600; }
-
 /* Cards */
-.control-card, .form-card, .ritmo-card {
+.control-card, .form-card {
   background: var(--card-bg, white); border: 1px solid var(--border-color, #e2e8f0);
   border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;
 }
 .control-card { display: flex; justify-content: space-between; align-items: center; }
-.control-card h3, .ritmo-head h3 { margin: 0 0 0.25rem; color: var(--text-primary, #1e293b); font-size: 1rem; font-weight: 600; }
+.control-card h3 { margin: 0 0 0.25rem; color: var(--text-primary, #1e293b); font-size: 1rem; font-weight: 600; }
 .muted { color: var(--text-secondary, #64748b); font-size: 0.8rem; }
 .control-buttons { display: flex; gap: 0.75rem; }
-
 /* Buttons */
 .btn-primary, .btn-secondary, .btn-danger {
   display: inline-flex; align-items: center; gap: 0.5rem; height: 40px; padding: 0 1.25rem;
@@ -89,7 +72,6 @@
 .btn-danger { background: linear-gradient(135deg, #ef4444, #b91c1c); color: white; }
 .btn-danger:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35); }
 .btn-primary:disabled, .btn-danger:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-
 /* Form */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
 .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
@@ -105,9 +87,6 @@
 }
 .form-group input:disabled, .form-group select:disabled { opacity: 0.5; cursor: not-allowed; }
 .checkbox-group { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-primary, #1e293b); }
-
-.ritmo-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
-
 /* Cola */
 .cola-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
 .chips { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -115,7 +94,6 @@
 .chip.pend { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
 .chip.done { background: rgba(34, 197, 94, 0.1); color: #047857; }
 .chip.disc { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
-
 /* Table */
 .table-card { background: var(--card-bg, white); border: 1px solid var(--border-color, #e2e8f0); border-radius: 12px; overflow: hidden; }
 .table-wrapper { overflow-x: auto; }
@@ -127,16 +105,13 @@ th {
 }
 td { padding: 0.75rem 1rem; font-size: 0.875rem; color: var(--text-primary, #1e293b); border-bottom: 1px solid var(--border-color, #e2e8f0); }
 tbody tr:hover { background: var(--bg-hover, #f8fafc); }
-
 .badge { padding: 0.125rem 0.5rem; border-radius: 6px; font-size: 0.78rem; background: var(--bg-secondary, #f1f5f9); color: var(--text-secondary, #64748b); }
 .badge.pendiente { background: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
 .badge.completada { background: rgba(34, 197, 94, 0.1); color: #047857; }
 .badge.descartada { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
 .badge.en_llamada { background: rgba(234, 179, 8, 0.12); color: #a16207; }
-
 .empty-state { padding: 3rem; text-align: center; color: var(--text-secondary, #64748b); }
 .empty-state.error { color: #b91c1c; }
-
 .paginador {
   display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;
   padding: 0.6rem 1rem; font-size: 0.8rem; color: var(--text-secondary, #64748b);
@@ -150,7 +125,6 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .paginador .btn-link:disabled { opacity: 0.35; cursor: not-allowed; }
 .descartes { margin-top: 1rem; }
 .descartes h4 { color: var(--text-secondary, #64748b); margin: 0 0 0.5rem; font-size: 0.9rem; }
-
 /* Descartes: tabla explicativa. Antes eran pastillas con el codigo crudo de la
    regla, ilegibles en cuanto pasaban de cinco. */
 .descartes-card { margin-top: 1rem; }
@@ -173,10 +147,8 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .resumen-reglas .pill-alerta b { color: #854d0e; }
 .badge-alerta { background: rgba(234, 179, 8, 0.14); color: #a16207; }
 .descartes-card .porque { font-weight: 400; line-height: 1.35; max-width: 46ch; }
-
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
 /* Dark mode */
 :host-context(body.dark-theme) {
   --card-bg: #1e293b;
@@ -187,25 +159,20 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   --bg-hover: #334155;
   --input-bg: #0f172a;
 }
-
 @media (max-width: 768px) {
   .bot-voz { padding: 1rem; }
   .page-header { flex-direction: column; gap: 1rem; align-items: flex-start; }
   .control-card { flex-direction: column; gap: 1rem; align-items: flex-start; }
 }
-
 /* Celdas de dos lineas: el dato que se lee arriba, el identificador abajo.
    Antes las tablas mostraban id_cliente e id_cuota, que obligaban a ir a la
    base para saber a quien se llamo. */
 .celda-principal { font-weight: 600; }
 .celda-sub { font-size: 0.75rem; color: var(--text-muted, #64748b); }
-
 .fila-clicable { cursor: pointer; }
 .fila-clicable:hover { background: rgba(59, 130, 246, 0.06); }
-
 /* Reset base: .btn-link se usa tambien fuera del aviso ambar. */
 .btn-link { background: none; border: none; cursor: pointer; font: inherit; padding: 0; }
-
 /* Selector de dias. Antes era un campo de texto libre y un error de tipeo
    ("L-V") dejaba dias sin marcar sin ningun aviso. */
 .form-group.full-span { grid-column: 1 / -1; }
@@ -232,7 +199,6 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .preset.on { background: rgba(59, 130, 246, 0.12); border-color: #3b82f6; color: #1d4ed8; font-weight: 600; }
 .resumen-dias { margin: 0.5rem 0 0; }
 .resumen-dias.alerta { color: #b45309; font-weight: 600; }
-
 .rango-horas { display: flex; align-items: center; gap: 0.5rem; }
 .rango-horas select {
   min-height: 40px; padding: 0.5rem 0.6rem; width: 6rem; cursor: pointer; font-variant-numeric: tabular-nums;
@@ -242,15 +208,13 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 }
 .rango-horas select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 .rango-horas select.invalido { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12); }
-
 .punto-sin-guardar {
   width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;
   box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
 }
-
-.progreso-cola { font-size: 0.8rem; font-weight: 600; color: var(--text-primary, #1e293b); margin: 0.35rem 0 0; }
+/* El avance de la cola se pinta con utilidades de Tailwind en la plantilla: es una
+   linea suelta, no hace falta CSS propio. */
 .control-buttons { align-items: center; }
-
 /* Detalle de una llamada: panel lateral con la transcripcion. */
 .detalle-overlay {
   position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
@@ -264,7 +228,6 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .detalle-head { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1.25rem; }
 .detalle-head h3 { margin: 0 0 0.25rem; }
 .detalle-head .btn-link { margin-left: auto; color: inherit; text-decoration: none; }
-
 .detalle-datos {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 0.75rem; margin-bottom: 1.5rem;
@@ -272,9 +235,7 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 }
 .detalle-datos > div { display: flex; flex-direction: column; gap: 0.15rem; }
 .detalle-datos .muted { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; }
-
 .detalle-cargando { padding: 1rem 0; color: var(--text-muted, #64748b); font-size: 0.875rem; }
-
 .transcripcion { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.75rem; }
 .transcripcion li { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.6rem 0.85rem; border-radius: 10px; }
 .transcripcion .quien { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -283,12 +244,10 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
 .transcripcion .de-bot .quien   { color: #1d4ed8; }
 .transcripcion .de-cliente { background: rgba(100, 116, 139, 0.1); }
 .transcripcion .de-cliente .quien { color: #475569; }
-
 @media (max-width: 768px) {
   .detalle-panel { width: 100%; padding: 1rem; }
   .detalle-datos { grid-template-columns: repeat(2, 1fr); }
 }
-
 /* ============================================================================
    Colas, tonos, reglas y filtros.
    Las secciones nuevas usaban clases que no existían en esta hoja, así que el
@@ -305,7 +264,6 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   color: var(--texto-suave, #6b7280);
   max-width: 78ch;
 }
-
 /* Rejilla de campos. `auto-fit` y no un número fijo de columnas: la misma rejilla
    sirve para el formulario de 6 campos de una cola y para el de 9 de un tono. */
 .grid-form {
@@ -314,7 +272,6 @@ tbody tr:hover { background: var(--bg-hover, #f8fafc); }
   gap: 14px 18px;
   margin-bottom: 16px;
 }
-
 .grid-form label,
 label.ancho {
   display: flex;
@@ -324,9 +281,7 @@ label.ancho {
   font-weight: 500;
   color: var(--texto, #374151);
 }
-
 label.ancho { grid-column: 1 / -1; margin-bottom: 16px; }
-
 .grid-form input,
 .grid-form select,
 label.ancho input,
@@ -340,27 +295,22 @@ label.ancho textarea {
   background: var(--fondo-input, #fff);
   color: inherit;
 }
-
 .grid-form input:focus,
 .grid-form select:focus,
 label.ancho select:focus {
   outline: 2px solid var(--primario, #3b82f6);
   outline-offset: -1px;
 }
-
 /* Un campo vacío significa "hereda", así que el placeholder tiene que leerse como
    una respuesta y no como un hueco por rellenar. */
 .grid-form input::placeholder { color: #9ca3af; font-style: italic; }
-
 .grid-form select:disabled {
   background: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;
 }
-
 .grid-form label small,
 label.ancho small { font-weight: 400; font-size: 12px; }
-
 /* Tarjeta de un tono o de una fila de reglas. */
 .tono-card {
   background: var(--fondo-tarjeta, #fff);
@@ -369,7 +319,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   padding: 18px 20px;
   margin-bottom: 14px;
 }
-
 /* Las casillas de "a quién llama". */
 .objetivos {
   display: flex;
@@ -379,13 +328,11 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   padding: 12px 0 16px;
   border-top: 1px solid var(--borde, #e5e7eb);
 }
-
 .objetivos .etiqueta {
   font-size: 13px;
   font-weight: 600;
   color: var(--texto, #374151);
 }
-
 .objetivos .check {
   display: flex;
   align-items: center;
@@ -393,10 +340,8 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   font-size: 13px;
   cursor: pointer;
 }
-
 .objetivos .check input { width: 15px; height: 15px; cursor: pointer; }
 .objetivos .check small { color: var(--texto-suave, #6b7280); }
-
 /* Una condición de filtro por línea. Los campos cambian según el tipo de dato, de
    ahí el `wrap`: con fechas o con una lista de valores ocupan distinto. */
 .filtro-fila {
@@ -407,7 +352,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   padding: 8px 0;
   border-bottom: 1px dashed var(--borde, #e5e7eb);
 }
-
 .filtro-fila input,
 .filtro-fila select {
   padding: 7px 9px;
@@ -416,11 +360,9 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   font-size: 13px;
   font-family: inherit;
 }
-
 .filtro-fila input[type="text"] { flex: 1 1 200px; min-width: 160px; }
 .filtro-fila input[type="number"],
 .filtro-fila input[type="date"] { width: 130px; }
-
 /* Fila de botones al pie de una tarjeta. */
 .acciones {
   display: flex;
@@ -429,7 +371,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   gap: 10px;
   margin-top: 12px;
 }
-
 /* Lo que diría el tono al escucharlo, y el resumen de las reglas efectivas. */
 .demo {
   margin: 12px 0 0;
@@ -440,7 +381,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   font-size: 13px;
   line-height: 1.5;
 }
-
 /* Tabla de colas. */
 .tabla-wrap {
   overflow-x: auto;
@@ -448,9 +388,7 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border: 1px solid var(--borde, #e5e7eb);
   border-radius: 12px;
 }
-
 .tabla { width: 100%; border-collapse: collapse; font-size: 13px; }
-
 .tabla th {
   text-align: left;
   padding: 12px 14px;
@@ -462,25 +400,19 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border-bottom: 1px solid var(--borde, #e5e7eb);
   white-space: nowrap;
 }
-
 .tabla td {
   padding: 12px 14px;
   border-bottom: 1px solid var(--borde-suave, #f3f4f6);
   vertical-align: middle;
 }
-
 .tabla tr:last-child td { border-bottom: none; }
-
 .tabla .acciones { margin: 0; justify-content: flex-end; }
-
 .objetivos-celda { display: flex; flex-wrap: wrap; gap: 5px; }
-
 .vacio {
   padding: 28px 14px;
   text-align: center;
   color: var(--texto-suave, #6b7280);
 }
-
 /* Discando / detenida. El verde solo cuando está marcando de verdad: si el estado
    se ve igual encendido que apagado, el botón deja de significar nada. */
 .badge-on {
@@ -488,7 +420,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   color: #166534;
   border-color: #86efac;
 }
-
 /* El mismo aviso, cuando lo que informa es un fallo.
    `.flash` iba siempre en verde y el parámetro de error se ignoraba, así que
    "No se pudieron cargar las subcarteras" salía con el mismo color que un guardado
@@ -498,7 +429,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border-color: rgba(239, 68, 68, 0.35);
   color: #b91c1c;
 }
-
 /* ============================================================================
    Lista de colas — misma forma que la gestión de campañas.
    Se copian los patrones de campaign-management (tarjeta con barra de acento,
@@ -514,12 +444,9 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
-
 .seccion-head h3 { margin: 0 0 4px; font-size: 17px; }
 .seccion-head p { margin: 0; max-width: 62ch; }
-
 .seccion-acciones { display: flex; align-items: center; gap: 10px; }
-
 .stat-badge {
   display: flex; flex-direction: column; align-items: center;
   padding: 6px 14px; border-radius: 10px;
@@ -528,7 +455,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .stat-badge.active { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.3); }
 .stat-number { font-size: 18px; font-weight: 700; line-height: 1; }
 .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--texto-suave,#6b7280); }
-
 .btn-create {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 9px 16px; border: none; border-radius: 9px;
@@ -536,7 +462,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   font-size: 14px; font-weight: 500; font-family: inherit; cursor: pointer;
 }
 .btn-create:hover { filter: brightness(1.05); }
-
 /* Una cola. La barra de acento a la izquierda solo se enciende cuando disca de
    verdad: es lo primero que se busca al entrar. */
 .cola-card {
@@ -546,21 +471,16 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border-radius: 12px; margin-bottom: 12px;
 }
 .cola-card.is-dialing { border-color: rgba(34,197,94,.45); }
-
 .card-accent { width: 4px; flex: 0 0 4px; background: var(--borde, #d1d5db); }
 .card-accent.on { background: #22c55e; }
-
 .card-content { flex: 1; padding: 14px 18px; min-width: 0; }
-
 .card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .card-title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .card-title-row h3 { margin: 0; font-size: 15px; font-weight: 600; }
-
 .status-badge {
   padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
   background: var(--fondo-suave, #f3f4f6); color: var(--texto-suave, #4b5563);
 }
-
 .dialing-indicator {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 11px; font-weight: 600; color: #16a34a;
@@ -570,9 +490,7 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   animation: pulso 1.6s ease-in-out infinite;
 }
 @keyframes pulso { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
-
 .card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-
 .btn-action-small {
   display: inline-flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; padding: 0;
@@ -585,9 +503,7 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .btn-action-small.btn-activate { color: #16a34a; border-color: rgba(34,197,94,.35); }
 .btn-action-small.btn-pause    { color: #b45309; border-color: rgba(245,158,11,.35); }
 .btn-action-small.btn-delete   { color: #b91c1c; border-color: rgba(239,68,68,.3); }
-
 .card-description { margin: 8px 0 0; font-size: 13px; color: var(--texto-suave, #6b7280); }
-
 .card-bottom { margin-top: 10px; }
 .card-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 .meta-tag {
@@ -595,7 +511,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   background: var(--fondo-suave, #f3f4f6); color: var(--texto-suave, #6b7280);
 }
 .meta-date { font-variant-numeric: tabular-nums; }
-
 /* Modal del alta. */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000;
@@ -619,7 +534,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   background: transparent; color: var(--texto-suave, #6b7280); cursor: pointer;
 }
 .btn-close:hover { background: var(--fondo-suave, #f3f4f6); }
-
 /* El cuerpo scrollea y el pie se queda fijo: con once campos, el botón de crear
    quedaba fuera de pantalla. */
 .modal-body { padding: 18px 20px; overflow-y: auto; }
@@ -634,7 +548,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .btn-cancel { border: 1px solid var(--borde, #d1d5db); background: transparent; color: inherit; }
 .btn-submit { border: none; background: var(--primario, #3b82f6); color: #fff; }
 .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
-
 /* Tarjeta de contenido normal, en bloque.
    NO se reutiliza `.control-card` porque esa es `display:flex` — está hecha para la
    cabecera de Configuración, texto a un lado y botones al otro. Meter un formulario
@@ -649,7 +562,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   margin-bottom: 1rem;
 }
 .panel h3 { margin: 0 0 .25rem; font-size: 1rem; font-weight: 600; }
-
 /* Los cinco estados de una cola.
    Cada uno tiene su color porque cada uno se arregla de forma distinta: esperar,
    volver a armar, o darle a Iniciar. Con una sola etiqueta "Pausada" para todos,
@@ -664,7 +576,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .estado-pill.st-borrador { background: #e5e7eb; color: #4b5563; }
 .estado-pill.st-espera   { background: #dbeafe; color: #1d4ed8; }
 .estado-pill.st-alerta   { background: #fee2e2; color: #b91c1c; }
-
 /* Por qué la apagó el sistema. Solo sale cuando hay motivo, y ese es justo el caso
    en el que alguien tiene que enterarse. */
 .aviso-pausa {
@@ -675,12 +586,10 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   border-radius: 0 8px 8px 0;
   font-size: 13px; color: #b91c1c;
 }
-
 /* Panel del ojo: cuelga de su tarjeta, sangrado para que se vea de quién es. */
 .detalle-cola { margin: -4px 0 14px 16px; border-left: 3px solid var(--primario, #3b82f6); }
 .detalle-cola h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .detalle-cola h4 + p, .detalle-cola .tabla-wrap { margin-bottom: 18px; }
-
 /* Las tres casillas de qué debe hacer Clara, con su explicación al lado. */
 .objetivos-bloque, .reglas-resumen {
   padding: 14px 0; border-top: 1px solid var(--borde, #e5e7eb);
@@ -690,7 +599,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   font-size: 13px; font-weight: 600; color: var(--texto, #374151);
 }
 .objetivos-bloque > .muted, .reglas-resumen .muted { margin: 0 0 12px; }
-
 .obj-opcion {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 9px 0; cursor: pointer;
@@ -699,13 +607,11 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .obj-opcion span { display: flex; flex-direction: column; gap: 2px; }
 .obj-opcion strong { font-size: 13px; font-weight: 600; }
 .obj-opcion small { font-size: 12px; color: var(--texto-suave, #6b7280); }
-
 /* Cabecera con acciones, como en Gestión de Campañas: la pantalla es de COLAS y lo
    que se toca de vez en cuando —ritmo, voces, reglas— vive en botones, no en pestañas. */
 .page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .header-left { display: flex; align-items: center; gap: 14px; }
 .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-
 .btn-header {
   display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 14px; border-radius: 9px;
@@ -718,9 +624,7 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.4);
   color: #1d4ed8; font-weight: 600;
 }
-
 .volver { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; padding: 0; font-size: 13px; }
-
 /* ===== LOS CUATRO BLOQUES DEL FORMULARIO =====
    Qué cola es -> a quién llama -> cuándo llama -> cómo suena. El número no es adorno:
    dice que hay un orden y cuánto falta. Antes eran doce campos seguidos en una rejilla
@@ -739,7 +643,6 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 }
 /* Dentro de un bloque, el separador ya lo pone el bloque. */
 .bloque .objetivos-bloque { padding: 0; border-top: none; }
-
 /* ===== BLOQUE 5 · CONDICIONES DE NEGOCIACIÓN =====
    Que la cola no tenga condiciones propias es lo normal, no un problema: por eso el
    aviso va en azul de informacion y no en el ambar de los que piden hacer algo. */
@@ -752,13 +655,11 @@ label.ancho small { font-weight: 400; font-size: 12px; }
   font-size: 13px; color: var(--texto, #374151);
 }
 .aviso-hereda lucide-angular { flex-shrink: 0; color: #2563eb; margin-top: 1px; }
-
 /* El fallo del campo, debajo de SU campo. Va antes que la ayuda para que se lea
    primero lo que hay que corregir y despues como se corrige. */
 .error-campo { color: #b91c1c; font-weight: 500; }
 .grid-form input.campo-malo,
 label.ancho input.campo-malo { border-color: #ef4444; }
-
 /* Una casilla con su explicacion al lado. `label.ancho` apila en columna, y aqui el
    texto tiene que ir a la derecha del cuadradito, no debajo. */
 .grid-form label.check-linea {
@@ -769,12 +670,9 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   flex-shrink: 0; cursor: pointer;
 }
 .check-linea > span { display: flex; flex-direction: column; gap: 3px; }
-
-
 /* Un descarte que no es rutina —blacklist, sin teléfono— pintado distinto: son los
    que explican por qué la cola salió más corta de lo que se esperaba. */
 .meta-tag.meta-alerta { background: rgba(245,158,11,.12); color: #b45309; }
-
 /* Cabecera del detalle: el titulo a la izquierda y el buscador a la derecha. */
 .detalle-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -787,7 +685,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
 }
 .buscador:focus { outline: 2px solid var(--primario, #3b82f6); outline-offset: -1px; }
-
 /* Selector de jerarquía: proveedor → cartera → subcartera, en su propia tarjeta.
    Mismo patrón que el resto de la aplicación, para que se reconozca sin leerlo. */
 .selector-jerarquia {
@@ -813,7 +710,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   background: var(--card-bg, #fff); color: inherit;
 }
 .jerarquia-campos select:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
-
 /* Un campo por el que segmentar, con sus valores como casillas.
    Se elige de lo que existe en la cartera; antes había que escribir el nombre de la
    columna a ciegas y un nombre mal puesto se ignoraba en silencio. */
@@ -822,7 +718,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
 .campo-filtro:last-child { border-bottom: none; }
-
 .campo-head {
   display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
 }
@@ -830,9 +725,7 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 .campo-estado { font-size: 12px; color: #16a34a; display: flex; align-items: center; gap: 6px; }
 .campo-estado.muted { color: var(--text-secondary, #94a3b8); }
 .campo-estado .btn-link { font-size: 12px; padding: 0; }
-
 .campo-valores { display: flex; flex-wrap: wrap; gap: 8px; }
-
 /* La casilla como pastilla. El conteo que llevaba al lado se quitó: contaba filas de
    la tabla dinámica de la cartera, no de la cola, así que ponía 450 junto a un valor
    del que iban a entrar doce. El número honesto es el de "entran N", al pie del
@@ -846,7 +739,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 .valor-chip:hover { background: var(--fondo-suave, #f8fafc); }
 .valor-chip.on { background: rgba(59,130,246,.1); border-color: rgba(59,130,246,.45); color: #1d4ed8; }
 .valor-chip input { width: 15px; height: 15px; cursor: pointer; }
-
 /* ===== A QUIÉN LLAMA: LOS FILTROS DENTRO DEL FORMULARIO =====
    Sangrados bajo la frase "…que estén en" para que se lean como parte de ella y no
    como una configuración aparte. Antes vivían en un modal detrás de otro botón, y las
@@ -865,7 +757,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   background: var(--input-bg, #fff);
 }
 .alta-filtro .btn-link { display: inline-flex; align-items: center; gap: 5px; padding: 0; font-size: 13px; }
-
 /* El único número de la pantalla, y de las dos preguntas a la vez. */
 .cuantos-entran {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -876,7 +767,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 }
 .cuantos-entran strong { font-size: 17px; color: #1d4ed8; font-variant-numeric: tabular-nums; }
 .cuantos-entran .aviso { color: #b45309; font-size: 13px; }
-
 /* Selector de cola de la pantalla de llamadas. Solo se pinta con mas de una. */
 .selector-cola {
   display: inline-flex; align-items: center; gap: 8px;
@@ -887,7 +777,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   border: 1px solid var(--border-color, #d1d5db); border-radius: 8px;
   background: var(--fondo, #fff); color: var(--texto, #0f172a);
 }
-
 /* ===== PASTILLAS DE LA PANTALLA DE LLAMADAS =====
    Contadores clicables: cada uno filtra la tabla y se vuelve a clicar para quitarlo.
    El tono es semantico — verde lo que sirve, ambar lo que pide que alguien haga algo,
@@ -910,7 +799,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 .pills-llamadas .pill.t-ok    { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
 .pills-llamadas .pill.t-aviso { background: #fffbeb; border-color: #fde68a; color: #92400e; }
 .pills-llamadas .pill.t-malo  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-
 /* ACTIVA: se INVIERTE — fondo solido y texto blanco.
    El estado activo era un borde azul con una sombra al 15%, y sobre una pastilla que
    ya venia con fondo de color no se distinguia de la inactiva: parecia que el clic no
@@ -922,7 +810,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 }
 .pills-llamadas .pill.on b { color: #fff; }
 .pills-llamadas .pill .quitar { font-size: 15px; line-height: 1; opacity: .75; }
-
 /* Lo que se esta viendo, en palabras. Sin esto hay que deducir del color por que la
    tabla enseña 3 filas de 100. */
 .pills-estado {
@@ -931,30 +818,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 }
 .pills-estado .btn-link { font-size: 13px; }
 .pills-cola { font-size: 12.5px; margin-left: 4px; }
-
-/* ===== TONO POR OBJETIVO =====
-   Va plegado dentro del form de la cola. Cerrado no ocupa nada; abierto son tres
-   selectores en una rejilla que se adapta, no tres filas sueltas estirando el modal. */
-.tonos-objetivo {
-  border: 1px dashed var(--borde, #e2e8f0);
-  border-radius: 8px;
-  padding: 12px 14px;
-  background: var(--fondo-suave, #f8fafc);
-}
-.tonos-objetivo > .btn-link {
-  color: #2563eb;
-  font-weight: 600;
-  font-size: 13px;
-}
-.tonos-objetivo > small { display: block; margin-top: 6px; }
-.rejilla-tonos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-.rejilla-tonos label { margin: 0; }
-
 /* ===== ALTA DE FILTRO =====
    La fila de "elige campo + agregar", como en la segmentación de campañas. */
 .alta-filtro {
@@ -977,7 +840,6 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   border-radius: 8px;
 }
 .campo-head .quitar { margin-left: 12px; color: #dc2626; font-size: 12px; }
-
 /* ===== EL CALENDARIO, POR TAREA =====
    Cada tarea con sus numeros dentro. Antes eran tres recuadros seguidos por ritmo y no
    habia forma de saber a cual de las tres cosas que hace Clara afectaba cada uno. */
@@ -988,33 +850,78 @@ label.ancho input.campo-malo { border-color: #ef4444; }
   font-size: 13px; color: var(--texto, #374151);
 }
 .tarea-head .muted { font-size: 12px; }
-
-/* ===== EL RITMO ELEGIDO, DENTRO DEL FORMULARIO =====
-   Va pegado a las casillas de tarea porque es lo que les da valor: "negociar vencidas"
-   no dice nada por si solo —vencidas de cuando, con cuantos intentos— y el ritmo lo
-   responde. No se configura aqui: se lee. */
-.ritmo-elegido { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde, #e5e7eb); }
-.ritmo-elegido .ritmo-vigente {
-  display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px;
-  margin: 8px 0 0; font-size: 13px; color: var(--texto-suave, #64748b);
-}
-.ritmo-elegido .ritmo-vigente strong { color: #2563eb; }
-.ritmo-elegido .btn-link {
-  display: inline-flex; align-items: center; gap: 6px; padding: 0; font-size: 13px;
-}
-.lo-que-hara {
-  margin-top: 12px; padding: 12px 14px;
-  border-radius: 8px; background: var(--fondo-suave, #f8fafc);
-  border: 1px solid var(--borde, #e2e8f0);
-}
-.lo-que-hara .etiqueta {
-  display: block; margin-bottom: 8px;
-  font-size: 12px; font-weight: 600; color: var(--texto, #374151);
-}
-.lo-que-hara ul { margin: 0; padding-left: 18px; }
-.lo-que-hara li { font-size: 13px; line-height: 1.55; color: var(--texto, #0f172a); }
-.lo-que-hara small { display: block; margin-top: 8px; }
-
 /* Quién tocó esto por última vez. Discreta y a la derecha: es un dato de auditoría,
    no compite con el botón de guardar. */
 .firma { margin-left: auto; font-size: 12px; font-style: italic; }
+
+/* ----- El editor de la curva de descuentos -----
+   Cada escalon en una linea: orden, deslizador, porcentaje y el importe que Clara va a
+   decir de verdad. El importe es lo que justifica la pantalla; el porcentaje solo no
+   dice si el suelo se lo va a comer. */
+/* `grid-column` explicito: el resto del formulario se ensancha con `label.ancho`, que
+   es un selector de etiqueta, y esto es un div —sin esto se quedaba en una columna. */
+.curva-editor {
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column; gap: 0.5rem;
+  margin-bottom: 16px;
+}
+.curva-titulo {
+  font-size: 0.8rem; font-weight: 600; color: var(--text-secondary, #475569);
+}
+.curva-vacia { margin: 0; font-size: 0.8rem; }
+
+.escalon {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc);
+}
+/* El escalon que el suelo aplasto contra el anterior: esta configurado pero no suena. */
+.escalon.aplastado { opacity: 0.6; border-style: dashed; }
+
+.escalon-orden {
+  width: 1.6rem; font-size: 0.78rem; font-weight: 700;
+  color: var(--text-secondary, #475569); font-variant-numeric: tabular-nums;
+}
+.escalon-rango { flex: 1; min-width: 5rem; accent-color: #2563eb; cursor: pointer; }
+.escalon-pct {
+  width: 3.6rem; min-height: 32px; padding: 0.25rem 0.4rem; text-align: right;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 6px;
+  background: var(--input-bg, #fff); color: var(--text-primary, #1e293b);
+  font-size: 0.85rem; font-family: inherit;
+}
+.escalon-signo { font-size: 0.8rem; color: var(--text-secondary, #475569); }
+.escalon-importe {
+  min-width: 9rem; font-size: 0.82rem; font-weight: 600;
+  color: var(--text-primary, #1e293b); font-variant-numeric: tabular-nums;
+}
+.escalon-importe small { font-weight: 500; color: #b45309; margin-left: 0.3rem; }
+
+.escalon-botones { display: flex; gap: 0.2rem; margin-left: auto; }
+.escalon-botones button {
+  width: 26px; height: 26px; line-height: 1; cursor: pointer;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 6px;
+  background: var(--bg-card, #fff); color: var(--text-secondary, #475569);
+}
+.escalon-botones button:disabled { opacity: 0.35; cursor: default; }
+.escalon-botones .quitar { color: #dc2626; }
+
+.curva-pie { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.btn-anadir-escalon {
+  padding: 0.35rem 0.7rem; cursor: pointer; font-size: 0.8rem; font-family: inherit;
+  border: 1px dashed var(--border-color, #cbd5e1); border-radius: 8px;
+  background: transparent; color: var(--text-secondary, #475569);
+}
+.btn-anadir-escalon:disabled { opacity: 0.4; cursor: default; }
+
+.curva-aviso {
+  display: flex; align-items: flex-start; gap: 0.5rem; margin: 0;
+  padding: 0.5rem 0.7rem; border-radius: 8px;
+  background: #fffbeb; color: #92400e; font-size: 0.8rem;
+  border: 1px solid #fde68a;
+}
+
+/* Una regla guardada pero apagada. Se veia igual que una activa. */
+.regla-inactiva { opacity: 0.7; }
+.regla-nombre { font-size: 0.8rem; margin-left: auto; }

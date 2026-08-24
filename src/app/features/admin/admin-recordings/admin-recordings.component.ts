@@ -11,6 +11,13 @@ import { PortfolioService } from '../../../maintenance/services/portfolio.servic
 import { Tenant } from '../../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../../maintenance/models/portfolio.model';
 
+/**
+ * Tope del rango de fechas de la busqueda. Es el unico freno que existe hoy:
+ * el backend no valida el rango, asi que este numero es la unica proteccion
+ * contra una consulta de meses sobre una subcartera con volumen.
+ */
+const MAX_DIAS_RANGO = 31;
+
 @Component({
   selector: 'app-admin-recordings',
   standalone: true,
@@ -60,7 +67,11 @@ export class AdminRecordingsComponent implements OnInit {
   endDate: string = '';
   documento: string = '';
   telefono: string = '';
+  rutaNivel1: string = '';
   errorMessage: string = '';
+
+  /** Tipificaciones de nivel 1 para el combo del filtro. */
+  tipificaciones: string[] = [];
 
   // Filter fields
   filterDocumento: string = '';
@@ -90,6 +101,14 @@ export class AdminRecordingsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadTenants();
+    this.loadTipificaciones();
+  }
+
+  private loadTipificaciones(): void {
+    this.recordingsService.getTipificaciones().subscribe({
+      next: (data) => this.tipificaciones = data,
+      error: (err) => console.error('No se pudieron cargar las tipificaciones', err)
+    });
   }
 
   // === Cascade selectors ===
@@ -134,6 +153,7 @@ export class AdminRecordingsComponent implements OnInit {
     this.endDate = '';
     this.documento = '';
     this.telefono = '';
+    this.rutaNivel1 = '';
     this.errorMessage = '';
   }
 
@@ -152,8 +172,8 @@ export class AdminRecordingsComponent implements OnInit {
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays > 7) {
-        this.errorMessage = 'La diferencia entre las fechas no puede ser mayor a 7 días.';
+      if (diffDays > MAX_DIAS_RANGO) {
+        this.errorMessage = `La diferencia entre las fechas no puede ser mayor a ${MAX_DIAS_RANGO} días.`;
       }
     }
   }
@@ -190,10 +210,11 @@ export class AdminRecordingsComponent implements OnInit {
 
     const doc = this.documento.trim();
     const tel = this.telefono.trim();
+    const ruta = this.rutaNivel1.trim();
     const hayFecha = !!(this.startDate || this.endDate);
 
-    if (!hayFecha && !doc && !tel) {
-      this.toastService.error('Ingresa al menos un criterio: fechas, documento o teléfono.');
+    if (!hayFecha && !doc && !tel && !ruta) {
+      this.toastService.error('Ingresa al menos un criterio: fechas, documento, teléfono o tipificación.');
       return;
     }
     if (hayFecha && !(this.startDate && this.endDate)) {
@@ -213,7 +234,8 @@ export class AdminRecordingsComponent implements OnInit {
         fechaDesde: this.startDate || undefined,
         fechaHasta: this.endDate || undefined,
         documento: doc || undefined,
-        telefono: tel || undefined
+        telefono: tel || undefined,
+        rutaNivel1: ruta || undefined
       }
     ).subscribe({
       next: (data) => {

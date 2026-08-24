@@ -72,6 +72,15 @@
                (keyup.enter)="buscar()">
       </div>
 
+      <div class="filter-group">
+        <label>Tipificación</label>
+        <select [(ngModel)]="rutaNivel1"
+                title="Filtra por la ultima tipificacion de la llamada. Las llamadas manuales no tienen tipificacion enlazada y quedan fuera.">
+          <option value="">Todas</option>
+          <option *ngFor="let t of tipificaciones" [value]="t">{{ t }}</option>
+        </select>
+      </div>
+
       <!-- Search Button -->
       <div class="filter-group filter-action">
         <button class="btn-primary" [disabled]="isLoading" (click)="buscar()">
@@ -142,6 +151,7 @@
             </th>
             <th></th>
             <th></th>
+            <th></th>
             <th class="col-action">
               <button class="btn-clear-filters" (click)="clearFilters()" title="Limpiar filtros">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
@@ -171,6 +181,10 @@
               Agente
               <span class="sort-icon" *ngIf="sortField === 'agente'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
             </th>
+            <th (click)="sort('tipificacion')" class="sortable">
+              Tipificación
+              <span class="sort-icon" *ngIf="sortField === 'tipificacion'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
+            </th>
             <th (click)="sort('fechaInicio')" class="sortable">
               Fecha
               <span class="sort-icon" *ngIf="sortField === 'fechaInicio'">{{ sortOrder === 1 ? '▲' : '▼' }}</span>
@@ -188,6 +202,7 @@
             <td class="cell-truncate" [title]="recording.cliente">{{ recording.cliente }}</td>
             <td class="cell-truncate" [title]="recording.campana">{{ recording.campana }}</td>
             <td>{{ recording.agente || '-' }}</td>
+            <td class="cell-truncate" [title]="recording.tipificacion">{{ recording.tipificacion || '-' }}</td>
             <td class="cell-mono">{{ formatDate(recording.fechaInicio) }}</td>
             <td class="cell-mono">{{ formatTime(recording.fechaInicio) }}</td>
             <td class="col-action">

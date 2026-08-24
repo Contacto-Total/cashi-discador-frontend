@@ -33,6 +33,11 @@ interface Recording {
   nombre: string;
   /** Segundos con decimales por archivo: '179.96' o '8.04,8.12,45.92'. */
   duracion: string;
+  /**
+   * Si hay texto en `audios_transcripcion` para esta gestión. Lo calcula el
+   * backend al armar el listado; decide si se dibuja el botón de transcripción.
+   */
+  tieneTranscripcion: boolean;
 }
 
 /**
@@ -98,6 +103,33 @@ export class RecordingsTrackerComponent implements OnInit {
   filterTelefono: string = '';
   filterCartera: string = '';
   filterResultado: string = '';
+  filterAsesor: string = '';
+
+  /**
+   * Qué filtros de columna tienen sentido sobre lo que se trajo.
+   *
+   * Un filtro solo sirve si su columna tiene más de un valor distinto en el
+   * resultado: buscar por documento devuelve un solo DNI, y elegir Tramo 5
+   * arriba deja un solo tramo, así que esas cajas no filtrarían nada y solo
+   * hacen ruido. Se calcula sobre `gestiones` —el universo traído— y nunca
+   * sobre `filteredGestiones`: mirando lo ya filtrado, cada filtro se
+   * escondería al usarlo y no habría forma de deshacerlo.
+   */
+  mostrarFiltroDocumento: boolean = false;
+  mostrarFiltroCartera: boolean = false;
+  mostrarFiltroTelefono: boolean = false;
+  mostrarFiltroResultado: boolean = false;
+  mostrarFiltroAsesor: boolean = false;
+
+  /**
+   * Las opciones de cada desplegable de la grilla, armadas con los valores que
+   * de verdad están en el resultado. Ofrecer FALLECIDO cuando no hay ninguna
+   * gestión con ese resultado es el mismo problema que ofrecer el filtro de DNI
+   * después de buscar por DNI: una opción que solo puede devolver cero filas.
+   */
+  opcionesTramo: SelectOption[] = [];
+  opcionesResultado: SelectOption[] = [];
+  opcionesAsesor: SelectOption[] = [];
 
   // Dropdowns
   resultados: SelectOption[] = [];
@@ -207,9 +239,7 @@ export class RecordingsTrackerComponent implements OnInit {
 
     this.gestionHistoricaAudiosService.getGestionHistoricaAudiosByDateRange(dateRangeRequest).subscribe({
       next: (data: any) => {
-        this.gestiones = data;
-        this.initialValue = [...data];
-        this.applyFilters();
+        this.cargarResultados(data);
         this.isLoading = false;
         this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
       },
@@ -236,9 +266,7 @@ export class RecordingsTrackerComponent implements OnInit {
 
     this.gestionHistoricaAudiosService.getGestionHistoricaAudiosByDocumento(documentoRequest).subscribe({
       next: (data: any) => {
-        this.gestiones = data;
-        this.initialValue = [...data];
-        this.applyFilters();
+        this.cargarResultados(data);
         this.isLoading = false;
         this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
       },
@@ -265,9 +293,7 @@ export class RecordingsTrackerComponent implements OnInit {
 
     this.gestionHistoricaAudiosService.getGestionHistoricaAudiosByTelefono(telefonoRequest).subscribe({
       next: (data: any) => {
-        this.gestiones = data;
-        this.initialValue = [...data];
-        this.applyFilters();
+        this.cargarResultados(data);
         this.isLoading = false;
         this.toastService.success(`Se encontraron ${data.length} grabaciones.`);
       },
@@ -277,6 +303,86 @@ export class RecordingsTrackerComponent implements OnInit {
         this.isLoading = false;
       }
     });
+  }
+
+  /**
+   * Deja la grilla lista con lo que acaba de traer el backend.
+   *
+   * Limpia los filtros de columna antes de mostrar: si venían de la búsqueda
+   * anterior seguirían aplicándose sobre datos nuevos, y encima invisibles
+   * cuando la columna deja de ofrecer su caja —el supervisor vería menos filas
+   * de las que trajo su búsqueda sin nada en pantalla que lo explique.
+   */
+  private cargarResultados(data: Recording[]): void {
+    this.gestiones = data;
+    this.initialValue = [...data];
+    this.filterDocumento = '';
+    this.filterTelefono = '';
+    this.filterCartera = '';
+    this.filterResultado = '';
+    this.filterAsesor = '';
+    this.actualizarFiltrosDisponibles();
+    this.applyFilters();
+  }
+
+  /**
+   * Qué cajas de filtro se dibujan y con qué opciones, según el resultado.
+   * Ver la nota de `mostrarFiltroDocumento` para el criterio.
+   */
+  private actualizarFiltrosDisponibles(): void {
+    const carteras = this.valoresDistintos(g => g.cartera);
+    const resultadosPresentes = this.valoresDistintos(g => g.resultado);
+    const asesores = this.valoresDistintos(g => g.usuarioregistra);
+
+    this.mostrarFiltroDocumento = this.valoresDistintos(g => g.documento).length > 1;
+    this.mostrarFiltroTelefono = this.valoresDistintos(g => g.telefono).length > 1;
+    this.mostrarFiltroCartera = carteras.length > 1;
+    this.mostrarFiltroResultado = resultadosPresentes.length > 1;
+    this.mostrarFiltroAsesor = asesores.length > 1;
+
+    // El tramo sale del dato y no del catálogo de `tramos`: la grilla muestra
+    // la cartera tal cual viene ('FO_TRAMO 3'), y una cartera que el catálogo
+    // no contemple quedaría sin forma de filtrarse. El catálogo solo aporta la
+    // etiqueta corta cuando el valor coincide.
+    this.opcionesTramo = [
+      { label: 'Todos', value: '' },
+      ...carteras.map(cartera => ({
+        label: this.tramos.find(opcion => opcion.value === cartera)?.label ?? cartera,
+        value: cartera
+      }))
+    ];
+
+    // El catálogo de resultados va de peor a mejor gestión, así que se filtra
+    // conservando ese orden en vez de reordenar alfabéticamente.
+    this.opcionesResultado = this.resultados.filter(
+      opcion => !opcion.value || resultadosPresentes.includes(opcion.value)
+    );
+
+    this.opcionesAsesor = [
+      { label: 'Todos', value: '' },
+      ...asesores.map(asesor => ({ label: asesor, value: asesor }))
+    ];
+  }
+
+  /** Los valores distintos de una columna en lo traído, ordenados y sin vacíos. */
+  private valoresDistintos(columna: (gestion: Recording) => string): string[] {
+    const valores = new Set<string>();
+    this.gestiones.forEach(gestion => {
+      const valor = columna(gestion);
+      if (valor) {
+        valores.add(valor);
+      }
+    });
+    return [...valores].sort((a, b) => a.localeCompare(b));
+  }
+
+  /** Si la fila de filtros tiene algo que mostrar. */
+  get hayFiltrosDisponibles(): boolean {
+    return this.mostrarFiltroDocumento
+      || this.mostrarFiltroTelefono
+      || this.mostrarFiltroCartera
+      || this.mostrarFiltroResultado
+      || this.mostrarFiltroAsesor;
   }
 
   applyFilters(): void {
@@ -307,6 +413,10 @@ export class RecordingsTrackerComponent implements OnInit {
       filtered = filtered.filter(g => g.resultado === this.filterResultado);
     }
 
+    if (this.filterAsesor) {
+      filtered = filtered.filter(g => g.usuarioregistra === this.filterAsesor);
+    }
+
     this.filteredGestiones = filtered;
     this.currentPage = 1;
     this.updatePagination();
@@ -317,6 +427,7 @@ export class RecordingsTrackerComponent implements OnInit {
     this.filterTelefono = '';
     this.filterCartera = '';
     this.filterResultado = '';
+    this.filterAsesor = '';
     this.applyFilters();
   }
 
@@ -547,6 +658,11 @@ export class RecordingsTrackerComponent implements OnInit {
    * Los cuatro campos son estados excluyentes de la misma vista: cargando, error,
    * sin texto (`partes` vacío) o con texto. Se separan `isLoading` y `error`
    * porque "todavía no llegó" y "no se pudo traer" no pueden verse igual.
+   *
+   * El estado "sin texto" sigue existiendo aunque el botón ya solo aparezca en las
+   * gestiones que tienen transcripción: `tieneTranscripcion` es una foto del
+   * momento en que se cargó la grilla, y el pipeline puede rehacer esa fila
+   * mientras el supervisor mira la pantalla.
    */
   transcripcionAbierta: boolean = false;
   transcripcionCargando: boolean = false;

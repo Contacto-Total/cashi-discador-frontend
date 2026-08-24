@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
 import {
-  BotVozService, BotConfig, BotRitmo, BotContacto, BotSesion, BotTurno,
+  BotVozService, BotConfig, BotContacto, BotSesion, BotTurno,
   BotCola, BotTono, BotRegla, BotColaRegla, BotColaFiltro, ResumenLlamadas,
 } from './bot-voz.service';
 
@@ -17,9 +17,13 @@ import {
 export class BotVozComponent implements OnInit, OnDestroy {
   /**
    * Qué se está mirando. Arranca en COLAS: es lo que se hace todos los días.
-   * Ritmo, voces y reglas se abren desde los botones de la cabecera y vuelven aquí.
+   * Voces y reglas se abren desde los botones de la cabecera y vuelven aquí.
+   *
+   * La vista 'ritmo' desaparecio con la tabla `bot_ritmo`: era un calendario unico
+   * para todas las carteras, asi que quien bajaba ahi los intentos se los bajaba a las
+   * colas de los demas. Esos numeros se editan hoy dentro de cada cola.
    */
-  vista: 'colas' | 'ritmo' | 'tonos' | 'reglas' | 'llamadas' = 'colas';
+  vista: 'colas' | 'tonos' | 'reglas' | 'llamadas' = 'colas';
 
   // ----- Colas y tonos -----
   colas: BotCola[] = [];
@@ -50,13 +54,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
   /** Si la ultima muestra salio de la cache del micro (no se cobro) o se sintetizo. */
   demoCacheada: Record<number, boolean> = {};
 
-  /** Abre los selectores de tono por objetivo. Cerrado, la cola usa uno solo. */
-  afinarTonos = false;
+  // `afinarTonos` y los tres selectores de tono por objetivo se fueron: el bloque
+  // pedia `hayVariosObjetivos()` para pintarse, asi que con un objetivo por cola era
+  // pantalla inalcanzable — ni rota ni visible, y sin forma de quitar lo que hubiera
+  // guardado.
 
-  /** Los tres objetivos como casillas. Se juntan en `objetivos` al crear. */
-  objRecordatorio = true;
-  objCreacion = true;
-  objPrimerContacto = false;
+  /**
+   * El objetivo de la cola. Uno solo, y sin valor por defecto.
+   *
+   * Antes eran tres casillas que se juntaban con comas, dos de ellas marcadas de
+   * salida. Elegir a que viene una cola es una decision de negocio y ninguna de las
+   * tres es "la normal": preseleccionar dos hacia que una cola creada de corrido
+   * saliera recordando y negociando sin que nadie lo hubiera pedido.
+   */
+  objetivo: string = '';
 
   nuevaCola: BotCola = this.colaVacia();
   /** El formulario de alta vive en un modal, como el de campañas. */
@@ -141,10 +152,21 @@ export class BotVozComponent implements OnInit, OnDestroy {
   detalleDe?: number;
 
   config?: BotConfig;
-  ritmos: BotRitmo[] = [];
+  /** Las filas de la cola cuyo detalle esta abierto. Ya no es "la cola de hoy" de
+   *  todas juntas: se piden por `idCola` y solo al abrir el ojo. */
   cola: BotContacto[] = [];
   descartes: any[] = [];
   sesiones: BotSesion[] = [];
+
+  /**
+   * Como esta cada cola, contado en la BASE e indexado por id.
+   *
+   * Antes cada tarjeta contaba sus pendientes filtrando en el navegador la cola del
+   * dia entera. Sin dias eso seria bajarse todas las filas de todas las colas cada
+   * cinco segundos para pintar un numero al lado de "Armada".
+   */
+  contadores: Record<number, { pendientes: number; enLlamada: number;
+                               completadas: number; descartadas: number; total: number }> = {};
 
   loadingCola = false;
   errorCola = false;
@@ -158,9 +180,6 @@ export class BotVozComponent implements OnInit, OnDestroy {
    *  de simultaneas porque nadie noto que habia que darle a "Guardar". */
   private configGuardada = '';
 
-  /** Igual que configGuardada pero por ritmo, indexado por id. */
-  private ritmosGuardados = new Map<number, string>();
-
   /** Refresco de las vistas de monitoreo. Las filas cambian de estado mientras
    *  el bot disca y sin esto la pantalla se queda en la foto de cuando entraste. */
   private readonly REFRESCO_MS = 5000;
@@ -173,8 +192,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.cargarColas();
     this.cargarTonos();
     this.cargarConfig();
-    this.cargarRitmos();
-    this.cargarCola(true);   // alimenta el indicador de estado de la cabecera
+    // Los contadores alimentan el indicador de la cabecera y el "por marcar" de cada
+    // tarjeta. Antes eso salia de traerse la cola del dia entera y contarla aqui.
+    this.cargarContadores();
     this.refresco = setInterval(() => this.refrescar(), this.REFRESCO_MS);
   }
 
@@ -183,10 +203,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.pararDemo();       // si no, la muestra sigue sonando al cambiar de pantalla
   }
 
-  /** La cola se refresca siempre porque de ella sale el estado de la cabecera.
-   *  Config y ritmos no: recargarlos pisaria lo que el usuario esta editando. */
+  /**
+   * Recargar las COLAS cada cinco segundos es obligatorio, no una comodidad.
+   *
+   * El estado de una cola lo cambia el servidor solo: el discador la pasa a FINALIZADA
+   * en cuanto no le queda ninguna fila viva. Sin esta recarga la tarjeta se quedaria
+   * diciendo "Discando" para siempre, sobre una cola que ya no marca a nadie. De paso
+   * mata la trampa del `motivoPausa` rancio despues de Iniciar o Detener, que se
+   * quedaba acusando a un fallo de hace tres dias.
+   *
+   * La config no se recarga: pisaria lo que el usuario esta editando.
+   */
   private refrescar(): void {
-    this.cargarCola(true);
+    this.cargarColas();
+    this.cargarContadores();
     if (this.vista === 'llamadas') this.cargarSesiones();
   }
 
@@ -322,15 +352,22 @@ export class BotVozComponent implements OnInit, OnDestroy {
   colaLlamadas: number | null = null;
 
   /**
-   * El dia que se esta mirando. Hoy por defecto.
+   * El selector de dia se retiro, y con el `fechaLlamadas` y su setter.
    *
-   * Existe porque sin el la pantalla se contradecia: las pastillas contaban HOY y la
-   * tabla enseñaba las 100 ultimas de siempre, asi que un dia sin llamadas salia con
-   * todos los contadores a cero al lado de una tabla llena de llamadas de ayer. Las dos
-   * cosas eran ciertas y aun asi parecia rota. Y al elegir una cola seguia en cero,
-   * porque sus llamadas eran de otro dia.
+   * Existia porque las pastillas contaban HOY y la tabla enseñaba las 100 ultimas de
+   * siempre, y la pantalla se contradecia sola. La solucion de entonces fue atar las
+   * dos a un dia; la de ahora es quitar el dia de en medio: una cola vive hasta que se
+   * acaba, asi que sus llamadas son suyas venga el dia que venga. Contadores y tabla
+   * miran lo mismo —todo lo de la cola elegida— y siguen sin contradecirse.
    */
-  fechaLlamadas = new Date().toISOString().slice(0, 10);
+  /**
+   * El dia que se mira, VACIO por defecto = todos.
+   *
+   * Ponerlo en hoy dejaba la pantalla en cero casi cada mañana: no hay una cola
+   * discando todos los dias, asi que lo normal era abrir Llamadas y no ver nada
+   * teniendo miles de llamadas dentro. Se abre con todo y se acota si hace falta.
+   */
+  fechaLlamadas: string = '';
 
   cambiarColaLlamadas(id: number | null): void {
     this.colaLlamadas = id;
@@ -339,9 +376,11 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   cambiarFechaLlamadas(fecha: string): void {
-    // Vacio vuelve a hoy en vez de dejar la pantalla sin dia: un input de fecha se
-    // puede borrar entero y quedaria pidiendo `fecha=` al backend.
-    this.fechaLlamadas = fecha || new Date().toISOString().slice(0, 10);
+    this.fechaLlamadas = fecha || '';
+    // El desplegable de colas se rehace con el dia: las que no llamaron ese dia dejan
+    // de ofrecerse. Y si la que estaba elegida no esta entre ellas, se suelta el filtro
+    // en vez de dejar seleccionada una cola que ya no sale en la lista.
+    this.refrescarColasFiltro();
     this.paginaSesiones = 1;
     this.cargarSesiones();
   }
@@ -376,7 +415,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
    * más vieja que las 100 últimas, y el selector enseñaba únicamente la cola 5.
    */
   private refrescarColasFiltro(): void {
-    this.svc.getColasDelHistorico().subscribe({
+    // Con un dia elegido se parte de cero: lo visto en otros dias no vale, o el
+    // desplegable acumularia colas que ese dia no llamaron.
+    if (this.fechaLlamadas) this.colasVistas.clear();
+    this.svc.getColasDelHistorico(this.fechaLlamadas || null).subscribe({
       next: (filas) => {
         for (const f of filas) {
           if (f.idCola == null) continue;
@@ -386,6 +428,12 @@ export class BotVozComponent implements OnInit, OnDestroy {
           this.colasVistas.set(f.idCola, f.nombreCola || `Cola ${f.idCola}`);
         }
         this.componerColasFiltro();
+        // La cola elegida puede no haber llamado el dia nuevo: se suelta el filtro en
+        // vez de dejar un desplegable enseñando algo que ya no esta entre sus opciones.
+        if (this.fechaLlamadas && this.colaLlamadas != null
+            && !this.colasFiltro.some((c) => c.id === this.colaLlamadas)) {
+          this.colaLlamadas = null;
+        }
       },
       // Sin el histórico se pinta al menos lo que hay vivo: un selector vacío deja al
       // supervisor sin poder filtrar nada.
@@ -534,7 +582,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     G8:  { titulo: 'Sin teléfono válido',   ok: false,
            porque: 'El cliente no tiene ningún celular activo de 9 dígitos. Sin número no hay a dónde marcar.' },
     G11: { titulo: 'Tope diario alcanzado', ok: true,
-           porque: 'Se llegó al máximo de llamadas que permite el ritmo activo. Estas cuotas entran mañana.' },
+           porque: 'Se llegó al máximo de llamadas que permite la cola. Estas cuotas entran mañana.' },
     G12: { titulo: 'Tiene cita agendada',   ok: true,
            porque: 'Hay una llamada agendada con un asesor. Llamar antes pisaría esa cita.' },
     G13: { titulo: 'Ya tiene promesa nueva', ok: true,
@@ -570,17 +618,15 @@ export class BotVozComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.n - a.n);
   }
 
-  abrir(v: 'colas' | 'ritmo' | 'tonos' | 'reglas' | 'llamadas'): void {
-    // El ritmo es del admin: el botón no se le pinta al supervisor, pero la vista se
-    // cierra también aquí. Ocultar el botón no es esconder la pantalla — basta con que
-    // algo llame a abrir('ritmo') para colarse.
-    if (v === 'ritmo' && !this.esAdmin) return;
+  abrir(v: 'colas' | 'tonos' | 'reglas' | 'llamadas'): void {
     // Un segundo clic en el mismo botón devuelve a las colas: hace de ida y de vuelta.
     this.vista = this.vista === v && v !== 'colas' ? 'colas' : v;
     const t = this.vista;
     if (t === 'llamadas') this.cargarSesiones();
-    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarCola(); }
-    if (t === 'ritmo') this.cargarRitmos();
+    // Las filas de una cola NO se piden al volver: se piden por `idCola` y solo cuando
+    // se abre su detalle. Pedirlas aqui seria bajarse las de todas las colas para
+    // pintar una lista de tarjetas que ya lleva sus numeros en `contadores`.
+    if (t === 'colas') { this.cargarColas(); this.cargarTonos(); this.cargarContadores(); }
     if (t === 'tonos') this.cargarTonos();
     if (t === 'reglas') { this.cargarReglas(); this.cargarProveedoresReglas(); }
   }
@@ -644,6 +690,139 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ----- La curva de descuentos, por escalones -----
+  //
+  // El campo de texto con comas se quedo corto: no valida al escribir, no deja ver el
+  // orden y, sobre todo, esconde lo unico que importa —cuanto va a DECIR Clara—. El
+  // suelo aplasta mas de lo que parece: con 90 % y suelo 200 muerde en el 54 % de la
+  // cartera antigua, asi que "70,80,90" acaba siendo tres veces el mismo importe y el
+  // backend lo deduplica a uno solo. Configurabas tres rebajas y ofrecias una.
+  //
+  // `escalones` manda en la pantalla y se vuelca a `curvaDescuento` en cada cambio, asi
+  // que el contrato con el backend no se toca: sigue viajando "70,80,90".
+
+  /** Los porcentajes de la curva, en el orden en que Clara los ofrece. */
+  escalones: number[] = [];
+
+  /** Importe representativo de la subcartera, para la vista previa. `n: 0` = sin dato. */
+  muestra: { campo: string; n: number; mediana?: number; minimo?: number; maximo?: number } | null = null;
+
+  /**
+   * Texto -> escalones, y de vuelta.
+   *
+   * Se reescribe la curva con lo que se pinta para que lo que ves sea lo que se guarda.
+   * La columna admite cualquier texto —una fila vieja o un UPDATE a mano pueden traer
+   * "90%" o "noventa"— y sin este viaje de ida y vuelta la pantalla enseñaria cero
+   * escalones mientras el formulario seguia mandando la basura al guardar: el backend
+   * responderia 400 sin que nada en pantalla explicara por que.
+   */
+  private leerEscalones(): void {
+    const crudo = (this.reglaCola.curvaDescuento || '').trim();
+    this.escalones = crudo
+      .split(',')
+      .map((t) => Number(t.trim()))
+      .filter((v) => Number.isFinite(v) && v > 0 && v < 100)
+      .map((v) => Math.round(v));
+    const habia = crudo.split(',').filter((t) => t.trim() !== '').length;
+    this.escribirCurva();
+    if (habia && this.escalones.length < habia) {
+      this.errorCurva = 'La curva guardada tenía valores ilegibles; se han descartado.';
+    }
+  }
+
+  /** Escalones -> texto. El backend sigue recibiendo lo mismo de siempre. */
+  private escribirCurva(): void {
+    this.reglaCola.curvaDescuento = this.escalones.join(',');
+    this.errorCurva = '';
+  }
+
+  cambiarEscalon(i: number, valor: number | string): void {
+    const v = Math.round(Number(valor));
+    if (!Number.isFinite(v)) return;
+    this.escalones[i] = Math.min(99, Math.max(1, v));
+    this.escribirCurva();
+  }
+
+  /**
+   * Un escalon nuevo por encima del ultimo, sin pasar de 99.
+   *
+   * Se siembra con algo razonable en vez de con 0: un escalon a 0 % no es una oferta,
+   * y obligaba a moverlo siempre antes de que sirviera de nada.
+   */
+  anadirEscalon(): void {
+    const ultimo = this.escalones.length ? this.escalones[this.escalones.length - 1] : 70;
+    this.escalones.push(Math.min(99, ultimo + 10));
+    this.escribirCurva();
+  }
+
+  quitarEscalon(i: number): void {
+    this.escalones.splice(i, 1);
+    this.escribirCurva();
+  }
+
+  /** El orden es el orden en que Clara ofrece, asi que se mueve a mano, no se ordena solo. */
+  moverEscalon(i: number, salto: number): void {
+    const j = i + salto;
+    if (j < 0 || j >= this.escalones.length) return;
+    [this.escalones[i], this.escalones[j]] = [this.escalones[j], this.escalones[i]];
+    this.escribirCurva();
+  }
+
+  /**
+   * Lo que Clara diria en este escalon: la misma cuenta que hace el backend, con el
+   * suelo aplicado y redondeado a soles enteros.
+   *
+   * Si no hay muestra devuelve null y la pantalla se limita a los porcentajes: preferir
+   * no enseñar importe a enseñar uno inventado.
+   */
+  importeDe(pct: number): number | null {
+    const base = this.muestra?.mediana;
+    if (base == null || !this.muestra?.n) return null;
+    // Mismo redondeo que el backend: a soles enteros primero el importe y luego el
+    // suelo. Redondear solo uno de los dos hace que la vista previa diga 200 donde la
+    // llamada dice 201.
+    const piso = Math.round(Number(this.reglaCola.pagoMinimo ?? 0));
+    return Math.max(Math.round(Number(base) * (1 - pct / 100)), piso);
+  }
+
+  /** Este escalon dice el mismo importe que el anterior: el suelo lo aplasto. */
+  escalonAplastado(i: number): boolean {
+    if (i === 0) return false;
+    const hoy = this.importeDe(this.escalones[i]);
+    return hoy != null && hoy === this.importeDe(this.escalones[i - 1]);
+  }
+
+  /** Cuantos escalones distintos oira el cliente de verdad. */
+  get escalonesUtiles(): number {
+    if (!this.escalones.length) return 0;
+    if (this.importeDe(this.escalones[0]) == null) return this.escalones.length;
+    return this.escalones.filter((_, i) => !this.escalonAplastado(i)).length;
+  }
+
+  /** El nombre legible de la columna sobre la que se descuenta, para los avisos. */
+  nombreCampoBase(): string {
+    const c = this.CAMPOS_BASE.find((x) => x.valor === this.reglaCola.campoBase);
+    return c ? c.nombre : (this.reglaCola.campoBase || 'La columna elegida');
+  }
+
+  /**
+   * Pide el importe de referencia. Silencioso a proposito: es una ayuda visual y su
+   * fallo no puede estorbar al que esta montando la cola.
+   */
+  cargarMuestra(): void {
+    const sub = this.nuevaCola.idSubcartera;
+    const campo = this.reglaCola.campoBase;
+    // Al editar no se pasa por los selectores —la subcartera de una cola no se cambia—
+    // asi que ahi los ids salen de la propia cola.
+    const inq = this.idInquilinoSel || this.nuevaCola.idInquilino;
+    const cart = this.idCarteraSel || this.nuevaCola.idCartera;
+    if (!sub || !campo || !inq || !cart) { this.muestra = null; return; }
+    this.svc.getMuestra(inq, cart, sub, campo).subscribe({
+      next: (m) => (this.muestra = m),
+      error: () => (this.muestra = null),
+    });
+  }
+
   /**
    * Carga las condiciones de una cola al abrirla.
    *
@@ -657,7 +836,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.errorCurva = '';
     this.svc.getReglaDeCola(id).subscribe({
       next: (r) => {
-        if (!r) { this.reglaHeredada = true; return; }
+        if (!r) { this.reglaHeredada = true; this.escalones = []; this.cargarMuestra(); return; }
         this.reglaCola = {
           campoBase: r.campoBase || 'sld_capital_asig',
           curvaDescuento: r.curvaDescuento || '',
@@ -666,101 +845,36 @@ export class BotVozComponent implements OnInit, OnDestroy {
           ultimoTramoSoloHoy: !!r.ultimoTramoSoloHoy,
           maxCuotasBot: r.maxCuotasBot ?? null,
         };
+        this.leerEscalones();
+        this.cargarMuestra();
       },
       // Sin condiciones a la vista es preferible a un formulario a medio rellenar: si
       // falla la lectura, se deja en blanco y marcado como heredado, que es el estado
       // mas conservador —guardar asi no le escribe una regla propia—.
-      error: () => { this.reglaHeredada = true; },
+      error: () => { this.reglaHeredada = true; this.escalones = []; },
     });
   }
 
+  /**
+   * Una cola nueva ya NO nace con todo en null.
+   *
+   * Los tres numeros de abajo eran "hereda del calendario de ritmos" y ese calendario
+   * ya no existe, asi que null aqui solo significaria un INSERT contra tres columnas
+   * NOT NULL. Se siembran con lo mas conservador: se marca una vez a cada cliente, no
+   * se avisa con adelanto y la ventana de vencidas es de un dia.
+   */
   private colaVacia(): BotCola {
     return {
       nombre: '', idSubcartera: undefined as any, objetivos: '',
       idTono: null, horaInicio: null, horaFin: null,
       maxLlamadasSimultaneas: null,
-      modoRitmo: 'AUTO', idRitmo: null,
+      intentosMaximos: 1, diasAnticipacion: 0, maxDiasVencida: 1,
     };
   }
 
-  // ---- El ritmo que rige, para poder enseñarlo ----
-  //
-  // Los reintentos y los días de anticipación ya no se editan por cola: los manda el
-  // calendario de ritmos. Aquí se resuelve cuál rige hoy para poder decir el número
-  // en el formulario, en lectura. Un recuadro que pone "hereda" no informa de nada.
-
-  /** El ritmo que se aplicaría hoy si la cola no fija ninguno. */
-  get ritmoVigente(): BotRitmo | undefined {
-    if (this.nuevaCola.modoRitmo === 'MANUAL' && this.nuevaCola.idRitmo) {
-      return this.ritmos.find((p) => p.id === this.nuevaCola.idRitmo);
-    }
-    const dia = new Date().getDate();
-    return this.ritmos.find((p) => p.diaMesDesde <= dia && p.diaMesHasta >= dia);
-  }
-
-  /**
-   * Las tres cosas que hace Clara, con el campo de intentos que le toca a cada una.
-   *
-   * Ordena la pantalla del calendario: antes eran tres números sueltos por ritmo y no
-   * había forma de saber a cuál de las tres afectaba cada uno.
-   */
-  readonly TOPE_VENCIDA = 3;
-  readonly TAREAS: Array<{
-    clave: string; titulo: string; subtitulo: string; icono: string;
-    campoIntentos: 'intentosRecordatorio' | 'intentosVencida' | 'intentosPrimera';
-  }> = [
-    { clave: 'RECORDATORIO', titulo: 'Recordatorio',
-      subtitulo: 'cuotas que aún no vencen', icono: 'bell',
-      campoIntentos: 'intentosRecordatorio' },
-    { clave: 'CREACION', titulo: 'PDP de cuota vencida',
-      subtitulo: 'negociar una promesa nueva', icono: 'handshake',
-      campoIntentos: 'intentosVencida' },
-    { clave: 'PRIMER_CONTACTO', titulo: '1ª PDP',
-      // `plus-circle` y no `user-plus`: el juego de iconos que registra app.config no
-      // trae UserPlus, y un icono no registrado no se pinta ni avisa.
-      subtitulo: 'clientes que nunca han pactado', icono: 'plus-circle',
-      campoIntentos: 'intentosPrimera' },
-  ];
-
-  /**
-   * Lo que hará Clara con el ritmo elegido, en frases, y solo de lo que esté marcado.
-   *
-   * Va justo debajo de las casillas y no en una tabla aparte porque es la respuesta a
-   * "¿y esto qué significa hoy?". El supervisor no configura nada aquí: lee la
-   * consecuencia de lo que acaba de marcar.
-   */
-  loQueHara(): string[] {
-    const r = this.ritmoVigente;
-    if (!r) return [];
-    const frases: string[] = [];
-    if (this.objRecordatorio) {
-      frases.push(`Recordará cuotas ${r.diasAnticipacion} día(s) antes de que venzan`
-        + `, con ${r.intentosRecordatorio} intento(s) por cliente.`);
-    }
-    if (this.objCreacion) {
-      frases.push(`Negociará cuotas de hasta ${r.maxDiasVencida} día(s) de vencidas`
-        + `, con ${r.intentosVencida} intento(s). No entran las de clientes que sigan`
-        + ` en el periodo de gracia de su asesor.`);
-    }
-    if (this.objPrimerContacto) {
-      frases.push(`Abrirá primeras promesas con ${r.intentosPrimera} intento(s)`
-        + ` por cliente.`);
-    }
-    return frases;
-  }
-
-  /**
-   * El calendario de ritmos vive fuera del modal, asi que ir alli lo cierra. Se avisa
-   * antes: perder un formulario a medio llenar por pulsar un enlace informativo es
-   * peor que el viaje de vuelta.
-   */
-  irAlCalendario(): void {
-    const aviso = 'Se cerrará este formulario y se perderá lo que no hayas guardado. '
-      + '¿Ir al calendario de ritmos?';
-    if (!confirm(aviso)) return;
-    this.cerrarModalCola();
-    this.abrir('ritmo');
-  }
+  // El ritmo vigente, las tres TAREAS y el enlace al calendario se fueron con la tabla
+  // `bot_ritmo`. Los numeros que ensenaban en lectura ahora se editan en el propio
+  // formulario, porque son de esta cola y de ninguna otra.
 
   // Topes del sistema. No son configuración de negocio —son la ley y el techo de
   // canales de la máquina— así que no se editan en el panel: se enseñan como límite.
@@ -815,6 +929,60 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Los seis numeros de cada cola, contados en la base.
+   *
+   * Un fallo aqui no se avisa: la lista de colas se lee igual sin los contadores, y un
+   * aviso rojo cada cinco segundos por un numero que falta taparia el que si importa.
+   * Se dejan los anteriores en vez de vaciarlos — un cero mentiria diciendo que la
+   * cola se quedo sin trabajo, que es justo lo que dispara "Finalizada".
+   */
+  cargarContadores(): void {
+    this.svc.getContadores().subscribe({
+      next: (filas) => {
+        const m: Record<number, { pendientes: number; enLlamada: number;
+                                  completadas: number; descartadas: number; total: number }> = {};
+        for (const f of filas) {
+          m[f.idCola] = { pendientes: f.pendientes, enLlamada: f.enLlamada,
+                          completadas: f.completadas, descartadas: f.descartadas, total: f.total };
+        }
+        this.contadores = m;
+      },
+      error: () => { /* se queda la ultima foto buena */ },
+    });
+  }
+
+  // ---- Filtrar la lista de colas ----
+  //
+  // Filtra el NAVEGADOR y ordena el BACKEND. Son un punado de colas ya cargadas, asi
+  // que un viaje al servidor por tecla no compra nada; y reordenar aqui lo que el
+  // backend ya ordeno es como se acaba viendo una lista distinta segun por donde
+  // entres.
+
+  busquedaCola: string = '';
+  subcarteraFiltro: number | null = null;
+
+  /** Las colas que se pintan. NO ordena: el orden llega hecho de `GET /colas`. */
+  get colasVisibles(): BotCola[] {
+    const q = this.busquedaCola.trim().toLowerCase();
+    return this.colas.filter((c) => {
+      if (this.subcarteraFiltro != null && c.idSubcartera !== this.subcarteraFiltro) return false;
+      if (!q) return true;
+      return (c.nombre || '').toLowerCase().includes(q);
+    });
+  }
+
+  /** Las subcarteras que de verdad tienen cola. Ofrecer las demas es ofrecer un
+   *  filtro que solo puede dejar la lista vacia. */
+  get subcarterasConCola(): { id: number; nombre: string }[] {
+    const m = new Map<number, string>();
+    for (const c of this.colas) {
+      if (c.idSubcartera == null) continue;
+      m.set(c.idSubcartera, c.nombreSubcartera || `#${c.idSubcartera}`);
+    }
+    return [...m].map(([id, nombre]) => ({ id, nombre }));
+  }
+
   cargarTonos(): void {
     this.svc.getTonos(true).subscribe({
       next: (t) => (this.tonos = t),
@@ -854,6 +1022,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (!this.nuevaCola.idSubcartera) return;
     this.verEfectivas(this.nuevaCola.idSubcartera);
     this.cargarCampos(this.nuevaCola.idSubcartera);
+    this.cargarMuestra();
     this.recalcular();
   }
 
@@ -874,10 +1043,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.editandoCola = undefined;
     this.errorModal = '';
     this.nuevaCola = this.colaVacia();
-    this.objRecordatorio = true;
-    this.objCreacion = true;
-    this.objPrimerContacto = false;
-    this.afinarTonos = false;
+    // Sin objetivo preseleccionado: el boton de guardar se queda deshabilitado hasta
+    // que alguien elija uno, que es lo que obliga a decidirlo en vez de heredarlo.
+    this.objetivo = '';
     this.idInquilinoSel = 0;
     this.idCarteraSel = 0;
     this.carteras = [];
@@ -888,9 +1056,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.reglaCola = this.reglaColaVacia();
     this.reglaHeredada = true;
     this.errorCurva = '';
+    this.escalones = [];
+    this.muestra = null;
     this.modalCola = true;
     this.cargarSubcarteras();
-    this.cargarRitmos();
   }
 
   cerrarModalCola(): void {
@@ -909,17 +1078,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   editarCola(c: BotCola): void {
     this.editandoCola = c.id;
     this.nuevaCola = { ...c };
-    const objs = (c.objetivos || '').split(',').map((o) => o.trim());
-    this.objRecordatorio = objs.includes('RECORDATORIO');
-    this.objCreacion = objs.includes('CREACION');
-    this.objPrimerContacto = objs.includes('PRIMER_CONTACTO');
-    // Si la cola ya tiene algun tono por objetivo, el bloque se abre solo: si no, no
-    // habria forma de ver lo que hay configurado sin saber que existe el enlace.
-    this.afinarTonos = c.idTonoRecordatorio != null
-        || c.idTonoVencida != null || c.idTonoPrimera != null;
+    // Se normaliza al leer, no solo al guardar: la columna admite fisicamente una coma
+    // y una fila vieja o un UPDATE a mano pueden traerla. Si trae dos objetivos ningun
+    // radio queda marcado, que es exactamente lo que hay que ver — y guardar obliga a
+    // elegir uno, que es lo que el backend va a exigir de todos modos.
+    this.objetivo = (c.objetivos || '').trim().toUpperCase();
     // La subcartera no se cambia al editar: cambiarla convertiria esta cola en la de
     // otra cartera, con las filas de la anterior dentro. Para eso se borra y se crea.
-    this.cargarRitmos();
     if (c.idSubcartera) this.verEfectivas(c.idSubcartera);
     if (c.id) this.cargarReglaDeCola(c.id);
 
@@ -952,20 +1117,24 @@ export class BotVozComponent implements OnInit, OnDestroy {
       return;
     }
     if (!confirm(`¿Eliminar la cola "${c.nombre}"? Se borra también lo que tenga pendiente hoy.`)) return;
+    const borrada = c.id;
     this.svc.eliminarCola(c.id).subscribe({
-      next: () => { this.cargarColas(); this.cargarCola(true); this.flash('Cola eliminada'); },
+      next: () => {
+        // Si el detalle abierto era el suyo hay que cerrarlo y soltar sus filas: si no,
+        // la tabla seguiria pintando los clientes de una cola que ya no existe y el ojo
+        // no se podria volver a pulsar para cerrarla.
+        if (this.detalleDe === borrada) { this.detalleDe = undefined; this.cola = []; this.descartes = []; }
+        this.cargarColas();
+        this.cargarContadores();
+        this.flash('Cola eliminada');
+      },
       error: () => this.flash('No se pudo eliminar la cola', true),
     });
   }
 
   crearCola(): void {
-    const objetivos = [
-      this.objRecordatorio ? 'RECORDATORIO' : null,
-      this.objCreacion ? 'CREACION' : null,
-      this.objPrimerContacto ? 'PRIMER_CONTACTO' : null,
-    ].filter(Boolean).join(',');
-    if (!objetivos) {
-      this.errorModal = 'Marca al menos una cosa que deba hacer Clara.';
+    if (!this.objetivo) {
+      this.errorModal = 'Elige qué debe hacer Clara.';
       return;
     }
     // La curva se comprueba antes de tocar nada. Si se dejara para el tercer paso, la
@@ -978,32 +1147,19 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.errorCurva = '';
     this.errorModal = '';
     this.guardandoCola = true;
-    // Con el bloque cerrado se limpian los tres: si no, quien lo abre, elige tonos y
-    // vuelve a cerrarlo guardaria unos tonos que la pantalla ya no enseña. Lo mismo
-    // si se queda con un solo objetivo: ahi el bloque se oculta, y guardar un tono
-    // por objetivo que nadie puede ver ni quitar es peor que no guardarlo.
-    const porObjetivo = this.afinarTonos && this.hayVariosObjetivos()
-      ? {
-          idTonoRecordatorio: this.objRecordatorio ? this.nuevaCola.idTonoRecordatorio : null,
-          idTonoVencida: this.objCreacion ? this.nuevaCola.idTonoVencida : null,
-          idTonoPrimera: this.objPrimerContacto ? this.nuevaCola.idTonoPrimera : null,
-        }
-      : { idTonoRecordatorio: null, idTonoVencida: null, idTonoPrimera: null };
     // El inquilino y la cartera ya los eligio el usuario en la cascada. Hacen falta
     // para localizar la tabla dinamica de la subcartera, que es de donde salen los
     // clientes sin promesa.
+    //
+    // Los tres numeros de intensidad viajan dentro de `nuevaCola` y se mandan siempre,
+    // tambien los que la pantalla no ensena para este objetivo: son NOT NULL en la base
+    // y el backend los normaliza, asi que vaciar uno vale lo que el de por defecto.
     this.guardarCola({
-      ...this.nuevaCola, objetivos, ...porObjetivo,
+      ...this.nuevaCola, objetivos: this.objetivo,
       maxLlamadasSimultaneas: this.simultaneasEnRango(this.nuevaCola.maxLlamadasSimultaneas),
       idInquilino: this.idInquilinoSel || undefined,
       idCartera: this.idCarteraSel || undefined,
     });
-  }
-
-  /** Afinar el tono solo tiene sentido si la cola hace mas de una cosa. */
-  hayVariosObjetivos(): boolean {
-    return [this.objRecordatorio, this.objCreacion, this.objPrimerContacto]
-        .filter(Boolean).length > 1;
   }
 
   private guardarCola(cola: BotCola): void {
@@ -1023,6 +1179,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
           this.nuevaCola = this.colaVacia();
           this.reglaCola = this.reglaColaVacia();
           this.errorCurva = '';
+          this.escalones = [];
+          this.muestra = null;
           this.olvidarFiltros();
           this.modalCola = false;
           this.editandoCola = undefined;
@@ -1163,6 +1321,40 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
   /** Filas de HOY de esa cola que todavía se pueden marcar. */
+  /**
+   * El avance mide LO QUE SE VA A LLAMAR, no las filas de la tabla.
+   *
+   * La primera version contaba descartada como gestionada —"las dos estan cerradas"— y
+   * salio mal a la primera prueba: una cola de 8.030 con 8.024 descartadas y ni una
+   * llamada hecha marcaba 100%. Y es que una descartada no se trabajo, se quito de en
+   * medio: la blacklist, el sin telefono o el "hoy ya le llamaron" no son gestion.
+   *
+   * Asi que la descartada sale del DENOMINADOR en vez de llenar la barra. Con eso, esa
+   * misma cola marca 0 de 6, que es la verdad.
+   */
+  totalDe(c: BotCola): number {
+    if (c.id == null) return 0;
+    const x = this.contadores[c.id];
+    return x ? Math.max(0, x.total - x.descartadas) : 0;
+  }
+
+  gestionadosDe(c: BotCola): number {
+    return c.id != null ? (this.contadores[c.id]?.completadas ?? 0) : 0;
+  }
+
+  /** Los que se quitaron de en medio. Se dicen aparte, no se esconden: si de 8.030
+   *  entran 6, quien mira la cola tiene que ver por que. */
+  descartadasDe(c: BotCola): number {
+    return c.id != null ? (this.contadores[c.id]?.descartadas ?? 0) : 0;
+  }
+
+  /** El porcentaje, entero. Sin total no hay avance que ensenar: devuelve 0 y la
+   *  barra no se pinta (el *ngIf de la plantilla mira `totalDe`). */
+  avanceDe(c: BotCola): number {
+    const total = this.totalDe(c);
+    return total ? Math.round((this.gestionadosDe(c) / total) * 100) : 0;
+  }
+
   pendientesDe(c: BotCola): number {
     return this.cola.filter((f) => f.idCola === c.id &&
       (f.estado === 'PENDIENTE' || f.estado === 'EN_LLAMADA')).length;
@@ -1270,6 +1462,26 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (deLaCola) return deLaCola;
     const s = this.subcarteras.find((x) => x.id === id);
     return s ? (s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
+  }
+
+  /**
+   * Las reglas que esta pantalla puede editar: las de subcartera y la fila por defecto.
+   *
+   * Las de COLA se caen de aqui a proposito. Se veian con el mismo titulo que las de
+   * subcartera —cinco tarjetas diciendo "TRAMO PROPIO"— y ademas con los campos
+   * equivocados: esta pantalla ofrece enganche y cuotas, que es el trato de castigo, y
+   * una regla de cola de propia se negocia con curva de descuento, suelo y plazo, que
+   * no aparecen por ningun lado. Se editan donde viven, en el alta de la cola, que es
+   * ademas donde se elige la antiguedad a la que aplican.
+   */
+  get reglasDeSubcartera(): BotRegla[] {
+    return this.reglas.filter((r) => r.idCola == null);
+  }
+
+  /** De que cartera es esta subcartera, si alguna cola nos lo ha dicho ya. */
+  carteraDeSubcartera(id?: number | null): string {
+    if (id == null) return '';
+    return this.colas.find((c) => c.idSubcartera === id)?.nombreCartera ?? '';
   }
 
   nombreTono(id?: number | null): string {
@@ -1542,14 +1754,20 @@ export class BotVozComponent implements OnInit, OnDestroy {
         idInquilino: this.idInquilinoSel,
         idCartera: this.idCarteraSel,
         objetivos,
-        modoRitmo: this.nuevaCola.modoRitmo,
-        idRitmo: this.nuevaCola.idRitmo,
+        // Los tres numeros van al preview porque el recuento depende de ellos: la
+        // ventana de anticipacion y la de vencidas deciden que cuotas entran. Los
+        // intentos no cambian el universo, pero el backend los quiere en el mismo
+        // objeto y mandarlos aparte seria tener dos formas de decir lo mismo.
+        intentosMaximos: this.nuevaCola.intentosMaximos,
+        diasAnticipacion: this.nuevaCola.diasAnticipacion,
+        maxDiasVencida: this.nuevaCola.maxDiasVencida,
         filtros: this.filtrosDeLoMarcado(),
       }).subscribe({
         next: (r) => {
           this.calculando = false;
-          // Que hoy no haya ritmo vigente no es un fallo de la aplicación: es algo que
-          // el admin tiene que arreglar en el calendario, y se dice tal cual.
+          // El backend puede devolver un motivo en vez de un numero (subcartera sin
+          // campos, filtro imposible). Se ensena tal cual como aviso, no como error de
+          // la aplicacion.
           if (r?.error) { this.errorPreview = r.error; return; }
           this.entran = r.entran ?? 0;
         },
@@ -1558,13 +1776,16 @@ export class BotVozComponent implements OnInit, OnDestroy {
     }, 500);
   }
 
-  /** Los objetivos en la forma que entiende el backend. Vacío = la cola no trae a nadie. */
+  /**
+   * El objetivo en la forma que entiende el backend. Vacio = la cola no trae a nadie.
+   *
+   * Sigue devolviendo un string y el campo del backend se sigue llamando `objetivos`
+   * en plural: no se renombro para no arrastrar una migracion de datos por un nombre.
+   * Lo que cambio es que ya solo puede llevar UN valor, y el backend rechaza con 400
+   * cualquier cosa que traiga una coma.
+   */
   private objetivosMarcados(): string {
-    return [
-      this.objRecordatorio ? 'RECORDATORIO' : null,
-      this.objCreacion ? 'CREACION' : null,
-      this.objPrimerContacto ? 'PRIMER_CONTACTO' : null,
-    ].filter(Boolean).join(',');
+    return this.objetivo || '';
   }
 
   /** Lo marcado, en la forma que entiende el backend. Lo usan contar y guardar. */
@@ -1738,29 +1959,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
   }
 
 
-  // ----- Ritmos -----
-  cargarRitmos(): void {
-    this.svc.getRitmos().subscribe((p) => {
-      this.ritmos = p;
-      this.ritmosGuardados = new Map(p.map((x) => [x.id, JSON.stringify(x)]));
-    });
-  }
-  /** Mismo problema que la config: sin esto editas un ritmo, no le das a
-   *  guardar y el cambio se pierde sin ningun aviso. */
-  ritmoSinGuardar(p: BotRitmo): boolean {
-    const guardado = this.ritmosGuardados.get(p.id);
-    return guardado !== undefined && guardado !== JSON.stringify(p);
-  }
-  guardarRitmo(p: BotRitmo): void {
-    this.svc.actualizarRitmo(p.id, p).subscribe({
-      next: (r) => {
-        Object.assign(p, r);
-        this.ritmosGuardados.set(p.id, JSON.stringify(p));
-        this.flash(`Ritmo ${p.nombre} guardado`);
-      },
-      error: () => this.flash('Error al guardar ritmo', true),
-    });
-  }
+  // El bloque de Ritmos se fue con la tabla `bot_ritmo`. Cargaba el calendario que
+  // decidia cuanto insistir segun el dia del mes, y era comun a todas las colas: bajar
+  // los intentos de la tuya se los bajaba a las de los demas. Ahora cada cola lleva su
+  // propio `intentosMaximos` en su formulario.
 
   // ----- Detalle de una llamada -----
   sesionAbierta?: BotSesion;
@@ -1786,10 +1988,21 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // Habia dos botones para lo mismo —"Armar cola del dia" y "Armar" en cada fila— y
   // el global no sabia a que subcartera llamaba, asi que mezclaba todas.
 
-  /** silencioso: sin spinner, para que el refresco automatico no parpadee. */
+  /**
+   * Las filas de UNA cola. Antes se pedia "la cola del dia" sin decir cual, y el
+   * backend devolvia lo que hubiera con fecha de hoy: al cambiar el dia, lo que quedo
+   * sin marcar desaparecia de la pantalla —y del discador— sin que nadie lo cerrara.
+   *
+   * Ahora se pide por `id_cola` y la cola es suya, no del calendario. Sin cola abierta
+   * no hay nada que pedir: se vacia y se sale.
+   *
+   * silencioso: sin spinner, para que el refresco automatico no parpadee.
+   */
   cargarCola(silencioso = false): void {
+    const idCola = this.detalleDe;
+    if (!idCola) { this.cola = []; this.descartes = []; this.loadingCola = false; return; }
     this.loadingCola = !silencioso;
-    this.svc.getCola().subscribe({
+    this.svc.getCola(idCola).subscribe({
       next: (c) => { this.cola = c; this.errorCola = false; this.loadingCola = false; },
       error: () => {
         // Sin esto un 500 se veia igual que una cola vacia: la tabla mostraba
@@ -1799,7 +2012,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         if (!silencioso) this.flash('No se pudo cargar la cola', true);
       },
     });
-    this.svc.getDescartes().subscribe({
+    this.svc.getDescartes(idCola).subscribe({
       next: (d) => (this.descartes = d),
       error: () => (this.descartes = []),
     });
@@ -1811,8 +2024,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // ----- Llamadas (monitoreo) -----
   cargarSesiones(): void {
     const g = BotVozComponent.GRUPOS.find((x) => x.clave === this.pillLlamadas);
+    // Fecha vacia = todas las llamadas de la cola elegida, del dia que sean.
     this.svc.getSesiones(g?.estados, g?.resultados, this.colaLlamadas,
-                         this.fechaLlamadas).subscribe({
+                         this.fechaLlamadas || null).subscribe({
       next: (s) => {
         this.sesiones = s;
         this.errorSesiones = false;
@@ -1825,7 +2039,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     // Los contadores van aparte porque cuentan el día ENTERO en la base y la tabla
     // solo trae las 100 últimas de ese mismo día. Si esta falla no se avisa: la pantalla sirve igual sin las pastillas,
     // y un aviso rojo por unos contadores tapa el que sí importa, el de la tabla.
-    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas).subscribe({
+    this.svc.getResumenSesiones(this.colaLlamadas, this.fechaLlamadas || null).subscribe({
       next: (r) => (this.resumenLlamadas = r),
       error: () => (this.resumenLlamadas = null),
     });

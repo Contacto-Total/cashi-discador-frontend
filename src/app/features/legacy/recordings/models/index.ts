@@ -5,3 +5,4 @@ export * from './historical-recordings-by-date-range.request';
 export * from './historical-recordings-by-tract';
 export * from './create-recording-evaluation-report.request';
 export * from './transcription.model';
+export * from './quality-monitoring.model';
