@@ -690,6 +690,139 @@ export class BotVozComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ----- La curva de descuentos, por escalones -----
+  //
+  // El campo de texto con comas se quedo corto: no valida al escribir, no deja ver el
+  // orden y, sobre todo, esconde lo unico que importa —cuanto va a DECIR Clara—. El
+  // suelo aplasta mas de lo que parece: con 90 % y suelo 200 muerde en el 54 % de la
+  // cartera antigua, asi que "70,80,90" acaba siendo tres veces el mismo importe y el
+  // backend lo deduplica a uno solo. Configurabas tres rebajas y ofrecias una.
+  //
+  // `escalones` manda en la pantalla y se vuelca a `curvaDescuento` en cada cambio, asi
+  // que el contrato con el backend no se toca: sigue viajando "70,80,90".
+
+  /** Los porcentajes de la curva, en el orden en que Clara los ofrece. */
+  escalones: number[] = [];
+
+  /** Importe representativo de la subcartera, para la vista previa. `n: 0` = sin dato. */
+  muestra: { campo: string; n: number; mediana?: number; minimo?: number; maximo?: number } | null = null;
+
+  /**
+   * Texto -> escalones, y de vuelta.
+   *
+   * Se reescribe la curva con lo que se pinta para que lo que ves sea lo que se guarda.
+   * La columna admite cualquier texto —una fila vieja o un UPDATE a mano pueden traer
+   * "90%" o "noventa"— y sin este viaje de ida y vuelta la pantalla enseñaria cero
+   * escalones mientras el formulario seguia mandando la basura al guardar: el backend
+   * responderia 400 sin que nada en pantalla explicara por que.
+   */
+  private leerEscalones(): void {
+    const crudo = (this.reglaCola.curvaDescuento || '').trim();
+    this.escalones = crudo
+      .split(',')
+      .map((t) => Number(t.trim()))
+      .filter((v) => Number.isFinite(v) && v > 0 && v < 100)
+      .map((v) => Math.round(v));
+    const habia = crudo.split(',').filter((t) => t.trim() !== '').length;
+    this.escribirCurva();
+    if (habia && this.escalones.length < habia) {
+      this.errorCurva = 'La curva guardada tenía valores ilegibles; se han descartado.';
+    }
+  }
+
+  /** Escalones -> texto. El backend sigue recibiendo lo mismo de siempre. */
+  private escribirCurva(): void {
+    this.reglaCola.curvaDescuento = this.escalones.join(',');
+    this.errorCurva = '';
+  }
+
+  cambiarEscalon(i: number, valor: number | string): void {
+    const v = Math.round(Number(valor));
+    if (!Number.isFinite(v)) return;
+    this.escalones[i] = Math.min(99, Math.max(1, v));
+    this.escribirCurva();
+  }
+
+  /**
+   * Un escalon nuevo por encima del ultimo, sin pasar de 99.
+   *
+   * Se siembra con algo razonable en vez de con 0: un escalon a 0 % no es una oferta,
+   * y obligaba a moverlo siempre antes de que sirviera de nada.
+   */
+  anadirEscalon(): void {
+    const ultimo = this.escalones.length ? this.escalones[this.escalones.length - 1] : 70;
+    this.escalones.push(Math.min(99, ultimo + 10));
+    this.escribirCurva();
+  }
+
+  quitarEscalon(i: number): void {
+    this.escalones.splice(i, 1);
+    this.escribirCurva();
+  }
+
+  /** El orden es el orden en que Clara ofrece, asi que se mueve a mano, no se ordena solo. */
+  moverEscalon(i: number, salto: number): void {
+    const j = i + salto;
+    if (j < 0 || j >= this.escalones.length) return;
+    [this.escalones[i], this.escalones[j]] = [this.escalones[j], this.escalones[i]];
+    this.escribirCurva();
+  }
+
+  /**
+   * Lo que Clara diria en este escalon: la misma cuenta que hace el backend, con el
+   * suelo aplicado y redondeado a soles enteros.
+   *
+   * Si no hay muestra devuelve null y la pantalla se limita a los porcentajes: preferir
+   * no enseñar importe a enseñar uno inventado.
+   */
+  importeDe(pct: number): number | null {
+    const base = this.muestra?.mediana;
+    if (base == null || !this.muestra?.n) return null;
+    // Mismo redondeo que el backend: a soles enteros primero el importe y luego el
+    // suelo. Redondear solo uno de los dos hace que la vista previa diga 200 donde la
+    // llamada dice 201.
+    const piso = Math.round(Number(this.reglaCola.pagoMinimo ?? 0));
+    return Math.max(Math.round(Number(base) * (1 - pct / 100)), piso);
+  }
+
+  /** Este escalon dice el mismo importe que el anterior: el suelo lo aplasto. */
+  escalonAplastado(i: number): boolean {
+    if (i === 0) return false;
+    const hoy = this.importeDe(this.escalones[i]);
+    return hoy != null && hoy === this.importeDe(this.escalones[i - 1]);
+  }
+
+  /** Cuantos escalones distintos oira el cliente de verdad. */
+  get escalonesUtiles(): number {
+    if (!this.escalones.length) return 0;
+    if (this.importeDe(this.escalones[0]) == null) return this.escalones.length;
+    return this.escalones.filter((_, i) => !this.escalonAplastado(i)).length;
+  }
+
+  /** El nombre legible de la columna sobre la que se descuenta, para los avisos. */
+  nombreCampoBase(): string {
+    const c = this.CAMPOS_BASE.find((x) => x.valor === this.reglaCola.campoBase);
+    return c ? c.nombre : (this.reglaCola.campoBase || 'La columna elegida');
+  }
+
+  /**
+   * Pide el importe de referencia. Silencioso a proposito: es una ayuda visual y su
+   * fallo no puede estorbar al que esta montando la cola.
+   */
+  cargarMuestra(): void {
+    const sub = this.nuevaCola.idSubcartera;
+    const campo = this.reglaCola.campoBase;
+    // Al editar no se pasa por los selectores —la subcartera de una cola no se cambia—
+    // asi que ahi los ids salen de la propia cola.
+    const inq = this.idInquilinoSel || this.nuevaCola.idInquilino;
+    const cart = this.idCarteraSel || this.nuevaCola.idCartera;
+    if (!sub || !campo || !inq || !cart) { this.muestra = null; return; }
+    this.svc.getMuestra(inq, cart, sub, campo).subscribe({
+      next: (m) => (this.muestra = m),
+      error: () => (this.muestra = null),
+    });
+  }
+
   /**
    * Carga las condiciones de una cola al abrirla.
    *
@@ -703,7 +836,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.errorCurva = '';
     this.svc.getReglaDeCola(id).subscribe({
       next: (r) => {
-        if (!r) { this.reglaHeredada = true; return; }
+        if (!r) { this.reglaHeredada = true; this.escalones = []; this.cargarMuestra(); return; }
         this.reglaCola = {
           campoBase: r.campoBase || 'sld_capital_asig',
           curvaDescuento: r.curvaDescuento || '',
@@ -712,11 +845,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
           ultimoTramoSoloHoy: !!r.ultimoTramoSoloHoy,
           maxCuotasBot: r.maxCuotasBot ?? null,
         };
+        this.leerEscalones();
+        this.cargarMuestra();
       },
       // Sin condiciones a la vista es preferible a un formulario a medio rellenar: si
       // falla la lectura, se deja en blanco y marcado como heredado, que es el estado
       // mas conservador —guardar asi no le escribe una regla propia—.
-      error: () => { this.reglaHeredada = true; },
+      error: () => { this.reglaHeredada = true; this.escalones = []; },
     });
   }
 
@@ -887,6 +1022,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (!this.nuevaCola.idSubcartera) return;
     this.verEfectivas(this.nuevaCola.idSubcartera);
     this.cargarCampos(this.nuevaCola.idSubcartera);
+    this.cargarMuestra();
     this.recalcular();
   }
 
@@ -920,6 +1056,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.reglaCola = this.reglaColaVacia();
     this.reglaHeredada = true;
     this.errorCurva = '';
+    this.escalones = [];
+    this.muestra = null;
     this.modalCola = true;
     this.cargarSubcarteras();
   }
@@ -1041,6 +1179,8 @@ export class BotVozComponent implements OnInit, OnDestroy {
           this.nuevaCola = this.colaVacia();
           this.reglaCola = this.reglaColaVacia();
           this.errorCurva = '';
+          this.escalones = [];
+          this.muestra = null;
           this.olvidarFiltros();
           this.modalCola = false;
           this.editandoCola = undefined;
@@ -1322,6 +1462,26 @@ export class BotVozComponent implements OnInit, OnDestroy {
     if (deLaCola) return deLaCola;
     const s = this.subcarteras.find((x) => x.id === id);
     return s ? (s.nombreSubcartera || `#${id}`) : `#${id ?? '—'}`;
+  }
+
+  /**
+   * Las reglas que esta pantalla puede editar: las de subcartera y la fila por defecto.
+   *
+   * Las de COLA se caen de aqui a proposito. Se veian con el mismo titulo que las de
+   * subcartera —cinco tarjetas diciendo "TRAMO PROPIO"— y ademas con los campos
+   * equivocados: esta pantalla ofrece enganche y cuotas, que es el trato de castigo, y
+   * una regla de cola de propia se negocia con curva de descuento, suelo y plazo, que
+   * no aparecen por ningun lado. Se editan donde viven, en el alta de la cola, que es
+   * ademas donde se elige la antiguedad a la que aplican.
+   */
+  get reglasDeSubcartera(): BotRegla[] {
+    return this.reglas.filter((r) => r.idCola == null);
+  }
+
+  /** De que cartera es esta subcartera, si alguna cola nos lo ha dicho ya. */
+  carteraDeSubcartera(id?: number | null): string {
+    if (id == null) return '';
+    return this.colas.find((c) => c.idSubcartera === id)?.nombreCartera ?? '';
   }
 
   nombreTono(id?: number | null): string {

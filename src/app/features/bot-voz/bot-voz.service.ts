@@ -131,6 +131,14 @@ export interface BotTono {
 export interface BotRegla {
   id?: number;
   idSubcartera?: number | null;
+  /**
+   * La cola a la que pertenece la regla, o null si es de la subcartera entera.
+   *
+   * El backend siempre lo ha devuelto; era el front el que no lo miraba, y por eso
+   * la pantalla de Reglas dibujaba las cuatro reglas de campaña de propia como si
+   * fueran cuatro reglas de la subcartera 21, todas con el mismo titulo.
+   */
+  idCola?: number | null;
   nombre?: string;
   pctPrimeraMin?: number | null;
   pctPrimeraMax?: number | null;
@@ -413,6 +421,17 @@ export class BotVozService {
   getCampos(idInquilino: number, idCartera: number, idSubcartera: number): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/subcarteras/${idSubcartera}/campos`,
       { params: { idInquilino, idCartera } });
+  }
+
+  /**
+   * Un importe representativo de la subcartera sobre esa columna, para la vista previa
+   * de la curva. Devuelve `n: 0` si la columna no existe o esta vacia; es una ayuda,
+   * no un requisito, asi que el formulario sigue funcionando sin ella.
+   */
+  getMuestra(idInquilino: number, idCartera: number, idSubcartera: number, campo: string):
+      Observable<{ campo: string; n: number; mediana?: number; minimo?: number; maximo?: number }> {
+    return this.http.get<any>(`${this.apiUrl}/subcarteras/${idSubcartera}/muestra`,
+      { params: { idInquilino, idCartera, campo } });
   }
 
   /** Los valores de un campo. Se piden al añadir ese filtro, no al abrir la pantalla. */

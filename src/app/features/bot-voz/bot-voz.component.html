@@ -530,23 +530,89 @@
             </p>
 
             <div class="grid-form">
-              <label class="ancho">
-                Descuentos que ofrece
-                <input type="text" [(ngModel)]="reglaCola.curvaDescuento"
-                       placeholder="70,80,90" [class.campo-malo]="!!errorCurva"
-                       (ngModelChange)="errorCurva = ''">
+              <!-- La curva, por escalones. Era un campo de texto con comas: no validaba al
+                   escribir, no dejaba ver el orden y, sobre todo, escondia lo unico que
+                   importa —el importe que Clara va a DECIR—. El suelo aplasta mucho mas
+                   de lo que parece, asi que una curva de tres podia ser una oferta de
+                   una sin que nadie lo supiera hasta oir la grabacion. -->
+              <div class="ancho curva-editor">
+                <span class="curva-titulo">Descuentos que ofrece Clara, en orden</span>
+
+                <p class="muted curva-vacia" *ngIf="!escalones.length">
+                  Sin escalones, esta cola hereda la curva de su subcartera.
+                </p>
+
+                <div class="escalon" *ngFor="let e of escalones; let i = index"
+                     [class.aplastado]="escalonAplastado(i)">
+                  <span class="escalon-orden">{{ i + 1 }}º</span>
+
+                  <input class="escalon-rango" type="range" min="1" max="99" step="1"
+                         [value]="e" (input)="cambiarEscalon(i, $any($event.target).value)">
+
+                  <input class="escalon-pct" type="number" min="1" max="99" step="1"
+                         [value]="e" (change)="cambiarEscalon(i, $any($event.target).value)">
+                  <span class="escalon-signo">%</span>
+
+                  <span class="escalon-importe" *ngIf="importeDe(e) !== null">
+                    → S/ {{ importeDe(e) | number:'1.0-0' }}
+                    <small *ngIf="escalonAplastado(i)" title="El suelo lo dejó en el mismo importe que el escalón anterior, así que Clara no lo dirá">
+                      mismo importe
+                    </small>
+                  </span>
+
+                  <span class="escalon-botones">
+                    <button type="button" (click)="moverEscalon(i, -1)" [disabled]="i === 0"
+                            title="Subir">↑</button>
+                    <button type="button" (click)="moverEscalon(i, 1)"
+                            [disabled]="i === escalones.length - 1" title="Bajar">↓</button>
+                    <button type="button" class="quitar" (click)="quitarEscalon(i)"
+                            title="Quitar este escalón">×</button>
+                  </span>
+                </div>
+
+                <div class="curva-pie">
+                  <button type="button" class="btn-anadir-escalon" (click)="anadirEscalon()"
+                          [disabled]="escalones.length >= 6">+ añadir escalón</button>
+
+                  <small class="muted" *ngIf="muestra?.n">
+                    Importes calculados sobre el valor mediano de la subcartera
+                    (S/ {{ muestra?.mediana | number:'1.0-0' }} en {{ muestra?.n | number }} clientes)
+                    y con el pago mínimo ya aplicado.
+                  </small>
+                </div>
+
+                <!-- La lista de columnas sobre las que se descuenta esta fijada en el
+                     front. Hoy es correcta, pero si esa columna se renombra o entra otra
+                     cartera el desplegable la seguiria ofreciendo y Clara se quedaria sin
+                     ofertas con un aviso en el log y nada mas. Esto lo saca a la cara:
+                     la muestra ya sabe si la columna trae dato. -->
+                <p class="curva-aviso" *ngIf="muestra && !muestra.n">
+                  <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+                  <span>
+                    <strong>{{ nombreCampoBase() }}</strong> no tiene ningún valor en esta
+                    subcartera. Clara no podrá calcular ningún descuento sobre ella: la
+                    llamada se quedará sin ofertas que hacer.
+                  </span>
+                </p>
+                <!-- Lo que de verdad va a oir el cliente. Una curva de tres escalones que
+                     el suelo deja en uno es el fallo mas caro de esta pantalla. -->
+                <p class="curva-aviso" *ngIf="escalones.length > 1 && escalonesUtiles < escalones.length">
+                  <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+                  De {{ escalones.length }} escalones el cliente solo oirá
+                  <strong>{{ escalonesUtiles }}</strong>: el pago mínimo aplasta a los demás
+                  contra el importe anterior. Baja el mínimo o quita los escalones de más.
+                </p>
+
                 <small class="error-campo" *ngIf="errorCurva">{{ errorCurva }}</small>
                 <small class="muted">
-                  Los porcentajes que Clara va ofreciendo, en orden y separados por comas.
-                  Un solo valor (<em>90</em>) es una única oferta: si la rechazan, se cierra.
-                  Varios (<em>70,80,90</em>) abren por el primero y van bajando conforme
-                  el cliente rechaza.
+                  Clara abre por el primero y va bajando el importe conforme el cliente
+                  rechaza. Un solo escalón es una única oferta: si la rechazan, se cierra.
                 </small>
-              </label>
+              </div>
 
               <label>
                 Se descuenta sobre
-                <select [(ngModel)]="reglaCola.campoBase">
+                <select [(ngModel)]="reglaCola.campoBase" (ngModelChange)="cargarMuestra()">
                   <option *ngFor="let c of CAMPOS_BASE" [ngValue]="c.valor">{{ c.nombre }}</option>
                 </select>
                 <small class="muted">
@@ -795,10 +861,24 @@
       </p>
     </div>
 
-    <div class="tono-card" *ngFor="let r of reglas">
+    <!-- Solo las reglas de SUBCARTERA. Las de cola se caian aqui dentro y se pintaban
+         con el mismo titulo —cinco tarjetas diciendo "TRAMO PROPIO"— y ademas con los
+         campos equivocados: aqui hay enganche y cuotas, que es castigo, y una regla de
+         cola de propia negocia con curva, suelo y plazo. Se editan en el alta de la
+         cola, que es donde ademas se elige la antiguedad a la que aplican. -->
+    <div class="tono-card" *ngFor="let r of reglasDeSubcartera"
+         [class.regla-inactiva]="r.activo === false">
       <div class="card-title-row" style="margin-bottom: 14px;">
         <h3>{{ r.idSubcartera ? nombreSubcartera(r.idSubcartera) : 'Por defecto (todas)' }}</h3>
+        <span class="status-badge" *ngIf="carteraDeSubcartera(r.idSubcartera)">
+          {{ carteraDeSubcartera(r.idSubcartera) }}
+        </span>
         <span class="status-badge" *ngIf="!r.idSubcartera">se aplica si no hay una propia</span>
+        <!-- Una regla desactivada se veia igual que una activa, asi que se podia estar
+             ajustando numeros que no rigen nada. -->
+        <span class="estado-pill st-alerta" *ngIf="r.activo === false"
+              title="Está guardada pero no se aplica en ninguna llamada">inactiva</span>
+        <span class="muted regla-nombre" *ngIf="r.nombre">{{ r.nombre }}</span>
       </div>
 
       <div class="grid-form">
