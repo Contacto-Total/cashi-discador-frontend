@@ -568,8 +568,9 @@
 
                 <small class="muted">
                   Clara los ofrece en este orden, del más caro al más barato. El plazo de
-                  cada uno lo fija la política de castigo según su importe, y no se
-                  configura aquí.
+                  cada uno lo fija la política de castigo según su importe —desde 900, cinco
+                  meses; 600, cuatro; 500, tres; 400, dos— y no se configura aquí. El pago
+                  mínimo es siempre de una sola vez y el mismo día.
                 </small>
               </div>
 
@@ -669,7 +670,7 @@
                 </small>
               </label>
 
-              <label>
+              <label *ngIf="!esCastigo">
                 Plazo máximo para pagar
                 <input type="number" min="0" step="1" [(ngModel)]="reglaCola.diasMaxPago"
                        placeholder="2">
@@ -685,7 +686,7 @@
                 <small class="muted">En cartera propia es pago único, o sea 1.</small>
               </label>
 
-              <label class="ancho check-linea">
+              <label class="ancho check-linea" *ngIf="!esCastigo">
                 <input type="checkbox" [(ngModel)]="reglaCola.ultimoTramoSoloHoy">
                 <span>
                   El mayor descuento, solo pagando hoy

@@ -684,6 +684,16 @@ export class BotVozComponent implements OnInit, OnDestroy {
   curvaValida(): boolean {
     const curva = (this.reglaCola.curvaDescuento || '').trim();
     if (!curva) return true;
+    // En castigo la curva NO son porcentajes: son los nombres de las columnas que
+    // traen el importe ya calculado (`ltd`, `ltd_plus`…). Sin esta rama, el validador
+    // de propia los leía como números, `Number('ltd')` daba NaN y el formulario se
+    // quedaba bloqueado con «Revisa las condiciones de negociación» sin decir cuál.
+    // Se validan contra los escalones que el backend dijo que existen, que además
+    // impide guardar el nombre de una columna vacía.
+    if (this.esCastigo) {
+      return curva.split(',').every(
+        (t) => this.escalonesCastigo.some((e) => e.campo === t.trim()));
+    }
     return curva.split(',').every((t) => {
       const v = Number(t.trim());
       return t.trim() !== '' && Number.isFinite(v) && v > 0 && v < 100;
