@@ -841,9 +841,21 @@ export class BotVozComponent implements OnInit, OnDestroy {
       (a: string, b: string) => this.escalonesCastigo.findIndex((e) => e.campo === a)
                               - this.escalonesCastigo.findIndex((e) => e.campo === b));
     this.reglaCola.curvaDescuento = this.escalonesElegidos.join(',');
-    // En castigo no hay columna base: el importe ya viene en cada escalon. Se limpia
-    // aqui porque ocultar el campo no borra su valor, y con los dos puestos el backend
-    // creeria que es una curva de porcentajes.
+    this.normalizarReglaCastigo();
+  }
+
+  /**
+   * En castigo no hay columna base ni plazo ni tope de cuotas: el importe ya viene en
+   * cada escalón y el plazo lo fija la política según ese importe.
+   *
+   * Se llama al guardar y al cargar, no solo al marcar un escalón. Estaba dentro de
+   * `alternarEscalon` y solo corría si tocabas un checkbox: editar la cola sin volver a
+   * marcarlos guardaba el `campoBase` por defecto de propia con la curva vacía, y el
+   * backend se iba al camino del catálogo y ofrecía la deuda entera como si fuera una
+   * rebaja. Visto en la llamada de Martha Mendoza del 24/08.
+   */
+  private normalizarReglaCastigo(): void {
+    if (!this.esCastigo) return;
     this.reglaCola.campoBase = undefined as any;
     this.reglaCola.diasMaxPago = null;
     this.reglaCola.maxCuotasBot = null;
@@ -1264,6 +1276,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
          */
         const guardarRegla = () => {
           if (!idCola || this.sinCondiciones()) { terminar(); return; }
+          this.normalizarReglaCastigo();
           this.svc.guardarReglaDeCola(idCola, this.reglaCola).subscribe({
             next: () => { this.reglaHeredada = false; terminar(); },
             error: (e) => {
