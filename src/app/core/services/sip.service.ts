@@ -168,7 +168,11 @@ export class SipService {
           password: password,
           display_name: extension,
           register: true,
-          session_timers: false
+          session_timers: false,
+          // Recover SIP/WebSocket quickly after a brief network interruption,
+          // while keeping a bounded backoff if FreeSWITCH remains unavailable.
+          connection_recovery_min_interval: 1,
+          connection_recovery_max_interval: 10
         };
 
         this.ua = new JsSIP.UA(configuration);
