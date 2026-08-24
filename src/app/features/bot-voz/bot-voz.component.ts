@@ -841,6 +841,12 @@ export class BotVozComponent implements OnInit, OnDestroy {
       (a: string, b: string) => this.escalonesCastigo.findIndex((e) => e.campo === a)
                               - this.escalonesCastigo.findIndex((e) => e.campo === b));
     this.reglaCola.curvaDescuento = this.escalonesElegidos.join(',');
+    // En castigo no hay columna base: el importe ya viene en cada escalon. Se limpia
+    // aqui porque ocultar el campo no borra su valor, y con los dos puestos el backend
+    // creeria que es una curva de porcentajes.
+    this.reglaCola.campoBase = undefined as any;
+    this.reglaCola.diasMaxPago = null;
+    this.reglaCola.maxCuotasBot = null;
   }
 
   /** Pide los escalones de la subcartera. Silencioso: es una ayuda, no un requisito. */
