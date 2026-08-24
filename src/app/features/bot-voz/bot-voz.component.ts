@@ -1441,9 +1441,19 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return total ? Math.round((this.gestionadosDe(c) / total) * 100) : 0;
   }
 
+  /**
+   * Los que quedan por marcar. Sale de los CONTADORES, no de `this.cola`.
+   *
+   * `this.cola` son las filas del panel de detalle, y solo están cargadas si abriste
+   * el ojo de esa cola. Contando ahí, una cola con filas pendientes en la base decía
+   * "0 por marcar" y `estadoCola` la daba por «Cola agotada» — que es justo lo que
+   * hacía que una cola recién armada pareciera muerta.
+   */
   pendientesDe(c: BotCola): number {
-    return this.cola.filter((f) => f.idCola === c.id &&
-      (f.estado === 'PENDIENTE' || f.estado === 'EN_LLAMADA')).length;
+    if (c.id == null) return 0;
+    const x = this.contadores[c.id];
+    if (!x) return 0;
+    return Math.max(0, x.total - x.descartadas - x.completadas);
   }
 
   /**
