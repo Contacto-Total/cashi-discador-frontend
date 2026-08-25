@@ -76,6 +76,12 @@
     animation: slideDown 0.15s ease;
     min-width: 150px;
 
+    // Cuando se abre hacia arriba, la entrada tiene que venir desde abajo: con
+    // slideDown la lista parece caer sobre el control en lugar de salir de él.
+    &.arriba {
+      animation: slideUp 0.15s ease;
+    }
+
     &::-webkit-scrollbar {
       width: 5px;
     }
@@ -129,6 +135,17 @@
   from {
     opacity: 0;
     transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
   to {
     opacity: 1;

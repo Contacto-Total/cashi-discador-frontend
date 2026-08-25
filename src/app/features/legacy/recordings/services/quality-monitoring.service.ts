@@ -8,6 +8,7 @@ import {
   MonitoringAudio,
   MonitoringDetailRequest,
   MonitoringRequest,
+  MonitoringSubportfolio,
   MonitoringWeek
 } from '../models/quality-monitoring.model';
 
@@ -46,6 +47,20 @@ export class QualityMonitoringService {
       );
     }
     return throwError(() => ({ status: error.status, message: error.error?.message }))
+  }
+
+  /**
+   * Las subcarteras que puede elegir el filtro, tal como están dadas de alta en
+   * `speech_plantilla_subcartera`.
+   *
+   * No es un catálogo de la tabla histórica: son las subcarteras con plantilla
+   * configurada, que son las únicas cuyos audios se puntúan contra la rúbrica que
+   * calidad definió.
+   */
+  getSubcarteras() {
+    return this.http
+      .get<MonitoringSubportfolio[]>(this.baseUrl + '/subcarteras', this.httpOptions)
+      .pipe(retry(1), catchError(this.handleError));
   }
 
   /** La matriz asesor × día del rango pedido. */

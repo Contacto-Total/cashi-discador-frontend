@@ -15,6 +15,27 @@ import {
 } from '../../models/quality-monitoring.model';
 
 /**
+ * El largo máximo del rango, en días.
+ *
+ * Siete es una semana: el ciclo con el que trabaja calidad y el ancho al que la matriz
+ * sigue siendo legible. Cada día es una columna, y cada columna lleva el desglose de los
+ * tres bloques, así que a partir de ahí la tabla se lee en horizontal a fuerza de scroll
+ * y deja de servir para lo que existe, que es comparar filas entre sí.
+ *
+ * También es un freno del lado del cliente: la consulta recorre gestiones de producción y
+ * un rango de tres meses la vuelve cara sin que nadie se lo haya propuesto.
+ */
+const MAX_DIAS = 7;
+
+/**
+ * La opción «sin filtro» del desplegable de subcarteras.
+ *
+ * El valor `'todos'` es el que el backend reconoce como «no filtrar». Va como constante
+ * porque el catálogo se recarga y la opción tiene que reponerse idéntica cada vez.
+ */
+const TODAS_LAS_SUBCARTERAS: SelectOption = { label: 'Todas', value: 'todos' };
+
+/**
  * La matriz asesor × día de evaluaciones de calidad.
  *
  * Es el gráfico "EVALUACIONES DIARIAS" del Excel de calidad generalizado a todo el
@@ -153,7 +174,24 @@ export class QualityMonitorComponent implements OnInit {
   tamanoPagina = 5;
   tamanosPagina: SelectOption[] = [
     { label: '5', value: 5 },
+    { label: '8', value: 8 },
     { label: '10', value: 10 }
+  ];
+
+  // --- Paginación de la matriz ---
+  /**
+   * Los asesores también se paginan.
+   *
+   * Cada celda lleva ahora el desglose de los tres bloques con sus puntos, así que una
+   * fila mide el triple que antes. Con quince asesores la matriz se convertía en una
+   * columna de scroll donde comparar dos filas exigía recordar la primera.
+   */
+  paginaMatriz = 1;
+  tamanoMatriz = 10;
+  tamanosMatriz: SelectOption[] = [
+    { label: '5', value: 5 },
+    { label: '10', value: 10 },
+    { label: '20', value: 20 }
   ];
 
   /**
@@ -170,13 +208,7 @@ export class QualityMonitorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Mismo catálogo que la grilla, para que las dos pestañas hablen igual.
-    this.tramos = [
-      { label: 'Todos', value: 'todos' },
-      { label: 'Tramo 3', value: 'FO_TRAMO 3' },
-      { label: 'Tramo 5', value: 'FO_TRAMO 5' },
-      { label: 'Cartera Propia', value: 'TRAMO' }
-    ];
+    this.cargarSubcarteras();
 
     // Solo los dos resultados que el sistema sabe evaluar. CONTACTO CON TERCEROS
     // NO está: su rúbrica no existe en el sistema y el backend además la excluye,
@@ -188,6 +220,36 @@ export class QualityMonitorComponent implements OnInit {
     ];
 
     this.semanaActual();
+  }
+
+  /**
+   * Llena el desplegable con las subcarteras que tienen plantilla configurada.
+   *
+   * **No es un catálogo de lo que hay en la tabla histórica**, y esa es la diferencia
+   * que importa: son las subcarteras dadas de alta en `speech_plantilla_subcartera`, que
+   * es la misma tabla que decide contra qué rúbrica se puntúa cada audio. Ofrecer valores
+   * sacados del histórico dejaría elegir una subcartera sin configurar, cuyos audios se
+   * miden contra la rúbrica completa sin que la pantalla lo diga.
+   *
+   * Si la llamada falla, el desplegable se queda con «Todos». Es un catálogo, no un dato
+   * de la pantalla: perderlo limita el filtrado pero no impide ver la matriz, así que no
+   * se bloquea la carga por esto.
+   */
+  private cargarSubcarteras(): void {
+    this.tramos = [TODAS_LAS_SUBCARTERAS];
+
+    this.monitoreo.getSubcarteras().subscribe({
+      next: (data) => {
+        this.tramos = [
+          TODAS_LAS_SUBCARTERAS,
+          ...data.map(s => ({ label: s.nombre, value: s.nombre }))
+        ];
+      },
+      error: () => {
+        this.toast.warning(
+          'No se pudieron cargar las subcarteras; el filtro queda en «Todos»');
+      }
+    });
   }
 
   // ------------------------------------------------------------------ rango
@@ -249,8 +311,14 @@ export class QualityMonitorComponent implements OnInit {
       this.errorMessage = 'La fecha de inicio no puede ser posterior a la de fin';
       return;
     }
+    if (this.diasDelRango() > MAX_DIAS) {
+      this.errorMessage = `El rango no puede pasar de ${MAX_DIAS} días. `
+        + `Elija hasta el ${this.maxHasta} o mueva la fecha de inicio.`;
+      return;
+    }
 
     this.isLoading = true;
+    this.paginaMatriz = 1;
 
     // Sin `asesores`: la matriz muestra siempre a todos. El recorte por persona lo
     // hacen las cards de abajo, cada una por su cuenta.
@@ -525,6 +593,35 @@ export class QualityMonitorComponent implements OnInit {
     return bloque?.cumplimiento ?? 0;
   }
 
+  /**
+   * El porcentaje del bloque, como etiqueta de la fila.
+   *
+   * Ocupa el sitio donde antes iba la inicial del bloque: quién es cada fila ya lo dice
+   * el color, que es el mismo que calidad usa en su hoja y el que repite la leyenda del
+   * pie. La inicial gastaba ancho en repetir eso.
+   */
+  pctBloque(dia: MonitoringDay | MonitoringAgent, seccion: string): string {
+    const bloque = dia.bloques?.[seccion];
+    if (!bloque || bloque.posibles === 0 || bloque.cumplimiento === null) {
+      return '—';
+    }
+    return `${bloque.cumplimiento}%`;
+  }
+
+  /**
+   * `153/217` — puntos obtenidos sobre posibles de ese bloque.
+   *
+   * Un bloque sin criterios evaluados devuelve una raya y no `0/0`: cero sobre cero se
+   * lee como incumplimiento total, que es justo lo contrario de lo que pasó.
+   */
+  fraccionBloque(dia: MonitoringDay | MonitoringAgent, seccion: string): string {
+    const bloque = dia.bloques?.[seccion];
+    if (!bloque || bloque.posibles === 0) {
+      return '—';
+    }
+    return `${bloque.puntos}/${bloque.posibles}`;
+  }
+
   tituloBloque(dia: MonitoringDay | MonitoringAgent, seccion: string): string {
     const bloque = dia.bloques?.[seccion];
     const etiqueta = this.ETIQUETA_SECCION[seccion] ?? seccion;
@@ -548,6 +645,66 @@ export class QualityMonitorComponent implements OnInit {
   porDia = (_: number, fecha: string) => fecha;
   porCampo = (_: number, c: MonitoringCriterion) => c.campo;
   porIdx = (_: number, a: MonitoringAudio) => a.idx;
+  porSeccion = (_: number, s: string) => s;
+
+  // ------------------------------------------------------------------ rango de fechas
+
+  /** Cuántos días cubre el rango elegido, extremos incluidos. */
+  private diasDelRango(): number {
+    if (!this.desde || !this.hasta) {
+      return 0;
+    }
+    const a = new Date(`${this.desde}T00:00:00`).getTime();
+    const b = new Date(`${this.hasta}T00:00:00`).getTime();
+    return Math.round((b - a) / 86_400_000) + 1;
+  }
+
+  /**
+   * El último día seleccionable, para que el calendario mismo frene el rango.
+   *
+   * Validar al buscar no alcanza: el supervisor ya eligió la fecha y recibe un error
+   * por algo que la pantalla podía haberle impedido. El `max` del input lo bloquea
+   * antes, y la validación se queda como red por si el valor entra escrito a mano.
+   */
+  get maxHasta(): string {
+    if (!this.desde) {
+      return '';
+    }
+    const tope = new Date(`${this.desde}T00:00:00`);
+    tope.setDate(tope.getDate() + MAX_DIAS - 1);
+    return this.comoIso(tope);
+  }
+
+  // ------------------------------------------------------------------ paginado de la matriz
+
+  /** Los asesores de la página que se está viendo. */
+  get asesoresPaginados(): MonitoringAgent[] {
+    const todos = this.semana?.asesores ?? [];
+    const desde = (this.paginaMatriz - 1) * this.tamanoMatriz;
+    return todos.slice(desde, desde + this.tamanoMatriz);
+  }
+
+  get totalPaginasMatriz(): number {
+    const todos = this.semana?.asesores.length ?? 0;
+    return Math.max(1, Math.ceil(todos / this.tamanoMatriz));
+  }
+
+  get rangoVisibleMatriz(): string {
+    const total = this.semana?.asesores.length ?? 0;
+    if (!total) {
+      return '0';
+    }
+    const desde = (this.paginaMatriz - 1) * this.tamanoMatriz + 1;
+    return `${desde}–${Math.min(desde + this.tamanoMatriz - 1, total)} de ${total}`;
+  }
+
+  irAMatriz(pagina: number): void {
+    this.paginaMatriz = Math.min(Math.max(1, pagina), this.totalPaginasMatriz);
+  }
+
+  reiniciarPaginadoMatriz(): void {
+    this.paginaMatriz = 1;
+  }
 
   /** 'lun 03' — el encabezado de columna. */
   etiquetaDia(fecha: string): string {

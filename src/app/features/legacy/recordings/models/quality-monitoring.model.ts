@@ -12,8 +12,28 @@
  *    Lo mismo con los deltas: nulos cuando no hay contra qué comparar.
  */
 
+/**
+ * Una subcartera dada de alta en `speech_plantilla_subcartera`.
+ *
+ * Es lo que llena el desplegable. El filtro viaja por **nombre** y no por id porque
+ * la tabla histórica no guarda el id: sus filas traen el nombre escrito, y con más de
+ * una forma de escribirlo (`FO_TRAMO_3`, `TRAMO 3`). El backend resuelve esas variantes.
+ */
+export interface MonitoringSubportfolio {
+  id: number;
+  /** 'TRAMO 3' — el nombre configurado, que es también el valor del filtro. */
+  nombre: string;
+  /** La cartera a la que pertenece. Solo informativo. */
+  cartera: string | null;
+}
+
 export interface MonitoringRequest {
-  /** CARTERA tal cual ('FO_TRAMO 3'), o 'todos' para no filtrar. */
+  /**
+   * `nombre_subcartera` tal como está configurada ('TRAMO 3'), o 'todos' para no filtrar.
+   *
+   * El campo se sigue llamando `tramo` por compatibilidad con el contrato ya desplegado;
+   * lo que filtra es la SUBCARTERA de la gestión, no su cartera.
+   */
   tramo: string;
   /** 'YYYY-MM-DD' inclusive. */
   desde: string;

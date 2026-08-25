@@ -7,7 +7,9 @@
   </div>
 
   <div
+    #lista
     class="select-dropdown"
+    [class.arriba]="abreArriba"
     *ngIf="isOpen"
     [style.top]="dropdownPosition.top"
     [style.left]="dropdownPosition.left"
