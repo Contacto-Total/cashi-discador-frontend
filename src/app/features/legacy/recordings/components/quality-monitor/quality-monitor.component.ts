@@ -353,8 +353,19 @@ export class QualityMonitorComponent implements OnInit {
     if (!this.desde || !this.hasta) {
       return;
     }
+
     this.detalle = [];
     this.pagina = 1;
+
+    // Si la semana vino sin un solo asesor evaluado, el detalle solo puede volver
+    // vacio: es la misma consulta con otro SELECT. Pedirlo igual gasta un viaje y
+    // deja al usuario con dos avisos —uno informativo y otro de error— para
+    // explicar una sola cosa, que no hay datos en ese rango.
+    if (this.semana && !this.semana.asesores.length) {
+      this.isLoadingDetalle = false;
+      return;
+    }
+
     this.isLoadingDetalle = true;
 
     this.monitoreo.getDetalle({
