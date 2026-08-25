@@ -129,6 +129,7 @@ export class EvaluationEditorComponent {
         for (const c of data.criterios) {
           this.valores[c.campo] = c.valor;
         }
+        this.recalcularBloques();
         this.isLoading = false;
       },
       error: (e) => {
@@ -150,6 +151,7 @@ export class EvaluationEditorComponent {
       return;
     }
     this.valores[campo] = valor;
+    this.recalcularBloques();
   }
 
   /** Devuelve un criterio a lo que dice el backend, sin tener que recargar la ficha. */
@@ -157,6 +159,7 @@ export class EvaluationEditorComponent {
     const original = this.ficha?.criterios.find(c => c.campo === campo);
     if (original) {
       this.valores[campo] = original.valor;
+      this.recalcularBloques();
     }
   }
 
@@ -198,7 +201,8 @@ export class EvaluationEditorComponent {
         for (const c of data.criterios) {
           this.valores[c.campo] = c.valor;
         }
-            this.isSaving = false;
+        this.recalcularBloques();
+        this.isSaving = false;
         this.toast.success('Evaluación corregida');
         this.guardado.emit();
       },
@@ -231,8 +235,23 @@ export class EvaluationEditorComponent {
     return posibles ? Math.round(this.puntosEditados * 1000 / posibles) / 10 : null;
   }
 
-  /** Los criterios agrupados por sección, en el orden del Excel. */
-  get bloques(): Bloque[] {
+  /**
+   * Los criterios agrupados por sección, en el orden del Excel.
+   *
+   * **Es un campo y no un getter, y eso NO es una optimización.** Como getter, el
+   * template lo llamaba en cada ciclo de detección de cambios y devolvía objetos nuevos
+   * cada vez; sin `trackBy`, el `*ngFor` destruía y reconstruía las dieciséis filas en
+   * cada ciclo. Con el WebSocket de latencia disparando detección de cambios cada pocos
+   * segundos, el botón que se estaba pulsando desaparecía entre el `mousedown` y el
+   * `mouseup`, el navegador no llegaba a emitir el `click` y el criterio no cambiaba.
+   * Ese era el bug de «hago click en la X y no pasa nada».
+   *
+   * Se recalcula donde de verdad cambia algo: al cargar, al marcar, al deshacer y al
+   * guardar. El `trackBy` de la plantilla es la segunda red.
+   */
+  bloques: Bloque[] = [];
+
+  private recalcularBloques(): void {
     const orden = ['PRESENTACION', 'NEGOCIACION', 'CIERRE'];
     const mapa = new Map<string, Bloque>();
 
@@ -251,9 +270,13 @@ export class EvaluationEditorComponent {
       bloque.total++;
     }
 
-    return [...mapa.values()].sort(
+    this.bloques = [...mapa.values()].sort(
       (a, b) => orden.indexOf(a.seccion) - orden.indexOf(b.seccion));
   }
+
+  /** Identidades estables para los dos `*ngFor` de la hoja. */
+  porSeccion = (_: number, b: Bloque) => b.seccion;
+  porCampo = (_: number, c: EvaluationCriterion) => c.campo;
 
   // ------------------------------------------------------------------ evidencia
 

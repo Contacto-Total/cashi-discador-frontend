@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  LucideAngularModule, Search, Eye, X, TrendingUp, TrendingDown,
+  LucideAngularModule, Search, Eye, TrendingUp, TrendingDown,
   Minus, User, ArrowLeft, ChevronLeft, ChevronRight
 } from 'lucide-angular';
 
@@ -11,22 +11,8 @@ import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
 import { EvaluationEditorComponent } from '../evaluation-editor/evaluation-editor.component';
 import {
-  MonitoringAgent, MonitoringAudio, MonitoringDay, MonitoringWeek
+  MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringWeek
 } from '../../models/quality-monitoring.model';
-
-/**
- * Lo que está abierto en el panel de detalle.
- *
- * Un solo tipo para los dos niveles de drill-down porque la diferencia es la ventana
- * y nada más: `fecha` con valor es una celda, `fecha` en null es el asesor completo.
- */
-interface Foco {
-  asesor: string;
-  fecha: string | null;
-  cumplimiento: number | null;
-  audios: number;
-}
-
 
 /**
  * La matriz asesor × día de evaluaciones de calidad.
@@ -67,7 +53,6 @@ interface Foco {
 export class QualityMonitorComponent implements OnInit {
   readonly Search = Search;
   readonly Eye = Eye;
-  readonly X = X;
   readonly TrendingUp = TrendingUp;
   readonly TrendingDown = TrendingDown;
   readonly Minus = Minus;
@@ -96,25 +81,48 @@ export class QualityMonitorComponent implements OnInit {
     CIERRE: 'Cierre'
   };
 
-  // --- Filtros ---
+  // --- Filtros de la consulta: definen QUÉ trae el backend, para toda la pantalla ---
   tramos: SelectOption[] = [];
   resultados: SelectOption[] = [];
-  /** Se arma con los asesores que de verdad trajo la consulta. Ver `recordarAsesores`. */
-  opcionesAsesor: SelectOption[] = [{ label: 'Todos', value: '' }];
 
   selectedTramo = 'todos';
   selectedResultado = '';
-  selectedAsesor = '';
   desde = '';
   hasta = '';
   errorMessage = '';
+
+  /**
+   * Los asesores que trajo la consulta, para los desplegables de las dos cards.
+   *
+   * **Arriba ya no hay filtro de asesor y es deliberado.** La matriz es el total contra
+   * el que se compara: en cuanto se la recorta a una persona, la referencia desaparece y
+   * la pantalla deja de poder responder «¿esto es de él o le pasa a todos?». El recorte
+   * por persona vive en las cards de abajo, cada una con el suyo e independientes entre
+   * sí, que es lo que permite mirar a un asesor y al conjunto al mismo tiempo.
+   */
+  asesoresDisponibles: SelectOption[] = [{ label: 'Todos', value: '' }];
+
+  /** Filtro propio de la card de criterios. '' = todos. No toca nada más de la pantalla. */
+  asesorCriterios = '';
 
   // --- Datos ---
   semana: MonitoringWeek | null = null;
   isLoading = false;
 
-  // --- Revisión de reportes: una celda o un asesor completo ---
-  foco: Foco | null = null;
+  // --- Revisión de reportes: card permanente con filtro propio ---
+
+  /**
+   * El asesor de la card de revisión. '' = todos.
+   *
+   * Independiente del de la card de criterios a propósito: el caso que justifica la
+   * pantalla es comparar los criterios que falla una persona contra los audios de todo
+   * el rango, y eso necesita las dos cards mirando recortes distintos a la vez.
+   */
+  asesorRevision = '';
+
+  /** El día que se está mirando, o null para todo el rango. Lo fija el click en una celda. */
+  fechaRevision: string | null = null;
+
   detalle: MonitoringAudio[] = [];
   isLoadingDetalle = false;
 
@@ -128,18 +136,24 @@ export class QualityMonitorComponent implements OnInit {
    */
   filtroRubrica: '' | 'CD' | 'PDP' = '';
   rubricas: SelectOption[] = [
-    { label: 'CD y PDP', value: '' },
-    { label: 'Solo CD', value: 'CD' },
-    { label: 'Solo PDP', value: 'PDP' }
+    { label: 'TODOS', value: '' },
+    { label: 'CD', value: 'CD' },
+    { label: 'PDP', value: 'PDP' }
   ];
 
   // --- Paginación del panel ---
   pagina = 1;
-  tamanoPagina = 10;
+  /**
+   * 5 por página, y como mucho 10.
+   *
+   * La card convive con la matriz y con los criterios en la misma vista: una lista más
+   * larga empuja todo lo demás fuera de pantalla y obliga a hacer scroll para volver al
+   * dato contra el que se estaba comparando.
+   */
+  tamanoPagina = 5;
   tamanosPagina: SelectOption[] = [
-    { label: '10', value: 10 },
-    { label: '25', value: 25 },
-    { label: '50', value: 50 }
+    { label: '5', value: 5 },
+    { label: '10', value: 10 }
   ];
 
   /**
@@ -168,9 +182,9 @@ export class QualityMonitorComponent implements OnInit {
     // NO está: su rúbrica no existe en el sistema y el backend además la excluye,
     // así que ofrecerla sería prometer una vista que devuelve cero filas.
     this.resultados = [
-      { label: 'Todos (PDP + CD)', value: '' },
-      { label: 'Promesa de pago (PDP)', value: 'PROMESA DE PAGO' },
-      { label: 'Contacto directo (CD)', value: 'CONTACTO CON TITULAR O ENCARGADO' }
+      { label: 'Todos', value: '' },
+      { label: 'Contacto directo', value: 'CONTACTO CON TITULAR O ENCARGADO' },
+      { label: 'Promesa de pago', value: 'PROMESA DE PAGO' }
     ];
 
     this.semanaActual();
@@ -236,20 +250,21 @@ export class QualityMonitorComponent implements OnInit {
       return;
     }
 
-    this.cerrarDetalle();
     this.isLoading = true;
 
+    // Sin `asesores`: la matriz muestra siempre a todos. El recorte por persona lo
+    // hacen las cards de abajo, cada una por su cuenta.
     this.monitoreo.getSemana({
       tramo: this.selectedTramo,
       desde: this.desde,
       hasta: this.hasta,
-      resultado: this.selectedResultado || undefined,
-      asesores: this.selectedAsesor ? [this.selectedAsesor] : undefined
+      resultado: this.selectedResultado || undefined
     }).subscribe({
       next: (data) => {
         this.semana = data;
         this.isLoading = false;
         this.recordarAsesores(data);
+        this.cargarRevision();
 
         if (data.truncado) {
           this.toast.warning(
@@ -257,17 +272,12 @@ export class QualityMonitorComponent implements OnInit {
         }
         if (!data.asesores.length) {
           this.toast.info('No hay audios evaluados en ese rango');
-          return;
-        }
-        // Si se filtró por una persona, se entra directo a su ficha: pedir un
-        // asesor y quedarse mirando una matriz de una fila no ayuda a nadie.
-        if (this.selectedAsesor && data.asesores.length === 1) {
-          this.abrirAsesor(data.asesores[0]);
         }
       },
       error: (e) => {
         this.isLoading = false;
         this.semana = null;
+        this.detalle = [];
         this.errorMessage = e?.message || 'No se pudo cargar el monitoreo';
         this.toast.error(this.errorMessage);
       }
@@ -275,70 +285,87 @@ export class QualityMonitorComponent implements OnInit {
   }
 
   /**
-   * Refresca el catálogo de asesores, pero **solo cuando la consulta vino sin
-   * filtrar por asesor**.
+   * El catálogo de asesores de los dos desplegables de abajo.
    *
-   * Si se refrescara siempre, al elegir a una persona el desplegable se quedaría
-   * con esa sola opción y no habría forma de volver a las demás ni de saltar a
-   * otra. Es el mismo cuidado que ya tiene la grilla con sus filtros de columna.
+   * Se puede refrescar sin cuidados en cada consulta —a diferencia de la versión
+   * anterior— porque la matriz ya no se filtra por asesor: la respuesta siempre trae a
+   * todos los que tuvieron audios en el rango. Los filtros elegidos se conservan si la
+   * persona sigue apareciendo, y se limpian si no, para no dejar una card mostrando el
+   * recorte de alguien que no está en el rango nuevo.
    */
   private recordarAsesores(data: MonitoringWeek): void {
-    if (this.selectedAsesor) {
-      return;
-    }
-    this.opcionesAsesor = [
+    const nombres = data.asesores.map(a => a.asesor);
+    this.asesoresDisponibles = [
       { label: 'Todos', value: '' },
-      ...data.asesores.map(a => ({ label: a.asesor, value: a.asesor }))
+      ...nombres.map(n => ({ label: n, value: n }))
     ];
-  }
 
-  /** El desplegable de asesor recarga: el backend filtra y los totales quedan bien. */
-  cambiarAsesor(): void {
-    this.buscar();
+    if (this.asesorCriterios && !nombres.includes(this.asesorCriterios)) {
+      this.asesorCriterios = '';
+    }
+    if (this.asesorRevision && !nombres.includes(this.asesorRevision)) {
+      this.asesorRevision = '';
+      this.fechaRevision = null;
+    }
   }
 
   // ------------------------------------------------------------------ drill-down
 
-  /** Una celda: un asesor, un día. */
+  /**
+   * Una celda: apunta la card de revisión a ese asesor y ese día.
+   *
+   * Ya no abre ni cierra nada. La card está siempre en pantalla y el click sobre la
+   * matriz es un atajo para su filtro, no un panel que aparece: el supervisor no tiene
+   * que descubrir dónde quedó la lista que estaba mirando.
+   */
   abrirCelda(asesor: MonitoringAgent, dia: MonitoringDay): void {
     if (!dia.audios) {
       return;
     }
-    this.abrirDetalle({
-      asesor: asesor.asesor,
-      fecha: dia.fecha,
-      cumplimiento: dia.cumplimiento,
-      audios: dia.audios
-    });
+    this.asesorRevision = asesor.asesor;
+    this.fechaRevision = dia.fecha;
+    this.cargarRevision();
   }
 
-  /** La ficha del asesor: todos sus audios del rango. */
+  /** El nombre del asesor: sus audios de todo el rango. */
   abrirAsesor(asesor: MonitoringAgent): void {
     if (!asesor.audios) {
       return;
     }
-    this.abrirDetalle({
-      asesor: asesor.asesor,
-      fecha: null,
-      cumplimiento: asesor.cumplimiento,
-      audios: asesor.audios
-    });
+    this.asesorRevision = asesor.asesor;
+    this.fechaRevision = null;
+    this.cargarRevision();
   }
 
-  private abrirDetalle(foco: Foco): void {
-    this.foco = foco;
+  /** Cambiar el desplegable de la card descarta el día: vuelve a todo el rango. */
+  cambiarAsesorRevision(): void {
+    this.fechaRevision = null;
+    this.cargarRevision();
+  }
+
+  /** Quita el recorte de un día sin perder el asesor. */
+  verTodoElRango(): void {
+    this.fechaRevision = null;
+    this.cargarRevision();
+  }
+
+  private cargarRevision(): void {
+    if (!this.desde || !this.hasta) {
+      return;
+    }
     this.detalle = [];
     this.pagina = 1;
     this.isLoadingDetalle = true;
 
     this.monitoreo.getDetalle({
       tramo: this.selectedTramo,
-      asesor: foco.asesor,
+      // Vacío = todos. El backend acepta el asesor en blanco desde este cambio.
+      asesor: this.asesorRevision || undefined,
       resultado: this.selectedResultado || undefined,
       // Una de las dos ventanas, nunca las dos: el backend prioriza `fecha`.
-      fecha: foco.fecha ?? undefined,
-      desde: foco.fecha ? undefined : this.desde,
-      hasta: foco.fecha ? undefined : this.hasta
+      fecha: this.fechaRevision ?? undefined,
+      desde: this.fechaRevision ? undefined : this.desde,
+      hasta: this.fechaRevision ? undefined : this.hasta
     }).subscribe({
       next: (data) => {
         this.detalle = data;
@@ -346,32 +373,18 @@ export class QualityMonitorComponent implements OnInit {
       },
       error: (e) => {
         this.isLoadingDetalle = false;
-        this.toast.error(e?.message || 'No se pudo cargar el detalle');
+        this.toast.error(e?.message || 'No se pudo cargar la revisión');
       }
     });
   }
 
-  cerrarDetalle(): void {
-    this.foco = null;
-    this.detalle = [];
-  }
-
-  /** Desde la ficha del asesor se vuelve a la matriz completa. */
-  volverATodos(): void {
-    this.selectedAsesor = '';
-    this.buscar();
-  }
-
+  /** Si la celda es la que está mirando la card de revisión. */
   estaAbierta(asesor: MonitoringAgent, dia: MonitoringDay): boolean {
-    return !!this.foco && this.foco.asesor === asesor.asesor && this.foco.fecha === dia.fecha;
+    return this.asesorRevision === asesor.asesor && this.fechaRevision === dia.fecha;
   }
 
   filaAbierta(asesor: MonitoringAgent): boolean {
-    return !!this.foco && this.foco.asesor === asesor.asesor;
-  }
-
-  get esFichaDeAsesor(): boolean {
-    return !!this.foco && this.foco.fecha === null;
+    return this.asesorRevision === asesor.asesor;
   }
 
   // ------------------------------------------------------------------ filtro y paginación
@@ -445,13 +458,9 @@ export class QualityMonitorComponent implements OnInit {
    * garantía de que en algún momento las dos versiones dejarían de coincidir.
    */
   refrescarTrasAjuste(): void {
-    const foco = this.foco;
+    // `buscar` vuelve a pedir la revisión al terminar, así que la lista de abajo
+    // muestra el puntaje nuevo sin que el supervisor tenga que hacer nada.
     this.buscar();
-    if (foco) {
-      // Se vuelve a pedir el detalle para que la lista de abajo muestre el
-      // puntaje nuevo sin que el supervisor tenga que reabrirla.
-      this.abrirDetalle(foco);
-    }
   }
 
   // ------------------------------------------------------------------ formato
@@ -477,23 +486,26 @@ export class QualityMonitorComponent implements OnInit {
    * relativa, y la comparación real la hace el delta contra el propio asesor.
    */
   colorCelda(valor: number | null): string {
+    // Cada tramo declara su par claro/oscuro. En claro la rampa arranca de un gris
+    // frio y sube en indigo solido; las opacidades del tema oscuro sobre blanco dan
+    // lavandas casi identicas entre si y la rampa deja de leerse.
     if (valor === null) {
       // Una celda sin datos apenas se separa del fondo: existe, pero no compite.
-      return 'bg-slate-950/40 ring-white/[0.04]';
+      return 'bg-slate-50 ring-slate-200 dark:bg-slate-950/40 dark:ring-white/[0.04]';
     }
     if (valor >= 85) {
-      return 'bg-indigo-500/35 ring-indigo-400/40';
+      return 'bg-indigo-500/30 ring-indigo-400/50 dark:bg-indigo-500/35 dark:ring-indigo-400/40';
     }
     if (valor >= 70) {
-      return 'bg-indigo-500/24 ring-indigo-400/25';
+      return 'bg-indigo-500/20 ring-indigo-400/35 dark:bg-indigo-500/24 dark:ring-indigo-400/25';
     }
     if (valor >= 55) {
-      return 'bg-indigo-500/15 ring-indigo-400/15';
+      return 'bg-indigo-500/12 ring-indigo-400/25 dark:bg-indigo-500/15 dark:ring-indigo-400/15';
     }
     if (valor >= 40) {
-      return 'bg-indigo-500/8 ring-white/[0.06]';
+      return 'bg-indigo-500/[0.06] ring-slate-200 dark:bg-indigo-500/8 dark:ring-white/[0.06]';
     }
-    return 'bg-white/[0.04] ring-white/[0.06]';
+    return 'bg-slate-100 ring-slate-200 dark:bg-white/[0.04] dark:ring-white/[0.06]';
   }
 
   /** El ancho de la barrita de un bloque. 0 si el bloque no se evaluó. */
@@ -511,6 +523,21 @@ export class QualityMonitorComponent implements OnInit {
     return `${etiqueta}: ${bloque.puntos}/${bloque.posibles} (${bloque.cumplimiento}%)`;
   }
 
+  /**
+   * Identidades estables para los `*ngFor`.
+   *
+   * `detallePaginado`, `topCriterios` y compañía son getters que devuelven arrays nuevos
+   * en cada ciclo de detección de cambios. Sin `trackBy`, cada ciclo destruye y
+   * reconstruye las filas, y un botón que se reconstruye entre el `mousedown` y el
+   * `mouseup` nunca llega a emitir su `click`. Ver la nota de `bloques` en
+   * `EvaluationEditorComponent`, donde ese bug se manifestó primero.
+   */
+  porAsesor = (_: number, a: MonitoringAgent) => a.asesor;
+  porFecha = (_: number, d: MonitoringDay) => d.fecha;
+  porDia = (_: number, fecha: string) => fecha;
+  porCampo = (_: number, c: MonitoringCriterion) => c.campo;
+  porIdx = (_: number, a: MonitoringAudio) => a.idx;
+
   /** 'lun 03' — el encabezado de columna. */
   etiquetaDia(fecha: string): string {
     const [a, m, d] = fecha.split('-').map(Number);
@@ -523,8 +550,42 @@ export class QualityMonitorComponent implements OnInit {
     return !!this.semana && this.semana.asesores.length > 0;
   }
 
-  /** Los criterios con más falla, recortados a lo que cabe sin volverse un reporte. */
-  get topCriterios() {
-    return (this.semana?.criteriosMasFallados ?? []).slice(0, 8);
+  /**
+   * Los criterios con más falla, recortados a lo que cabe sin volverse un reporte.
+   *
+   * Sale del asesor elegido en ESTA card, o del total del rango si está en Todos. El
+   * desglose por persona ya viene en la respuesta de la semana, así que cambiar el
+   * filtro no pide nada al servidor.
+   */
+  get topCriterios(): MonitoringCriterion[] {
+    const fuente = this.asesorCriterios
+      ? this.semana?.asesores.find(a => a.asesor === this.asesorCriterios)?.criteriosMasFallados
+      : this.semana?.criteriosMasFallados;
+    return (fuente ?? []).slice(0, 8);
+  }
+
+  /** Cuántos audios respaldan la card de criterios, para que el % no se lea suelto. */
+  get audiosDeCriterios(): number {
+    if (!this.asesorCriterios) {
+      return this.semana?.totales.audios ?? 0;
+    }
+    return this.semana?.asesores.find(a => a.asesor === this.asesorCriterios)?.audios ?? 0;
+  }
+
+  // --- Cabecera de la card de revisión: se calcula sobre lo que se trajo ---
+
+  get cumplimientoRevision(): number | null {
+    let puntos = 0;
+    let posibles = 0;
+    for (const a of this.detalle) {
+      puntos += a.puntos;
+      posibles += a.posibles;
+    }
+    return posibles ? Math.round(puntos * 1000 / posibles) / 10 : null;
+  }
+
+  /** Si la lista mezcla varios días, la columna Día tiene sentido; si no, sobra. */
+  get muestraColumnaDia(): boolean {
+    return this.fechaRevision === null;
   }
 }

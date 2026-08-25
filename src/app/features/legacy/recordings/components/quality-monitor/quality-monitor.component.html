@@ -12,19 +12,30 @@
   · Un solo acento —índigo— y color semántico solo donde significa algo: verde y
     rosa en los deltas, y las tres tintas de bloque, que son las que calidad ya
     usa en su hoja.
+
+  · **Los dos temas son obligatorios.** Los supervisores trabajan en modo claro y
+    esta pantalla se escribió al revés: cada color se declara para claro y se pisa
+    con `dark:`. Un `text-white` o un `bg-white/[0.03]` sueltos —sin su par claro—
+    desaparecen sobre fondo blanco. Es exactamente el bug que tenía este archivo.
+
+  · Tres cards y tres alcances distintos. La matriz muestra SIEMPRE a todos los
+    asesores: es el total contra el que se compara, y filtrarla por persona borraría
+    la referencia. El recorte por asesor vive en las dos cards de abajo, cada una con
+    el suyo e independiente, para poder mirar a alguien y al conjunto a la vez.
 -->
 <div>
   <!-- Loading -->
   <div *ngIf="isLoading"
-       class="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 backdrop-blur-sm">
-    <div class="w-10 h-10 border-2 border-white/10 border-t-indigo-400 rounded-full animate-spin"></div>
+       class="fixed inset-0 z-50 grid place-items-center bg-slate-900/25 dark:bg-slate-950/60 backdrop-blur-sm">
+    <div class="w-10 h-10 border-2 border-slate-300 dark:border-white/10 border-t-indigo-500 dark:border-t-indigo-400
+                rounded-full animate-spin"></div>
   </div>
 
-  <!-- Filtros -->
-  <div class="rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06] p-4 mb-4">
+  <!-- Filtros de la consulta -->
+  <div class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4 mb-4">
     <div class="flex gap-3 overflow-x-auto items-end pb-0.5">
       <div class="flex flex-col gap-1.5 w-[140px] flex-shrink-0">
-        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500">Tramo</label>
+        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Tramo</label>
         <app-custom-select [options]="tramos" [(ngModel)]="selectedTramo" placeholder="Seleccionar tramo">
         </app-custom-select>
       </div>
@@ -34,38 +45,32 @@
         en Todos es válido —las celdas son porcentajes— pero entonces la lista de
         criterios más fallados junta dos tarjetas distintas.
       -->
-      <div class="flex flex-col gap-1.5 w-[230px] flex-shrink-0">
-        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500">Resultado</label>
+      <div class="flex flex-col gap-1.5 w-[190px] flex-shrink-0">
+        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Resultado</label>
         <app-custom-select [options]="resultados" [(ngModel)]="selectedResultado" placeholder="Todos">
         </app-custom-select>
       </div>
 
-      <!-- Elegir un asesor no filtra la vista: entra a su ficha. -->
-      <div class="flex flex-col gap-1.5 w-[165px] flex-shrink-0">
-        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500">Asesor</label>
-        <app-custom-select [options]="opcionesAsesor" [(ngModel)]="selectedAsesor"
-                           (selectionChange)="cambiarAsesor()" placeholder="Todos">
-        </app-custom-select>
-      </div>
-
       <div class="flex flex-col gap-1.5 w-[145px] flex-shrink-0">
-        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500">Desde</label>
+        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Desde</label>
         <input type="date" [(ngModel)]="desde"
-               class="w-full h-10 px-3 rounded-lg bg-slate-950/50 ring-1 ring-white/10 text-slate-100
-                      text-[13px] tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
+               class="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-950/50 ring-1 ring-slate-300 dark:ring-white/10
+                      text-slate-900 dark:text-slate-100 text-[13px] tabular-nums
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
       </div>
 
       <div class="flex flex-col gap-1.5 w-[145px] flex-shrink-0">
-        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500">Hasta</label>
+        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Hasta</label>
         <input type="date" [(ngModel)]="hasta"
-               class="w-full h-10 px-3 rounded-lg bg-slate-950/50 ring-1 ring-white/10 text-slate-100
-                      text-[13px] tabular-nums focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
+               class="w-full h-10 px-3 rounded-lg bg-white dark:bg-slate-950/50 ring-1 ring-slate-300 dark:ring-white/10
+                      text-slate-900 dark:text-slate-100 text-[13px] tabular-nums
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500/60" />
       </div>
 
       <button (click)="buscar()" [disabled]="isLoading"
               class="h-10 inline-flex items-center gap-2 px-4 rounded-full text-[13px] font-medium
                      text-white bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98]
-                     shadow-lg shadow-indigo-950/40 transition-all duration-200
+                     shadow-lg shadow-indigo-500/20 dark:shadow-indigo-950/40 transition-all duration-200
                      disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
                      whitespace-nowrap cursor-pointer">
         <lucide-angular [img]="Search" [size]="15"></lucide-angular>
@@ -74,104 +79,110 @@
 
       <div class="flex gap-2 flex-shrink-0">
         <button (click)="semanaAnterior()"
-                class="h-10 px-3.5 rounded-full text-[13px] text-slate-300 bg-white/5
-                       hover:bg-white/10 transition-colors whitespace-nowrap cursor-pointer">
+                class="h-10 px-3.5 rounded-full text-[13px] text-slate-700 dark:text-slate-300
+                       bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10
+                       transition-colors whitespace-nowrap cursor-pointer">
           Semana anterior
         </button>
         <button (click)="semanaActual()"
-                class="h-10 px-3.5 rounded-full text-[13px] text-slate-300 bg-white/5
-                       hover:bg-white/10 transition-colors whitespace-nowrap cursor-pointer">
+                class="h-10 px-3.5 rounded-full text-[13px] text-slate-700 dark:text-slate-300
+                       bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10
+                       transition-colors whitespace-nowrap cursor-pointer">
           Semana actual
         </button>
       </div>
     </div>
 
-    <div *ngIf="errorMessage" class="mt-3 text-[12.5px] text-rose-400">{{ errorMessage }}</div>
-  </div>
-
-  <!-- Volver, cuando se está mirando a una sola persona -->
-  <div *ngIf="selectedAsesor" class="mb-4">
-    <button (click)="volverATodos()"
-            class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-[12px] text-slate-300
-                   bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
-      <lucide-angular [img]="ArrowLeft" [size]="13"></lucide-angular>
-      Ver a todos los asesores
-    </button>
+    <div *ngIf="errorMessage" class="mt-3 text-[12.5px] text-rose-600 dark:text-rose-400">{{ errorMessage }}</div>
   </div>
 
   <!-- Cómo se calcula -->
-  <div *ngIf="semana" class="flex flex-wrap items-center gap-x-5 gap-y-1 mb-4 px-1 text-[11.5px] text-slate-500">
+  <div *ngIf="semana"
+       class="flex flex-wrap items-center gap-x-5 gap-y-1 mb-4 px-1 text-[11.5px] text-slate-600 dark:text-slate-500">
     <span>
       Cumplimiento = puntos obtenidos ÷ puntos totales posibles. El total posible sale de la
       rúbrica del audio (PDP 16 · CD 14) más los criterios activos en esa subcartera.
     </span>
-    <span class="text-slate-700">·</span>
-    <span>Una celda vacía significa <b class="text-slate-400 font-medium">sin audios evaluados</b>, no 0%.</span>
-    <span class="text-slate-700">·</span>
-    <span *ngIf="semana.rubrica">Rúbrica <b class="text-slate-400 font-medium">{{ semana.rubrica }}</b></span>
-    <span *ngIf="!semana.rubrica">Rúbricas <b class="text-slate-400 font-medium">PDP y CD</b> mezcladas</span>
+    <span class="text-slate-300 dark:text-slate-700">·</span>
+    <span>
+      Una celda vacía significa
+      <b class="text-slate-700 dark:text-slate-400 font-medium">sin audios evaluados</b>, no 0%.
+    </span>
+    <span class="text-slate-300 dark:text-slate-700">·</span>
+    <span *ngIf="semana.rubrica">
+      Rúbrica <b class="text-slate-700 dark:text-slate-400 font-medium">{{ semana.rubrica }}</b>
+    </span>
+    <span *ngIf="!semana.rubrica">
+      Rúbricas <b class="text-slate-700 dark:text-slate-400 font-medium">PDP y CD</b> mezcladas
+    </span>
   </div>
 
   <div *ngIf="semana?.truncado"
-       class="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 ring-1 ring-amber-400/20 text-[12.5px] text-amber-300">
+       class="mb-4 px-4 py-2.5 rounded-xl bg-amber-500/10 ring-1 ring-amber-400/30 dark:ring-amber-400/20
+              text-[12.5px] text-amber-700 dark:text-amber-300">
     Se alcanzó el tope de filas: la matriz está incompleta. Acote el rango de fechas o elija un tramo.
   </div>
 
-  <!-- Matriz -->
-  <div *ngIf="hayDatos" class="rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06] overflow-hidden mb-4">
+  <!-- Matriz: siempre todos los asesores -->
+  <div *ngIf="hayDatos"
+       class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06]
+              overflow-hidden mb-4">
     <div class="overflow-x-auto">
       <table class="w-full border-collapse text-[12px]">
         <thead>
-          <tr class="border-b border-white/[0.07]">
-            <th class="px-4 py-3 text-left text-[10.5px] uppercase tracking-[0.12em] text-slate-500
-                       font-medium sticky left-0 bg-slate-900 z-10 min-w-[168px]">
+          <tr class="border-b border-slate-200 dark:border-white/[0.07]">
+            <th class="px-4 py-3 text-left text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500
+                       font-medium sticky left-0 bg-white dark:bg-slate-900 z-10 min-w-[168px]">
               Asesor
             </th>
-            <th *ngFor="let dia of semana!.dias"
-                class="px-2 py-3 text-center text-[10.5px] uppercase tracking-[0.12em] text-slate-500
+            <th *ngFor="let dia of semana!.dias; trackBy: porDia"
+                class="px-2 py-3 text-center text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500
                        font-medium min-w-[124px]">
               {{ etiquetaDia(dia) }}
             </th>
-            <th class="px-4 py-3 text-center text-[10.5px] uppercase tracking-[0.12em] text-slate-500
-                       font-medium min-w-[136px] border-l border-white/[0.07]">
+            <th class="px-4 py-3 text-center text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500
+                       font-medium min-w-[136px] border-l border-slate-200 dark:border-white/[0.07]">
               Total
             </th>
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-white/[0.05]">
-          <tr *ngFor="let asesor of semana!.asesores" class="group">
-            <!-- El nombre abre la ficha del asesor. Es USUARIOREGISTRA; el nombre real vive en otra base. -->
-            <td class="px-4 py-2.5 sticky left-0 bg-slate-900 z-10">
+        <tbody class="divide-y divide-slate-100 dark:divide-white/[0.05]">
+          <tr *ngFor="let asesor of semana!.asesores; trackBy: porAsesor" class="group">
+            <!-- El nombre apunta la card de revisión a esa persona. Es USUARIOREGISTRA. -->
+            <td class="px-4 py-2.5 sticky left-0 bg-white dark:bg-slate-900 z-10">
               <button (click)="abrirAsesor(asesor)"
                       [class]="'flex items-center gap-2 text-left cursor-pointer transition-colors '
-                               + (filaAbierta(asesor) ? 'text-indigo-300' : 'text-slate-200 hover:text-indigo-300')">
+                               + (filaAbierta(asesor)
+                                  ? 'text-indigo-600 dark:text-indigo-300'
+                                  : 'text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300')">
                 <lucide-angular [img]="User" [size]="13" class="flex-shrink-0 opacity-40"></lucide-angular>
                 <span class="text-[12.5px] font-medium">{{ asesor.asesor }}</span>
               </button>
-              <div class="text-[10.5px] text-slate-600 pl-[21px] tabular-nums">
+              <div class="text-[10.5px] text-slate-400 dark:text-slate-600 pl-[21px] tabular-nums">
                 {{ asesor.audios }} audios
               </div>
             </td>
 
             <!-- Celdas -->
-            <td *ngFor="let dia of asesor.dias" class="px-1 py-1 align-top">
+            <td *ngFor="let dia of asesor.dias; trackBy: porFecha" class="px-1 py-1 align-top">
               <div (click)="abrirCelda(asesor, dia)"
                    [class]="'rounded-xl px-2.5 py-2 transition-all duration-200 ring-1 ' + colorCelda(dia.cumplimiento)
-                            + (dia.audios ? ' cursor-pointer hover:brightness-125' : '')
-                            + (estaAbierta(asesor, dia) ? ' ring-2 ring-indigo-400/70' : '')">
+                            + (dia.audios ? ' cursor-pointer hover:brightness-105 dark:hover:brightness-125' : '')
+                            + (estaAbierta(asesor, dia) ? ' ring-2 ring-indigo-500/70 dark:ring-indigo-400/70' : '')">
 
                 <div class="flex items-baseline justify-between gap-1">
                   <span [class]="'tabular-nums ' + (dia.cumplimiento === null
-                                  ? 'text-[13px] text-slate-700'
-                                  : 'text-[15px] font-semibold text-white tracking-[-0.01em]')">
+                                  ? 'text-[13px] text-slate-300 dark:text-slate-700'
+                                  : 'text-[15px] font-semibold text-slate-900 dark:text-white tracking-[-0.01em]')">
                     {{ pct(dia.cumplimiento) }}
                   </span>
                   <!-- Δ contra el día anterior CON audios de este mismo asesor. -->
                   <span *ngIf="dia.deltaDiaAnterior !== null"
                         [class]="'inline-flex items-center gap-0.5 text-[10.5px] font-medium tabular-nums '
-                                 + (dia.deltaDiaAnterior! > 0 ? 'text-emerald-400'
-                                    : dia.deltaDiaAnterior! < 0 ? 'text-rose-400' : 'text-slate-500')">
+                                 + (dia.deltaDiaAnterior! > 0 ? 'text-emerald-600 dark:text-emerald-400'
+                                    : dia.deltaDiaAnterior! < 0 ? 'text-rose-600 dark:text-rose-400'
+                                    : 'text-slate-500 dark:text-slate-500')">
                     <lucide-angular
                       [img]="dia.deltaDiaAnterior! > 0 ? TrendingUp : dia.deltaDiaAnterior! < 0 ? TrendingDown : Minus"
                       [size]="11"></lucide-angular>
@@ -179,15 +190,15 @@
                   </span>
                 </div>
 
-                <div *ngIf="dia.audios" class="text-[10.5px] text-slate-400 mt-1 tabular-nums">
+                <div *ngIf="dia.audios" class="text-[10.5px] text-slate-600 dark:text-slate-400 mt-1 tabular-nums">
                   {{ dia.puntos }}/{{ dia.posibles }} · {{ dia.audios }} aud.
                 </div>
-                <div *ngIf="!dia.audios" class="text-[10.5px] text-slate-700 mt-1">sin evaluar</div>
+                <div *ngIf="!dia.audios" class="text-[10.5px] text-slate-400 dark:text-slate-700 mt-1">sin evaluar</div>
 
                 <!-- Las tres series del gráfico del Excel, plegadas a la celda. -->
                 <div *ngIf="dia.audios" class="flex gap-1 mt-2">
                   <div *ngFor="let s of SECCIONES"
-                       class="flex-1 h-1 rounded-full bg-slate-950/60 overflow-hidden"
+                       class="flex-1 h-1 rounded-full bg-slate-200 dark:bg-slate-950/60 overflow-hidden"
                        [title]="tituloBloque(dia, s)">
                     <div [class]="'h-full rounded-full transition-all duration-500 ' + COLOR_SECCION[s]"
                          [style.width.%]="anchoBloque(dia, s)"></div>
@@ -197,15 +208,16 @@
             </td>
 
             <!-- Total de la fila -->
-            <td class="px-4 py-2.5 border-l border-white/[0.07] align-top">
+            <td class="px-4 py-2.5 border-l border-slate-200 dark:border-white/[0.07] align-top">
               <div class="flex items-baseline justify-between gap-2">
-                <span class="text-[15px] font-semibold text-white tabular-nums tracking-[-0.01em]">
+                <span class="text-[15px] font-semibold text-slate-900 dark:text-white tabular-nums tracking-[-0.01em]">
                   {{ pct(asesor.cumplimiento) }}
                 </span>
                 <span *ngIf="asesor.deltaSemanaAnterior !== null"
                       [class]="'inline-flex items-center gap-0.5 text-[10.5px] font-medium tabular-nums '
-                               + (asesor.deltaSemanaAnterior! > 0 ? 'text-emerald-400'
-                                  : asesor.deltaSemanaAnterior! < 0 ? 'text-rose-400' : 'text-slate-500')"
+                               + (asesor.deltaSemanaAnterior! > 0 ? 'text-emerald-600 dark:text-emerald-400'
+                                  : asesor.deltaSemanaAnterior! < 0 ? 'text-rose-600 dark:text-rose-400'
+                                  : 'text-slate-500 dark:text-slate-500')"
                       title="Contra la ventana anterior del mismo largo">
                   <lucide-angular
                     [img]="asesor.deltaSemanaAnterior! > 0 ? TrendingUp : asesor.deltaSemanaAnterior! < 0 ? TrendingDown : Minus"
@@ -213,12 +225,12 @@
                   {{ delta(asesor.deltaSemanaAnterior) }}
                 </span>
               </div>
-              <div class="text-[10.5px] text-slate-400 mt-1 tabular-nums">
+              <div class="text-[10.5px] text-slate-600 dark:text-slate-400 mt-1 tabular-nums">
                 {{ asesor.puntos }}/{{ asesor.posibles }} · {{ asesor.audios }} aud.
               </div>
               <div class="flex gap-1 mt-2">
                 <div *ngFor="let s of SECCIONES"
-                     class="flex-1 h-1 rounded-full bg-slate-950/60 overflow-hidden"
+                     class="flex-1 h-1 rounded-full bg-slate-200 dark:bg-slate-950/60 overflow-hidden"
                      [title]="tituloBloque(asesor, s)">
                   <div [class]="'h-full rounded-full transition-all duration-500 ' + COLOR_SECCION[s]"
                        [style.width.%]="anchoBloque(asesor, s)"></div>
@@ -233,21 +245,23 @@
           trae al supervisor a esta pantalla es sobre una persona, y el promedio
           general es contexto, no titular.
         -->
-        <tfoot class="border-t border-white/[0.07]">
+        <tfoot class="border-t border-slate-200 dark:border-white/[0.07]">
           <tr>
-            <td class="px-4 py-3 sticky left-0 bg-slate-900 z-10 text-[12px] text-slate-400 font-medium">
+            <td class="px-4 py-3 sticky left-0 bg-white dark:bg-slate-900 z-10 text-[12px]
+                       text-slate-600 dark:text-slate-400 font-medium">
               {{ semana!.totales.asesores }} asesores
             </td>
-            <td [attr.colspan]="semana!.dias.length" class="px-4 py-3 text-[11.5px] text-slate-500">
+            <td [attr.colspan]="semana!.dias.length" class="px-4 py-3 text-[11.5px] text-slate-600 dark:text-slate-500">
               <span class="mr-5 tabular-nums">{{ semana!.totales.audios }} audios evaluados</span>
               <span *ngFor="let s of SECCIONES" class="mr-4 inline-flex items-center gap-1.5">
                 <span [class]="'inline-block w-1.5 h-1.5 rounded-full ' + COLOR_SECCION[s]"></span>
                 {{ ETIQUETA_SECCION[s] }}
               </span>
             </td>
-            <td class="px-4 py-3 border-l border-white/[0.07] text-[14px] text-white font-semibold tabular-nums">
+            <td class="px-4 py-3 border-l border-slate-200 dark:border-white/[0.07] text-[14px]
+                       text-slate-900 dark:text-white font-semibold tabular-nums">
               {{ pct(semana!.totales.cumplimiento) }}
-              <span class="text-[10.5px] text-slate-600 font-normal">
+              <span class="text-[10.5px] text-slate-400 dark:text-slate-600 font-normal">
                 {{ semana!.totales.puntos }}/{{ semana!.totales.posibles }}
               </span>
             </td>
@@ -258,53 +272,94 @@
   </div>
 
   <!-- Vacío -->
-  <div *ngIf="semana && !hayDatos" class="rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06] p-12 text-center">
-    <p class="text-[14px] text-slate-300 font-medium">No hay audios evaluados en este rango</p>
-    <p class="text-[12.5px] text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+  <div *ngIf="semana && !hayDatos"
+       class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-12 text-center">
+    <p class="text-[14px] text-slate-800 dark:text-slate-300 font-medium">No hay audios evaluados en este rango</p>
+    <p class="text-[12.5px] text-slate-600 dark:text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
       La matriz se arma sobre lo que el speech evaluó, no sobre las gestiones registradas.
       Si el rango es correcto, es que todavía no se corrió la evaluación de esos días.
     </p>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <!-- Criterios más fallados -->
-    <div *ngIf="topCriterios.length" class="rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
-      <h3 class="text-[13.5px] font-semibold text-slate-200 tracking-[-0.01em]">Criterios que más se fallan</h3>
-      <p class="text-[11px] text-slate-500 mt-1 mb-3 leading-relaxed">
-        Sobre las evaluaciones que <b class="text-slate-400 font-medium">sí</b> midieron cada criterio.
-        A diferencia del puntaje, acá un criterio sin calificar no cuenta como falla: «fallado» tiene
-        que significar que se escuchó y no se cumplió.
-      </p>
-      <div class="divide-y divide-white/[0.05]">
-        <div *ngFor="let c of topCriterios" class="flex items-center gap-3 py-2">
-          <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ' + (COLOR_SECCION[c.seccion] || 'bg-slate-500')"></span>
-          <span class="flex-1 text-[12.5px] text-slate-300 truncate" [title]="c.etiqueta">{{ c.etiqueta }}</span>
-          <span class="text-[10.5px] text-slate-600 whitespace-nowrap tabular-nums">{{ c.fallados }}/{{ c.evaluados }}</span>
-          <span class="w-16 h-1 bg-slate-950/60 rounded-full overflow-hidden flex-shrink-0">
-            <span class="block h-full bg-rose-400/70 rounded-full" [style.width.%]="c.pctFalla || 0"></span>
-          </span>
-          <span class="text-[12px] text-rose-300/90 w-12 text-right tabular-nums">{{ pct(c.pctFalla) }}</span>
+  <div *ngIf="semana" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!--
+      Criterios más fallados. Filtro de asesor propio: comparar «lo que más falla X»
+      contra el total del rango exige tener las dos lecturas a la vez, y por eso este
+      desplegable no habla con el de la card de al lado.
+    -->
+    <div class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <h3 class="text-[13.5px] font-semibold text-slate-900 dark:text-slate-200 tracking-[-0.01em]">
+          Criterios que más se fallan
+        </h3>
+        <div class="w-[165px] flex-shrink-0">
+          <app-custom-select [options]="asesoresDisponibles" [(ngModel)]="asesorCriterios"
+                             [compact]="true" placeholder="Todos">
+          </app-custom-select>
         </div>
+      </div>
+
+      <p class="text-[11px] text-slate-500 dark:text-slate-600 mb-3 tabular-nums">
+        {{ asesorCriterios || 'Todos los asesores' }} · {{ audiosDeCriterios }} audios
+      </p>
+
+      <div *ngIf="topCriterios.length" class="divide-y divide-slate-100 dark:divide-white/[0.05]">
+        <div *ngFor="let c of topCriterios; trackBy: porCampo" class="flex items-center gap-3 py-2">
+          <span [class]="'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 '
+                         + (COLOR_SECCION[c.seccion] || 'bg-slate-400')"></span>
+          <span class="flex-1 text-[12.5px] text-slate-700 dark:text-slate-300 truncate"
+                [title]="c.etiqueta">{{ c.etiqueta }}</span>
+          <span class="text-[10.5px] text-slate-400 dark:text-slate-600 whitespace-nowrap tabular-nums">
+            {{ c.fallados }}/{{ c.evaluados }}
+          </span>
+          <span class="w-16 h-1 bg-slate-200 dark:bg-slate-950/60 rounded-full overflow-hidden flex-shrink-0">
+            <span class="block h-full bg-rose-500/80 dark:bg-rose-400/70 rounded-full"
+                  [style.width.%]="c.pctFalla || 0"></span>
+          </span>
+          <span class="text-[12px] text-rose-600 dark:text-rose-300/90 w-12 text-right tabular-nums">
+            {{ pct(c.pctFalla) }}
+          </span>
+        </div>
+      </div>
+
+      <div *ngIf="!topCriterios.length" class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
+        Sin criterios evaluados en esta selección
       </div>
     </div>
 
-    <!-- Revisión de reportes -->
-    <div *ngIf="foco" class="rounded-2xl bg-white/[0.03] ring-1 ring-white/[0.06] p-4">
-      <div class="flex items-start justify-between gap-3 mb-3">
-        <div class="min-w-0">
-          <h3 class="text-[13.5px] font-semibold text-slate-200 tracking-[-0.01em]">Revisión de reportes</h3>
-          <p class="text-[11px] text-slate-500 mt-0.5 truncate">
-            {{ foco.asesor }} ·
-            <span *ngIf="foco.fecha">{{ foco.fecha }}</span>
-            <span *ngIf="!foco.fecha">{{ semana!.desde }} a {{ semana!.hasta }}</span>
-            · cumplimiento {{ pct(foco.cumplimiento) }}
-            · {{ detalle.length }} de {{ foco.audios }} audios
-          </p>
+    <!--
+      Revisión de reportes. Permanente: no se abre ni se cierra. El click en la matriz
+      solo apunta su filtro, así el supervisor nunca pierde de vista la lista que estaba
+      recorriendo.
+    -->
+    <div class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <h3 class="text-[13.5px] font-semibold text-slate-900 dark:text-slate-200 tracking-[-0.01em]">
+          Revisión de reportes
+        </h3>
+        <div class="w-[165px] flex-shrink-0">
+          <app-custom-select [options]="asesoresDisponibles" [(ngModel)]="asesorRevision"
+                             (selectionChange)="cambiarAsesorRevision()" [compact]="true" placeholder="Todos">
+          </app-custom-select>
         </div>
-        <button (click)="cerrarDetalle()"
-                class="flex-shrink-0 w-7 h-7 rounded-full grid place-items-center text-slate-500
-                       bg-white/5 hover:bg-white/10 hover:text-slate-300 transition-colors cursor-pointer">
-          <lucide-angular [img]="X" [size]="14"></lucide-angular>
+      </div>
+
+      <p class="text-[11px] text-slate-500 dark:text-slate-600 mb-3 truncate tabular-nums">
+        {{ asesorRevision || 'Todos los asesores' }} ·
+        <span *ngIf="fechaRevision">{{ fechaRevision }}</span>
+        <span *ngIf="!fechaRevision">{{ semana!.desde }} a {{ semana!.hasta }}</span>
+        · cumplimiento {{ pct(cumplimientoRevision) }}
+        · {{ detalle.length }} audios
+      </p>
+
+      <!-- Quitar el recorte de un día sin perder al asesor. -->
+      <div *ngIf="fechaRevision" class="mb-3">
+        <button (click)="verTodoElRango()"
+                class="inline-flex items-center gap-2 h-7 px-3 rounded-full text-[11.5px]
+                       text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/5
+                       hover:bg-slate-200 dark:hover:bg-white/10 transition-colors cursor-pointer">
+          <lucide-angular [img]="ArrowLeft" [size]="12"></lucide-angular>
+          Ver todo el rango
         </button>
       </div>
 
@@ -314,58 +369,82 @@
         matriz y viaja al backend.
       -->
       <div class="flex items-center gap-3 mb-3">
-        <div class="w-[128px]">
+        <div class="w-[110px]">
           <app-custom-select [options]="rubricas" [(ngModel)]="filtroRubrica"
                              (selectionChange)="reiniciarPaginado()" [compact]="true"
-                             placeholder="CD y PDP">
+                             placeholder="TODOS">
           </app-custom-select>
         </div>
-        <span class="text-[10.5px] text-slate-600 tabular-nums">{{ rangoVisible }}</span>
+        <span class="text-[10.5px] text-slate-400 dark:text-slate-600 tabular-nums">{{ rangoVisible }}</span>
       </div>
 
-      <div *ngIf="isLoadingDetalle" class="py-10 text-center text-[12.5px] text-slate-500">Cargando…</div>
+      <div *ngIf="isLoadingDetalle" class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
+        Cargando…
+      </div>
 
       <div *ngIf="!isLoadingDetalle">
-        <div class="rounded-xl bg-slate-950/30 overflow-hidden">
-          <table class="w-full text-[12px] border-collapse">
+        <!--
+          `overflow-x-auto` y no `overflow-hidden`: la card ocupa media pantalla y con el
+          sidebar desplegado la tabla no entra. Con `hidden`, la columna Revisar quedaba
+          recortada y el ojo era inalcanzable —no había forma de abrir la evaluación—.
+          El `min-w` evita que las columnas se aplasten hasta ser ilegibles antes de
+          decidir que hace falta scroll.
+        -->
+        <div class="rounded-xl bg-slate-50 dark:bg-slate-950/30 overflow-x-auto">
+          <table class="w-full min-w-[560px] text-[12px] border-collapse">
             <thead>
-              <tr class="border-b border-white/[0.06]">
-                <!-- El día solo tiene sentido en la ficha del asesor: en una celda es uno solo. -->
-                <th *ngIf="esFichaDeAsesor" class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em] text-slate-500 font-medium">Día</th>
-                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em] text-slate-500 font-medium">Hora</th>
-                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em] text-slate-500 font-medium">Documento</th>
-                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em] text-slate-500 font-medium">Rúbrica</th>
-                <th class="px-3 py-2 text-right text-[10px] uppercase tracking-[0.1em] text-slate-500 font-medium">Puntaje</th>
-                <th class="px-3 py-2 text-center text-[10px] uppercase tracking-[0.1em] text-slate-500 font-medium">Revisar</th>
+              <tr class="border-b border-slate-200 dark:border-white/[0.06]">
+                <!-- El día solo tiene sentido si la lista mezcla varios: en una celda es uno solo. -->
+                <th *ngIf="muestraColumnaDia"
+                    class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Día</th>
+                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Hora</th>
+                <th *ngIf="!asesorRevision"
+                    class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Asesor</th>
+                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Documento</th>
+                <th class="px-3 py-2 text-left text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Rúbrica</th>
+                <th class="px-3 py-2 text-right text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium">Puntaje</th>
+                <th class="px-3 py-2 text-center text-[10px] uppercase tracking-[0.1em]
+                           text-slate-500 dark:text-slate-500 font-medium whitespace-nowrap">Revisar</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-white/[0.05]">
-              <tr *ngFor="let a of detallePaginado" class="hover:bg-white/[0.02] transition-colors">
-                <td *ngIf="esFichaDeAsesor" class="px-3 py-2 text-slate-400 whitespace-nowrap tabular-nums">
+            <tbody class="divide-y divide-slate-100 dark:divide-white/[0.05]">
+              <tr *ngFor="let a of detallePaginado; trackBy: porIdx"
+                  class="hover:bg-slate-100 dark:hover:bg-white/[0.02] transition-colors">
+                <td *ngIf="muestraColumnaDia"
+                    class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap tabular-nums">
                   {{ etiquetaDia(a.fecha) }}
                 </td>
-                <td class="px-3 py-2 text-slate-400 tabular-nums">{{ a.hora }}</td>
+                <td class="px-3 py-2 text-slate-600 dark:text-slate-400 tabular-nums">{{ a.hora }}</td>
+                <td *ngIf="!asesorRevision"
+                    class="px-3 py-2 text-slate-600 dark:text-slate-400 whitespace-nowrap">{{ a.asesor }}</td>
                 <td class="px-3 py-2">
-                  <div class="text-slate-200 tabular-nums">{{ a.documento }}</div>
-                  <div class="text-[10.5px] text-slate-600 truncate max-w-[170px]" [title]="a.cliente">{{ a.cliente }}</div>
+                  <div class="text-slate-800 dark:text-slate-200 tabular-nums">{{ a.documento }}</div>
+                  <div class="text-[10.5px] text-slate-400 dark:text-slate-600 truncate max-w-[170px]"
+                       [title]="a.cliente">{{ a.cliente }}</div>
                 </td>
                 <td class="px-3 py-2">
                   <span [class]="'px-2 py-0.5 rounded-full text-[10px] font-medium ring-1 '
                                  + (a.rubrica === 'PDP'
-                                    ? 'bg-indigo-500/15 text-indigo-300 ring-indigo-400/20'
-                                    : 'bg-white/5 text-slate-400 ring-white/10')">
+                                    ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-indigo-400/30 dark:ring-indigo-400/20'
+                                    : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 ring-slate-200 dark:ring-white/10')">
                     {{ a.rubrica }}
                   </span>
                 </td>
-                <td class="px-3 py-2 text-right text-slate-200 tabular-nums">
+                <td class="px-3 py-2 text-right text-slate-800 dark:text-slate-200 tabular-nums">
                   {{ a.puntos }}/{{ a.posibles }}
-                  <span class="text-[10.5px] text-slate-600">{{ pct(a.cumplimiento) }}</span>
+                  <span class="text-[10.5px] text-slate-400 dark:text-slate-600">{{ pct(a.cumplimiento) }}</span>
                 </td>
                 <td class="px-3 py-2">
                   <!-- Una sola acción por fila: abrir la evaluación. -->
                   <div class="flex items-center justify-center">
                     <button (click)="verEvaluacion(a)" title="Ver y corregir la evaluación"
-                            class="w-8 h-8 rounded-full grid place-items-center text-indigo-300
+                            class="w-8 h-8 rounded-full grid place-items-center text-indigo-600 dark:text-indigo-300
                                    bg-indigo-500/12 hover:bg-indigo-500/25 active:scale-95
                                    transition-all duration-200 cursor-pointer">
                       <lucide-angular [img]="Eye" [size]="15"></lucide-angular>
@@ -376,7 +455,8 @@
             </tbody>
           </table>
 
-          <div *ngIf="!detalleFiltrado.length" class="py-10 text-center text-[12.5px] text-slate-500">
+          <div *ngIf="!detalleFiltrado.length"
+               class="py-10 text-center text-[12.5px] text-slate-500 dark:text-slate-500">
             {{ detalle.length ? 'Ningún audio de esa rúbrica en la selección' : 'Sin audios evaluados' }}
           </div>
         </div>
@@ -384,7 +464,7 @@
         <!-- Paginado -->
         <div *ngIf="detalleFiltrado.length" class="flex items-center justify-between gap-3 mt-3">
           <div class="flex items-center gap-2.5">
-            <span class="text-[10.5px] text-slate-600">Por página</span>
+            <span class="text-[10.5px] text-slate-500 dark:text-slate-600">Por página</span>
             <div class="w-[68px]">
               <app-custom-select [options]="tamanosPagina" [(ngModel)]="tamanoPagina"
                                  (selectionChange)="reiniciarPaginado()" [compact]="true">
@@ -394,15 +474,19 @@
 
           <div class="flex items-center gap-1.5">
             <button (click)="irA(pagina - 1)" [disabled]="pagina === 1"
-                    class="w-7 h-7 rounded-full grid place-items-center text-slate-400 bg-white/5
-                           hover:bg-white/10 hover:text-slate-200 disabled:opacity-30
+                    class="w-7 h-7 rounded-full grid place-items-center text-slate-600 dark:text-slate-400
+                           bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10
+                           hover:text-slate-900 dark:hover:text-slate-200 disabled:opacity-30
                            disabled:cursor-not-allowed transition-colors cursor-pointer">
               <lucide-angular [img]="ChevronLeft" [size]="14"></lucide-angular>
             </button>
-            <span class="text-[11.5px] text-slate-400 px-1.5 tabular-nums">{{ pagina }} / {{ totalPaginas }}</span>
+            <span class="text-[11.5px] text-slate-600 dark:text-slate-400 px-1.5 tabular-nums">
+              {{ pagina }} / {{ totalPaginas }}
+            </span>
             <button (click)="irA(pagina + 1)" [disabled]="pagina === totalPaginas"
-                    class="w-7 h-7 rounded-full grid place-items-center text-slate-400 bg-white/5
-                           hover:bg-white/10 hover:text-slate-200 disabled:opacity-30
+                    class="w-7 h-7 rounded-full grid place-items-center text-slate-600 dark:text-slate-400
+                           bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10
+                           hover:text-slate-900 dark:hover:text-slate-200 disabled:opacity-30
                            disabled:cursor-not-allowed transition-colors cursor-pointer">
               <lucide-angular [img]="ChevronRight" [size]="14"></lucide-angular>
             </button>

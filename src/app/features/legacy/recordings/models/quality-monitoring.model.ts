@@ -36,7 +36,8 @@ export interface MonitoringRequest {
  */
 export interface MonitoringDetailRequest {
   tramo: string;
-  asesor: string;
+  /** Vacío u omitido = todos los asesores, que es como arranca la card de revisión. */
+  asesor?: string;
   fecha?: string;
   desde?: string;
   hasta?: string;
@@ -74,6 +75,14 @@ export interface MonitoringAgent {
   dias: MonitoringDay[];
   /** Puntos porcentuales contra la ventana anterior del mismo largo. */
   deltaSemanaAnterior: number | null;
+  /**
+   * El mismo cálculo que `MonitoringWeek.criteriosMasFallados`, acotado a este asesor.
+   *
+   * Viaja por fila para que la card de criterios pueda filtrar por persona sin pedirle
+   * nada al servidor. Es lo que permite comparar «lo que más falla X» contra el total
+   * del rango teniendo las dos cosas en pantalla a la vez.
+   */
+  criteriosMasFallados: MonitoringCriterion[];
 }
 
 export interface MonitoringCriterion {
@@ -163,6 +172,8 @@ export interface AdjustRequest {
 export interface MonitoringAudio {
   /** gestion_historica_audios.idx: la llave para transcripción, XLSX y WAV. */
   idx: number;
+  /** USUARIOREGISTRA. Se muestra solo cuando la card de revisión está en «Todos». */
+  asesor: string;
   fecha: string;
   hora: string;
   documento: string;
