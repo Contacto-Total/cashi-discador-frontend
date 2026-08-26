@@ -29,10 +29,13 @@ export interface MonitoringSubportfolio {
 
 export interface MonitoringRequest {
   /**
-   * `nombre_subcartera` tal como está configurada ('TRAMO 3'), o 'todos' para no filtrar.
+   * El nombre de la subcartera elegida en la cascada ('Tramo 3'). Obligatorio.
    *
    * El campo se sigue llamando `tramo` por compatibilidad con el contrato ya desplegado;
    * lo que filtra es la SUBCARTERA de la gestión, no su cartera.
+   *
+   * El backend sigue aceptando 'todos', pero la pantalla ya no lo manda: sin subcartera
+   * no hay una sola rúbrica contra la cual puntuar, y la matriz mezclaría dos.
    */
   tramo: string;
   /** 'YYYY-MM-DD' inclusive. */

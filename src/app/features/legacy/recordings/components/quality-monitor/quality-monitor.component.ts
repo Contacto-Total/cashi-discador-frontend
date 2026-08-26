@@ -13,6 +13,9 @@ import { EvaluationEditorComponent } from '../evaluation-editor/evaluation-edito
 import {
   MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringWeek
 } from '../../models/quality-monitoring.model';
+import { TenantService } from '../../../../../maintenance/services/tenant.service';
+import { PortfolioService } from '../../../../../maintenance/services/portfolio.service';
+import { SubPortfolio } from '../../../../../maintenance/models/portfolio.model';
 
 /**
  * El largo máximo del rango, en días.
@@ -28,12 +31,14 @@ import {
 const MAX_DIAS = 7;
 
 /**
- * La opción «sin filtro» del desplegable de subcarteras.
+ * Lo que se pide antes de dejar consultar.
  *
- * El valor `'todos'` es el que el backend reconoce como «no filtrar». Va como constante
- * porque el catálogo se recarga y la opción tiene que reponerse idéntica cada vez.
+ * La cascada no admite «Todas» en ningún nivel, y no es una restricción heredada del
+ * resto de la pantalla: es lo único que distingue dos subcarteras homónimas. En QAS hay
+ * dos llamadas «Lima», una bajo Tramo 5 y otra bajo Tramo 3, y sin la cartera de arriba
+ * el nombre no alcanza para saber cuál se eligió.
  */
-const TODAS_LAS_SUBCARTERAS: SelectOption = { label: 'Todas', value: 'todos' };
+const SIN_CASCADA = 'Seleccione Proveedor, Cartera y Subcartera.';
 
 /**
  * La matriz asesor × día de evaluaciones de calidad.
@@ -103,11 +108,34 @@ export class QualityMonitorComponent implements OnInit {
   };
 
   // --- Filtros de la consulta: definen QUÉ trae el backend, para toda la pantalla ---
-  tramos: SelectOption[] = [];
+
+  /**
+   * La cascada proveedor -> cartera -> subcartera, igual que en Plantillas Speech.
+   *
+   * Los catálogos salen de los mismos servicios que el resto del sistema
+   * (`system-config/tenants`, `.../portfolios`, `subportfolios/by-portfolio`) y no de
+   * un endpoint propio del monitoreo: así el árbol que se ve aquí es exactamente el que
+   * se ve al configurar la rúbrica, y no dos listas que pueden divergir.
+   *
+   * `0` es «nada elegido» en los tres niveles; ninguno acepta «Todas».
+   */
+  proveedores: SelectOption[] = [];
+  carteras: SelectOption[] = [];
+  subcarteras: SelectOption[] = [];
   resultados: SelectOption[] = [];
 
-  selectedTramo = 'todos';
+  selectedProveedor = 0;
+  selectedCartera = 0;
+  selectedSubcartera = 0;
   selectedResultado = '';
+
+  /**
+   * Las subcarteras crudas del nivel abierto.
+   *
+   * Se guardan porque el desplegable trabaja con ids y el backend con nombres: esta
+   * lista es la que traduce del uno al otro.
+   */
+  private subPortfolios: SubPortfolio[] = [];
   desde = '';
   hasta = '';
   errorMessage = '';
@@ -204,11 +232,13 @@ export class QualityMonitorComponent implements OnInit {
 
   constructor(
     private monitoreo: QualityMonitoringService,
+    private tenantService: TenantService,
+    private portfolioService: PortfolioService,
     private toast: ToastService
   ) {}
 
   ngOnInit(): void {
-    this.cargarSubcarteras();
+    this.cargarProveedores();
 
     // Solo los dos resultados que el sistema sabe evaluar. CONTACTO CON TERCEROS
     // NO está: su rúbrica no existe en el sistema y el backend además la excluye,
@@ -219,37 +249,97 @@ export class QualityMonitorComponent implements OnInit {
       { label: 'Promesa de pago', value: 'PROMESA DE PAGO' }
     ];
 
-    this.semanaActual();
+    // Se fija el rango por defecto SIN consultar: sin la cascada elegida no hay nada
+    // que pedir, y disparar la búsqueda aquí abriría la pantalla con el error puesto.
+    this.fijarSemana(0, false);
+  }
+
+  // ---------------------------------------------------------------- cascada
+
+  private cargarProveedores(): void {
+    this.tenantService.getAllTenants().subscribe({
+      next: (data) => {
+        this.proveedores = data.map(t => ({ label: t.tenantName, value: t.id }));
+      },
+      error: () => {
+        this.toast.error('No se pudieron cargar los proveedores');
+      }
+    });
   }
 
   /**
-   * Llena el desplegable con las subcarteras que tienen plantilla configurada.
+   * Bajar un nivel invalida los de abajo Y lo que hay en pantalla.
    *
-   * **No es un catálogo de lo que hay en la tabla histórica**, y esa es la diferencia
-   * que importa: son las subcarteras dadas de alta en `speech_plantilla_subcartera`, que
-   * es la misma tabla que decide contra qué rúbrica se puntúa cada audio. Ofrecer valores
-   * sacados del histórico dejaría elegir una subcartera sin configurar, cuyos audios se
-   * miden contra la rúbrica completa sin que la pantalla lo diga.
-   *
-   * Si la llamada falla, el desplegable se queda con «Todos». Es un catálogo, no un dato
-   * de la pantalla: perderlo limita el filtrado pero no impide ver la matriz, así que no
-   * se bloquea la carga por esto.
+   * Lo segundo es lo que importa: la matriz que se está viendo es de la subcartera que
+   * se BUSCÓ, no de la que quedó elegida en el combo. Dejarla puesta mientras el
+   * encabezado ya dice otra cosa es exactamente el error que se corrigió en Plantillas
+   * Speech —leer los datos de TRAMO PROPIO creyendo que son de CASTIGO—, salvo que aquí
+   * el precio es un porcentaje de calidad atribuido a la cartera equivocada.
    */
-  private cargarSubcarteras(): void {
-    this.tramos = [TODAS_LAS_SUBCARTERAS];
+  onProveedorChange(): void {
+    this.carteras = [];
+    this.subcarteras = [];
+    this.selectedCartera = 0;
+    this.selectedSubcartera = 0;
+    this.limpiarResultados();
 
-    this.monitoreo.getSubcarteras().subscribe({
-      next: (data) => {
-        this.tramos = [
-          TODAS_LAS_SUBCARTERAS,
-          ...data.map(s => ({ label: s.nombre, value: s.nombre }))
-        ];
-      },
-      error: () => {
-        this.toast.warning(
-          'No se pudieron cargar las subcarteras; el filtro queda en «Todos»');
-      }
-    });
+    if (this.selectedProveedor > 0) {
+      this.portfolioService.getPortfoliosByTenant(this.selectedProveedor).subscribe({
+        next: (data) => {
+          this.carteras = data.map(p => ({ label: p.portfolioName, value: p.id }));
+        },
+        error: () => { this.toast.error('No se pudieron cargar las carteras'); }
+      });
+    }
+  }
+
+  onCarteraChange(): void {
+    this.subcarteras = [];
+    this.selectedSubcartera = 0;
+    this.limpiarResultados();
+
+    if (this.selectedCartera > 0) {
+      this.portfolioService.getSubPortfoliosByPortfolio(this.selectedCartera).subscribe({
+        next: (data) => {
+          this.subPortfolios = data;
+          this.subcarteras = data.map(s => ({ label: s.subPortfolioName, value: s.id }));
+        },
+        error: () => { this.toast.error('No se pudieron cargar las subcarteras'); }
+      });
+    }
+  }
+
+  onSubcarteraChange(): void {
+    this.limpiarResultados();
+  }
+
+  /** Descarta la consulta anterior para que nada quede rotulado con el filtro nuevo. */
+  private limpiarResultados(): void {
+    this.semana = null;
+    this.detalle = [];
+    this.evaluacionAbierta = null;
+    this.errorMessage = '';
+  }
+
+  /**
+   * El nombre de la subcartera elegida: es lo que viaja al backend.
+   *
+   * Va el nombre y no el id porque la tabla histórica no guarda el id de subcartera en
+   * las filas recién cargadas —`id_subcartera` llega en NULL hasta que corre la
+   * clasificación— mientras que la columna de texto `SUBCARTERA` viene siempre. Filtrar
+   * por id dejaría fuera justamente lo más reciente, que es lo que calidad revisa.
+   *
+   * Además los ids no son estables entre entornos: la misma subcartera es 35 en QAS y
+   * otra distinta con ese número en producción.
+   */
+  nombreSubcartera(): string {
+    const sub = this.subPortfolios.find(s => s.id === this.selectedSubcartera);
+    return sub?.subPortfolioName ?? '';
+  }
+
+  /** true cuando los tres niveles están elegidos. */
+  get cascadaCompleta(): boolean {
+    return this.selectedProveedor > 0 && this.selectedCartera > 0 && this.selectedSubcartera > 0;
   }
 
   // ------------------------------------------------------------------ rango
@@ -270,7 +360,7 @@ export class QualityMonitorComponent implements OnInit {
     this.fijarSemana(-1);
   }
 
-  private fijarSemana(offset: number): void {
+  private fijarSemana(offset: number, consultar = true): void {
     const hoy = new Date();
     // getDay(): 0 es domingo. El lunes de la semana en curso queda a -6 el domingo.
     const diaSemana = hoy.getDay();
@@ -284,7 +374,9 @@ export class QualityMonitorComponent implements OnInit {
 
     this.desde = this.comoIso(lunes);
     this.hasta = this.comoIso(viernes);
-    this.buscar();
+    if (consultar) {
+      this.buscar();
+    }
   }
 
   /**
@@ -303,6 +395,15 @@ export class QualityMonitorComponent implements OnInit {
 
   buscar(): void {
     this.errorMessage = '';
+
+    // Antes que las fechas: sin subcartera no hay rúbrica contra la cual puntuar, y una
+    // consulta «de todo» recorrería el histórico entero para devolver dos rúbricas
+    // mezcladas en la misma matriz.
+    if (!this.cascadaCompleta) {
+      this.errorMessage = SIN_CASCADA;
+      this.toast.error(SIN_CASCADA);
+      return;
+    }
     if (!this.desde || !this.hasta) {
       this.errorMessage = 'Seleccione el rango de fechas';
       return;
@@ -323,7 +424,7 @@ export class QualityMonitorComponent implements OnInit {
     // Sin `asesores`: la matriz muestra siempre a todos. El recorte por persona lo
     // hacen las cards de abajo, cada una por su cuenta.
     this.monitoreo.getSemana({
-      tramo: this.selectedTramo,
+      tramo: this.nombreSubcartera(),
       desde: this.desde,
       hasta: this.hasta,
       resultado: this.selectedResultado || undefined
@@ -437,7 +538,7 @@ export class QualityMonitorComponent implements OnInit {
     this.isLoadingDetalle = true;
 
     this.monitoreo.getDetalle({
-      tramo: this.selectedTramo,
+      tramo: this.nombreSubcartera(),
       // Vacío = todos. El backend acepta el asesor en blanco desde este cambio.
       asesor: this.asesorRevision || undefined,
       resultado: this.selectedResultado || undefined,

@@ -33,15 +33,45 @@
 
   <!-- Filtros de la consulta -->
   <div class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-4 mb-4">
-    <div class="flex gap-3 overflow-x-auto items-end pb-0.5">
+    <!--
+      Dos filas y no una: arriba QUÉ se mira, abajo CUÁNDO.
+
+      La cascada manda sobre el rango, no al revés. Cambiar de subcartera cambia la
+      rúbrica y por lo tanto el significado de cada porcentaje de la pantalla; mover las
+      fechas solo mueve la ventana. Ponerlas al mismo nivel, en una sola fila con scroll
+      horizontal, hacía que el filtro que redefine todo compitiera por el espacio con el
+      que apenas lo acota — y en pantallas angostas el primero era el que se salía.
+    -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
       <!--
-        Las opciones salen de speech_plantilla_subcartera, no de una lista fija: son las
-        subcarteras con plantilla configurada, que son las únicas cuyos audios se puntúan
-        contra la rúbrica que definió calidad.
+        Proveedor, cartera y subcartera salen de los mismos catálogos que usa el resto
+        del sistema (`system-config/tenants`, `.../portfolios`, `subportfolios`), que es
+        lo que garantiza que el árbol de aquí sea el mismo que el de Plantillas Speech.
       -->
-      <div class="flex flex-col gap-1.5 w-[170px] flex-shrink-0">
+      <div class="flex flex-col gap-1.5 min-w-0">
+        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Proveedor</label>
+        <app-custom-select [options]="proveedores" [(ngModel)]="selectedProveedor"
+                           (selectionChange)="onProveedorChange()" placeholder="Seleccionar...">
+        </app-custom-select>
+      </div>
+
+      <!--
+        Deshabilitados hasta que el nivel de arriba esté elegido: el orden de la cascada
+        se ve en la pantalla, no hace falta explicarlo.
+      -->
+      <div class="flex flex-col gap-1.5 min-w-0">
+        <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Cartera</label>
+        <app-custom-select [options]="carteras" [(ngModel)]="selectedCartera"
+                           [disabled]="!carteras.length"
+                           (selectionChange)="onCarteraChange()" placeholder="Seleccionar...">
+        </app-custom-select>
+      </div>
+
+      <div class="flex flex-col gap-1.5 min-w-0">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Subcartera</label>
-        <app-custom-select [options]="tramos" [(ngModel)]="selectedTramo" placeholder="Todas">
+        <app-custom-select [options]="subcarteras" [(ngModel)]="selectedSubcartera"
+                           [disabled]="!subcarteras.length"
+                           (selectionChange)="onSubcarteraChange()" placeholder="Seleccionar...">
         </app-custom-select>
       </div>
 
@@ -50,12 +80,14 @@
         en Todos es válido —las celdas son porcentajes— pero entonces la lista de
         criterios más fallados junta dos tarjetas distintas.
       -->
-      <div class="flex flex-col gap-1.5 w-[190px] flex-shrink-0">
+      <div class="flex flex-col gap-1.5 min-w-0">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Resultado</label>
         <app-custom-select [options]="resultados" [(ngModel)]="selectedResultado" placeholder="Todos">
         </app-custom-select>
       </div>
+    </div>
 
+    <div class="flex gap-3 overflow-x-auto items-end pb-0.5">
       <div class="flex flex-col gap-1.5 w-[145px] flex-shrink-0">
         <label class="text-[10.5px] uppercase tracking-[0.12em] text-slate-500 dark:text-slate-500">Desde</label>
         <input type="date" [(ngModel)]="desde"
@@ -104,6 +136,24 @@
     </div>
 
     <div *ngIf="errorMessage" class="mt-3 text-[12.5px] text-rose-600 dark:text-rose-400">{{ errorMessage }}</div>
+  </div>
+
+  <!--
+    Estado de arranque: la pantalla no consulta sola.
+
+    Antes abría con la semana en curso puesta, pero eso solo podía funcionar mientras
+    existía un «Todas»: ahora la subcartera decide la rúbrica, y sin ella no hay una
+    consulta por defecto que tenga sentido.
+  -->
+  <div *ngIf="!semana && !isLoading"
+       class="rounded-2xl bg-white dark:bg-white/[0.03] ring-1 ring-slate-200 dark:ring-white/[0.06] p-12 text-center">
+    <p class="text-[14px] text-slate-800 dark:text-slate-300 font-medium">
+      Seleccione Proveedor, Cartera y Subcartera, y presione Ver monitoreo
+    </p>
+    <p class="text-[12.5px] text-slate-600 dark:text-slate-500 mt-1.5 max-w-md mx-auto leading-relaxed">
+      Cada subcartera se puntúa contra su propia rúbrica, así que la matriz se arma para
+      una a la vez: es lo que hace comparables entre sí los porcentajes de la tabla.
+    </p>
   </div>
 
   <!-- Cómo se calcula -->
