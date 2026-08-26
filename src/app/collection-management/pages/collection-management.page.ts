@@ -50,6 +50,22 @@ import { PuedeBloquearSalida } from '../../core/guards/gestion-pendiente.guard';
 import { FormatService } from '@/shared/services/format.service';
 import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 
+interface ActiveCallContext {
+  llamadaId: number | null;
+  uuid: string | null;
+  telefono: string;
+  clienteId: number | null;
+  contactoId: number | null;
+}
+
+const EMPTY_CALL_CONTEXT: ActiveCallContext = {
+  llamadaId: null,
+  uuid: null,
+  telefono: '',
+  clienteId: null,
+  contactoId: null
+};
+
 @Component({
   selector: 'app-collection-management',
   standalone: true,
@@ -1880,9 +1896,11 @@ import { AppCurrencyPipe } from '@/shared/pipes/format.pipes';
 })
 export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquearSalida {
   protected callActive = signal(false);
-  protected activeCallPhone = signal<string>(''); // Número real discado (anexoDestino)
-  protected activeCallClientId = signal<number | null>(null); // ID del cliente de la llamada activa del discador
-  protected activeCallId = signal<number | null>(null); // ID de la llamada del discador (marcador_llamadas.id) para enlazar la gestión
+  // El contexto se actualiza como una unidad para no mezclar ficha, teléfono e ID de llamadas distintas.
+  protected activeCallContext = signal<ActiveCallContext>({ ...EMPTY_CALL_CONTEXT });
+  protected activeCallPhone = computed(() => this.activeCallContext().telefono);
+  protected activeCallClientId = computed(() => this.activeCallContext().clienteId);
+  protected activeCallId = computed(() => this.activeCallContext().llamadaId);
   protected isManualSource = signal(false); // true solo cuando viene desde /manual-management con source=manual
   protected callDuration = signal(0);
   protected saving = signal(false);
@@ -3067,6 +3085,36 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
   }
 
+  private setActiveCallContext(context: ActiveCallContext): void {
+    this.activeCallContext.set(context);
+  }
+
+  private setPredictiveCallContext(data: any): void {
+    this.setActiveCallContext({
+      llamadaId: data.llamadaId ?? null,
+      uuid: data.callUuid ?? null,
+      telefono: data.anexoDestino || data.phoneNumber || '',
+      clienteId: null,
+      contactoId: data.contactId ?? null
+    });
+  }
+
+  private setNonPredictiveCallContext(phoneNumber: string): void {
+    this.setActiveCallContext({ ...EMPTY_CALL_CONTEXT, telefono: phoneNumber });
+  }
+
+  private assignCallClient(customerId: number, expectedCallId?: number | null): void {
+    this.activeCallContext.update(context => {
+      if (expectedCallId != null && context.llamadaId !== expectedCallId) {
+        return context;
+      }
+      if (expectedCallId == null && context.llamadaId !== null) {
+        return context;
+      }
+      return { ...context, clienteId: customerId };
+    });
+  }
+
   ngOnInit() {
     this.loadTenants();
     this.loadManagementHistory();
@@ -3117,10 +3165,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       // Cuando la llamada se activa, cambiar estado a EN_LLAMADA
       if (state === CallState.ACTIVE && !this.callActive()) {
         this.callActive.set(true);
-        // Guardar el ID del cliente asociado a esta llamada del discador
-        if (this.customerData()?.id) {
-          this.activeCallClientId.set(this.customerData().id ?? null);
-        }
+        // El cliente de una predictiva se asigna al cargar su contexto confirmado,
+        // nunca a partir de la ficha que estuviera visible al recibir ACTIVE.
         this.startCall(); // Iniciar timer
         this.playCallAlertBeep(); // Beep de alerta al agente
         // Cambiar estado del agente a EN_LLAMADA
@@ -3183,7 +3229,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       // Guardar el número y buscar cliente
       if (callInfo.from) {
-        this.activeCallPhone.set(callInfo.from);
+        this.setNonPredictiveCallContext(callInfo.from);
         this.autoLoadCustomerByPhone(callInfo.from);
       }
     });
@@ -3197,7 +3243,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       // Guardar el número marcado y buscar cliente
       if (callInfo.to) {
-        this.activeCallPhone.set(callInfo.to);
+        this.setNonPredictiveCallContext(callInfo.to);
         this.autoLoadCustomerByPhone(callInfo.to);
       }
     });
@@ -3208,7 +3254,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (pendingOutgoingNumber && !this.customerData()?.id) {
       console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
       this.outgoingPhoneNumber = pendingOutgoingNumber;
-      this.activeCallPhone.set(pendingOutgoingNumber);
+      this.setNonPredictiveCallContext(pendingOutgoingNumber);
       this.autoLoadCustomerByPhone(pendingOutgoingNumber);
     }
     // Siempre limpiar para evitar que quede stale (rellamada anterior, etc.)
@@ -3260,7 +3306,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    *
    * PRIORIDAD: Si hay un recordatorio en curso, usa esos datos primero
    */
-  private autoLoadCustomerByPhone(phoneNumber: string, onNotFound?: () => void) {
+  private autoLoadCustomerByPhone(phoneNumber: string, onNotFound?: () => void, expectedCallId?: number | null) {
     this.isLoadingCustomer.set(true);
     console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
 
@@ -3285,9 +3331,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // PRIORIDAD 2: Buscar por teléfono en todos los tenants
     this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber).subscribe({
       next: (customers) => {
+        if (expectedCallId != null && this.activeCallId() !== expectedCallId) {
+          console.warn('🚫 [AUTO-LOAD] Respuesta descartada: corresponde a una llamada predictiva anterior');
+          return;
+        }
         if (customers && customers.length > 0) {
           console.log('✅ [AUTO-LOAD] Cliente encontrado:', customers[0]);
-          this.loadCustomerFromResource(customers[0]);
+          this.loadCustomerFromResource(customers[0], expectedCallId);
         } else {
           console.warn('⚠️ [AUTO-LOAD] No se encontró cliente con teléfono:', phoneNumber);
           // [FIX] Si no matchea por teléfono, caer al endpoint confiable por contactId.
@@ -3529,12 +3579,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.loadTelefonosMetodo(doc);
     }
 
-    // Si hay llamada activa y no se ha asignado cliente a la llamada, asignar este
-    if ((this.callActive() || this.rellamadaCallActive()) && this.activeCallClientId() === null && customerId) {
-      this.activeCallClientId.set(customerId);
-      console.log('📞 [CALL-CLIENT] Cliente asignado a llamada activa:', customerId);
-    }
-
     this.isLoadingCustomer.set(false);
     console.log('✅ Cliente cargado exitosamente, customerId:', customerId);
   }
@@ -3761,14 +3805,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           const predictiveData = JSON.parse(predictiveDataStr);
           if (predictiveData.phoneNumber) {
             console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
-            this.activeCallPhone.set(predictiveData.anexoDestino || predictiveData.phoneNumber);
-            if (predictiveData.llamadaId) {
-              this.activeCallId.set(predictiveData.llamadaId);
-            }
+            this.setPredictiveCallContext(predictiveData);
             this.autoLoadCustomerByPhone(predictiveData.phoneNumber, () => {
               console.warn('⚠️ [FAST-PATH] Teléfono no matcheó — cayendo a customer-full-data por contactId');
               this.loadFirstCustomer(0, true);
-            });
+            }, predictiveData.llamadaId ?? null);
             return;
           }
         } catch (e) {
@@ -3805,29 +3846,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
         console.log(`✅ [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
 
+        this.setPredictiveCallContext(fullData);
+
         // Guardar contactId del discador para posible rellamada
         if (fullData.contactId) {
           this.dialerContactId.set(fullData.contactId);
-        }
-
-        // Guardar el id de la llamada del discador para enlazar la gestión (registros_gestion.id_llamada)
-        if (fullData.llamadaId) {
-          this.activeCallId.set(fullData.llamadaId);
-        }
-
-        // Guardar el número real discado
-        if (fullData.anexoDestino) {
-          this.activeCallPhone.set(fullData.anexoDestino);
         }
 
         // Si tiene datos dinámicos completos, usar loadCustomerFromDynamicTable
         if (fullData.dynamicData) {
           console.log('✅ [FULL-DATA] Datos dinámicos disponibles, cargando con loadCustomerFromDynamicTable');
           this.loadCustomerFromDynamicTable(fullData.dynamicData);
+          if (this.customerData()?.id) this.assignCallClient(this.customerData().id, fullData.llamadaId);
         } else if (fullData.clienteDetalle) {
           // Fallback: solo tiene datos básicos del cliente
           console.warn('⚠️ [FULL-DATA] Sin datos dinámicos, usando fallback con clienteDetalle');
           this.loadClienteDetalleFallback(fullData.clienteDetalle);
+          if (this.customerData()?.id) this.assignCallClient(this.customerData().id, fullData.llamadaId);
         } else {
           console.warn('⚠️ [FULL-DATA] Sin datos del cliente');
           this.isLoadingCustomer.set(false);
@@ -4336,7 +4371,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.llamadaRealizada.set(true); // llamada manual/rellamada: bloquea salida hasta guardar
     this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
 
-    this.activeCallPhone.set(phoneNumber);
+    this.setNonPredictiveCallContext(phoneNumber);
     this.sipService.setRellamadaActive(true);
     this.sipService.setCurrentOutgoingNumber(phoneNumber);
     this.showRellamadaDropdown.set(false);
@@ -5849,8 +5884,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       // Determinar si es una llamada activa o gestión manual
       // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
       const hasActiveCallOrTimerSched = this.callActive() || this.rellamadaCallActive() || !!this.callStartTime;
-      const isSameClientAsCallSched = this.activeCallClientId() !== null &&
-                                       this.activeCallClientId() === this.customerData()?.id;
+      const scheduleCallContext = this.activeCallContext();
+      const isSameClientAsCallSched = scheduleCallContext.clienteId !== null &&
+                                       scheduleCallContext.clienteId === this.customerData()?.id;
       const isActiveCallSchedule = hasActiveCallOrTimerSched && isSameClientAsCallSched;
 
       // Obtener el ID del agente actual
@@ -5880,8 +5916,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
       // ========== FIN VALIDACIÓN DE PRIMERA CUOTA ==========
       const phoneNumber = isActiveCallSchedule
-        ? (this.activeCallPhone() || this.getCustomerPhone())
-        : (this.selectedManualPhone() || this.activeCallPhone() || this.getCustomerPhone());
+        ? (scheduleCallContext.telefono || this.getCustomerPhone())
+        : (this.selectedManualPhone() || this.getCustomerPhone());
 
       const scheduleRequest: PaymentScheduleRequest = {
         idCliente: this.customerData().id || 0,
@@ -5975,19 +6011,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       // Determinar si es una llamada activa o gestión manual
       // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
       const hasActiveCallOrTimer = this.callActive() || this.rellamadaCallActive() || !!this.callStartTime;
-      const isSameClientAsCall = this.activeCallClientId() !== null &&
-                                  this.activeCallClientId() === this.customerData()?.id;
+      const callContext = this.activeCallContext();
+      const isSameClientAsCall = callContext.clienteId !== null &&
+                                  callContext.clienteId === this.customerData()?.id;
       const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
       // Obtener información del usuario actual
       const currentUser = this.authService.getCurrentUser();
 
-      // Phone: si hay llamada activa del mismo cliente, usar el teléfono de la llamada
-      // Si hay activeCallPhone (número del discador/rellamada), usarlo como fallback
-      // Si es gestión manual pura, usar el teléfono seleccionado por el agente
+      // Una ficha distinta nunca puede heredar teléfono o ID de otra llamada.
       const phoneNumber = isActiveCall
-        ? (this.activeCallPhone() || this.getCustomerPhone())
-        : (this.selectedManualPhone() || this.activeCallPhone() || this.getCustomerPhone());
+        ? (callContext.telefono || this.getCustomerPhone())
+        : (this.selectedManualPhone() || this.getCustomerPhone());
 
       const request: CreateManagementRequest = {
         customerId: String(this.customerData().id),
@@ -6018,7 +6053,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
         idCampana: null,  // Se puede obtener del contexto si hay campaña activa
-        idLlamada: this.activeCallId(),  // id de la llamada del discador (marcador_llamadas.id); backend lo rescata si viene null
+        idLlamada: isActiveCall ? callContext.llamadaId : null,
         duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
         // Información del agente y dispositivo
@@ -6248,9 +6283,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     this.callDuration.set(0);
     this.callStartTime = undefined;
-    this.activeCallPhone.set('');
-    this.activeCallClientId.set(null);
-    this.activeCallId.set(null);
+    this.setActiveCallContext({ ...EMPTY_CALL_CONTEXT });
     this.selectedManualPhone.set('');
     this.dialerContactId.set(null);
 
@@ -6703,7 +6736,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Carga un cliente desde un CustomerResource
    * Similar a loadFirstCustomer pero reutilizable
    */
-  private loadCustomerFromResource(customer: any) {
+  private loadCustomerFromResource(customer: any, expectedCallId?: number | null) {
     console.log('[TEST] Cargando cliente:', customer);
 
     // Limpiar teléfono seleccionado del cliente anterior para evitar guardar teléfonos incorrectos
@@ -6762,6 +6795,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         monto_ultimo_pago: 0
       }
     });
+    if (customer.id) {
+      this.assignCallClient(customer.id, expectedCallId);
+    }
     this.syncEmailsMetodoFromCurrentData();
     // [FIX] Datos básicos ya mostrables: apagar el spinner acá para que NUNCA quede colgado.
     // El lookup dinámico de abajo solo enriquece; si viene null/error no debe dejar el overlay tapando la ficha.
@@ -6803,12 +6839,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           console.warn('⚠️ [RESOURCE] Error obteniendo datos dinámicos, manteniendo datos básicos:', error);
         }
       });
-    }
-
-    // Si hay llamada activa y no se ha asignado cliente a la llamada, asignar este
-    if ((this.callActive() || this.rellamadaCallActive()) && this.activeCallClientId() === null && customer.id) {
-      this.activeCallClientId.set(customer.id);
-      console.log('📞 [CALL-CLIENT] Cliente asignado a llamada activa:', customer.id);
     }
 
     console.log('[TEST] Cliente cargado exitosamente');
