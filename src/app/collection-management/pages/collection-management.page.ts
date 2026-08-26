@@ -3857,12 +3857,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         if (fullData.dynamicData) {
           console.log('✅ [FULL-DATA] Datos dinámicos disponibles, cargando con loadCustomerFromDynamicTable');
           this.loadCustomerFromDynamicTable(fullData.dynamicData);
-          if (this.customerData()?.id) this.assignCallClient(this.customerData().id, fullData.llamadaId);
+          const customerId = this.customerData()?.id;
+          if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
         } else if (fullData.clienteDetalle) {
           // Fallback: solo tiene datos básicos del cliente
           console.warn('⚠️ [FULL-DATA] Sin datos dinámicos, usando fallback con clienteDetalle');
           this.loadClienteDetalleFallback(fullData.clienteDetalle);
-          if (this.customerData()?.id) this.assignCallClient(this.customerData().id, fullData.llamadaId);
+          const customerId = this.customerData()?.id;
+          if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
         } else {
           console.warn('⚠️ [FULL-DATA] Sin datos del cliente');
           this.isLoadingCustomer.set(false);
