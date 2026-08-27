@@ -65,6 +65,38 @@ const EMPTY_CALL_CONTEXT: ActiveCallContext = {
   clienteId: null,
   contactoId: null
 };
+/**
+ * Cuota de la última promesa de tipo convenio, ya normalizada para pintarla.
+ */
+interface CuotaUltimoConvenio {
+  numeroCuota: number;
+  monto: number;
+  fechaPromesa: string;
+  estado: string;
+}
+
+/**
+ * Última promesa de pago de tipo convenio del cliente, cerrada en CUMPLIDO o VENCIDO.
+ * Es informativa: nunca bloquea el registro de una nueva promesa.
+ */
+interface UltimoConvenio {
+  estado: 'CUMPLIDO' | 'VENCIDO';
+  montoTotal: number;
+  totalCuotas: number;
+  cuotasPagadas: number;
+  nombreAgente: string;
+  cuotas: CuotaUltimoConvenio[];
+}
+
+/**
+ * Resultado de evaluar una gestión del historial como candidata a "último convenio".
+ * NO_ES_CONVENIO deja seguir buscando hacia atrás; OTRO_ESTADO corta la búsqueda,
+ * porque esa ya era la última promesa de tipo convenio del cliente.
+ */
+type EvaluacionConvenio =
+  | { tipo: 'NO_ES_CONVENIO' }
+  | { tipo: 'OTRO_ESTADO' }
+  | { tipo: 'MOSTRAR'; convenio: UltimoConvenio };
 
 @Component({
   selector: 'app-collection-management',
@@ -746,6 +778,93 @@ const EMPTY_CALL_CONTEXT: ActiveCallContext = {
                   </div>
                 }
               </div>
+            }
+
+            <!-- ULTIMO CONVENIO - Última promesa de tipo convenio cerrada en CUMPLIDO o VENCIDO.
+                 Es informativa: no bloquea registrar una nueva promesa. Se oculta cuando el
+                 cliente tiene una promesa Pendiente / Parcial / En Evaluación, porque en ese
+                 caso manda la tarjeta de promesa activa. -->
+            @if (!hasActivePromiseWithPending()) {
+              @if (ultimoConvenio(); as convenio) {
+                <div [class]="'mb-1.5 overflow-hidden rounded-md border border-l-4 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm ' +
+                  (convenio.estado === 'CUMPLIDO' ? 'border-l-green-600 dark:border-l-green-500' : 'border-l-red-600 dark:border-l-red-500')">
+
+                  <!-- Fila compacta -->
+                  <div class="flex items-center gap-2.5 px-2.5 py-1.5">
+                    <div [class]="'w-6 h-6 flex-none rounded flex items-center justify-center border ' +
+                      (convenio.estado === 'CUMPLIDO'
+                        ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+                        : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400')">
+                      <lucide-angular [name]="convenio.estado === 'CUMPLIDO' ? 'check' : 'alert-triangle'" [size]="12"></lucide-angular>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-[9px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Ultimo Convenio</span>
+                        <span [class]="'text-[9px] font-extrabold uppercase tracking-wide px-1.5 py-px rounded border ' +
+                          (convenio.estado === 'CUMPLIDO'
+                            ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+                            : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400')">
+                          {{ convenio.estado === 'CUMPLIDO' ? 'Cumplido' : 'Vencido' }}
+                        </span>
+                      </div>
+                      <div class="flex items-center gap-1.5 flex-wrap text-xs text-gray-900 dark:text-gray-100">
+                        <span class="font-bold">S/ {{ convenio.montoTotal.toFixed(2) }}</span>
+                        <span class="text-gray-300 dark:text-gray-600">·</span>
+                        <span>{{ convenio.totalCuotas }} cuota{{ convenio.totalCuotas === 1 ? '' : 's' }}</span>
+                        <span class="text-gray-300 dark:text-gray-600">·</span>
+                        <span class="text-gray-500 dark:text-gray-400 truncate" [title]="convenio.nombreAgente">{{ convenio.nombreAgente }}</span>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 flex-none">
+                      <div class="flex flex-col items-end gap-0.5">
+                        <div class="text-[9px] font-bold tracking-wide text-gray-500 dark:text-gray-400">
+                          {{ convenio.cuotasPagadas }}/{{ convenio.totalCuotas }} PAGADAS
+                        </div>
+                        <div class="flex gap-px">
+                          @for (cuota of convenio.cuotas; track cuota.numeroCuota) {
+                            <span [class]="'block w-3 h-1 rounded-sm ' + getBarraCuotaConvenio(cuota.estado)"></span>
+                          }
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        (click)="toggleUltimoConvenio()"
+                        [attr.aria-expanded]="ultimoConvenioExpandido()"
+                        class="inline-flex items-center gap-1 rounded border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 px-1.5 py-1 text-[10px] font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        {{ ultimoConvenioExpandido() ? 'Ocultar cuotas' : 'Ver cuotas' }}
+                        <lucide-angular [name]="ultimoConvenioExpandido() ? 'chevron-up' : 'chevron-down'" [size]="10"></lucide-angular>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Detalle de cuotas -->
+                  @if (ultimoConvenioExpandido()) {
+                    <div class="border-t border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 px-2.5 pt-1.5 pb-2">
+                      <div class="mb-1.5 text-[9px] font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Detalle de cuotas
+                      </div>
+                      <div class="flex flex-wrap gap-1.5">
+                        @for (cuota of convenio.cuotas; track cuota.numeroCuota) {
+                          <div [class]="'inline-flex items-center gap-1.5 rounded border px-1.5 py-1 text-[11px] ' + getChipCuotaConvenio(cuota.estado)">
+                            <span class="font-extrabold">C{{ cuota.numeroCuota }}</span>
+                            <span class="text-gray-300 dark:text-gray-600">|</span>
+                            <span class="font-bold">S/ {{ cuota.monto.toFixed(2) }}</span>
+                            <span class="text-gray-300 dark:text-gray-600">|</span>
+                            <span class="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400">
+                              <lucide-angular name="calendar" [size]="10"></lucide-angular>{{ formatDate(cuota.fechaPromesa) }}
+                            </span>
+                            <span [class]="'inline-flex h-3.5 w-3.5 items-center justify-center rounded-sm text-white ' + getIconoCuotaConvenio(cuota.estado)">
+                              <lucide-angular [name]="getNombreIconoCuotaConvenio(cuota.estado)" [size]="8"></lucide-angular>
+                            </span>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
             }
 
             <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
@@ -2528,6 +2647,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Cronogramas de pago
   activePaymentSchedules = signal<any[]>([]);
   allPaymentSchedules = signal<any[]>([]);
+
+  // Última promesa de tipo convenio cerrada (CUMPLIDO / VENCIDO). Solo lectura.
+  protected ultimoConvenio = signal<UltimoConvenio | null>(null);
+  protected ultimoConvenioExpandido = signal<boolean>(false);
   promesaVencidaGracia = signal<PromesaVencidaGraciaResponse | null>(null);
   reprogrammingCuotaId = signal<number | null>(null);
   reprogramDateDraft = signal<string>('');
@@ -4149,6 +4272,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   loadManagementHistory() {
+    // Limpiar antes de resolver el documento, para no arrastrar el convenio del
+    // cliente anterior si esta carga no llega a hacerse.
+    this.ultimoConvenio.set(null);
+    this.ultimoConvenioExpandido.set(false);
+
     // Usar documento en lugar de ID para buscar el historial
     const documento = this.customerData()?.numero_documento;
     if (!documento) {
@@ -4197,11 +4325,156 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
         this.selectedHistorialPromesaGroupUuid.set(null);
         this.historialGestiones.set(historial);
+        this.cargarUltimoConvenio(historial);
       },
       error: (error) => {
         console.error('[HISTORIAL] Error al cargar historial:', error);
       }
     });
+  }
+
+  // ==================== ÚLTIMO CONVENIO ====================
+  // Un "convenio" es una promesa de pago cuyas cuotas caen en dos o más meses distintos.
+  // Dos cuotas dentro del mismo mes son una promesa fraccionada, no un convenio.
+  private static readonly ESTADOS_CUOTA_PAGADA = new Set(['PAGADA', 'PAGADO', 'CUMPLIDO']);
+  private static readonly ESTADOS_CUOTA_VENCIDA = new Set(['VENCIDA', 'VENCIDO']);
+  // Tope de gestiones del historial que se consultan antes de rendirse, para no
+  // disparar una ráfaga de llamadas en clientes con muchas promesas de una sola cuota.
+  private static readonly MAX_CANDIDATOS_CONVENIO = 5;
+
+  /**
+   * Busca la última promesa de tipo convenio del cliente para pintarla en el panel de
+   * gestión, y solo la muestra si quedó CUMPLIDA o VENCIDA.
+   *
+   * Trabaja únicamente con datos que la pantalla ya tiene a mano: el historial ligero
+   * como prefiltro, y el endpoint de cuotas por grupo, que no filtra por estado y por
+   * eso sí devuelve los convenios ya pagados.
+   */
+  private cargarUltimoConvenio(historial: Array<{ nombreAgente: string; grupoPromesaUuid?: string }>): void {
+    this.ultimoConvenio.set(null);
+    this.ultimoConvenioExpandido.set(false);
+
+    // El historial ya viene ordenado de la gestión más reciente a la más antigua.
+    const candidatos = historial
+      .filter(gestion => !!gestion.grupoPromesaUuid)
+      .slice(0, CollectionManagementPage.MAX_CANDIDATOS_CONVENIO);
+
+    if (candidatos.length === 0) return;
+    this.evaluarCandidatoConvenio(candidatos, 0);
+  }
+
+  /**
+   * Recorre los candidatos hacia atrás hasta dar con el primero que sea un convenio.
+   * Ese es "el último convenio" del cliente: si quedó en otro estado no se pinta nada
+   * y la búsqueda se corta, en vez de seguir hasta encontrar uno que sí calce.
+   */
+  private evaluarCandidatoConvenio(
+    candidatos: Array<{ nombreAgente: string; grupoPromesaUuid?: string }>,
+    indice: number
+  ): void {
+    if (indice >= candidatos.length) return;
+
+    const candidato = candidatos[indice];
+    this.typificationV2Service.getPaymentScheduleByGroup(candidato.grupoPromesaUuid!).subscribe({
+      next: (registros) => {
+        const evaluacion = this.evaluarConvenio(candidato.nombreAgente, registros);
+        if (evaluacion.tipo === 'MOSTRAR') {
+          this.ultimoConvenio.set(evaluacion.convenio);
+        } else if (evaluacion.tipo === 'NO_ES_CONVENIO') {
+          this.evaluarCandidatoConvenio(candidatos, indice + 1);
+        }
+      },
+      error: (error) => {
+        console.error('[ULTIMO CONVENIO] Error cargando cuotas del grupo:', error);
+        this.evaluarCandidatoConvenio(candidatos, indice + 1);
+      }
+    });
+  }
+
+  /**
+   * Decide si un cronograma es un convenio y, si lo es, cómo terminó.
+   * Todas las cuotas pagadas -> CUMPLIDO. Alguna vencida sin pagar -> VENCIDO.
+   */
+  private evaluarConvenio(nombreAgente: string, registros: any[]): EvaluacionConvenio {
+    const cuotasCrudas = (registros || []).flatMap((registro: any) => registro?.cuotasPromesa || []);
+    if (cuotasCrudas.length === 0) return { tipo: 'NO_ES_CONVENIO' };
+
+    const cuotas: CuotaUltimoConvenio[] = cuotasCrudas
+      .map((cuota: any) => ({
+        numeroCuota: cuota.numeroCuota ?? cuota.installmentNumber ?? 0,
+        monto: Number(cuota.montoPromesa ?? cuota.monto ?? cuota.amount ?? 0),
+        fechaPromesa: cuota.fechaPromesa || cuota.fechaPago || cuota.dueDate || '',
+        estado: String(cuota.estado || cuota.status || 'PENDIENTE').toUpperCase()
+      }))
+      .sort((a: CuotaUltimoConvenio, b: CuotaUltimoConvenio) => a.numeroCuota - b.numeroCuota);
+
+    // Es convenio solo si las cuotas se reparten en dos o más meses distintos.
+    const meses = new Set(
+      cuotas.map(cuota => (cuota.fechaPromesa || '').substring(0, 7)).filter(mes => mes.length === 7)
+    );
+    if (meses.size < 2) return { tipo: 'NO_ES_CONVENIO' };
+
+    const pagadas = cuotas.filter(c => CollectionManagementPage.ESTADOS_CUOTA_PAGADA.has(c.estado)).length;
+    const vencidas = cuotas.filter(c => CollectionManagementPage.ESTADOS_CUOTA_VENCIDA.has(c.estado)).length;
+
+    if (vencidas > 0) {
+      return { tipo: 'MOSTRAR', convenio: this.construirConvenio('VENCIDO', nombreAgente, cuotas, pagadas) };
+    }
+    if (pagadas === cuotas.length) {
+      return { tipo: 'MOSTRAR', convenio: this.construirConvenio('CUMPLIDO', nombreAgente, cuotas, pagadas) };
+    }
+    // Es un convenio, pero terminó en otro estado (anulado, o aún con cuotas vivas
+    // que ya maneja la tarjeta de promesa activa): no se muestra nada.
+    return { tipo: 'OTRO_ESTADO' };
+  }
+
+  private construirConvenio(
+    estado: 'CUMPLIDO' | 'VENCIDO',
+    nombreAgente: string,
+    cuotas: CuotaUltimoConvenio[],
+    cuotasPagadas: number
+  ): UltimoConvenio {
+    return {
+      estado,
+      montoTotal: cuotas.reduce((total, cuota) => total + cuota.monto, 0),
+      totalCuotas: cuotas.length,
+      cuotasPagadas,
+      nombreAgente: nombreAgente || '-',
+      cuotas
+    };
+  }
+
+  protected toggleUltimoConvenio(): void {
+    this.ultimoConvenioExpandido.set(!this.ultimoConvenioExpandido());
+  }
+
+  /** Color de la barrita que resume cada cuota en la fila compacta. */
+  protected getBarraCuotaConvenio(estado: string): string {
+    if (CollectionManagementPage.ESTADOS_CUOTA_PAGADA.has(estado)) return 'bg-green-600 dark:bg-green-500';
+    if (CollectionManagementPage.ESTADOS_CUOTA_VENCIDA.has(estado)) return 'bg-red-600 dark:bg-red-500';
+    return 'bg-gray-300 dark:bg-gray-600';
+  }
+
+  protected getChipCuotaConvenio(estado: string): string {
+    if (CollectionManagementPage.ESTADOS_CUOTA_PAGADA.has(estado)) {
+      return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-gray-900 dark:text-gray-100';
+    }
+    if (CollectionManagementPage.ESTADOS_CUOTA_VENCIDA.has(estado)) {
+      return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-gray-900 dark:text-gray-100';
+    }
+    return 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400';
+  }
+
+  protected getIconoCuotaConvenio(estado: string): string {
+    if (CollectionManagementPage.ESTADOS_CUOTA_PAGADA.has(estado)) return 'bg-green-600 dark:bg-green-500';
+    if (CollectionManagementPage.ESTADOS_CUOTA_VENCIDA.has(estado)) return 'bg-red-600 dark:bg-red-500';
+    return 'bg-gray-400 dark:bg-gray-500';
+  }
+
+  protected getNombreIconoCuotaConvenio(estado: string): string {
+    if (CollectionManagementPage.ESTADOS_CUOTA_PAGADA.has(estado)) return 'check';
+    if (CollectionManagementPage.ESTADOS_CUOTA_VENCIDA.has(estado)) return 'alert-triangle';
+    return 'x';
   }
 
   /**
