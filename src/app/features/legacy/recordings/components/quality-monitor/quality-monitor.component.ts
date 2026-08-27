@@ -240,13 +240,19 @@ export class QualityMonitorComponent implements OnInit {
   ngOnInit(): void {
     this.cargarProveedores();
 
-    // Solo los dos resultados que el sistema sabe evaluar. CONTACTO CON TERCEROS
-    // NO está: su rúbrica no existe en el sistema y el backend además la excluye,
-    // así que ofrecerla sería prometer una vista que devuelve cero filas.
+    // Las tres rutas que el speech-analyzer evalúa, y solo esas. La lista tiene
+    // que seguir a `_RUTAS_N2_EVALUABLES` de cashi_read.py: si aquí sobra una,
+    // la pantalla ofrece un filtro que devuelve cero filas; si falta, hay
+    // evaluaciones en la base que nadie puede aislar y quedan mezcladas dentro
+    // de «Todos».
+    //
+    // CONTACTO CON TERCEROS no está y no es un olvido: su rúbrica no existe y
+    // el backend la excluye de la consulta.
     this.resultados = [
       { label: 'Todos', value: '' },
       { label: 'Contacto directo', value: 'CONTACTO CON TITULAR O ENCARGADO' },
-      { label: 'Promesa de pago', value: 'PROMESA DE PAGO' }
+      { label: 'Promesa de pago', value: 'PROMESA DE PAGO' },
+      { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' }
     ];
 
     // Se fija el rango por defecto SIN consultar: sin la cascada elegida no hay nada
