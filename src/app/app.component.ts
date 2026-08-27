@@ -514,7 +514,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.predictiveCallSubscription = this.websocketService.subscribe('/user/queue/messages').subscribe((message: any) => {
         if (message.type === 'PREDICTIVE_CALL_CONNECTED' && message.payload) {
           console.log('📞 [App] PREDICTIVE_CALL_CONNECTED recibido:', message.payload);
-          sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
 
           // Segundo disparador de la pantalla de tipificación, independiente del softphone.
           // El backend manda este mensaje DESPUÉS de confirmar el bridge, así que es
@@ -526,7 +525,16 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           const agentRoles = ['AGENT', 'ASESOR'];
           const esAsesor = !!currentUser && agentRoles.includes(currentUser.role);
 
-          if (!yaEnTipificacion && esAsesor && !this.supervisionService.isSupervisionActive()) {
+          // No dejar un evento tardío en sessionStorage: la siguiente tipificación no debe
+          // consumir el contexto de una llamada anterior.
+          if (yaEnTipificacion) {
+            console.warn('🚫 [App] Contexto predictivo ignorado: el agente ya está tipificando');
+            return;
+          }
+
+          sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
+
+          if (esAsesor && !this.supervisionService.isSupervisionActive()) {
             // Dejar el mismo estado interno que deja el camino del softphone. Sin esto, el
             // manejador de fin de llamada ve "temporizador pendiente + nunca navegué",
             // cree que fue llamada fantasma y devuelve al asesor a DISPONIBLE estando
