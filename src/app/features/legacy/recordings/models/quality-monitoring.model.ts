@@ -12,8 +12,31 @@
  *    Lo mismo con los deltas: nulos cuando no hay contra qué comparar.
  */
 
+/**
+ * Una subcartera dada de alta en `speech_plantilla_subcartera`.
+ *
+ * Es lo que llena el desplegable. El filtro viaja por **nombre** y no por id porque
+ * la tabla histórica no guarda el id: sus filas traen el nombre escrito, y con más de
+ * una forma de escribirlo (`FO_TRAMO_3`, `TRAMO 3`). El backend resuelve esas variantes.
+ */
+export interface MonitoringSubportfolio {
+  id: number;
+  /** 'TRAMO 3' — el nombre configurado, que es también el valor del filtro. */
+  nombre: string;
+  /** La cartera a la que pertenece. Solo informativo. */
+  cartera: string | null;
+}
+
 export interface MonitoringRequest {
-  /** CARTERA tal cual ('FO_TRAMO 3'), o 'todos' para no filtrar. */
+  /**
+   * El nombre de la subcartera elegida en la cascada ('Tramo 3'). Obligatorio.
+   *
+   * El campo se sigue llamando `tramo` por compatibilidad con el contrato ya desplegado;
+   * lo que filtra es la SUBCARTERA de la gestión, no su cartera.
+   *
+   * El backend sigue aceptando 'todos', pero la pantalla ya no lo manda: sin subcartera
+   * no hay una sola rúbrica contra la cual puntuar, y la matriz mezclaría dos.
+   */
   tramo: string;
   /** 'YYYY-MM-DD' inclusive. */
   desde: string;
@@ -36,7 +59,8 @@ export interface MonitoringRequest {
  */
 export interface MonitoringDetailRequest {
   tramo: string;
-  asesor: string;
+  /** Vacío u omitido = todos los asesores, que es como arranca la card de revisión. */
+  asesor?: string;
   fecha?: string;
   desde?: string;
   hasta?: string;
@@ -74,6 +98,14 @@ export interface MonitoringAgent {
   dias: MonitoringDay[];
   /** Puntos porcentuales contra la ventana anterior del mismo largo. */
   deltaSemanaAnterior: number | null;
+  /**
+   * El mismo cálculo que `MonitoringWeek.criteriosMasFallados`, acotado a este asesor.
+   *
+   * Viaja por fila para que la card de criterios pueda filtrar por persona sin pedirle
+   * nada al servidor. Es lo que permite comparar «lo que más falla X» contra el total
+   * del rango teniendo las dos cosas en pantalla a la vez.
+   */
+  criteriosMasFallados: MonitoringCriterion[];
 }
 
 export interface MonitoringCriterion {
@@ -163,6 +195,8 @@ export interface AdjustRequest {
 export interface MonitoringAudio {
   /** gestion_historica_audios.idx: la llave para transcripción, XLSX y WAV. */
   idx: number;
+  /** USUARIOREGISTRA. Se muestra solo cuando la card de revisión está en «Todos». */
+  asesor: string;
   fecha: string;
   hora: string;
   documento: string;

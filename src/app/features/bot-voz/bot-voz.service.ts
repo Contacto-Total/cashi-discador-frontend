@@ -170,8 +170,13 @@ export interface BotRegla {
 export interface BotColaRegla {
   /** Columna sobre la que se calcula el descuento: capital o deuda total. */
   campoBase: string;
-  /** Los descuentos que ofrece, en orden y separados por comas: "70,80,90". */
+  /** PROPIA: los descuentos que ofrece, en orden y separados por comas: "70,80,90". */
   curvaDescuento: string;
+  /** CASTIGO: las columnas con el importe ya calculado, de más caro a más barato
+   *  ("ltd,ltd_especial_feria,ltd_plus"). Campo aparte de `curvaDescuento` a propósito:
+   *  son dos cosas distintas, y compartirlo hacía que el formulario de propia vaciara
+   *  los escalones de castigo al editar la cola. */
+  escalonesCastigo?: string | null;
   pagoMinimo: number | null;
   diasMaxPago: number | null;
   ultimoTramoSoloHoy: boolean;
@@ -428,6 +433,21 @@ export class BotVozService {
    * de la curva. Devuelve `n: 0` si la columna no existe o esta vacia; es una ayuda,
    * no un requisito, asi que el formulario sigue funcionando sin ella.
    */
+  /**
+   * Los escalones de descuento que EXISTEN en una subcartera de castigo, con su importe
+   * mediano. En castigo no se proponen porcentajes: los escalones ya vienen calculados
+   * por cliente en la tabla, y aquí solo se marca cuáles entran en la cola.
+   *
+   * No sale del catálogo de opciones a propósito: ese habilita para castigo cuatro
+   * columnas que no existen en la tabla, y ofrecerlas dejaría la cola sin importes.
+   */
+  getEscalones(idInquilino: number, idCartera: number, idSubcartera: number):
+      Observable<{ campo: string; etiqueta: string; n: number; mediana?: number;
+                   minimo?: number; maximo?: number }[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/subcarteras/${idSubcartera}/escalones`,
+      { params: { idInquilino, idCartera } });
+  }
+
   getMuestra(idInquilino: number, idCartera: number, idSubcartera: number, campo: string):
       Observable<{ campo: string; n: number; mediana?: number; minimo?: number; maximo?: number }> {
     return this.http.get<any>(`${this.apiUrl}/subcarteras/${idSubcartera}/muestra`,

@@ -925,3 +925,17 @@ label.ancho input.campo-malo { border-color: #ef4444; }
 /* Una regla guardada pero apagada. Se veia igual que una activa. */
 .regla-inactiva { opacity: 0.7; }
 .regla-nombre { font-size: 0.8rem; margin-left: auto; }
+
+/* Los escalones de castigo. Cada uno con su importe al lado: marcar "LTD Plus" sin ver
+   que son 600 soles de mediana es marcar a ciegas. */
+.escalon-check {
+  display: flex; align-items: baseline; gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-color, #e2e8f0); border-radius: 8px;
+  background: var(--bg-secondary, #f8fafc); cursor: pointer;
+}
+.escalon-nombre { font-size: 0.85rem; font-weight: 600; color: var(--text-primary, #1e293b); }
+.escalon-check .escalon-importe {
+  margin-left: auto; text-align: right; min-width: 0;
+  font-size: 0.82rem; font-variant-numeric: tabular-nums;
+}

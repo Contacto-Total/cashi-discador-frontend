@@ -535,7 +535,47 @@
                    importa —el importe que Clara va a DECIR—. El suelo aplasta mucho mas
                    de lo que parece, asi que una curva de tres podia ser una oferta de
                    una sin que nadie lo supiera hasta oir la grabacion. -->
-              <div class="ancho curva-editor">
+              <!-- CASTIGO: los escalones ya existen, no se proponen. Se marcan.
+                   La lista sale de las columnas que TIENEN DATO en la tabla de esa
+                   subcartera, no del catalogo de opciones: ese habilita cuatro columnas
+                   (ltd_especial, baja30/60/90) que no existen alli, y configurar la
+                   cola con una de ellas la deja sin importes y muda. -->
+              <div class="ancho curva-editor" *ngIf="esCastigo">
+                <span class="curva-titulo">Descuentos que entran en esta cola</span>
+
+                <p class="muted curva-vacia" *ngIf="!escalonesCastigo.length">
+                  Esta subcartera no tiene escalones con datos.
+                </p>
+
+                <label class="escalon-check" *ngFor="let e of escalonesCastigo">
+                  <input type="checkbox"
+                         [checked]="escalonesElegidos.includes(e.campo)"
+                         (change)="alternarEscalon(e.campo)">
+                  <span class="escalon-nombre">{{ e.etiqueta }}</span>
+                  <span class="escalon-importe">
+                    ≈ S/ {{ e.mediana | number:'1.0-0' }}
+                    <small class="muted">
+                      · {{ e.n | number }} clientes · de {{ e.minimo | number:'1.0-0' }}
+                      a {{ e.maximo | number:'1.0-0' }}
+                    </small>
+                  </span>
+                </label>
+
+                <p class="curva-aviso" *ngIf="escalonesCastigo.length && !escalonesElegidos.length">
+                  <lucide-angular name="alert-triangle" [size]="15"></lucide-angular>
+                  <span>Sin ningún escalón marcado, Clara no tendrá descuentos que ofrecer.</span>
+                </p>
+
+                <small class="muted">
+                  Clara los ofrece en este orden, del más caro al más barato. El plazo de
+                  cada uno lo fija la política de castigo según su importe —desde 900, cinco
+                  meses; 600, cuatro; 500, tres; 400, dos— y no se configura aquí. El pago
+                  mínimo es siempre de una sola vez y el mismo día.
+                </small>
+              </div>
+
+              <!-- PROPIA: aqui si proponemos nosotros la curva. -->
+              <div class="ancho curva-editor" *ngIf="!esCastigo">
                 <span class="curva-titulo">Descuentos que ofrece Clara, en orden</span>
 
                 <p class="muted curva-vacia" *ngIf="!escalones.length">
@@ -610,7 +650,7 @@
                 </small>
               </div>
 
-              <label>
+              <label *ngIf="!esCastigo">
                 Se descuenta sobre
                 <select [(ngModel)]="reglaCola.campoBase" (ngModelChange)="cargarMuestra()">
                   <option *ngFor="let c of CAMPOS_BASE" [ngValue]="c.valor">{{ c.nombre }}</option>
@@ -630,7 +670,7 @@
                 </small>
               </label>
 
-              <label>
+              <label *ngIf="!esCastigo">
                 Plazo máximo para pagar
                 <input type="number" min="0" step="1" [(ngModel)]="reglaCola.diasMaxPago"
                        placeholder="2">
@@ -639,14 +679,14 @@
                 </small>
               </label>
 
-              <label>
+              <label *ngIf="!esCastigo">
                 Cuotas máximas
                 <input type="number" min="1" step="1" [(ngModel)]="reglaCola.maxCuotasBot"
                        placeholder="1">
                 <small class="muted">En cartera propia es pago único, o sea 1.</small>
               </label>
 
-              <label class="ancho check-linea">
+              <label class="ancho check-linea" *ngIf="!esCastigo">
                 <input type="checkbox" [(ngModel)]="reglaCola.ultimoTramoSoloHoy">
                 <span>
                   El mayor descuento, solo pagando hoy

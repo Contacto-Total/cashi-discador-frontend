@@ -15,40 +15,44 @@
   · El control de cada criterio es un segmentado con fondo propio, no dos botones
     sueltos. Deja claro que las opciones son mutuamente excluyentes y que hay un
     tercer estado posible —ninguna marcada— que es "sin calificar".
+
+  · **Los dos temas son obligatorios.** Los supervisores trabajan en modo claro.
+    Cada color va declarado para claro y pisado con `dark:`; un `text-white` o un
+    `bg-white/[0.03]` sueltos desaparecen sobre fondo blanco.
 -->
 <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-6
-            bg-slate-950/70 backdrop-blur-md"
+            bg-slate-900/50 dark:bg-slate-950/70 backdrop-blur-md"
      (click)="cerrar()">
 
-  <div class="w-full max-w-2xl my-2 sm:my-6 rounded-2xl bg-slate-900 ring-1 ring-white/10
-              shadow-[0_32px_80px_-24px_rgba(0,0,0,.9)] overflow-hidden"
+  <div class="w-full max-w-2xl my-2 sm:my-6 rounded-2xl bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-white/10
+              shadow-[0_24px_60px_-24px_rgba(15,23,42,.35)] dark:shadow-[0_32px_80px_-24px_rgba(0,0,0,.9)] overflow-hidden"
        (click)="$event.stopPropagation()">
 
     <!-- Encabezado -->
     <header class="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
       <div *ngIf="ficha" class="min-w-0">
         <div class="flex items-center gap-2">
-          <h2 class="text-[17px] font-semibold text-white tracking-[-0.01em]">Evaluación del audio</h2>
+          <h2 class="text-[17px] font-semibold text-slate-900 dark:text-white tracking-[-0.01em]">Evaluación del audio</h2>
           <span class="px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide
-                       bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/20">
+                       bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-400/30 dark:ring-indigo-400/20">
             {{ ficha.rubrica }}
           </span>
           <span *ngIf="!ficha.editable"
                 class="px-2 py-0.5 rounded-full text-[10px] font-medium
-                       bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/20">
+                       bg-amber-500/15 text-amber-700 dark:text-amber-300 ring-1 ring-amber-400/30 dark:ring-amber-400/20">
             Solo lectura
           </span>
         </div>
-        <p class="mt-1 text-[12.5px] text-slate-400 truncate">
+        <p class="mt-1 text-[12.5px] text-slate-600 dark:text-slate-400 truncate">
           {{ ficha.asesor }} · {{ ficha.fecha }} {{ ficha.hora }} ·
           {{ ficha.documento }} {{ ficha.cliente }}
         </p>
       </div>
-      <div *ngIf="!ficha" class="text-[15px] text-slate-400">Cargando evaluación…</div>
+      <div *ngIf="!ficha" class="text-[15px] text-slate-600 dark:text-slate-400">Cargando evaluación…</div>
 
       <button (click)="cerrar()"
               class="flex-shrink-0 w-8 h-8 rounded-full grid place-items-center
-                     text-slate-400 bg-white/5 hover:bg-white/10 hover:text-slate-200
+                     text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-slate-200
                      transition-colors cursor-pointer">
         <lucide-angular [img]="X" [size]="16"></lucide-angular>
       </button>
@@ -59,19 +63,19 @@
     <div *ngIf="ficha && !isLoading" class="px-6 pb-6">
 
       <!-- Cumplimiento: el único número grande de la hoja -->
-      <div class="flex items-end justify-between gap-4 rounded-xl bg-white/[0.03] px-5 py-4 mb-5">
+      <div class="flex items-end justify-between gap-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] px-5 py-4 mb-5">
         <div>
           <div class="text-[10.5px] uppercase tracking-[0.14em] text-slate-500 mb-1">Cumplimiento</div>
           <div class="flex items-baseline gap-2.5">
             <span [class]="'text-[34px] leading-none font-semibold tabular-nums tracking-[-0.02em] transition-colors duration-300 '
-                           + (cantidadCambios ? 'text-amber-300' : 'text-white')">
+                           + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-900 dark:text-white')">
               {{ pct(cumplimientoEditado) }}
             </span>
             <span *ngIf="cantidadCambios" class="text-[12px] text-slate-500 tabular-nums">
               antes {{ pct(ficha.cumplimiento) }}
             </span>
           </div>
-          <div class="mt-1.5 text-[12px] text-slate-400 tabular-nums">
+          <div class="mt-1.5 text-[12px] text-slate-600 dark:text-slate-400 tabular-nums">
             {{ puntosEditados }} de {{ ficha.posibles }} puntos
           </div>
         </div>
@@ -82,62 +86,76 @@
           [class]="'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium '
                    + 'transition-colors cursor-pointer ring-1 '
                    + (mostrarTranscripcion
-                      ? 'bg-sky-500/15 text-sky-300 ring-sky-400/25'
-                      : 'bg-white/5 text-slate-300 ring-white/10 hover:bg-white/10')">
+                      ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-400/35 dark:ring-sky-400/25'
+                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10')">
           <lucide-angular [img]="FileText" [size]="13"></lucide-angular>
           {{ mostrarTranscripcion ? 'Ocultar texto' : 'Transcripción' }}
         </button>
       </div>
 
       <!-- El resumen del modelo: la justificación de las notas de abajo -->
-      <div *ngIf="ficha.summary" class="rounded-xl bg-white/[0.03] px-5 py-4 mb-4">
+      <div *ngIf="ficha.summary" class="rounded-xl bg-slate-50 dark:bg-white/[0.03] px-5 py-4 mb-4">
         <div class="text-[10.5px] uppercase tracking-[0.14em] text-slate-500 mb-2">
           Resumen del análisis
         </div>
-        <p class="text-[13px] leading-[1.65] text-slate-300 whitespace-pre-wrap">{{ ficha.summary }}</p>
+        <p class="text-[13px] leading-[1.65] text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ ficha.summary }}</p>
       </div>
 
       <!-- Transcripción, plegable -->
       <div *ngIf="mostrarTranscripcion"
-           class="rounded-xl bg-white/[0.03] px-5 py-4 mb-4 max-h-64 overflow-y-auto">
+           class="rounded-xl bg-slate-50 dark:bg-white/[0.03] px-5 py-4 mb-4 max-h-64 overflow-y-auto">
         <div *ngIf="isLoadingTranscripcion" class="text-[13px] text-slate-500">Cargando texto…</div>
         <div *ngFor="let parte of transcripcion" class="mb-4 last:mb-0">
           <div class="text-[10.5px] text-slate-500 mb-1.5 truncate" [title]="parte.titulo">{{ parte.titulo }}</div>
-          <p class="text-[13px] leading-[1.65] text-slate-300 whitespace-pre-wrap">{{ parte.transcripcion }}</p>
+          <p class="text-[13px] leading-[1.65] text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{{ parte.transcripcion }}</p>
         </div>
         <div *ngIf="transcripcion && !transcripcion.length" class="text-[13px] text-slate-500">
           Este audio no tiene texto transcrito
         </div>
       </div>
 
+      <!--
+        Por que no se puede editar, DONDE se intenta editar.
+        El badge del encabezado y la nota del pie se pierden: la lista de criterios es
+        larga y quien pulsa un boton esta con la vista ahi, no arriba ni abajo. Sin este
+        aviso, el sintoma es "hago click y no pasa nada", que es indistinguible de un bug.
+      -->
+      <div *ngIf="!ficha.editable"
+           class="rounded-xl bg-amber-500/10 ring-1 ring-amber-400/30 dark:ring-amber-400/20
+                  px-4 py-3 mb-4 text-[12.5px] text-amber-800 dark:text-amber-300">
+        <b class="font-semibold">Los criterios no se pueden corregir en este entorno.</b>
+        La escritura hacia la base de producción está deshabilitada, así que los botones de
+        esta ficha están inactivos y solo se puede consultar.
+      </div>
+
       <!-- Los criterios, agrupados por bloque como en el Excel -->
-      <div *ngFor="let bloque of bloques" class="mb-4 last:mb-0">
+      <div *ngFor="let bloque of bloques; trackBy: porSeccion" class="mb-4 last:mb-0">
         <div class="flex items-center gap-2 px-1 mb-1.5">
           <span [class]="'w-1.5 h-1.5 rounded-full ' + (COLOR_SECCION[bloque.seccion] || 'bg-slate-500')"></span>
-          <span class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          <span class="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-600 dark:text-slate-400">
             {{ bloque.etiqueta }}
           </span>
-          <span class="text-[11px] text-slate-600 tabular-nums">{{ bloque.puntos }}/{{ bloque.total }}</span>
+          <span class="text-[11px] text-slate-400 dark:text-slate-600 tabular-nums">{{ bloque.puntos }}/{{ bloque.total }}</span>
         </div>
 
         <!-- Grupo: un solo bloque redondeado, filas separadas por un divisor tenue -->
-        <div class="rounded-xl bg-white/[0.03] overflow-hidden divide-y divide-white/[0.06]">
-          <div *ngFor="let c of bloque.criterios"
+        <div class="rounded-xl bg-slate-50 dark:bg-white/[0.03] overflow-hidden divide-y divide-slate-200 dark:divide-white/[0.06]">
+          <div *ngFor="let c of bloque.criterios; trackBy: porCampo"
                [class]="'flex items-center gap-3 px-4 py-2.5 transition-colors duration-200 '
                         + (cambio(c.campo) ? 'bg-amber-400/[0.07]' : '')">
 
             <div class="flex-1 min-w-0">
-              <span class="text-[13px] leading-snug text-slate-200">{{ c.etiqueta }}</span>
+              <span class="text-[13px] leading-snug text-slate-800 dark:text-slate-200">{{ c.etiqueta }}</span>
               <div class="flex items-center gap-1.5 mt-0.5">
                 <!-- Declara que una persona revisó este criterio. No dice quién. -->
                 <span *ngIf="c.ajustado"
                       class="px-1.5 py-0.5 rounded-full text-[9.5px] font-medium
-                             bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/20">
+                             bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-400/30 dark:ring-indigo-400/20">
                   Modificado
                 </span>
                 <span *ngIf="c.valor === null"
                       class="px-1.5 py-0.5 rounded-full text-[9.5px] font-medium
-                             bg-white/5 text-slate-500 ring-1 ring-white/10">
+                             bg-slate-100 dark:bg-white/5 text-slate-500 ring-1 ring-slate-200 dark:ring-white/10">
                   Sin calificar
                 </span>
               </div>
@@ -148,7 +166,7 @@
               (click)="deshacer(c.campo)"
               title="Volver al valor guardado"
               class="flex-shrink-0 w-7 h-7 rounded-full grid place-items-center text-slate-500
-                     hover:text-slate-300 hover:bg-white/5 transition-colors cursor-pointer">
+                     hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer">
               <lucide-angular [img]="RotateCcw" [size]="12"></lucide-angular>
             </button>
 
@@ -157,14 +175,14 @@
               opciones son excluyentes, y que ninguna esté activa es el tercer
               estado legítimo —sin calificar—, que un switch no podría expresar.
             -->
-            <div class="flex-shrink-0 flex gap-0.5 p-0.5 rounded-lg bg-slate-950/60 ring-1 ring-white/[0.06]">
+            <div class="flex-shrink-0 flex gap-0.5 p-0.5 rounded-lg bg-slate-100 dark:bg-slate-950/60 ring-1 ring-slate-200 dark:ring-white/[0.06]">
               <button
                 (click)="marcar(c.campo, 0)"
                 [disabled]="!ficha.editable"
                 [class]="'w-8 h-7 rounded-md grid place-items-center transition-all duration-200 '
                          + (valores[c.campo] === 0
-                            ? 'bg-rose-500/25 text-rose-300 shadow-sm'
-                            : 'text-slate-600 hover:text-slate-400')
+                            ? 'bg-rose-500/25 text-rose-700 dark:text-rose-300 shadow-sm'
+                            : 'text-slate-400 dark:text-slate-600 hover:text-slate-700 dark:hover:text-slate-400')
                          + (ficha.editable ? ' cursor-pointer' : ' cursor-not-allowed opacity-50')"
                 title="No cumple">
                 <lucide-angular [img]="X" [size]="14"></lucide-angular>
@@ -174,8 +192,8 @@
                 [disabled]="!ficha.editable"
                 [class]="'w-8 h-7 rounded-md grid place-items-center transition-all duration-200 '
                          + (valores[c.campo] === 1
-                            ? 'bg-emerald-500/25 text-emerald-300 shadow-sm'
-                            : 'text-slate-600 hover:text-slate-400')
+                            ? 'bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 shadow-sm'
+                            : 'text-slate-400 dark:text-slate-600 hover:text-slate-700 dark:hover:text-slate-400')
                          + (ficha.editable ? ' cursor-pointer' : ' cursor-not-allowed opacity-50')"
                 title="Cumple">
                 <lucide-angular [img]="Check" [size]="14"></lucide-angular>
@@ -188,9 +206,9 @@
 
     <!-- Guardar. Sin caja de comentario: la corrección es un cambio de valor, no un informe. -->
     <footer *ngIf="ficha && ficha.editable && !isLoading"
-            class="flex items-center justify-between gap-3 px-6 py-4 bg-white/[0.02] border-t border-white/[0.06]">
+            class="flex items-center justify-between gap-3 px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200 dark:border-white/[0.06]">
       <span [class]="'text-[12.5px] transition-colors duration-200 '
-                     + (cantidadCambios ? 'text-amber-300' : 'text-slate-500')">
+                     + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-500')">
         {{ cantidadCambios
            ? cantidadCambios + (cantidadCambios === 1 ? ' cambio sin guardar' : ' cambios sin guardar')
            : 'Sin cambios' }}
@@ -200,9 +218,9 @@
         (click)="guardar()"
         [disabled]="!puedeGuardar"
         class="h-9 inline-flex items-center gap-2 px-5 rounded-full text-[13px] font-medium
-               text-white bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98]
+               text-slate-900 dark:text-white bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98]
                shadow-lg shadow-indigo-950/40 transition-all duration-200
-               disabled:bg-white/5 disabled:text-slate-600 disabled:shadow-none
+               disabled:bg-slate-100 dark:disabled:bg-white/5 disabled:text-slate-400 dark:disabled:text-slate-600 disabled:shadow-none
                disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer">
         <lucide-angular [img]="Save" [size]="14"></lucide-angular>
         {{ isSaving ? 'Guardando…' : 'Guardar' }}
@@ -210,9 +228,9 @@
     </footer>
 
     <footer *ngIf="ficha && !ficha.editable && !isLoading"
-            class="px-6 py-4 bg-white/[0.02] border-t border-white/[0.06] text-[12.5px] text-amber-300">
+            class="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200 dark:border-white/[0.06] text-[12.5px] text-amber-700 dark:text-amber-300">
       La corrección de evaluaciones está deshabilitada en este entorno
-      (<code class="text-amber-200">historico.datasource.escritura=false</code>).
+      (<code class="text-amber-800 dark:text-amber-200">historico.datasource.escritura=false</code>).
     </footer>
   </div>
 </div>

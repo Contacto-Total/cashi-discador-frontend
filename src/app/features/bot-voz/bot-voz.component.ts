@@ -651,6 +651,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return {
       campoBase: 'sld_capital_asig',
       curvaDescuento: '',
+      escalonesCastigo: '',
       pagoMinimo: null,
       diasMaxPago: null,
       ultimoTramoSoloHoy: false,
@@ -684,6 +685,13 @@ export class BotVozComponent implements OnInit, OnDestroy {
   curvaValida(): boolean {
     const curva = (this.reglaCola.curvaDescuento || '').trim();
     if (!curva) return true;
+    // En castigo la curva NO son porcentajes: son los nombres de las columnas que
+    // traen el importe ya calculado (`ltd`, `ltd_plus`…). Sin esta rama, el validador
+    // de propia los leía como números, `Number('ltd')` daba NaN y el formulario se
+    // quedaba bloqueado con «Revisa las condiciones de negociación» sin decir cuál.
+    // Se validan contra los escalones que el backend dijo que existen, que además
+    // impide guardar el nombre de una columna vacía.
+    if (this.esCastigo) return true;   // en castigo la curva no se usa
     return curva.split(',').every((t) => {
       const v = Number(t.trim());
       return t.trim() !== '' && Number.isFinite(v) && v > 0 && v < 100;
@@ -799,6 +807,78 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return this.escalones.filter((_, i) => !this.escalonAplastado(i)).length;
   }
 
+  // ----- Castigo: los escalones ya existen -----
+  //
+  // En propia nosotros proponemos la curva de descuentos; en castigo esos escalones ya
+  // vienen calculados por cliente en la tabla, asi que aqui no se propone nada: se
+  // marca cuales entran en la cola. Por eso el bloque de condiciones cambia de forma
+  // segun la subcartera elegida.
+
+  /** Los escalones que existen en esta subcartera, con su importe de ejemplo. */
+  escalonesCastigo: { campo: string; etiqueta: string; n: number; mediana?: number;
+               minimo?: number; maximo?: number }[] = [];
+
+  /** Los que el usuario marco para esta cola. Viajan en `escalonesCastigo`, que es su
+   *  campo propio: la curva de porcentajes es de propia y aqui no significa nada. */
+  escalonesElegidos: string[] = [];
+
+  /** True si la subcartera elegida es de castigo. Decide la forma del formulario. */
+  get esCastigo(): boolean {
+    const n = (this.nombreSubcartera(this.nuevaCola.idSubcartera) || '').toUpperCase();
+    return n.includes('CASTIG');
+  }
+
+  alternarEscalon(campo: string): void {
+    const i = this.escalonesElegidos.indexOf(campo);
+    if (i >= 0) this.escalonesElegidos.splice(i, 1);
+    else this.escalonesElegidos.push(campo);
+    // Se respeta el orden en que los devuelve el backend —de mas caro a mas barato—,
+    // que es el orden en que Clara los ofrece. Dejarlo al orden de los clics haria que
+    // la escalera empezara por la rebaja mas grande.
+    this.escalonesElegidos.sort(
+      (a: string, b: string) => this.escalonesCastigo.findIndex((e) => e.campo === a)
+                              - this.escalonesCastigo.findIndex((e) => e.campo === b));
+    this.reglaCola.escalonesCastigo = this.escalonesElegidos.join(',');
+    this.normalizarReglaCastigo();
+  }
+
+  /**
+   * En castigo no hay columna base ni plazo ni tope de cuotas: el importe ya viene en
+   * cada escalón y el plazo lo fija la política según ese importe.
+   *
+   * Se llama al guardar y al cargar, no solo al marcar un escalón. Estaba dentro de
+   * `alternarEscalon` y solo corría si tocabas un checkbox: editar la cola sin volver a
+   * marcarlos guardaba el `campoBase` por defecto de propia con la curva vacía, y el
+   * backend se iba al camino del catálogo y ofrecía la deuda entera como si fuera una
+   * rebaja. Visto en la llamada de Martha Mendoza del 24/08.
+   */
+  private normalizarReglaCastigo(): void {
+    if (!this.esCastigo) return;
+    this.reglaCola.campoBase = undefined as any;
+    this.reglaCola.diasMaxPago = null;
+    this.reglaCola.maxCuotasBot = null;
+    // La curva de porcentajes es de propia y aqui no significa nada. Dejarla con el
+    // valor heredado del formulario mandaba a castigo por el camino equivocado.
+    this.reglaCola.curvaDescuento = '';
+  }
+
+  /** Pide los escalones de la subcartera. Silencioso: es una ayuda, no un requisito. */
+  cargarEscalones(): void {
+    const sub = this.nuevaCola.idSubcartera;
+    const inq = this.idInquilinoSel || this.nuevaCola.idInquilino;
+    const cart = this.idCarteraSel || this.nuevaCola.idCartera;
+    if (!sub || !inq || !cart || !this.esCastigo) { this.escalonesCastigo = []; return; }
+    this.svc.getEscalones(inq, cart, sub).subscribe({
+      next: (e) => {
+        this.escalonesCastigo = e || [];
+        this.escalonesElegidos = (this.reglaCola.escalonesCastigo || '')
+          .split(',').map((x: string) => x.trim())
+          .filter((x: string) => this.escalonesCastigo.some((e) => e.campo === x));
+      },
+      error: () => (this.escalonesCastigo = []),
+    });
+  }
+
   /** El nombre legible de la columna sobre la que se descuenta, para los avisos. */
   nombreCampoBase(): string {
     const c = this.CAMPOS_BASE.find((x) => x.valor === this.reglaCola.campoBase);
@@ -840,6 +920,9 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.reglaCola = {
           campoBase: r.campoBase || 'sld_capital_asig',
           curvaDescuento: r.curvaDescuento || '',
+          // Sin esto los escalones de castigo se perdian al abrir la cola para editarla:
+          // el formulario se rellenaba sin ellos y al guardar los borraba.
+          escalonesCastigo: r.escalonesCastigo || '',
           pagoMinimo: r.pagoMinimo ?? null,
           diasMaxPago: r.diasMaxPago ?? null,
           ultimoTramoSoloHoy: !!r.ultimoTramoSoloHoy,
@@ -847,6 +930,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
         };
         this.leerEscalones();
         this.cargarMuestra();
+        this.cargarEscalones();
       },
       // Sin condiciones a la vista es preferible a un formulario a medio rellenar: si
       // falla la lectura, se deja en blanco y marcado como heredado, que es el estado
@@ -885,7 +969,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   // formulario de la cola sin efecto. Ahora cada cola dice cuántas sostiene, entre
   // MIN_SIMULTANEAS y MAX_SIMULTANEAS, y no se resta de ningún bolsón común.
   readonly MIN_SIMULTANEAS = 1;
-  readonly MAX_SIMULTANEAS = 20;
+  readonly MAX_SIMULTANEAS = 50;
 
   /**
    * El `max` del input frena las flechas, no lo que se teclea ni lo que se pega. El
@@ -1023,6 +1107,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
     this.verEfectivas(this.nuevaCola.idSubcartera);
     this.cargarCampos(this.nuevaCola.idSubcartera);
     this.cargarMuestra();
+    this.cargarEscalones();
     this.recalcular();
   }
 
@@ -1196,6 +1281,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
          */
         const guardarRegla = () => {
           if (!idCola || this.sinCondiciones()) { terminar(); return; }
+          this.normalizarReglaCastigo();
           this.svc.guardarReglaDeCola(idCola, this.reglaCola).subscribe({
             next: () => { this.reglaHeredada = false; terminar(); },
             error: (e) => {
@@ -1355,9 +1441,19 @@ export class BotVozComponent implements OnInit, OnDestroy {
     return total ? Math.round((this.gestionadosDe(c) / total) * 100) : 0;
   }
 
+  /**
+   * Los que quedan por marcar. Sale de los CONTADORES, no de `this.cola`.
+   *
+   * `this.cola` son las filas del panel de detalle, y solo están cargadas si abriste
+   * el ojo de esa cola. Contando ahí, una cola con filas pendientes en la base decía
+   * "0 por marcar" y `estadoCola` la daba por «Cola agotada» — que es justo lo que
+   * hacía que una cola recién armada pareciera muerta.
+   */
   pendientesDe(c: BotCola): number {
-    return this.cola.filter((f) => f.idCola === c.id &&
-      (f.estado === 'PENDIENTE' || f.estado === 'EN_LLAMADA')).length;
+    if (c.id == null) return 0;
+    const x = this.contadores[c.id];
+    if (!x) return 0;
+    return Math.max(0, x.total - x.descartadas - x.completadas);
   }
 
   /**
