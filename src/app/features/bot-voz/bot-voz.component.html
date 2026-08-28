@@ -957,18 +957,9 @@
           <input type="number" min="1" [(ngModel)]="r.diasMaxASegunda" placeholder="hereda">
           <small class="muted">Se busca que caiga en el mismo mes.</small>
         </label>
-        <label>
-          Máximo de cuotas
-          <input type="number" min="1" [(ngModel)]="r.maxCuotasBot" placeholder="hereda">
-          <small class="muted">Lo máximo que el bot puede ofrecer, aunque la opción admita más.</small>
-        </label>
-        <label>
-          Plazos por opción
-          <input type="text" [(ngModel)]="r.curvaMeses" placeholder="p. ej. 12,5,3,1">
-          <small class="muted">
-            Meses de cada rebaja, en orden. Vacío = los calcula el sistema.
-          </small>
-        </label>
+        <!-- "Máximo de cuotas" y "Plazos por opción" se fueron a la configuración de
+             la CAMPAÑA (el formulario de la cola): dicen qué se ofrece esta semana, no
+             cómo se fracciona una deuda. Aquí solo quedan las condiciones comunes. -->
         <!-- La casilla "La última opción, solo con pago hoy" se quitó: la condición es
              fija y vive en el código (BotOfertaService). No era una preferencia por
              subcartera sino lo que define al último escalón, y sembrada en 0 hacía que
