@@ -144,8 +144,6 @@ export interface BotRegla {
   pctPrimeraMax?: number | null;
   kMinPrimera?: number | null;
   diasMaxPrimeraCuota?: number | null;
-  diasMinASegunda?: number | null;
-  diasMaxASegunda?: number | null;
   /** La última opción de la escalera solo se acepta con pago el mismo día. */
   // `ultimoEscalonSoloHoy` se quitó: la condición del último escalón es fija y vive en
   // el backend (BotOfertaService). No se configura por subcartera.

@@ -705,9 +705,7 @@
               Enganche entre el {{ pct(reglasEfectivas.pctPrimeraMin) }} y el
               {{ pct(reglasEfectivas.pctPrimeraMax) }} del total, con la primera cuota al
               menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las demás.
-              La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días
-              y la segunda entre {{ reglasEfectivas.diasMinASegunda }} y
-              {{ reglasEfectivas.diasMaxASegunda }} días después.
+              La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días.
             </p>
             <p class="muted"><em>Esto no se edita aquí: lo define administración.</em></p>
           </div>
@@ -895,9 +893,7 @@
       <p class="demo" *ngIf="reglasEfectivas">
         Enganche entre {{ reglasEfectivas.pctPrimeraMin }} y {{ reglasEfectivas.pctPrimeraMax }},
         con la primera cuota al menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las
-        demás. La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días
-        y la segunda entre {{ reglasEfectivas.diasMinASegunda }} y
-        {{ reglasEfectivas.diasMaxASegunda }} días después.
+        demás. La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días.
       </p>
     </div>
 
@@ -946,16 +942,6 @@
           Días máx. para la 1ª cuota
           <input type="number" min="0" [(ngModel)]="r.diasMaxPrimeraCuota" placeholder="hereda">
           <small class="muted">Desde la llamada. 0 = solo hoy.</small>
-        </label>
-        <label>
-          2ª cuota, desde
-          <input type="number" min="1" [(ngModel)]="r.diasMinASegunda" placeholder="hereda">
-          <small class="muted">Días después de la primera.</small>
-        </label>
-        <label>
-          2ª cuota, hasta
-          <input type="number" min="1" [(ngModel)]="r.diasMaxASegunda" placeholder="hereda">
-          <small class="muted">Se busca que caiga en el mismo mes.</small>
         </label>
         <!-- "Máximo de cuotas" y "Plazos por opción" se fueron a la configuración de
              la CAMPAÑA (el formulario de la cola): dicen qué se ofrece esta semana, no
