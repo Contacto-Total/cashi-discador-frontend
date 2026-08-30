@@ -1327,7 +1327,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.errorModal =
           e?.status === 409 ? 'Esa subcartera ya tiene una cola. Edita la que hay.'
           : e?.status === 403 ? 'No tienes permiso sobre esa subcartera.'
-          : e?.status === 400 ? 'Faltan datos: revisa el nombre y la subcartera.'
+          // El 400 del servidor viene con su motivo: el objetivo, el horario fuera de
+          // la ventana legal. Descartarlo por un texto fijo mandaba a revisar el nombre
+          // por un fallo que estaba en otro sitio.
+          : e?.status === 400 ? (e?.error?.error || 'Faltan datos: revisa el nombre y la subcartera.')
           : 'No se pudo guardar la cola. Vuelve a intentarlo.';
       },
     });
