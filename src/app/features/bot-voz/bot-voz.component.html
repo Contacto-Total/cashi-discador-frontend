@@ -474,6 +474,18 @@
                      [(ngModel)]="nuevaCola.horaFin">
               <small class="muted">No puede pasar de {{ topeHoraFin }}: lo fija la Ley 29571.</small>
             </label>
+            <label class="ancho">
+              Días que llama
+              <div class="dias-semana">
+                <button type="button" *ngFor="let d of diasPermitidos"
+                        class="dia" [class.dia-on]="diaMarcado(d.letra)"
+                        (click)="alternarDia(d.letra)">{{ d.nombre }}</button>
+              </div>
+              <small class="muted">
+                Ninguno marcado = todos los permitidos ({{ config?.diasSemana }}).
+                Fuera de esos no se marca: lo fija la Ley 29571.
+              </small>
+            </label>
             <label>
               Llamadas a la vez
               <input type="number" [min]="MIN_SIMULTANEAS" [max]="MAX_SIMULTANEAS"
