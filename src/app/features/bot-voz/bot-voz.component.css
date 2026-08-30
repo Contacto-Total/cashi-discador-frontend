@@ -282,6 +282,26 @@ label.ancho {
   color: var(--texto, #374151);
 }
 label.ancho { grid-column: 1 / -1; margin-bottom: 16px; }
+
+/* Los dias de la semana como interruptores. Un select multiple obliga a saber que se
+   arrastra con Ctrl; siete botones se ven todos y se tocan de uno en uno. */
+.dias-semana { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 4px; }
+.dias-semana .dia {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.dias-semana .dia:hover { border-color: #94a3b8; }
+.dias-semana .dia.dia-on {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  font-weight: 600;
+}
 .grid-form input,
 .grid-form select,
 label.ancho input,
