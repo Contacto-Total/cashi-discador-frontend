@@ -5,10 +5,11 @@ import { environment } from '../../../environments/environment';
 
 export interface BotConfig {
   id?: number;
-  activo: boolean;
   // `modoRitmo` e `idRitmoActivo` se quitaron: elegian el ritmo del armado GLOBAL,
   // que ya no existe. Y el calendario de ritmos entero murio despues: cada cola lleva
   // ahora su propio `intentosMaximos`.
+  // `activo` se quitó: era el interruptor maestro y no lo lee ningún servicio. Cada
+  // cola arranca y para con el suyo, así que un 0 aquí no frenaba nada.
   horaInicio: string;             // HH:mm:ss
   horaFin: string;
   diasSemana: string;
