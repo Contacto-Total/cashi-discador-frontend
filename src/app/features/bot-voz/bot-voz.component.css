@@ -286,14 +286,18 @@ label.ancho { grid-column: 1 / -1; margin-bottom: 16px; }
 /* Los dias de la semana como interruptores. Un select multiple obliga a saber que se
    arrastra con Ctrl; siete botones se ven todos y se tocan de uno en uno.
 
+   Va la inicial y no la abreviatura: siete cajas iguales se leen de un golpe, y
+   "Mié" obligaba a que cada una midiera distinto. El nombre entero queda en el
+   `title`, que es donde resuelve la duda de M contra X.
+
    Alto y ancho van en pixeles y la tipografia se hereda a proposito: un boton no
-   hereda la fuente del formulario, y con el radio en pildora las cajas salian
-   redondas y descolocadas entre si. */
+   hereda la fuente del formulario, y sin medida fija las cajas salian de tamaños
+   distintos entre si. */
 .dias-semana { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .dias-semana .dia {
-  min-width: 44px;
-  height: 30px;
-  padding: 0 10px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   background: #fff;
