@@ -141,6 +141,13 @@ export interface BotRegla {
    */
   idCola?: number | null;
   nombre?: string;
+  /**
+   * El nombre de la subcartera, que lo rellena el backend.
+   *
+   * No esta en `bot_regla`. Antes la pantalla lo sacaba de las colas, asi que una
+   * subcartera con regla y sin ninguna cola abierta salia como "#21".
+   */
+  nombreSubcartera?: string | null;
   pctPrimeraMin?: number | null;
   pctPrimeraMax?: number | null;
   kMinPrimera?: number | null;
