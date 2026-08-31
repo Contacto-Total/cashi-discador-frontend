@@ -921,7 +921,11 @@
     <div class="tono-card" *ngFor="let r of reglasDeSubcartera"
          [class.regla-inactiva]="r.activo === false">
       <div class="card-title-row" style="margin-bottom: 14px;">
-        <h3>{{ r.idSubcartera ? nombreSubcartera(r.idSubcartera) : 'Por defecto (todas)' }}</h3>
+        <!-- El nombre viaja con la propia regla: una subcartera puede tener regla y no
+             tener ninguna cola abierta, y entonces no habia de donde sacarlo. -->
+        <h3>{{ r.idSubcartera
+               ? (r.nombreSubcartera || nombreSubcartera(r.idSubcartera))
+               : 'Por defecto (todas)' }}</h3>
         <span class="status-badge" *ngIf="carteraDeSubcartera(r.idSubcartera)">
           {{ carteraDeSubcartera(r.idSubcartera) }}
         </span>
