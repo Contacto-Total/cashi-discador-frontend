@@ -481,7 +481,8 @@
               <div class="dias-semana">
                 <button type="button" *ngFor="let d of diasPermitidos"
                         class="dia" [class.dia-on]="diaMarcado(d.letra)"
-                        (click)="alternarDia(d.letra)">{{ d.nombre }}</button>
+                        [title]="d.nombre"
+                        (click)="alternarDia(d.letra)">{{ d.letra }}</button>
               </div>
               <small class="muted">Vacío = todos</small>
             </label>
