@@ -458,7 +458,9 @@
                al bloque 2, pegados a la tarea que los provoca: "reintentos" no significa
                nada suelto, y sí junto a "recordar" o a "negociar vencidas". -->
           <section class="bloque">
-            <span class="etiqueta"><span class="paso">3</span> Cuándo llama</span>
+            <span class="etiqueta"><span class="paso">3</span> Cuándo llama
+              <span class="limite">{{ topeHoraInicio }} – {{ topeHoraFin }}</span>
+            </span>
             <div class="grid-form">
             <!-- min/max frenan las flechas y marcan el campo en rojo, pero no lo que se
                  teclea: el tope de verdad lo aplica el backend al guardar. -->
@@ -466,13 +468,13 @@
               Empieza a llamar
               <input type="time" [min]="topeHoraInicio" [max]="topeHoraFin"
                      [(ngModel)]="nuevaCola.horaInicio">
-              <small class="muted">Vacío = {{ topeHoraInicio }}, el mínimo legal.</small>
+              <small class="muted">Vacío = {{ topeHoraInicio }}</small>
             </label>
             <label>
               Deja de llamar
               <input type="time" [min]="topeHoraInicio" [max]="topeHoraFin"
                      [(ngModel)]="nuevaCola.horaFin">
-              <small class="muted">No puede pasar de {{ topeHoraFin }}: lo fija la Ley 29571.</small>
+              <small class="muted">Vacío = {{ topeHoraFin }}</small>
             </label>
             <label class="ancho">
               Días que llama
@@ -481,10 +483,7 @@
                         class="dia" [class.dia-on]="diaMarcado(d.letra)"
                         (click)="alternarDia(d.letra)">{{ d.nombre }}</button>
               </div>
-              <small class="muted">
-                Ninguno marcado = todos los permitidos ({{ config?.diasSemana }}).
-                Fuera de esos no se marca: lo fija la Ley 29571.
-              </small>
+              <small class="muted">Vacío = todos</small>
             </label>
             <label>
               Llamadas a la vez
