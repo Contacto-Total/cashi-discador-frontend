@@ -27,6 +27,7 @@ import { CustomerOutputConfigService } from '../../maintenance/services/customer
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
 import { SipService, CallState } from '../../core/services/sip.service';
+import { WebsocketService } from '../../core/services/websocket.service';
 import { AgentService } from '../../core/services/agent.service';
 import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
 import { AgentStatusService } from '../../core/services/agent-status.service';
@@ -3129,6 +3130,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
   private outgoingCallSubscription?: Subscription;
+  private predictiveCallSubscription?: Subscription;
+  private websocketConnectionSubscription?: Subscription;
   public callState: CallState = CallState.IDLE;
   public isMuted = signal(false);
   public isOnHold = signal(false);
@@ -3149,6 +3152,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     private route: ActivatedRoute,
     private http: HttpClient,
     private sipService: SipService,
+    private websocketService: WebsocketService,
     private agentService: AgentService,
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
@@ -3222,6 +3226,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     });
   }
 
+  private applyPredictiveCallContext(data: any): void {
+    if (!data.callUuid || !data.agentId) {
+      console.warn('⚠️ [PREDICTIVE] Evento sin callUuid o agentId');
+      return;
+    }
+
+    const currentUuid = this.activeCallContext().uuid;
+    if (currentUuid && currentUuid !== data.callUuid) {
+      console.warn('🚫 [PREDICTIVE] Evento descartado: pertenece a otra llamada activa');
+      return;
+    }
+
+    this.setPredictiveCallContext(data);
+    this.loadPredictiveCustomer(data.callUuid, data.agentId);
+  }
+
   private setNonPredictiveCallContext(phoneNumber: string): void {
     this.setActiveCallContext({ ...EMPTY_CALL_CONTEXT, telefono: phoneNumber });
   }
@@ -3249,6 +3269,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.gestionLock.register(this.boundLockCheck);
     window.addEventListener('beforeunload', this.boundBeforeUnload);
     window.addEventListener('popstate', this.boundPopState);
+
+    this.predictiveCallSubscription = this.websocketService.subscribe('/user/queue/messages').subscribe((message: any) => {
+      if (message.type === 'PREDICTIVE_CALL_CONNECTED' && message.payload) {
+        this.applyPredictiveCallContext(message.payload);
+      }
+    });
+    this.websocketConnectionSubscription = this.websocketService.connectionStatus$.subscribe(connected => {
+      const context = this.activeCallContext();
+      const agentId = this.authService.getCurrentUser()?.id;
+      if (connected && context.uuid && agentId && !this.customerData()?.id) {
+        this.loadPredictiveCustomer(context.uuid, agentId);
+      }
+    });
 
     // Verificar estado inicial de la llamada
     const initialCallState = this.sipService.getCallState();
@@ -3909,8 +3942,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.isLoadingCustomer.set(true);
     const currentUser = this.authService.getCurrentUser();
 
-    if (!currentUser || !currentUser.sipExtension) {
-      console.error('❌ No se pudo obtener la extensión SIP del agente logueado');
+    if (!currentUser || !currentUser.id) {
+      console.error('❌ No se pudo obtener el agente logueado');
       this.isLoadingCustomer.set(false);
       return;
     }
@@ -3926,13 +3959,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         sessionStorage.removeItem('predictive_call_data');
         try {
           const predictiveData = JSON.parse(predictiveDataStr);
-          if (predictiveData.phoneNumber) {
-            console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
+          if (predictiveData.callUuid && predictiveData.agentId) {
+            console.log(`📞 [FAST-PATH] Rehidratando contexto predictivo: ${predictiveData.callUuid}`);
             this.setPredictiveCallContext(predictiveData);
-            this.autoLoadCustomerByPhone(predictiveData.phoneNumber, () => {
-              console.warn('⚠️ [FAST-PATH] Teléfono no matcheó — cayendo a customer-full-data por contactId');
-              this.loadFirstCustomer(0, true);
-            }, predictiveData.llamadaId ?? null);
+            this.loadPredictiveCustomer(predictiveData.callUuid, predictiveData.agentId);
             return;
           }
         } catch (e) {
@@ -3941,11 +3971,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    const sipExt = currentUser.sipExtension;
-    console.log(`📋 [FULL-DATA] Cargando datos completos del cliente para extensión ${sipExt}... (intento ${retryCount + 1})`);
+    console.log(`📋 [FULL-DATA] Rehidratando llamada activa del agente ${currentUser.id}... (intento ${retryCount + 1})`);
 
-    // Endpoint unificado: obtiene llamada activa + detalle cliente + datos dinámicos en 1 sola llamada
-    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/extension/${sipExt}`).pipe(
+    // Excluye el fallback legado por "última llamada reciente", que es ambiguo.
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/agent/${currentUser.id}`).pipe(
       catchError((error) => {
         console.error('❌ [FULL-DATA] Error cargando datos completos:', error);
         this.isLoadingCustomer.set(false);
@@ -3964,6 +3993,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             console.warn('⚠️ [FULL-DATA] No se obtuvieron datos después de todos los intentos');
             this.isLoadingCustomer.set(false);
           }
+          return;
+        }
+
+        const currentUuid = this.activeCallContext().uuid;
+        if (currentUuid && fullData.callUuid && currentUuid !== fullData.callUuid) {
+          console.warn('🚫 [FULL-DATA] Respuesta descartada: pertenece a otra llamada activa');
+          this.isLoadingCustomer.set(false);
           return;
         }
 
@@ -3998,6 +4034,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   protected showDialerDataRefreshButton(): boolean {
     return false;
+  }
+
+  private loadPredictiveCustomer(callUuid: string, agentId: number): void {
+    this.isLoadingCustomer.set(true);
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/agent/${agentId}/call/${callUuid}`).pipe(
+      catchError(error => {
+        console.error(`❌ [PREDICTIVE] Error rehidratando ${callUuid}:`, error);
+        this.isLoadingCustomer.set(false);
+        return of(null);
+      })
+    ).subscribe(fullData => {
+      if (!fullData) {
+        this.isLoadingCustomer.set(false);
+        return;
+      }
+
+      const currentUuid = this.activeCallContext().uuid;
+      if (currentUuid && fullData.callUuid && currentUuid !== fullData.callUuid) {
+        console.warn('🚫 [PREDICTIVE] Respuesta descartada: pertenece a otra llamada activa');
+        this.isLoadingCustomer.set(false);
+        return;
+      }
+
+      this.setPredictiveCallContext(fullData);
+      if (fullData.contactId) this.dialerContactId.set(fullData.contactId);
+      if (fullData.dynamicData) {
+        this.loadCustomerFromDynamicTable(fullData.dynamicData);
+        const customerId = this.customerData()?.id;
+        if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
+      } else if (fullData.clienteDetalle) {
+        this.loadClienteDetalleFallback(fullData.clienteDetalle);
+        const customerId = this.customerData()?.id;
+        if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
+      } else {
+        console.warn('⚠️ [PREDICTIVE] Contexto sin datos de cliente');
+        this.isLoadingCustomer.set(false);
+      }
+    });
   }
 
   protected refreshDialerCustomerData(): void {
@@ -4633,6 +4707,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
     if (this.outgoingCallSubscription) {
       this.outgoingCallSubscription.unsubscribe();
+    }
+    if (this.predictiveCallSubscription) {
+      this.predictiveCallSubscription.unsubscribe();
+    }
+    if (this.websocketConnectionSubscription) {
+      this.websocketConnectionSubscription.unsubscribe();
     }
     if (this.agentStatusSubscription) {
       this.agentStatusSubscription.unsubscribe();

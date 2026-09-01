@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Client, IMessage, StompConfig } from '@stomp/stompjs';
+import { Client, IMessage, StompConfig, StompSubscription } from '@stomp/stompjs';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
@@ -29,6 +29,7 @@ export class WebsocketService {
   private connectionStatus = new BehaviorSubject<boolean>(false);
   public connectionStatus$ = this.connectionStatus.asObservable();
   private messageSubjects: Map<string, Subject<any>> = new Map();
+  private topicSubscriptions: Map<string, StompSubscription> = new Map();
   private latencyInterval: any = null;
   private currentExtension: string | null = null;
 
@@ -71,6 +72,8 @@ export class WebsocketService {
       onConnect: () => {
         console.log('WebSocket Connected');
         this.connectionStatus.next(true);
+        // STOMP subscriptions are transport state. Recreate all of them after a reconnect.
+        this.messageSubjects.forEach((subject, topic) => this.subscribeToTopic(topic, subject));
       },
       onDisconnect: () => {
         console.log('WebSocket Disconnected');
@@ -78,6 +81,10 @@ export class WebsocketService {
       },
       onStompError: (frame) => {
         console.error('STOMP error:', frame);
+        this.connectionStatus.next(false);
+      },
+      onWebSocketClose: () => {
+        this.connectionStatus.next(false);
       }
     };
 
@@ -91,6 +98,7 @@ export class WebsocketService {
       this.stompClient = null;
       this.connectionStatus.next(false);
       this.messageSubjects.clear();
+      this.topicSubscriptions.clear();
     }
   }
 
@@ -129,8 +137,9 @@ export class WebsocketService {
     }
 
     try {
+      this.topicSubscriptions.get(topic)?.unsubscribe();
       console.log(`[WebSocket] 🔌 Subscribing to topic: ${topic}`);
-      this.stompClient.subscribe(topic, (message: IMessage) => {
+      const subscription = this.stompClient.subscribe(topic, (message: IMessage) => {
         try {
           console.log(`[WebSocket] 📨 Raw message on ${topic}:`, message.body);
           const payload = JSON.parse(message.body);
@@ -140,6 +149,7 @@ export class WebsocketService {
           console.error('Error parsing WebSocket message:', e);
         }
       });
+      this.topicSubscriptions.set(topic, subscription);
     } catch (error) {
       console.error(`[WebSocket] Error subscribing to ${topic}:`, error);
     }
