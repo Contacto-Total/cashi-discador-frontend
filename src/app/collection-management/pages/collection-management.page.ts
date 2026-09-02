@@ -1556,7 +1556,10 @@ type EvaluacionConvenio =
                  @if (clientHeaderFields().length > 0) {
                     <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
                       @for (field of clientHeaderFields(); track field.field) {
-                        <div class="flex min-w-0 items-baseline justify-between gap-2">
+                        <div
+                          class="flex min-w-0 items-baseline justify-between gap-2"
+                          [style.font-size]="field.field === 'dias_mora' || field.field === 'dias_mora_asig' ? 'calc(var(--app-font-size) * 0.9375)' : null"
+                        >
                           <span class="whitespace-nowrap font-semibold uppercase">{{ field.label }}:</span>
                           <span class="min-w-0 truncate text-right font-bold" [title]="field.value">{{ field.value }}</span>
                         </div>
