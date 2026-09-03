@@ -11,6 +11,14 @@
       </div>
     </div>
     <div class="header-stats">
+      <button
+        class="clear-calls-btn"
+        type="button"
+        [disabled]="clearingCalls || clearCooldownSeconds > 0"
+        (click)="clearActiveCalls()">
+        <lucide-angular name="trash-2" [size]="16"></lucide-angular>
+        <span>@if (clearingCalls) { Limpiando... } @else if (clearCooldownSeconds > 0) { Disponible en {{ clearCooldownSeconds }}s } @else { Limpiar llamadas fantasma }</span>
+      </button>
       <div class="stat-badge" [class.active]="activeCalls.length > 0">
         <span class="stat-number">{{ activeCalls.length }}</span>
         <span class="stat-label">Llamadas Activas</span>
