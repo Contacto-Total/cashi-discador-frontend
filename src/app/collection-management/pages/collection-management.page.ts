@@ -1551,7 +1551,7 @@ type EvaluacionConvenio =
              <!-- Resumen Rápido Deuda -->
              <div [class]="'p-2 ' + purchaseSummaryClass()">
                <div class="text-center">
-                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
+                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital Total</div>
                  <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
                  @if (clientHeaderFields().length > 0) {
                     <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
