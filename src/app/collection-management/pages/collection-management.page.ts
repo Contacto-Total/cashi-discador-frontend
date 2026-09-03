@@ -2940,8 +2940,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Monto principal del panel derecho: etiqueta y valor SIEMPRE del mismo campo.
-   * Antes el titulo era el literal "Capital" y el valor podia venir de otro campo
-   * (ej. deuda total) cuando la subcartera no tiene una cabecera "capital".
+   * Es el PRIMER monto de la configuracion de la subcartera (orden_monto en
+   * cashi_db.configuracion_cabeceras), el mismo que encabeza la lista de abajo.
+   * Antes el titulo era el literal "Capital" y el valor se buscaba aparte, asi
+   * que en los clientes sin capital el rotulo mentia.
    */
   primaryAmountField = computed<{ label: string; value: number }>(() => {
     const fields = this.clientAmountFields();
@@ -2950,13 +2952,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return { label: 'Deuda Total', value: this.customerData().deuda?.saldo_total || 0 };
     }
 
-    const campo =
-      fields.find(f => f.label.trim().toLowerCase() === 'capital')
-      || fields.find(f => f.field.toLowerCase().includes('capital')
-                       && !f.field.toLowerCase().includes('tarj'))
-      || fields.find(f => f.label.toLowerCase().includes('total')
-                       || f.field.toLowerCase().includes('total'))
-      || fields[0];
+    // Se saltan los campos de texto/porcentaje (ej. "Descuento Feria 10%"),
+    // que no son importes y se mostrarian como S/ 0.00.
+    const campo = fields.find(f => f.formato !== 'TEXTO') || fields[0];
 
     return { label: campo.label, value: campo.value };
   });
