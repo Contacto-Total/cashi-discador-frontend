@@ -3977,15 +3977,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     console.log(`📋 [FULL-DATA] Rehidratando llamada activa del agente ${currentUser.id}... (intento ${retryCount + 1})`);
 
     // Excluye el fallback legado por "última llamada reciente", que es ambiguo.
-    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/agent/${currentUser.id}`).pipe(
+    const fullDataUrl = `${environment.gatewayUrl}/autodialer/customer-full-data/agent/${currentUser.id}`;
+    this.http.get<any>(fullDataUrl, { observe: 'response' }).pipe(
       catchError((error) => {
         console.error('❌ [FULL-DATA] Error cargando datos completos:', error);
         this.isLoadingCustomer.set(false);
         return of(null);
       })
     ).subscribe({
-      next: (fullData) => {
+      next: (response: any) => {
+        const fullData = response?.body ?? null;
         if (!fullData) {
+          if (response) {
+            console.warn(`⚠️ [FULL-DATA] ${fullDataUrl} respondió HTTP ${response.status} sin contexto activo`);
+          }
           // Reintentar si no hay datos - cubre dos escenarios:
           // 1. Llamada activa: transacción del backend aún no commiteada
           // 2. Llamada terminó rápido (<3s): agente ya está tipificando pero los datos no llegaron
