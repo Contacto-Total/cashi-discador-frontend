@@ -26,6 +26,12 @@ export interface MonitoringRequest {
   adminUsername: string;
 }
 
+export interface ClearActiveCallsResponse {
+  success: boolean;
+  clearedCount: number;
+  message: string;
+}
+
 export interface ExtensionRegistration {
   extension: string;
   username: string;
@@ -65,6 +71,10 @@ export class AdminMonitoringService {
    */
   getActiveCalls(): Observable<ActiveCall[]> {
     return this.http.get<ActiveCall[]>(`${this.apiUrl}/active-calls`);
+  }
+
+  clearActiveCalls(): Observable<ClearActiveCallsResponse> {
+    return this.http.delete<ClearActiveCallsResponse>(`${this.apiUrl}/active-calls/clear`);
   }
 
   /**
