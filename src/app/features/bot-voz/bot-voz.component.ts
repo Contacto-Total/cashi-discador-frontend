@@ -950,7 +950,7 @@ export class BotVozComponent implements OnInit, OnDestroy {
   private colaVacia(): BotCola {
     return {
       nombre: '', idSubcartera: undefined as any, objetivos: '',
-      idTono: null, horaInicio: null, horaFin: null,
+      idTono: null, horaInicio: null, horaFin: null, diasSemana: null,
       maxLlamadasSimultaneas: null,
       intentosMaximos: 1, diasAnticipacion: 0, maxDiasVencida: 1,
     };
@@ -1000,6 +1000,50 @@ export class BotVozComponent implements OnInit, OnDestroy {
 
   get topeHoraInicio(): string { return this.hhmm(this.config?.horaInicio) || '08:00'; }
   get topeHoraFin(): string { return this.hhmm(this.config?.horaFin) || '20:00'; }
+
+  /** La semana en el orden en que se guarda `dias_semana`. */
+  private static readonly SEMANA: ReadonlyArray<{ letra: string; nombre: string }> = [
+    { letra: 'L', nombre: 'Lun' }, { letra: 'M', nombre: 'Mar' }, { letra: 'X', nombre: 'Mié' },
+    { letra: 'J', nombre: 'Jue' }, { letra: 'V', nombre: 'Vie' }, { letra: 'S', nombre: 'Sáb' },
+    { letra: 'D', nombre: 'Dom' },
+  ];
+
+  /**
+   * Los días entre los que se puede elegir: los de la ventana legal, y solo esos.
+   *
+   * No se ofrecen los siete para tachar después los que no valen. Un día que no se
+   * puede marcar no tiene por qué estar en la pantalla.
+   */
+  get diasPermitidos(): ReadonlyArray<{ letra: string; nombre: string }> {
+    const deja = this.letras(this.config?.diasSemana);
+    return BotVozComponent.SEMANA.filter((d) => deja.includes(d.letra));
+  }
+
+  diaMarcado(letra: string): boolean {
+    return this.letras(this.nuevaCola.diasSemana).includes(letra);
+  }
+
+  /**
+   * Marca o desmarca un día.
+   *
+   * Ninguno y todos se guardan igual, en null: las dos cosas significan "los de la
+   * ventana legal". Congelar la lista entera dejaría a la cola con los días de hoy si
+   * mañana la ventana cambia, que es justo lo que hereda evita.
+   */
+  alternarDia(letra: string): void {
+    const puestos = new Set(this.letras(this.nuevaCola.diasSemana));
+    if (puestos.has(letra)) puestos.delete(letra); else puestos.add(letra);
+    const elegidos = this.diasPermitidos.filter((d) => puestos.has(d.letra)).map((d) => d.letra);
+    this.nuevaCola.diasSemana =
+      elegidos.length === 0 || elegidos.length === this.diasPermitidos.length
+        ? null
+        : elegidos.join(',');
+  }
+
+  /** "L,M , x" -> ['L','M','X']. La columna se edita por SQL y no siempre viene limpia. */
+  private letras(dias?: string | null): string[] {
+    return (dias || '').toUpperCase().split(',').map((d) => d.trim()).filter(Boolean);
+  }
 
   /** 0,15 -> "15 %". El número crudo no se lee bien en una frase. */
   pct(v?: number | null): string {
@@ -1327,7 +1371,10 @@ export class BotVozComponent implements OnInit, OnDestroy {
         this.errorModal =
           e?.status === 409 ? 'Esa subcartera ya tiene una cola. Edita la que hay.'
           : e?.status === 403 ? 'No tienes permiso sobre esa subcartera.'
-          : e?.status === 400 ? 'Faltan datos: revisa el nombre y la subcartera.'
+          // El 400 del servidor viene con su motivo: el objetivo, el horario fuera de
+          // la ventana legal. Descartarlo por un texto fijo mandaba a revisar el nombre
+          // por un fallo que estaba en otro sitio.
+          : e?.status === 400 ? (e?.error?.error || 'Faltan datos: revisa el nombre y la subcartera.')
           : 'No se pudo guardar la cola. Vuelve a intentarlo.';
       },
     });

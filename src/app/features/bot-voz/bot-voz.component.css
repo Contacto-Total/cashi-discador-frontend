@@ -282,6 +282,39 @@ label.ancho {
   color: var(--texto, #374151);
 }
 label.ancho { grid-column: 1 / -1; margin-bottom: 16px; }
+
+/* Los dias de la semana como interruptores. Un select multiple obliga a saber que se
+   arrastra con Ctrl; siete botones se ven todos y se tocan de uno en uno.
+
+   Va la inicial y no la abreviatura: siete cajas iguales se leen de un golpe, y
+   "Mié" obligaba a que cada una midiera distinto. El nombre entero queda en el
+   `title`, que es donde resuelve la duda de M contra X.
+
+   Alto y ancho van en pixeles y la tipografia se hereda a proposito: un boton no
+   hereda la fuente del formulario, y sin medida fija las cajas salian de tamaños
+   distintos entre si. */
+.dias-semana { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.dias-semana .dia {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+}
+.dias-semana .dia:hover { border-color: #94a3b8; }
+.dias-semana .dia.dia-on {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #93c5fd;
+  color: #1d4ed8;
+  font-weight: 600;
+}
 .grid-form input,
 .grid-form select,
 label.ancho input,
@@ -634,6 +667,18 @@ label.ancho small { font-weight: 400; font-size: 12px; }
 .bloque > .etiqueta {
   display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
   font-size: 13px; font-weight: 600; color: var(--texto, #374151);
+}
+/* El limite permitido, junto al titulo del bloque: se lee una vez y vale para los
+   tres campos de debajo, en vez de repetirlo en cada pie de campo. */
+.bloque > .etiqueta .limite {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--borde, #e5e7eb);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
 }
 .paso {
   display: inline-flex; align-items: center; justify-content: center;

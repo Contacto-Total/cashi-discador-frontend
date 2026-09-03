@@ -525,14 +525,13 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           const agentRoles = ['AGENT', 'ASESOR'];
           const esAsesor = !!currentUser && agentRoles.includes(currentUser.role);
 
-          // No dejar un evento tardío en sessionStorage: la siguiente tipificación no debe
-          // consumir el contexto de una llamada anterior.
+          // The page validates callUuid before consuming this context, so it is safe to
+          // retain an event that arrives after SIP already opened the page.
+          sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
           if (yaEnTipificacion) {
-            console.warn('🚫 [App] Contexto predictivo ignorado: el agente ya está tipificando');
+            console.log('📞 [App] Contexto predictivo retenido para la pantalla actual');
             return;
           }
-
-          sessionStorage.setItem('predictive_call_data', JSON.stringify(message.payload));
 
           if (esAsesor && !this.supervisionService.isSupervisionActive()) {
             // Dejar el mismo estado interno que deja el camino del softphone. Sin esto, el

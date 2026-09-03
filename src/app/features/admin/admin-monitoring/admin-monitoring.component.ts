@@ -35,11 +35,14 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
   currentMonitoringCall: string | null = null;
   currentAdminCallUuid: string | null = null;
   showLegend = false;
+  clearingCalls = false;
+  clearCooldownSeconds = 0;
 
   displayedColumns: string[] = ['agent', 'client', 'duration', 'state', 'campaign', 'actions'];
 
   private subscriptions: Subscription[] = [];
   private refreshInterval: any;
+  private clearCooldownTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private adminMonitoringService: AdminMonitoringService,
@@ -64,6 +67,9 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
     }
+    if (this.clearCooldownTimer) {
+      clearInterval(this.clearCooldownTimer);
+    }
   }
 
   loadActiveCalls(): void {
@@ -77,6 +83,42 @@ export class AdminMonitoringComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  clearActiveCalls(): void {
+    if (this.clearingCalls || this.clearCooldownSeconds > 0) {
+      return;
+    }
+
+    if (!confirm('Se retirarán todas las llamadas del Centro de Monitoreo. No se colgarán llamadas ni se modificarán registros. ¿Continuar?')) {
+      return;
+    }
+
+    this.clearingCalls = true;
+    this.adminMonitoringService.clearActiveCalls().subscribe({
+      next: (response) => {
+        this.activeCalls = [];
+        this.clearingCalls = false;
+        this.startClearCooldown();
+        alert(`Se retiraron ${response.clearedCount} llamada(s) del monitoreo.`);
+      },
+      error: (error) => {
+        this.clearingCalls = false;
+        console.error('Error clearing active calls:', error);
+        alert('No se pudieron limpiar las llamadas del monitoreo');
+      }
+    });
+  }
+
+  private startClearCooldown(): void {
+    this.clearCooldownSeconds = 60;
+    this.clearCooldownTimer = setInterval(() => {
+      this.clearCooldownSeconds--;
+      if (this.clearCooldownSeconds <= 0 && this.clearCooldownTimer) {
+        clearInterval(this.clearCooldownTimer);
+        this.clearCooldownTimer = null;
+      }
+    }, 1000);
   }
 
   subscribeToWebSocket(): void {

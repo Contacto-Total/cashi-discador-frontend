@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, computed, effect, ViewChild } from '@angular/core';
+﻿import { Component, OnInit, OnDestroy, signal, computed, effect, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LucideAngularModule } from 'lucide-angular';
@@ -27,6 +27,7 @@ import { CustomerOutputConfigService } from '../../maintenance/services/customer
 import { PaymentScheduleViewComponent } from '../components/payment-schedule-view/payment-schedule-view.component';
 import { CustomerService } from '../../customers/services/customer.service';
 import { SipService, CallState } from '../../core/services/sip.service';
+import { WebsocketService } from '../../core/services/websocket.service';
 import { AgentService } from '../../core/services/agent.service';
 import { AgentState, AgentStatus } from '../../core/models/agent-status.model';
 import { AgentStatusService } from '../../core/services/agent-status.service';
@@ -66,7 +67,7 @@ const EMPTY_CALL_CONTEXT: ActiveCallContext = {
   contactoId: null
 };
 /**
- * Cuota de la última promesa de tipo convenio, ya normalizada para pintarla.
+ * Cuota de la Ãºltima promesa de tipo convenio, ya normalizada para pintarla.
  */
 interface CuotaUltimoConvenio {
   numeroCuota: number;
@@ -76,7 +77,7 @@ interface CuotaUltimoConvenio {
 }
 
 /**
- * Última promesa de pago de tipo convenio del cliente, cerrada en CUMPLIDO o VENCIDO.
+ * Ãšltima promesa de pago de tipo convenio del cliente, cerrada en CUMPLIDO o VENCIDO.
  * Es informativa: nunca bloquea el registro de una nueva promesa.
  */
 interface UltimoConvenio {
@@ -89,9 +90,9 @@ interface UltimoConvenio {
 }
 
 /**
- * Resultado de evaluar una gestión del historial como candidata a "último convenio".
- * NO_ES_CONVENIO deja seguir buscando hacia atrás; OTRO_ESTADO corta la búsqueda,
- * porque esa ya era la última promesa de tipo convenio del cliente.
+ * Resultado de evaluar una gestiÃ³n del historial como candidata a "Ãºltimo convenio".
+ * NO_ES_CONVENIO deja seguir buscando hacia atrÃ¡s; OTRO_ESTADO corta la bÃºsqueda,
+ * porque esa ya era la Ãºltima promesa de tipo convenio del cliente.
  */
 type EvaluacionConvenio =
   | { tipo: 'NO_ES_CONVENIO' }
@@ -112,12 +113,12 @@ type EvaluacionConvenio =
   ],
   template: `
     <div class="collection-management-container h-[100dvh] flex flex-col overflow-hidden">
-      <!-- Notificación de éxito -->
+      <!-- NotificaciÃ³n de Ã©xito -->
       @if (showSuccess()) {
         <div class="fixed top-4 right-4 z-50 animate-[slideInRight_0.5s_ease-out]">
           <div class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4 rounded-lg shadow-2xl flex items-center gap-3">
             <div>
-              <div class="font-bold">¡Gestión Guardada!</div>
+              <div class="font-bold">Â¡GestiÃ³n Guardada!</div>
               <div class="text-sm opacity-90">Los datos se registraron correctamente</div>
             </div>
           </div>
@@ -150,14 +151,14 @@ type EvaluacionConvenio =
       <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
         <div class="px-5 py-3.5">
           <div class="flex items-center justify-between">
-            <!-- Lado Izquierdo: Título -->
+            <!-- Lado Izquierdo: TÃ­tulo -->
             <div class="flex items-center gap-2">
-              <h1 class="text-lg font-bold text-slate-800 dark:text-white">Gestión de Cobranza</h1>
+              <h1 class="text-lg font-bold text-slate-800 dark:text-white">GestiÃ³n de Cobranza</h1>
             </div>
 
-            <!-- Lado Derecho: Estado, Indicador de Tiempo y Cronómetro -->
+            <!-- Lado Derecho: Estado, Indicador de Tiempo y CronÃ³metro -->
             <div class="flex items-center gap-4">
-              <!-- Jerarquía del cliente (inquilino / cartera / subcartera) -->
+              <!-- JerarquÃ­a del cliente (inquilino / cartera / subcartera) -->
               @if (clientHierarchy(); as h) {
                 <div class="px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 max-w-[42rem]"
                      [title]="h.inquilino + ' / ' + h.cartera + ' / ' + h.subcartera">
@@ -249,27 +250,27 @@ type EvaluacionConvenio =
                       <lucide-angular name="cake" [size]="14" class="text-violet-500 dark:text-violet-400"></lucide-angular>
                       <div class="flex-1 min-w-0">
                         <div class="text-xs text-violet-500 dark:text-violet-400">Edad</div>
-                        <div class="text-xs font-bold text-violet-700 dark:text-violet-300">{{ customerAge() }} años</div>
+                        <div class="text-xs font-bold text-violet-700 dark:text-violet-300">{{ customerAge() }} aÃ±os</div>
                       </div>
                     </div>
                   }
 
-                  <!-- Ocupación del cliente (desde tabla dinámica) -->
+                  <!-- OcupaciÃ³n del cliente (desde tabla dinÃ¡mica) -->
                   @if (clientOcupacion()) {
                     <div class="flex items-center gap-2 p-1.5 bg-cyan-50 dark:bg-cyan-950/30 rounded border border-cyan-200 dark:border-cyan-800">
                       <lucide-angular name="briefcase" [size]="14" class="text-cyan-500 dark:text-cyan-400"></lucide-angular>
                       <div class="flex-1 min-w-0">
-                        <div class="text-xs text-cyan-500 dark:text-cyan-400">Ocupación</div>
+                        <div class="text-xs text-cyan-500 dark:text-cyan-400">OcupaciÃ³n</div>
                         <div class="text-xs font-bold text-cyan-700 dark:text-cyan-300 break-words">{{ clientOcupacion() }}</div>
                       </div>
                     </div>
                   }
 
-                  <!-- Información de Contacto -->
+                  <!-- InformaciÃ³n de Contacto -->
                   @if (customerData()?.contacto) {
                   <div class="space-y-1.5 mt-1">
                     <div class="flex items-center justify-between">
-                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Métodos de contacto</span>
+                      <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">MÃ©todos de contacto</span>
                       @if (customerData()?.id) {
                         <button
                           (click)="toggleAddContactForm()"
@@ -290,7 +291,7 @@ type EvaluacionConvenio =
                             [(ngModel)]="newContactType"
                             class="flex-1 min-w-0 px-2 py-1 border border-blue-200 dark:border-blue-800 rounded-md text-xs bg-white dark:bg-gray-900 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
                           >
-                            <option value="telefono">Teléfono</option>
+                            <option value="telefono">TelÃ©fono</option>
                             <option value="email">Correo</option>
                           </select>
                         </div>
@@ -350,7 +351,7 @@ type EvaluacionConvenio =
                     @if (isManualSource() && !callActive() && !rellamadaCallActive() && telefonosMetodo().length > 0) {
                       <div id="phone-selector-panel">
                         <div [class]="'text-xs font-semibold mt-1 ' + (errors()['phone'] && !selectedManualPhone() ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400')">
-                          {{ errors()['phone'] && !selectedManualPhone() ? '⚠ Seleccione un teléfono' : 'Teléfonos' }}
+                          {{ errors()['phone'] && !selectedManualPhone() ? 'âš  Seleccione un telÃ©fono' : 'TelÃ©fonos' }}
                         </div>
 
                         @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
@@ -399,9 +400,9 @@ type EvaluacionConvenio =
                         }
                       </div>
                     } @else {
-                      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">Teléfonos</div>
+                      <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-2">TelÃ©fonos</div>
 
-                      <!-- Teléfonos desde metodos_contacto -->
+                      <!-- TelÃ©fonos desde metodos_contacto -->
                       @if (telefonosMetodo().length > 0) {
                         @for (tel of telefonosMetodo(); track tel.numero; let i = $index) {
                           <div class="flex items-center gap-2 p-1.5 rounded border"
@@ -433,7 +434,7 @@ type EvaluacionConvenio =
                           </div>
                         }
                       } @else if (customerData().contacto.telefono_principal) {
-                        <!-- Fallback: mostrar teléfono de la tabla dinámica si metodos_contacto no tiene datos -->
+                        <!-- Fallback: mostrar telÃ©fono de la tabla dinÃ¡mica si metodos_contacto no tiene datos -->
                         <div class="flex items-center gap-2 p-1.5 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
                           <lucide-angular name="smartphone" [size]="14" class="text-green-600 dark:text-green-400"></lucide-angular>
                           <div class="flex-1 min-w-0">
@@ -466,12 +467,12 @@ type EvaluacionConvenio =
                         </div>
                       }
                     </div>
-                    <!-- Dirección -->
+                    <!-- DirecciÃ³n -->
                     @if (customerData().contacto.direccion) {
                       <div class="flex items-center gap-2 p-1.5 bg-orange-50 dark:bg-orange-950/30 rounded border border-orange-200 dark:border-orange-800">
                         <lucide-angular name="map-pin" [size]="14" class="text-orange-500 dark:text-orange-400 flex-shrink-0"></lucide-angular>
                         <div class="flex-1 min-w-0">
-                          <div class="text-xs text-orange-500 dark:text-orange-400">Dirección</div>
+                          <div class="text-xs text-orange-500 dark:text-orange-400">DirecciÃ³n</div>
                           <div class="text-xs font-semibold text-orange-700 dark:text-orange-300 break-words">{{ customerData().contacto.direccion }}</div>
                         </div>
                       </div>
@@ -489,7 +490,7 @@ type EvaluacionConvenio =
                   </div>
                   <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">Funcionalidad en Desarrollo</p>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center px-4">
-                    Las pautas de gestión estarán disponibles próximamente
+                    Las pautas de gestiÃ³n estarÃ¡n disponibles prÃ³ximamente
                   </p>
                 </div>
               }
@@ -524,7 +525,7 @@ type EvaluacionConvenio =
                           : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white')
                         : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
                   >
-                    {{ isMuted() ? '🔇 Activar' : '🔊 Silenciar' }}
+                    {{ isMuted() ? 'ðŸ”‡ Activar' : 'ðŸ”Š Silenciar' }}
                   </button>
                   <button
                     (click)="toggleHold()"
@@ -536,7 +537,7 @@ type EvaluacionConvenio =
                           : 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white')
                         : 'bg-gray-400 text-gray-200 cursor-not-allowed')"
                   >
-                    {{ isOnHold() ? '▶ Reanudar' : '⏸ Espera' }}
+                    {{ isOnHold() ? 'â–¶ Reanudar' : 'â¸ Espera' }}
                   </button>
                   <button
                     (click)="endCall()"
@@ -545,7 +546,7 @@ type EvaluacionConvenio =
                   >
                     Finalizar
                   </button>
-                  <!-- Botón WhatsApp -->
+                  <!-- BotÃ³n WhatsApp -->
                   <div class="relative">
                     <button
                       (click)="showWhatsappDropdown.set(!showWhatsappDropdown())"
@@ -559,7 +560,7 @@ type EvaluacionConvenio =
                       <div class="fixed inset-0 z-40" (click)="showWhatsappDropdown.set(false)"></div>
                       <div class="absolute right-0 top-full mt-1 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 p-3">
                         <div class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">Enviar mensaje por WhatsApp</div>
-                        <!-- Números del cliente -->
+                        <!-- NÃºmeros del cliente -->
                         @for (num of whatsappNumbers(); track num.label) {
                           <button
                             (click)="sendWhatsapp(num.number)"
@@ -577,7 +578,7 @@ type EvaluacionConvenio =
                         }
                         <!-- Input manual -->
                         <div class="border-t border-gray-200 dark:border-gray-600 pt-2 mt-1">
-                          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Otro número:</div>
+                          <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">Otro nÃºmero:</div>
                           <div class="flex gap-1.5">
                             <input
                               type="text"
@@ -598,7 +599,7 @@ type EvaluacionConvenio =
                       </div>
                     }
                   </div>
-                  <!-- Botón Rellamar -->
+                  <!-- BotÃ³n Rellamar -->
                   <div class="relative">
                     @if (!rellamadaCallActive()) {
                       <button
@@ -629,7 +630,7 @@ type EvaluacionConvenio =
                     @if (showRellamadaDropdown()) {
                       <div class="fixed inset-0 z-40" (click)="showRellamadaDropdown.set(false)"></div>
                       <div class="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-600 z-50 p-3">
-                        <div class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">Seleccionar número</div>
+                        <div class="text-xs font-bold text-gray-700 dark:text-gray-200 mb-2">Seleccionar nÃºmero</div>
                         @for (num of rellamadaPhoneNumbers(); track num.label) {
                           <button
                             (click)="iniciarRellamada(num.number)"
@@ -643,7 +644,7 @@ type EvaluacionConvenio =
                           </button>
                         }
                         @if (rellamadaPhoneNumbers().length === 0) {
-                          <div class="text-xs text-gray-400 dark:text-gray-500 py-1">No hay teléfonos registrados</div>
+                          <div class="text-xs text-gray-400 dark:text-gray-500 py-1">No hay telÃ©fonos registrados</div>
                         }
                       </div>
                     }
@@ -767,11 +768,11 @@ type EvaluacionConvenio =
                       </div>
                       @if (hasScheduleEnEvaluacion(schedule)) {
                         <div class="mt-1.5 text-xs text-white/80">
-                          <span class="font-semibold text-white">{{ schedule.cuotasPendientes }}</span> cuota(s) en evaluacion · Esperando aprobacion de supervisor
+                          <span class="font-semibold text-white">{{ schedule.cuotasPendientes }}</span> cuota(s) en evaluacion Â· Esperando aprobacion de supervisor
                         </div>
                       } @else if (schedule.cuotasPendientes > 0 && schedule.nextDueDate) {
                         <div class="mt-1.5 text-xs text-gray-700 dark:text-white/80">
-                          <span class="font-semibold text-gray-900 dark:text-white">{{ schedule.cuotasPendientes }}</span> pendiente(s) · Próx: <span class="font-semibold text-gray-900 dark:text-white">{{ formatDate(schedule.nextDueDate) }}</span>
+                          <span class="font-semibold text-gray-900 dark:text-white">{{ schedule.cuotasPendientes }}</span> pendiente(s) Â· PrÃ³x: <span class="font-semibold text-gray-900 dark:text-white">{{ formatDate(schedule.nextDueDate) }}</span>
                         </div>
                       }
                     </div>
@@ -780,9 +781,9 @@ type EvaluacionConvenio =
               </div>
             }
 
-            <!-- ULTIMO CONVENIO - Última promesa de tipo convenio cerrada en CUMPLIDO o VENCIDO.
+            <!-- ULTIMO CONVENIO - Ãšltima promesa de tipo convenio cerrada en CUMPLIDO o VENCIDO.
                  Es informativa: no bloquea registrar una nueva promesa. Se oculta cuando el
-                 cliente tiene una promesa Pendiente / Parcial / En Evaluación, porque en ese
+                 cliente tiene una promesa Pendiente / Parcial / En EvaluaciÃ³n, porque en ese
                  caso manda la tarjeta de promesa activa. -->
             @if (!hasActivePromiseWithPending()) {
               @if (ultimoConvenio(); as convenio) {
@@ -810,9 +811,9 @@ type EvaluacionConvenio =
                       </div>
                       <div class="flex items-center gap-1.5 flex-wrap text-xs text-gray-900 dark:text-gray-100">
                         <span class="font-bold">S/ {{ convenio.montoTotal.toFixed(2) }}</span>
-                        <span class="text-gray-300 dark:text-gray-600">·</span>
+                        <span class="text-gray-300 dark:text-gray-600">Â·</span>
                         <span>{{ convenio.totalCuotas }} cuota{{ convenio.totalCuotas === 1 ? '' : 's' }}</span>
-                        <span class="text-gray-300 dark:text-gray-600">·</span>
+                        <span class="text-gray-300 dark:text-gray-600">Â·</span>
                         <span class="text-gray-500 dark:text-gray-400 truncate" [title]="convenio.nombreAgente">{{ convenio.nombreAgente }}</span>
                       </div>
                     </div>
@@ -867,10 +868,10 @@ type EvaluacionConvenio =
               }
             }
 
-            <!-- Tipo de Gestión - DROPDOWNS EN LÍNEA -->
+            <!-- Tipo de GestiÃ³n - DROPDOWNS EN LÃNEA -->
             @if (usesHierarchicalClassifications()) {
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-3">
-                <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">Clasificación</div>
+                <div class="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase mb-2">ClasificaciÃ³n</div>
                 <div class="flex flex-wrap gap-2">
                   @for (level of hierarchyLevels(); track $index) {
                     @if (shouldShowLevel($index)) {
@@ -895,14 +896,14 @@ type EvaluacionConvenio =
                   }
                 </div>
                 @if (errors().tipoGestion) {
-                  <div class="text-red-500 text-xs mt-1">Seleccione una clasificación</div>
+                  <div class="text-red-500 text-xs mt-1">Seleccione una clasificaciÃ³n</div>
                 }
               </div>
             }
 
-            <!-- CONTINUIDAD DE PROMESA - Información cuando se selecciona CONTINUIDAD -->
+            <!-- CONTINUIDAD DE PROMESA - InformaciÃ³n cuando se selecciona CONTINUIDAD -->
             @if (esContinuidad()) {
-              <!-- Cargando verificación -->
+              <!-- Cargando verificaciÃ³n -->
               @if (isLoadingContinuidad()) {
                 <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-md p-3 animate-pulse">
                   <div class="flex items-center justify-center gap-2 text-amber-600 dark:text-amber-400">
@@ -927,7 +928,7 @@ type EvaluacionConvenio =
                 </div>
               }
 
-              <!-- Éxito: Aplica continuidad -->
+              <!-- Ã‰xito: Aplica continuidad -->
               @if (!isLoadingContinuidad() && continuidadData()) {
                 <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-2 border-amber-400 dark:border-amber-600 rounded-lg shadow-lg p-4 space-y-3">
                   <!-- Header -->
@@ -938,7 +939,7 @@ type EvaluacionConvenio =
                       </div>
                       <div>
                         <h4 class="text-sm font-bold text-amber-900 dark:text-amber-100">Continuidad de Promesa</h4>
-                        <p class="text-xs text-amber-600 dark:text-amber-300">El cliente tiene una promesa caída con pagos parciales</p>
+                        <p class="text-xs text-amber-600 dark:text-amber-300">El cliente tiene una promesa caÃ­da con pagos parciales</p>
                       </div>
                     </div>
                     <div class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
@@ -970,12 +971,12 @@ type EvaluacionConvenio =
                     </div>
                     @if (continuidadData()!.fechaVencimiento) {
                       <div class="text-xs text-gray-500 dark:text-gray-400 text-center">
-                        Promesa venció el: <span class="font-semibold">{{ continuidadData()!.fechaVencimiento }}</span>
+                        Promesa venciÃ³ el: <span class="font-semibold">{{ continuidadData()!.fechaVencimiento }}</span>
                       </div>
                     }
                   </div>
 
-                  <!-- Instrucción -->
+                  <!-- InstrucciÃ³n -->
                   <div class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg p-2">
                     <lucide-angular name="info" [size]="14"></lucide-angular>
                     <span>La nueva promesa debe ser por el saldo restante de <strong>{{ continuidadData()!.saldoRestante | appCurrency }}</strong></span>
@@ -987,7 +988,7 @@ type EvaluacionConvenio =
             <!-- BLOQUEO PROMESA DE PAGO ACTIVA - Mensaje cuando cliente tiene promesa activa -->
             @if (showPromesaActivaBlocking()) {
               @if (hasEvaluacionPromise()) {
-              <!-- Versión EN_EVALUACION -->
+              <!-- VersiÃ³n EN_EVALUACION -->
               <div class="bg-gradient-to-r from-purple-50 via-violet-50 to-purple-50 dark:from-purple-950/40 dark:via-violet-950/30 dark:to-purple-950/40 border-2 border-purple-400 dark:border-purple-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
                 <div class="flex items-center gap-4">
                   <div class="relative">
@@ -1024,7 +1025,7 @@ type EvaluacionConvenio =
                 </div>
               </div>
               } @else {
-              <!-- Versión normal: promesa activa con cuotas pendientes -->
+              <!-- VersiÃ³n normal: promesa activa con cuotas pendientes -->
               <div class="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 dark:from-red-950/40 dark:via-orange-950/30 dark:to-red-950/40 border-2 border-red-400 dark:border-red-600 rounded-xl shadow-xl p-5 animate-[slideInDown_0.3s_ease-out]">
                 <div class="flex items-center gap-4">
                   <div class="relative">
@@ -1057,7 +1058,7 @@ type EvaluacionConvenio =
                         </li>
                         <li class="flex items-center gap-2">
                           <lucide-angular name="x-circle" [size]="14" class="text-orange-500"></lucide-angular>
-                          <span>Cancelar la promesa activa si el cliente no cumplirá</span>
+                          <span>Cancelar la promesa activa si el cliente no cumplirÃ¡</span>
                         </li>
                         <li class="flex items-center gap-2">
                           <lucide-angular name="arrow-right" [size]="14" class="text-blue-500"></lucide-angular>
@@ -1070,7 +1071,7 @@ type EvaluacionConvenio =
                 <div class="mt-3 flex justify-center">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-xs font-semibold border border-red-300 dark:border-red-600">
                     <lucide-angular name="lock" [size]="14"></lucide-angular>
-                    Seleccione otra tipificación para continuar
+                    Seleccione otra tipificaciÃ³n para continuar
                   </span>
                 </div>
               </div>
@@ -1105,7 +1106,7 @@ type EvaluacionConvenio =
                     <div class="text-sm text-amber-700 dark:text-amber-300">
                       <p class="font-medium">
                         Solo {{ promesaVencidaGracia()?.nombreAgente }} puede registrar la nueva promesa con este cliente
-                        hasta el {{ promesaVencidaGracia()?.finGracia }} (período de gracia).
+                        hasta el {{ promesaVencidaGracia()?.finGracia }} (perÃ­odo de gracia).
                       </p>
                     </div>
                   </div>
@@ -1113,7 +1114,7 @@ type EvaluacionConvenio =
                 <div class="mt-3 flex justify-center">
                   <span class="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-full text-xs font-semibold border border-amber-300 dark:border-amber-600">
                     <lucide-angular name="lock" [size]="14"></lucide-angular>
-                    Seleccione otra tipificación para continuar
+                    Seleccione otra tipificaciÃ³n para continuar
                   </span>
                 </div>
               </div>
@@ -1174,24 +1175,24 @@ type EvaluacionConvenio =
                       }
                       @if (getPendingInstallments(schedule).length > 3) {
                         <div class="text-xs text-center text-gray-500 dark:text-gray-400 italic">
-                          + {{ getPendingInstallments(schedule).length - 3 }} cuotas más
+                          + {{ getPendingInstallments(schedule).length - 3 }} cuotas mÃ¡s
                         </div>
                       }
                     </div>
 
                     <!-- Quick Actions -->
                     <div class="flex gap-2 pt-1">
-                      <!-- Botón Usar Próxima Cuota - Mostrar si allowsInstallmentSelection es true -->
+                      <!-- BotÃ³n Usar PrÃ³xima Cuota - Mostrar si allowsInstallmentSelection es true -->
                       @if (selectedClassification()?.allowsInstallmentSelection === true) {
                         <button
                           type="button"
                           (click)="applyNextInstallmentPayment()"
                           class="flex-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white text-xs font-bold rounded transition-colors flex items-center justify-center gap-1">
-                          Usar Próxima Cuota
+                          Usar PrÃ³xima Cuota
                         </button>
                       }
 
-                      <!-- Botón Pagar Todo - Mostrar si suggestsFullAmount es true -->
+                      <!-- BotÃ³n Pagar Todo - Mostrar si suggestsFullAmount es true -->
                       @if (selectedClassification()?.suggestsFullAmount === true) {
                         <button
                           type="button"
@@ -1204,21 +1205,21 @@ type EvaluacionConvenio =
 
                     <!-- Info Note -->
                     <div class="text-xs text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/20 p-1.5 rounded flex items-start gap-1">
-                      <span>El pago se aplicará automáticamente a las cuotas pendientes en orden de vencimiento</span>
+                      <span>El pago se aplicarÃ¡ automÃ¡ticamente a las cuotas pendientes en orden de vencimiento</span>
                     </div>
                   </div>
                 }
               </div>
             }
 
-            <!-- Selector de Cuota para Cancelación -->
+            <!-- Selector de Cuota para CancelaciÃ³n -->
             @if (isCancellationTypification() && hasInstallmentsForCancellation()) {
               <div class="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3 space-y-2">
                 <div class="flex items-center gap-2">
-                  <span class="text-lg">💰</span>
+                  <span class="text-lg">ðŸ’°</span>
                   <div>
                     <h4 class="text-xs font-bold text-green-900 dark:text-green-100">Seleccionar Cuota a Cancelar</h4>
-                    <p class="text-xs text-green-600 dark:text-green-300">Elija qué cuota de la promesa de pago está cancelando</p>
+                    <p class="text-xs text-green-600 dark:text-green-300">Elija quÃ© cuota de la promesa de pago estÃ¡ cancelando</p>
                   </div>
                 </div>
 
@@ -1268,7 +1269,7 @@ type EvaluacionConvenio =
                 @if (overdueInstallments().length > 0) {
                   <div class="mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
                     <div class="flex items-center gap-2 mb-2">
-                      <span class="text-sm">⚠️</span>
+                      <span class="text-sm">âš ï¸</span>
                       <span class="text-xs font-bold text-amber-700 dark:text-amber-400">CUOTAS VENCIDAS - Pago retroactivo</span>
                     </div>
                     <div class="space-y-1.5">
@@ -1291,7 +1292,7 @@ type EvaluacionConvenio =
                             <div>
                               <span class="font-bold text-xs" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-slate-950' : 'text-slate-900 dark:text-slate-100'">Cuota {{ cuota.numeroCuota }}</span>
                               <span class="text-xs ml-2 font-medium" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'text-amber-900' : 'text-amber-700 dark:text-amber-300'">
-                                Venció: {{ formatDate(cuota.dueDate) }}
+                                VenciÃ³: {{ formatDate(cuota.dueDate) }}
                               </span>
                               @if (tienePagoParcial(cuota)) {
                                 <span class="text-xs ml-1 px-1 py-0.5 rounded" [class]="selectedInstallmentForCancellation()?.numeroCuota === cuota.numeroCuota ? 'bg-amber-500 text-slate-950' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'">Parcial</span>
@@ -1310,7 +1311,7 @@ type EvaluacionConvenio =
                       }
                     </div>
                     <div class="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                      Cliente pagó a tiempo pero envió comprobante después del vencimiento. Al registrar el pago completo, las cuotas siguientes se reactivarán.
+                      Cliente pagÃ³ a tiempo pero enviÃ³ comprobante despuÃ©s del vencimiento. Al registrar el pago completo, las cuotas siguientes se reactivarÃ¡n.
                     </div>
                   </div>
                 }
@@ -1319,7 +1320,7 @@ type EvaluacionConvenio =
                 @if (!selectedInstallmentForCancellation() && (pendingInstallmentsForCancellation().length > 0 || overdueInstallments().length > 0)) {
                   <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded flex items-center gap-1">
                     <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
-                    <span>Debe seleccionar una cuota para registrar la cancelación</span>
+                    <span>Debe seleccionar una cuota para registrar la cancelaciÃ³n</span>
                   </div>
                 }
 
@@ -1365,12 +1366,12 @@ type EvaluacionConvenio =
                         </p>
                         @if (!isCancellationPaymentDateValid()) {
                           <p class="text-xs text-red-600 dark:text-red-400 mt-0.5 font-semibold">
-                            La fecha de pago no es válida para la cuota seleccionada.
+                            La fecha de pago no es vÃ¡lida para la cuota seleccionada.
                           </p>
                         }
                       </div>
                     </div>
-                    <!-- Info de distribución si el monto es diferente -->
+                    <!-- Info de distribuciÃ³n si el monto es diferente -->
                     @if (montoPagoEditable() !== selectedInstallmentForCancellation()?.monto) {
                       <div class="mt-2 p-2 rounded-lg text-xs"
                            [class]="montoPagoEditable() < selectedInstallmentForCancellation()?.monto
@@ -1379,12 +1380,12 @@ type EvaluacionConvenio =
                         @if (montoPagoEditable() < selectedInstallmentForCancellation()?.monto) {
                           <span class="flex items-center gap-1">
                             <lucide-angular name="alert-triangle" [size]="14"></lucide-angular>
-                            <span><strong>Pago parcial:</strong> La cuota quedará con saldo pendiente de S/ {{ (selectedInstallmentForCancellation()?.monto - montoPagoEditable()).toFixed(2) }}</span>
+                            <span><strong>Pago parcial:</strong> La cuota quedarÃ¡ con saldo pendiente de S/ {{ (selectedInstallmentForCancellation()?.monto - montoPagoEditable()).toFixed(2) }}</span>
                           </span>
                         } @else {
                           <span class="flex items-center gap-1">
-                            <span>ℹ️</span>
-                            <span><strong>Pago mayor:</strong> El excedente de S/ {{ (montoPagoEditable() - selectedInstallmentForCancellation()?.monto).toFixed(2) }} se aplicará a las siguientes cuotas</span>
+                            <span>â„¹ï¸</span>
+                            <span><strong>Pago mayor:</strong> El excedente de S/ {{ (montoPagoEditable() - selectedInstallmentForCancellation()?.monto).toFixed(2) }} se aplicarÃ¡ a las siguientes cuotas</span>
                           </span>
                         }
                       </div>
@@ -1401,12 +1402,12 @@ type EvaluacionConvenio =
               </div>
             }
 
-            <!-- Botón para subir comprobante (opcional) - Sin OCR -->
+            <!-- BotÃ³n para subir comprobante (opcional) - Sin OCR -->
             @if (isCancellationTypification() && selectedInstallmentForCancellation()) {
               <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/30 dark:to-indigo-950/30 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
-                    <span class="text-lg">📎</span>
+                    <span class="text-lg">ðŸ“Ž</span>
                     <div>
                       <h4 class="text-xs font-bold text-purple-900 dark:text-purple-100">Comprobante de Pago</h4>
                       <p class="text-xs text-purple-600 dark:text-purple-300">Opcional: Adjunta una imagen del voucher</p>
@@ -1460,7 +1461,7 @@ type EvaluacionConvenio =
               </div>
             }
 
-            <!-- Sección de Campos Dinámicos / Adicionales -->
+            <!-- SecciÃ³n de Campos DinÃ¡micos / Adicionales -->
             @if (isLoadingDynamicFields() && shouldShowDynamicForm()) {
               <div class="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-900/50 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-indigo-600 dark:text-indigo-400">
@@ -1470,12 +1471,12 @@ type EvaluacionConvenio =
             }
 
             <!-- Fallo al cargar: NO depende de isLeafClassification(), porque cuando la
-                 carga falla el backend no llega a decir si es hoja y el aviso quedaría oculto. -->
+                 carga falla el backend no llega a decir si es hoja y el aviso quedarÃ­a oculto. -->
             @if (!isLoadingDynamicFields() && dynamicFieldsError() && shouldShowDynamicForm()) {
               <div class="bg-red-50 dark:bg-red-950/20 border border-red-300 dark:border-red-900/50 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-xs text-red-700 dark:text-red-300">
-                    No se pudieron cargar los campos adicionales. No guardes la gestión hasta reintentar.
+                    No se pudieron cargar los campos adicionales. No guardes la gestiÃ³n hasta reintentar.
                   </span>
                   <button
                     type="button"
@@ -1490,7 +1491,7 @@ type EvaluacionConvenio =
             @if (!isLoadingDynamicFields() && !dynamicFieldsError() && isLeafClassification() && dynamicFields().length === 0 && shouldShowDynamicForm()) {
               <div class="bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded-lg shadow-md p-3">
                 <div class="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
-                  <span class="text-xs">Esta clasificación no tiene campos adicionales configurados</span>
+                  <span class="text-xs">Esta clasificaciÃ³n no tiene campos adicionales configurados</span>
                 </div>
               </div>
             }
@@ -1507,22 +1508,22 @@ type EvaluacionConvenio =
               />
             }
 
-            <!-- Botones de Acción - COMPACTOS -->
+            <!-- Botones de AcciÃ³n - COMPACTOS -->
             <div class="flex gap-2 pt-2">
-              <!-- Botón de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
+              <!-- BotÃ³n de Guardar (las excepciones se guardan con estado EN_EVALUACION) -->
               <button
                 (click)="saveManagement()"
                 [disabled]="saving() || !isFormValid() || rellamadaCallActive() || (isCancellationTypification() && !hasInstallmentsForCancellation()) || (isCancellationTypification() && hasInstallmentsForCancellation() && !selectedInstallmentForCancellation()) || !isCancellationPaymentDateValid()"
-                [title]="'Guardando: ' + saving() + ' | Válido: ' + isFormValid() + ' | Fecha pago válida: ' + isCancellationPaymentDateValid()"
+                [title]="'Guardando: ' + saving() + ' | VÃ¡lido: ' + isFormValid() + ' | Fecha pago vÃ¡lida: ' + isCancellationPaymentDateValid()"
                 class="flex-1 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 disabled:from-gray-400 disabled:to-gray-500 text-white disabled:text-gray-200 py-2 px-4 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 @if (saving()) {
                   Guardando...
                 } @else {
-                  Guardar Gestión
+                  Guardar GestiÃ³n
                 }
               </button>
-              <!-- Botón Cancelar oculto para forzar que el agente siempre guarde una tipificación -->
+              <!-- BotÃ³n Cancelar oculto para forzar que el agente siempre guarde una tipificaciÃ³n -->
             </div>
           </div>
         </div>
@@ -1547,7 +1548,7 @@ type EvaluacionConvenio =
               </div>
             }
 
-             <!-- Resumen Rápido Deuda -->
+             <!-- Resumen RÃ¡pido Deuda -->
              <div [class]="'p-2 ' + purchaseSummaryClass()">
                <div class="text-center">
                  <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ primaryAmountField().label }}</div>
@@ -1555,7 +1556,10 @@ type EvaluacionConvenio =
                  @if (clientHeaderFields().length > 0) {
                     <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
                       @for (field of clientHeaderFields(); track field.field) {
-                        <div class="flex min-w-0 items-baseline justify-between gap-2">
+                        <div
+                          class="flex min-w-0 items-baseline justify-between gap-2"
+                          [style.font-size]="field.field === 'dias_mora' || field.field === 'dias_mora_asig' ? 'calc(var(--app-font-size) * 0.9375)' : null"
+                        >
                           <span class="whitespace-nowrap font-semibold uppercase">{{ field.label }}:</span>
                           <span class="min-w-0 truncate text-right font-bold" [title]="field.value">{{ field.value }}</span>
                         </div>
@@ -1565,7 +1569,7 @@ type EvaluacionConvenio =
                </div>
              </div>
 
-            <!-- Montos de la Cuenta (click para seleccionar como base de cálculo) -->
+            <!-- Montos de la Cuenta (click para seleccionar como base de cÃ¡lculo) -->
             <div class="p-2 flex-1 overflow-y-auto">
               @if (clientAmountFields().length > 0) {
                 <div class="space-y-1.5">
@@ -1634,7 +1638,7 @@ type EvaluacionConvenio =
           <div class="px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Historial de Gestiones</h3>
-              <!-- Tabs Actual / Histórico -->
+              <!-- Tabs Actual / HistÃ³rico -->
               <div class="flex items-center border border-slate-300 dark:border-slate-600 rounded overflow-hidden">
                 <button
                   (click)="cambiarTabHistorial('actual')"
@@ -1650,7 +1654,7 @@ type EvaluacionConvenio =
                     (historialTabActivo() === 'historico'
                       ? 'bg-purple-600 text-white'
                       : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')">
-                  Histórico
+                  HistÃ³rico
                 </button>
               </div>
               @if (historialTabActivo() === 'actual') {
@@ -1659,14 +1663,14 @@ type EvaluacionConvenio =
                 <span class="text-xs text-slate-500 dark:text-slate-400">({{ historialHistorico().length }}/{{ historialHistoricoTotalElements() }})</span>
               }
             </div>
-            <!-- Botón de expandir/contraer - Centro -->
+            <!-- BotÃ³n de expandir/contraer - Centro -->
             <button
               (click)="historialExpanded.set(!historialExpanded())"
               class="w-6 h-6 flex items-center justify-center rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               [title]="historialExpanded() ? 'Contraer historial' : 'Expandir historial'">
               <lucide-angular [name]="historialExpanded() ? 'chevron-down' : 'chevron-up'" [size]="16"></lucide-angular>
             </button>
-            <!-- Filtros de tipificación (solo para tab Actual) -->
+            <!-- Filtros de tipificaciÃ³n (solo para tab Actual) -->
             @if (historialTabActivo() === 'actual') {
               <div class="flex items-center gap-1">
                 <button
@@ -1694,11 +1698,11 @@ type EvaluacionConvenio =
                   [CI]
                 </button>
                 <button (click)="loadManagementHistory()" class="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
-                  <span>↻</span>
+                  <span>â†»</span>
                 </button>
               </div>
             } @else {
-              <!-- Paginación para tab Histórico -->
+              <!-- PaginaciÃ³n para tab HistÃ³rico -->
               <div class="flex items-center gap-2">
                 <button
                   (click)="cambiarPaginaHistorico('anterior')"
@@ -1707,10 +1711,10 @@ type EvaluacionConvenio =
                     (historialHistoricoPage() === 0 || historialHistoricoLoading()
                       ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
-                  ← Ant
+                  â† Ant
                 </button>
                 <span class="text-xs text-slate-500 dark:text-slate-400">
-                  Pág {{ historialHistoricoPage() + 1 }} de {{ historialHistoricoTotalPages() }}
+                  PÃ¡g {{ historialHistoricoPage() + 1 }} de {{ historialHistoricoTotalPages() }}
                 </span>
                 <button
                   (click)="cambiarPaginaHistorico('siguiente')"
@@ -1719,10 +1723,10 @@ type EvaluacionConvenio =
                     (historialHistoricoPage() >= historialHistoricoTotalPages() - 1 || historialHistoricoLoading()
                       ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600')">
-                  Sig →
+                  Sig â†’
                 </button>
                 <button (click)="loadHistorialHistorico(historialHistoricoPage())" class="ml-1 text-xs text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
-                  <span>↻</span>
+                  <span>â†»</span>
                 </button>
               </div>
             }
@@ -1744,7 +1748,7 @@ type EvaluacionConvenio =
                     <table class="text-xs table-auto" style="min-width: max-content;">
                       <thead class="bg-slate-100 dark:bg-slate-800 sticky top-0">
                         <tr class="text-left text-slate-600 dark:text-slate-300">
-                          @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
+                          @for (col of ['Fecha','Asesor','TipificaciÃ³n','TelÃ©fono','Promesa','ObservaciÃ³n','Estado','VÃ­a']; track col; let i = $index) {
                             <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
                                 [class.text-center]="col === 'Estado'">
                               {{ col }}
@@ -1857,20 +1861,20 @@ type EvaluacionConvenio =
                 </div>
               }
             } @else {
-              <!-- TAB HISTÓRICO -->
+              <!-- TAB HISTÃ“RICO -->
               @if (historialHistoricoLoading()) {
                 <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
-                  <span class="animate-pulse">Cargando historial histórico...</span>
+                  <span class="animate-pulse">Cargando historial histÃ³rico...</span>
                 </div>
               } @else if (historialHistorico().length === 0) {
                 <div class="flex items-center justify-center h-full text-slate-400 dark:text-slate-500 text-xs">
-                  Sin gestiones históricas para este cliente
+                  Sin gestiones histÃ³ricas para este cliente
                 </div>
               } @else {
                 <table class="text-xs table-auto" style="min-width: max-content;">
                   <thead class="bg-purple-50 dark:bg-purple-900/20 sticky top-0">
                     <tr class="text-left text-slate-600 dark:text-slate-300">
-                      @for (col of ['Fecha','Asesor','Tipificación','Teléfono','Promesa','Observación','Estado','Vía']; track col; let i = $index) {
+                      @for (col of ['Fecha','Asesor','TipificaciÃ³n','TelÃ©fono','Promesa','ObservaciÃ³n','Estado','VÃ­a']; track col; let i = $index) {
                         <th class="px-2 py-1 font-semibold relative select-none" [style.width.px]="historialColWidths()[i]"
                             [class.text-center]="col === 'Estado'">
                           {{ col }}
@@ -1939,7 +1943,7 @@ type EvaluacionConvenio =
               <div class="flex items-center gap-3">
                 <div>
                   <h2 class="text-lg font-bold">Cronograma de Pagos</h2>
-                  <p class="text-sm opacity-90">Gestión {{ scheduleManagementId() }}</p>
+                  <p class="text-sm opacity-90">GestiÃ³n {{ scheduleManagementId() }}</p>
                 </div>
               </div>
               <button
@@ -2015,7 +2019,7 @@ type EvaluacionConvenio =
 })
 export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquearSalida {
   protected callActive = signal(false);
-  // El contexto se actualiza como una unidad para no mezclar ficha, teléfono e ID de llamadas distintas.
+  // El contexto se actualiza como una unidad para no mezclar ficha, telÃ©fono e ID de llamadas distintas.
   protected activeCallContext = signal<ActiveCallContext>({ ...EMPTY_CALL_CONTEXT });
   protected activeCallPhone = computed(() => this.activeCallContext().telefono);
   protected activeCallClientId = computed(() => this.activeCallContext().clienteId);
@@ -2033,17 +2037,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected phoneDuplicateMessage = signal('El contacto ya existe para este cliente.');
   protected animateEntry = signal(true);
   protected activeTab = signal('cliente');
-  protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificación
+  protected isTipifying = signal(false); // Bloquea llamadas entrantes durante tipificaciÃ³n
 
   // Rellamada signals
   protected isRellamada = signal(false);          // Flag: rellamada en progreso
   protected rellamadaCallActive = signal(false);  // Flag: SIP de rellamada conectado
-  protected showRellamadaDropdown = signal(false); // UI: dropdown de números
+  protected showRellamadaDropdown = signal(false); // UI: dropdown de nÃºmeros
   protected dialerContactId = signal<number | null>(null); // contacto_id de la llamada del discador (para rellamadas)
   // Evita hacer muchos clicks en rellamada y saturar el SIP
   protected canRellamar = computed(() => !this.callActive() && !this.rellamadaCallActive() && !this.isRellamada() && !!this.customerData()?.id);
 
-  // "Teléfono Contactado" queda BLOQUEADO cuando el número proviene de una llamada/rellamada
+  // "TelÃ©fono Contactado" queda BLOQUEADO cuando el nÃºmero proviene de una llamada/rellamada
   // (activeCallPhone) y pertenece al cliente: el asesor ya no puede cambiarlo manualmente.
   protected telefonoContactadoBloqueado = computed(() =>
     !!this.activeCallPhone() && this.telefonosMetodo().some(t => t.numero === this.activeCallPhone()));
@@ -2053,8 +2057,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected excedeTiempoMaximo = signal(false);
   private agentStatusSubscription?: Subscription;
 
-  // [DESACTIVADO] Signals para autorización de montos personalizados en tiempo real
-  // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después
+  // [DESACTIVADO] Signals para autorizaciÃ³n de montos personalizados en tiempo real
+  // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban despuÃ©s
   // protected requiresAuthorization = signal(false);
   // protected waitingForAuthorization = signal(false);
   // showSupervisorModal = false;
@@ -2088,7 +2092,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Tab activo del historial: 'actual' | 'historico'
   protected historialTabActivo = signal<'actual' | 'historico'>('actual');
 
-  // Signals para historial histórico (base de datos antigua)
+  // Signals para historial histÃ³rico (base de datos antigua)
   protected historialHistorico = signal<Array<{
     id: number;
     fecha: string;
@@ -2112,12 +2116,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected historialPromesaLoadingByGroupUuid = signal<Record<string, boolean>>({});
   protected historialPromesaInstallmentsByGroupUuid = signal<Record<string, InstallmentResource[]>>({});
 
-  // Computed signal para filtrar el historial según el filtro seleccionado
+  // Computed signal para filtrar el historial segÃºn el filtro seleccionado
   protected historialGestionesFiltrado = computed(() => {
     const filter = this.historialFilter();
     const gestiones = this.historialGestiones();
 
-    // Las gestiones automáticas (PROGRESIVO, PREDICTIVO, etc.) ya se excluyen en el backend
+    // Las gestiones automÃ¡ticas (PROGRESIVO, PREDICTIVO, etc.) ya se excluyen en el backend
 
     if (filter === 'TODOS') {
       return gestiones;
@@ -2150,7 +2154,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   testDocument = '';
   testPhone = '';
 
-  // Configuración de outputs del cliente
+  // ConfiguraciÃ³n de outputs del cliente
   customerOutputFields = signal<any[]>([]);
 
   campaign = computed(() => this.systemConfigService.getCampaign());
@@ -2184,7 +2188,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         flattened.push({
           ...item,
           indentLevel: level,
-          displayLabel: '  '.repeat(level) + (level > 0 ? '└─ ' : '') + `[${item.codigo}] ${item.label}`
+          displayLabel: '  '.repeat(level) + (level > 0 ? 'â””â”€ ' : '') + `[${item.codigo}] ${item.label}`
         });
         const itemIdStr = String(item.id);
         const itemChildren = children.get(itemIdStr) || [];
@@ -2204,7 +2208,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   periodicities = computed(() => this.systemConfigService.getScheduleConfig().periodicidades);
 
   // Computed para obtener los montos disponibles del cliente (de la tabla ini_*)
-  // Respeta la configuración del admin: si hay config, solo muestra las habilitadas
+  // Respeta la configuraciÃ³n del admin: si hay config, solo muestra las habilitadas
   // Usa nombres visuales de montoCabeceras como fuente de verdad
   customerPaymentAmounts = computed<AmountOption[]>(() => {
     const rawData = this.rawClientData();
@@ -2217,7 +2221,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return [];
     }
 
-    // Crear mapa de código -> nombre visual desde cabeceras
+    // Crear mapa de cÃ³digo -> nombre visual desde cabeceras
     const codigoToNombre = new Map<string, string>();
     for (const c of cabeceras) {
       codigoToNombre.set(c.codigo.toLowerCase(), c.nombre);
@@ -2225,14 +2229,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     const amounts: AmountOption[] = [];
 
-    // Si hay configuración en el mantenimiento, solo mostrar las opciones habilitadas
+    // Si hay configuraciÃ³n en el mantenimiento, solo mostrar las opciones habilitadas
     if (hasConfig) {
-      // Solo incluir los campos que están en enabledOptions
+      // Solo incluir los campos que estÃ¡n en enabledOptions
       for (const option of enabledOptions) {
         // Handle "personalizado" option specially - add as custom option marker
         if (option.codigoOpcion === 'personalizado') {
           amounts.push({
-            label: 'Excepción',
+            label: 'ExcepciÃ³n',
             value: -1, // Special marker for custom amount
             field: 'personalizado',
             generaCartaAcuerdo: option.generaCartaAcuerdo || false,
@@ -2279,7 +2283,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
       console.log('[PAYMENT] Amounts from CONFIG (enabled only):', amounts.length);
     } else {
-      // No hay configuración: usar montoCabeceras si están disponibles
+      // No hay configuraciÃ³n: usar montoCabeceras si estÃ¡n disponibles
       if (cabeceras.length > 0) {
         // Usar solo los campos definidos en cabeceras (montos reales)
         for (const cabecera of cabeceras) {
@@ -2307,7 +2311,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    // Ordenar por valor descendente (montos más altos primero, pero "personalizado" va al final)
+    // Ordenar por valor descendente (montos mÃ¡s altos primero, pero "personalizado" va al final)
     amounts.sort((a, b) => {
       if (a.field === 'personalizado') return 1;
       if (b.field === 'personalizado') return -1;
@@ -2345,14 +2349,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   isLoadingDynamicFields = signal(false);
   isLeafClassification = signal(false);
   dynamicFieldsSchema = signal<MetadataSchema | null>(null);
-  // Error al cargar los campos dinámicos. Antes un fallo se disfrazaba de
-  // "esta clasificación no tiene campos": el asesor no veía nada y el error
-  // recién aparecía al guardar. Ahora se muestra y se puede reintentar.
+  // Error al cargar los campos dinÃ¡micos. Antes un fallo se disfrazaba de
+  // "esta clasificaciÃ³n no tiene campos": el asesor no veÃ­a nada y el error
+  // reciÃ©n aparecÃ­a al guardar. Ahora se muestra y se puede reintentar.
   dynamicFieldsError = signal<string | null>(null);
   private lastDynamicFieldsTypificationId: number | null = null;
   externalFieldUpdates = signal<any>({}); // Para comunicar actualizaciones externas al componente hijo
 
-  // ViewChild para acceder al componente de campos dinámicos
+  // ViewChild para acceder al componente de campos dinÃ¡micos
   @ViewChild('dynamicFieldRendererComponent') dynamicFieldRenderer?: DynamicFieldRendererComponent;
 
   // Payment schedule signals
@@ -2360,7 +2364,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   isLoadingSchedules = signal(false);
   showScheduleHelper = signal(false);
 
-  // Computed para obtener la clasificación seleccionada actual con sus propiedades de tipo
+  // Computed para obtener la clasificaciÃ³n seleccionada actual con sus propiedades de tipo
   selectedClassification = computed<ManagementClassification | null>(() => {
     const selectedIds = this.selectedClassifications();
     if (selectedIds.length === 0) return null;
@@ -2382,41 +2386,41 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return found as ManagementClassification || null;
   });
 
-  // Computed para determinar si el formulario es válido y completo para habilitar el botón guardar
+  // Computed para determinar si el formulario es vÃ¡lido y completo para habilitar el botÃ³n guardar
   isFormValid = computed(() => {
     // 0. Verificar bloqueo de promesa activa
     if (this.showPromesaActivaBlocking()) {
-      console.log('[isFormValid] ❌ Bloqueado: cliente tiene promesa activa');
+      console.log('[isFormValid] âŒ Bloqueado: cliente tiene promesa activa');
       return false;
     }
 
-    // 0.1 Verificar bloqueo por período de gracia de promesa vencida de otro asesor
+    // 0.1 Verificar bloqueo por perÃ­odo de gracia de promesa vencida de otro asesor
     if (this.showPromesaVencidaGraciaBlocking()) {
-      console.log('[isFormValid] ❌ Bloqueado: cliente en período de gracia de otro asesor');
+      console.log('[isFormValid] âŒ Bloqueado: cliente en perÃ­odo de gracia de otro asesor');
       return false;
     }
 
-    // 1. Verificar clasificación seleccionada
+    // 1. Verificar clasificaciÃ³n seleccionada
     if (this.usesHierarchicalClassifications()) {
-      // Sistema jerárquico: verificar que se haya seleccionado al menos una clasificación
+      // Sistema jerÃ¡rquico: verificar que se haya seleccionado al menos una clasificaciÃ³n
       const selected = this.selectedClassifications();
 
       if (selected.length === 0 || !selected[selected.length - 1]) {
-        console.log('[isFormValid] ❌ No hay clasificación seleccionada');
+        console.log('[isFormValid] âŒ No hay clasificaciÃ³n seleccionada');
         return false;
       }
 
-      // Verificar que no haya más niveles disponibles (no debe haber hijos)
+      // Verificar que no haya mÃ¡s niveles disponibles (no debe haber hijos)
       const lastSelectedId = selected[selected.length - 1];
       const all: any[] = this.managementClassifications() as any[];
       const hasChildren = all.some((c: any) => c.parentId && Number(c.parentId) === Number(lastSelectedId));
 
-      // Solo es válido si no hay hijos disponibles
+      // Solo es vÃ¡lido si no hay hijos disponibles
       if (hasChildren) {
-        console.log('[isFormValid] ❌ Aún hay niveles por seleccionar, lastSelectedId:', lastSelectedId);
+        console.log('[isFormValid] âŒ AÃºn hay niveles por seleccionar, lastSelectedId:', lastSelectedId);
         return false;
       }
-      console.log('[isFormValid] ✅ Clasificación completa:', selected);
+      console.log('[isFormValid] âœ… ClasificaciÃ³n completa:', selected);
     } else {
       // Sistema simple: verificar resultado de contacto
       if (!this.managementForm.resultadoContacto) {
@@ -2424,15 +2428,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    // 1.5 Si los campos dinámicos no se pudieron cargar, NO dejar guardar.
-    // Antes el schema quedaba vacío, el bucle de requeridos de abajo no corría y
-    // la gestión se enviaba sin un campo obligatorio: el error saltaba recién al guardar.
+    // 1.5 Si los campos dinÃ¡micos no se pudieron cargar, NO dejar guardar.
+    // Antes el schema quedaba vacÃ­o, el bucle de requeridos de abajo no corrÃ­a y
+    // la gestiÃ³n se enviaba sin un campo obligatorio: el error saltaba reciÃ©n al guardar.
     if (this.dynamicFieldsError()) {
-      console.log('[isFormValid] ❌ Bloqueado: los campos adicionales no cargaron');
+      console.log('[isFormValid] âŒ Bloqueado: los campos adicionales no cargaron');
       return false;
     }
 
-    // 2. Verificar campos dinámicos requeridos
+    // 2. Verificar campos dinÃ¡micos requeridos
     const schema = this.dynamicFieldsSchema();
     const dynamicValues = this.dynamicFieldValues();
 
@@ -2445,16 +2449,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           const value = dynamicValues[field.id];
           console.log(`[isFormValid] Campo '${field.id}' (required=${field.required}): valor='${value}'`);
 
-          // Campo vacío
+          // Campo vacÃ­o
           if (value === undefined || value === null || value === '') {
-            console.log(`[isFormValid] ❌ Campo requerido '${field.id}' está vacío`);
+            console.log(`[isFormValid] âŒ Campo requerido '${field.id}' estÃ¡ vacÃ­o`);
             return false;
           }
 
           // Tabla sin filas
           if (field.type === 'table') {
             if (!Array.isArray(value) || value.length === 0) {
-              console.log(`[isFormValid] ❌ Tabla '${field.id}' sin filas`);
+              console.log(`[isFormValid] âŒ Tabla '${field.id}' sin filas`);
               return false;
             }
           }
@@ -2462,7 +2466,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    console.log('[isFormValid] ✅ Formulario válido!');
+    console.log('[isFormValid] âœ… Formulario vÃ¡lido!');
     return true;
   });
 
@@ -2492,7 +2496,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         if (children.length > 0) {
           levels.push(children);
         } else {
-          console.log(`[hierarchyLevels] No se encontraron hijos, deteniendo búsqueda`);
+          console.log(`[hierarchyLevels] No se encontraron hijos, deteniendo bÃºsqueda`);
           break;
         }
       }
@@ -2516,22 +2520,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   customerData = signal<CustomerData>({} as CustomerData);
   isLoadingCustomer = signal(false);
 
-  // Jerarquía del cliente (inquilino/cartera/subcartera) para mostrar el contexto
+  // JerarquÃ­a del cliente (inquilino/cartera/subcartera) para mostrar el contexto
   // Ej: "Financiera Oh / CASTIGO / CASTIGO". Viene de /client-search/find.
   clientHierarchy = signal<{ inquilino: string; cartera: string; subcartera: string } | null>(null);
 
-  // Teléfonos desde metodos_contacto
+  // TelÃ©fonos desde metodos_contacto
   telefonosMetodo = signal<TelefonoMetodo[]>([]);
 
-  // Teléfono seleccionado para gestión manual (sin llamada)
+  // TelÃ©fono seleccionado para gestiÃ³n manual (sin llamada)
   selectedManualPhone = signal<string>('');
 
-  // True solo cuando estamos en gestión manual sin llamada activa → habilita selección en el panel "Teléfonos"
+  // True solo cuando estamos en gestiÃ³n manual sin llamada activa â†’ habilita selecciÃ³n en el panel "TelÃ©fonos"
   protected modoSeleccionTelefono = computed(() =>
       this.isManualSource() && !this.callActive() && !this.rellamadaCallActive()
     );
 
-  // Agregar teléfono
+  // Agregar telÃ©fono
   showAddContactForm = signal(false);
   newContactType: 'telefono' | 'email' = 'telefono';
   newPhoneNumber = '';
@@ -2555,7 +2559,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         .filter(t => /^9\d{8}$/.test(t.numero.trim()))
         .map(t => ({ number: t.numero.trim(), label: this.subtipoLabel(t.subtipo) }));
     }
-    // Fallback: usar datos estáticos de la tabla dinámica
+    // Fallback: usar datos estÃ¡ticos de la tabla dinÃ¡mica
     const data = this.customerData();
     const nums: { number: string; label: string }[] = [];
     if (data?.contacto) {
@@ -2576,7 +2580,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         .filter(t => t.numero.trim().length >= 7)
         .map(t => ({ number: t.numero.trim(), label: this.subtipoLabel(t.subtipo) }));
     }
-    // Fallback: usar datos estáticos de la tabla dinámica
+    // Fallback: usar datos estÃ¡ticos de la tabla dinÃ¡mica
     const data = this.customerData();
     const nums: { number: string; label: string }[] = [];
     if (data?.contacto) {
@@ -2648,14 +2652,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   activePaymentSchedules = signal<any[]>([]);
   allPaymentSchedules = signal<any[]>([]);
 
-  // Última promesa de tipo convenio cerrada (CUMPLIDO / VENCIDO). Solo lectura.
+  // Ãšltima promesa de tipo convenio cerrada (CUMPLIDO / VENCIDO). Solo lectura.
   protected ultimoConvenio = signal<UltimoConvenio | null>(null);
   protected ultimoConvenioExpandido = signal<boolean>(false);
   promesaVencidaGracia = signal<PromesaVencidaGraciaResponse | null>(null);
   reprogrammingCuotaId = signal<number | null>(null);
   reprogramDateDraft = signal<string>('');
 
-  // Cuota seleccionada para cancelación/pago
+  // Cuota seleccionada para cancelaciÃ³n/pago
   selectedInstallmentForCancellation = signal<any | null>(null);
 
   // Campos editables para el pago
@@ -2663,28 +2667,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   fechaPagoEditable = signal<string>('');
   todayDate = new Date().toISOString().split('T')[0];
 
-  // Comprobante subido para la cancelación (opcional)
+  // Comprobante subido para la cancelaciÃ³n (opcional)
   uploadedComprobante = signal<ComprobanteUploadResponse | null>(null);
-  // Flag para indicar que se está subiendo un comprobante
+  // Flag para indicar que se estÃ¡ subiendo un comprobante
   isUploadingComprobante = signal<boolean>(false);
 
-  // Computed para detectar si la tipificación seleccionada es de tipo Cancelación (código CA)
+  // Computed para detectar si la tipificaciÃ³n seleccionada es de tipo CancelaciÃ³n (cÃ³digo CA)
   isCancellationTypification = computed(() => {
     const selected = this.selectedClassification();
     if (!selected) return false;
-    // Detectar por código "CA" o por label que contenga "CANCELACION"
+    // Detectar por cÃ³digo "CA" o por label que contenga "CANCELACION"
     return selected.codigo === 'CA' ||
            selected.label?.toUpperCase().includes('CANCELACION') ||
-           selected.label?.toUpperCase().includes('CANCELACIÓN');
+           selected.label?.toUpperCase().includes('CANCELACIÃ“N');
   });
 
-  // Computed para obtener las cuotas pendientes de la ÚLTIMA promesa activa
+  // Computed para obtener las cuotas pendientes de la ÃšLTIMA promesa activa
   // IMPORTANTE: Solo incluye cuotas que pueden ser canceladas (fecha de pago >= hoy)
   pendingInstallmentsForCancellation = computed(() => {
     const schedules = this.activePaymentSchedules();
     if (schedules.length === 0) return [];
 
-    // Solo la última promesa (la más reciente, ya viene ordenada DESC del backend)
+    // Solo la Ãºltima promesa (la mÃ¡s reciente, ya viene ordenada DESC del backend)
     const latestSchedule = schedules[0];
     const allPending: any[] = [];
     const today = new Date();
@@ -2713,13 +2717,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return this.sortInstallmentsByDueDate(allPending);
   });
 
-  // Computed para obtener cuotas VENCIDAS de la promesa inmediata más reciente
-  // Flujo separado: no altera la lógica histórica de promesas activas
+  // Computed para obtener cuotas VENCIDAS de la promesa inmediata mÃ¡s reciente
+  // Flujo separado: no altera la lÃ³gica histÃ³rica de promesas activas
   overdueInstallments = computed(() => {
     const schedules = this.allPaymentSchedules();
     if (schedules.length === 0) return [];
 
-    // Solo la última promesa (la más reciente)
+    // Solo la Ãºltima promesa (la mÃ¡s reciente)
     const latestSchedule = schedules[0];
     const overdue: any[] = [];
     const today = new Date();
@@ -2797,7 +2801,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   cancellationPaymentMinDateLabel = computed(() => {
     const minDate = this.cancellationPaymentMinDate();
-    return minDate ? this.formatDate(minDate) : 'Sin límite';
+    return minDate ? this.formatDate(minDate) : 'Sin lÃ­mite';
   });
 
   cancellationPaymentMaxDateLabel = computed(() => {
@@ -2830,13 +2834,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Campos fijos de cabecera. El resto de columnas queda disponible para ofertas/montos.
   private readonly fixedHeaderLabels: Record<string, string> = {
     documento: 'Documento',
-    num_cuenta_ori: 'Número de cuenta',
-    num_cuenta: 'Número de cuenta',
-    numero_cuenta: 'Número de cuenta',
-    num_cuenta_pmcp: 'Número de cuenta',
-    dias_mora_asig: 'Días mora',
-    dias_mora: 'Días mora',
-    periodo_castigo: 'Período castigo',
+    num_cuenta_ori: 'NÃºmero de cuenta',
+    num_cuenta: 'NÃºmero de cuenta',
+    numero_cuenta: 'NÃºmero de cuenta',
+    num_cuenta_pmcp: 'NÃºmero de cuenta',
+    dias_mora_asig: 'DÃ­as mora',
+    dias_mora: 'DÃ­as mora',
+    periodo_castigo: 'PerÃ­odo castigo',
     rango_mora: 'Rango mora',
     rango_mora_asig: 'Rango mora',
     rango_mora_proy: 'Rango mora'
@@ -2858,7 +2862,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return fields;
   });
 
-  // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociación
+  // Computed para extraer campos de MONTOS del cliente para mostrar en panel de negociaciÃ³n
   // Usa las cabeceras configuradas para filtrar solo montos reales (decimal) y mostrar nombres visuales
   clientAmountFields = computed(() => {
     const rawData = this.rawClientData();
@@ -2902,7 +2906,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         }
       }
     } else {
-      // Fallback: si no hay cabeceras, usar lógica anterior pero con exclusiones estrictas
+      // Fallback: si no hay cabeceras, usar lÃ³gica anterior pero con exclusiones estrictas
       const excludeFields = [
         'id', 'id_campana', 'id_cartera', 'id_subcartera', 'prioridad', 'estado',
          'documento', 'num_cuenta', 'num_cuenta_pmcp', 'numero_cuenta',
@@ -2930,7 +2934,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    // Ordenar por valor descendente (mayores primero) - solo para campos sin ordenMonto explícito
+    // Ordenar por valor descendente (mayores primero) - solo para campos sin ordenMonto explÃ­cito
     return allCabeceras.length > 0 ? amountFields : amountFields.sort((a, b) => b.value - a.value);
   });
 
@@ -2957,7 +2961,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return { label: campo.label, value: campo.value };
   });
 
-  // Computed para obtener días de mora del cliente
+  // Computed para obtener dÃ­as de mora del cliente
   clientDiasMora = computed(() => {
     const rawData = this.rawClientData();
     const diasMora = rawData['dias_mora'] || rawData['dias_mora_asig'] || 0;
@@ -2968,20 +2972,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return Object.prototype.hasOwnProperty.call(this.fixedHeaderLabels, field.toLowerCase());
   }
 
-  // Ocupación del cliente desde la tabla dinámica (ini_*).
+  // OcupaciÃ³n del cliente desde la tabla dinÃ¡mica (ini_*).
   // Busca la columna exacta y, si no, cualquier columna que contenga "ocupacion".
   clientOcupacion = computed(() => {
     const rawData = this.rawClientData();
-    const direct = rawData['ocupacion'] ?? rawData['ocupación'] ?? rawData['occupation'];
+    const direct = rawData['ocupacion'] ?? rawData['ocupaciÃ³n'] ?? rawData['occupation'];
     if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
       return String(direct).trim();
     }
-    const key = Object.keys(rawData).find(k => k.toLowerCase().includes('ocupacion') || k.toLowerCase().includes('ocupación'));
+    const key = Object.keys(rawData).find(k => k.toLowerCase().includes('ocupacion') || k.toLowerCase().includes('ocupaciÃ³n'));
     const val = key ? rawData[key] : null;
     return val === undefined || val === null ? '' : String(val).trim();
   });
 
-  // Cabeceras de configuración para mostrar nombres visuales
+  // Cabeceras de configuraciÃ³n para mostrar nombres visuales
   montoCabeceras = signal<{ codigo: string; nombre: string; tipoDato: string; tipoSql: string; esVisibleMonto?: number; ordenMonto?: number; formatoVisualizacion?: string }[]>([]);
 
   // Enabled payment amount options (configured in maintenance)
@@ -3012,7 +3016,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   });
 
   // ==================== CONTINUIDAD DE PROMESAS ====================
-  // Flag para indicar si se seleccionó tipificación CONTINUIDAD
+  // Flag para indicar si se seleccionÃ³ tipificaciÃ³n CONTINUIDAD
   esContinuidad = signal<boolean>(false);
   // Datos de continuidad obtenidos del backend
   continuidadData = signal<ContinuidadPromesaResponse | null>(null);
@@ -3038,20 +3042,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // ==================== BLOQUEO PROMESA DE PAGO ACTIVA ====================
   // Flag para mostrar alerta de bloqueo cuando cliente tiene promesa activa
   showPromesaActivaBlocking = signal<boolean>(false);
-  // Número de cuotas pendientes de la promesa activa
+  // NÃºmero de cuotas pendientes de la promesa activa
   promesaActivaPendingCount = signal<number>(0);
 
   // ==================== CARTA DE ACUERDO DESDE BANNER ====================
-  // El botón Generar/Regenerar acuerdo solo se muestra si la subcartera tiene plantilla asignada
+  // El botÃ³n Generar/Regenerar acuerdo solo se muestra si la subcartera tiene plantilla asignada
   cartaPlantillaDisponible = signal<boolean>(false);
   // Gestiones que ya tienen carta generada (define la etiqueta Generar vs Regenerar)
   cartasGeneradasGestionIds = signal<Set<number>>(new Set());
-  // Gestión cuya carta se está generando (deshabilita el botón mientras descarga)
+  // GestiÃ³n cuya carta se estÃ¡ generando (deshabilita el botÃ³n mientras descarga)
   generandoCartaGestionId = signal<number | null>(null);
 
   // ==================== BLOQUEO PERIODO DE GRACIA (PROMESA VENCIDA DE OTRO ASESOR) ====================
-  // Flag para mostrar la card de bloqueo cuando la última promesa del cliente está vencida
-  // y todavía dentro del período de gracia de otro asesor
+  // Flag para mostrar la card de bloqueo cuando la Ãºltima promesa del cliente estÃ¡ vencida
+  // y todavÃ­a dentro del perÃ­odo de gracia de otro asesor
   showPromesaVencidaGraciaBlocking = signal<boolean>(false);
 
   // Computed: Opciones de monto para continuidad (solo saldo restante)
@@ -3069,7 +3073,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }];
   });
 
-  // Computed: Determina si se debe mostrar el formulario de campos dinámicos
+  // Computed: Determina si se debe mostrar el formulario de campos dinÃ¡micos
   // No mostrar si es CONTINUIDAD pero no aplica (tiene error o no hay datos)
   // No mostrar si hay bloqueo de promesa activa
   shouldShowDynamicForm = computed<boolean>(() => {
@@ -3078,7 +3082,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return false;
     }
 
-    // Si hay bloqueo por período de gracia de otro asesor, NO mostrar formulario
+    // Si hay bloqueo por perÃ­odo de gracia de otro asesor, NO mostrar formulario
     if (this.showPromesaVencidaGraciaBlocking()) {
       return false;
     }
@@ -3092,7 +3096,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return true;
     }
 
-    // Si es continuidad y está cargando, no mostrar aún
+    // Si es continuidad y estÃ¡ cargando, no mostrar aÃºn
     if (isLoadingCont) {
       return false;
     }
@@ -3115,11 +3119,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Fix temporal: margen de 100ms antes de desbloquear llamadas entrantes
   private desbloqueoTimeout?: number;
 
-  // --- Bloqueo de salida durante una gestión con llamada en curso ---
-  // Se levanta al guardar (onSaveSuccess) para habilitar la navegación
-  // programática de salida. Muere con la instancia del componente.
+  // --- Bloqueo de salida durante una gestiÃ³n con llamada en curso ---
+  // Se levanta al guardar (onSaveSuccess) para habilitar la navegaciÃ³n
+  // programÃ¡tica de salida. Muere con la instancia del componente.
   private salidaAutorizada = false;
-  // Marcador explícito de "se colocó una llamada en esta gestión". Es FALSE al
+  // Marcador explÃ­cito de "se colocÃ³ una llamada en esta gestiÃ³n". Es FALSE al
   // entrar (incluida la entrada manual, que setea isTipifying sin llamada) y
   // solo se vuelve TRUE al iniciar una llamada (startCall / iniciarRellamada);
   // se resetea al guardar. No usamos isTipifying porque la carga manual lo
@@ -3134,16 +3138,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       e.returnValue = '';
     }
   };
-  // Trampa de historial para el botón "Atrás" del navegador. El CanDeactivate
-  // guard es asíncrono y en back rápido/múltiple el navegador procesa varios
+  // Trampa de historial para el botÃ³n "AtrÃ¡s" del navegador. El CanDeactivate
+  // guard es asÃ­ncrono y en back rÃ¡pido/mÃºltiple el navegador procesa varios
   // popstate antes de que Angular cancele/restaure la URL, dejando escapar. Esta
-  // trampa es SÍNCRONA: re-empuja el estado en cada popstate mientras hay
-  // gestión con llamada sin guardar, sin ventana asíncrona que explotar.
+  // trampa es SÃNCRONA: re-empuja el estado en cada popstate mientras hay
+  // gestiÃ³n con llamada sin guardar, sin ventana asÃ­ncrona que explotar.
   private historyTrapArmed = false;
   private boundPopState = () => {
     if (this.hasGestionEnCurso() && !this.salidaAutorizada) {
       history.pushState(null, '', location.href); // deshacer el back inmediatamente
-      this.toast.warning('Debes guardar la gestión antes de salir');
+      this.toast.warning('Debes guardar la gestiÃ³n antes de salir');
     } else {
       this.historyTrapArmed = false; // sin bloqueo: permitir el back real
     }
@@ -3152,6 +3156,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private callStateSubscription?: Subscription;
   private incomingCallSubscription?: Subscription;
   private outgoingCallSubscription?: Subscription;
+  private predictiveCallSubscription?: Subscription;
+  private websocketConnectionSubscription?: Subscription;
   public callState: CallState = CallState.IDLE;
   public isMuted = signal(false);
   public isOnHold = signal(false);
@@ -3172,6 +3178,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     private route: ActivatedRoute,
     private http: HttpClient,
     private sipService: SipService,
+    private websocketService: WebsocketService,
     private agentService: AgentService,
     private agentStatusService: AgentStatusService,
     private authService: AuthService,
@@ -3186,11 +3193,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     private gestionLock: GestionLockService,
     private fmt: FormatService
   ) {
-    // Auto-selecciona en "Teléfono Contactado" el último número discado (discador o
+    // Auto-selecciona en "TelÃ©fono Contactado" el Ãºltimo nÃºmero discado (discador o
     // rellamada). Como activeCallPhone se actualiza en cada llamada, si el asesor
-    // rellama a otro número, la selección se actualiza sola (gana la última llamada).
-    // Se acota a los teléfonos del cliente cargado para evitar cruces entre clientes;
-    // el asesor puede sobreescribir manualmente después (el effect no re-dispara salvo
+    // rellama a otro nÃºmero, la selecciÃ³n se actualiza sola (gana la Ãºltima llamada).
+    // Se acota a los telÃ©fonos del cliente cargado para evitar cruces entre clientes;
+    // el asesor puede sobreescribir manualmente despuÃ©s (el effect no re-dispara salvo
     // que haya una nueva llamada).
     effect(() => {
       const discado = this.activeCallPhone();
@@ -3203,8 +3210,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Indica si hay una gestión "en curso": se colocó una llamada en esta gestión
-   * (en curso o ya finalizada) y aún no se guarda. NO incluye isTipifying porque
+   * Indica si hay una gestiÃ³n "en curso": se colocÃ³ una llamada en esta gestiÃ³n
+   * (en curso o ya finalizada) y aÃºn no se guarda. NO incluye isTipifying porque
    * la entrada manual lo activa sin que haya habido llamada (falso positivo de
    * bloqueo). `llamadaRealizada` cubre tanto llamadas normales (startCall) como
    * manuales/rellamada (iniciarRellamada).
@@ -3213,16 +3220,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return this.callActive() || this.rellamadaCallActive() || this.llamadaRealizada();
   }
 
-  /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
+  /** CanDeactivate: solo se permite salir si no hay gestiÃ³n con llamada pendiente. */
   puedeSalir(_nextUrl: string): boolean {
     return this.salidaAutorizada || !this.hasGestionEnCurso();
   }
 
   /**
    * Arma la trampa de historial empujando un estado centinela (mismo URL) la
-   * primera vez que se coloca una llamada. A partir de ahí, cada "Atrás" del
+   * primera vez que se coloca una llamada. A partir de ahÃ­, cada "AtrÃ¡s" del
    * navegador pop-ea este centinela y el listener de popstate lo vuelve a
-   * empujar, neutralizando el botón Atrás mientras la gestión esté bloqueada.
+   * empujar, neutralizando el botÃ³n AtrÃ¡s mientras la gestiÃ³n estÃ© bloqueada.
    */
   private armHistoryTrap(): void {
     if (!this.historyTrapArmed) {
@@ -3245,6 +3252,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     });
   }
 
+  private applyPredictiveCallContext(data: any): void {
+    if (!data.callUuid || !data.agentId) {
+      console.warn('âš ï¸ [PREDICTIVE] Evento sin callUuid o agentId');
+      return;
+    }
+
+    const currentUuid = this.activeCallContext().uuid;
+    if (currentUuid && currentUuid !== data.callUuid) {
+      console.warn('ðŸš« [PREDICTIVE] Evento descartado: pertenece a otra llamada activa');
+      return;
+    }
+
+    this.setPredictiveCallContext(data);
+    this.loadPredictiveCustomer(data.callUuid, data.agentId);
+  }
+
   private setNonPredictiveCallContext(phoneNumber: string): void {
     this.setActiveCallContext({ ...EMPTY_CALL_CONTEXT, telefono: phoneNumber });
   }
@@ -3265,47 +3288,60 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.loadTenants();
     this.loadManagementHistory();
 
-    // Bloqueo de salida: si se hizo una llamada, la única vía de salida es
-    // Guardar Gestión. Cubre el botón de logout (vía el service) y el
-    // refresh/cierre de pestaña (vía beforeunload). El sidebar y el back se
+    // Bloqueo de salida: si se hizo una llamada, la Ãºnica vÃ­a de salida es
+    // Guardar GestiÃ³n. Cubre el botÃ³n de logout (vÃ­a el service) y el
+    // refresh/cierre de pestaÃ±a (vÃ­a beforeunload). El sidebar y el back se
     // cubren con el CanDeactivate guard de la ruta.
     this.gestionLock.register(this.boundLockCheck);
     window.addEventListener('beforeunload', this.boundBeforeUnload);
     window.addEventListener('popstate', this.boundPopState);
 
+    this.predictiveCallSubscription = this.websocketService.subscribe('/user/queue/messages').subscribe((message: any) => {
+      if (message.type === 'PREDICTIVE_CALL_CONNECTED' && message.payload) {
+        this.applyPredictiveCallContext(message.payload);
+      }
+    });
+    this.websocketConnectionSubscription = this.websocketService.connectionStatus$.subscribe(connected => {
+      const context = this.activeCallContext();
+      const agentId = this.authService.getCurrentUser()?.id;
+      if (connected && context.uuid && agentId && !this.customerData()?.id) {
+        this.loadPredictiveCustomer(context.uuid, agentId);
+      }
+    });
+
     // Verificar estado inicial de la llamada
     const initialCallState = this.sipService.getCallState();
-    console.log('📞 [CollectionManagement] Estado inicial de llamada:', initialCallState);
+    console.log('ðŸ“ž [CollectionManagement] Estado inicial de llamada:', initialCallState);
 
     if (initialCallState === CallState.ACTIVE && !this.callActive()) {
-      console.log('⏱️ Llamada ya está activa, iniciando timer automáticamente...');
+      console.log('â±ï¸ Llamada ya estÃ¡ activa, iniciando timer automÃ¡ticamente...');
       this.callActive.set(true);
-      this.startCall(); // Iniciar timer automáticamente
+      this.startCall(); // Iniciar timer automÃ¡ticamente
       this.playCallAlertBeep(); // Beep de alerta al agente
     }
 
     // Suscribirse a cambios de estado de llamada
     this.callStateSubscription = this.sipService.onCallStatus.subscribe((state: CallState) => {
-      console.log('📞 [CollectionManagement] Estado de llamada:', state);
+      console.log('ðŸ“ž [CollectionManagement] Estado de llamada:', state);
       this.callState = state;
 
       // Guard: si es rellamada, manejar aislado sin tocar estado principal
       if (this.isRellamada()) {
         if (state === CallState.CONNECTING || state === CallState.RINGING || state === CallState.ACTIVE) {
           this.rellamadaCallActive.set(true);
-          console.log(`📞 [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
+          console.log(`ðŸ“ž [Rellamada] ${state === CallState.ACTIVE ? 'Conectada' : 'Timbrando...'}`);
         }
         
         // Cuando la llamada de rellamada termina o se cuelga, resetear estado de rellamada
         if((state === CallState.ENDED || state === CallState.IDLE) && this.rellamadaCallActive()) {
-          console.log('🚫 [Rellamada] Llamada de rellamada terminó, reseteando estado');
+          console.log('ðŸš« [Rellamada] Llamada de rellamada terminÃ³, reseteando estado');
           this.resetRellamadaState();
         }
         else if((state === CallState.ENDED || state === CallState.IDLE) && !this.rellamadaCallActive()) {
-          console.log('🚫 [Rellamada] Llamada de rellamada falló, reseteando estado');
+          console.log('ðŸš« [Rellamada] Llamada de rellamada fallÃ³, reseteando estado');
           this.resetRellamadaState();
         }
-        return; // No ejecutar lógica normal
+        return; // No ejecutar lÃ³gica normal
       }
 
       // Cuando la llamada se activa, cambiar estado a EN_LLAMADA
@@ -3319,14 +3355,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         const currentUser = this.authService.getCurrentUser();
         if (currentUser?.id) {
           this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.EN_LLAMADA }).subscribe({
-            next: () => console.log('✅ Estado cambiado a EN_LLAMADA'),
-            error: (err: any) => console.error('❌ Error cambiando estado:', err)
+            next: () => console.log('âœ… Estado cambiado a EN_LLAMADA'),
+            error: (err: any) => console.error('âŒ Error cambiando estado:', err)
           });
         }
       }
 
       // Cuando la llamada termina, SIEMPRE cambiar estado a TIPIFICANDO
-      // El agente debe quedarse en la pantalla para completar la tipificación
+      // El agente debe quedarse en la pantalla para completar la tipificaciÃ³n
       if ((state === CallState.ENDED || state === CallState.IDLE) && this.callActive()) {
         this.callActive.set(false);
         // Resetear hold si estaba activo
@@ -3337,9 +3373,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Esto previene la race condition con el auto-dialer
         this.isTipifying.set(true);
         this.sipService.blockIncomingCallsMode(true);
-        console.log('🚫 Bloqueando llamadas entrantes - agente en tipificación');
+        console.log('ðŸš« Bloqueando llamadas entrantes - agente en tipificaciÃ³n');
 
-        // Obtener la duración de la llamada antes de detener el timer
+        // Obtener la duraciÃ³n de la llamada antes de detener el timer
         const finalDuration = this.callDuration();
 
         // Detener timer
@@ -3350,55 +3386,55 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
         // SIEMPRE cambiar a TIPIFICANDO cuando termina una llamada
         // El agente debe completar el formulario antes de volver a DISPONIBLE
-        console.log(`📝 Llamada terminada (${finalDuration}s), cambiando a TIPIFICANDO`);
+        console.log(`ðŸ“ Llamada terminada (${finalDuration}s), cambiando a TIPIFICANDO`);
         const currentUser = this.authService.getCurrentUser();
         if (currentUser?.id) {
           this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
-            next: () => console.log('✅ Estado cambiado a TIPIFICANDO - agente debe completar formulario'),
-            error: (err: any) => console.error('❌ Error cambiando estado:', err)
+            next: () => console.log('âœ… Estado cambiado a TIPIFICANDO - agente debe completar formulario'),
+            error: (err: any) => console.error('âŒ Error cambiando estado:', err)
           });
         }
       }
     });
 
-    // Suscribirse a llamadas entrantes para cargar automáticamente el cliente
+    // Suscribirse a llamadas entrantes para cargar automÃ¡ticamente el cliente
     this.incomingCallSubscription = this.sipService.onIncomingCall.subscribe((callInfo: { from: string }) => {
-      console.log('📲 [CollectionManagement] Llamada entrante de:', callInfo.from);
+      console.log('ðŸ“² [CollectionManagement] Llamada entrante de:', callInfo.from);
 
-      // Guard: no recargar datos si está tipificando o en rellamada
+      // Guard: no recargar datos si estÃ¡ tipificando o en rellamada
       if (this.isTipifying() || this.isRellamada() || this.rellamadaCallActive()) {
-        console.warn('🚫 [CollectionManagement] Ignorando llamada entrante - tipificando/rellamada activa');
+        console.warn('ðŸš« [CollectionManagement] Ignorando llamada entrante - tipificando/rellamada activa');
         return;
       }
 
       this.incomingPhoneNumber = callInfo.from;
 
-      // Guardar el número y buscar cliente
+      // Guardar el nÃºmero y buscar cliente
       if (callInfo.from) {
         this.setNonPredictiveCallContext(callInfo.from);
         this.autoLoadCustomerByPhone(callInfo.from);
       }
     });
 
-    // Suscribirse a llamadas SALIENTES (desde /dialer manual) para cargar automáticamente el cliente
+    // Suscribirse a llamadas SALIENTES (desde /dialer manual) para cargar automÃ¡ticamente el cliente
     this.outgoingCallSubscription = this.sipService.onOutgoingCall.subscribe((callInfo: { to: string }) => {
-      console.log('📤 [CollectionManagement] Llamada saliente a:', callInfo.to);
+      console.log('ðŸ“¤ [CollectionManagement] Llamada saliente a:', callInfo.to);
       // Si es rellamada, no recargar datos del cliente
       if (this.isRellamada()) return;
       this.outgoingPhoneNumber = callInfo.to;
 
-      // Guardar el número marcado y buscar cliente
+      // Guardar el nÃºmero marcado y buscar cliente
       if (callInfo.to) {
         this.setNonPredictiveCallContext(callInfo.to);
         this.autoLoadCustomerByPhone(callInfo.to);
       }
     });
 
-    // Verificar si hay una llamada saliente en curso (navegación desde /dialer)
-    // El evento onOutgoingCall ya se emitió antes de navegar aquí, así que leemos el número guardado
+    // Verificar si hay una llamada saliente en curso (navegaciÃ³n desde /dialer)
+    // El evento onOutgoingCall ya se emitiÃ³ antes de navegar aquÃ­, asÃ­ que leemos el nÃºmero guardado
     const pendingOutgoingNumber = this.sipService.getCurrentOutgoingNumber();
     if (pendingOutgoingNumber && !this.customerData()?.id) {
-      console.log('📤 [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
+      console.log('ðŸ“¤ [CollectionManagement] Llamada saliente pendiente detectada:', pendingOutgoingNumber);
       this.outgoingPhoneNumber = pendingOutgoingNumber;
       this.setNonPredictiveCallContext(pendingOutgoingNumber);
       this.autoLoadCustomerByPhone(pendingOutgoingNumber);
@@ -3407,11 +3443,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.sipService.clearCurrentOutgoingNumber();
 
 
-    // Verificar si viene desde gestión manual con parámetros de cliente
+    // Verificar si viene desde gestiÃ³n manual con parÃ¡metros de cliente
     this.route.queryParams.subscribe(params => {
       if (params['source'] === 'manual' && params['documento']) {
         this.isManualSource.set(true);
-        console.log('📋 [MANUAL] Cargando cliente desde gestión manual:', params);
+        console.log('ðŸ“‹ [MANUAL] Cargando cliente desde gestiÃ³n manual:', params);
         this.loadCustomerByDocumentoFromManual(
           params['documento'],
           Number(params['tenantId']),
@@ -3421,8 +3457,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     });
 
-    // [DESACTIVADO] Suscribirse a respuestas de autorización en tiempo real
-    // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después
+    // [DESACTIVADO] Suscribirse a respuestas de autorizaciÃ³n en tiempo real
+    // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban despuÃ©s
     // this.autorizacionService.respuesta$.subscribe(solicitud => {
     //   if (solicitud && this.waitingForAuthorization()) {
     //     this.handleAuthorizationResponse(solicitud);
@@ -3440,13 +3476,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           }
           this.excedeTiempoMaximo.set(response.excedeTiempoMaximo || false);
         },
-        error: (err) => console.error('❌ Error polling estado del agente:', err)
+        error: (err) => console.error('âŒ Error polling estado del agente:', err)
       });
     }
   }
 
   /**
-   * Busca y carga automáticamente un cliente por su número de teléfono
+   * Busca y carga automÃ¡ticamente un cliente por su nÃºmero de telÃ©fono
    * Se llama cuando llega una llamada entrante
    * Busca en todos los tenants/carteras/subcarteras
    *
@@ -3454,45 +3490,45 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   private autoLoadCustomerByPhone(phoneNumber: string, onNotFound?: () => void, expectedCallId?: number | null) {
     this.isLoadingCustomer.set(true);
-    console.log('🔍 [AUTO-LOAD] Buscando cliente por teléfono:', phoneNumber);
+    console.log('ðŸ” [AUTO-LOAD] Buscando cliente por telÃ©fono:', phoneNumber);
 
     // PRIORIDAD 1: Verificar si hay un recordatorio en curso con datos del cliente
     const recordatorioEnCursoStr = sessionStorage.getItem('recordatorioEnCurso');
     if (recordatorioEnCursoStr) {
       try {
         const recordatorioEnCurso = JSON.parse(recordatorioEnCursoStr);
-        console.log('📝 [AUTO-LOAD] Recordatorio en curso detectado:', recordatorioEnCurso);
+        console.log('ðŸ“ [AUTO-LOAD] Recordatorio en curso detectado:', recordatorioEnCurso);
 
         // Si tiene datos del cliente del recordatorio, usarlos
         if (recordatorioEnCurso.documentoCliente && recordatorioEnCurso.idSubcartera) {
-          console.log('✅ [AUTO-LOAD] Usando datos del recordatorio en curso');
+          console.log('âœ… [AUTO-LOAD] Usando datos del recordatorio en curso');
           this.loadCustomerFromRecordatorio(recordatorioEnCurso);
           return;
         }
       } catch (e) {
-        console.warn('⚠️ [AUTO-LOAD] Error parseando recordatorioEnCurso:', e);
+        console.warn('âš ï¸ [AUTO-LOAD] Error parseando recordatorioEnCurso:', e);
       }
     }
 
-    // PRIORIDAD 2: Buscar por teléfono en todos los tenants
+    // PRIORIDAD 2: Buscar por telÃ©fono en todos los tenants
     this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber).subscribe({
       next: (customers) => {
         if (expectedCallId != null && this.activeCallId() !== expectedCallId) {
-          console.warn('🚫 [AUTO-LOAD] Respuesta descartada: corresponde a una llamada predictiva anterior');
+          console.warn('ðŸš« [AUTO-LOAD] Respuesta descartada: corresponde a una llamada predictiva anterior');
           return;
         }
         if (customers && customers.length > 0) {
-          console.log('✅ [AUTO-LOAD] Cliente encontrado:', customers[0]);
+          console.log('âœ… [AUTO-LOAD] Cliente encontrado:', customers[0]);
           this.loadCustomerFromResource(customers[0], expectedCallId);
         } else {
-          console.warn('⚠️ [AUTO-LOAD] No se encontró cliente con teléfono:', phoneNumber);
-          // [FIX] Si no matchea por teléfono, caer al endpoint confiable por contactId.
-          // Solo el flujo predictivo pasa onNotFound; los demás (entrante/saliente/manual) quedan igual.
+          console.warn('âš ï¸ [AUTO-LOAD] No se encontrÃ³ cliente con telÃ©fono:', phoneNumber);
+          // [FIX] Si no matchea por telÃ©fono, caer al endpoint confiable por contactId.
+          // Solo el flujo predictivo pasa onNotFound; los demÃ¡s (entrante/saliente/manual) quedan igual.
           if (onNotFound) onNotFound();
         }
       },
       error: (error) => {
-        console.error('❌ [AUTO-LOAD] Error buscando cliente:', error);
+        console.error('âŒ [AUTO-LOAD] Error buscando cliente:', error);
         if (onNotFound) onNotFound();
       }
     });
@@ -3503,7 +3539,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Busca por documento usando el endpoint global
    */
   private loadCustomerFromRecordatorio(recordatorio: any) {
-    console.log('🔍 [RECORDATORIO] Cargando cliente desde recordatorio:', recordatorio);
+    console.log('ðŸ” [RECORDATORIO] Cargando cliente desde recordatorio:', recordatorio);
 
     // Buscar cliente por documento usando endpoint global
     this.http.get<any>(`${environment.apiUrl}/client-search/global`, {
@@ -3513,7 +3549,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }).subscribe({
       next: (clientData) => {
         if (clientData) {
-          console.log('✅ [RECORDATORIO] Cliente encontrado:', clientData);
+          console.log('âœ… [RECORDATORIO] Cliente encontrado:', clientData);
           // Establecer contexto de subcartera desde la respuesta
           if (clientData.subPortfolioId) {
             this.selectedSubPortfolioId = clientData.subPortfolioId;
@@ -3529,27 +3565,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           this.reloadTypifications();
           this.loadCustomerOutputConfig();
           this.loadFirstInstallmentConfig();
-          // Cargar datos del cliente (clientData.clientData tiene los datos dinámicos del ini_*)
+          // Cargar datos del cliente (clientData.clientData tiene los datos dinÃ¡micos del ini_*)
           this.loadCustomerFromDynamicTable(clientData.clientData || clientData);
         } else {
-          console.warn('⚠️ [RECORDATORIO] Cliente no encontrado, usando datos básicos');
+          console.warn('âš ï¸ [RECORDATORIO] Cliente no encontrado, usando datos bÃ¡sicos');
           this.loadCustomerBasicFromRecordatorio(recordatorio);
         }
       },
       error: (error) => {
-        console.error('❌ [RECORDATORIO] Error buscando cliente:', error);
-        // Fallback: cargar datos básicos del recordatorio
+        console.error('âŒ [RECORDATORIO] Error buscando cliente:', error);
+        // Fallback: cargar datos bÃ¡sicos del recordatorio
         this.loadCustomerBasicFromRecordatorio(recordatorio);
       }
     });
   }
 
   /**
-   * Carga datos básicos del cliente desde el recordatorio (fallback)
+   * Carga datos bÃ¡sicos del cliente desde el recordatorio (fallback)
    * Solo se usa si no se encuentra el cliente en la base de datos
    */
   private loadCustomerBasicFromRecordatorio(recordatorio: any) {
-    console.log('📋 [RECORDATORIO] Cargando datos básicos del recordatorio');
+    console.log('ðŸ“‹ [RECORDATORIO] Cargando datos bÃ¡sicos del recordatorio');
     this.customerData.set({
       id: recordatorio.idCliente || 0,
       id_cliente: recordatorio.documentoCliente || '',
@@ -3588,8 +3624,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Carga un cliente por documento desde la gestión manual
-   * Busca en la tabla dinámica ini_ de la subcartera especificada
+   * Carga un cliente por documento desde la gestiÃ³n manual
+   * Busca en la tabla dinÃ¡mica ini_ de la subcartera especificada
    */
   private loadCustomerByDocumentoFromManual(
     documento: string,
@@ -3597,7 +3633,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     portfolioId: number,
     subPortfolioId: number
   ) {
-    console.log('🔍 [MANUAL] Buscando cliente por documento:', documento);
+    console.log('ðŸ” [MANUAL] Buscando cliente por documento:', documento);
     this.isLoadingCustomer.set(true);
 
     // Establecer el contexto de tenant/portfolio/subportfolio para las tipificaciones
@@ -3605,12 +3641,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.selectedPortfolioId = portfolioId;
     this.selectedSubPortfolioId = subPortfolioId;
 
-    // Cargar configs en paralelo (no bloquean la búsqueda del cliente)
+    // Cargar configs en paralelo (no bloquean la bÃºsqueda del cliente)
     this.reloadTypifications();
     this.loadCustomerOutputConfig();
     this.loadFirstInstallmentConfig();
 
-    // Buscar cliente en la tabla dinámica
+    // Buscar cliente en la tabla dinÃ¡mica
     this.http.get<any>(`${environment.apiUrl}/client-search/find`, {
       params: {
         tenantId: tenantId.toString(),
@@ -3620,26 +3656,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }).pipe(
       catchError((error) => {
-        console.error('❌ [MANUAL] Error buscando cliente:', error);
+        console.error('âŒ [MANUAL] Error buscando cliente:', error);
         return of(null);
       })
     ).subscribe({
       next: (clientData) => {
         if (clientData) {
-          console.log('✅ [MANUAL] Cliente encontrado:', clientData);
+          console.log('âœ… [MANUAL] Cliente encontrado:', clientData);
           this.loadCustomerFromDynamicTable(clientData);
 
-          // Cambiar estado a TIPIFICANDO al entrar desde gestión manual
+          // Cambiar estado a TIPIFICANDO al entrar desde gestiÃ³n manual
           const currentUser = this.authService.getCurrentUser();
           if (currentUser?.id) {
             this.agentService.changeAgentStatus(currentUser.id, { estado: AgentState.TIPIFICANDO }).subscribe({
-              next: () => console.log('✅ [MANUAL] Estado cambiado a TIPIFICANDO'),
-              error: (err: any) => console.error('❌ [MANUAL] Error cambiando estado:', err)
+              next: () => console.log('âœ… [MANUAL] Estado cambiado a TIPIFICANDO'),
+              error: (err: any) => console.error('âŒ [MANUAL] Error cambiando estado:', err)
             });
           }
           this.isTipifying.set(true);
         } else {
-          console.warn('⚠️ [MANUAL] Cliente no encontrado');
+          console.warn('âš ï¸ [MANUAL] Cliente no encontrado');
           this.isLoadingCustomer.set(false);
         }
       }
@@ -3647,16 +3683,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Carga los datos de un cliente desde la tabla dinámica ini_
-   * @param client Datos del cliente desde la tabla dinámica
+   * Carga los datos de un cliente desde la tabla dinÃ¡mica ini_
+   * @param client Datos del cliente desde la tabla dinÃ¡mica
    * IMPORTANTE: Siempre usa client.id (ini_*.id) para consistencia entre flujos
    */
   private loadCustomerFromDynamicTable(client: any) {
-    // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
+    // Guardar los datos raw del cliente para detectar columnas numÃ©ricas dinÃ¡micamente
     this.rawClientData.set(client);
     console.log('[CUSTOMER] Raw client data from ini_* table:', client);
 
-    // Capturar jerarquía (inquilino/cartera/subcartera) si viene en la respuesta
+    // Capturar jerarquÃ­a (inquilino/cartera/subcartera) si viene en la respuesta
     this.clientHierarchy.set(
       (client?.nombreInquilino || client?.nombreCartera || client?.nombreSubcartera)
         ? {
@@ -3670,11 +3706,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
 
-    // SIEMPRE usar client.id (ini_*.id) - es consistente entre llamada activa y gestión manual
+    // SIEMPRE usar client.id (ini_*.id) - es consistente entre llamada activa y gestiÃ³n manual
     const customerId = client.id || 0;
     console.log('[CUSTOMER] Using ini_*.id as customerId:', customerId);
 
-    // Mapear los datos de la tabla dinámica al formato de CustomerData
+    // Mapear los datos de la tabla dinÃ¡mica al formato de CustomerData
     this.customerData.set({
       id: customerId,
       id_cliente: client.documento,
@@ -3692,7 +3728,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       },
       cuenta: {
         numero_cuenta: client.cuenta || '',
-        tipo_producto: client.producto || 'PRÉSTAMO',
+        tipo_producto: client.producto || 'PRÃ‰STAMO',
         fecha_desembolso: '',
         monto_original: client.monto_original || 0,
         plazo_meses: 0,
@@ -3719,14 +3755,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.loadActivePaymentSchedules(customerId);
     }
 
-    // Cargar teléfonos desde metodos_contacto
+    // Cargar telÃ©fonos desde metodos_contacto
     const doc = client.documento || '';
     if (doc) {
       this.loadTelefonosMetodo(doc);
     }
 
     this.isLoadingCustomer.set(false);
-    console.log('✅ Cliente cargado exitosamente, customerId:', customerId);
+    console.log('âœ… Cliente cargado exitosamente, customerId:', customerId);
   }
 
   /**
@@ -3762,7 +3798,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // Variable para almacenar el subPortfolioId seleccionado
   selectedSubPortfolioId?: number;
 
-  // Configuración de días máximos para primera cuota (por subcartera)
+  // ConfiguraciÃ³n de dÃ­as mÃ¡ximos para primera cuota (por subcartera)
   firstInstallmentMaxDays = signal<number | null>(null);
 
   loadTenants() {
@@ -3773,21 +3809,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.selectedTenantId = currentUser.tenantId;
       this.selectedPortfolioId = currentUser.portfolioId;
       this.selectedSubPortfolioId = currentUser.subPortfolioId;
-      console.log(`[V2] Usando asignación del usuario: tenant=${this.selectedTenantId}, portfolio=${this.selectedPortfolioId}, subPortfolio=${this.selectedSubPortfolioId}`);
+      console.log(`[V2] Usando asignaciÃ³n del usuario: tenant=${this.selectedTenantId}, portfolio=${this.selectedPortfolioId}, subPortfolio=${this.selectedSubPortfolioId}`);
 
       // Cargar datos SIN llamar a onTenantChange (que resetea portfolioId)
       this.reloadTypifications();
       this.loadCustomerOutputConfig();
       this.loadFirstInstallmentConfig(); // Cargar config de primera cuota
 
-      // Solo cargar cliente por defecto si NO viene desde gestión manual
-      // (gestión manual carga el cliente por documento en route.queryParams)
+      // Solo cargar cliente por defecto si NO viene desde gestiÃ³n manual
+      // (gestiÃ³n manual carga el cliente por documento en route.queryParams)
       const params = this.route.snapshot.queryParams;
       if (params['source'] !== 'manual') {
         this.loadFirstCustomer();
       }
     } else {
-      console.error('[V2] Usuario no tiene asignación completa de tenant/portfolio/subportfolio');
+      console.error('[V2] Usuario no tiene asignaciÃ³n completa de tenant/portfolio/subportfolio');
       console.error('[V2] Valores recibidos:', {
         tenantId: currentUser?.tenantId,
         portfolioId: currentUser?.portfolioId,
@@ -3837,22 +3873,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Carga la configuración de outputs del cliente desde el backend
+   * Carga la configuraciÃ³n de outputs del cliente desde el backend
    *
-   * LÓGICA:
+   * LÃ“GICA:
    * 1. Llama a GET /api/v1/customer-outputs/config?tenantId=X&portfolioId=Y
    * 2. Backend SIEMPRE retorna 200 OK (nunca 404)
-   * 3. Si id === null → No hay configuración guardada → Usar campos por defecto
-   * 4. Si id !== null → Hay configuración guardada → Usar esos campos (incluso si fieldsConfig="[]")
+   * 3. Si id === null â†’ No hay configuraciÃ³n guardada â†’ Usar campos por defecto
+   * 4. Si id !== null â†’ Hay configuraciÃ³n guardada â†’ Usar esos campos (incluso si fieldsConfig="[]")
    *
    * DIFERENCIA IMPORTANTE:
-   * - id=null, fieldsConfig="[]": No existe config en BD → Mostrar campos DEFAULT
-   * - id=123, fieldsConfig="[]": Existe config vacía → Admin configuró NO mostrar nada
+   * - id=null, fieldsConfig="[]": No existe config en BD â†’ Mostrar campos DEFAULT
+   * - id=123, fieldsConfig="[]": Existe config vacÃ­a â†’ Admin configurÃ³ NO mostrar nada
    */
   loadCustomerOutputConfig() {
     if (!this.selectedTenantId) return;
 
-    // TEMPORAL: El endpoint customer-outputs/config no existe aún
+    // TEMPORAL: El endpoint customer-outputs/config no existe aÃºn
     // Usar directamente los campos por defecto
     console.log('[TEMPORAL] loadCustomerOutputConfig - endpoint no existe, usando campos por defecto');
     this.setDefaultOutputFields();
@@ -3862,23 +3898,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.customerOutputConfigService.getConfiguration(this.selectedTenantId, this.selectedPortfolioId)
       .pipe(
         catchError((error) => {
-          console.error('Error cargando configuración:', error);
+          console.error('Error cargando configuraciÃ³n:', error);
           this.setDefaultOutputFields();
           return of(null);
         })
       )
       .subscribe({
         next: (response) => {
-          if (!response) return; // Si hubo error, ya se manejó en catchError
+          if (!response) return; // Si hubo error, ya se manejÃ³ en catchError
 
-          // Verificar si existe configuración en BD
+          // Verificar si existe configuraciÃ³n en BD
           if (response.id === null) {
-            // No hay configuración guardada → usar campos por defecto
+            // No hay configuraciÃ³n guardada â†’ usar campos por defecto
             this.setDefaultOutputFields();
             return;
           }
 
-          // Hay configuración guardada → usar esos campos (incluso si está vacío)
+          // Hay configuraciÃ³n guardada â†’ usar esos campos (incluso si estÃ¡ vacÃ­o)
           try {
             const fields = JSON.parse(response.fieldsConfig);
             // Filtrar solo campos visibles y ordenar
@@ -3897,7 +3933,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Carga la configuración de días máximos para la primera cuota de la subcartera actual
+   * Carga la configuraciÃ³n de dÃ­as mÃ¡ximos para la primera cuota de la subcartera actual
    */
   loadFirstInstallmentConfig() {
     if (!this.selectedSubPortfolioId) {
@@ -3920,28 +3956,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Carga el cliente de la llamada activa del agente
-   * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinámicamente
+   * MODIFICADO: Ahora consulta la llamada activa y carga ese contacto dinÃ¡micamente
    */
   loadFirstCustomer(retryCount: number = 0, forceRefresh: boolean = false) {
-    // Si autoLoadCustomerByPhone ya cargó un cliente (llamada manual/saliente), no duplicar
+    // Si autoLoadCustomerByPhone ya cargÃ³ un cliente (llamada manual/saliente), no duplicar
     if (this.customerData()?.id && retryCount === 0 && !forceRefresh) {
-      console.log('📋 [FULL-DATA] Cliente ya cargado por autoLoadCustomerByPhone, omitiendo loadFirstCustomer');
+      console.log('ðŸ“‹ [FULL-DATA] Cliente ya cargado por autoLoadCustomerByPhone, omitiendo loadFirstCustomer');
       return;
     }
 
     this.isLoadingCustomer.set(true);
     const currentUser = this.authService.getCurrentUser();
 
-    if (!currentUser || !currentUser.sipExtension) {
-      console.error('❌ No se pudo obtener la extensión SIP del agente logueado');
+    if (!currentUser || !currentUser.id) {
+      console.error('âŒ No se pudo obtener el agente logueado');
       this.isLoadingCustomer.set(false);
       return;
     }
 
     // ========================================
     // FAST PATH: Usar datos buffereados del WebSocket PREDICTIVE_CALL_CONNECTED
-    // El backend envía phoneNumber, contactId, etc. ANTES del bridge.
-    // app.component los guarda en sessionStorage porque llegan antes de que esta página cargue.
+    // El backend envÃ­a phoneNumber, contactId, etc. ANTES del bridge.
+    // app.component los guarda en sessionStorage porque llegan antes de que esta pÃ¡gina cargue.
     // ========================================
     if (retryCount === 0 && !forceRefresh) {
       const predictiveDataStr = sessionStorage.getItem('predictive_call_data');
@@ -3949,28 +3985,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         sessionStorage.removeItem('predictive_call_data');
         try {
           const predictiveData = JSON.parse(predictiveDataStr);
-          if (predictiveData.phoneNumber) {
-            console.log(`📞 [FAST-PATH] Datos de llamada predictiva en buffer - phone: ${predictiveData.phoneNumber}`);
+          if (predictiveData.callUuid && predictiveData.agentId) {
+            console.log(`ðŸ“ž [FAST-PATH] Rehidratando contexto predictivo: ${predictiveData.callUuid}`);
             this.setPredictiveCallContext(predictiveData);
-            this.autoLoadCustomerByPhone(predictiveData.phoneNumber, () => {
-              console.warn('⚠️ [FAST-PATH] Teléfono no matcheó — cayendo a customer-full-data por contactId');
-              this.loadFirstCustomer(0, true);
-            }, predictiveData.llamadaId ?? null);
+            this.loadPredictiveCustomer(predictiveData.callUuid, predictiveData.agentId);
             return;
           }
         } catch (e) {
-          console.warn('⚠️ [FAST-PATH] Error parseando datos buffereados:', e);
+          console.warn('âš ï¸ [FAST-PATH] Error parseando datos buffereados:', e);
         }
       }
     }
 
-    const sipExt = currentUser.sipExtension;
-    console.log(`📋 [FULL-DATA] Cargando datos completos del cliente para extensión ${sipExt}... (intento ${retryCount + 1})`);
+    console.log(`ðŸ“‹ [FULL-DATA] Rehidratando llamada activa del agente ${currentUser.id}... (intento ${retryCount + 1})`);
 
-    // Endpoint unificado: obtiene llamada activa + detalle cliente + datos dinámicos en 1 sola llamada
-    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/extension/${sipExt}`).pipe(
+    // Excluye el fallback legado por "Ãºltima llamada reciente", que es ambiguo.
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/agent/${currentUser.id}`).pipe(
       catchError((error) => {
-        console.error('❌ [FULL-DATA] Error cargando datos completos:', error);
+        console.error('âŒ [FULL-DATA] Error cargando datos completos:', error);
         this.isLoadingCustomer.set(false);
         return of(null);
       })
@@ -3978,19 +4010,26 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       next: (fullData) => {
         if (!fullData) {
           // Reintentar si no hay datos - cubre dos escenarios:
-          // 1. Llamada activa: transacción del backend aún no commiteada
-          // 2. Llamada terminó rápido (<3s): agente ya está tipificando pero los datos no llegaron
+          // 1. Llamada activa: transacciÃ³n del backend aÃºn no commiteada
+          // 2. Llamada terminÃ³ rÃ¡pido (<3s): agente ya estÃ¡ tipificando pero los datos no llegaron
           if (retryCount < 2 && (this.callActive() || this.isTipifying()) && !this.customerData()?.id) {
-            console.warn(`⚠️ [FULL-DATA] Sin datos pero en llamada/tipificando - reintentando en 2s (intento ${retryCount + 1}/3)`);
+            console.warn(`âš ï¸ [FULL-DATA] Sin datos pero en llamada/tipificando - reintentando en 2s (intento ${retryCount + 1}/3)`);
             setTimeout(() => this.loadFirstCustomer(retryCount + 1, forceRefresh), 2000);
           } else {
-            console.warn('⚠️ [FULL-DATA] No se obtuvieron datos después de todos los intentos');
+            console.warn('âš ï¸ [FULL-DATA] No se obtuvieron datos despuÃ©s de todos los intentos');
             this.isLoadingCustomer.set(false);
           }
           return;
         }
 
-        console.log(`✅ [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
+        const currentUuid = this.activeCallContext().uuid;
+        if (currentUuid && fullData.callUuid && currentUuid !== fullData.callUuid) {
+          console.warn('ðŸš« [FULL-DATA] Respuesta descartada: pertenece a otra llamada activa');
+          this.isLoadingCustomer.set(false);
+          return;
+        }
+
+        console.log(`âœ… [FULL-DATA] Datos recibidos - llamadaId: ${fullData.llamadaId}, contactId: ${fullData.contactId}`);
 
         this.setPredictiveCallContext(fullData);
 
@@ -3999,20 +4038,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           this.dialerContactId.set(fullData.contactId);
         }
 
-        // Si tiene datos dinámicos completos, usar loadCustomerFromDynamicTable
+        // Si tiene datos dinÃ¡micos completos, usar loadCustomerFromDynamicTable
         if (fullData.dynamicData) {
-          console.log('✅ [FULL-DATA] Datos dinámicos disponibles, cargando con loadCustomerFromDynamicTable');
+          console.log('âœ… [FULL-DATA] Datos dinÃ¡micos disponibles, cargando con loadCustomerFromDynamicTable');
           this.loadCustomerFromDynamicTable(fullData.dynamicData);
           const customerId = this.customerData()?.id;
           if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
         } else if (fullData.clienteDetalle) {
-          // Fallback: solo tiene datos básicos del cliente
-          console.warn('⚠️ [FULL-DATA] Sin datos dinámicos, usando fallback con clienteDetalle');
+          // Fallback: solo tiene datos bÃ¡sicos del cliente
+          console.warn('âš ï¸ [FULL-DATA] Sin datos dinÃ¡micos, usando fallback con clienteDetalle');
           this.loadClienteDetalleFallback(fullData.clienteDetalle);
           const customerId = this.customerData()?.id;
           if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
         } else {
-          console.warn('⚠️ [FULL-DATA] Sin datos del cliente');
+          console.warn('âš ï¸ [FULL-DATA] Sin datos del cliente');
           this.isLoadingCustomer.set(false);
         }
       }
@@ -4021,6 +4060,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   protected showDialerDataRefreshButton(): boolean {
     return false;
+  }
+
+  private loadPredictiveCustomer(callUuid: string, agentId: number): void {
+    this.isLoadingCustomer.set(true);
+    this.http.get<any>(`${environment.gatewayUrl}/autodialer/customer-full-data/agent/${agentId}/call/${callUuid}`).pipe(
+      catchError(error => {
+        console.error(`âŒ [PREDICTIVE] Error rehidratando ${callUuid}:`, error);
+        this.isLoadingCustomer.set(false);
+        return of(null);
+      })
+    ).subscribe(fullData => {
+      if (!fullData) {
+        this.isLoadingCustomer.set(false);
+        return;
+      }
+
+      const currentUuid = this.activeCallContext().uuid;
+      if (currentUuid && fullData.callUuid && currentUuid !== fullData.callUuid) {
+        console.warn('ðŸš« [PREDICTIVE] Respuesta descartada: pertenece a otra llamada activa');
+        this.isLoadingCustomer.set(false);
+        return;
+      }
+
+      this.setPredictiveCallContext(fullData);
+      if (fullData.contactId) this.dialerContactId.set(fullData.contactId);
+      if (fullData.dynamicData) {
+        this.loadCustomerFromDynamicTable(fullData.dynamicData);
+        const customerId = this.customerData()?.id;
+        if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
+      } else if (fullData.clienteDetalle) {
+        this.loadClienteDetalleFallback(fullData.clienteDetalle);
+        const customerId = this.customerData()?.id;
+        if (customerId != null) this.assignCallClient(customerId, fullData.llamadaId);
+      } else {
+        console.warn('âš ï¸ [PREDICTIVE] Contexto sin datos de cliente');
+        this.isLoadingCustomer.set(false);
+      }
+    });
   }
 
   protected refreshDialerCustomerData(): void {
@@ -4032,21 +4109,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Carga los datos del cliente desde el backend
-   * MODIFICADO: Ahora usa el mismo servicio que la búsqueda manual para obtener datos completos
+   * MODIFICADO: Ahora usa el mismo servicio que la bÃºsqueda manual para obtener datos completos
    */
   private loadClienteDetalle(contactId: number) {
-    console.log(`📋 Cargando datos del cliente para contacto ${contactId}...`);
+    console.log(`ðŸ“‹ Cargando datos del cliente para contacto ${contactId}...`);
 
-    // Primero obtener info básica del contacto para conseguir el documento
+    // Primero obtener info bÃ¡sica del contacto para conseguir el documento
     this.http.get<any>(`${environment.gatewayUrl}/contacts/${contactId}/cliente-detalle`).pipe(
       catchError((error) => {
-        console.error('❌ Error cargando datos del cliente:', error);
+        console.error('âŒ Error cargando datos del cliente:', error);
         return of(null);
       })
     ).subscribe({
       next: (clienteDetalle) => {
         if (clienteDetalle && clienteDetalle.documento) {
-          console.log('✅ Cliente básico cargado, documento:', clienteDetalle.documento);
+          console.log('âœ… Cliente bÃ¡sico cargado, documento:', clienteDetalle.documento);
 
           // Obtener tenant, portfolio y subportfolio del usuario actual
           const currentUser = this.authService.getCurrentUser();
@@ -4055,35 +4132,35 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           const subPortfolioId = currentUser?.subPortfolioId;
 
           if (!tenantId || !portfolioId || !subPortfolioId) {
-            console.error('❌ No se pudo obtener asignación completa del usuario:', { tenantId, portfolioId, subPortfolioId });
+            console.error('âŒ No se pudo obtener asignaciÃ³n completa del usuario:', { tenantId, portfolioId, subPortfolioId });
             // Fallback: usar datos limitados del clienteDetalle
             this.loadClienteDetalleFallback(clienteDetalle);
             return;
           }
 
-          // Usar el endpoint /api/client-search/find que retorna datos COMPLETOS de la tabla dinámica
-          console.log(`🔍 Buscando datos completos del cliente con documento ${clienteDetalle.documento} en tenant ${tenantId}, portfolio ${portfolioId}, subportfolio ${subPortfolioId}...`);
+          // Usar el endpoint /api/client-search/find que retorna datos COMPLETOS de la tabla dinÃ¡mica
+          console.log(`ðŸ” Buscando datos completos del cliente con documento ${clienteDetalle.documento} en tenant ${tenantId}, portfolio ${portfolioId}, subportfolio ${subPortfolioId}...`);
           this.customerService.findClientByDocumento(tenantId, portfolioId, subPortfolioId, clienteDetalle.documento).subscribe({
             next: (clienteCompleto) => {
               if (clienteCompleto) {
-                console.log('✅ Datos completos del cliente obtenidos:', clienteCompleto);
+                console.log('âœ… Datos completos del cliente obtenidos:', clienteCompleto);
                 // Usar loadCustomerFromDynamicTable - siempre usa ini_*.id
                 this.loadCustomerFromDynamicTable(clienteCompleto);
               } else {
-                console.warn('⚠️ No se encontró cliente con documento:', clienteDetalle.documento);
+                console.warn('âš ï¸ No se encontrÃ³ cliente con documento:', clienteDetalle.documento);
                 // Fallback: usar datos limitados del clienteDetalle
                 this.loadClienteDetalleFallback(clienteDetalle);
               }
             },
             error: (error) => {
-              console.error('❌ Error buscando datos completos del cliente:', error);
+              console.error('âŒ Error buscando datos completos del cliente:', error);
               // Fallback: usar datos limitados del clienteDetalle
               this.loadClienteDetalleFallback(clienteDetalle);
             }
           });
         } else {
           this.isLoadingCustomer.set(false);
-          console.log('⚠️ No se pudieron cargar los datos del cliente');
+          console.log('âš ï¸ No se pudieron cargar los datos del cliente');
         }
       }
     });
@@ -4092,11 +4169,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   /**
    * Fallback: carga datos limitados del cliente cuando no se puede obtener datos completos
    * ADVERTENCIA: En este modo NO tenemos el ini_*.id, las gestiones pueden no guardarse correctamente
-   * @param clienteDetalle Datos básicos del cliente
+   * @param clienteDetalle Datos bÃ¡sicos del cliente
    */
   private loadClienteDetalleFallback(clienteDetalle: any) {
-    console.warn('⚠️ FALLBACK: No se pudo obtener datos de tabla dinámica');
-    console.warn('⚠️ Las gestiones guardadas pueden no tener el ID correcto del cliente');
+    console.warn('âš ï¸ FALLBACK: No se pudo obtener datos de tabla dinÃ¡mica');
+    console.warn('âš ï¸ Las gestiones guardadas pueden no tener el ID correcto del cliente');
 
     // Guardar los datos raw del cliente
     this.rawClientData.set(clienteDetalle);
@@ -4146,48 +4223,48 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     });
     this.syncEmailsMetodoFromCurrentData();
 
-    // Cargar teléfonos desde metodos_contacto
+    // Cargar telÃ©fonos desde metodos_contacto
     const doc = clienteDetalle.documento || '';
     if (doc) {
       this.loadTelefonosMetodo(doc);
     }
 
     this.isLoadingCustomer.set(false);
-    console.warn('⚠️ Datos del cliente cargados en modo FALLBACK, customerId:', customerId);
+    console.warn('âš ï¸ Datos del cliente cargados en modo FALLBACK, customerId:', customerId);
 
-    // 📅 Cargar cronogramas de promesas de pago activos (puede no encontrar resultados correctos)
+    // ðŸ“… Cargar cronogramas de promesas de pago activos (puede no encontrar resultados correctos)
     this.loadActivePaymentSchedules(customerId);
   }
 
   /**
    * Carga los cronogramas de promesas de pago activos para un cliente
    * IMPORTANTE: Usa documento en lugar de customerId porque el id_cliente
-   * en registros_gestion se resuelve desde la tabla 'clientes' (diferente al ID de la tabla dinámica)
+   * en registros_gestion se resuelve desde la tabla 'clientes' (diferente al ID de la tabla dinÃ¡mica)
    */
   private loadActivePaymentSchedules(customerId: number) {
     // Usar documento en lugar de customerId para buscar promesas
-    // El customerId de la tabla dinámica no coincide con id_cliente en registros_gestion
+    // El customerId de la tabla dinÃ¡mica no coincide con id_cliente en registros_gestion
     const documento = this.customerData()?.numero_documento;
     if (!documento) {
-      console.warn('⚠️ No hay documento del cliente, no se pueden cargar cronogramas');
+      console.warn('âš ï¸ No hay documento del cliente, no se pueden cargar cronogramas');
       this.activePaymentSchedules.set([]);
       this.allPaymentSchedules.set([]);
       return;
     }
 
-    console.log(`📅 Cargando cronogramas activos para documento ${documento}...`);
+    console.log(`ðŸ“… Cargando cronogramas activos para documento ${documento}...`);
 
-    // Cargar en paralelo el estado del período de gracia por promesa vencida (Regla B)
+    // Cargar en paralelo el estado del perÃ­odo de gracia por promesa vencida (Regla B)
     this.loadPromesaVencidaGracia(documento);
 
     this.managementService.getActiveSchedulesByDocumento(documento).pipe(
       catchError((error) => {
-        console.warn('⚠️ Error cargando cronogramas activos:', error);
+        console.warn('âš ï¸ Error cargando cronogramas activos:', error);
         return of([]);
       })
     ).subscribe({
       next: (records: any[]) => {
-        console.log('✅ Registros de promesas cargados:', records);
+        console.log('âœ… Registros de promesas cargados:', records);
 
         if (!records || records.length === 0) {
           this.activePaymentSchedules.set([]);
@@ -4230,28 +4307,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           };
         });
 
-        // Ordenar DESC por fecha de gestión para garantizar que [0] sea la promesa inmediata
+        // Ordenar DESC por fecha de gestiÃ³n para garantizar que [0] sea la promesa inmediata
         const sortedSchedules = [...schedules].sort((a: any, b: any) => {
           const dateA = new Date(a?.fechaGestion || 0).getTime();
           const dateB = new Date(b?.fechaGestion || 0).getTime();
           return dateB - dateA;
         });
 
-        // Mantener TODAS para lógica de cancelación (solo usa la inmediata)
+        // Mantener TODAS para lÃ³gica de cancelaciÃ³n (solo usa la inmediata)
         this.allPaymentSchedules.set(sortedSchedules);
 
-        // Mantener comportamiento histórico de promesas activas:
+        // Mantener comportamiento histÃ³rico de promesas activas:
         // solo cronogramas con cuotas pendientes.
         const activeSchedules = sortedSchedules.filter((s: any) =>
           s.cuotasPendientes > 0
         );
 
-        console.log('📅 Cronogramas transformados:', schedules);
-        console.log('📅 Cronogramas activos (con cuotas pendientes):', activeSchedules);
+        console.log('ðŸ“… Cronogramas transformados:', schedules);
+        console.log('ðŸ“… Cronogramas activos (con cuotas pendientes):', activeSchedules);
         this.activePaymentSchedules.set(activeSchedules);
 
         if (activeSchedules.length > 0) {
-          console.log(`📅 ¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
+          console.log(`ðŸ“… Â¡Cliente tiene ${activeSchedules.length} promesa(s) de pago activa(s)!`);
           this.cargarEstadoCartaAcuerdo(Number(records[0]?.customerId) || null);
         }
       }
@@ -4259,9 +4336,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Carga el estado del período de gracia por promesa vencida (Regla B), para pintar
-   * la card de bloqueo si la última promesa del cliente está vencida y le pertenece
-   * todavía a otro asesor.
+   * Carga el estado del perÃ­odo de gracia por promesa vencida (Regla B), para pintar
+   * la card de bloqueo si la Ãºltima promesa del cliente estÃ¡ vencida y le pertenece
+   * todavÃ­a a otro asesor.
    */
   private loadPromesaVencidaGracia(documento: string) {
     if (!this.selectedTenantId || !this.selectedPortfolioId || !this.selectedSubPortfolioId) {
@@ -4273,7 +4350,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       documento, this.selectedTenantId, this.selectedPortfolioId, this.selectedSubPortfolioId
     ).pipe(
       catchError((error) => {
-        console.warn('⚠️ Error verificando período de gracia de promesa vencida:', error);
+        console.warn('âš ï¸ Error verificando perÃ­odo de gracia de promesa vencida:', error);
         return of(null);
       })
     ).subscribe(response => {
@@ -4282,7 +4359,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Establece campos por defecto cuando no hay configuración guardada
+   * Establece campos por defecto cuando no hay configuraciÃ³n guardada
    */
   private setDefaultOutputFields() {
     this.customerOutputFields.set([
@@ -4290,7 +4367,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       { id: 'nombre_completo', label: 'Nombre Completo', field: 'nombre_completo', category: 'personal', format: 'text', highlight: false, size: 'full' },
       { id: 'telefono_principal', label: 'Celular', field: 'contacto.telefono_principal', category: 'contact', format: 'text', highlight: false, size: 'medium' },
       { id: 'email', label: 'Email', field: 'contacto.email', category: 'contact', format: 'text', highlight: false, size: 'medium' },
-      { id: 'direccion', label: 'Dirección', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' }
+      { id: 'direccion', label: 'DirecciÃ³n', field: 'contacto.direccion', category: 'contact', format: 'text', highlight: false, size: 'full' }
     ]);
   }
 
@@ -4320,10 +4397,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           const tipificacionParts = [m.level1Name, m.level2Name, m.level3Name, m.level4Name].filter(Boolean);
           const tipificacionCompleta = tipificacionParts.join(' > ') || '-';
 
-          // VÍA unificada: Canal + Método
+          // VÃA unificada: Canal + MÃ©todo
           const via = this.formatViaDisplay(m.canalContacto, m.metodoContacto);
 
-          // PROMESA compacta: monto · cuotas · fecha
+          // PROMESA compacta: monto Â· cuotas Â· fecha
           const promesaCompacta = this.formatPromesaCompacta(m.montoPromesa, m.totalCuotas, m.fechaPrimeraCuota);
 
           return {
@@ -4356,28 +4433,28 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     });
   }
 
-  // ==================== ÚLTIMO CONVENIO ====================
-  // Un "convenio" es una promesa de pago cuyas cuotas caen en dos o más meses distintos.
+  // ==================== ÃšLTIMO CONVENIO ====================
+  // Un "convenio" es una promesa de pago cuyas cuotas caen en dos o mÃ¡s meses distintos.
   // Dos cuotas dentro del mismo mes son una promesa fraccionada, no un convenio.
   private static readonly ESTADOS_CUOTA_PAGADA = new Set(['PAGADA', 'PAGADO', 'CUMPLIDO']);
   private static readonly ESTADOS_CUOTA_VENCIDA = new Set(['VENCIDA', 'VENCIDO']);
   // Tope de gestiones del historial que se consultan antes de rendirse, para no
-  // disparar una ráfaga de llamadas en clientes con muchas promesas de una sola cuota.
+  // disparar una rÃ¡faga de llamadas en clientes con muchas promesas de una sola cuota.
   private static readonly MAX_CANDIDATOS_CONVENIO = 5;
 
   /**
-   * Busca la última promesa de tipo convenio del cliente para pintarla en el panel de
-   * gestión, y solo la muestra si quedó CUMPLIDA o VENCIDA.
+   * Busca la Ãºltima promesa de tipo convenio del cliente para pintarla en el panel de
+   * gestiÃ³n, y solo la muestra si quedÃ³ CUMPLIDA o VENCIDA.
    *
-   * Trabaja únicamente con datos que la pantalla ya tiene a mano: el historial ligero
+   * Trabaja Ãºnicamente con datos que la pantalla ya tiene a mano: el historial ligero
    * como prefiltro, y el endpoint de cuotas por grupo, que no filtra por estado y por
-   * eso sí devuelve los convenios ya pagados.
+   * eso sÃ­ devuelve los convenios ya pagados.
    */
   private cargarUltimoConvenio(historial: Array<{ nombreAgente: string; grupoPromesaUuid?: string }>): void {
     this.ultimoConvenio.set(null);
     this.ultimoConvenioExpandido.set(false);
 
-    // El historial ya viene ordenado de la gestión más reciente a la más antigua.
+    // El historial ya viene ordenado de la gestiÃ³n mÃ¡s reciente a la mÃ¡s antigua.
     const candidatos = historial
       .filter(gestion => !!gestion.grupoPromesaUuid)
       .slice(0, CollectionManagementPage.MAX_CANDIDATOS_CONVENIO);
@@ -4387,9 +4464,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Recorre los candidatos hacia atrás hasta dar con el primero que sea un convenio.
-   * Ese es "el último convenio" del cliente: si quedó en otro estado no se pinta nada
-   * y la búsqueda se corta, en vez de seguir hasta encontrar uno que sí calce.
+   * Recorre los candidatos hacia atrÃ¡s hasta dar con el primero que sea un convenio.
+   * Ese es "el Ãºltimo convenio" del cliente: si quedÃ³ en otro estado no se pinta nada
+   * y la bÃºsqueda se corta, en vez de seguir hasta encontrar uno que sÃ­ calce.
    */
   private evaluarCandidatoConvenio(
     candidatos: Array<{ nombreAgente: string; grupoPromesaUuid?: string }>,
@@ -4415,7 +4492,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Decide si un cronograma es un convenio y, si lo es, cómo terminó.
+   * Decide si un cronograma es un convenio y, si lo es, cÃ³mo terminÃ³.
    * Todas las cuotas pagadas -> CUMPLIDO. Alguna vencida sin pagar -> VENCIDO.
    */
   private evaluarConvenio(nombreAgente: string, registros: any[]): EvaluacionConvenio {
@@ -4431,7 +4508,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }))
       .sort((a: CuotaUltimoConvenio, b: CuotaUltimoConvenio) => a.numeroCuota - b.numeroCuota);
 
-    // Es convenio solo si las cuotas se reparten en dos o más meses distintos.
+    // Es convenio solo si las cuotas se reparten en dos o mÃ¡s meses distintos.
     const meses = new Set(
       cuotas.map(cuota => (cuota.fechaPromesa || '').substring(0, 7)).filter(mes => mes.length === 7)
     );
@@ -4446,7 +4523,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (pagadas === cuotas.length) {
       return { tipo: 'MOSTRAR', convenio: this.construirConvenio('CUMPLIDO', nombreAgente, cuotas, pagadas) };
     }
-    // Es un convenio, pero terminó en otro estado (anulado, o aún con cuotas vivas
+    // Es un convenio, pero terminÃ³ en otro estado (anulado, o aÃºn con cuotas vivas
     // que ya maneja la tarjeta de promesa activa): no se muestra nada.
     return { tipo: 'OTRO_ESTADO' };
   }
@@ -4501,16 +4578,16 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Carga el historial histórico desde la base de datos antigua (Web-Service)
+   * Carga el historial histÃ³rico desde la base de datos antigua (Web-Service)
    */
   loadHistorialHistorico(page: number = 0) {
     const documento = this.customerData()?.numero_documento;
     if (!documento) {
-      console.log('[HISTORICO] No hay documento del cliente, omitiendo carga de historial histórico');
+      console.log('[HISTORICO] No hay documento del cliente, omitiendo carga de historial histÃ³rico');
       return;
     }
 
-    console.log('[HISTORICO] Cargando historial histórico para documento:', documento, 'página:', page);
+    console.log('[HISTORICO] Cargando historial histÃ³rico para documento:', documento, 'pÃ¡gina:', page);
     this.historialHistoricoLoading.set(true);
 
     this.managementService.getGestionesHistoricas(documento, page, 10).subscribe({
@@ -4524,13 +4601,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           const hora = g.horaGestion ? g.horaGestion.substring(0, 5) : '';
           const fecha = hora ? `${fechaOnly} ${hora}` : fechaOnly;
 
-          // Construir tipificación: buscar en catálogo por nombre de resultado
+          // Construir tipificaciÃ³n: buscar en catÃ¡logo por nombre de resultado
           const tipificacionCompleta = [g.resultado, g.solucion].filter(Boolean).join(' > ') || '-';
 
-          // VÍA unificada
+          // VÃA unificada
           const via = this.formatViaDisplay(g.canal, g.metodo);
 
-          // Promesa compacta (histórico no tiene cuotas ni fecha)
+          // Promesa compacta (histÃ³rico no tiene cuotas ni fecha)
           const promesaCompacta = this.formatPromesaCompacta(g.montoPromesa ?? undefined, undefined, undefined);
 
           // Formatear estado de pago
@@ -4559,10 +4636,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.historialHistoricoTotalElements.set(response.totalElements);
         this.historialHistoricoLoading.set(false);
 
-        console.log('[HISTORICO] Historial histórico cargado:', historial.length, 'registros');
+        console.log('[HISTORICO] Historial histÃ³rico cargado:', historial.length, 'registros');
       },
       error: (error) => {
-        console.error('[HISTORICO] Error al cargar historial histórico:', error);
+        console.error('[HISTORICO] Error al cargar historial histÃ³rico:', error);
         this.historialHistoricoLoading.set(false);
         this.historialHistorico.set([]);
       }
@@ -4570,7 +4647,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Cambia de página en el historial histórico
+   * Cambia de pÃ¡gina en el historial histÃ³rico
    */
   cambiarPaginaHistorico(direccion: 'anterior' | 'siguiente') {
     const currentPage = this.historialHistoricoPage();
@@ -4592,7 +4669,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.selectedHistorialPromesaGroupUuid.set(null);
     }
 
-    // Si cambia a histórico y no hay datos cargados, cargarlos
+    // Si cambia a histÃ³rico y no hay datos cargados, cargarlos
     if (tab === 'historico' && this.historialHistorico().length === 0) {
       this.loadHistorialHistorico();
     }
@@ -4611,7 +4688,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Calcula la duración de la llamada en segundos desde callStartTime hasta ahora
+   * Calcula la duraciÃ³n de la llamada en segundos desde callStartTime hasta ahora
    */
   private calculateCallDurationSeconds(): number {
     if (!this.callStartTime) return 0;
@@ -4633,7 +4710,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     // Fix temporal: si el componente muere antes de los 100ms, el desbloqueo lo hace
-    // el bloque de abajo (isTipifying sigue en true porque el timer no llegó a correr)
+    // el bloque de abajo (isTipifying sigue en true porque el timer no llegÃ³ a correr)
     if (this.desbloqueoTimeout) {
       clearTimeout(this.desbloqueoTimeout);
       this.desbloqueoTimeout = undefined;
@@ -4644,7 +4721,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (this.isTipifying()) {
       this.isTipifying.set(false);
       this.sipService.blockIncomingCallsMode(false);
-      console.log('🔓 [ngOnDestroy] Desbloqueando llamadas entrantes al salir del componente');
+      console.log('ðŸ”“ [ngOnDestroy] Desbloqueando llamadas entrantes al salir del componente');
     }
 
     // Limpiar suscripciones
@@ -4657,6 +4734,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (this.outgoingCallSubscription) {
       this.outgoingCallSubscription.unsubscribe();
     }
+    if (this.predictiveCallSubscription) {
+      this.predictiveCallSubscription.unsubscribe();
+    }
+    if (this.websocketConnectionSubscription) {
+      this.websocketConnectionSubscription.unsubscribe();
+    }
     if (this.agentStatusSubscription) {
       this.agentStatusSubscription.unsubscribe();
     }
@@ -4667,7 +4750,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (this.rellamadaCallActive() || this.callActive() || this.isRellamada()) return;
     this.isRellamada.set(true);
     this.llamadaRealizada.set(true); // llamada manual/rellamada: bloquea salida hasta guardar
-    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
+    this.armHistoryTrap(); // neutralizar botÃ³n AtrÃ¡s del navegador mientras hay llamada
 
     this.setNonPredictiveCallContext(phoneNumber);
     this.sipService.setRellamadaActive(true);
@@ -4681,13 +4764,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const agentId = currentUser?.id;
 
     if (!agentId) {
-      console.error('❌ No se pudo obtener el ID del agente para la rellamada');
+      console.error('âŒ No se pudo obtener el ID del agente para la rellamada');
       this.resetRellamadaState();
       return;
     }
 
     // Registrar en BD (sin originar via FreeSWITCH) + llamada SIP directa
-    console.log('📞 [Rellamada] Registrando y llamando a:', phoneNumber);
+    console.log('ðŸ“ž [Rellamada] Registrando y llamando a:', phoneNumber);
       await this.ensureCustomerLoadedForRellamada(phoneNumber);
       const idCliente = this.customerData()?.id || undefined;
       const documento = this.customerData()?.numero_documento || undefined;
@@ -4702,9 +4785,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         carteraId: this.selectedPortfolioId,
         subcarteraId: this.selectedSubPortfolioId
       }).subscribe({
-        next: (call) => console.log('📞 [Rellamada] Registrada en BD', call?.callId),
+        next: (call) => console.log('ðŸ“ž [Rellamada] Registrada en BD', call?.callId),
         error: (err: any) => {
-          console.error('❌ [Rellamada] Error registrando llamada en BD:', err?.message || err);
+          console.error('âŒ [Rellamada] Error registrando llamada en BD:', err?.message || err);
            this.resetRellamadaState();
         }
       });
@@ -4739,7 +4822,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     try {
-      console.log('🔍 [Rellamada] Resolviendo cliente antes de registrar llamada:', phoneNumber);
+      console.log('ðŸ” [Rellamada] Resolviendo cliente antes de registrar llamada:', phoneNumber);
       const customers = await firstValueFrom(
         this.customerService.searchCustomersAcrossAllTenants('telefono', phoneNumber)
       );
@@ -4748,7 +4831,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.loadCustomerFromResource(customers[0]);
         console.log(' [Rellamada] Cliente cargado antes del registro:', customers[0].id);
       } else {
-        console.warn(' [Rellamada] No se encontró cliente por teléfono; se registrará sin idCliente/documento');
+        console.warn(' [Rellamada] No se encontrÃ³ cliente por telÃ©fono; se registrarÃ¡ sin idCliente/documento');
       }
     } catch (error) {
       console.error(' [Rellamada] Error cargando cliente antes del registro:', error);
@@ -4758,7 +4841,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   colgarRellamada() {
     if (!this.rellamadaCallActive()) return;
     this.sipService.hangup();
-    // El handler de onCallStatus limpia los flags automáticamente
+    // El handler de onCallStatus limpia los flags automÃ¡ticamente
   }
 
   protected openScheduleDetail(managementId: number) {
@@ -4771,21 +4854,21 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.scheduleManagementId.set(null);
   }
 
-  // ===== [DESACTIVADO] MÉTODOS DE AUTORIZACIÓN PARA MONTOS PERSONALIZADOS =====
-  // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban después desde un módulo aparte
-  // Se mantienen los métodos comentados por si se necesitan reactivar en el futuro
+  // ===== [DESACTIVADO] MÃ‰TODOS DE AUTORIZACIÃ“N PARA MONTOS PERSONALIZADOS =====
+  // Las excepciones ahora se guardan con estado EN_EVALUACION y se aprueban despuÃ©s desde un mÃ³dulo aparte
+  // Se mantienen los mÃ©todos comentados por si se necesitan reactivar en el futuro
 
   /**
    * [DESACTIVADO] Detecta cuando el usuario selecciona un monto personalizado
    * Ya no se usa - las excepciones se guardan directamente con estado EN_EVALUACION
    */
   onCustomAmountDetected(isCustom: boolean): void {
-    // Método desactivado - ya no se bloquea el guardado
-    console.log('ℹ️ [Exception] Custom amount detected (no blocking):', isCustom);
+    // MÃ©todo desactivado - ya no se bloquea el guardado
+    console.log('â„¹ï¸ [Exception] Custom amount detected (no blocking):', isCustom);
   }
 
   /*
-  // Los siguientes métodos están desactivados:
+  // Los siguientes mÃ©todos estÃ¡n desactivados:
   // - openSupervisorSelectionModal
   // - onSupervisorSelected
   // - onSupervisorSelectionCancelled
@@ -4802,8 +4885,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   startCall() {
     this.callActive.set(true);
-    this.llamadaRealizada.set(true); // se colocó una llamada: bloquea salida hasta guardar
-    this.armHistoryTrap(); // neutralizar botón Atrás del navegador mientras hay llamada
+    this.llamadaRealizada.set(true); // se colocÃ³ una llamada: bloquea salida hasta guardar
+    this.armHistoryTrap(); // neutralizar botÃ³n AtrÃ¡s del navegador mientras hay llamada
     this.callDuration.set(0);
     this.callStartTime = new Date().toISOString();
 
@@ -4813,9 +4896,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   endCall(navigate: boolean = false) {
-    console.log('📵 Finalizando llamada...');
+    console.log('ðŸ“µ Finalizando llamada...');
 
-    // Si está en hold, parar música y colgar la pata del cliente en FreeSWITCH
+    // Si estÃ¡ en hold, parar mÃºsica y colgar la pata del cliente en FreeSWITCH
     if (this.isOnHold()) {
       const currentUser = this.authService.getCurrentUser();
       const agentId = currentUser?.id;
@@ -4838,8 +4921,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.callTimer = undefined;
     }
 
-    // NO navegar - el agente debe quedarse en tipificación
-    // Solo navegará cuando guarde la gestión (onSaveSuccess)
+    // NO navegar - el agente debe quedarse en tipificaciÃ³n
+    // Solo navegarÃ¡ cuando guarde la gestiÃ³n (onSaveSuccess)
     if (navigate) {
       this.router.navigate(['/agent-dashboard']);
     }
@@ -4880,7 +4963,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Formatea el método de contacto para mostrar
+   * Formatea el mÃ©todo de contacto para mostrar
    */
   private formatMetodoDisplay(metodo: string | undefined): string {
     if (!metodo) return '-';
@@ -4888,7 +4971,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       'GESTION_MANUAL': 'Manual',
       'GESTION_PROGRESIVO': 'Progresivo',
       'GESTION_PREDICTIVO': 'Predictivo',
-      'GESTION_AUTOMATICA': 'Automática'
+      'GESTION_AUTOMATICA': 'AutomÃ¡tica'
     };
     return metodoMap[metodo] || this.formatSnakeCase(metodo);
   }
@@ -4910,7 +4993,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Unifica Canal + Método en una sola columna "VÍA"
+   * Unifica Canal + MÃ©todo en una sola columna "VÃA"
    * Ej: "Llamada Sal. / Manual", "WhatsApp", "Manual"
    */
   private formatViaDisplay(canal: string | undefined, metodo: string | undefined): { text: string; cssClass: string } {
@@ -4925,7 +5008,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       'GESTION_MANUAL': 'Manual',
       'GESTION_PROGRESIVO': 'Progresivo',
       'GESTION_PREDICTIVO': 'Predictivo',
-      'GESTION_AUTOMATICA': 'Automática'
+      'GESTION_AUTOMATICA': 'AutomÃ¡tica'
     };
 
     const canalText = canal ? (canalCorto[canal] || this.formatSnakeCase(canal)) : '';
@@ -4938,7 +5021,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       text = canalText || metodoText || '-';
     }
 
-    // CSS class basado en el canal (más visual) o método
+    // CSS class basado en el canal (mÃ¡s visual) o mÃ©todo
     let cssClass = 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
     if (canal?.includes('SALIENTE')) {
       cssClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
@@ -4957,7 +5040,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Formatea la promesa de pago de forma compacta
-   * Ej: "S/1,200 · 3 cuotas · 15/03"
+   * Ej: "S/1,200 Â· 3 cuotas Â· 15/03"
    */
   private formatPromesaCompacta(monto: number | undefined, totalCuotas: number | undefined, fechaPrimeraCuota: string | undefined): string {
     if (!monto || monto <= 0) return '';
@@ -4970,12 +5053,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
 
     if (fechaPrimeraCuota) {
-      // fecha compacta (día/mes) siguiendo el idioma del navegador
+      // fecha compacta (dÃ­a/mes) siguiendo el idioma del navegador
       const f = this.fmt.date(fechaPrimeraCuota, { day: '2-digit', month: '2-digit' });
       if (f) parts.push(f);
     }
 
-    return parts.join(' · ');
+    return parts.join(' Â· ');
   }
 
   /**
@@ -5019,7 +5102,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     this.selectedClassifications.set(newSelections.slice(0, levelIndex + 1));
 
-    // Resetear señales de continuidad y bloqueo de promesa activa al cambiar tipificación
+    // Resetear seÃ±ales de continuidad y bloqueo de promesa activa al cambiar tipificaciÃ³n
     this.resetContinuidadState();
     this.resetPromesaActivaState();
     this.showPromesaVencidaGraciaBlocking.set(false);
@@ -5041,10 +5124,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       if (!isNaN(numValue) && numValue > 0) {
         this.loadDynamicFields(numValue);
 
-        // Detectar si es tipificación CONTINUIDAD (nivel 2)
+        // Detectar si es tipificaciÃ³n CONTINUIDAD (nivel 2)
         this.checkIfContinuidad(numValue);
 
-        // Detectar si es tipificación PROMESA DE PAGO y validar promesas activas
+        // Detectar si es tipificaciÃ³n PROMESA DE PAGO y validar promesas activas
         this.checkIfPromesaPago(numValue);
       } else {
         this.dynamicFields.set([]);
@@ -5071,7 +5154,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Verifica si la tipificación seleccionada es CONTINUIDAD y valida si aplica
+   * Verifica si la tipificaciÃ³n seleccionada es CONTINUIDAD y valida si aplica
    */
   private checkIfContinuidad(typificationId: number) {
     const allTypifications = this.managementClassifications();
@@ -5079,25 +5162,25 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const selected = allTypifications.find((c: any) => String(c.id) === String(typificationId));
 
     if (!selected) {
-      console.log('[CONTINUIDAD] No se encontró tipificación con ID:', typificationId);
+      console.log('[CONTINUIDAD] No se encontrÃ³ tipificaciÃ³n con ID:', typificationId);
       return;
     }
 
-    // Verificar si el código es CON o el label contiene CONTINUIDAD (case insensitive)
+    // Verificar si el cÃ³digo es CON o el label contiene CONTINUIDAD (case insensitive)
     const isContinuidad = selected.codigo?.toUpperCase() === 'CON' ||
                           selected.label?.toUpperCase()?.includes('CONTINUIDAD');
 
-    console.log('[CONTINUIDAD] Verificando tipificación:', selected.codigo, selected.label, '- Es continuidad:', isContinuidad);
+    console.log('[CONTINUIDAD] Verificando tipificaciÃ³n:', selected.codigo, selected.label, '- Es continuidad:', isContinuidad);
 
     if (isContinuidad) {
-      console.log('[CONTINUIDAD] Tipificación CONTINUIDAD detectada:', selected.codigo, selected.label);
+      console.log('[CONTINUIDAD] TipificaciÃ³n CONTINUIDAD detectada:', selected.codigo, selected.label);
       this.esContinuidad.set(true);
       this.verificarContinuidadCliente();
     }
   }
 
   /**
-   * Verifica si la tipificación seleccionada es PROMESA DE PAGO y si el cliente
+   * Verifica si la tipificaciÃ³n seleccionada es PROMESA DE PAGO y si el cliente
    * ya tiene una promesa activa, mostrando un mensaje de bloqueo proactivo
    */
   private checkIfPromesaPago(typificationId: number) {
@@ -5105,17 +5188,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const selected = allTypifications.find((c: any) => String(c.id) === String(typificationId));
 
     if (!selected) {
-      console.log('[PROMESA-CHECK] No se encontró tipificación con ID:', typificationId);
+      console.log('[PROMESA-CHECK] No se encontrÃ³ tipificaciÃ³n con ID:', typificationId);
       return;
     }
 
-    // Verificar si el código es PP (Promesa de Pago) o el label contiene "PROMESA DE PAGO"
-    // También verificar allowsInstallmentSelection que indica que genera cronograma
+    // Verificar si el cÃ³digo es PP (Promesa de Pago) o el label contiene "PROMESA DE PAGO"
+    // TambiÃ©n verificar allowsInstallmentSelection que indica que genera cronograma
     const isPromesaPago = selected.codigo?.toUpperCase() === 'PP' ||
                           selected.label?.toUpperCase()?.includes('PROMESA DE PAGO') ||
                           selected.allowsInstallmentSelection === true;
 
-    console.log('[PROMESA-CHECK] Verificando tipificación:', selected.codigo, selected.label,
+    console.log('[PROMESA-CHECK] Verificando tipificaciÃ³n:', selected.codigo, selected.label,
                 '- Es promesa de pago:', isPromesaPago,
                 '- allowsInstallmentSelection:', selected.allowsInstallmentSelection);
 
@@ -5128,7 +5211,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Calcular total de cuotas pendientes
         const totalPending = schedulesWithPending.reduce((sum, schedule) => sum + schedule.cuotasPendientes, 0);
 
-        console.log('[PROMESA-CHECK] ⚠️ Cliente tiene', totalPending, 'cuota(s) pendiente(s) en',
+        console.log('[PROMESA-CHECK] âš ï¸ Cliente tiene', totalPending, 'cuota(s) pendiente(s) en',
                     schedulesWithPending.length, 'promesa(s) activa(s)');
 
         this.showPromesaActivaBlocking.set(true);
@@ -5137,12 +5220,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.resetPromesaActivaState();
       }
 
-      // Verificar período de gracia de una promesa vencida de otro asesor (Regla B)
+      // Verificar perÃ­odo de gracia de una promesa vencida de otro asesor (Regla B)
       const gracia = this.promesaVencidaGracia();
       const currentUser = this.authService.getCurrentUser();
       const esOtroAsesor = gracia?.idAgente != null && gracia.idAgente !== currentUser?.id;
       if (gracia?.enGracia && esOtroAsesor) {
-        console.log('[PROMESA-CHECK] ⚠️ Cliente en período de gracia de', gracia.nombreAgente, 'hasta', gracia.finGracia);
+        console.log('[PROMESA-CHECK] âš ï¸ Cliente en perÃ­odo de gracia de', gracia.nombreAgente, 'hasta', gracia.finGracia);
         this.showPromesaVencidaGraciaBlocking.set(true);
       } else {
         this.showPromesaVencidaGraciaBlocking.set(false);
@@ -5162,7 +5245,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Verifica si un cronograma específico tiene cuotas EN_EVALUACION
+   * Verifica si un cronograma especÃ­fico tiene cuotas EN_EVALUACION
    */
   hasScheduleEnEvaluacion(schedule: any): boolean {
     return schedule.installments?.some((c: any) => c.status === 'EN_EVALUACION') || false;
@@ -5176,7 +5259,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (!documento) {
       console.warn('[CONTINUIDAD] No hay documento del cliente');
-      this.continuidadError.set('No se encontró el documento del cliente');
+      this.continuidadError.set('No se encontrÃ³ el documento del cliente');
       return;
     }
 
@@ -5212,13 +5295,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   private loadDynamicFields(typificationId: number) {
     const reqId = ++this.dynamicFieldsReqId;
-    // Cargar campos dinámicos desde el backend
+    // Cargar campos dinÃ¡micos desde el backend
     this.lastDynamicFieldsTypificationId = typificationId;
     this.dynamicFieldsError.set(null);
     this.isLoadingDynamicFields.set(true);
     this.apiSystemConfigService.getClassificationFields(typificationId)
       .pipe(
-        // El flag baja SIEMPRE: si no, una excepción dentro del next dejaba el
+        // El flag baja SIEMPRE: si no, una excepciÃ³n dentro del next dejaba el
         // "Cargando campos adicionales..." colgado para siempre.
         finalize(() => {
           if (reqId === this.dynamicFieldsReqId) {
@@ -5228,14 +5311,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       )
       .subscribe({
       next: (response) => {
-        // Respuesta obsoleta (el asesor ya cambió de nivel): descartarla para que
+        // Respuesta obsoleta (el asesor ya cambiÃ³ de nivel): descartarla para que
         // no pise el schema del nivel actual.
         if (reqId !== this.dynamicFieldsReqId) { return; }
         this.isLeafClassification.set(response.isLeaf);
         this.dynamicFields.set(response.fields || []);
 
         // Convertir campos del backend al formato MetadataSchema
-        // Los tipos ya vienen en lowercase desde el backend, no necesitan conversión
+        // Los tipos ya vienen en lowercase desde el backend, no necesitan conversiÃ³n
         const fieldConfigs: FieldConfig[] = (response.fields || []).map((field: any, index: number) => {
           return {
           id: field.fieldCode,
@@ -5303,7 +5386,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       },
       error: (error) => {
         if (reqId !== this.dynamicFieldsReqId) { return; }
-        console.error('Error cargando campos dinámicos:', error);
+        console.error('Error cargando campos dinÃ¡micos:', error);
         this.isLeafClassification.set(false);
         this.dynamicFields.set([]);
         this.dynamicFieldsSchema.set(null);
@@ -5315,7 +5398,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Reintenta la carga de los campos dinámicos de la última tipificación seleccionada.
+   * Reintenta la carga de los campos dinÃ¡micos de la Ãºltima tipificaciÃ³n seleccionada.
    */
   reintentarCamposDinamicos() {
     if (this.lastDynamicFieldsTypificationId !== null) {
@@ -5348,7 +5431,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       },
       error: (error) => {
         console.warn('[PAYMENT] Error loading options, showing all amounts:', error);
-        // If error, assume no config exists → show all amounts
+        // If error, assume no config exists â†’ show all amounts
         this.hasPaymentOptionsConfig.set(false);
         this.enabledPaymentOptions.set([]);
       }
@@ -5426,7 +5509,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Find first pending installment
     const pendingInstallment = schedule.installments
-      .filter((inst: any) => inst.status.status === 'PENDING') // Corregido: el backend usa 'PENDING' en inglés
+      .filter((inst: any) => inst.status.status === 'PENDING') // Corregido: el backend usa 'PENDING' en inglÃ©s
       .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())[0];
 
     if (pendingInstallment) {
@@ -5472,13 +5555,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       const updates: any = {};
       updates[montoField.id] = pendingAmount;
 
-      // Si hay campo saldo_pendiente, calcularlo (será 0 porque se paga todo)
+      // Si hay campo saldo_pendiente, calcularlo (serÃ¡ 0 porque se paga todo)
       const hasSaldoField = schema?.fields.some(f => f.id === 'saldo_pendiente');
       if (hasSaldoField) {
         updates.saldo_pendiente = 0; // Al pagar todo, el saldo pendiente es 0
-        console.log('[BUTTON] Saldo pendiente será 0 (pago total)');
+        console.log('[BUTTON] Saldo pendiente serÃ¡ 0 (pago total)');
 
-        // Actualizar también dynamicFieldValues para que la validación pase
+        // Actualizar tambiÃ©n dynamicFieldValues para que la validaciÃ³n pase
         const currentValues = { ...this.dynamicFieldValues() };
         currentValues[montoField.id] = pendingAmount;
         currentValues.saldo_pendiente = 0;
@@ -5488,10 +5571,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.externalFieldUpdates.set(updates);
       console.log('[BUTTON] Updated externalFieldUpdates:', updates);
 
-      // Limpiar después de un breve delay para permitir futuras actualizaciones
+      // Limpiar despuÃ©s de un breve delay para permitir futuras actualizaciones
       setTimeout(() => this.externalFieldUpdates.set({}), 100);
     } else {
-      console.warn('[BUTTON] No se encontró campo de monto en el schema');
+      console.warn('[BUTTON] No se encontrÃ³ campo de monto en el schema');
     }
   }
 
@@ -5499,7 +5582,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Applies next installment payment
    */
   applyNextInstallmentPayment() {
-    console.log('[BUTTON-PP] Usar Próxima Cuota clicked!');
+    console.log('[BUTTON-PP] Usar PrÃ³xima Cuota clicked!');
     const schedules = this.activeSchedules();
     console.log('[BUTTON-PP] Active schedules:', schedules);
 
@@ -5515,7 +5598,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const pendingInstallments = schedule.installments
       .filter((inst: any) => {
         console.log('[BUTTON-PP] Checking installment:', inst, 'Status:', inst.status?.status);
-        return inst.status.status === 'PENDING'; // Corregido: el backend usa 'PENDING' en inglés
+        return inst.status.status === 'PENDING'; // Corregido: el backend usa 'PENDING' en inglÃ©s
       });
 
     console.log('[BUTTON-PP] Pending installments:', pendingInstallments);
@@ -5526,7 +5609,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     console.log('[BUTTON-PP] Next pending installment:', pendingInstallment);
 
     if (pendingInstallment) {
-      console.log('[BUTTON-PP] Usar Próxima Cuota - Amount:', pendingInstallment.amount);
+      console.log('[BUTTON-PP] Usar PrÃ³xima Cuota - Amount:', pendingInstallment.amount);
 
       // Buscar el campo de monto en el schema
       const schema = this.dynamicFieldsSchema();
@@ -5549,7 +5632,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           updates.saldo_pendiente = saldoPendiente;
           console.log('[BUTTON-PP] Saldo pendiente calculado:', saldoPendiente, '= Total', totalPendiente, '- Monto', pendingInstallment.amount);
 
-          // Actualizar también dynamicFieldValues para que la validación pase
+          // Actualizar tambiÃ©n dynamicFieldValues para que la validaciÃ³n pase
           const currentValues = { ...this.dynamicFieldValues() };
           currentValues[montoField.id] = pendingInstallment.amount;
           currentValues.saldo_pendiente = saldoPendiente;
@@ -5559,10 +5642,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.externalFieldUpdates.set(updates);
         console.log('[BUTTON-PP] Updated externalFieldUpdates:', updates);
 
-        // Limpiar después de un breve delay para permitir futuras actualizaciones
+        // Limpiar despuÃ©s de un breve delay para permitir futuras actualizaciones
         setTimeout(() => this.externalFieldUpdates.set({}), 100);
       } else {
-        console.warn('[BUTTON-PP] No se encontró campo de monto en el schema');
+        console.warn('[BUTTON-PP] No se encontrÃ³ campo de monto en el schema');
       }
     } else {
       console.warn('[BUTTON-PP] No pending installment found');
@@ -5578,7 +5661,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const pendingInstallments = schedule.installments
       .filter((inst: any) => {
         console.log('[CALC] Installment status:', inst.status, 'Status value:', inst.status?.status);
-        return inst.status.status === 'PENDING'; // Corregido: el backend usa 'PENDING' en inglés
+        return inst.status.status === 'PENDING'; // Corregido: el backend usa 'PENDING' en inglÃ©s
       });
     console.log('[CALC] Pending installments:', pendingInstallments);
     const total = pendingInstallments.reduce((sum: number, inst: any) => sum + inst.amount, 0);
@@ -5592,14 +5675,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   protected getPendingInstallments(schedule: any): any[] {
     if (!schedule.installments) return [];
     return schedule.installments
-      .filter((inst: any) => inst.status.status === 'PENDING') // Corregido: el backend usa 'PENDING' en inglés
+      .filter((inst: any) => inst.status.status === 'PENDING') // Corregido: el backend usa 'PENDING' en inglÃ©s
       .sort((a: any, b: any) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
   }
 
   /**
-   * Maneja cambios en los campos dinámicos del componente
+   * Maneja cambios en los campos dinÃ¡micos del componente
    * Calcula saldo_pendiente en tiempo real para mostrar a la asesora
-   * También se calcula en backend al guardar para histórico
+   * TambiÃ©n se calcula en backend al guardar para histÃ³rico
    */
   onDynamicFieldsChange(data: any) {
     this.dynamicFieldValues.set(data);
@@ -5613,7 +5696,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   /**
    * Calcula y actualiza el saldo pendiente en tiempo real
    * para que la asesora pueda informar al cliente
-   * Fórmula: Saldo Pendiente = (Suma de cuotas pendientes) - (Monto Pagado)
+   * FÃ³rmula: Saldo Pendiente = (Suma de cuotas pendientes) - (Monto Pagado)
    */
   private calculateAndUpdatePendingBalance(montoPagado: number) {
     const schedules = this.activeSchedules();
@@ -5638,11 +5721,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (hasSaldoField) {
       console.log('[SALDO] Actualizando campo saldo_pendiente con:', saldoPendiente);
 
-      // Actualizar tanto en el componente hijo (para mostrar) como en dynamicFieldValues (para validación)
+      // Actualizar tanto en el componente hijo (para mostrar) como en dynamicFieldValues (para validaciÃ³n)
       const updates: any = { saldo_pendiente: saldoPendiente };
       this.externalFieldUpdates.set(updates);
 
-      // También actualizar directamente dynamicFieldValues para que la validación pase
+      // TambiÃ©n actualizar directamente dynamicFieldValues para que la validaciÃ³n pase
       const currentValues = { ...this.dynamicFieldValues() };
       currentValues.saldo_pendiente = saldoPendiente;
       this.dynamicFieldValues.set(currentValues);
@@ -5659,7 +5742,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       if (codes.includes('RP') || codes.includes('CSA')) {
         return 'Tipo de Resultado';
       }
-      return 'Categoría Principal';
+      return 'CategorÃ­a Principal';
     }
 
     const parentIndex = levelIndex - 1;
@@ -5672,10 +5755,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (levelIndex === 1) {
       const labelMap: Record<string, string> = {
-        'RP': 'Intención de Pago',
-        'CSA': 'Motivo de No Atención',
-        'SC': 'Razón de No Contacto',
-        'GA': 'Tipo de Gestión'
+        'RP': 'IntenciÃ³n de Pago',
+        'CSA': 'Motivo de No AtenciÃ³n',
+        'SC': 'RazÃ³n de No Contacto',
+        'GA': 'Tipo de GestiÃ³n'
       };
       return labelMap[parent.codigo] || `Detalle de ${parent.label}`;
     }
@@ -5722,20 +5805,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       'cuota_vencida': 'Cuota Vencida',
       'cuotas_vencidas': 'Cuotas Vencidas',
       'monto_cuota': 'Monto Cuota',
-      'dias_mora': 'Días Mora',
-      'monto_minimo': 'Monto Mínimo',
+      'dias_mora': 'DÃ­as Mora',
+      'monto_minimo': 'Monto MÃ­nimo',
       'monto_total': 'Monto Total',
       'deuda': 'Deuda',
       'saldo': 'Saldo'
     };
 
-    // Buscar traducción exacta
+    // Buscar traducciÃ³n exacta
     const lowerField = fieldName.toLowerCase();
     if (translations[lowerField]) {
       return translations[lowerField];
     }
 
-    // Si no hay traducción, convertir snake_case a Title Case
+    // Si no hay traducciÃ³n, convertir snake_case a Title Case
     return fieldName
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -5743,20 +5826,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Formatea un valor numérico como moneda (Soles)
+   * Formatea un valor numÃ©rico como moneda (Soles)
    */
   formatCurrency(value: number): string {
     return this.fmt.currency(value);
   }
 
   /**
-   * Formatea un valor según el formato de visualización configurado
+   * Formatea un valor segÃºn el formato de visualizaciÃ³n configurado
    */
   formatByType(field: { value: number; formato: string; rawValue: string }): string {
     switch (field.formato) {
       case 'PORCENTAJE':
-        // El valor viene como fracción (ej. 0.5 = 50%), por eso se multiplica x100.
-        // min 0 / max 2 decimales → "50%", "65%", "12.5%" (sin ceros de más).
+        // El valor viene como fracciÃ³n (ej. 0.5 = 50%), por eso se multiplica x100.
+        // min 0 / max 2 decimales â†’ "50%", "65%", "12.5%" (sin ceros de mÃ¡s).
         return this.fmt.number(field.value * 100, { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + '%';
       case 'NUMERO':
         return this.fmt.number(field.value);
@@ -5873,8 +5956,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Obtiene las clases CSS para cada fila de montos según su índice
-   * Alterna entre 2 colores para mejor visualización
+   * Obtiene las clases CSS para cada fila de montos segÃºn su Ã­ndice
+   * Alterna entre 2 colores para mejor visualizaciÃ³n
    */
   getAmountRowClass(index: number): string {
     const colorsByOrder: Record<string, string[]> = {
@@ -5939,7 +6022,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   generateSchedule() {
     const numCuotas = parseInt(this.scheduleForm.numeroCuotas);
     if (isNaN(numCuotas) || numCuotas < 1) {
-      alert('Por favor ingrese un número válido de cuotas');
+      alert('Por favor ingrese un nÃºmero vÃ¡lido de cuotas');
       return;
     }
 
@@ -5961,7 +6044,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       monto: '',
       fechaVencimiento: this.calcularFechaCuota(nextNumber)
     });
-    // Actualizar el número de cuotas
+    // Actualizar el nÃºmero de cuotas
     this.scheduleForm.numeroCuotas = nextNumber.toString();
   }
 
@@ -5972,7 +6055,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.scheduleForm.cuotas.forEach((cuota, idx) => {
         cuota.numero = idx + 1;
       });
-      // Actualizar el número de cuotas
+      // Actualizar el nÃºmero de cuotas
       this.scheduleForm.numeroCuotas = this.scheduleForm.cuotas.length.toString();
     }
   }
@@ -5986,7 +6069,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Calcula la fecha de una cuota basándose en la periodicidad seleccionada
+   * Calcula la fecha de una cuota basÃ¡ndose en la periodicidad seleccionada
    * Cuota 1 = hoy, Cuota 2 = hoy + intervalo, etc.
    */
   calcularFechaCuota(numeroCuota: number): string {
@@ -6002,7 +6085,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Obtiene los días de intervalo según la periodicidad seleccionada
+   * Obtiene los dÃ­as de intervalo segÃºn la periodicidad seleccionada
    */
   getDiasPeriodicidad(): number {
     const periodicidad = this.scheduleForm.periodicidad?.toLowerCase() || '';
@@ -6014,7 +6097,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (periodicidad.includes('bimestral')) return 60;
     if (periodicidad.includes('trimestral')) return 90;
 
-    // Por defecto: semanal (7 días)
+    // Por defecto: semanal (7 dÃ­as)
     return 7;
   }
 
@@ -6062,22 +6145,22 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     let managementClassification: any;
 
     if (this.usesHierarchicalClassifications()) {
-      // Sistema jerárquico: obtener clasificación (categoría) y tipificación (hoja)
+      // Sistema jerÃ¡rquico: obtener clasificaciÃ³n (categorÃ­a) y tipificaciÃ³n (hoja)
       const selected = this.selectedClassifications();
       const allTypifications = this.managementClassifications();
 
-      // TIPIFICACIÓN: La hoja/leaf (última selección)
+      // TIPIFICACIÃ“N: La hoja/leaf (Ãºltima selecciÃ³n)
       const lastSelectedId = selected[selected.length - 1];
       managementClassification = allTypifications.find((c: any) => c.id.toString() === lastSelectedId);
 
-      // CLASIFICACIÓN: La categoría padre de la tipificación
-      // Si la tipificación tiene parent_id, buscar ese parent como clasificación
-      // Si es root (sin parent), usar el mismo como clasificación
+      // CLASIFICACIÃ“N: La categorÃ­a padre de la tipificaciÃ³n
+      // Si la tipificaciÃ³n tiene parent_id, buscar ese parent como clasificaciÃ³n
+      // Si es root (sin parent), usar el mismo como clasificaciÃ³n
       if (managementClassification?.parentId) {
         const parentId = managementClassification.parentId;
         contactClassification = allTypifications.find((c: any) => c.id.toString() === parentId.toString());
       } else {
-        // Si no tiene padre, usar la misma como clasificación
+        // Si no tiene padre, usar la misma como clasificaciÃ³n
         contactClassification = managementClassification;
       }
     } else {
@@ -6098,7 +6181,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const level2 = selectedClassifs[1] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[1]) : null;
     const level3 = selectedClassifs[2] ? allTypifications.find((c: any) => c.id.toString() === selectedClassifs[2]) : null;
 
-    // Verificar si hay un cronograma de pago en los campos dinámicos
+    // Verificar si hay un cronograma de pago en los campos dinÃ¡micos
     const dynamicValues = this.dynamicFieldValues();
     const schema = this.dynamicFieldsSchema();
     let paymentScheduleData = null;
@@ -6123,7 +6206,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     }
     console.log('[SAVE] Final paymentScheduleData:', paymentScheduleData);
 
-    // ⚠️ VALIDACIÓN: No permitir registrar nueva promesa si hay cuotas pendientes
+    // âš ï¸ VALIDACIÃ“N: No permitir registrar nueva promesa si hay cuotas pendientes
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
       const activeSchedules = this.activePaymentSchedules();
       const hasPendingInstallments = activeSchedules.some(schedule => schedule.cuotasPendientes > 0);
@@ -6132,19 +6215,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.saving.set(false);
         const hasEnEvaluacion = activeSchedules.some(s => s.installments?.some((c: any) => c.status === 'EN_EVALUACION'));
         if (hasEnEvaluacion) {
-          alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa en evaluacion pendiente de aprobacion por supervisor.\n\nDebe esperar a que el supervisor apruebe o rechace la promesa actual.');
+          alert('âš ï¸ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa en evaluacion pendiente de aprobacion por supervisor.\n\nDebe esperar a que el supervisor apruebe o rechace la promesa actual.');
         } else {
-          alert('⚠️ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa de pago activa con cuotas pendientes.\n\nDebe esperar a que se completen o cancelen las cuotas pendientes antes de registrar una nueva promesa.');
+          alert('âš ï¸ No puede registrar una nueva Promesa de Pago.\n\nEl cliente ya tiene una promesa de pago activa con cuotas pendientes.\n\nDebe esperar a que se completen o cancelen las cuotas pendientes antes de registrar una nueva promesa.');
         }
         return;
       }
     }
 
-    // Si hay cronograma de pago con cuotas, usar el endpoint específico
+    // Si hay cronograma de pago con cuotas, usar el endpoint especÃ­fico
     if (paymentScheduleData && paymentScheduleData.cuotas && paymentScheduleData.cuotas.length > 0) {
       const finalTypificationId = typificationLevel3Id || typificationLevel2Id || typificationLevel1Id;
 
-      // Determinar si es una llamada activa o gestión manual
+      // Determinar si es una llamada activa o gestiÃ³n manual
       // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
       const hasActiveCallOrTimerSched = this.callActive() || this.rellamadaCallActive() || !!this.callStartTime;
       const scheduleCallContext = this.activeCallContext();
@@ -6155,8 +6238,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       // Obtener el ID del agente actual
       const currentUserSchedule = this.authService.getCurrentUser();
 
-      // ========== VALIDACIÓN DE PRIMERA CUOTA ==========
-      // Calcular días desde hoy hasta la fecha de la primera cuota
+      // ========== VALIDACIÃ“N DE PRIMERA CUOTA ==========
+      // Calcular dÃ­as desde hoy hasta la fecha de la primera cuota
       let esExcepcionPrimeraCuota = false;
       let diasPrimeraCuota = 0;
       const maxDiasPermitidos = this.firstInstallmentMaxDays();
@@ -6169,15 +6252,15 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         const fechaPrimeraCuota = new Date(primeraCuota.fechaPago + 'T00:00:00');
         diasPrimeraCuota = Math.ceil((fechaPrimeraCuota.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
 
-        // Verificar si excede el límite configurado
+        // Verificar si excede el lÃ­mite configurado
         if (maxDiasPermitidos !== null && diasPrimeraCuota > maxDiasPermitidos) {
           esExcepcionPrimeraCuota = true;
-          console.log(`[PRIMERA-CUOTA] ⚠️ EXCEPCIÓN: ${diasPrimeraCuota} días > ${maxDiasPermitidos} días permitidos`);
+          console.log(`[PRIMERA-CUOTA] âš ï¸ EXCEPCIÃ“N: ${diasPrimeraCuota} dÃ­as > ${maxDiasPermitidos} dÃ­as permitidos`);
         } else {
-          console.log(`[PRIMERA-CUOTA] ✅ OK: ${diasPrimeraCuota} días <= ${maxDiasPermitidos ?? 'sin límite'} días permitidos`);
+          console.log(`[PRIMERA-CUOTA] âœ… OK: ${diasPrimeraCuota} dÃ­as <= ${maxDiasPermitidos ?? 'sin lÃ­mite'} dÃ­as permitidos`);
         }
       }
-      // ========== FIN VALIDACIÓN DE PRIMERA CUOTA ==========
+      // ========== FIN VALIDACIÃ“N DE PRIMERA CUOTA ==========
       const phoneNumber = isActiveCallSchedule
         ? (scheduleCallContext.telefono || this.getCustomerPhone())
         : (this.selectedManualPhone() || this.getCustomerPhone());
@@ -6195,14 +6278,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         metodoContacto: isActiveCallSchedule ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimerSched ? 'LLAMADA_SALIENTE' : undefined,
         campoMontoOrigen: paymentScheduleData.campoMontoOrigen,  // Campo de origen del monto (ej: sld_mora)
-        montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepción). null = monto libre
+        montoBase: paymentScheduleData.montoBase,  // Monto original del campo (antes de excepciÃ³n). null = monto libre
         // Datos de continuidad (si aplica)
         esContinuidad: this.esContinuidad() && this.continuidadData()?.aplica,
         promesaOrigenUuid: this.continuidadData()?.promesaOrigenUuid,
         montoOriginalPromesa: this.continuidadData()?.montoOriginal,
         montoPagadoPrevio: this.continuidadData()?.montoPagado,
         telefonoContacto: phoneNumber,
-        // Excepción de primera cuota
+        // ExcepciÃ³n de primera cuota
         esExcepcionPrimeraCuota: esExcepcionPrimeraCuota,
         diasPrimeraCuota: diasPrimeraCuota,
         maxDiasPermitidos: maxDiasPermitidos ?? undefined,
@@ -6214,13 +6297,13 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             monto: cuota.monto,
             fechaPago: cuota.fechaPago
           })),
-          // Porcentaje de auto-aprobación para calcular excepciones
+          // Porcentaje de auto-aprobaciÃ³n para calcular excepciones
           porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
           porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
           porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa,
           generaCartaAcuerdo: paymentScheduleData.generaCartaAcuerdo
         },
-        // También a nivel raíz para que el backend lo procese
+        // TambiÃ©n a nivel raÃ­z para que el backend lo procese
         porcentajeAutoAprobacion: paymentScheduleData.porcentajeAutoAprobacion,
         porcentajeAutoAprobacionAumento: paymentScheduleData.porcentajeAutoAprobacionAumento,
         porcentajeMaximoPromesa: paymentScheduleData.porcentajeMaximoPromesa
@@ -6250,7 +6333,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           } else {
             if (estadoPago === 'EN_EVALUACION') {
               console.log('[CARTA] Promesa en estado EN_EVALUACION, no se muestra modal de carta.');
-              alert('✅ Promesa de pago creada.\n\n⚠️ Pendiente de aprobación por supervisor debido a excepción en descuento.');
+              alert('âœ… Promesa de pago creada.\n\nâš ï¸ Pendiente de aprobaciÃ³n por supervisor debido a excepciÃ³n en descuento.');
             } else if (idGestion && !debeGenerarCarta) {
               console.log('[CARTA] Monto seleccionado NO requiere carta de acuerdo, omitiendo modal.');
             }
@@ -6260,18 +6343,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         error: (error) => {
           console.error('Error al guardar cronograma de pago:', error);
           this.saving.set(false);
-          // El backend valida promesas duplicadas/período de gracia (400 con mensaje claro).
-          // El frontend ya no replica esa lógica: si el backend manda un mensaje, se muestra tal cual.
+          // El backend valida promesas duplicadas/perÃ­odo de gracia (400 con mensaje claro).
+          // El frontend ya no replica esa lÃ³gica: si el backend manda un mensaje, se muestra tal cual.
           if (error?.status === 400 && error?.error?.message) {
-            alert(`⚠️ No puede registrar una nueva Promesa de Pago.\n\n${error.error.message}`);
+            alert(`âš ï¸ No puede registrar una nueva Promesa de Pago.\n\n${error.error.message}`);
           } else {
-            alert('⚠️ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
+            alert('âš ï¸ Error al guardar el cronograma de pago. Por favor intente nuevamente.');
           }
         }
       });
     } else {
-      // Gestión normal sin cronograma de pago
-      // Determinar si es una llamada activa o gestión manual
+      // GestiÃ³n normal sin cronograma de pago
+      // Determinar si es una llamada activa o gestiÃ³n manual
       // Es llamada activa SOLO si hay llamada/timer activo Y el cliente es el mismo de la llamada
       const hasActiveCallOrTimer = this.callActive() || this.rellamadaCallActive() || !!this.callStartTime;
       const callContext = this.activeCallContext();
@@ -6279,10 +6362,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
                                   callContext.clienteId === this.customerData()?.id;
       const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
-      // Obtener información del usuario actual
+      // Obtener informaciÃ³n del usuario actual
       const currentUser = this.authService.getCurrentUser();
 
-      // Una ficha distinta nunca puede heredar teléfono o ID de otra llamada.
+      // Una ficha distinta nunca puede heredar telÃ©fono o ID de otra llamada.
       const phoneNumber = isActiveCall
         ? (callContext.telefono || this.getCustomerPhone())
         : (this.selectedManualPhone() || this.getCustomerPhone());
@@ -6312,14 +6395,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
         observations: this.managementForm.observaciones || this.getObservacionesFromDynamicFields(),
 
-        // Campos de contexto de gestión
+        // Campos de contexto de gestiÃ³n
         metodoContacto: isActiveCall ? (this.rellamadaCallActive() ? 'GESTION_RELLAMADA' : 'GESTION_PROGRESIVO') : 'GESTION_MANUAL',
         canalContacto: hasActiveCallOrTimer ? 'LLAMADA_SALIENTE' : undefined,
-        idCampana: null,  // Se puede obtener del contexto si hay campaña activa
+        idCampana: null,  // Se puede obtener del contexto si hay campaÃ±a activa
         idLlamada: isActiveCall ? callContext.llamadaId : null,
         duracionSegundos: hasActiveCallOrTimer && this.callStartTime ? this.calculateCallDurationSeconds() : null,
 
-        // Información del agente y dispositivo
+        // InformaciÃ³n del agente y dispositivo
         nombreAgente: currentUser ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() || currentUser.username : 'Sistema',
         userAgent: navigator.userAgent
       };
@@ -6330,29 +6413,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             this.registerCallToBackend(response.id);
           }
 
-          // Si es una cancelación y hay cuota seleccionada, registrar el pago
-          // Usa el nuevo endpoint que distribuye automáticamente entre cuotas
+          // Si es una cancelaciÃ³n y hay cuota seleccionada, registrar el pago
+          // Usa el nuevo endpoint que distribuye automÃ¡ticamente entre cuotas
           const selectedCuota = this.selectedInstallmentForCancellation();
           if (this.isCancellationTypification() && selectedCuota && selectedCuota.id) {
             // Usar los valores editables (monto y fecha)
             const montoPago = this.montoPagoEditable() || selectedCuota.monto;
             const fechaPago = this.fechaPagoEditable() || new Date().toISOString().split('T')[0];
 
-            console.log('💰 Registrando pago:', {
+            console.log('ðŸ’° Registrando pago:', {
               cuota: selectedCuota.numeroCuota,
               montoOriginal: selectedCuota.monto,
               montoPagado: montoPago,
               fecha: fechaPago
             });
 
-            // Buscar también en todos los cronogramas porque las cuotas vencidas no siempre están activas.
+            // Buscar tambiÃ©n en todos los cronogramas porque las cuotas vencidas no siempre estÃ¡n activas.
             const schedule = [...this.activePaymentSchedules(), ...this.allPaymentSchedules()].find(s =>
               s.installments?.some((c: any) => c.id === selectedCuota.id)
             );
             const grupoPromesaUuid = selectedCuota.grupoPromesaUuid || schedule?.grupoPromesaUuid || selectedCuota.scheduleId || schedule?.id;
 
             if (!grupoPromesaUuid) {
-              console.error('No se encontró el grupoPromesaUuid');
+              console.error('No se encontrÃ³ el grupoPromesaUuid');
               this.selectedInstallmentForCancellation.set(null);
               this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               return;
@@ -6363,9 +6446,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             // Usar el nuevo endpoint de pagos
             this.http.post<any>(`${environment.apiUrl}/pagos/registrar`, {
               grupoPromesaUuid: grupoPromesaUuid,
-              // Cuota elegida por el asesor: la distribución arranca en esta cuota y el excedente
-              // se aplica hacia adelante (sin tocar las anteriores). Si no eligió cuota va null →
-              // FIFO desde la más antigua, comportamiento retrocompatible.
+              // Cuota elegida por el asesor: la distribuciÃ³n arranca en esta cuota y el excedente
+              // se aplica hacia adelante (sin tocar las anteriores). Si no eligiÃ³ cuota va null â†’
+              // FIFO desde la mÃ¡s antigua, comportamiento retrocompatible.
               cuotaId: selectedCuota ? Number(selectedCuota.id) : null,
               monto: montoPago,
               fechaPago: fechaPago,
@@ -6373,7 +6456,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
               numeroOperacion: null,
               agenteId: currentUser?.id || 1,
               metodoRegistro: 'MANUAL',
-              observaciones: this.managementForm.observaciones || 'Pago registrado desde gestión',
+              observaciones: this.managementForm.observaciones || 'Pago registrado desde gestiÃ³n',
               comprobanteUrl: null
             }).subscribe({
               next: (result) => {
@@ -6383,8 +6466,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
                   this.handlePagoCancelacionRechazado(result.error || result.mensaje);
                   return;
                 }
-                console.log('✅ Pago registrado exitosamente:', result);
-                // Limpiar la selección y campos editables
+                console.log('âœ… Pago registrado exitosamente:', result);
+                // Limpiar la selecciÃ³n y campos editables
                 this.selectedInstallmentForCancellation.set(null);
                 this.montoPagoEditable.set(0);
                 this.fechaPagoEditable.set('');
@@ -6396,8 +6479,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
                 this.onSaveSuccess(contactClassification?.label || '', managementClassification?.label || '-');
               },
               error: (err) => {
-                console.error('⚠️ Error registrando pago:', err);
-                // Backend transaccional: si rechaza (HTTP 400) hizo rollback; no quedó nada a medias.
+                console.error('âš ï¸ Error registrando pago:', err);
+                // Backend transaccional: si rechaza (HTTP 400) hizo rollback; no quedÃ³ nada a medias.
                 this.handlePagoCancelacionRechazado(err?.error?.error || err?.error?.mensaje);
               }
             });
@@ -6406,31 +6489,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           }
         },
         error: (error) => {
-          console.error('Error al guardar gestión:', error);
+          console.error('Error al guardar gestiÃ³n:', error);
           this.saving.set(false);
-          alert('⚠️ Error al guardar la gestión. Por favor intente nuevamente.');
+          alert('âš ï¸ Error al guardar la gestiÃ³n. Por favor intente nuevamente.');
         }
       });
     }
   }
 
   /**
-   * Maneja el rechazo del backend al registrar un pago de cancelación (HTTP 400 o
-   * { success: false }). El backend es transaccional e hizo rollback, así que no quedó
+   * Maneja el rechazo del backend al registrar un pago de cancelaciÃ³n (HTTP 400 o
+   * { success: false }). El backend es transaccional e hizo rollback, asÃ­ que no quedÃ³
    * nada a medias. Se muestra el motivo y se mantiene la pantalla abierta (sin navegar ni
    * limpiar cuota/monto/fecha) para que el asesor corrija y reintente.
    *
-   * NOTA (deuda técnica): la gestión (createManagement) ya se guardó ANTES de este pago,
-   * porque el pago va anidado en su callback de éxito. Si el asesor reintenta con el botón
-   * Guardar se re-crea la gestión (duplicado). El caso común —fecha posterior al vencimiento—
-   * ya está bloqueado en UI por isCancellationPaymentDateValid()/botón deshabilitado, así que
+   * NOTA (deuda tÃ©cnica): la gestiÃ³n (createManagement) ya se guardÃ³ ANTES de este pago,
+   * porque el pago va anidado en su callback de Ã©xito. Si el asesor reintenta con el botÃ³n
+   * Guardar se re-crea la gestiÃ³n (duplicado). El caso comÃºn â€”fecha posterior al vencimientoâ€”
+   * ya estÃ¡ bloqueado en UI por isCancellationPaymentDateValid()/botÃ³n deshabilitado, asÃ­ que
    * este rechazo solo ocurre con datos obsoletos (cuota ya pagada / de otro grupo). Para un
-   * reintento aislado del pago habría que desacoplarlo de createManagement.
+   * reintento aislado del pago habrÃ­a que desacoplarlo de createManagement.
    */
   private handlePagoCancelacionRechazado(mensaje?: string): void {
     const detalle = mensaje || 'El pago fue rechazado. Verifica la fecha y la cuota, luego reintenta.';
-    alert(`⚠️ ${detalle}`);
-    // Re-habilitar el botón Guardar y conservar cuota/monto/fecha para permitir la corrección.
+    alert(`âš ï¸ ${detalle}`);
+    // Re-habilitar el botÃ³n Guardar y conservar cuota/monto/fecha para permitir la correcciÃ³n.
     this.saving.set(false);
   }
 
@@ -6489,7 +6572,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     );
 
     if (hasInvalidInstallments) {
-      alert('⚠️ Por favor complete todos los montos y fechas de las cuotas');
+      alert('âš ï¸ Por favor complete todos los montos y fechas de las cuotas');
       return;
     }
 
@@ -6509,20 +6592,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       next: (response) => {},
       error: (error) => {
         console.error('Error al crear cronograma:', error);
-        alert('⚠️ Error al crear el cronograma de pagos');
+        alert('âš ï¸ Error al crear el cronograma de pagos');
       }
     });
   }
 
   private onSaveSuccess(resultadoCodigo: string, gestionCodigo: string) {
-    // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
-    // Todas las ramas de este método terminan navegando fuera de la pantalla.
+    // GestiÃ³n guardada: habilitar la navegaciÃ³n de salida (dashboard/seguimiento).
+    // Todas las ramas de este mÃ©todo terminan navegando fuera de la pantalla.
     this.salidaAutorizada = true;
-    this.llamadaRealizada.set(false); // gestión cerrada: ya no hay llamada pendiente de guardar
+    this.llamadaRealizada.set(false); // gestiÃ³n cerrada: ya no hay llamada pendiente de guardar
     this.saving.set(false);
     this.showSuccess.set(true);
 
-    // Colgar la llamada SIP y detener timer (sin navegar todavía)
+    // Colgar la llamada SIP y detener timer (sin navegar todavÃ­a)
     this.endCall(false);
 
     this.loadManagementHistory();
@@ -6552,45 +6635,45 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     this.activeTab.set('cliente');
 
-    // Desbloquear llamadas entrantes - tipificación completada
-    // Fix temporal: 100ms de margen (ver navegación a agent-dashboard más abajo)
+    // Desbloquear llamadas entrantes - tipificaciÃ³n completada
+    // Fix temporal: 100ms de margen (ver navegaciÃ³n a agent-dashboard mÃ¡s abajo)
     this.desbloqueoTimeout = window.setTimeout(() => {
       this.desbloqueoTimeout = undefined;
       this.isTipifying.set(false);
       this.sipService.blockIncomingCallsMode(false);
-      console.log('✅ Desbloqueando llamadas entrantes - tipificación completada');
+      console.log('âœ… Desbloqueando llamadas entrantes - tipificaciÃ³n completada');
     }, 100);
 
     // Verificar si estamos en modo recordatorio dialer
     const recordatorioEnCurso = sessionStorage.getItem('recordatorioEnCurso');
     if (recordatorioEnCurso) {
-      console.log('🔔 Modo recordatorio dialer activo, procesando siguiente...');
+      console.log('ðŸ”” Modo recordatorio dialer activo, procesando siguiente...');
       this.procesarSiguienteRecordatorio(JSON.parse(recordatorioEnCurso));
       return;
     }
 
     // Flujo normal: navegar PRIMERO, luego cambiar a DISPONIBLE
-    // Esto evita que el auto-dialer asigne una llamada mientras el agente aún está en esta pantalla
-    console.log('✅ Gestión guardada, navegando a agent-dashboard...');
+    // Esto evita que el auto-dialer asigne una llamada mientras el agente aÃºn estÃ¡ en esta pantalla
+    console.log('âœ… GestiÃ³n guardada, navegando a agent-dashboard...');
 
     const currentUser = this.authService.getCurrentUser();
     const agentId = currentUser?.id || 1;
     setTimeout(() => {
       this.showSuccess.set(false);
-      console.log('🔄 Navegando a /agent-dashboard...');
+      console.log('ðŸ”„ Navegando a /agent-dashboard...');
       this.router.navigate(['/agent-dashboard']).then(() => {
-        // Solo cambiar a DISPONIBLE después de llegar al dashboard
+        // Solo cambiar a DISPONIBLE despuÃ©s de llegar al dashboard
         this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-          next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+          next: () => console.log('âœ… Estado cambiado a DISPONIBLE'),
+          error: (err: any) => console.error('âŒ Error cambiando estado:', err)
         });
       });
-    // Fix temporal: reducción a 1 segundo
+    // Fix temporal: reducciÃ³n a 1 segundo
     }, 1000);
   }
 
   /**
-   * Procesa el siguiente recordatorio después de completar la tipificación.
+   * Procesa el siguiente recordatorio despuÃ©s de completar la tipificaciÃ³n.
    * Navega a /seguimiento donde se maneja el flujo completo (completar actual, obtener siguiente, countdown, llamar).
    */
   private procesarSiguienteRecordatorio(recordatorioActual: any): void {
@@ -6624,12 +6707,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private validateForm(): boolean {
     const newErrors: ValidationErrors = {};
 
-    // 1. Validar clasificación (sistema jerárquico o simple)
+    // 1. Validar clasificaciÃ³n (sistema jerÃ¡rquico o simple)
     if (this.usesHierarchicalClassifications()) {
-      // Sistema jerárquico: verificar que se haya seleccionado clasificación completa
+      // Sistema jerÃ¡rquico: verificar que se haya seleccionado clasificaciÃ³n completa
       const selected = this.selectedClassifications();
       if (selected.length === 0 || !selected[selected.length - 1]) {
-        newErrors['typification'] = 'Debe seleccionar una clasificación';
+        newErrors['typification'] = 'Debe seleccionar una clasificaciÃ³n';
       } else {
         // TEMPORAL: No verificar isLeaf, verificar si hay hijos disponibles
         const lastSelectedId = selected[selected.length - 1];
@@ -6637,7 +6720,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         const hasChildren = all.some((c: any) => c.parentId && Number(c.parentId) === Number(lastSelectedId));
 
         if (hasChildren) {
-          newErrors['typification'] = 'Debe completar todos los niveles de clasificación';
+          newErrors['typification'] = 'Debe completar todos los niveles de clasificaciÃ³n';
         }
       }
     } else {
@@ -6651,23 +6734,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       }
     }
 
-    // 2. Validar teléfono en gestión manual (sin llamada activa)
+    // 2. Validar telÃ©fono en gestiÃ³n manual (sin llamada activa)
     const hasActiveCallOrTimer = this.callActive() || this.rellamadaCallActive() || this.callDuration() > 0;
     const isSameClientAsCall = this.activeCallClientId() !== null &&
                                 this.activeCallClientId() === this.customerData()?.id;
     const isActiveCall = hasActiveCallOrTimer && isSameClientAsCall;
 
-    // El número discado (activeCallPhone) cuenta como teléfono contactado aunque no se
-    // haya marcado en el selector (p. ej. número no registrado en la lista del cliente).
+    // El nÃºmero discado (activeCallPhone) cuenta como telÃ©fono contactado aunque no se
+    // haya marcado en el selector (p. ej. nÃºmero no registrado en la lista del cliente).
     if (!isActiveCall && this.isManualSource() && !this.selectedManualPhone() && !this.activeCallPhone()) {
-      newErrors['phone'] = 'Debe seleccionar un teléfono contactado';
+      newErrors['phone'] = 'Debe seleccionar un telÃ©fono contactado';
     }
 
     if (this.isCancellationTypification() && !this.isCancellationPaymentDateValid()) {
-      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no es válida para la cuota seleccionada';
+      newErrors['fechaPagoCancelacion'] = 'La fecha de pago no es vÃ¡lida para la cuota seleccionada';
     }
 
-    // 3. Validar campos dinámicos requeridos
+    // 3. Validar campos dinÃ¡micos requeridos
     const schema = this.dynamicFieldsSchema();
     if (schema && schema.fields && schema.fields.length > 0) {
       const dynamicValues = this.dynamicFieldValues();
@@ -6676,7 +6759,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         if (field.required) {
           const value = dynamicValues[field.id];
 
-          // Verificar si el campo está vacío
+          // Verificar si el campo estÃ¡ vacÃ­o
           if (value === undefined || value === null || value === '') {
             newErrors[`dynamic_${field.id}`] = `${field.label} es requerido`;
           }
@@ -6692,12 +6775,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     this.errors.set(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
-      // Solo mostrar alert si hay errores que no sean solo el teléfono (ese se muestra visualmente)
+      // Solo mostrar alert si hay errores que no sean solo el telÃ©fono (ese se muestra visualmente)
       const nonPhoneErrors = Object.keys(newErrors).filter(k => k !== 'phone');
       if (nonPhoneErrors.length > 0) {
         alert('Por favor complete todos los campos requeridos');
       }
-      // Auto-scroll al selector de teléfono si falta
+      // Auto-scroll al selector de telÃ©fono si falta
       if (newErrors['phone']) {
         setTimeout(() => {
           document.getElementById('phone-selector-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -6710,7 +6793,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Extrae observaciones de los campos dinámicos (tipo textarea)
+   * Extrae observaciones de los campos dinÃ¡micos (tipo textarea)
    */
   private getObservacionesFromDynamicFields(): string {
     const schema = this.dynamicFieldsSchema();
@@ -6738,8 +6821,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Obtiene el valor de un campo del cliente usando notación de punto
-   * Ejemplo: 'contactInfo.mobilePhone' → customerData.contactInfo.mobilePhone
+   * Obtiene el valor de un campo del cliente usando notaciÃ³n de punto
+   * Ejemplo: 'contactInfo.mobilePhone' â†’ customerData.contactInfo.mobilePhone
    */
   getFieldValue(field: string): any {
     const customer = this.customerData();
@@ -6749,7 +6832,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Formatea un valor según su tipo
+   * Formatea un valor segÃºn su tipo
    */
   formatFieldValue(value: any, format?: string): string {
     if (value === null || value === undefined || value === '') {
@@ -6777,7 +6860,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Verifica si un campo es de contacto (para excluirlo de la lista principal)
-   * ya que estos campos se muestran en la sección de Contacto
+   * ya que estos campos se muestran en la secciÃ³n de Contacto
    */
   isContactField(fieldName: string): boolean {
     const contactFields = [
@@ -6846,24 +6929,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    * Muestra el detalle de un cronograma de pago
    */
   showPaymentScheduleDetail(schedule: any) {
-    console.log('📅 Detalle de promesa de pago:', schedule);
+    console.log('ðŸ“… Detalle de promesa de pago:', schedule);
 
     // Construir mensaje con las cuotas
     let message = `PROMESA DE PAGO\n\n`;
     message += `Monto Total: S/ ${schedule.totalAmount?.toFixed(2) || '0.00'}\n`;
-    message += `Número de Cuotas: ${schedule.numberOfInstallments}\n\n`;
+    message += `NÃºmero de Cuotas: ${schedule.numberOfInstallments}\n\n`;
     message += `DETALLE DE CUOTAS:\n`;
 
     if (schedule.installments && schedule.installments.length > 0) {
       for (const cuota of schedule.installments) {
         const fechaStr = cuota.dueDate ? this.formatDate(cuota.dueDate) : '-';
-        let estadoStr = '⏳ Pendiente';
+        let estadoStr = 'â³ Pendiente';
         if (cuota.status === 'PAGADA' || cuota.status === 'PAGADO' || cuota.status === 'CUMPLIDO') {
-          estadoStr = '✅ PAGADA';
+          estadoStr = 'âœ… PAGADA';
         } else if (cuota.status === 'VENCIDA' || cuota.status === 'VENCIDO') {
-          estadoStr = '⚠️ VENCIDA';
+          estadoStr = 'âš ï¸ VENCIDA';
         } else if (cuota.status === 'CANCELADA' || cuota.status === 'CANCELADO') {
-          estadoStr = '✗ CANCELADA';
+          estadoStr = 'âœ— CANCELADA';
         }
         message += `  Cuota ${cuota.numeroCuota}: S/ ${cuota.monto?.toFixed(2) || '0.00'} - ${fechaStr} - ${estadoStr}\n`;
       }
@@ -6898,7 +6981,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   addTableRow(fieldCode: string, columns: any[]) {
     if (!Array.isArray(columns)) {
-      console.error('addTableRow: columns no es un array válido', columns);
+      console.error('addTableRow: columns no es un array vÃ¡lido', columns);
       return;
     }
 
@@ -6946,7 +7029,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   searchByTestDocument() {
     if (!this.testDocument.trim() || !this.selectedTenantId) {
-      console.warn('[TEST] Documento vacío o tenant no seleccionado');
+      console.warn('[TEST] Documento vacÃ­o o tenant no seleccionado');
       return;
     }
 
@@ -6957,8 +7040,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           console.log('[TEST] Cliente encontrado:', customers[0]);
           this.loadCustomerFromResource(customers[0]);
         } else {
-          console.warn('[TEST] No se encontró cliente con documento:', this.testDocument);
-          alert('No se encontró cliente con el documento: ' + this.testDocument);
+          console.warn('[TEST] No se encontrÃ³ cliente con documento:', this.testDocument);
+          alert('No se encontrÃ³ cliente con el documento: ' + this.testDocument);
         }
       },
       error: (error) => {
@@ -6969,23 +7052,23 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Busca un cliente por teléfono de testing
+   * Busca un cliente por telÃ©fono de testing
    */
   searchByTestPhone() {
     if (!this.testPhone.trim() || !this.selectedTenantId) {
-      console.warn('[TEST] Teléfono vacío o tenant no seleccionado');
+      console.warn('[TEST] TelÃ©fono vacÃ­o o tenant no seleccionado');
       return;
     }
 
-    console.log('[TEST] Buscando cliente por teléfono:', this.testPhone);
+    console.log('[TEST] Buscando cliente por telÃ©fono:', this.testPhone);
     this.customerService.searchCustomersByCriteria(this.selectedTenantId, 'telefono', this.testPhone).subscribe({
       next: (customers) => {
         if (customers && customers.length > 0) {
           console.log('[TEST] Cliente encontrado:', customers[0]);
           this.loadCustomerFromResource(customers[0]);
         } else {
-          console.warn('[TEST] No se encontró cliente con teléfono:', this.testPhone);
-          alert('No se encontró cliente con el teléfono: ' + this.testPhone);
+          console.warn('[TEST] No se encontrÃ³ cliente con telÃ©fono:', this.testPhone);
+          alert('No se encontrÃ³ cliente con el telÃ©fono: ' + this.testPhone);
         }
       },
       error: (error) => {
@@ -7002,10 +7085,10 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   private loadCustomerFromResource(customer: any, expectedCallId?: number | null) {
     console.log('[TEST] Cargando cliente:', customer);
 
-    // Limpiar teléfono seleccionado del cliente anterior para evitar guardar teléfonos incorrectos
+    // Limpiar telÃ©fono seleccionado del cliente anterior para evitar guardar telÃ©fonos incorrectos
     this.selectedManualPhone.set('');
 
-    // Guardar los datos raw del cliente para detectar columnas numéricas dinámicamente
+    // Guardar los datos raw del cliente para detectar columnas numÃ©ricas dinÃ¡micamente
     this.rawClientData.set(customer);
     console.log('[PAYMENT] Raw client data from resource:', customer);
 
@@ -7023,7 +7106,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Cargar cabeceras de montos para esta subcartera
     this.loadMontoCabeceras();
 
-    // Mapear CustomerResource a CustomerData (datos básicos iniciales)
+    // Mapear CustomerResource a CustomerData (datos bÃ¡sicos iniciales)
     this.customerData.set({
       id: customer.id,
       id_cliente: customer.documentNumber || customer.identificationCode,
@@ -7041,7 +7124,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       },
       cuenta: {
         numero_cuenta: customer.accountNumber || '',
-        tipo_producto: 'PRÉSTAMO',
+        tipo_producto: 'PRÃ‰STAMO',
         fecha_desembolso: '2024-01-15',
         monto_original: customer.principalAmount || 0,
         plazo_meses: 12,
@@ -7062,8 +7145,8 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.assignCallClient(customer.id, expectedCallId);
     }
     this.syncEmailsMetodoFromCurrentData();
-    // [FIX] Datos básicos ya mostrables: apagar el spinner acá para que NUNCA quede colgado.
-    // El lookup dinámico de abajo solo enriquece; si viene null/error no debe dejar el overlay tapando la ficha.
+    // [FIX] Datos bÃ¡sicos ya mostrables: apagar el spinner acÃ¡ para que NUNCA quede colgado.
+    // El lookup dinÃ¡mico de abajo solo enriquece; si viene null/error no debe dejar el overlay tapando la ficha.
     this.isLoadingCustomer.set(false);
 
     // Cargar historial de gestiones del cliente
@@ -7074,19 +7157,19 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.loadActivePaymentSchedules(customer.id);
     }
 
-    // Intentar cargar datos completos de la tabla dinámica (deuda real, dias_mora, etc.)
+    // Intentar cargar datos completos de la tabla dinÃ¡mica (deuda real, dias_mora, etc.)
     if (customer.tenantId && customer.portfolioId && customer.subPortfolioId && customer.documentNumber) {
-      console.log('🔍 [RESOURCE] Buscando datos completos de tabla dinámica para documento:', customer.documentNumber);
+      console.log('ðŸ” [RESOURCE] Buscando datos completos de tabla dinÃ¡mica para documento:', customer.documentNumber);
       this.customerService.findClientByDocumento(
         customer.tenantId, customer.portfolioId, customer.subPortfolioId, customer.documentNumber
       ).subscribe({
         next: (clienteCompleto) => {
           if (clienteCompleto) {
-            console.log('✅ [RESOURCE] Datos dinámicos obtenidos, actualizando con datos reales de deuda');
+            console.log('âœ… [RESOURCE] Datos dinÃ¡micos obtenidos, actualizando con datos reales de deuda');
             // El contexto se toma del cliente cargado. Si el usuario no tiene
             // tenant/cartera/subcartera en su ficha, loadTenants() no lo establece y
-            // reloadTypifications() se salía sin hacer nada: sin contexto, la carga de
-            // campos dinámicos fallaba en cada selección de tipificación.
+            // reloadTypifications() se salÃ­a sin hacer nada: sin contexto, la carga de
+            // campos dinÃ¡micos fallaba en cada selecciÃ³n de tipificaciÃ³n.
             this.selectedTenantId = customer.tenantId;
             this.selectedPortfolioId = customer.portfolioId;
             this.selectedSubPortfolioId = customer.subPortfolioId;
@@ -7095,11 +7178,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             this.loadFirstInstallmentConfig();
             this.loadCustomerFromDynamicTable(clienteCompleto);
           } else {
-            console.warn('⚠️ [RESOURCE] No se encontraron datos en tabla dinámica, manteniendo datos básicos');
+            console.warn('âš ï¸ [RESOURCE] No se encontraron datos en tabla dinÃ¡mica, manteniendo datos bÃ¡sicos');
           }
         },
         error: (error) => {
-          console.warn('⚠️ [RESOURCE] Error obteniendo datos dinámicos, manteniendo datos básicos:', error);
+          console.warn('âš ï¸ [RESOURCE] Error obteniendo datos dinÃ¡micos, manteniendo datos bÃ¡sicos:', error);
         }
       });
     }
@@ -7108,14 +7191,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   // ============================================
-  // MÉTODOS DE CONTROL DE LLAMADA (SIP)
+  // MÃ‰TODOS DE CONTROL DE LLAMADA (SIP)
   // ============================================
 
   /**
    * Colgar llamada activa
    */
   hangupCall() {
-    console.log('📵 Colgando llamada...');
+    console.log('ðŸ“µ Colgando llamada...');
     this.sipService.hangup();
   }
 
@@ -7124,18 +7207,18 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
    */
   toggleMute() {
     if (this.isMuted()) {
-      console.log('🔊 Desmuteando...');
+      console.log('ðŸ”Š Desmuteando...');
       this.sipService.unmute();
       this.isMuted.set(false);
     } else {
-      console.log('🔇 Muteando...');
+      console.log('ðŸ”‡ Muteando...');
       this.sipService.mute();
       this.isMuted.set(true);
     }
   }
 
   /**
-   * Poner/quitar en espera (mute + música de espera al cliente)
+   * Poner/quitar en espera (mute + mÃºsica de espera al cliente)
    */
   toggleHold() {
     if (!this.callActive() && !this.rellamadaCallActive()) return;
@@ -7144,24 +7227,24 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     if (!agentId) return;
 
     if (this.isOnHold()) {
-      // Quitar espera: unmute + parar música
+      // Quitar espera: unmute + parar mÃºsica
       this.http.post(`${environment.apiUrl}/calls/agent/${agentId}/unhold`, {}).subscribe({
         next: () => {
           this.sipService.unmute();
           this.isMuted.set(false);
           this.isOnHold.set(false);
-          console.log('▶ Llamada reanudada');
+          console.log('â–¶ Llamada reanudada');
         },
         error: (err: any) => console.error('Error al quitar espera:', err)
       });
     } else {
-      // Poner en espera: mute + reproducir música
+      // Poner en espera: mute + reproducir mÃºsica
       this.http.post(`${environment.apiUrl}/calls/agent/${agentId}/hold`, {}).subscribe({
         next: () => {
           this.sipService.mute();
           this.isMuted.set(true);
           this.isOnHold.set(true);
-          console.log('⏸ Llamada en espera');
+          console.log('â¸ Llamada en espera');
         },
         error: (err: any) => console.error('Error al poner en espera:', err)
       });
@@ -7169,7 +7252,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Verificar si está en llamada activa
+   * Verificar si estÃ¡ en llamada activa
    */
   isInActiveCall(): boolean {
     return this.callState === CallState.ACTIVE;
@@ -7190,7 +7273,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   }
 
   /**
-   * Maneja la selección de archivo de comprobante (subida simple sin OCR)
+   * Maneja la selecciÃ³n de archivo de comprobante (subida simple sin OCR)
    */
   onComprobanteFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -7205,9 +7288,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
-    // Validar tamaño (5MB)
+    // Validar tamaÃ±o (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('El archivo es muy grande. Máximo 5MB.');
+      alert('El archivo es muy grande. MÃ¡ximo 5MB.');
       input.value = '';
       return;
     }
@@ -7224,7 +7307,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     this.isUploadingComprobante.set(true);
 
-    // Subir sin validación OCR
+    // Subir sin validaciÃ³n OCR
     this.comprobanteService.uploadComprobante(file, {
       idCuota: cuota.id,
       montoEsperado: cuota.monto || 0,
@@ -7242,7 +7325,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       error: (err) => {
         console.error('[COMPROBANTE-SIMPLE] Error al subir:', err);
         this.isUploadingComprobante.set(false);
-        alert('Error al subir el comprobante: ' + (err.error?.error || 'Error de conexión'));
+        alert('Error al subir el comprobante: ' + (err.error?.error || 'Error de conexiÃ³n'));
         input.value = '';
       }
     });
@@ -7328,11 +7411,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const minDate = this.getMinReprogramDate(cuota, schedule);
     const maxDate = this.getMaxReprogramDate(cuota, schedule);
     if (selectedDate < minDate || selectedDate > maxDate) {
-      alert(`Fecha no válida. Debe estar entre ${minDate} y ${maxDate}.`);
+      alert(`Fecha no vÃ¡lida. Debe estar entre ${minDate} y ${maxDate}.`);
       return;
     }
 
-    const motivo = (window.prompt('Motivo de reprogramación (obligatorio):', 'Reprogramación solicitada por cliente') || '').trim();
+    const motivo = (window.prompt('Motivo de reprogramaciÃ³n (obligatorio):', 'ReprogramaciÃ³n solicitada por cliente') || '').trim();
     if (!motivo) {
       alert('El motivo es obligatorio.');
       return;
@@ -7433,7 +7516,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Abre el modal para registrar pago con voucher (flujo nuevo)
-   * Auto-selecciona: Contacto Directo + Cancelación + Cuota más próxima
+   * Auto-selecciona: Contacto Directo + CancelaciÃ³n + Cuota mÃ¡s prÃ³xima
    */
   openVoucherPaymentDialog(schedule: any): void {
     const customer = this.customerData();
@@ -7449,7 +7532,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       return;
     }
 
-    // Preparar cuotas para el diálogo
+    // Preparar cuotas para el diÃ¡logo
     const cuotas = schedule.installments.map((c: any) => ({
       id: c.id,
       numeroCuota: c.numeroCuota,
@@ -7481,7 +7564,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       if (result?.confirmed && result.autoSelect) {
         console.log('[VOUCHER] Pago confirmado, auto-seleccionando:', result.autoSelect);
 
-        // Auto-seleccionar la clasificación: Contacto Directo
+        // Auto-seleccionar la clasificaciÃ³n: Contacto Directo
         this.autoSelectClassification(result.autoSelect.categoriaId, result.autoSelect.detalleId);
 
         // Auto-seleccionar la cuota
@@ -7523,14 +7606,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
           }
         }
 
-        // Mostrar mensaje de éxito
+        // Mostrar mensaje de Ã©xito
         console.log('[VOUCHER] Formulario auto-completado. Listo para guardar.');
       }
     });
   }
 
   /**
-   * Auto-selecciona la clasificación jerárquica por códigos o labels
+   * Auto-selecciona la clasificaciÃ³n jerÃ¡rquica por cÃ³digos o labels
    */
   private autoSelectClassification(categoriaCode: string, detalleCode: string): void {
     // Usar directamente managementClassifications en lugar de hierarchyLevels
@@ -7547,9 +7630,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     console.log('[VOUCHER] Total clasificaciones:', allClassifications.length);
     console.log('[VOUCHER] Roots disponibles:', roots.map(r => `${r.codigo}: ${r.label}`));
-    console.log('[VOUCHER] Buscando categoría:', categoriaCode, 'y detalle:', detalleCode);
+    console.log('[VOUCHER] Buscando categorÃ­a:', categoriaCode, 'y detalle:', detalleCode);
 
-    // Buscar la categoría (nivel 0) por código o por label que contenga "CONTACTO DIRECTO"
+    // Buscar la categorÃ­a (nivel 0) por cÃ³digo o por label que contenga "CONTACTO DIRECTO"
     const categoria = roots.find((opt: any) =>
       opt.codigo === categoriaCode ||
       opt.codigo?.toUpperCase() === categoriaCode ||
@@ -7559,7 +7642,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     if (categoria) {
       this.onClassificationLevelChange(0, categoria.id);
-      console.log('[VOUCHER] Categoría seleccionada:', categoria.label, '(id:', categoria.id, ')');
+      console.log('[VOUCHER] CategorÃ­a seleccionada:', categoria.label, '(id:', categoria.id, ')');
 
       // Esperar a que se actualice el signal y buscar los hijos directamente
       setTimeout(() => {
@@ -7571,31 +7654,31 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         console.log('[VOUCHER] Hijos disponibles:', children.map(c => `${c.codigo}: ${c.label}`));
 
         if (children.length > 0) {
-          // Buscar detalle por código o por label que contenga "CANCELACION"
+          // Buscar detalle por cÃ³digo o por label que contenga "CANCELACION"
           const detalle = children.find((opt: any) =>
             opt.codigo === detalleCode ||
             opt.codigo?.toUpperCase() === detalleCode ||
             opt.label?.toUpperCase().includes('CANCELACION') ||
-            opt.label?.toUpperCase().includes('CANCELACIÓN')
+            opt.label?.toUpperCase().includes('CANCELACIÃ“N')
           );
 
           if (detalle) {
             this.onClassificationLevelChange(1, detalle.id);
             console.log('[VOUCHER] Detalle seleccionado:', detalle.label, '(id:', detalle.id, ')');
           } else {
-            console.warn('[VOUCHER] No se encontró detalle "CANCELACION". Opciones:', children.map(c => c.label));
+            console.warn('[VOUCHER] No se encontrÃ³ detalle "CANCELACION". Opciones:', children.map(c => c.label));
           }
         } else {
-          console.warn('[VOUCHER] No se encontraron hijos para categoría:', categoria.id);
+          console.warn('[VOUCHER] No se encontraron hijos para categorÃ­a:', categoria.id);
         }
       }, 150);
     } else {
-      console.warn('[VOUCHER] No se encontró categoría "CONTACTO DIRECTO". Opciones:', roots.map(r => r.label));
+      console.warn('[VOUCHER] No se encontrÃ³ categorÃ­a "CONTACTO DIRECTO". Opciones:', roots.map(r => r.label));
     }
   }
 
   /**
-   * Selecciona una cuota para cancelación e inicializa los campos editables
+   * Selecciona una cuota para cancelaciÃ³n e inicializa los campos editables
    */
   onSelectCuotaForCancellation(cuota: any): void {
     this.selectedInstallmentForCancellation.set(cuota);
@@ -7635,7 +7718,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Limpiar espacios
     fechaStr = fechaStr.trim();
 
-    // Si ya está en formato YYYY-MM-DD, devolverlo
+    // Si ya estÃ¡ en formato YYYY-MM-DD, devolverlo
     if (/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
       return fechaStr;
     }
@@ -7665,7 +7748,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   // ==================== CARTA DE ACUERDO ====================
 
   /**
-   * Muestra el modal de confirmación para generar Carta de Acuerdo después de guardar promesa
+   * Muestra el modal de confirmaciÃ³n para generar Carta de Acuerdo despuÃ©s de guardar promesa
    */
   private mostrarModalGenerarCarta(idGestion: number, contactLabel: string, managementLabel: string): void {
     const documentoCliente = this.customerData()?.numero_documento || '';
@@ -7681,44 +7764,44 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // Generar carta y luego finalizar
         this.generarCartaYFinalizar(idGestion, contactLabel, managementLabel);
       } else {
-        // Usuario eligió "Ahora no", solo finalizar
+        // Usuario eligiÃ³ "Ahora no", solo finalizar
         this.onSaveSuccess(contactLabel, managementLabel);
       }
     });
   }
 
   /**
-   * Genera la carta de acuerdo y luego finaliza la gestión
+   * Genera la carta de acuerdo y luego finaliza la gestiÃ³n
    */
   private generarCartaYFinalizar(idGestion: number, contactLabel: string, managementLabel: string): void {
     const user = this.authService.getCurrentUser();
     if (!user) {
-      alert('⚠️ No se puede generar la carta: usuario no encontrado');
+      alert('âš ï¸ No se puede generar la carta: usuario no encontrado');
       this.onSaveSuccess(contactLabel, managementLabel);
       return;
     }
 
-    console.log('📄 Generando Carta de Acuerdo para gestión:', idGestion);
+    console.log('ðŸ“„ Generando Carta de Acuerdo para gestiÃ³n:', idGestion);
 
     this.cartaAcuerdoService.generarCarta(idGestion, user.id).subscribe({
       next: (blob) => {
         const docCliente = this.customerData()?.numero_documento || idGestion;
         this.cartaAcuerdoService.descargarPdf(blob, `CARTA_ACUERDO_${docCliente}.pdf`);
-        console.log('✅ Carta de Acuerdo generada exitosamente');
-        alert('✅ Carta de Acuerdo generada exitosamente');
+        console.log('âœ… Carta de Acuerdo generada exitosamente');
+        alert('âœ… Carta de Acuerdo generada exitosamente');
         this.onSaveSuccess(contactLabel, managementLabel);
       },
       error: (error) => {
-        console.error('❌ Error generando carta:', error);
-        alert('⚠️ Error al generar la Carta de Acuerdo. La gestión se guardó correctamente.');
+        console.error('âŒ Error generando carta:', error);
+        alert('âš ï¸ Error al generar la Carta de Acuerdo. La gestiÃ³n se guardÃ³ correctamente.');
         this.onSaveSuccess(contactLabel, managementLabel);
       }
     });
   }
 
   /**
-   * Carga el estado del botón de carta del banner de promesa activa:
-   * si la subcartera tiene plantilla asignada y qué gestiones ya tienen carta generada
+   * Carga el estado del botÃ³n de carta del banner de promesa activa:
+   * si la subcartera tiene plantilla asignada y quÃ© gestiones ya tienen carta generada
    */
   private cargarEstadoCartaAcuerdo(idCliente: number | null): void {
     const idSubcartera = this.selectedSubPortfolioId;
@@ -7743,7 +7826,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   /**
    * Genera (o regenera) la carta de acuerdo desde el banner de promesa activa.
-   * El backend relee la gestión y sus cuotas, así que la carta sale con los datos actuales.
+   * El backend relee la gestiÃ³n y sus cuotas, asÃ­ que la carta sale con los datos actuales.
    */
   protected generarCartaDesdeBanner(schedule: any): void {
     const idGestion = Number(schedule?.id);
@@ -7751,7 +7834,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     const user = this.authService.getCurrentUser();
     if (!user) {
-      alert('⚠️ No se puede generar la carta: usuario no encontrado');
+      alert('âš ï¸ No se puede generar la carta: usuario no encontrado');
       return;
     }
 
@@ -7768,14 +7851,14 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.generandoCartaGestionId.set(null);
       },
       error: (error) => {
-        console.error('❌ Error generando carta desde banner:', error);
+        console.error('âŒ Error generando carta desde banner:', error);
         this.generandoCartaGestionId.set(null);
-        alert('⚠️ Error al generar la Carta de Acuerdo.');
+        alert('âš ï¸ Error al generar la Carta de Acuerdo.');
       }
     });
   }
 
-  // --- Agregar Teléfono ---
+  // --- Agregar TelÃ©fono ---
   subtipoLabel(subtipo: string): string {
     const labels: Record<string, string> = {
       'telefono_principal': 'Principal',
@@ -7787,7 +7870,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       'telefono_referencia_1': 'Referencia 1',
       'telefono_referencia_2': 'Referencia 2'
     };
-    return labels[subtipo] || subtipo || 'Teléfono';
+    return labels[subtipo] || subtipo || 'TelÃ©fono';
   }
 
   contactabilidadBadge(estado: string | undefined, activo?: boolean): { text: string; class: string } {
@@ -7801,9 +7884,9 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       case 'CONTACTO_TERCERO': return { text: 'Tercero',             class: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40dark:text-blue-300' };
       case 'CONTACTADO': return { text: 'Contactado',          class: 'bg-teal-100 text-teal-700 dark:bg-teal-900/40dark:text-teal-300' };
       case 'NO_CONTACTADO': return { text: 'No contactado',       class: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'};
-      case 'INVALIDO': return { text: 'Inválido',            class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40dark:text-orange-300' };
+      case 'INVALIDO': return { text: 'InvÃ¡lido',            class: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40dark:text-orange-300' };
       case 'NUEVO': return { text: 'Nuevo',               class: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40dark:text-amber-300' };
-      case 'INVALIDO_CONFIRMADO': return { text: 'Inválido confirmado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'};
+      case 'INVALIDO_CONFIRMADO': return { text: 'InvÃ¡lido confirmado', class: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'};
       default: return { text: '', class: '' };
     }
   }
@@ -7811,7 +7894,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
   /* MOSTRAR ESTADOS DE OSIPTEL */
   osiptelBadge(estado: string | undefined ): { icon: string; class: string; title: string } {
     switch (estado) {
-    case 'PERTENECE': return { icon: 'id-card', class: 'text-green-600 dark:text-green-400', title: 'OSIPTEL: la línea pertenece al titular' };
+    case 'PERTENECE': return { icon: 'id-card', class: 'text-green-600 dark:text-green-400', title: 'OSIPTEL: la lÃ­nea pertenece al titular' };
       default: 
       return { icon: '', class: '', title: '' };
     }
@@ -7822,7 +7905,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   whatsappBadge(estado: string | undefined): { show: boolean; class: string; title: string } {
     switch (estado) {
-      case 'TIENE': return { show: true, class: 'text-green-600 dark:text-green-400', title: 'WhatsApp: el número tiene WhatsApp' };
+      case 'TIENE': return { show: true, class: 'text-green-600 dark:text-green-400', title: 'WhatsApp: el nÃºmero tiene WhatsApp' };
       default: return { show: false, class: '', title: '' };
     }
   }
@@ -7875,11 +7958,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     this.http.get<TelefonoMetodo[]>(`${environment.gatewayUrl}/contacts/telefonos-todos/${documento}`, { params }).pipe(
       catchError(err => {
-        console.error('❌ Error cargando teléfonos de metodos_contacto:', err);
+        console.error('âŒ Error cargando telÃ©fonos de metodos_contacto:', err);
         return of([]);
       })
     ).subscribe(telefonos => {
-      console.log('📞 Teléfonos cargados (todos):', telefonos.length);
+      console.log('ðŸ“ž TelÃ©fonos cargados (todos):', telefonos.length);
       this.telefonosMetodo.set(telefonos);
     });
   }
@@ -7956,7 +8039,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
   protected getSelectedHistorialPromesaResumen(promesaCompacta: string | undefined): string {
     if (!promesaCompacta) return '';
-    const parts = promesaCompacta.split(' · ').filter(Boolean);
+    const parts = promesaCompacta.split(' Â· ').filter(Boolean);
     return parts[0] || '';
   }
 
@@ -8051,7 +8134,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       subcarteraId: this.selectedSubPortfolioId
     }).subscribe({
       next: () => {
-        // Recargar la lista completa de teléfonos desde el backend
+        // Recargar la lista completa de telÃ©fonos desde el backend
         this.loadTelefonosMetodo(documento);
 
         // Reset form
@@ -8060,17 +8143,17 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         this.cancelAddContactForm();
         this.savingPhone.set(false);
 
-        // Toast de éxito
+        // Toast de Ã©xito
         this.showSuccess.set(true);
         setTimeout(() => this.showSuccess.set(false), 3000);
-        console.log('✅ Teléfono agregado exitosamente:', valor);
+        console.log('âœ… TelÃ©fono agregado exitosamente:', valor);
       },
       error: (err) => {
         this.savingPhone.set(false);
-        const msg = err.error?.error || 'Error al agregar teléfono';
-        console.error('❌ Error agregando teléfono:', msg);
+        const msg = err.error?.error || 'Error al agregar telÃ©fono';
+        console.error('âŒ Error agregando telÃ©fono:', msg);
         if ((msg || '').toLowerCase().includes('ya existe para este cliente')) {
-          this.phoneDuplicateTitle.set('Teléfono duplicado');
+          this.phoneDuplicateTitle.set('TelÃ©fono duplicado');
           this.phoneDuplicateMessage.set(msg);
           this.showPhoneDuplicateCard.set(true);
           return;
@@ -8110,12 +8193,12 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
         this.showSuccess.set(true);
         setTimeout(() => this.showSuccess.set(false), 3000);
-        console.log('✅ Correo agregado exitosamente:', valor);
+        console.log('âœ… Correo agregado exitosamente:', valor);
       },
       error: (err) => {
         this.savingEmail.set(false);
         const msg = err.error?.error || 'Error al agregar correo';
-        console.error('❌ Error agregando correo:', msg);
+        console.error('âŒ Error agregando correo:', msg);
         if ((msg || '').toLowerCase().includes('ya existe')) {
           this.phoneDuplicateTitle.set('Correo duplicado');
           this.phoneDuplicateMessage.set(msg);
@@ -8140,7 +8223,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const num = (phone || '').trim();
     if (!this.isValidCellphone(num)) return;
     const nombre = this.customerData()?.nombre_completo || 'cliente';
-    const mensaje = encodeURIComponent(`Buenos días, me comunico con el Sr(a). ${nombre}.`);
+    const mensaje = encodeURIComponent(`Buenos dÃ­as, me comunico con el Sr(a). ${nombre}.`);
     const url = `https://web.whatsapp.com/send?phone=51${num}&text=${mensaje}`;
     window.open(url, 'whatsapp-chat');
     this.showWhatsappDropdown.set(false);

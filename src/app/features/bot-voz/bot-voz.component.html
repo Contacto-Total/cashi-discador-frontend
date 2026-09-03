@@ -458,17 +458,33 @@
                al bloque 2, pegados a la tarea que los provoca: "reintentos" no significa
                nada suelto, y sí junto a "recordar" o a "negociar vencidas". -->
           <section class="bloque">
-            <span class="etiqueta"><span class="paso">3</span> Cuándo llama</span>
+            <span class="etiqueta"><span class="paso">3</span> Cuándo llama
+              <span class="limite">{{ topeHoraInicio }} – {{ topeHoraFin }}</span>
+            </span>
             <div class="grid-form">
+            <!-- min/max frenan las flechas y marcan el campo en rojo, pero no lo que se
+                 teclea: el tope de verdad lo aplica el backend al guardar. -->
             <label>
               Empieza a llamar
-              <input type="time" [(ngModel)]="nuevaCola.horaInicio">
-              <small class="muted">Vacío = {{ topeHoraInicio }}, el mínimo legal.</small>
+              <input type="time" [min]="topeHoraInicio" [max]="topeHoraFin"
+                     [(ngModel)]="nuevaCola.horaInicio">
+              <small class="muted">Vacío = {{ topeHoraInicio }}</small>
             </label>
             <label>
               Deja de llamar
-              <input type="time" [(ngModel)]="nuevaCola.horaFin">
-              <small class="muted">No puede pasar de {{ topeHoraFin }}: lo fija la Ley 29571.</small>
+              <input type="time" [min]="topeHoraInicio" [max]="topeHoraFin"
+                     [(ngModel)]="nuevaCola.horaFin">
+              <small class="muted">Vacío = {{ topeHoraFin }}</small>
+            </label>
+            <label class="ancho">
+              Días que llama
+              <div class="dias-semana">
+                <button type="button" *ngFor="let d of diasPermitidos"
+                        class="dia" [class.dia-on]="diaMarcado(d.letra)"
+                        [title]="d.nombre"
+                        (click)="alternarDia(d.letra)">{{ d.letra }}</button>
+              </div>
+              <small class="muted">Vacío = todos</small>
             </label>
             <label>
               Llamadas a la vez
@@ -705,9 +721,7 @@
               Enganche entre el {{ pct(reglasEfectivas.pctPrimeraMin) }} y el
               {{ pct(reglasEfectivas.pctPrimeraMax) }} del total, con la primera cuota al
               menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las demás.
-              La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días
-              y la segunda entre {{ reglasEfectivas.diasMinASegunda }} y
-              {{ reglasEfectivas.diasMaxASegunda }} días después.
+              La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días.
             </p>
             <p class="muted"><em>Esto no se edita aquí: lo define administración.</em></p>
           </div>
@@ -895,9 +909,7 @@
       <p class="demo" *ngIf="reglasEfectivas">
         Enganche entre {{ reglasEfectivas.pctPrimeraMin }} y {{ reglasEfectivas.pctPrimeraMax }},
         con la primera cuota al menos {{ reglasEfectivas.kMinPrimera }} veces cada una de las
-        demás. La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días
-        y la segunda entre {{ reglasEfectivas.diasMinASegunda }} y
-        {{ reglasEfectivas.diasMaxASegunda }} días después.
+        demás. La primera vence como máximo a {{ reglasEfectivas.diasMaxPrimeraCuota }} días.
       </p>
     </div>
 
@@ -909,7 +921,11 @@
     <div class="tono-card" *ngFor="let r of reglasDeSubcartera"
          [class.regla-inactiva]="r.activo === false">
       <div class="card-title-row" style="margin-bottom: 14px;">
-        <h3>{{ r.idSubcartera ? nombreSubcartera(r.idSubcartera) : 'Por defecto (todas)' }}</h3>
+        <!-- El nombre viaja con la propia regla: una subcartera puede tener regla y no
+             tener ninguna cola abierta, y entonces no habia de donde sacarlo. -->
+        <h3>{{ r.idSubcartera
+               ? (r.nombreSubcartera || nombreSubcartera(r.idSubcartera))
+               : 'Por defecto (todas)' }}</h3>
         <span class="status-badge" *ngIf="carteraDeSubcartera(r.idSubcartera)">
           {{ carteraDeSubcartera(r.idSubcartera) }}
         </span>
@@ -947,28 +963,9 @@
           <input type="number" min="0" [(ngModel)]="r.diasMaxPrimeraCuota" placeholder="hereda">
           <small class="muted">Desde la llamada. 0 = solo hoy.</small>
         </label>
-        <label>
-          2ª cuota, desde
-          <input type="number" min="1" [(ngModel)]="r.diasMinASegunda" placeholder="hereda">
-          <small class="muted">Días después de la primera.</small>
-        </label>
-        <label>
-          2ª cuota, hasta
-          <input type="number" min="1" [(ngModel)]="r.diasMaxASegunda" placeholder="hereda">
-          <small class="muted">Se busca que caiga en el mismo mes.</small>
-        </label>
-        <label>
-          Máximo de cuotas
-          <input type="number" min="1" [(ngModel)]="r.maxCuotasBot" placeholder="hereda">
-          <small class="muted">Lo máximo que el bot puede ofrecer, aunque la opción admita más.</small>
-        </label>
-        <label>
-          Plazos por opción
-          <input type="text" [(ngModel)]="r.curvaMeses" placeholder="p. ej. 12,5,3,1">
-          <small class="muted">
-            Meses de cada rebaja, en orden. Vacío = los calcula el sistema.
-          </small>
-        </label>
+        <!-- "Máximo de cuotas" y "Plazos por opción" se fueron a la configuración de
+             la CAMPAÑA (el formulario de la cola): dicen qué se ofrece esta semana, no
+             cómo se fracciona una deuda. Aquí solo quedan las condiciones comunes. -->
         <!-- La casilla "La última opción, solo con pago hoy" se quitó: la condición es
              fija y vive en el código (BotOfertaService). No era una preferencia por
              subcartera sino lo que define al último escalón, y sembrada en 0 hacía que
