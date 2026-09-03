@@ -1550,8 +1550,8 @@ type EvaluacionConvenio =
              <!-- Resumen Rápido Deuda -->
              <div [class]="'p-2 ' + purchaseSummaryClass()">
                <div class="text-center">
-                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">Capital</div>
-                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(getPrimaryAmountValue()) }}</div>
+                 <div class="text-xs uppercase font-bold" [ngClass]="purchaseTextClass()">{{ primaryAmountField().label }}</div>
+                 <div class="text-xl font-black" [ngClass]="purchaseTextClass()">{{ formatCurrency(primaryAmountField().value) }}</div>
                  @if (clientHeaderFields().length > 0) {
                     <div class="mx-auto mt-2 max-w-[230px] space-y-1 text-[10px] leading-tight text-red-600 dark:text-red-400">
                       @for (field of clientHeaderFields(); track field.field) {
@@ -2932,6 +2932,29 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // Ordenar por valor descendente (mayores primero) - solo para campos sin ordenMonto explícito
     return allCabeceras.length > 0 ? amountFields : amountFields.sort((a, b) => b.value - a.value);
+  });
+
+  /**
+   * Monto principal del panel derecho: etiqueta y valor SIEMPRE del mismo campo.
+   * Antes el titulo era el literal "Capital" y el valor podia venir de otro campo
+   * (ej. deuda total) cuando la subcartera no tiene una cabecera "capital".
+   */
+  primaryAmountField = computed<{ label: string; value: number }>(() => {
+    const fields = this.clientAmountFields();
+
+    if (fields.length === 0) {
+      return { label: 'Deuda Total', value: this.customerData().deuda?.saldo_total || 0 };
+    }
+
+    const campo =
+      fields.find(f => f.label.trim().toLowerCase() === 'capital')
+      || fields.find(f => f.field.toLowerCase().includes('capital')
+                       && !f.field.toLowerCase().includes('tarj'))
+      || fields.find(f => f.label.toLowerCase().includes('total')
+                       || f.field.toLowerCase().includes('total'))
+      || fields[0];
+
+    return { label: campo.label, value: campo.value };
   });
 
   // Computed para obtener días de mora del cliente
@@ -5760,41 +5783,6 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-  }
-
-  /**
-   * Obtiene la etiqueta del monto principal (primer campo de montos o "Deuda Total")
-   */
-  getPrimaryAmountLabel(): string {
-    const fields = this.clientAmountFields();
-    if (fields.length > 0) {
-      // Buscar campo que contenga "total" en el nombre
-      const totalField = fields.find(f =>
-        f.label.toLowerCase().includes('total') ||
-        f.field.toLowerCase().includes('total')
-      );
-      return totalField?.label || fields[0].label;
-    }
-    return 'Deuda Total';
-  }
-
-  /**
-   * Obtiene el valor del monto principal
-   */
-  getPrimaryAmountValue(): number {
-    const fields = this.clientAmountFields();
-    if (fields.length > 0) {
-      const capitalField = fields.find(f => f.label.trim().toLowerCase() === 'capital')
-        || fields.find(f => f.field.toLowerCase().includes('capital') && !f.field.toLowerCase().includes('tarj'));
-      if (capitalField) return capitalField.value;
-      // Buscar campo que contenga "total" en el nombre
-      const totalField = fields.find(f =>
-        f.label.toLowerCase().includes('total') ||
-        f.field.toLowerCase().includes('total')
-      );
-      return totalField?.value || fields[0].value;
-    }
-    return this.customerData().deuda?.saldo_total || 0;
   }
 
   purchaseOrder(): string {
