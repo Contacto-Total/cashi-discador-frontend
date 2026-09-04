@@ -37,6 +37,7 @@ export class SipService {
   // Permite que collection-management lo lea al inicializarse
   private currentOutgoingNumber: string | null = null;
   private currentCallIncoming: boolean = false; // Dirección de la llamada actual
+  private currentPredictiveCallUuid: string | null = null;
 
 
   private websocketService = inject(WebsocketService);
@@ -118,6 +119,11 @@ export class SipService {
    */
   isCurrentCallIncoming(): boolean {
     return this.currentCallIncoming;
+  }
+
+  /** UUID propagated only by predictive INVITEs; manual calls never set this value. */
+  getCurrentPredictiveCallUuid(): string | null {
+    return this.currentPredictiveCallUuid;
   }
 
 
@@ -256,11 +262,17 @@ export class SipService {
 
           if (session.direction === 'incoming') {
             this.currentCallIncoming = true;
+            const request = session._request;
+            const predictiveUuid = request?.getHeader?.('X-Cashi-UUID');
+            this.currentPredictiveCallUuid = typeof predictiveUuid === 'string' && predictiveUuid.trim()
+              ? predictiveUuid.trim()
+              : null;
             console.log('📲 Incoming call from:', session.remote_identity.uri.user);
 
             // CHECK: If calls are blocked (agent is tipifying), reject the call immediately
             if (this.blockIncomingCalls) {
               console.warn('🚫 REJECTING incoming call - agent is tipifying (ACW period)');
+              this.currentPredictiveCallUuid = null;
               session.terminate({
                 status_code: 486,
                 reason_phrase: 'Busy Here - Agent Tipifying'
@@ -272,7 +284,6 @@ export class SipService {
 
             // Check if this is an auto-answer call (from auto-dialer)
             // Auto-answer is triggered by SIP header Alert-Info or Call-Info
-            const request = session._request;
             const hasAutoAnswer = request && (
               request.hasHeader('Alert-Info') ||
               request.hasHeader('Call-Info') ||
@@ -416,6 +427,7 @@ export class SipService {
 
       // Guardar número de destino y emitir evento
       this.currentCallIncoming = false;
+      this.currentPredictiveCallUuid = null;
       this.currentOutgoingNumber = destination;
       console.log('📤 Emitiendo onOutgoingCall con destino:', destination);
       this.onOutgoingCall.emit({ to: destination });
@@ -918,6 +930,7 @@ export class SipService {
       this.onCallStatus.emit(this.currentCallState);
 
       this.currentSession = null;
+      this.currentPredictiveCallUuid = null;
 
       setTimeout(() => {
         // Solo emitir IDLE si no hay una nueva llamada activa
@@ -944,6 +957,7 @@ export class SipService {
       this.onCallStatus.emit(this.currentCallState);
 
       this.currentSession = null;
+      this.currentPredictiveCallUuid = null;
       this.onError.emit(`Call failed: ${data.cause}`);
 
       setTimeout(() => {

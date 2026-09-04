@@ -422,6 +422,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         }
 
         if (state === CallState.ACTIVE && !this.hasNavigatedToTypification) {
+          // An incoming call without the correlation header must wait for backend
+          // confirmation. A predictive UUID is safe to rehydrate from the durable
+          // agent reservation even if the ESL bridge event arrives late or is lost.
+          if (this.sipService.isCurrentCallIncoming() && !this.sipService.getCurrentPredictiveCallUuid()) {
+            console.log('📞 [App] Llamada entrante sin UUID predictivo; esperando bridge confirmado del backend...');
+            return;
+          }
+
           // ✅ CRITICAL FIX: Cancelar timeout anterior si existe
           // Evita múltiples timeouts cuando ACTIVE se emite múltiples veces (por ACK, etc)
           if (this.navigationTimeout) {
@@ -464,6 +472,14 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
               }
 
               console.log(`📞 [App] Llamada estable (${callDuration}ms), navegando a tipificación...`);
+              const predictiveCallUuid = this.sipService.getCurrentPredictiveCallUuid();
+              if (predictiveCallUuid && currentUser?.id) {
+                // The SIP header provides durable context when the bridge confirmation arrives late.
+                sessionStorage.setItem('predictive_call_data', JSON.stringify({
+                  callUuid: predictiveCallUuid,
+                  agentId: currentUser.id
+                }));
+              }
               this.hasNavigatedToTypification = true;
               // ✅ FIX: Limpiar timeout después de navegación exitosa
               // Esto evita que IDLE dispare restauración incorrecta del estado
