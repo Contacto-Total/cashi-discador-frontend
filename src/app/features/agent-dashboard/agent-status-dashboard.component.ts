@@ -92,10 +92,8 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     this.subPortfolioId = user.subPortfolioId || null;
     this.agentName = user.firstName + ' ' + user.lastName || user.username;
 
-    // SIEMPRE desbloquear llamadas al entrar al dashboard
-    // Esto previene que blockIncomingCalls quede pegado en true si la tipificación
-    // falló, hubo error de red, o el agente navegó sin guardar/cancelar correctamente
-    this.sipService.blockIncomingCallsMode(false);
+    // No aceptar SIP hasta conocer el estado durable del agente.
+    this.sipService.blockIncomingCallsMode(true);
 
     this.loadAgentStatus(user.id);
 
@@ -204,6 +202,16 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
         };
         this.loading = false;
 
+        const releaseKey = `tipification-release-pending-${userId}`;
+        if (response.estadoActual !== AgentState.TIPIFICANDO) {
+          sessionStorage.removeItem(releaseKey);
+        } else if (sessionStorage.getItem(releaseKey)) {
+          this.agentStatusService.finalizarTipificacion(userId).subscribe({
+            next: () => sessionStorage.removeItem(releaseKey),
+            error: (err: any) => console.error('[AgentDashboard] Error liberando tipificación pendiente:', err)
+          });
+        }
+
         // Si está DESCONECTADO, cambiar a DISPONIBLE automáticamente
         if (response.estadoActual === 'DESCONECTADO') {
           console.log('[AgentDashboard] Agente DESCONECTADO - activando como DISPONIBLE');
@@ -213,11 +221,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
           }).subscribe();
         }
 
-        // SYNC: Si ya está DISPONIBLE al cargar, asegurar que llamadas estén desbloqueadas
-        if (response.estadoActual === 'DISPONIBLE') {
-          console.log('[AgentDashboard] ✅ Carga inicial con estado DISPONIBLE - desbloqueando llamadas');
-          this.sipService.blockIncomingCallsMode(false);
-        }
+        this.sipService.blockIncomingCallsMode(response.estadoActual !== AgentState.DISPONIBLE);
       },
       error: (err) => {
         console.error('Error loading agent status:', err);
@@ -238,12 +242,7 @@ export class AgentStatusDashboardComponent implements OnInit, OnDestroy {
     // Suscribirse a cambios del estado
     this.currentStatusSubscription = this.agentStatusService.currentStatus$.subscribe(status => {
       if (status) {
-        // SYNC: Si el estado del backend es DISPONIBLE, desbloquear llamadas entrantes
-        // Esto soluciona la desincronización cuando blockIncomingCalls quedó en true
-        if (status.estadoActual === AgentState.DISPONIBLE) {
-          console.log('[AgentDashboard] ✅ Estado DISPONIBLE - desbloqueando llamadas entrantes');
-          this.sipService.blockIncomingCallsMode(false);
-        }
+        this.sipService.blockIncomingCallsMode(status.estadoActual !== AgentState.DISPONIBLE);
 
         this.previousState = status.estadoActual;
         this.currentStatus = status;

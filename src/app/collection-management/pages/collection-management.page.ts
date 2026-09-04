@@ -3218,6 +3218,20 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     return this.callActive() || this.rellamadaCallActive() || this.llamadaRealizada();
   }
 
+  private markTipificationReleasePending(): void {
+    const userId = this.authService.getCurrentUser()?.id;
+    if (userId) {
+      sessionStorage.setItem(`tipification-release-pending-${userId}`, 'true');
+    }
+  }
+
+  private clearTipificationReleasePending(): void {
+    const userId = this.authService.getCurrentUser()?.id;
+    if (userId) {
+      sessionStorage.removeItem(`tipification-release-pending-${userId}`);
+    }
+  }
+
   /** CanDeactivate: solo se permite salir si no hay gestión con llamada pendiente. */
   puedeSalir(_nextUrl: string): boolean {
     return this.salidaAutorizada || !this.hasGestionEnCurso();
@@ -3370,6 +3384,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
         // INMEDIATAMENTE bloquear llamadas entrantes ANTES de cambiar estado en backend
         // Esto previene la race condition con el auto-dialer
         this.isTipifying.set(true);
+        this.markTipificationReleasePending();
         this.sipService.blockIncomingCallsMode(true);
         console.log('🚫 Bloqueando llamadas entrantes - agente en tipificación');
 
@@ -3672,6 +3687,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
             });
           }
           this.isTipifying.set(true);
+          this.markTipificationReleasePending();
         } else {
           console.warn('⚠️ [MANUAL] Cliente no encontrado');
           this.isLoadingCustomer.set(false);
@@ -4721,10 +4737,27 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
 
     // IMPORTANTE: Desbloquear llamadas si el componente se destruye
     // Esto cubre el caso cuando el usuario navega fuera sin guardar
-    if (this.isTipifying()) {
+      if (this.isTipifying()) {
       this.isTipifying.set(false);
       this.sipService.blockIncomingCallsMode(false);
       console.log('🔓 [ngOnDestroy] Desbloqueando llamadas entrantes al salir del componente');
+
+      // Si el asesor abandonó la gestión sin una llamada SIP activa, no debe quedar
+      // bloqueado en TIPIFICANDO. La marca permite completar el cambio tras un reload.
+      if (!this.salidaAutorizada && !this.callActive() && !this.rellamadaCallActive()) {
+        const userId = this.authService.getCurrentUser()?.id;
+        if (userId) {
+          const releaseKey = `tipification-release-pending-${userId}`;
+          this.markTipificationReleasePending();
+          this.agentStatusService.finalizarTipificacion(userId).subscribe({
+            next: () => {
+              sessionStorage.removeItem(releaseKey);
+              console.log('✅ [ngOnDestroy] Tipificación liberada al salir sin guardar');
+            },
+            error: (err: any) => console.error('❌ [ngOnDestroy] Error liberando tipificación:', err)
+          });
+        }
+      }
     }
 
     // Limpiar suscripciones
@@ -6604,6 +6637,7 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
     // Gestión guardada: habilitar la navegación de salida (dashboard/seguimiento).
     // Todas las ramas de este método terminan navegando fuera de la pantalla.
     this.salidaAutorizada = true;
+    this.clearTipificationReleasePending();
     this.llamadaRealizada.set(false); // gestión cerrada: ya no hay llamada pendiente de guardar
     this.saving.set(false);
     this.showSuccess.set(true);
@@ -6665,10 +6699,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.showSuccess.set(false);
       console.log('🔄 Navegando a /agent-dashboard...');
       this.router.navigate(['/agent-dashboard']).then(() => {
-        // Solo cambiar a DISPONIBLE después de llegar al dashboard
-        this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-          next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+        // Solo finalizar después de llegar al dashboard para no recibir otra llamada
+        // mientras la pantalla de gestión sigue abierta.
+        this.agentStatusService.finalizarTipificacion(agentId).subscribe({
+          next: () => console.log('✅ Tipificación finalizada; estado actualizado'),
+          error: (err: any) => console.error('❌ Error finalizando tipificación:', err)
         });
       });
     // Fix temporal: reducción a 1 segundo
