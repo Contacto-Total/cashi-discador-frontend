@@ -6665,10 +6665,11 @@ export class CollectionManagementPage implements OnInit, OnDestroy, PuedeBloquea
       this.showSuccess.set(false);
       console.log('🔄 Navegando a /agent-dashboard...');
       this.router.navigate(['/agent-dashboard']).then(() => {
-        // Solo cambiar a DISPONIBLE después de llegar al dashboard
-        this.agentService.changeAgentStatus(agentId, { estado: AgentState.DISPONIBLE }).subscribe({
-          next: () => console.log('✅ Estado cambiado a DISPONIBLE'),
-          error: (err: any) => console.error('❌ Error cambiando estado:', err)
+        // Solo finalizar después de llegar al dashboard para no recibir otra llamada
+        // mientras la pantalla de gestión sigue abierta.
+        this.agentStatusService.finalizarTipificacion(agentId).subscribe({
+          next: () => console.log('✅ Tipificación finalizada; estado actualizado'),
+          error: (err: any) => console.error('❌ Error finalizando tipificación:', err)
         });
       });
     // Fix temporal: reducción a 1 segundo
