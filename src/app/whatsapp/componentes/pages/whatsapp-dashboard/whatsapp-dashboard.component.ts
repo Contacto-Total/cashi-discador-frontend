@@ -33,6 +33,7 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
   saving = false;
   activationSaving = false;
   changingNumber = false;
+  relinking = false;
   loadingTenants = false;
   loadingPortfolios = false;
   loadingSubPortfolios = false;
@@ -296,6 +297,38 @@ export class WhatsappDashboardComponent implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  relinkSameNumber(): void {
+    const account = this.selectedAccount;
+    if (!account || !this.canRelink(account) || this.relinking) return;
+
+    const confirmed = window.confirm(
+      'Se generará un nuevo QR para volver a vincular el mismo número. ' +
+      'Se conservarán las conversaciones y la asignación de este servicio.'
+    );
+    if (!confirmed) return;
+
+    this.relinking = true;
+    this.feedback = '';
+    this.subscriptions.add(
+      this.whatsappApi.relinkWhatsappAccount(account.id).subscribe({
+        next: updated => {
+          this.relinking = false;
+          this.accounts = this.accounts.map(item => item.id === updated.id ? updated : item);
+          this.feedback = 'Preparando el código QR para reconectar el mismo número.';
+          this.refreshAccounts();
+        },
+        error: () => {
+          this.relinking = false;
+          this.feedback = 'No se pudo preparar la reconexión de la sesión.';
+        }
+      })
+    );
+  }
+
+  canRelink(account: WhatsappAccount): boolean {
+    return account.currentAccount !== false && account.status === 'LOGGED_OUT';
   }
 
   private syncForm(account: WhatsappAccount): void {
