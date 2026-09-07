@@ -66,12 +66,18 @@
              </div>
              <span class="detail-status" [ngClass]="statusClass(account.status)">
                <span class="status-dot"></span>{{ statusLabel(account.status) }}
-             </span>
-             <div class="detail-actions">
-              <button type="button" class="change-number-button" [disabled]="changingNumber || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
-               <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
-               {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
-              </button>
+              </span>
+              <div class="detail-actions">
+               @if (canRelink(account)) {
+                 <button type="button" class="relink-number-button" [disabled]="relinking" title="Volver a vincular el mismo número y conservar conversaciones" (click)="relinkSameNumber()">
+                  <lucide-angular [name]="relinking ? 'loader-2' : 'link-2'" [size]="16" [class.spin]="relinking"></lucide-angular>
+                  {{ relinking ? 'Preparando QR...' : 'Reconectar mismo número' }}
+                 </button>
+               }
+               <button type="button" class="change-number-button" [disabled]="changingNumber || relinking || account.currentAccount === false" [title]="account.currentAccount === false ? 'Cuenta histórica' : 'Eliminar sesión y cambiar número'" (click)="changeNumber()">
+                <lucide-angular [name]="changingNumber ? 'loader-2' : 'refresh-cw'" [size]="16" [class.spin]="changingNumber"></lucide-angular>
+                {{ changingNumber ? 'Limpiando sesión...' : 'Eliminar sesión y cambiar número' }}
+               </button>
              </div>
             </header>
 

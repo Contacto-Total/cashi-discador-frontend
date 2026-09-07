@@ -48,6 +48,10 @@ export class WhatsappApiService {
     return this.http.post<WhatsappAccount>(`${this.apiBase}/accounts/${id}/cleanup`, {});
   }
 
+  relinkWhatsappAccount(id: number): Observable<WhatsappAccount> {
+    return this.http.post<WhatsappAccount>(`${this.apiBase}/accounts/${id}/relink`, {});
+  }
+
   getChats(page = 0, size = 30, q?: string, accountId?: number, includeHistorical = false): Observable<PageResponse<Conversation>> {
     let params = new HttpParams().set('page', page).set('size', size);
     if (q) params = params.set('q', q);

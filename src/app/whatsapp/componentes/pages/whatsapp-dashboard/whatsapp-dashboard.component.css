@@ -382,7 +382,28 @@ p {
   background: rgba(220, 38, 38, .11);
 }
 
-.change-number-button:disabled {
+.relink-number-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 9px 12px;
+  border: 1px solid rgba(13, 148, 136, .25);
+  border-radius: 11px;
+  background: rgba(13, 148, 136, .07);
+  color: #0f766e;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.relink-number-button:hover {
+  background: rgba(13, 148, 136, .13);
+}
+
+.change-number-button:disabled,
+.relink-number-button:disabled {
   cursor: wait;
   opacity: .65;
 }
