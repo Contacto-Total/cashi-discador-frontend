@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -143,6 +143,7 @@ export class CampaignFormComponent implements OnInit {
   promesaVencidaHasta = this.fechaHoy;
   promesaVencidaMontoMinimo: number | null = null;
   promesaVencidaMontoMaximo: number | null = null;
+  nivelMontoPromesa: 'CUOTA' | 'PROMESA' = 'CUOTA';
 
   // Rango de antigüedad (filtro categórico) - rangos fijos basados en dias_mora
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
@@ -419,6 +420,62 @@ export class CampaignFormComponent implements OnInit {
 
   isTipoTelefonoSelected(codigo: string): boolean {
     return this.selectedTiposTelefono.includes(codigo);
+  }
+
+  setPromiseFilter(tipo: 'VIGENTE' | 'VENCIDA_MES', activo: boolean): void {
+    if (tipo === 'VIGENTE') {
+      this.seguimientoPromesaVigente = activo;
+      if (activo) this.seguimientoPromesaVencida = false;
+    } else {
+      this.seguimientoPromesaVencida = activo;
+      if (activo) this.seguimientoPromesaVigente = false;
+    }
+  }
+
+  private buildPromiseFilter(): CampaignPromiseFilter | null {
+    if (this.seguimientoPromesaVigente) {
+      return {
+        tipo: 'VIGENTE',
+        nivelMonto: this.nivelMontoPromesa,
+        fechaDesde: this.proximaCuotaVencimiento || undefined,
+        fechaHasta: this.proximaCuotaVencimiento || undefined,
+        montoDesde: this.promesaMontoMinimo ?? undefined,
+        montoHasta: this.promesaMontoMaximo ?? undefined
+      };
+    }
+    if (this.seguimientoPromesaVencida) {
+      return {
+        tipo: 'VENCIDA_MES',
+        nivelMonto: this.nivelMontoPromesa,
+        fechaDesde: this.promesaVencidaDesde,
+        fechaHasta: this.promesaVencidaHasta,
+        montoDesde: this.promesaVencidaMontoMinimo ?? undefined,
+        montoHasta: this.promesaVencidaMontoMaximo ?? undefined
+      };
+    }
+    return null;
+  }
+
+  private loadPromiseFilter(campaignId: number): void {
+    this.campaignService.getCampaignPromiseFilter(campaignId).subscribe({
+      next: (filter) => {
+        if (!filter) return;
+        this.nivelMontoPromesa = filter.nivelMonto;
+        if (filter.tipo === 'VIGENTE') {
+          this.seguimientoPromesaVigente = true;
+          this.proximaCuotaVencimiento = filter.fechaDesde || '';
+          this.promesaMontoMinimo = filter.montoDesde ?? null;
+          this.promesaMontoMaximo = filter.montoHasta ?? null;
+        } else {
+          this.seguimientoPromesaVencida = true;
+          this.promesaVencidaDesde = filter.fechaDesde || this.inicioMesActual;
+          this.promesaVencidaHasta = filter.fechaHasta || this.fechaHoy;
+          this.promesaVencidaMontoMinimo = filter.montoDesde ?? null;
+          this.promesaVencidaMontoMaximo = filter.montoHasta ?? null;
+        }
+      },
+      error: (err) => console.error('Error cargando filtro de promesa:', err)
+    });
   }
 
   loadFilterableFields(subcarteraId: number): void {
@@ -822,9 +879,10 @@ export class CampaignFormComponent implements OnInit {
                 this.loadFilterableFields(campaign.subPortfolioId);
                 this.loadGrupos(campaign.subPortfolioId, campaign.idGrupoAsesores ?? undefined);
               }
-              if (campaign.id) {
-                this.loadCampaignFilters(campaign.id);
-              }
+               if (campaign.id) {
+                 this.loadCampaignFilters(campaign.id);
+                 this.loadPromiseFilter(campaign.id);
+               }
 
               // Restaurar selección de rangos de antigüedad
               if (campaign.filtroRangoAntiguedad) {
@@ -981,23 +1039,32 @@ export class CampaignFormComponent implements OnInit {
         // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
         this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
           next: () => {
-            // 3) Llamar al preview SP
-            this.campaignService.previewImportacionSP(
-              newCampaignId,
-              this.selectedTenantId,
-              this.selectedPortfolioId,
-              this.selectedSubPortfolioId,
-              this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
-              filtroRangoAnt,
-              filtroTipoTel
-            ).subscribe({
-              next: (preview) => {
-                this.previewData = preview;
-                this.previewLoading = false;
+            this.campaignService.replaceCampaignPromiseFilter(newCampaignId, this.buildPromiseFilter()).subscribe({
+              next: () => {
+                // 3) Llamar al preview SP después de persistir todos los filtros.
+                this.campaignService.previewImportacionSP(
+                  newCampaignId,
+                  this.selectedTenantId,
+                  this.selectedPortfolioId,
+                  this.selectedSubPortfolioId,
+                  this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+                  filtroRangoAnt,
+                  filtroTipoTel
+                ).subscribe({
+                  next: (preview) => {
+                    this.previewData = preview;
+                    this.previewLoading = false;
+                  },
+                  error: (err) => {
+                    console.error('Error preview V2:', err);
+                    this.previewError = 'Error al obtener el preview';
+                    this.previewLoading = false;
+                  }
+                });
               },
               error: (err) => {
-                console.error('Error preview V2:', err);
-                this.previewError = 'Error al obtener el preview';
+                console.error('Error guardando filtro de promesa:', err);
+                this.previewError = 'Error al guardar el filtro de promesa';
                 this.previewLoading = false;
               }
             });
@@ -1150,13 +1217,22 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        // Solo exportar Excel para campañas NUEVAS, no en edición
-        if (exportExcel) {
-          this.exportCampaignToExcel(campaignId);
-        } else {
-          this.loading = false;
-          this.router.navigate(['/admin/campaigns']);
-        }
+        this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
+          next: () => {
+            // Solo exportar Excel para campañas NUEVAS, no en edición
+            if (exportExcel) {
+              this.exportCampaignToExcel(campaignId);
+            } else {
+              this.loading = false;
+              this.router.navigate(['/admin/campaigns']);
+            }
+          },
+          error: (err) => {
+            console.error('Error guardando filtro de promesa:', err);
+            this.loading = false;
+            this.router.navigate(['/admin/campaigns']);
+          }
+        });
       },
       error: (err) => {
         console.error('Error guardando filtros:', err);

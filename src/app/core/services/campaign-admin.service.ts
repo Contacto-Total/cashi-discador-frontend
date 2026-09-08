@@ -195,6 +195,15 @@ export interface CampaignFilterRange {
   tipoContacto?: TipoContacto; // CD, CI, PR, NC - null = aplica a todos
 }
 
+export interface CampaignPromiseFilter {
+  tipo: 'VIGENTE' | 'VENCIDA_MES';
+  nivelMonto: 'CUOTA' | 'PROMESA';
+  fechaDesde?: string;
+  fechaHasta?: string;
+  montoDesde?: number;
+  montoHasta?: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -418,6 +427,18 @@ export class CampaignAdminService {
       `${this.apiUrl}/${campaignId}/filters${params}`,
       filters,
       { headers: this.getHeaders() }
+    );
+  }
+
+  getCampaignPromiseFilter(campaignId: number): Observable<CampaignPromiseFilter | null> {
+    return this.http.get<CampaignPromiseFilter | null>(
+      `${this.apiUrl}/${campaignId}/promise-filter`, { headers: this.getHeaders() }
+    );
+  }
+
+  replaceCampaignPromiseFilter(campaignId: number, filter: CampaignPromiseFilter | null): Observable<CampaignPromiseFilter | null> {
+    return this.http.put<CampaignPromiseFilter | null>(
+      `${this.apiUrl}/${campaignId}/promise-filter`, filter, { headers: this.getHeaders() }
     );
   }
 

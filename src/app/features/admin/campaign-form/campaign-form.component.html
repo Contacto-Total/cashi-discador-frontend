@@ -599,19 +599,27 @@
         Seguimiento de Promesas
       </h2>
       <p class="section-description">
-        Prototipo visual. Estos filtros todavía no se envían al resumen ni a la importación.
+        Elija un único tipo de seguimiento; se aplicará junto con los demás filtros de la campaña.
       </p>
 
       <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-        <input type="checkbox" [(ngModel)]="seguimientoPromesaVigente" name="seguimientoPromesaVigente">
+        <input type="checkbox" [ngModel]="seguimientoPromesaVigente"
+               (ngModelChange)="setPromiseFilter('VIGENTE', $event)" name="seguimientoPromesaVigente">
         <span>Promesas vigentes</span>
       </label>
 
-      <div class="promise-filter-row" *ngIf="seguimientoPromesaVigente" style="margin-top: 16px;">
+      <div class="promise-filter-row promise-filter-row--four" *ngIf="seguimientoPromesaVigente" style="margin-top: 16px;">
         <div class="form-group">
           <label for="proximaCuotaVencimiento">Vencimiento de próxima cuota</label>
           <input type="date" id="proximaCuotaVencimiento" [(ngModel)]="proximaCuotaVencimiento"
                  name="proximaCuotaVencimiento" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="nivelMontoVigente">Evaluar monto por</label>
+          <select id="nivelMontoVigente" [(ngModel)]="nivelMontoPromesa" name="nivelMontoVigente" class="form-select">
+            <option value="CUOTA">Cuota</option>
+            <option value="PROMESA">Promesa</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="promesaMontoMinimo">Monto desde <small>(opcional)</small></label>
@@ -619,7 +627,6 @@
                  name="promesaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000">
           <small class="help-text">Use solo este valor para montos mayores o iguales.</small>
         </div>
-        <!-- TODO: Definir si el monto máximo debe ser un rango inclusivo o una opción separada. -->
         <div class="form-group">
           <label for="promesaMontoMaximo">Monto hasta <small>(opcional)</small></label>
           <input type="number" id="promesaMontoMaximo" [(ngModel)]="promesaMontoMaximo"
@@ -628,7 +635,8 @@
       </div>
 
       <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 20px;">
-        <input type="checkbox" [(ngModel)]="seguimientoPromesaVencida" name="seguimientoPromesaVencida">
+        <input type="checkbox" [ngModel]="seguimientoPromesaVencida"
+               (ngModelChange)="setPromiseFilter('VENCIDA_MES', $event)" name="seguimientoPromesaVencida">
         <span>Promesas vencidas del mes</span>
       </label>
 
@@ -645,11 +653,17 @@
           <small class="help-text">Disponible desde el primer día del mes hasta hoy.</small>
         </div>
         <div class="form-group">
+          <label for="nivelMontoVencida">Evaluar monto por</label>
+          <select id="nivelMontoVencida" [(ngModel)]="nivelMontoPromesa" name="nivelMontoVencida" class="form-select">
+            <option value="CUOTA">Cuota</option>
+            <option value="PROMESA">Promesa</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="promesaVencidaMontoMinimo">Monto desde <small>(opcional)</small></label>
           <input type="number" id="promesaVencidaMontoMinimo" [(ngModel)]="promesaVencidaMontoMinimo"
                  name="promesaVencidaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000">
         </div>
-        <!-- TODO: Definir si el monto máximo debe ser un rango inclusivo o una opción separada. -->
         <div class="form-group">
           <label for="promesaVencidaMontoMaximo">Monto hasta <small>(opcional)</small></label>
           <input type="number" id="promesaVencidaMontoMaximo" [(ngModel)]="promesaVencidaMontoMaximo"
