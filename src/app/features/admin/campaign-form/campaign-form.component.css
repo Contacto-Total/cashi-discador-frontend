@@ -222,6 +222,17 @@
   gap: 1rem;
 }
 
+.promise-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.promise-filter-row--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 /* ========================================
    CONFIGURACIÓN DE DISCADO
    ======================================== */
@@ -552,6 +563,11 @@
 
 @media (max-width: 768px) {
   .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .promise-filter-row,
+  .promise-filter-row--four {
     grid-template-columns: 1fr;
   }
 
