@@ -234,6 +234,62 @@
       </div>
     </div>
 
+    <!-- SECCIÓN: Seguimiento de Promesas -->
+    <div class="form-section full-width">
+      <h2>
+        <lucide-angular name="handshake" [size]="20"></lucide-angular>
+        Seguimiento de Promesas
+      </h2>
+      <p class="section-description">
+        Prototipo de filtro para clientes con una promesa de pago pendiente o parcial.
+      </p>
+
+      <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input
+          type="checkbox"
+          [(ngModel)]="seguimientoPromesaVigente"
+          name="seguimientoPromesaVigente">
+        <span>Incluir solo clientes con promesa vigente</span>
+      </label>
+
+      <div class="form-row" *ngIf="seguimientoPromesaVigente" style="margin-top: 16px;">
+        <div class="form-group">
+          <label for="proximaCuotaVencimiento">Vencimiento de próxima cuota</label>
+          <input
+            type="date"
+            id="proximaCuotaVencimiento"
+            [(ngModel)]="proximaCuotaVencimiento"
+            name="proximaCuotaVencimiento"
+            class="form-input">
+          <small class="help-text">Filtra por la fecha de la próxima cuota.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="promesaMontoMinimo">Monto de cuota desde</label>
+          <input
+            type="number"
+            id="promesaMontoMinimo"
+            [(ngModel)]="promesaMontoMinimo"
+            name="promesaMontoMinimo"
+            class="form-input"
+            min="0"
+            placeholder="Ej: 100">
+        </div>
+
+        <div class="form-group">
+          <label for="promesaMontoMaximo">Monto de cuota hasta</label>
+          <input
+            type="number"
+            id="promesaMontoMaximo"
+            [(ngModel)]="promesaMontoMaximo"
+            name="promesaMontoMaximo"
+            class="form-input"
+            min="0"
+            placeholder="Ej: 500">
+        </div>
+      </div>
+    </div>
+
     <!-- SECCIÓN: Filtro por Antigüedad de Mora -->
     <div class="form-section full-width">
       <h2>

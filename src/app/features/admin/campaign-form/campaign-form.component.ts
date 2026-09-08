@@ -131,6 +131,12 @@ export class CampaignFormComponent implements OnInit {
   ];
   selectedTiposTelefono: string[] = [];
 
+  // Prototipo visual de seguimiento de promesas vigentes. Aún no se persiste.
+  seguimientoPromesaVigente = false;
+  proximaCuotaVencimiento = '';
+  promesaMontoMinimo: number | null = null;
+  promesaMontoMaximo: number | null = null;
+
   // Rango de antigüedad (filtro categórico) - rangos fijos basados en dias_mora
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
   selectedRangosAntiguedad: string[] = [];
