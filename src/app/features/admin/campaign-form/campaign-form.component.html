@@ -234,62 +234,6 @@
       </div>
     </div>
 
-    <!-- SECCIÓN: Seguimiento de Promesas -->
-    <div class="form-section full-width">
-      <h2>
-        <lucide-angular name="handshake" [size]="20"></lucide-angular>
-        Seguimiento de Promesas
-      </h2>
-      <p class="section-description">
-        Prototipo de filtro para clientes con una promesa de pago pendiente o parcial.
-      </p>
-
-      <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-        <input
-          type="checkbox"
-          [(ngModel)]="seguimientoPromesaVigente"
-          name="seguimientoPromesaVigente">
-        <span>Incluir solo clientes con promesa vigente</span>
-      </label>
-
-      <div class="form-row" *ngIf="seguimientoPromesaVigente" style="margin-top: 16px;">
-        <div class="form-group">
-          <label for="proximaCuotaVencimiento">Vencimiento de próxima cuota</label>
-          <input
-            type="date"
-            id="proximaCuotaVencimiento"
-            [(ngModel)]="proximaCuotaVencimiento"
-            name="proximaCuotaVencimiento"
-            class="form-input">
-          <small class="help-text">Filtra por la fecha de la próxima cuota.</small>
-        </div>
-
-        <div class="form-group">
-          <label for="promesaMontoMinimo">Monto de cuota desde</label>
-          <input
-            type="number"
-            id="promesaMontoMinimo"
-            [(ngModel)]="promesaMontoMinimo"
-            name="promesaMontoMinimo"
-            class="form-input"
-            min="0"
-            placeholder="Ej: 100">
-        </div>
-
-        <div class="form-group">
-          <label for="promesaMontoMaximo">Monto de cuota hasta</label>
-          <input
-            type="number"
-            id="promesaMontoMaximo"
-            [(ngModel)]="promesaMontoMaximo"
-            name="promesaMontoMaximo"
-            class="form-input"
-            min="0"
-            placeholder="Ej: 500">
-        </div>
-      </div>
-    </div>
-
     <!-- SECCIÓN: Filtro por Antigüedad de Mora -->
     <div class="form-section full-width">
       <h2>
@@ -646,6 +590,76 @@
           <span>Selecciona una subcartera en la sección de Asignación para ver los campos disponibles para filtrar.</span>
         </div>
       </ng-template>
+    </div>
+
+    <!-- SECCIÓN: Seguimiento de Promesas -->
+    <div class="form-section full-width">
+      <h2>
+        <lucide-angular name="handshake" [size]="20"></lucide-angular>
+        Seguimiento de Promesas
+      </h2>
+      <p class="section-description">
+        Prototipo visual. Estos filtros todavía no se envían al resumen ni a la importación.
+      </p>
+
+      <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input type="checkbox" [(ngModel)]="seguimientoPromesaVigente" name="seguimientoPromesaVigente">
+        <span>Promesas vigentes</span>
+      </label>
+
+      <div class="form-row" *ngIf="seguimientoPromesaVigente" style="margin-top: 16px;">
+        <div class="form-group" style="max-width: 210px;">
+          <label for="proximaCuotaVencimiento">Vencimiento de próxima cuota</label>
+          <input type="date" id="proximaCuotaVencimiento" [(ngModel)]="proximaCuotaVencimiento"
+                 name="proximaCuotaVencimiento" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="promesaMontoMinimo">Monto desde <small>(opcional)</small></label>
+          <input type="number" id="promesaMontoMinimo" [(ngModel)]="promesaMontoMinimo"
+                 name="promesaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000">
+          <small class="help-text">Use solo este valor para montos mayores o iguales.</small>
+        </div>
+        <!-- TODO: Definir si el monto máximo debe ser un rango inclusivo o una opción separada. -->
+        <div class="form-group">
+          <label for="promesaMontoMaximo">Monto hasta <small>(opcional)</small></label>
+          <input type="number" id="promesaMontoMaximo" [(ngModel)]="promesaMontoMaximo"
+                 name="promesaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000">
+        </div>
+      </div>
+
+      <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 20px;">
+        <input type="checkbox" [(ngModel)]="seguimientoPromesaVencida" name="seguimientoPromesaVencida">
+        <span>Promesas vencidas del mes</span>
+      </label>
+
+      <div class="form-row" *ngIf="seguimientoPromesaVencida" style="margin-top: 16px;">
+        <div class="form-group" style="max-width: 210px;">
+          <label for="promesaVencidaDesde">Vencida desde</label>
+          <input type="date" id="promesaVencidaDesde" [(ngModel)]="promesaVencidaDesde"
+                 name="promesaVencidaDesde" class="form-input" [min]="inicioMesActual" [max]="promesaVencidaHasta">
+        </div>
+        <div class="form-group" style="max-width: 210px;">
+          <label for="promesaVencidaHasta">Vencida hasta</label>
+          <input type="date" id="promesaVencidaHasta" [(ngModel)]="promesaVencidaHasta"
+                 name="promesaVencidaHasta" class="form-input" [min]="inicioMesActual" [max]="fechaHoy">
+          <small class="help-text">Disponible desde el primer día del mes hasta hoy.</small>
+        </div>
+        <div class="form-group">
+          <label for="promesaVencidaMontoMinimo">Monto desde <small>(opcional)</small></label>
+          <input type="number" id="promesaVencidaMontoMinimo" [(ngModel)]="promesaVencidaMontoMinimo"
+                 name="promesaVencidaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000">
+        </div>
+        <!-- TODO: Definir si el monto máximo debe ser un rango inclusivo o una opción separada. -->
+        <div class="form-group">
+          <label for="promesaVencidaMontoMaximo">Monto hasta <small>(opcional)</small></label>
+          <input type="number" id="promesaVencidaMontoMaximo" [(ngModel)]="promesaVencidaMontoMaximo"
+                 name="promesaVencidaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000">
+        </div>
+      </div>
+
+      <small class="help-text" *ngIf="seguimientoPromesaVencida">
+        Solo se considerará la última promesa del cliente, incluso si tiene otras promesas vencidas en el mes.
+      </small>
     </div>
 
     <!-- SECCIÓN: Ordenamiento de Contactos -->

@@ -136,6 +136,13 @@ export class CampaignFormComponent implements OnInit {
   proximaCuotaVencimiento = '';
   promesaMontoMinimo: number | null = null;
   promesaMontoMaximo: number | null = null;
+  seguimientoPromesaVencida = false;
+  inicioMesActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01`;
+  promesaVencidaDesde = this.inicioMesActual;
+  fechaHoy = new Date().toISOString().slice(0, 10);
+  promesaVencidaHasta = this.fechaHoy;
+  promesaVencidaMontoMinimo: number | null = null;
+  promesaVencidaMontoMaximo: number | null = null;
 
   // Rango de antigüedad (filtro categórico) - rangos fijos basados en dias_mora
   rangosAntiguedad: string[] = ['3 años a menos', '3 a 5 años', '5 años a más'];
