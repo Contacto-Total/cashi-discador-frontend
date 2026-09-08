@@ -24,6 +24,11 @@ Chart.register(...registerables);
 
 type PeriodType = 'today' | 'week' | 'month' | 'lastMonth' | 'year' | 'custom';
 type TabType = 'productividad' | 'corteHorario';
+// Ventana de vencimiento de la columna Generacion: de lo pactado hoy, que
+// cuotas se cuentan segun cuando vencen.
+type GeneracionVentana = 'hoy' | 'manana' | 'semana' | 'mes';
+// Ventana de la Tasa de Cierre: el dia o el mes corrido.
+type CierreVentana = 'hoy' | 'mes';
 
 @Component({
   selector: 'app-agent-productivity',
@@ -47,6 +52,8 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   selectedCarteraId: number | null = null;
   selectedSubcarteraId: number | null = null;
   selectedPeriod: PeriodType = 'today';
+  generacionVentana: GeneracionVentana = 'mes';
+  cierreVentana: CierreVentana = 'hoy';
   customDateFrom: string = '';
   customDateTo: string = '';
 
@@ -204,7 +211,9 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
       fechaFin,
       this.selectedTenantId || undefined,
       this.selectedCarteraId || undefined,
-      this.selectedSubcarteraId || undefined
+      this.selectedSubcarteraId || undefined,
+      this.generacionVentana,
+      this.cierreVentana
     ).subscribe({
       next: (data) => {
         this.productivityData = data;
@@ -222,6 +231,22 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     if (this.activeTab === 'corteHorario' || this.corteHorarioData) {
       this.loadCorteHorario();
     }
+  }
+
+  onGeneracionVentanaChange(): void {
+    if (this.productivityData) {
+      this.loadData();
+    }
+  }
+
+  onCierreVentanaChange(): void {
+    if (this.productivityData) {
+      this.loadData();
+    }
+  }
+
+  get etiquetaTasaCierre(): string {
+    return this.cierreVentana === 'hoy' ? 'Tasa de Cierre (Hoy)' : 'Tasa de Cierre (Mes)';
   }
 
   private destroyCharts(): void {
@@ -434,6 +459,21 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   get agents(): AgentMetrics[] {
     return this.productivityData?.agents || [];
+  }
+
+  // El fallback cubre al backend que todavia no manda el campo: sin el, la
+  // cabecera de la columna saldria vacia.
+  get etiquetaRecaudo(): string {
+    return this.productivityData?.etiquetaRecaudo || 'Recaudo';
+  }
+
+  get etiquetaRecaudoAcumulado(): string {
+    return this.productivityData?.etiquetaRecaudoAcumulado || 'Recaudo Acumulado';
+  }
+
+  // Totales de la fila de cierre de la tabla.
+  agentTotal(field: string): number {
+    return this.agents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
   }
 
   formatMoney(value: number): string {

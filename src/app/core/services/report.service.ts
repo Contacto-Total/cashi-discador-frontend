@@ -47,6 +47,10 @@ export interface AgentProductivityResponse {
   summary: ProductivitySummary;
   agents: AgentMetrics[];
   chartData: ChartData;
+  // Titulo de la columna de recaudo. Lo decide el backend: en las subcarteras
+  // que liquidan por capital llega como "Contención".
+  etiquetaRecaudo?: string;
+  etiquetaRecaudoAcumulado?: string;
 }
 
 export interface ProductivitySummary {
@@ -58,6 +62,15 @@ export interface ProductivitySummary {
   efectividadProyeccion: number;
   efectividadGeneral: number;
   totalAgentes: number;
+  // Cards de gestion y proyeccion
+  rotasCantidad: number;
+  rotasMonto: number;
+  colchonCantidad: number;
+  colchonMonto: number;
+  cierreCantidad: number;
+  cierreMonto: number;
+  mananaCantidad: number;
+  mananaMonto: number;
   cambioGestiones?: number;
   cambioPromesas?: number;
   cambioMonto?: number;
@@ -74,8 +87,11 @@ export interface AgentMetrics {
   proyeccion: number;
   proyeccionTotal: number;
   recaudo: number;
+  generacionHoy: number;
+  recaudoAcumulado: number;
   efectividadProyeccion: number;
-  efectividadGeneral: number;
+  // Promesas sobre CONTACTO DIRECTO en la ventana elegida (hoy o mes)
+  tasaCierre: number;
   trend: 'up' | 'down' | 'stable';
   ranking: number;
   tipificaciones?: { [key: string]: number };
@@ -178,7 +194,9 @@ export class ReportService {
     fechaFin: string,
     tenantId?: number,
     carteraId?: number,
-    subcarteraId?: number
+    subcarteraId?: number,
+    generacionVentana?: string,
+    cierreVentana?: string
   ): Observable<AgentProductivityResponse> {
     let params = new HttpParams()
       .set('fechaInicio', fechaInicio)
@@ -187,6 +205,8 @@ export class ReportService {
     if (tenantId) params = params.set('tenantId', tenantId.toString());
     if (carteraId) params = params.set('carteraId', carteraId.toString());
     if (subcarteraId) params = params.set('subcarteraId', subcarteraId.toString());
+    if (generacionVentana) params = params.set('generacionVentana', generacionVentana);
+    if (cierreVentana) params = params.set('cierreVentana', cierreVentana);
 
     return this.http.get<AgentProductivityResponse>(`${this.apiUrl}/agent-productivity`, { params });
   }

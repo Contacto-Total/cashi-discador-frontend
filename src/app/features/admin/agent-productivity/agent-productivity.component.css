@@ -748,3 +748,36 @@
     justify-content: center;
   }
 }
+
+/* Selector de ventana de la columna Generacion. Vive en la cabecera de la
+   tabla y no en los filtros de arriba porque solo afecta a esa columna. */
+.table-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.generacion-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.generacion-filter select {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+}
+
+.generacion-filter select:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
