@@ -196,15 +196,41 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   onPeriodChange(): void {
     if (this.selectedPeriod !== 'custom') {
-      this.loadData();
+      this.loadData(true);
     }
   }
 
-  loadData(): void {
+  // Cambiar un selector de columna reconsultaba el SP entero. Como la respuesta
+  // depende solo de estos parametros, se guarda por combinacion: volver a una
+  // ventana ya vista es instantaneo. "Buscar" limpia el cache.
+  private cache = new Map<string, AgentProductivityResponse>();
+
+  private cacheKey(fechaInicio: string, fechaFin: string): string {
+    return [
+      fechaInicio, fechaFin,
+      this.selectedTenantId, this.selectedCarteraId, this.selectedSubcarteraId,
+      this.generacionVentana, this.cierreVentana
+    ].join('|');
+  }
+
+  loadData(forzar: boolean = false): void {
+    const { fechaInicio, fechaFin } = this.getDateRange();
+    const key = this.cacheKey(fechaInicio, fechaFin);
+
+    if (forzar) {
+      this.cache.clear();
+    } else {
+      const cacheado = this.cache.get(key);
+      if (cacheado) {
+        this.productivityData = cacheado;
+        this.error = null;
+        setTimeout(() => this.initCharts(), 100);
+        return;
+      }
+    }
+
     this.loading = true;
     this.error = null;
-
-    const { fechaInicio, fechaFin } = this.getDateRange();
 
     this.reportService.getAgentProductivity(
       fechaInicio,
@@ -217,6 +243,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     ).subscribe({
       next: (data) => {
         this.productivityData = data;
+        this.cache.set(key, data);
         this.loading = false;
         setTimeout(() => this.initCharts(), 100);
       },
