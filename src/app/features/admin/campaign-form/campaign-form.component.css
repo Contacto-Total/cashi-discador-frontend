@@ -487,14 +487,14 @@
   align-items: center;
   margin-top: 1.25rem;
   padding: 1rem;
-  background: rgba(14, 116, 144, 0.12);
-  border: 1px solid rgba(34, 211, 238, 0.32);
+  background: rgba(30, 41, 59, 0.82);
+  border: 1px solid #475569;
   border-radius: 8px;
 }
 
 .phone-selection-panel h3 {
   margin: 0;
-  color: #e0f2fe;
+  color: #e2e8f0;
   font-size: 0.92rem;
 }
 
@@ -530,8 +530,8 @@
 }
 
 .phone-count-option.selected span {
-  background: #0891b2;
-  border-color: #22d3ee;
+  background: #2563eb;
+  border-color: #60a5fa;
   color: white;
 }
 
@@ -541,12 +541,12 @@
   grid-template-columns: auto 1fr;
   column-gap: 0.5rem;
   align-items: center;
-  color: #bae6fd;
+  color: #bfdbfe;
   font-size: 0.82rem;
 }
 
 .phone-selection-summary lucide-angular {
-  color: #22d3ee;
+  color: #60a5fa;
 }
 
 .phone-selection-summary small {
@@ -556,8 +556,42 @@
 }
 
 .phone-selection-summary .phone-preview-count {
-  color: #67e8f9;
+  color: #93c5fd;
   font-weight: 600;
+}
+
+:host-context(body.light-theme) .phone-selection-panel {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+:host-context(body.light-theme) .phone-selection-panel h3 {
+  color: #0f172a;
+}
+
+:host-context(body.light-theme) .phone-selection-panel p,
+:host-context(body.light-theme) .phone-selection-summary small {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .phone-count-option span {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+:host-context(body.light-theme) .phone-count-option.selected span {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+:host-context(body.light-theme) .phone-selection-summary {
+  color: #1e3a8a;
+}
+
+:host-context(body.light-theme) .phone-selection-summary .phone-preview-count {
+  color: #2563eb;
 }
 
 /* ========================================

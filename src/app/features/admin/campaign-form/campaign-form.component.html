@@ -140,6 +140,7 @@
       </div>
     </div>
 
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
     <!-- SECCIÓN MEDIA: Configuración de Discado -->
     <div class="form-section full-width dial-config-section !rounded-lg !p-3">
       <h2>
@@ -282,6 +283,8 @@
         <lucide-angular name="check-circle" [size]="16"></lucide-angular>
         <span>{{ selectedTiposTelefono.length }} tipo(s) seleccionado(s)</span>
       </div>
+    </div>
+
     </div>
 
     <!-- SECCIÓN: Grupo de asesores -->
@@ -629,27 +632,6 @@
         </div>
       </div>
 
-      <div class="phone-selection-panel">
-        <div>
-          <h3>Números por cliente</h3>
-          <p>Defina cuántos números elegibles se considerarán para cada cliente.</p>
-        </div>
-        <div class="phone-count-options" role="radiogroup" aria-label="Números por cliente">
-          <label *ngFor="let total of [1, 2, 3, 0]" class="phone-count-option"
-                 [class.selected]="maxTelefonosPorCliente === total">
-            <input type="radio" name="maxTelefonosPorCliente" [value]="total"
-                   [(ngModel)]="maxTelefonosPorCliente">
-            <span>{{ total === 0 ? 'Todos' : total }}</span>
-          </label>
-        </div>
-        <div class="phone-selection-summary">
-          <lucide-angular name="phone-forwarded" [size]="18"></lucide-angular>
-          <span>{{ getPhoneSelectionDescription() }}</span>
-          <small>Los clientes que ya registren una tipificación de llamada contestada se excluirán con todos sus números.</small>
-          <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
-        </div>
-      </div>
-
       <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 20px;">
         <input type="checkbox" [ngModel]="seguimientoPromesaVencida"
                (ngModelChange)="setPromiseFilter('VENCIDA_MES', $event)" name="seguimientoPromesaVencida">
@@ -690,6 +672,27 @@
       <small class="help-text" *ngIf="seguimientoPromesaVencida">
         Solo se considerará la última promesa del cliente, incluso si tiene otras promesas vencidas en el mes.
       </small>
+    </div>
+
+    <div class="phone-selection-panel !mt-0">
+      <div>
+        <h3>Números por cliente</h3>
+        <p>Defina cuántos números elegibles se considerarán para cada cliente.</p>
+      </div>
+      <div class="phone-count-options" role="radiogroup" aria-label="Números por cliente">
+        <label *ngFor="let total of [1, 2, 3, 0]" class="phone-count-option"
+               [class.selected]="maxTelefonosPorCliente === total">
+          <input type="radio" name="maxTelefonosPorCliente" [value]="total"
+                 [(ngModel)]="maxTelefonosPorCliente">
+          <span>{{ total === 0 ? 'Todos' : total }}</span>
+        </label>
+      </div>
+      <div class="phone-selection-summary">
+        <lucide-angular name="phone-forwarded" [size]="18"></lucide-angular>
+        <span>{{ getPhoneSelectionDescription() }}</span>
+        <small>Los clientes que ya registren una tipificación de llamada contestada se excluirán con todos sus números.</small>
+        <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
+      </div>
     </div>
 
     <!-- Botones de Acción -->
