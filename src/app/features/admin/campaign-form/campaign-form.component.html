@@ -682,7 +682,7 @@
       <div class="phone-count-options" role="radiogroup" aria-label="Números por cliente">
         <label *ngFor="let total of [1, 2, 3, 0]" class="phone-count-option"
                [class.selected]="maxTelefonosPorCliente === total">
-          <input type="radio" name="maxTelefonosPorCliente" [value]="total"
+          <input type="radio" name="maxTelefonosPorCliente" [ngValue]="total"
                  [(ngModel)]="maxTelefonosPorCliente">
           <span>{{ total === 0 ? 'Todos' : total }}</span>
         </label>
@@ -696,7 +696,7 @@
     </div>
 
     <!-- Botones de Acción -->
-    <div class="form-actions !sticky !bottom-3 !z-10 !rounded-lg !p-2.5 !shadow-2xl">
+    <div class="form-actions !rounded-lg !p-2.5">
       <button type="button" class="btn-cancel" (click)="onCancel()">
         <lucide-angular name="x" [size]="16"></lucide-angular>
         Cancelar
