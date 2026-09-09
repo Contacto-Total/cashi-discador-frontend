@@ -29,6 +29,9 @@ type TabType = 'productividad' | 'corteHorario';
 type GeneracionVentana = 'hoy' | 'manana' | 'semana' | 'mes';
 // Ventana de la Tasa de Cierre: el dia o el mes corrido.
 type CierreVentana = 'hoy' | 'mes';
+// Que gestiones muestra la columna. Se resuelve en memoria: el SP ya manda
+// los tres conteos, asi que cambiar el selector no reconsulta nada.
+type GestionesTipo = 'todos' | 'cd' | 'ci' | 'nc';
 
 @Component({
   selector: 'app-agent-productivity',
@@ -54,6 +57,7 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   selectedPeriod: PeriodType = 'today';
   generacionVentana: GeneracionVentana = 'mes';
   cierreVentana: CierreVentana = 'hoy';
+  gestionesTipo: GestionesTipo = 'todos';
   customDateFrom: string = '';
   customDateTo: string = '';
 
@@ -270,6 +274,20 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     if (this.productivityData) {
       this.loadData();
     }
+  }
+
+  // "Todos" es CD + CI, el universo historico de la pantalla; NC va aparte.
+  gestionesDe(agent: AgentMetrics): number {
+    switch (this.gestionesTipo) {
+      case 'cd': return agent.gestionesCd;
+      case 'ci': return agent.gestionesCi;
+      case 'nc': return agent.gestionesNc;
+      default:   return agent.gestionesCd + agent.gestionesCi;
+    }
+  }
+
+  totalGestionesMostradas(): number {
+    return this.agents.reduce((sum, a) => sum + this.gestionesDe(a), 0);
   }
 
   get etiquetaTasaCierre(): string {
