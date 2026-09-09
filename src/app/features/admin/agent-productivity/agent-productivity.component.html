@@ -220,14 +220,14 @@
               <th class="col-num">Promesas</th>
               <th class="col-money">
                 <div class="th-with-filter">
-                  <span>Generacion de Hoy</span>
+                  <span>Generacion del Dia</span>
                   <select class="th-filter" [(ngModel)]="generacionVentana"
                           (ngModelChange)="onGeneracionVentanaChange()"
-                          title="De lo pactado hoy, que cuotas contar segun cuando vencen">
-                    <option value="hoy">Vence hoy</option>
-                    <option value="manana">Vence ma&ntilde;ana</option>
-                    <option value="semana">Esta semana</option>
-                    <option value="mes">Este mes</option>
+                          title="De lo pactado el dia consultado, que cuotas contar segun cuando vencen">
+                    <option value="hoy">Vence ese dia</option>
+                    <option value="manana">Vence al dia siguiente</option>
+                    <option value="semana">En esa semana</option>
+                    <option value="mes">En ese mes</option>
                   </select>
                 </div>
               </th>
