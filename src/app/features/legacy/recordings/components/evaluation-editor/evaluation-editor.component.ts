@@ -1,13 +1,16 @@
 import { Component, EventEmitter, Input, OnDestroy, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-  LucideAngularModule, X, FileText, Save, Check, RotateCcw
+  LucideAngularModule, X, FileText, Save, Check, RotateCcw,
+  Play, Pause, RotateCw, Download, AudioLines, TriangleAlert
 } from 'lucide-angular';
 
 import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
 import { HistoricalRecordingsService } from '../../services/historical-recordings.service';
-import { EvaluationCriterion, EvaluationDetail } from '../../models/quality-monitoring.model';
+import { RecordingDownloadService } from '../../services/recording-download.service';
+import { AudioPlaybackService } from '../../services/audio-playback.service';
+import { AudioPart, EvaluationCriterion, EvaluationDetail } from '../../models/quality-monitoring.model';
 import { Transcription } from '../../models/transcription.model';
 
 /** Los criterios de una sección, para dibujarlos agrupados como en el Excel. */
@@ -44,18 +47,25 @@ interface Bloque {
  * por eso el botón de guardar está deshabilitado hasta que haya un cambio real y
  * por eso se pide un comentario: la corrección queda registrada con quién y por qué.
  *
- * ## Qué NO tiene, y por qué
+ * ## El audio se escucha aquí, y esto cambió
  *
- * No descarga el XLSX ni reproduce el audio. Las dos cosas viven en la pestaña de
- * Grabaciones, que es donde el supervisor prepara su revisión: para cuando llega
- * acá ya escuchó la llamada. Repetirlas convertía la ficha en una barra de
- * herramientas y enterraba lo único que se viene a hacer, que es mirar los
- * criterios y corregir.
+ * Hasta agosto de 2026 este comentario decía que la ficha no reproduce el audio
+ * «porque para cuando llega aquí ya escuchó la llamada». **Era falso en la
+ * práctica:** el supervisor que duda de una nota tenía que descargar el WAV,
+ * buscarlo en la carpeta de descargas y abrirlo en otro programa, y al volver había
+ * perdido la fila en la que estaba. Ahora suena dentro de la ficha.
  *
- * La transcripción sí quedó, plegada y apagada por defecto. Es la excepción porque
- * es la única que responde la pregunta concreta que aparece al dudar de un
- * criterio —«¿dijo o no dijo la frase?»— sin salir de la pantalla ni perder los
- * cambios sin guardar.
+ * El reproductor vive en el bloque de cumplimiento y ese bloque queda **fijo al
+ * hacer scroll**: la lista tiene catorce o dieciséis criterios, y sin eso quien
+ * llega al criterio doce y quiere pausar tiene que subir a buscar el botón.
+ *
+ * Lo que sigue sin estar es la descarga del XLSX: esa vive en la pestaña de
+ * Grabaciones, que es donde el supervisor prepara la revisión. Aquí solo aparece un
+ * enlace de descarga cuando la conversión falla, como salida de emergencia.
+ *
+ * La transcripción quedó plegada y apagada por defecto. Responde la pregunta
+ * concreta que aparece al dudar de un criterio —«¿dijo o no dijo la frase?»— sin
+ * salir de la pantalla ni perder los cambios sin guardar.
  */
 @Component({
   selector: 'app-evaluation-editor',
@@ -64,12 +74,18 @@ interface Bloque {
   templateUrl: './evaluation-editor.component.html',
   styleUrls: ['./evaluation-editor.component.scss']
 })
-export class EvaluationEditorComponent {
+export class EvaluationEditorComponent implements OnDestroy {
   readonly X = X;
   readonly FileText = FileText;
   readonly Save = Save;
   readonly Check = Check;
   readonly RotateCcw = RotateCcw;
+  readonly Play = Play;
+  readonly Pause = Pause;
+  readonly RotateCw = RotateCw;
+  readonly Download = Download;
+  readonly AudioLines = AudioLines;
+  readonly TriangleAlert = TriangleAlert;
 
   readonly ETIQUETA_SECCION: Record<string, string> = {
     PRESENTACION: 'Presentación',
@@ -111,8 +127,25 @@ export class EvaluationEditorComponent {
   constructor(
     private monitoreo: QualityMonitoringService,
     private historicas: HistoricalRecordingsService,
-    private toast: ToastService
+    private descargas: RecordingDownloadService,
+    private toast: ToastService,
+    /**
+     * Público porque la plantilla lee su estado directamente.
+     *
+     * Es un singleton con un único elemento de audio, así que el componente no lo
+     * posee: lo toma prestado mientras la ficha está abierta y lo suelta al cerrar.
+     */
+    public player: AudioPlaybackService
   ) {}
+
+  /**
+   * Cerrar la ficha detiene el audio. Nada de mini-reproductor flotante: el audio es
+   * el contexto de ESTA evaluación, y si sobreviviera al cierre terminaría sonando
+   * sobre la ficha equivocada.
+   */
+  ngOnDestroy(): void {
+    this.player.cerrar();
+  }
 
   // ------------------------------------------------------------------ carga
 
@@ -121,6 +154,9 @@ export class EvaluationEditorComponent {
     this.ficha = null;
     this.transcripcion = null;
     this.mostrarTranscripcion = false;
+    // Antes de pedir nada: si venía sonando el audio de la ficha anterior, se corta ya.
+    // Esperar a que llegue la respuesta lo dejaría sonando sobre una ficha que ya no es.
+    this.player.cerrar();
 
     this.monitoreo.getEvaluacion(idx).subscribe({
       next: (data) => {
@@ -131,6 +167,11 @@ export class EvaluationEditorComponent {
         }
         this.recalcularBloques();
         this.isLoading = false;
+
+        // La conversión arranca al abrir la ficha, no al pulsar play: mientras el
+        // supervisor lee el resumen y baja por los criterios, el audio ya se está
+        // preparando en el servidor. Si cierra antes, la petición se cancela.
+        this.player.abrir(data.audios ?? []);
       },
       error: (e) => {
         this.isLoading = false;
@@ -141,6 +182,7 @@ export class EvaluationEditorComponent {
   }
 
   cerrar(): void {
+    this.player.cerrar();
     this.cerrado.emit();
   }
 
@@ -299,6 +341,89 @@ export class EvaluationEditorComponent {
         this.isLoadingTranscripcion = false;
         this.toast.error('No se pudo cargar la transcripción');
       }
+    });
+  }
+
+  // ------------------------------------------------------------------ audio
+
+  /**
+   * Cuánto de la parte actual va reproducido, en porcentaje.
+   *
+   * Se calcula sobre la duración que reportó el archivo ya cargado y no sobre la
+   * columna DURACION de FOH: esa es la del WAV original y, tras la conversión, no
+   * tiene por qué coincidir al decimal. Un riel que se llena antes o después de que
+   * el audio termine se ve como un error aunque el audio esté bien.
+   */
+  get progreso(): number {
+    return this.player.duracion
+      ? Math.min(100, (this.player.posicion / this.player.duracion) * 100)
+      : 0;
+  }
+
+  /** Salta al punto del riel donde se hizo click. */
+  buscarEnRiel(evento: MouseEvent): void {
+    const riel = evento.currentTarget as HTMLElement;
+    const ancho = riel.getBoundingClientRect().width;
+    if (!ancho) {
+      return;
+    }
+    const proporcion = (evento.clientX - riel.getBoundingClientRect().left) / ancho;
+    this.player.irA(proporcion * this.player.duracion);
+  }
+
+  reloj(segundos: number | null | undefined): string {
+    return AudioPlaybackService.reloj(segundos);
+  }
+
+  /**
+   * La duración de una parte, para el rótulo del selector.
+   *
+   * Sale de la columna DURACION, que llega en segundos con decimales ('179.96'). Es
+   * la única forma de saber cuánto dura la parte 2 sin haberla convertido todavía, y
+   * ese es justamente el dato que decide si vale la pena saltar a ella.
+   */
+  duracionDe(parte: AudioPart): string {
+    const valor = Number(parte.duracion);
+    return parte.duracion && !Number.isNaN(valor) ? AudioPlaybackService.reloj(valor) : '';
+  }
+
+  porParte = (_: number, parte: AudioPart) => parte.orden;
+
+  /**
+   * La salida de emergencia cuando la conversión falla.
+   *
+   * Baja el objeto tal como está en el bucket. Sigue funcionando aunque ffmpeg no
+   * pueda con él, porque la descarga no lo convierte: lo que el navegador no puede
+   * reproducir, un reproductor de escritorio a veces sí.
+   */
+  descargarParteActual(): void {
+    const parte = this.player.parteActual;
+    if (!parte || !this.ficha) {
+      return;
+    }
+
+    const fecha = this.ficha.fecha.replace(/-/g, '');
+    this.descargas.downloadGestionHistoricaAudioFileByName({
+      anio: parte.anio ?? '',
+      mes: parte.mes ?? '',
+      dia: parte.dia ?? '',
+      nombre: parte.nombre,
+      fecha,
+      resultado: this.ficha.resultado,
+      telefono: this.ficha.telefono,
+      documento: this.ficha.documento,
+      cliente: this.ficha.cliente,
+      asesor: this.ficha.asesor
+    }).subscribe({
+      next: (blob: any) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = parte.nombre;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.error('No se encontró el audio.')
     });
   }
 

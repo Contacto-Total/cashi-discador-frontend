@@ -24,6 +24,14 @@ Chart.register(...registerables);
 
 type PeriodType = 'today' | 'week' | 'month' | 'lastMonth' | 'year' | 'custom';
 type TabType = 'productividad' | 'corteHorario';
+// Ventana de vencimiento de la columna Generacion: de lo pactado hoy, que
+// cuotas se cuentan segun cuando vencen.
+type GeneracionVentana = 'hoy' | 'manana' | 'semana' | 'mes';
+// Ventana de la Tasa de Cierre: el dia o el mes corrido.
+type CierreVentana = 'hoy' | 'mes';
+// Que gestiones muestra la columna. Se resuelve en memoria: el SP ya manda
+// los tres conteos, asi que cambiar el selector no reconsulta nada.
+type GestionesTipo = 'todos' | 'cd' | 'ci' | 'nc';
 
 @Component({
   selector: 'app-agent-productivity',
@@ -47,6 +55,9 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
   selectedCarteraId: number | null = null;
   selectedSubcarteraId: number | null = null;
   selectedPeriod: PeriodType = 'today';
+  generacionVentana: GeneracionVentana = 'mes';
+  cierreVentana: CierreVentana = 'hoy';
+  gestionesTipo: GestionesTipo = 'todos';
   customDateFrom: string = '';
   customDateTo: string = '';
 
@@ -189,25 +200,54 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   onPeriodChange(): void {
     if (this.selectedPeriod !== 'custom') {
-      this.loadData();
+      this.loadData(true);
     }
   }
 
-  loadData(): void {
+  // Cambiar un selector de columna reconsultaba el SP entero. Como la respuesta
+  // depende solo de estos parametros, se guarda por combinacion: volver a una
+  // ventana ya vista es instantaneo. "Buscar" limpia el cache.
+  private cache = new Map<string, AgentProductivityResponse>();
+
+  private cacheKey(fechaInicio: string, fechaFin: string): string {
+    return [
+      fechaInicio, fechaFin,
+      this.selectedTenantId, this.selectedCarteraId, this.selectedSubcarteraId,
+      this.generacionVentana, this.cierreVentana
+    ].join('|');
+  }
+
+  loadData(forzar: boolean = false): void {
+    const { fechaInicio, fechaFin } = this.getDateRange();
+    const key = this.cacheKey(fechaInicio, fechaFin);
+
+    if (forzar) {
+      this.cache.clear();
+    } else {
+      const cacheado = this.cache.get(key);
+      if (cacheado) {
+        this.productivityData = cacheado;
+        this.error = null;
+        setTimeout(() => this.initCharts(), 100);
+        return;
+      }
+    }
+
     this.loading = true;
     this.error = null;
-
-    const { fechaInicio, fechaFin } = this.getDateRange();
 
     this.reportService.getAgentProductivity(
       fechaInicio,
       fechaFin,
       this.selectedTenantId || undefined,
       this.selectedCarteraId || undefined,
-      this.selectedSubcarteraId || undefined
+      this.selectedSubcarteraId || undefined,
+      this.generacionVentana,
+      this.cierreVentana
     ).subscribe({
       next: (data) => {
         this.productivityData = data;
+        this.cache.set(key, data);
         this.loading = false;
         setTimeout(() => this.initCharts(), 100);
       },
@@ -222,6 +262,36 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
     if (this.activeTab === 'corteHorario' || this.corteHorarioData) {
       this.loadCorteHorario();
     }
+  }
+
+  onGeneracionVentanaChange(): void {
+    if (this.productivityData) {
+      this.loadData();
+    }
+  }
+
+  onCierreVentanaChange(): void {
+    if (this.productivityData) {
+      this.loadData();
+    }
+  }
+
+  // "Todos" es CD + CI, el universo historico de la pantalla; NC va aparte.
+  gestionesDe(agent: AgentMetrics): number {
+    switch (this.gestionesTipo) {
+      case 'cd': return agent.gestionesCd;
+      case 'ci': return agent.gestionesCi;
+      case 'nc': return agent.gestionesNc;
+      default:   return agent.gestionesCd + agent.gestionesCi;
+    }
+  }
+
+  totalGestionesMostradas(): number {
+    return this.agents.reduce((sum, a) => sum + this.gestionesDe(a), 0);
+  }
+
+  get etiquetaTasaCierre(): string {
+    return this.cierreVentana === 'hoy' ? 'Tasa de Cierre (Hoy)' : 'Tasa de Cierre (Mes)';
   }
 
   private destroyCharts(): void {
@@ -434,6 +504,21 @@ export class AgentProductivityComponent implements OnInit, OnDestroy, AfterViewI
 
   get agents(): AgentMetrics[] {
     return this.productivityData?.agents || [];
+  }
+
+  // El fallback cubre al backend que todavia no manda el campo: sin el, la
+  // cabecera de la columna saldria vacia.
+  get etiquetaRecaudo(): string {
+    return this.productivityData?.etiquetaRecaudo || 'Recaudo';
+  }
+
+  get etiquetaRecaudoAcumulado(): string {
+    return this.productivityData?.etiquetaRecaudoAcumulado || 'Recaudo Acumulado';
+  }
+
+  // Totales de la fila de cierre de la tabla.
+  agentTotal(field: string): number {
+    return this.agents.reduce((sum, a) => sum + ((a as any)[field] || 0), 0);
   }
 
   formatMoney(value: number): string {

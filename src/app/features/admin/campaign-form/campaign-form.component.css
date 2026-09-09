@@ -222,6 +222,17 @@
   gap: 1rem;
 }
 
+.promise-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.promise-filter-row--four {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 /* ========================================
    CONFIGURACIÓN DE DISCADO
    ======================================== */
@@ -343,8 +354,17 @@
 /* Cards de filtros */
 .filter-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 380px));
+  gap: 0.65rem;
+}
+
+.filter-order-help {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.65rem;
+  color: #94a3b8;
+  font-size: 0.8rem;
 }
 
 .filter-card {
@@ -353,6 +373,19 @@
   border-radius: 10px;
   overflow: hidden;
   transition: all 0.2s;
+}
+
+.filter-card.cdk-drag-preview {
+  box-sizing: border-box;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.55);
+}
+
+.filter-card.cdk-drag-placeholder {
+  opacity: 0.25;
+}
+
+.filter-cards.cdk-drop-list-dragging .filter-card:not(.cdk-drag-placeholder) {
+  transition: transform 180ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .filter-card:hover {
@@ -367,6 +400,20 @@
   padding: 0.75rem 1rem;
   background: rgba(59, 130, 246, 0.1);
   border-bottom: 1px solid #334155;
+}
+
+.filter-order {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #94a3b8;
+  cursor: grab;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.filter-order:active {
+  cursor: grabbing;
 }
 
 .filter-field-name {
@@ -431,6 +478,168 @@
 .range-separator {
   color: #64748b;
   padding: 0 0.5rem;
+}
+
+.filter-sort-actions {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+.btn-filter-sort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 28px;
+  padding: 0 0.55rem;
+  color: #ffffff;
+  background: #2563eb;
+  border: 1px solid #60a5fa;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.btn-filter-sort:hover {
+  background: #1d4ed8;
+  border-color: #93c5fd;
+}
+
+:host-context(body.light-theme) .btn-filter-sort {
+  color: #1e3a8a;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+:host-context(body.light-theme) .btn-filter-sort:hover {
+  color: #1d4ed8;
+  border-color: #60a5fa;
+}
+
+.phone-selection-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  background: rgba(30, 41, 59, 0.82);
+  border: 1px solid #475569;
+  border-radius: 8px;
+}
+
+.phone-selection-panel h3 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 0.92rem;
+}
+
+.phone-selection-panel p {
+  margin: 0.25rem 0 0;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.phone-count-options {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.phone-count-option {
+  display: inline-flex;
+  position: relative;
+  cursor: pointer;
+}
+
+.phone-count-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.phone-count-option span {
+  min-width: 38px;
+  padding: 0.42rem 0.65rem;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.phone-count-option.selected span {
+  background: #2563eb;
+  border-color: #60a5fa;
+  color: white;
+}
+
+.phone-count-option input:focus-visible + span {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
+.phone-selection-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.5rem;
+  align-items: center;
+  color: #bfdbfe;
+  font-size: 0.82rem;
+}
+
+.phone-selection-summary lucide-angular {
+  color: #60a5fa;
+}
+
+.phone-selection-summary small {
+  grid-column: 2;
+  margin-top: 0.25rem;
+  color: #94a3b8;
+}
+
+.phone-selection-summary .phone-preview-count {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+:host-context(body.light-theme) .phone-selection-panel {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+:host-context(body.light-theme) .phone-selection-panel h3 {
+  color: #0f172a;
+}
+
+:host-context(body.light-theme) .phone-selection-panel p,
+:host-context(body.light-theme) .phone-selection-summary small {
+  color: #64748b;
+}
+
+:host-context(body.light-theme) .phone-count-option span {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+:host-context(body.light-theme) .phone-count-option.selected span {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+:host-context(body.light-theme) .phone-selection-summary {
+  color: #1e3a8a;
+}
+
+:host-context(body.light-theme) .phone-selection-summary .phone-preview-count {
+  color: #2563eb;
 }
 
 /* ========================================
@@ -555,6 +764,11 @@
     grid-template-columns: 1fr;
   }
 
+  .promise-filter-row,
+  .promise-filter-row--four {
+    grid-template-columns: 1fr;
+  }
+
   .dial-config-grid {
     grid-template-columns: 1fr;
   }
@@ -569,6 +783,14 @@
 
   .filter-cards {
     grid-template-columns: 1fr;
+  }
+
+  .phone-selection-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .phone-count-options {
+    flex-wrap: wrap;
   }
 
   .form-header {

@@ -58,7 +58,7 @@
         </div>
       </ng-container>
       <div class="filter-group filter-action">
-        <button class="btn-primary" (click)="loadData()" [disabled]="loading">
+        <button class="btn-primary" (click)="loadData(true)" [disabled]="loading">
           <lucide-angular name="search" [size]="16"></lucide-angular>
           <span>Buscar</span>
         </button>
@@ -150,10 +150,56 @@
         </div>
         <div class="kpi-content">
           <span class="kpi-value">{{ summary?.efectividadGeneral | appNumber:'1.1-1' }}%</span>
-          <span class="kpi-label">% Efectividad General</span>
+          <span class="kpi-label">% Tasa de Cierre</span>
           <span class="kpi-change" [ngClass]="getChangeClass(summary?.cambioEfectividadGeneral)">
             {{ formatPercent(summary?.cambioEfectividadGeneral) }}
           </span>
+        </div>
+      </div>
+
+      <!-- Cards de gestion y proyeccion. El monto va arriba y la cantidad al
+           pie, para que se lean igual que las de arriba. -->
+      <div class="kpi-card">
+        <div class="kpi-icon orange">
+          <lucide-angular name="alert-triangle" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">S/ {{ formatMoney(summary?.rotasMonto || 0) }}</span>
+          <span class="kpi-label">Monto Rotas</span>
+          <span class="kpi-change">{{ summary?.rotasCantidad | appNumber }} cuotas</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon teal">
+          <lucide-angular name="shield" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">S/ {{ formatMoney(summary?.colchonMonto || 0) }}</span>
+          <span class="kpi-label">Proyeccion Colchon al Cierre</span>
+          <span class="kpi-change">{{ summary?.colchonCantidad | appNumber }} cuotas</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon blue">
+          <lucide-angular name="flag" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">S/ {{ formatMoney(summary?.cierreMonto || 0) }}</span>
+          <span class="kpi-label">Proyeccion al Cierre</span>
+          <span class="kpi-change">{{ summary?.cierreCantidad | appNumber }} acuerdos</span>
+        </div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-icon purple">
+          <lucide-angular name="calendar-clock" [size]="24"></lucide-angular>
+        </div>
+        <div class="kpi-content">
+          <span class="kpi-value">S/ {{ formatMoney(summary?.mananaMonto || 0) }}</span>
+          <span class="kpi-label">Proyeccion Ma&ntilde;ana</span>
+          <span class="kpi-change">{{ summary?.mananaCantidad | appNumber }} cuotas</span>
         </div>
       </div>
     </div>
@@ -170,13 +216,48 @@
             <tr>
               <th class="col-rank">#</th>
               <th class="col-agent">Asesor</th>
-              <th class="col-num">Gestiones</th>
+              <th class="col-num">
+                <div class="th-with-filter">
+                  <span>Gestiones</span>
+                  <select class="th-filter" [(ngModel)]="gestionesTipo"
+                          title="Que gestiones cuenta la columna">
+                    <option value="todos">Todos (CD+CI)</option>
+                    <option value="cd">Solo CD</option>
+                    <option value="ci">Solo CI</option>
+                    <option value="nc">Solo NC</option>
+                  </select>
+                </div>
+              </th>
               <th class="col-num">Promesas</th>
+              <th class="col-money">
+                <div class="th-with-filter">
+                  <span>Generacion del Dia</span>
+                  <select class="th-filter" [(ngModel)]="generacionVentana"
+                          (ngModelChange)="onGeneracionVentanaChange()"
+                          title="De lo pactado el dia consultado, que cuotas contar segun cuando vencen">
+                    <option value="hoy">Vence ese dia</option>
+                    <option value="manana">Vence al dia siguiente</option>
+                    <option value="semana">En esa semana</option>
+                    <option value="mes">En ese mes</option>
+                  </select>
+                </div>
+              </th>
               <th class="col-money">Proyeccion Dia</th>
               <th class="col-money">Proyectado Total</th>
-              <th class="col-money">Recaudo</th>
+              <th class="col-money">{{ etiquetaRecaudo }}</th>
+              <th class="col-money">{{ etiquetaRecaudoAcumulado }}</th>
               <th class="col-pct" title="(Recaudo / Proyeccion) x 100">% Efectividad Proyeccion</th>
-              <th class="col-pct" title="(Promesas / Gestiones) x 100">% Efectividad General</th>
+              <th class="col-pct" title="Promesas / Contactos directos x 100">
+                <div class="th-with-filter">
+                  <span>Tasa de Cierre</span>
+                  <select class="th-filter" [(ngModel)]="cierreVentana"
+                          (ngModelChange)="onCierreVentanaChange()"
+                          title="Ventana sobre la que se mide la tasa de cierre">
+                    <option value="hoy">Hoy</option>
+                    <option value="mes">Este mes</option>
+                  </select>
+                </div>
+              </th>
               <th class="col-trend">Tendencia</th>
             </tr>
           </thead>
@@ -193,13 +274,24 @@
                   <span class="agent-name">{{ agent.nombreAgente }}</span>
                 </div>
               </td>
-              <td class="col-num">{{ agent.totalGestiones | appNumber }}</td>
+              <td class="col-num">
+                <span class="gest-cell" tabindex="0">
+                  {{ gestionesDe(agent) | appNumber }}
+                  <span class="gest-tooltip" role="tooltip">
+                    <span class="gest-row"><span>CD</span><b>{{ agent.gestionesCd | appNumber }}</b></span>
+                    <span class="gest-row"><span>CI</span><b>{{ agent.gestionesCi | appNumber }}</b></span>
+                    <span class="gest-row"><span>NC</span><b>{{ agent.gestionesNc | appNumber }}</b></span>
+                  </span>
+                </span>
+              </td>
               <td class="col-num">
                 <span class="promesas-badge">{{ agent.totalPromesas | appNumber }}</span>
               </td>
+              <td class="col-money">S/ {{ formatMoney(agent.generacionHoy) }}</td>
               <td class="col-money">S/ {{ formatMoney(agent.proyeccion) }}</td>
               <td class="col-money">S/ {{ formatMoney(agent.proyeccionTotal) }}</td>
               <td class="col-money">S/ {{ formatMoney(agent.recaudo) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agent.recaudoAcumulado) }}</td>
               <td class="col-pct">
                 <div class="efectividad-bar">
                   <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadProyeccion, 100)"></div>
@@ -208,8 +300,8 @@
               </td>
               <td class="col-pct">
                 <div class="efectividad-bar efectividad-general">
-                  <div class="bar-fill" [style.width.%]="Math.min(agent.efectividadGeneral, 100)"></div>
-                  <span class="bar-label">{{ agent.efectividadGeneral | appNumber:'1.0-0' }}%</span>
+                  <div class="bar-fill" [style.width.%]="Math.min(agent.tasaCierre, 100)"></div>
+                  <span class="bar-label">{{ agent.tasaCierre | appNumber:'1.0-1' }}%</span>
                 </div>
               </td>
               <td class="col-trend">
@@ -219,6 +311,24 @@
               </td>
             </tr>
           </tbody>
+          <tfoot *ngIf="agents.length > 0">
+            <tr class="totals-row">
+              <td class="col-rank"></td>
+              <td class="col-agent">Total</td>
+              <td class="col-num">{{ totalGestionesMostradas() | appNumber }}</td>
+              <td class="col-num">{{ agentTotal('totalPromesas') | appNumber }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('generacionHoy')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('proyeccion')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('proyeccionTotal')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('recaudo')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('recaudoAcumulado')) }}</td>
+              <!-- Los porcentajes muestran el global de la cabecera, no la suma
+                   de la columna: sumar porcentajes no dice nada. -->
+              <td class="col-pct">{{ summary?.efectividadProyeccion | appNumber:'1.0-1' }}%</td>
+              <td class="col-pct">{{ summary?.efectividadGeneral | appNumber:'1.0-1' }}%</td>
+              <td class="col-trend totals-muted">&mdash;</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
       <div class="empty-state" *ngIf="agents.length === 0">

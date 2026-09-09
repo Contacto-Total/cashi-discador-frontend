@@ -158,25 +158,28 @@
 /* KPIs */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  /* 5 columnas: los 5 indicadores base ocupan la primera fila y las 4 cards
+     de proyeccion la segunda, igual que en el prototipo. */
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
 .kpi-card {
   background: var(--card-bg, white);
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--border-color, #e2e8f0);
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
 }
 
 .kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,16 +212,17 @@
 }
 
 .kpi-value {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary, #1e293b);
   line-height: 1.2;
 }
 
 .kpi-label {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-secondary, #64748b);
-  margin-top: 0.25rem;
+  margin-top: 0.1rem;
+  line-height: 1.25;
 }
 
 .kpi-change {
@@ -747,4 +751,205 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Cabecera de la tabla. Los selectores de ventana viven ahora dentro del
+   <th> de su propia columna. */
+.table-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.generacion-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+.generacion-filter select {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+}
+
+.generacion-filter select:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+/* Los iconos de lucide heredan el tamano del contenedor, que ahora es 34px. */
+.kpi-icon lucide-angular svg,
+.kpi-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kpi-content {
+  min-width: 0;
+}
+
+.kpi-change {
+  font-size: 0.7rem;
+}
+
+/* Fila de totales de la tabla. */
+.totals-row td {
+  background: var(--bg-secondary, #f1f5f9);
+  border-top: 2px solid var(--border-color, #cbd5e1);
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  padding: 0.7rem 0.75rem;
+}
+
+.totals-row .col-agent {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.totals-row .totals-muted {
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
+}
+
+/* Selector embebido en la cabecera de una columna. */
+.th-with-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* Alineado con el contenido de su columna: los numeros van a la derecha,
+     el titulo tambien, y el selector debajo sin desalinear la cabecera. */
+  align-items: inherit;
+}
+
+.th-filter {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 3px 22px 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background-color: var(--bg-primary, #ffffff);
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: normal;
+  max-width: 100%;
+  /* Flecha propia: el select nativo se ve distinto en cada navegador. */
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='none' stroke='%2394a3b8' stroke-width='1.6' d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 7px center;
+  transition: border-color .15s, color .15s;
+}
+
+.th-filter:hover {
+  border-color: #94a3b8;
+  color: var(--text-primary, #1e293b);
+}
+
+.th-filter:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+@media (max-width: 1400px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------- Desglose de Gestiones al pasar el cursor ---------- */
+.gest-cell {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+  border-bottom: 1px dotted var(--border-color, #cbd5e1);
+}
+
+.gest-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 112px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  /* Vidrio esmerilado: deja ver la fila de abajo sin competir con ella. */
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 22px -8px rgba(15, 23, 42, .5);
+  color: #f1f5f9;
+  font-size: 0.72rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(3px);
+  transition: opacity .14s ease, transform .14s ease, visibility .14s;
+  pointer-events: none;
+}
+
+.gest-cell:hover .gest-tooltip,
+.gest-cell:focus-visible .gest-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Puntita hacia la celda */
+.gest-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  border: 5px solid transparent;
+  border-top-color: rgba(15, 23, 42, 0.72);
+}
+
+.gest-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  line-height: 1.4;
+}
+
+.gest-row span { color: #94a3b8; letter-spacing: .04em; }
+.gest-row b { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gest-tooltip { transition: none; }
+}
+
+/* ---------- Tabla: mas aire y numeros alineados ---------- */
+.agents-table th,
+.agents-table td {
+  vertical-align: middle;
+}
+
+.agents-table .col-num,
+.agents-table .col-money {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* La cabecera se queda fija al hacer scroll horizontal en una tabla ancha. */
+.agents-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }

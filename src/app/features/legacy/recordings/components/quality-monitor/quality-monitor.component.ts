@@ -41,6 +41,46 @@ const MAX_DIAS = 7;
 const SIN_CASCADA = 'Seleccione Proveedor, Cartera y Subcartera.';
 
 /**
+ * Los resultados que el speech-analyzer evalúa, y solo esos.
+ *
+ * La lista tiene que seguir a `_RUTAS_N2_EVALUABLES` de `cashi_read.py`: si aquí sobra
+ * una, la pantalla ofrece un filtro que devuelve cero filas; si falta, hay evaluaciones
+ * en la base que nadie puede aislar y quedan mezcladas dentro de «Todos».
+ *
+ * CONTACTO CON TERCEROS no está y no es un olvido: su rúbrica no existe y el backend la
+ * excluye de la consulta.
+ */
+const RESULTADOS_EVALUABLES: SelectOption[] = [
+  { label: 'Todos', value: '' },
+  { label: 'Contacto directo', value: 'CONTACTO CON TITULAR O ENCARGADO' },
+  { label: 'Promesa de pago', value: 'PROMESA DE PAGO' },
+  { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' }
+];
+
+/**
+ * Los tramos donde OPORTUNIDAD DE PAGO no se usa como tipificación.
+ *
+ * Que el speech sepa evaluarla no significa que aplique en todas partes: en Tramo 3 y
+ * Tramo 5 no es parte de la operación, así que ofrecer el filtro solo puede terminar en
+ * una matriz vacía y en la duda de si el speech dejó de correr.
+ *
+ * **Medido en producción (2026-09-08)**, sobre `gestion_historica_audios`:
+ *
+ * | Cartera    | Gestiones OPORTUNIDAD DE PAGO | Evaluadas |
+ * |------------|------------------------------:|----------:|
+ * | FO_TRAMO 3 |                           202 |     **0** |
+ * | FO_TRAMO 5 |                             9 |     **0** |
+ *
+ * Ni una sola evaluación en los dos tramos, mientras que CONTACTO DIRECTO y PROMESA DE
+ * PAGO tienen 2135 y 294. El filtro no está mal calculado: es que ahí no hay nada.
+ *
+ * Se esconde en vez de borrarse de {@link RESULTADOS_EVALUABLES} porque la regla es de la
+ * operación de estos dos tramos, no del sistema: en otra cartera la tipificación se usa,
+ * y el speech la evalúa igual.
+ */
+const TRAMOS_SIN_OPORTUNIDAD_DE_PAGO = ['TRAMO3', 'TRAMO5'];
+
+/**
  * La matriz asesor × día de evaluaciones de calidad.
  *
  * Es el gráfico "EVALUACIONES DIARIAS" del Excel de calidad generalizado a todo el
@@ -239,21 +279,7 @@ export class QualityMonitorComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarProveedores();
-
-    // Las tres rutas que el speech-analyzer evalúa, y solo esas. La lista tiene
-    // que seguir a `_RUTAS_N2_EVALUABLES` de cashi_read.py: si aquí sobra una,
-    // la pantalla ofrece un filtro que devuelve cero filas; si falta, hay
-    // evaluaciones en la base que nadie puede aislar y quedan mezcladas dentro
-    // de «Todos».
-    //
-    // CONTACTO CON TERCEROS no está y no es un olvido: su rúbrica no existe y
-    // el backend la excluye de la consulta.
-    this.resultados = [
-      { label: 'Todos', value: '' },
-      { label: 'Contacto directo', value: 'CONTACTO CON TITULAR O ENCARGADO' },
-      { label: 'Promesa de pago', value: 'PROMESA DE PAGO' },
-      { label: 'Oportunidad de pago', value: 'OPORTUNIDAD DE PAGO' }
-    ];
+    this.recalcularResultados();
 
     // Se fija el rango por defecto SIN consultar: sin la cascada elegida no hay nada
     // que pedir, y disparar la búsqueda aquí abriría la pantalla con el error puesto.
@@ -287,6 +313,7 @@ export class QualityMonitorComponent implements OnInit {
     this.subcarteras = [];
     this.selectedCartera = 0;
     this.selectedSubcartera = 0;
+    this.recalcularResultados();
     this.limpiarResultados();
 
     if (this.selectedProveedor > 0) {
@@ -302,6 +329,7 @@ export class QualityMonitorComponent implements OnInit {
   onCarteraChange(): void {
     this.subcarteras = [];
     this.selectedSubcartera = 0;
+    this.recalcularResultados();
     this.limpiarResultados();
 
     if (this.selectedCartera > 0) {
@@ -316,7 +344,61 @@ export class QualityMonitorComponent implements OnInit {
   }
 
   onSubcarteraChange(): void {
+    this.recalcularResultados();
     this.limpiarResultados();
+  }
+
+  // ---------------------------------------------------------------- resultados por tramo
+
+  /**
+   * Arma el desplegable de Resultado según el tramo elegido.
+   *
+   * Hoy quita una sola opción —OPORTUNIDAD DE PAGO en Tramo 3 y Tramo 5, ver
+   * {@link TRAMOS_SIN_OPORTUNIDAD_DE_PAGO}—, pero se escribe como un recálculo y no
+   * como un `if` sobre el arreglo porque la cascada se recorre para arriba y para
+   * abajo: quien pasa de una cartera donde la opción existe a una donde no, tiene que
+   * ver la lista corta, y al volver, la larga otra vez.
+   *
+   * **Y si la opción escondida estaba elegida, el filtro vuelve a «Todos».** Dejarla
+   * puesta sería peor que mostrarla: el desplegable diría «Todos» mientras la consulta
+   * sigue filtrando por un resultado que la pantalla ya no ofrece.
+   */
+  private recalcularResultados(): void {
+    const fuera = this.tramoSinOportunidadDePago()
+      ? ['OPORTUNIDAD DE PAGO']
+      : [];
+
+    this.resultados = RESULTADOS_EVALUABLES.filter(r => !fuera.includes(String(r.value)));
+
+    if (fuera.includes(this.selectedResultado)) {
+      this.selectedResultado = '';
+    }
+  }
+
+  /** Si el tramo elegido es uno de los que no usan esa tipificación. */
+  private tramoSinOportunidadDePago(): boolean {
+    // Se miran los dos niveles porque el nombre del tramo vive en uno o en otro según
+    // el entorno: en la tabla histórica la cartera es 'FO_TRAMO 3' y la subcartera
+    // 'FO_TRAMO_3', pero en el catálogo de QAS hay subcarteras con nombre propio
+    // ('Lima') colgando de una cartera que sí se llama Tramo 3. Con los dos, la regla
+    // acierta en los dos árboles.
+    const cartera = this.carteras.find(c => c.value === this.selectedCartera);
+    return [cartera?.label, this.nombreSubcartera()]
+      .some(nombre => TRAMOS_SIN_OPORTUNIDAD_DE_PAGO.includes(this.claveTramo(nombre)));
+  }
+
+  /**
+   * 'FO_TRAMO 3', 'FO_TRAMO_3', 'Tramo 3' -> 'TRAMO3'.
+   *
+   * Es la misma normalización que hace `variantesDeSubcartera()` en el backend, y por
+   * el mismo motivo: el mismo tramo aparece escrito de cuatro formas entre el catálogo
+   * y la tabla histórica, y una comparación literal acertaría solo con una de ellas.
+   */
+  private claveTramo(nombre: string | number | undefined | null): string {
+    return String(nombre ?? '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .replace(/^FO(?=TRAMO)/, '');
   }
 
   /** Descarta la consulta anterior para que nada quede rotulado con el filtro nuevo. */

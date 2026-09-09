@@ -37,7 +37,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     status: 'DRAFT',
     dialMode: 'PROGRESSIVE',
     maxAttempts: 3,
-    retryInterval: 60,
+    retryInterval: 0,
     intensidad: 50,
     tenantId: undefined,
     portfolioId: undefined,
@@ -137,6 +137,10 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
     });
   }
 
+  showDuplicatePreview(campaign: Campaign): void {
+    this.successMessage = `Duplicar “${campaign.name}” creará un borrador para ajustar antes de importar.`;
+  }
+
   /**
    * Carga estadísticas de importación para una campaña específica
    */
@@ -161,7 +165,7 @@ export class CampaignManagementComponent implements OnInit, OnDestroy {
       status: 'DRAFT',
       dialMode: 'PROGRESSIVE',
       maxAttempts: 3,
-      retryInterval: 60,
+      retryInterval: 0,
       intensidad: 50
     };
     this.showCreateModal = true;
