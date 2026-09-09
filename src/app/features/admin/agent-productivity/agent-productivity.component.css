@@ -158,25 +158,28 @@
 /* KPIs */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  /* 5 columnas: los 5 indicadores base ocupan la primera fila y las 4 cards
+     de proyeccion la segunda, igual que en el prototipo. */
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 
 .kpi-card {
   background: var(--card-bg, white);
-  border-radius: 12px;
-  padding: 1.25rem;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
   border: 1px solid var(--border-color, #e2e8f0);
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+  gap: 0.65rem;
+  align-items: center;
+  min-width: 0;
 }
 
 .kpi-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,16 +212,17 @@
 }
 
 .kpi-value {
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary, #1e293b);
   line-height: 1.2;
 }
 
 .kpi-label {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--text-secondary, #64748b);
-  margin-top: 0.25rem;
+  margin-top: 0.1rem;
+  line-height: 1.25;
 }
 
 .kpi-change {
@@ -749,8 +753,8 @@
   }
 }
 
-/* Selector de ventana de la columna Generacion. Vive en la cabecera de la
-   tabla y no en los filtros de arriba porque solo afecta a esa columna. */
+/* Cabecera de la tabla. Los selectores de ventana viven ahora dentro del
+   <th> de su propia columna. */
 .table-header-actions {
   display: flex;
   align-items: center;
@@ -780,4 +784,74 @@
 .generacion-filter select:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 1px;
+}
+
+/* Los iconos de lucide heredan el tamano del contenedor, que ahora es 34px. */
+.kpi-icon lucide-angular svg,
+.kpi-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kpi-content {
+  min-width: 0;
+}
+
+.kpi-change {
+  font-size: 0.7rem;
+}
+
+/* Fila de totales de la tabla. */
+.totals-row td {
+  background: var(--bg-secondary, #f1f5f9);
+  border-top: 2px solid var(--border-color, #cbd5e1);
+  font-weight: 700;
+  color: var(--text-primary, #1e293b);
+  padding: 0.7rem 0.75rem;
+}
+
+.totals-row .col-agent {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.totals-row .totals-muted {
+  color: var(--text-secondary, #64748b);
+  font-weight: 500;
+}
+
+/* Selector embebido en la cabecera de una columna. */
+.th-with-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.th-filter {
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 2px 4px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1e293b);
+  cursor: pointer;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.th-filter:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 1px;
+}
+
+@media (max-width: 1400px) {
+  .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }

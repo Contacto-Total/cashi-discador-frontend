@@ -208,25 +208,7 @@
     <div class="table-card">
       <div class="table-header">
         <h3>Detalle por Agente</h3>
-        <div class="table-header-actions">
-          <label class="generacion-filter">
-            <span>Tasa de cierre:</span>
-            <select [(ngModel)]="cierreVentana" (ngModelChange)="onCierreVentanaChange()">
-              <option value="hoy">Hoy</option>
-              <option value="mes">Este mes</option>
-            </select>
-          </label>
-          <label class="generacion-filter">
-            <span>Generacion, cuotas que vencen:</span>
-            <select [(ngModel)]="generacionVentana" (ngModelChange)="onGeneracionVentanaChange()">
-              <option value="hoy">Hoy</option>
-              <option value="manana">Ma&ntilde;ana</option>
-              <option value="semana">Esta semana</option>
-              <option value="mes">Este mes</option>
-            </select>
-          </label>
-          <span class="agent-count">{{ agents.length }} agentes</span>
-        </div>
+        <span class="agent-count">{{ agents.length }} agentes</span>
       </div>
       <div class="table-wrapper">
         <table class="agents-table">
@@ -236,13 +218,35 @@
               <th class="col-agent">Asesor</th>
               <th class="col-num">Gestiones</th>
               <th class="col-num">Promesas</th>
-              <th class="col-money">Generacion de Hoy</th>
+              <th class="col-money">
+                <div class="th-with-filter">
+                  <span>Generacion del Dia</span>
+                  <select class="th-filter" [(ngModel)]="generacionVentana"
+                          (ngModelChange)="onGeneracionVentanaChange()"
+                          title="De lo pactado el dia consultado, que cuotas contar segun cuando vencen">
+                    <option value="hoy">Vence ese dia</option>
+                    <option value="manana">Vence al dia siguiente</option>
+                    <option value="semana">En esa semana</option>
+                    <option value="mes">En ese mes</option>
+                  </select>
+                </div>
+              </th>
               <th class="col-money">Proyeccion Dia</th>
               <th class="col-money">Proyectado Total</th>
               <th class="col-money">{{ etiquetaRecaudo }}</th>
               <th class="col-money">{{ etiquetaRecaudoAcumulado }}</th>
               <th class="col-pct" title="(Recaudo / Proyeccion) x 100">% Efectividad Proyeccion</th>
-              <th class="col-pct" title="Promesas / Contactos directos x 100">{{ etiquetaTasaCierre }}</th>
+              <th class="col-pct" title="Promesas / Contactos directos x 100">
+                <div class="th-with-filter">
+                  <span>Tasa de Cierre</span>
+                  <select class="th-filter" [(ngModel)]="cierreVentana"
+                          (ngModelChange)="onCierreVentanaChange()"
+                          title="Ventana sobre la que se mide la tasa de cierre">
+                    <option value="hoy">Hoy</option>
+                    <option value="mes">Este mes</option>
+                  </select>
+                </div>
+              </th>
               <th class="col-trend">Tendencia</th>
             </tr>
           </thead>
@@ -287,6 +291,24 @@
               </td>
             </tr>
           </tbody>
+          <tfoot *ngIf="agents.length > 0">
+            <tr class="totals-row">
+              <td class="col-rank"></td>
+              <td class="col-agent">Total</td>
+              <td class="col-num">{{ agentTotal('totalGestiones') | appNumber }}</td>
+              <td class="col-num">{{ agentTotal('totalPromesas') | appNumber }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('generacionHoy')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('proyeccion')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('proyeccionTotal')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('recaudo')) }}</td>
+              <td class="col-money">S/ {{ formatMoney(agentTotal('recaudoAcumulado')) }}</td>
+              <!-- Los porcentajes muestran el global de la cabecera, no la suma
+                   de la columna: sumar porcentajes no dice nada. -->
+              <td class="col-pct">{{ summary?.efectividadProyeccion | appNumber:'1.0-1' }}%</td>
+              <td class="col-pct">{{ summary?.efectividadGeneral | appNumber:'1.0-1' }}%</td>
+              <td class="col-trend totals-muted">&mdash;</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
       <div class="empty-state" *ngIf="agents.length === 0">
