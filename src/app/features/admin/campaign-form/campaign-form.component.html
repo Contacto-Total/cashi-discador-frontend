@@ -522,13 +522,14 @@
                 </span>
                 <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
                 <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
-                <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
+                <!-- Temporalmente oculto: el backend anterior solo admite el ordenamiento heredado. -->
+                <!-- <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
                   <button type="button" class="btn-filter-sort"
                           (click)="toggleFilterOrder(filter); $event.stopPropagation()"
                           [title]="getFilterOrderLabel(filter) === 'DESC' ? 'Mayor a menor. Cambiar a ascendente' : 'Menor a mayor. Cambiar a descendente'">
                     {{ getFilterOrderLabel(filter) }}
                   </button>
-                </div>
+                </div> -->
                 <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                 </button>
@@ -592,7 +593,7 @@
       </ng-template>
     </div>
 
-    <!-- SECCIÓN: Seguimiento de Promesas -->
+    <!-- Seguimiento de Promesas temporalmente ocultado para mantener compatibilidad con el backend anterior.
     <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="handshake" [size]="20"></lucide-angular>
@@ -678,9 +679,9 @@
       <small class="help-text" *ngIf="seguimientoPromesaVencida">
         Solo se considerará la última promesa del cliente, incluso si tiene otras promesas vencidas en el mes.
       </small>
-    </div>
+    </div> -->
 
-    <div class="phone-selection-panel !mt-0">
+    <!-- <div class="phone-selection-panel !mt-0">
       <div>
         <h3>Números por cliente</h3>
         <p>Defina cuántos números elegibles se considerarán para cada cliente.</p>
@@ -699,7 +700,7 @@
         <small>Los clientes que ya registren una tipificación de llamada contestada se excluirán con todos sus números.</small>
         <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
       </div>
-    </div>
+    </div> -->
 
     <!-- Botones de Acción -->
     <div class="form-actions !rounded-lg !p-2.5">

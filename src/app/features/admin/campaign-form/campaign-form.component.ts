@@ -58,6 +58,8 @@ export const MY_DATE_FORMATS = {
 
 
 export class CampaignFormComponent implements OnInit {
+  // Temporalmente desactivado hasta desplegar el backend de filtros de promesas.
+  private readonly promiseFiltersEnabled = false;
   startDate: Date | null = null;
   endDate: Date | null = null;
 
@@ -459,6 +461,7 @@ export class CampaignFormComponent implements OnInit {
   }
 
   private loadPromiseFilter(campaignId: number): void {
+    if (!this.promiseFiltersEnabled) return;
     this.campaignService.getCampaignPromiseFilter(campaignId).subscribe({
       next: (filter) => {
         if (!filter) return;
@@ -980,6 +983,9 @@ export class CampaignFormComponent implements OnInit {
     // Grupo dirigido (null = todos los asesores de la subcartera)
     this.campaign.idGrupoAsesores = this.selectedGrupoId ?? null;
 
+    // El campo está oculto temporalmente; el backend anterior recibe siempre cero.
+    this.campaign.retryInterval = 0;
+
     this.error = null;
 
     if (this.isEditMode && this.campaignId) {
@@ -1067,32 +1073,23 @@ export class CampaignFormComponent implements OnInit {
         // 2) Guardar filtros con skipImport=true (no quiero importar todavía)
         this.campaignService.saveCampaignFilters(newCampaignId, this.campaignFilters, true).subscribe({
           next: () => {
-            this.campaignService.replaceCampaignPromiseFilter(newCampaignId, this.buildPromiseFilter()).subscribe({
-              next: () => {
-                // 3) Llamar al preview SP después de persistir todos los filtros.
-                this.campaignService.previewImportacionSP(
-                  newCampaignId,
-                  this.selectedTenantId,
-                  this.selectedPortfolioId,
-                  this.selectedSubPortfolioId,
-                  this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
-                  filtroRangoAnt,
-                  filtroTipoTel
-                ).subscribe({
-                  next: (preview) => {
-                    this.previewData = preview;
-                    this.previewLoading = false;
-                  },
-                  error: (err) => {
-                    console.error('Error preview V2:', err);
-                    this.previewError = 'Error al obtener el preview';
-                    this.previewLoading = false;
-                  }
-                });
+            // 3) El backend anterior no conoce filtros de promesas.
+            this.campaignService.previewImportacionSP(
+              newCampaignId,
+              this.selectedTenantId,
+              this.selectedPortfolioId,
+              this.selectedSubPortfolioId,
+              this.campaign.tipoFiltroEstado || 'ULTIMO_ESTADO',
+              filtroRangoAnt,
+              filtroTipoTel
+            ).subscribe({
+              next: (preview) => {
+                this.previewData = preview;
+                this.previewLoading = false;
               },
               error: (err) => {
-                console.error('Error guardando filtro de promesa:', err);
-                this.previewError = 'Error al guardar el filtro de promesa';
+                console.error('Error preview V2:', err);
+                this.previewError = 'Error al obtener el preview';
                 this.previewLoading = false;
               }
             });
@@ -1245,22 +1242,13 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
-          next: () => {
-            // Solo exportar Excel para campañas NUEVAS, no en edición
-            if (exportExcel) {
-              this.exportCampaignToExcel(campaignId);
-            } else {
-              this.loading = false;
-              this.router.navigate(['/admin/campaigns']);
-            }
-          },
-          error: (err) => {
-            console.error('Error guardando filtro de promesa:', err);
-            this.loading = false;
-            this.router.navigate(['/admin/campaigns']);
-          }
-        });
+        // Solo exportar Excel para campañas NUEVAS, no en edición.
+        if (exportExcel) {
+          this.exportCampaignToExcel(campaignId);
+        } else {
+          this.loading = false;
+          this.router.navigate(['/admin/campaigns']);
+        }
       },
       error: (err) => {
         console.error('Error guardando filtros:', err);
