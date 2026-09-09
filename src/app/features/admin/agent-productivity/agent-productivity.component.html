@@ -216,7 +216,18 @@
             <tr>
               <th class="col-rank">#</th>
               <th class="col-agent">Asesor</th>
-              <th class="col-num">Gestiones</th>
+              <th class="col-num">
+                <div class="th-with-filter">
+                  <span>Gestiones</span>
+                  <select class="th-filter" [(ngModel)]="gestionesTipo"
+                          title="Que gestiones cuenta la columna">
+                    <option value="todos">Todos (CD+CI)</option>
+                    <option value="cd">Solo CD</option>
+                    <option value="ci">Solo CI</option>
+                    <option value="nc">Solo NC</option>
+                  </select>
+                </div>
+              </th>
               <th class="col-num">Promesas</th>
               <th class="col-money">
                 <div class="th-with-filter">
@@ -263,7 +274,16 @@
                   <span class="agent-name">{{ agent.nombreAgente }}</span>
                 </div>
               </td>
-              <td class="col-num">{{ agent.totalGestiones | appNumber }}</td>
+              <td class="col-num">
+                <span class="gest-cell" tabindex="0">
+                  {{ gestionesDe(agent) | appNumber }}
+                  <span class="gest-tooltip" role="tooltip">
+                    <span class="gest-row"><span>CD</span><b>{{ agent.gestionesCd | appNumber }}</b></span>
+                    <span class="gest-row"><span>CI</span><b>{{ agent.gestionesCi | appNumber }}</b></span>
+                    <span class="gest-row"><span>NC</span><b>{{ agent.gestionesNc | appNumber }}</b></span>
+                  </span>
+                </span>
+              </td>
               <td class="col-num">
                 <span class="promesas-badge">{{ agent.totalPromesas | appNumber }}</span>
               </td>
@@ -295,7 +315,7 @@
             <tr class="totals-row">
               <td class="col-rank"></td>
               <td class="col-agent">Total</td>
-              <td class="col-num">{{ agentTotal('totalGestiones') | appNumber }}</td>
+              <td class="col-num">{{ totalGestionesMostradas() | appNumber }}</td>
               <td class="col-num">{{ agentTotal('totalPromesas') | appNumber }}</td>
               <td class="col-money">S/ {{ formatMoney(agentTotal('generacionHoy')) }}</td>
               <td class="col-money">S/ {{ formatMoney(agentTotal('proyeccion')) }}</td>

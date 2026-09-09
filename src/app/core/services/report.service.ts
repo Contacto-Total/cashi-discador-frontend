@@ -82,6 +82,10 @@ export interface AgentMetrics {
   idAgente: number;
   nombreAgente: string;
   totalGestiones: number;
+  // Desglose de Gestiones: el selector Todos/CD/CI/NC se resuelve en memoria
+  gestionesCd: number;
+  gestionesCi: number;
+  gestionesNc: number;
   totalPromesas: number;
   montoPromesas: number;
   proyeccion: number;
