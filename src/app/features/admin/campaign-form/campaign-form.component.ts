@@ -805,15 +805,19 @@ export class CampaignFormComponent implements OnInit {
     moveItemInArray(this.campaignFilters, event.previousIndex, event.currentIndex);
   }
 
-  setFilterOrder(filter: CampaignFilterRange, direction: 'ASC' | 'DESC'): void {
+  toggleFilterOrder(filter: CampaignFilterRange): void {
     if (!filter.fieldCode) return;
+    const isCurrentField = this.campaign.ordenarPorCampo === filter.fieldCode;
     this.campaign.ordenarPorCampo = filter.fieldCode;
-    this.campaign.ordenarDireccion = direction;
+    this.campaign.ordenarDireccion = isCurrentField && this.campaign.ordenarDireccion === 'DESC'
+      ? 'ASC'
+      : 'DESC';
   }
 
-  isFilterOrderSelected(filter: CampaignFilterRange, direction: 'ASC' | 'DESC'): boolean {
+  getFilterOrderLabel(filter: CampaignFilterRange): 'ASC' | 'DESC' {
     return this.campaign.ordenarPorCampo === filter.fieldCode
-      && this.campaign.ordenarDireccion === direction;
+      ? this.campaign.ordenarDireccion || 'DESC'
+      : 'DESC';
   }
 
   getPhoneSelectionDescription(): string {

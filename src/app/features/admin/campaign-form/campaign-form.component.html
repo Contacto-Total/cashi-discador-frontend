@@ -524,14 +524,9 @@
                 <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
                 <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
                   <button type="button" class="btn-filter-sort"
-                          [class.active]="isFilterOrderSelected(filter, 'DESC')"
-                          (click)="setFilterOrder(filter, 'DESC')" title="Mayor a menor">
-                    <lucide-angular name="arrow-down" [size]="15"></lucide-angular>
-                  </button>
-                  <button type="button" class="btn-filter-sort"
-                          [class.active]="isFilterOrderSelected(filter, 'ASC')"
-                          (click)="setFilterOrder(filter, 'ASC')" title="Menor a mayor">
-                    <lucide-angular name="arrow-up" [size]="15"></lucide-angular>
+                          (click)="toggleFilterOrder(filter); $event.stopPropagation()"
+                          [title]="getFilterOrderLabel(filter) === 'DESC' ? 'Mayor a menor. Cambiar a ascendente' : 'Menor a mayor. Cambiar a descendente'">
+                    {{ getFilterOrderLabel(filter) }}
                   </button>
                 </div>
                 <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
