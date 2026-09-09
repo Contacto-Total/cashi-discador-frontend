@@ -682,8 +682,8 @@
       <div class="phone-count-options" role="radiogroup" aria-label="Números por cliente">
         <label *ngFor="let total of [1, 2, 3, 0]" class="phone-count-option"
                [class.selected]="maxTelefonosPorCliente === total">
-          <input type="radio" name="maxTelefonosPorCliente" [ngValue]="total"
-                 [(ngModel)]="maxTelefonosPorCliente">
+          <input type="radio" name="maxTelefonosPorCliente" [checked]="maxTelefonosPorCliente === total"
+                 (change)="maxTelefonosPorCliente = total">
           <span>{{ total === 0 ? 'Todos' : total }}</span>
         </label>
       </div>
