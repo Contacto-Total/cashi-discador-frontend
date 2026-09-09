@@ -1,6 +1,6 @@
-<div class="campaign-form-container">
+<div class="campaign-form-container !max-w-7xl !p-3 md:!p-4">
   <!-- Header estilo monitoring -->
-  <div class="form-header">
+  <div class="form-header !mb-3 !rounded-lg !px-4 !py-3">
     <div class="header-left">
       <div class="header-icon-box" [class.edit-mode]="isEditMode">
         <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="22"></lucide-angular>
@@ -10,7 +10,7 @@
         <p>{{ isEditMode ? 'Modificar configuración de campaña' : 'Configurar nueva campaña de llamadas' }}</p>
       </div>
     </div>
-    <button class="btn-back" (click)="onCancel()">
+      <button class="btn-back !px-3 !py-2" (click)="onCancel()">
       <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
       <span>Volver</span>
     </button>
@@ -29,12 +29,13 @@
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading" (ngSubmit)="onSubmit()" class="form-content">
+  <form *ngIf="!loading" (ngSubmit)="onSubmit()"
+        class="form-content !gap-3 [&_.form-group]:!mb-2 [&_.form-group_label]:!mb-1 [&_.form-group_label]:!text-xs [&_.form-input]:!rounded-md [&_.form-input]:!px-2.5 [&_.form-input]:!py-1.5 [&_.form-input]:!text-sm [&_.form-select]:!rounded-md [&_.form-select]:!px-2.5 [&_.form-select]:!py-1.5 [&_.form-select]:!text-sm [&_.form-textarea]:!rounded-md [&_.form-textarea]:!px-2.5 [&_.form-textarea]:!py-1.5 [&_.form-textarea]:!text-sm [&_.form-section_h2]:!mb-3 [&_.form-section_h2]:!pb-2 [&_.section-description]:!mb-2 [&_.section-description]:!text-xs">
 
     <!-- SECCIÓN SUPERIOR: Info básica + Asignación -->
-    <div class="top-sections">
+    <div class="top-sections !gap-3">
       <!-- Información Básica -->
-      <div class="form-section">
+      <div class="form-section !rounded-lg !p-3">
         <h2>
           <lucide-angular name="file-text" [size]="20"></lucide-angular>
           Información Básica
@@ -79,7 +80,7 @@
       </div>
 
       <!-- Asignación -->
-      <div class="form-section">
+      <div class="form-section !rounded-lg !p-3">
         <h2>
           <lucide-angular name="building-2" [size]="20"></lucide-angular>
           Asignación
@@ -140,13 +141,13 @@
     </div>
 
     <!-- SECCIÓN MEDIA: Configuración de Discado -->
-    <div class="form-section full-width dial-config-section">
+    <div class="form-section full-width dial-config-section !rounded-lg !p-3">
       <h2>
         <lucide-angular name="phone-call" [size]="20"></lucide-angular>
         Configuración de Discado
       </h2>
 
-      <div class="dial-config-grid">
+      <div class="dial-config-grid !grid-cols-1 sm:!grid-cols-3 !gap-3">
         <div class="form-group">
           <label for="dialMode">Modo de Discado</label>
           <select
@@ -172,18 +173,6 @@
             max="10">
         </div>
 
-        <div class="form-group" *ngIf="!isEditMode">
-          <label for="retryInterval">Intervalo de Reintento (min)</label>
-          <input
-            type="number"
-            id="retryInterval"
-            [(ngModel)]="campaign.retryInterval"
-            name="retryInterval"
-            class="form-input"
-            min="0">
-          <small>Valor por defecto: 0 minutos.</small>
-        </div>
-
         <div class="form-group">
           <label for="intensidad">Intensidad de Llamadas</label>
           <input
@@ -201,7 +190,7 @@
     </div>
 
     <!-- SECCIÓN: Configuración de Estado de Cliente -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
         Segmentación por Estado de Cliente
@@ -236,7 +225,7 @@
     </div>
 
     <!-- SECCIÓN: Filtro por Antigüedad de Mora -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="calendar-range" [size]="20"></lucide-angular>
         Filtro por Antigüedad de Mora
@@ -265,7 +254,7 @@
     </div>
 
     <!-- SECCIÓN: Filtro por Tipo de Teléfono -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="phone" [size]="20"></lucide-angular>
         Teléfonos y Contactabilidad
@@ -296,7 +285,7 @@
     </div>
 
     <!-- SECCIÓN: Grupo de asesores -->
-    <div class="form-section full-width" *ngIf="selectedSubPortfolioId > 0">
+    <div class="form-section full-width !rounded-lg !p-3" *ngIf="selectedSubPortfolioId > 0">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
         Grupo de Asesores
@@ -344,7 +333,7 @@
     </div>
 
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
-    <div class="form-section full-width filters-section">
+    <div class="form-section full-width filters-section !rounded-lg !p-3">
       <h2>
         <lucide-angular name="filter" [size]="20"></lucide-angular>
         Filtros de Segmentación por Rango
@@ -352,7 +341,7 @@
 
       <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
-        <div class="filter-add-section">
+        <div class="filter-add-section !mb-3 !rounded-lg !p-3">
           <h3>Agregar Filtro de Rango</h3>
           <div class="filter-add-grid">
             <div class="form-group">
@@ -594,7 +583,7 @@
     </div>
 
     <!-- SECCIÓN: Seguimiento de Promesas -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="handshake" [size]="20"></lucide-angular>
         Seguimiento de Promesas
@@ -704,7 +693,7 @@
     </div>
 
     <!-- Botones de Acción -->
-    <div class="form-actions">
+    <div class="form-actions !sticky !bottom-3 !z-10 !rounded-lg !p-2.5 !shadow-2xl">
       <button type="button" class="btn-cancel" (click)="onCancel()">
         <lucide-angular name="x" [size]="16"></lucide-angular>
         Cancelar
