@@ -1,6 +1,6 @@
-<div class="campaign-form-container">
+<div class="campaign-form-container !max-w-7xl !p-3 md:!p-4">
   <!-- Header estilo monitoring -->
-  <div class="form-header">
+  <div class="form-header !mb-3 !rounded-lg !px-4 !py-3">
     <div class="header-left">
       <div class="header-icon-box" [class.edit-mode]="isEditMode">
         <lucide-angular [name]="isEditMode ? 'pencil' : 'plus-circle'" [size]="22"></lucide-angular>
@@ -10,7 +10,7 @@
         <p>{{ isEditMode ? 'Modificar configuración de campaña' : 'Configurar nueva campaña de llamadas' }}</p>
       </div>
     </div>
-    <button class="btn-back" (click)="onCancel()">
+      <button class="btn-back !px-3 !py-2" (click)="onCancel()">
       <lucide-angular name="arrow-left" [size]="16"></lucide-angular>
       <span>Volver</span>
     </button>
@@ -29,12 +29,13 @@
   </div>
 
   <!-- Form -->
-  <form *ngIf="!loading" (ngSubmit)="onSubmit()" class="form-content">
+  <form *ngIf="!loading" (ngSubmit)="onSubmit()"
+        class="form-content !gap-3 [&_.form-group]:!mb-2 [&_.form-group_label]:!mb-1 [&_.form-group_label]:!text-xs [&_.form-input]:!rounded-md [&_.form-input]:!px-2.5 [&_.form-input]:!py-1.5 [&_.form-input]:!text-sm [&_.form-select]:!rounded-md [&_.form-select]:!px-2.5 [&_.form-select]:!py-1.5 [&_.form-select]:!text-sm [&_.form-textarea]:!rounded-md [&_.form-textarea]:!px-2.5 [&_.form-textarea]:!py-1.5 [&_.form-textarea]:!text-sm [&_.form-section_h2]:!mb-3 [&_.form-section_h2]:!pb-2 [&_.section-description]:!mb-2 [&_.section-description]:!text-xs">
 
     <!-- SECCIÓN SUPERIOR: Info básica + Asignación -->
-    <div class="top-sections">
+    <div class="top-sections !gap-3">
       <!-- Información Básica -->
-      <div class="form-section">
+      <div class="form-section !rounded-lg !p-3">
         <h2>
           <lucide-angular name="file-text" [size]="20"></lucide-angular>
           Información Básica
@@ -79,7 +80,7 @@
       </div>
 
       <!-- Asignación -->
-      <div class="form-section">
+      <div class="form-section !rounded-lg !p-3">
         <h2>
           <lucide-angular name="building-2" [size]="20"></lucide-angular>
           Asignación
@@ -140,13 +141,13 @@
     </div>
 
     <!-- SECCIÓN MEDIA: Configuración de Discado -->
-    <div class="form-section full-width dial-config-section">
+    <div class="form-section full-width dial-config-section !rounded-lg !p-3">
       <h2>
         <lucide-angular name="phone-call" [size]="20"></lucide-angular>
         Configuración de Discado
       </h2>
 
-      <div class="dial-config-grid">
+      <div class="dial-config-grid !grid-cols-1 sm:!grid-cols-3 !gap-3">
         <div class="form-group">
           <label for="dialMode">Modo de Discado</label>
           <select
@@ -173,17 +174,6 @@
         </div>
 
         <div class="form-group">
-          <label for="retryInterval">Intervalo de Reintento (min)</label>
-          <input
-            type="number"
-            id="retryInterval"
-            [(ngModel)]="campaign.retryInterval"
-            name="retryInterval"
-            class="form-input"
-            min="1">
-        </div>
-
-        <div class="form-group">
           <label for="intensidad">Intensidad de Llamadas</label>
           <input
             type="number"
@@ -200,7 +190,7 @@
     </div>
 
     <!-- SECCIÓN: Configuración de Estado de Cliente -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
         Segmentación por Estado de Cliente
@@ -235,7 +225,7 @@
     </div>
 
     <!-- SECCIÓN: Filtro por Antigüedad de Mora -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="calendar-range" [size]="20"></lucide-angular>
         Filtro por Antigüedad de Mora
@@ -264,13 +254,13 @@
     </div>
 
     <!-- SECCIÓN: Filtro por Tipo de Teléfono -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="phone" [size]="20"></lucide-angular>
-        Filtro por Tipo de Teléfono
+        Teléfonos y Contactabilidad
       </h2>
       <p class="section-description">
-        Seleccione los tipos de teléfono que desea incluir. Si no selecciona ninguno, se incluirán todos los números.
+        Seleccione los tipos de teléfono y la cantidad máxima de números elegibles por cliente.
       </p>
 
       <div class="rango-antiguedad-grid">
@@ -295,7 +285,7 @@
     </div>
 
     <!-- SECCIÓN: Grupo de asesores -->
-    <div class="form-section full-width" *ngIf="selectedSubPortfolioId > 0">
+    <div class="form-section full-width !rounded-lg !p-3" *ngIf="selectedSubPortfolioId > 0">
       <h2>
         <lucide-angular name="users" [size]="20"></lucide-angular>
         Grupo de Asesores
@@ -343,7 +333,7 @@
     </div>
 
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
-    <div class="form-section full-width filters-section">
+    <div class="form-section full-width filters-section !rounded-lg !p-3">
       <h2>
         <lucide-angular name="filter" [size]="20"></lucide-angular>
         Filtros de Segmentación por Rango
@@ -351,7 +341,7 @@
 
       <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
-        <div class="filter-add-section">
+        <div class="filter-add-section !mb-3 !rounded-lg !p-3">
           <h3>Agregar Filtro de Rango</h3>
           <div class="filter-add-grid">
             <div class="form-group">
@@ -593,7 +583,7 @@
     </div>
 
     <!-- SECCIÓN: Seguimiento de Promesas -->
-    <div class="form-section full-width">
+    <div class="form-section full-width !rounded-lg !p-3">
       <h2>
         <lucide-angular name="handshake" [size]="20"></lucide-angular>
         Seguimiento de Promesas
@@ -610,9 +600,14 @@
 
       <div class="promise-filter-row promise-filter-row--four" *ngIf="seguimientoPromesaVigente" style="margin-top: 16px;">
         <div class="form-group">
-          <label for="proximaCuotaVencimiento">Vencimiento de próxima cuota</label>
-          <input type="date" id="proximaCuotaVencimiento" [(ngModel)]="proximaCuotaVencimiento"
-                 name="proximaCuotaVencimiento" class="form-input">
+          <label for="proximaCuotaDesde">Próxima cuota desde</label>
+          <input type="date" id="proximaCuotaDesde" [(ngModel)]="proximaCuotaDesde"
+                 name="proximaCuotaDesde" class="form-input" [min]="fechaHoy" [max]="proximaCuotaHasta || null">
+        </div>
+        <div class="form-group">
+          <label for="proximaCuotaHasta">Próxima cuota hasta <small>(opcional)</small></label>
+          <input type="date" id="proximaCuotaHasta" [(ngModel)]="proximaCuotaHasta"
+                 name="proximaCuotaHasta" class="form-input" [min]="proximaCuotaDesde || fechaHoy">
         </div>
         <div class="form-group">
           <label for="nivelMontoVigente">Evaluar monto por</label>
@@ -631,6 +626,27 @@
           <label for="promesaMontoMaximo">Monto hasta <small>(opcional)</small></label>
           <input type="number" id="promesaMontoMaximo" [(ngModel)]="promesaMontoMaximo"
                  name="promesaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000">
+        </div>
+      </div>
+
+      <div class="phone-selection-panel">
+        <div>
+          <h3>Números por cliente</h3>
+          <p>Defina cuántos números elegibles se considerarán para cada cliente.</p>
+        </div>
+        <div class="phone-count-options" role="radiogroup" aria-label="Números por cliente">
+          <label *ngFor="let total of [1, 2, 3, 0]" class="phone-count-option"
+                 [class.selected]="maxTelefonosPorCliente === total">
+            <input type="radio" name="maxTelefonosPorCliente" [value]="total"
+                   [(ngModel)]="maxTelefonosPorCliente">
+            <span>{{ total === 0 ? 'Todos' : total }}</span>
+          </label>
+        </div>
+        <div class="phone-selection-summary">
+          <lucide-angular name="phone-forwarded" [size]="18"></lucide-angular>
+          <span>{{ getPhoneSelectionDescription() }}</span>
+          <small>Los clientes que ya registren una tipificación de llamada contestada se excluirán con todos sus números.</small>
+          <small class="phone-preview-count">Total de números a llamar: se calculará en el resumen previo.</small>
         </div>
       </div>
 
@@ -676,73 +692,8 @@
       </small>
     </div>
 
-    <!-- SECCIÓN: Ordenamiento de Contactos -->
-    <div class="form-section full-width" *ngIf="getCamposConFiltros().length > 0">
-      <h2>
-        <lucide-angular name="arrow-up-down" [size]="20"></lucide-angular>
-        Ordenamiento de Contactos
-      </h2>
-      <p class="section-description">
-        Define el orden en que se importarán y llamarán los contactos. Los contactos se ordenarán según el campo seleccionado.
-      </p>
-
-      <div class="ordenamiento-grid">
-        <div class="form-group">
-          <label for="ordenarPorCampo">Ordenar por Campo</label>
-          <select
-            id="ordenarPorCampo"
-            [(ngModel)]="campaign.ordenarPorCampo"
-            name="ordenarPorCampo"
-            class="form-select">
-            <option [ngValue]="undefined">Sin ordenamiento específico</option>
-            <option *ngFor="let campo of getCamposConFiltros()" [ngValue]="campo.fieldCode">
-              {{ campo.fieldName }}
-            </option>
-          </select>
-          <small class="help-text">Solo aparecen los campos que tienen filtros de rango configurados</small>
-        </div>
-
-        <div class="form-group">
-          <label for="ordenarDireccion">Dirección</label>
-          <select
-            id="ordenarDireccion"
-            [(ngModel)]="campaign.ordenarDireccion"
-            name="ordenarDireccion"
-            class="form-select"
-            [disabled]="!campaign.ordenarPorCampo">
-            <option value="DESC">Mayor a menor (primero los más altos)</option>
-            <option value="ASC">Menor a mayor (primero los más bajos)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group full-width"
-           *ngIf="campaign.ordenarPorCampo"
-           style="margin-top: 12px;">
-        <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-          <input type="checkbox"
-                 [(ngModel)]="campaign.particionadoPorBloques"
-                 name="particionadoPorBloques">
-          <span>Particionado por bloques</span>
-        </label>
-        <small class="help-text">
-          Intercala contactos de los distintos rangos de antigüedad en rondas proporcionales,
-          para que los agentes no marquen un solo tipo de deuda por largo rato.
-        </small>
-      </div>
-
-      <div class="ordenamiento-preview" *ngIf="campaign.ordenarPorCampo">
-        <lucide-angular name="info" [size]="16"></lucide-angular>
-        <span>
-          Los contactos se ordenarán por <strong>{{ getFieldNameByCode(campaign.ordenarPorCampo) }}</strong>
-          de <strong>{{ campaign.ordenarDireccion === 'DESC' ? 'mayor a menor' : 'menor a mayor' }}</strong>.
-          Se llamará primero a los clientes con valores {{ campaign.ordenarDireccion === 'DESC' ? 'más altos' : 'más bajos' }}.
-        </span>
-      </div>
-    </div>
-
     <!-- Botones de Acción -->
-    <div class="form-actions">
+    <div class="form-actions !sticky !bottom-3 !z-10 !rounded-lg !p-2.5 !shadow-2xl">
       <button type="button" class="btn-cancel" (click)="onCancel()">
         <lucide-angular name="x" [size]="16"></lucide-angular>
         Cancelar

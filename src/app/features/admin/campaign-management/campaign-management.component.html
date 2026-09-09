@@ -63,9 +63,12 @@
               <button class="btn-action-small btn-view" (click)="viewCampaignDetail(campaign)" title="Ver detalle">
                 <lucide-angular name="eye" [size]="15"></lucide-angular>
               </button>
-              <button class="btn-action-small btn-edit" [routerLink]="['/admin/campaigns', campaign.id, 'edit']" title="Editar">
-                <lucide-angular name="pencil" [size]="15"></lucide-angular>
-              </button>
+               <button class="btn-action-small btn-edit" [routerLink]="['/admin/campaigns', campaign.id, 'edit']" title="Editar">
+                 <lucide-angular name="pencil" [size]="15"></lucide-angular>
+               </button>
+               <button class="btn-action-small btn-duplicate" (click)="showDuplicatePreview(campaign)" title="Duplicar campaña">
+                 <lucide-angular name="copy" [size]="15"></lucide-angular>
+               </button>
               <button *ngIf="canToggle(campaign)"
                 [class]="getToggleButtonClass(campaign)"
                 (click)="toggleCampaign(campaign)"

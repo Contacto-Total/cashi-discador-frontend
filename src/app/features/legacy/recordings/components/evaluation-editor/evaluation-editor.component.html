@@ -19,17 +19,24 @@
   · **Los dos temas son obligatorios.** Los supervisores trabajan en modo claro.
     Cada color va declarado para claro y pisado con `dark:`; un `text-white` o un
     `bg-white/[0.03]` sueltos desaparecen sobre fondo blanco.
+
+  · **La tarjeta scrollea por dentro, no la página.** Es lo que permite que el
+    bloque de cumplimiento —con el reproductor— quede fijo arriba mientras se baja
+    por los criterios. Un `sticky` no funciona si el contenedor que scrollea es el
+    fondo del modal: la tarjeta tiene que ser el que scrollea, y de ahí el
+    `max-h` con `flex flex-col` y el `overflow-y-auto` del cuerpo.
 -->
 <div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-6
             bg-slate-900/50 dark:bg-slate-950/70 backdrop-blur-md"
      (click)="cerrar()">
 
   <div class="w-full max-w-2xl my-2 sm:my-6 rounded-2xl bg-white dark:bg-slate-900 ring-1 ring-slate-200 dark:ring-white/10
-              shadow-[0_24px_60px_-24px_rgba(15,23,42,.35)] dark:shadow-[0_32px_80px_-24px_rgba(0,0,0,.9)] overflow-hidden"
+              shadow-[0_24px_60px_-24px_rgba(15,23,42,.35)] dark:shadow-[0_32px_80px_-24px_rgba(0,0,0,.9)] overflow-hidden
+              flex flex-col max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-3rem)]"
        (click)="$event.stopPropagation()">
 
     <!-- Encabezado -->
-    <header class="flex items-start justify-between gap-4 px-6 pt-5 pb-4">
+    <header class="flex-shrink-0 flex items-start justify-between gap-4 px-6 pt-5 pb-4">
       <div *ngIf="ficha" class="min-w-0">
         <div class="flex items-center gap-2">
           <h2 class="text-[17px] font-semibold text-slate-900 dark:text-white tracking-[-0.01em]">Evaluación del audio</h2>
@@ -60,37 +67,196 @@
 
     <div *ngIf="isLoading" class="px-6 py-16 text-center text-[13px] text-slate-500">Cargando…</div>
 
-    <div *ngIf="ficha && !isLoading" class="px-6 pb-6">
+    <div *ngIf="ficha && !isLoading" class="flex-1 min-h-0 overflow-y-auto px-6 pb-6">
 
-      <!-- Cumplimiento: el único número grande de la hoja -->
-      <div class="flex items-end justify-between gap-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] px-5 py-4 mb-5">
-        <div>
-          <div class="text-[10.5px] uppercase tracking-[0.14em] text-slate-500 mb-1">Cumplimiento</div>
-          <div class="flex items-baseline gap-2.5">
-            <span [class]="'text-[34px] leading-none font-semibold tabular-nums tracking-[-0.02em] transition-colors duration-300 '
-                           + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-900 dark:text-white')">
-              {{ pct(cumplimientoEditado) }}
-            </span>
-            <span *ngIf="cantidadCambios" class="text-[12px] text-slate-500 tabular-nums">
-              antes {{ pct(ficha.cumplimiento) }}
-            </span>
+      <!--
+        Cumplimiento y reproductor, fijos al hacer scroll.
+
+        El envoltorio existe solo para eso: lleva el fondo OPACO de la tarjeta para
+        que los criterios pasen por debajo sin transparentarse, y el `-mx-6 px-6`
+        para que ese fondo llegue a los bordes pese al padding del contenedor.
+      -->
+      <div class="sticky top-0 z-10 -mx-6 px-6 pt-1 pb-4 bg-white dark:bg-slate-900">
+        <div class="rounded-xl bg-slate-50 dark:bg-white/[0.03] px-5 py-4">
+          <div class="flex items-end justify-between gap-4">
+            <div>
+              <div class="text-[10.5px] uppercase tracking-[0.14em] text-slate-500 mb-1">Cumplimiento</div>
+              <div class="flex items-baseline gap-2.5">
+                <span [class]="'text-[34px] leading-none font-semibold tabular-nums tracking-[-0.02em] transition-colors duration-300 '
+                               + (cantidadCambios ? 'text-amber-700 dark:text-amber-300' : 'text-slate-900 dark:text-white')">
+                  {{ pct(cumplimientoEditado) }}
+                </span>
+                <span *ngIf="cantidadCambios" class="text-[12px] text-slate-500 tabular-nums">
+                  antes {{ pct(ficha.cumplimiento) }}
+                </span>
+              </div>
+              <div class="mt-1.5 text-[12px] text-slate-600 dark:text-slate-400 tabular-nums">
+                {{ puntosEditados }} de {{ ficha.posibles }} puntos
+              </div>
+            </div>
+
+            <button
+              *ngIf="ficha.tieneTranscripcion"
+              (click)="verTranscripcion()"
+              [class]="'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium '
+                       + 'transition-colors cursor-pointer ring-1 '
+                       + (mostrarTranscripcion
+                          ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-400/35 dark:ring-sky-400/25'
+                          : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10')">
+              <lucide-angular [img]="FileText" [size]="13"></lucide-angular>
+              {{ mostrarTranscripcion ? 'Ocultar texto' : 'Transcripción' }}
+            </button>
           </div>
-          <div class="mt-1.5 text-[12px] text-slate-600 dark:text-slate-400 tabular-nums">
-            {{ puntosEditados }} de {{ ficha.posibles }} puntos
+
+          <!--
+            ================= EL REPRODUCTOR =================
+
+            Va dentro del bloque de cumplimiento y no como una fila aparte: escuchar la
+            llamada es parte de mirar la nota, no una acción de otra categoría.
+
+            Los tres estados están dibujados a propósito. Con conversión al vuelo,
+            «listo» no es el único que existe: hay una espera real entre abrir la ficha y
+            poder pulsar play, y un archivo que ffmpeg no puede convertir tiene que
+            ofrecer la salida de emergencia en vez de un botón que no responde.
+          -->
+          <div *ngIf="player.partes.length"
+               class="mt-4 pt-4 border-t border-slate-200 dark:border-white/[0.06]">
+
+            <!-- Preparando: la conversión ya arrancó, el play todavía no sirve -->
+            <div *ngIf="player.estado === 'preparando'"
+                 class="flex items-center gap-3 text-[12.5px] text-slate-500">
+              <span class="w-9 h-9 rounded-full grid place-items-center bg-slate-200/70 dark:bg-white/[0.06]">
+                <lucide-angular [img]="AudioLines" [size]="15" class="animate-pulse"></lucide-angular>
+              </span>
+              <span>Preparando el audio…</span>
+            </div>
+
+            <!-- Falla: el archivo no se pudo convertir. La descarga sigue funcionando. -->
+            <div *ngIf="player.estado === 'error'" class="flex items-center gap-3 flex-wrap">
+              <span class="w-9 h-9 rounded-full grid place-items-center
+                           bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                <lucide-angular [img]="TriangleAlert" [size]="15"></lucide-angular>
+              </span>
+              <span class="text-[12.5px] text-rose-700 dark:text-rose-300">{{ player.mensajeError }}</span>
+              <button (click)="player.reintentar()"
+                      class="h-7 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11.5px] font-medium
+                             bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300
+                             ring-1 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10
+                             transition-colors cursor-pointer">
+                <lucide-angular [img]="RotateCcw" [size]="12"></lucide-angular>
+                Reintentar
+              </button>
+              <button (click)="descargarParteActual()"
+                      class="h-7 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11.5px] font-medium
+                             bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300
+                             ring-1 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10
+                             transition-colors cursor-pointer">
+                <lucide-angular [img]="Download" [size]="12"></lucide-angular>
+                Descargar el archivo
+              </button>
+            </div>
+
+            <!-- Listo -->
+            <div *ngIf="player.estado === 'listo'" class="flex items-center gap-3">
+              <button (click)="player.alternar()"
+                      [attr.aria-label]="player.reproduciendo ? 'Pausar' : 'Reproducir'"
+                      class="flex-shrink-0 w-9 h-9 rounded-full grid place-items-center
+                             bg-indigo-600 text-white hover:bg-indigo-500 active:scale-95
+                             shadow-md shadow-indigo-950/30 transition-all duration-150 cursor-pointer">
+                <lucide-angular [img]="player.reproduciendo ? Pause : Play" [size]="15"></lucide-angular>
+              </button>
+
+              <div class="flex-1 min-w-0">
+                <!--
+                  El riel es un div y no un <input type=range>: el nativo trae su propio
+                  pulgar, su propio foco y tres implementaciones distintas de alto que
+                  habría que pisar en los dos temas. Acepta teclado igual, con las flechas.
+                -->
+                <div (click)="buscarEnRiel($event)"
+                     (keydown.arrowleft)="player.saltar(-5)"
+                     (keydown.arrowright)="player.saltar(5)"
+                     tabindex="0"
+                     role="slider"
+                     aria-label="Posición del audio"
+                     [attr.aria-valuemin]="0"
+                     [attr.aria-valuemax]="player.duracion"
+                     [attr.aria-valuenow]="player.posicion"
+                     class="h-1.5 rounded-full bg-slate-200 dark:bg-white/10 cursor-pointer
+                            ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-900
+                            focus:outline-none focus:ring-2 focus:ring-indigo-400/60">
+                  <div class="h-full rounded-full bg-indigo-500" [style.width.%]="progreso"></div>
+                </div>
+                <div class="flex items-center justify-between mt-1.5 text-[11px] tabular-nums text-slate-500">
+                  <span>{{ reloj(player.posicion) }}</span>
+                  <span>{{ reloj(player.duracion) }}</span>
+                </div>
+              </div>
+
+              <div class="flex-shrink-0 flex items-center gap-1">
+                <button (click)="player.saltar(-10)" title="Retroceder 10 segundos"
+                        class="h-7 inline-flex items-center gap-1 px-2 rounded-full text-[11px] font-medium tabular-nums
+                               text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10
+                               transition-colors cursor-pointer">
+                  <lucide-angular [img]="RotateCcw" [size]="12"></lucide-angular>10
+                </button>
+                <button (click)="player.saltar(10)" title="Adelantar 10 segundos"
+                        class="h-7 inline-flex items-center gap-1 px-2 rounded-full text-[11px] font-medium tabular-nums
+                               text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10
+                               transition-colors cursor-pointer">
+                  10<lucide-angular [img]="RotateCw" [size]="12"></lucide-angular>
+                </button>
+                <!--
+                  Velocidad. No es un adorno: quien revisa veinte audios seguidos se ahorra
+                  minutos reales, y el navegador corrige el tono, así que a 2x se sigue
+                  entendiendo. Lo que NO hay es forma de onda: exige decodificar el PCM
+                  entero en el navegador para adornar algo que nadie usa para decidir.
+                -->
+                <button (click)="player.cambiarVelocidad()" title="Velocidad de reproducción"
+                        [class]="'h-7 min-w-[2.2rem] px-2 rounded-full text-[11px] font-medium tabular-nums '
+                                 + 'transition-colors cursor-pointer '
+                                 + (player.velocidad === 1
+                                    ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10'
+                                    : 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-400/30 dark:ring-indigo-400/20')">
+                  {{ player.velocidad }}×
+                </button>
+              </div>
+            </div>
+
+            <!--
+              LAS PARTES DE UNA GESTIÓN.
+
+              Una gestión larga se partía en varias grabaciones. NO es un desplegable: un
+              desplegable esconde cuántas hay y cuánto dura cada una, que es justo lo que
+              decide si vale la pena saltar. Como son dos o tres, entran en una línea con
+              su duración a la vista.
+
+              Y se comportan como UNA escucha: al terminar una arranca la siguiente sola.
+              La división es del sistema de archivos de FOH, no de la conversación.
+            -->
+            <div *ngIf="player.hayVarias" class="flex items-center gap-1.5 flex-wrap mt-3">
+              <span class="text-[10.5px] uppercase tracking-[0.14em] text-slate-500 mr-0.5">Partes</span>
+              <button *ngFor="let parte of player.partes; let i = index; trackBy: porParte"
+                      (click)="player.irAParte(i)"
+                      [class]="'h-7 inline-flex items-center gap-1.5 px-2.5 rounded-full text-[11.5px] font-medium '
+                               + 'transition-colors cursor-pointer ring-1 '
+                               + (i === player.indice
+                                  ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 ring-indigo-400/35 dark:ring-indigo-400/25'
+                                  : 'bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10')">
+                {{ parte.orden }}
+                <span class="tabular-nums text-slate-500">{{ duracionDe(parte) }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!--
+            Una ficha sin audio no es un error: es una gestión cuyo archivo nunca se migró
+            a S3. Decirlo evita que el supervisor busque un botón que no está.
+          -->
+          <div *ngIf="!player.partes.length"
+               class="mt-4 pt-4 border-t border-slate-200 dark:border-white/[0.06] text-[12.5px] text-slate-500">
+            Esta gestión no tiene grabación registrada.
           </div>
         </div>
-
-        <button
-          *ngIf="ficha.tieneTranscripcion"
-          (click)="verTranscripcion()"
-          [class]="'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-[12px] font-medium '
-                   + 'transition-colors cursor-pointer ring-1 '
-                   + (mostrarTranscripcion
-                      ? 'bg-sky-500/15 text-sky-700 dark:text-sky-300 ring-sky-400/35 dark:ring-sky-400/25'
-                      : 'bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 ring-slate-200 dark:ring-white/10 hover:bg-slate-200 dark:hover:bg-white/10')">
-          <lucide-angular [img]="FileText" [size]="13"></lucide-angular>
-          {{ mostrarTranscripcion ? 'Ocultar texto' : 'Transcripción' }}
-        </button>
       </div>
 
       <!-- El resumen del modelo: la justificación de las notas de abajo -->
