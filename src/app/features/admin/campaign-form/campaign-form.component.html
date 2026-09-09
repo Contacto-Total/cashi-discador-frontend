@@ -522,6 +522,18 @@
                 </span>
                 <span class="filter-field-name" *ngIf="filter.fieldCode">{{ filter.fieldName }}</span>
                 <span class="filter-field-name filter-only-estado" *ngIf="!filter.fieldCode">Solo por Estado</span>
+                <div class="filter-sort-actions" *ngIf="filter.fieldCode" title="Ordenar contactos por este campo">
+                  <button type="button" class="btn-filter-sort"
+                          [class.active]="isFilterOrderSelected(filter, 'DESC')"
+                          (click)="setFilterOrder(filter, 'DESC')" title="Mayor a menor">
+                    <lucide-angular name="arrow-down" [size]="15"></lucide-angular>
+                  </button>
+                  <button type="button" class="btn-filter-sort"
+                          [class.active]="isFilterOrderSelected(filter, 'ASC')"
+                          (click)="setFilterOrder(filter, 'ASC')" title="Menor a mayor">
+                    <lucide-angular name="arrow-up" [size]="15"></lucide-angular>
+                  </button>
+                </div>
                 <button type="button" class="btn-remove-filter" (click)="removeFilter(i)" title="Eliminar filtro">
                   <lucide-angular name="trash-2" [size]="16"></lucide-angular>
                 </button>
@@ -608,7 +620,7 @@
                  name="proximaCuotaDesde" class="form-input" [min]="fechaHoy" [max]="proximaCuotaHasta || null">
         </div>
         <div class="form-group">
-          <label for="proximaCuotaHasta">Próxima cuota hasta <small>(opcional)</small></label>
+          <label for="proximaCuotaHasta">Próxima cuota hasta</label>
           <input type="date" id="proximaCuotaHasta" [(ngModel)]="proximaCuotaHasta"
                  name="proximaCuotaHasta" class="form-input" [min]="proximaCuotaDesde || fechaHoy">
         </div>
@@ -620,15 +632,14 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="promesaMontoMinimo">Monto desde <small>(opcional)</small></label>
+          <label for="promesaMontoMinimo">Monto desde</label>
           <input type="number" id="promesaMontoMinimo" [(ngModel)]="promesaMontoMinimo"
-                 name="promesaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000">
-          <small class="help-text">Use solo este valor para montos mayores o iguales.</small>
+                 name="promesaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000 (opcional)">
         </div>
         <div class="form-group">
-          <label for="promesaMontoMaximo">Monto hasta <small>(opcional)</small></label>
+          <label for="promesaMontoMaximo">Monto hasta</label>
           <input type="number" id="promesaMontoMaximo" [(ngModel)]="promesaMontoMaximo"
-                 name="promesaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000">
+                 name="promesaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000 (opcional)">
         </div>
       </div>
 
@@ -658,14 +669,14 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="promesaVencidaMontoMinimo">Monto desde <small>(opcional)</small></label>
+          <label for="promesaVencidaMontoMinimo">Monto desde</label>
           <input type="number" id="promesaVencidaMontoMinimo" [(ngModel)]="promesaVencidaMontoMinimo"
-                 name="promesaVencidaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000">
+                 name="promesaVencidaMontoMinimo" class="form-input" min="0" placeholder="Ej: 3000 (opcional)">
         </div>
         <div class="form-group">
-          <label for="promesaVencidaMontoMaximo">Monto hasta <small>(opcional)</small></label>
+          <label for="promesaVencidaMontoMaximo">Monto hasta</label>
           <input type="number" id="promesaVencidaMontoMaximo" [(ngModel)]="promesaVencidaMontoMaximo"
-                 name="promesaVencidaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000">
+                 name="promesaVencidaMontoMaximo" class="form-input" min="0" placeholder="Ej: 5000 (opcional)">
         </div>
       </div>
 

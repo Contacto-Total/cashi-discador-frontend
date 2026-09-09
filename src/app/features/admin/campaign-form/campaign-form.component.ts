@@ -805,6 +805,17 @@ export class CampaignFormComponent implements OnInit {
     moveItemInArray(this.campaignFilters, event.previousIndex, event.currentIndex);
   }
 
+  setFilterOrder(filter: CampaignFilterRange, direction: 'ASC' | 'DESC'): void {
+    if (!filter.fieldCode) return;
+    this.campaign.ordenarPorCampo = filter.fieldCode;
+    this.campaign.ordenarDireccion = direction;
+  }
+
+  isFilterOrderSelected(filter: CampaignFilterRange, direction: 'ASC' | 'DESC'): boolean {
+    return this.campaign.ordenarPorCampo === filter.fieldCode
+      && this.campaign.ordenarDireccion === direction;
+  }
+
   getPhoneSelectionDescription(): string {
     return this.maxTelefonosPorCliente === 0
       ? 'Se considerarán todos los números elegibles por cliente.'
