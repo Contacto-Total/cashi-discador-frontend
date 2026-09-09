@@ -70,7 +70,7 @@ export class CampaignFormComponent implements OnInit {
     status: 'DRAFT',
     dialMode: 'PROGRESSIVE',
     maxAttempts: 3,
-    retryInterval: 60,
+    retryInterval: 0,
     intensidad: 50,
     tenantId: undefined,
     portfolioId: undefined,
@@ -130,10 +130,12 @@ export class CampaignFormComponent implements OnInit {
     { codigo: 'FIJO', nombre: 'Tlf. Fijos', descripcion: '7 dígitos' }
   ];
   selectedTiposTelefono: string[] = [];
+  maxTelefonosPorCliente: number = 1;
 
-  // Prototipo visual de seguimiento de promesas vigentes. Aún no se persiste.
+  // Seguimiento de promesas.
   seguimientoPromesaVigente = false;
-  proximaCuotaVencimiento = '';
+  proximaCuotaDesde = new Date().toISOString().slice(0, 10);
+  proximaCuotaHasta = '';
   promesaMontoMinimo: number | null = null;
   promesaMontoMaximo: number | null = null;
   seguimientoPromesaVencida = false;
@@ -437,8 +439,8 @@ export class CampaignFormComponent implements OnInit {
       return {
         tipo: 'VIGENTE',
         nivelMonto: this.nivelMontoPromesa,
-        fechaDesde: this.proximaCuotaVencimiento || undefined,
-        fechaHasta: this.proximaCuotaVencimiento || undefined,
+        fechaDesde: this.proximaCuotaDesde || undefined,
+        fechaHasta: this.proximaCuotaHasta || undefined,
         montoDesde: this.promesaMontoMinimo ?? undefined,
         montoHasta: this.promesaMontoMaximo ?? undefined
       };
@@ -463,7 +465,8 @@ export class CampaignFormComponent implements OnInit {
         this.nivelMontoPromesa = filter.nivelMonto;
         if (filter.tipo === 'VIGENTE') {
           this.seguimientoPromesaVigente = true;
-          this.proximaCuotaVencimiento = filter.fechaDesde || '';
+          this.proximaCuotaDesde = filter.fechaDesde || this.fechaHoy;
+          this.proximaCuotaHasta = filter.fechaHasta || '';
           this.promesaMontoMinimo = filter.montoDesde ?? null;
           this.promesaMontoMaximo = filter.montoHasta ?? null;
         } else {
@@ -796,6 +799,16 @@ export class CampaignFormComponent implements OnInit {
 
   removeFilter(index: number): void {
     this.campaignFilters.splice(index, 1);
+  }
+
+  reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
+    moveItemInArray(this.campaignFilters, event.previousIndex, event.currentIndex);
+  }
+
+  getPhoneSelectionDescription(): string {
+    return this.maxTelefonosPorCliente === 0
+      ? 'Se considerarán todos los números elegibles por cliente.'
+      : `Se considerará hasta ${this.maxTelefonosPorCliente} número${this.maxTelefonosPorCliente === 1 ? '' : 's'} elegible(s) por cliente.`;
   }
 
   getFieldNameByCode(fieldCode: string): string {
