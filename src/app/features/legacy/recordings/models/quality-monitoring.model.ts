@@ -158,6 +158,28 @@ export interface EvaluationCriterion {
 }
 
 /**
+ * Una grabación de la gestión, lista para pedirle los bytes al backend.
+ *
+ * Los cuatro campos de ubicación son la key del objeto en S3 y son los mismos que
+ * usa la descarga de Grabaciones. El backend ya los entrega separados y alineados:
+ * NOMBRE y DURACION traen un valor por archivo, pero ANIO/MES/DIA traen uno solo
+ * para toda la gestión, y esa regla se resuelve allá para que la ficha y la grilla
+ * no la escriban dos veces.
+ *
+ * `duracion` viene en segundos con decimales ('179.96'), tal como lo guarda FOH.
+ * Formatearla a m:ss es decisión de la pantalla.
+ */
+export interface AudioPart {
+  /** 1-based: es el rótulo de la parte cuando hay más de una. */
+  orden: number;
+  nombre: string;
+  anio: string | null;
+  mes: string | null;
+  dia: string | null;
+  duracion: string | null;
+}
+
+/**
  * La ficha completa de un audio evaluado.
  *
  * `summary` es el resumen que escribió el modelo y va de solo lectura: es la
@@ -184,6 +206,13 @@ export interface EvaluationDetail {
   tieneTranscripcion: boolean;
   editable: boolean;
   criterios: EvaluationCriterion[];
+  /**
+   * Las grabaciones de esta gestión, en orden.
+   *
+   * Vacío cuando la fila no tiene NOMBRE. No es un error: es una gestión cuyo
+   * archivo nunca se migró, y la ficha simplemente no dibuja el reproductor.
+   */
+  audios: AudioPart[];
 }
 
 /** La corrección de un supervisor: solo los criterios que cambian. */
