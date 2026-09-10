@@ -5,7 +5,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { LucideAngularModule } from 'lucide-angular';
-import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
+import { CampaignAdminService, Campaign, CampaignPromiseFilter, FilterableField, CampaignFilterRange, CampaignOrderField, TipoContacto, TIPOS_CONTACTO, TIPOS_FILTRO_ESTADO, ImportPreview, GrupoAsesor, AsesorMiembro } from '../../../core/services/campaign-admin.service';
 import { TenantService } from '../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../maintenance/services/portfolio.service';
 import { Tenant } from '../../../maintenance/models/tenant.model';
@@ -102,6 +102,9 @@ export class CampaignFormComponent implements OnInit {
   // Filtros de rango
   filterableFields: FilterableField[] = [];
   campaignFilters: CampaignFilterRange[] = [];
+  campaignOrderFields: CampaignOrderField[] = [];
+  selectedOrderFieldCode = '';
+  selectedOrderDirection: 'ASC' | 'DESC' = 'DESC';
   selectedFieldId: number = 0;
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
@@ -628,21 +631,7 @@ export class CampaignFormComponent implements OnInit {
   loadCampaignFilters(campaignId: number): void {
     this.campaignService.getCampaignFilters(campaignId).subscribe({
       next: (filters) => {
-        let legacyOrderAssigned = false;
-        this.campaignFilters = filters.map(filter => {
-          if (filter.orderDirection === 'ASC' || filter.orderDirection === 'DESC') {
-            return { ...filter };
-          }
-          if (!legacyOrderAssigned && filter.fieldCode === this.campaign.ordenarPorCampo) {
-            legacyOrderAssigned = true;
-            return {
-              ...filter,
-              orderDirection: this.campaign.ordenarDireccion === 'ASC' ? 'ASC' : 'DESC',
-              orderPriority: 1
-            };
-          }
-          return { ...filter, orderDirection: 'NA', orderPriority: undefined };
-        });
+        this.campaignFilters = filters;
         console.log('Filtros de campaña cargados:', filters);
       },
       error: (err) => console.error('Error loading campaign filters:', err)
@@ -816,66 +805,58 @@ export class CampaignFormComponent implements OnInit {
   removeFilter(filter: CampaignFilterRange): void {
     const index = this.campaignFilters.indexOf(filter);
     if (index >= 0) this.campaignFilters.splice(index, 1);
-    this.normalizeOrderPriorities();
   }
 
   reorderFilters(event: CdkDragDrop<CampaignFilterRange[]>): void {
     moveItemInArray(this.campaignFilters, event.previousIndex, event.currentIndex);
   }
 
-  toggleFilterOrder(filter: CampaignFilterRange): void {
-    if (!filter.fieldCode) return;
-    const currentDirection = filter.orderDirection || 'NA';
+  loadCampaignOrderFields(campaignId: number): void {
+    this.campaignService.getCampaignOrderFields(campaignId).subscribe({
+      next: fields => this.campaignOrderFields = fields,
+      error: err => console.error('Error loading campaign order fields:', err)
+    });
+  }
 
-    if (currentDirection === 'NA') {
-      const activeOrderCount = this.getOrderedFilters().length;
-      if (activeOrderCount >= 5) {
-        this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
-        return;
-      }
-      filter.orderDirection = 'DESC';
-      filter.orderPriority = activeOrderCount + 1;
-    } else if (currentDirection === 'DESC') {
-      filter.orderDirection = 'ASC';
-    } else {
-      filter.orderDirection = 'NA';
-      filter.orderPriority = undefined;
+  getAvailableOrderFields(): FilterableField[] {
+    return this.filterableFields.filter(field => !this.campaignOrderFields.some(order => order.fieldCode === field.fieldCode));
+  }
+
+  addOrderField(): void {
+    const field = this.filterableFields.find(item => item.fieldCode === this.selectedOrderFieldCode);
+    if (!field) return;
+    if (this.campaignOrderFields.length >= 5) {
+      this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
+      return;
     }
-
-    this.normalizeOrderPriorities();
+    this.campaignOrderFields.push({
+      fieldDefinitionId: field.id,
+      fieldCode: field.fieldCode,
+      fieldName: field.fieldName,
+      orderDirection: this.selectedOrderDirection,
+      orderPriority: this.campaignOrderFields.length + 1
+    });
+    this.selectedOrderFieldCode = '';
     this.error = null;
   }
 
-  getFilterOrderLabel(filter: CampaignFilterRange): 'NA' | 'ASC' | 'DESC' {
-    return filter.orderDirection || 'NA';
+  toggleOrderDirection(field: CampaignOrderField): void {
+    field.orderDirection = field.orderDirection === 'ASC' ? 'DESC' : 'ASC';
   }
 
-  getOrderedFilters(): CampaignFilterRange[] {
-    return this.campaignFilters
-      .filter(filter => filter.fieldCode && filter.orderDirection && filter.orderDirection !== 'NA')
-      .sort((a, b) => (a.orderPriority || 0) - (b.orderPriority || 0));
+  removeOrderField(field: CampaignOrderField): void {
+    const index = this.campaignOrderFields.indexOf(field);
+    if (index >= 0) this.campaignOrderFields.splice(index, 1);
+    this.normalizeOrderPriorities();
   }
 
-  getNonOrderedFilters(): CampaignFilterRange[] {
-    return this.campaignFilters.filter(filter => !filter.orderDirection || filter.orderDirection === 'NA');
-  }
-
-  reorderOrderPriorities(event: CdkDragDrop<CampaignFilterRange[]>): void {
-    const orderedFilters = this.getOrderedFilters();
-    moveItemInArray(orderedFilters, event.previousIndex, event.currentIndex);
-    orderedFilters.forEach((filter, index) => filter.orderPriority = index + 1);
-    this.syncLegacyOrder();
+  reorderOrderFields(event: CdkDragDrop<CampaignOrderField[]>): void {
+    moveItemInArray(this.campaignOrderFields, event.previousIndex, event.currentIndex);
+    this.normalizeOrderPriorities();
   }
 
   private normalizeOrderPriorities(): void {
-    this.getOrderedFilters().forEach((filter, index) => filter.orderPriority = index + 1);
-    this.syncLegacyOrder();
-  }
-
-  private syncLegacyOrder(): void {
-    const firstOrder = this.getOrderedFilters()[0];
-    this.campaign.ordenarPorCampo = firstOrder?.fieldCode;
-    this.campaign.ordenarDireccion = firstOrder?.orderDirection === 'ASC' ? 'ASC' : 'DESC';
+    this.campaignOrderFields.forEach((field, index) => field.orderPriority = index + 1);
   }
 
   getPhoneSelectionDescription(): string {
@@ -966,10 +947,11 @@ export class CampaignFormComponent implements OnInit {
                 this.loadFilterableFields(campaign.subPortfolioId);
                 this.loadGrupos(campaign.subPortfolioId, campaign.idGrupoAsesores ?? undefined);
               }
-               if (campaign.id) {
-                 this.loadCampaignFilters(campaign.id);
-                 this.loadPromiseFilter(campaign.id);
-               }
+                if (campaign.id) {
+                  this.loadCampaignFilters(campaign.id);
+                  this.loadCampaignOrderFields(campaign.id);
+                  this.loadPromiseFilter(campaign.id);
+                }
 
               // Restaurar selección de rangos de antigüedad
               if (campaign.filtroRangoAntiguedad) {
@@ -1347,17 +1329,26 @@ export class CampaignFormComponent implements OnInit {
     this.campaignService.saveCampaignFilters(campaignId, this.campaignFilters, skipImport).subscribe({
       next: (response) => {
         console.log('✅ Filtros guardados correctamente, respuesta:', response);
-        this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
+        this.campaignService.replaceCampaignOrderFields(campaignId, this.campaignOrderFields).subscribe({
           next: () => {
-            if (exportExcel) {
-              this.exportCampaignToExcel(campaignId);
-            } else {
-              this.loading = false;
-              this.router.navigate(['/admin/campaigns']);
-            }
+            this.campaignService.replaceCampaignPromiseFilter(campaignId, this.buildPromiseFilter()).subscribe({
+              next: () => {
+                if (exportExcel) {
+                  this.exportCampaignToExcel(campaignId);
+                } else {
+                  this.loading = false;
+                  this.router.navigate(['/admin/campaigns']);
+                }
+              },
+              error: (err) => {
+                console.error('Error guardando filtro de promesa:', err);
+                this.loading = false;
+                this.router.navigate(['/admin/campaigns']);
+              }
+            });
           },
           error: (err) => {
-            console.error('Error guardando filtro de promesa:', err);
+            console.error('Error guardando prioridades de ordenamiento:', err);
             this.loading = false;
             this.router.navigate(['/admin/campaigns']);
           }

@@ -198,6 +198,15 @@ export interface CampaignFilterRange {
   orderPriority?: number;
 }
 
+export interface CampaignOrderField {
+  id?: number;
+  fieldDefinitionId: number;
+  fieldCode: string;
+  fieldName: string;
+  orderDirection: 'ASC' | 'DESC';
+  orderPriority?: number;
+}
+
 export interface CampaignPromiseFilter {
   tipo: 'VIGENTE' | 'VENCIDA_MES';
   nivelMonto: 'CUOTA' | 'PROMESA';
@@ -431,6 +440,14 @@ export class CampaignAdminService {
       filters,
       { headers: this.getHeaders() }
     );
+  }
+
+  getCampaignOrderFields(campaignId: number): Observable<CampaignOrderField[]> {
+    return this.http.get<CampaignOrderField[]>(`${this.apiUrl}/${campaignId}/order-fields`, { headers: this.getHeaders() });
+  }
+
+  replaceCampaignOrderFields(campaignId: number, fields: CampaignOrderField[]): Observable<CampaignOrderField[]> {
+    return this.http.put<CampaignOrderField[]>(`${this.apiUrl}/${campaignId}/order-fields`, fields, { headers: this.getHeaders() });
   }
 
   getCampaignPromiseFilter(campaignId: number): Observable<CampaignPromiseFilter | null> {
