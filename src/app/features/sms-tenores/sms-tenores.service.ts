@@ -94,6 +94,16 @@ export function guardarArchivo(blob: Blob, nombre: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Token de una etiqueta, con la misma regla que el backend: "LTD combinado" es LTD_COMBINADO. */
+export function tokenDe(etiqueta: string): string {
+  return etiqueta
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
 /** Número entero con espacio fino entre miles (1 340); raya si no hay valor. */
 export function miles(valor: number | null | undefined): string {
   if (valor === null || valor === undefined) {

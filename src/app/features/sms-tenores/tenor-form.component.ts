@@ -9,8 +9,9 @@ import { PortfolioService } from '../../maintenance/services/portfolio.service';
 import { Tenant } from '../../maintenance/models/tenant.model';
 import { Portfolio, SubPortfolio } from '../../maintenance/models/portfolio.model';
 import { ToastService } from '../../shared/services/toast.service';
-import { SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoTenor } from './sms-tenores.service';
+import { SmsTenoresService, guardarArchivo, mensajeDeError, miles, nombreArchivoTenor, tokenDe } from './sms-tenores.service';
 import {
+  CombinadaTenor,
   ConteoTenor,
   MensajeTenor,
   PreviewTenor,
@@ -209,6 +210,106 @@ interface ParteMensaje {
                         </button>
                       }
                     </div>
+
+                    @if (combinadas.length || combinadaEnEdicion()) {
+                      <div class="flex flex-col gap-2 border-t border-[#dbe7fb] pt-2.5 dark:border-blue-900">
+                        <span class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400">
+                          <lucide-angular name="layers" [size]="12" class="block"></lucide-angular>
+                          Combinados
+                        </span>
+                        <div class="flex flex-wrap gap-1.5">
+                          @for (c of combinadas; track c.token; let i = $index) {
+                            <span class="inline-flex items-center rounded-full" [ngClass]="usadaCombinada(c) ? 'bg-[#0f172a] dark:bg-white' : 'border border-[#8491a3] bg-white dark:border-slate-600 dark:bg-slate-800'">
+                              <button type="button" (click)="insertarCombinada(c)" [attr.aria-pressed]="usadaCombinada(c)" [attr.title]="resumenCombinada(c)"
+                                      class="inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-l-full pl-[11px] pr-1.5 text-[12.5px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      [ngClass]="usadaCombinada(c) ? 'font-semibold text-white dark:text-slate-900' : 'font-medium text-[#334155] hover:bg-[#f4f6f9] dark:text-slate-200 dark:hover:bg-slate-700'">
+                                <lucide-angular name="layers" [size]="11" class="block"></lucide-angular>
+                                {{ c.etiqueta }}
+                                <span class="rounded-full px-1.5 text-[10px] tabular-nums" [ngClass]="usadaCombinada(c) ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-[#eef2f7] text-[#5f6c80] dark:bg-slate-700 dark:text-slate-300'">{{ c.columnas.length }}</span>
+                              </button>
+                              <button type="button" (click)="editarCombinada(i)" [attr.aria-label]="'Editar ' + c.etiqueta"
+                                      class="flex h-[30px] w-6 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      [ngClass]="usadaCombinada(c) ? 'text-white/80 hover:text-white dark:text-slate-700' : 'text-[#5f6c80] hover:text-[#0f172a] dark:text-slate-400'">
+                                <lucide-angular name="pencil" [size]="11" class="block"></lucide-angular>
+                              </button>
+                              <button type="button" (click)="quitarCombinada(i)" [attr.aria-label]="'Quitar ' + c.etiqueta"
+                                      class="flex h-[30px] w-6 items-center justify-center rounded-r-full pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      [ngClass]="usadaCombinada(c) ? 'text-white/80 hover:text-white dark:text-slate-700' : 'text-[#5f6c80] hover:text-[#b91c1c] dark:text-slate-400'">
+                                <lucide-angular name="x" [size]="12" class="block"></lucide-angular>
+                              </button>
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    @if (combinadaEnEdicion(); as edicion) {
+                      <div class="flex flex-col gap-3 rounded-lg border border-[#c7d7f5] bg-white px-3.5 py-3.5 dark:border-blue-900 dark:bg-slate-900">
+                        <span class="text-[13px] font-bold">{{ edicion.indice === null ? 'Nuevo monto combinado' : 'Editar monto combinado' }}</span>
+                        <label class="flex flex-col gap-1">
+                          <span [class]="estilos.etiqueta">Nombre</span>
+                          <input type="text" [ngModel]="edicion.etiqueta" (ngModelChange)="edicion.etiqueta = $event" maxlength="60" placeholder="Ej.: LTD combinado"
+                                 class="h-9 rounded-lg border !border-[#8491a3] !bg-white px-3 text-[13px] !text-[#0f172a] placeholder:text-[#5f6c80] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100" />
+                          @if (edicion.etiqueta.trim()) {
+                            <span class="text-[11.5px] text-[#5f6c80] dark:text-slate-400">En el mensaje: <span class="font-semibold text-[#1d4ed8] dark:text-blue-300">{{ '{' + tokenDe(edicion.etiqueta) + '}' }}</span></span>
+                          }
+                        </label>
+                        <div class="flex flex-col gap-1.5">
+                          <span [class]="estilos.etiqueta">Toca los montos en orden de prioridad</span>
+                          <div class="flex flex-wrap gap-1.5">
+                            @for (v of vars.montos; track v.token) {
+                              <button type="button" (click)="alternarEnCombinada(v.columna!)" [attr.aria-pressed]="edicion.columnas.includes(v.columna!)"
+                                      class="inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                                      [ngClass]="edicion.columnas.includes(v.columna!) ? 'border-[#1d4ed8] bg-[#1d4ed8] font-semibold text-white' : 'border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200'">
+                                @if (edicion.columnas.includes(v.columna!)) {
+                                  <span class="flex h-4 w-4 items-center justify-center rounded-full bg-white/25 text-[10px] font-bold tabular-nums">{{ edicion.columnas.indexOf(v.columna!) + 1 }}</span>
+                                }
+                                {{ v.etiqueta }}
+                              </button>
+                            }
+                          </div>
+                        </div>
+                        @if (edicion.columnas.length) {
+                          <ol class="flex flex-col gap-1">
+                            @for (columna of edicion.columnas; track columna; let k = $index) {
+                              <li class="flex items-center gap-2 rounded-md bg-[#f4f6f9] px-2 py-1 text-[12.5px] dark:bg-slate-800">
+                                <span class="w-4 text-center font-bold tabular-nums text-[#1d4ed8] dark:text-blue-300">{{ k + 1 }}</span>
+                                <span class="flex-1">{{ etiquetaDeMonto(columna) }}</span>
+                                <button type="button" (click)="moverEnCombinada(k, -1)" [disabled]="k === 0" aria-label="Subir prioridad" class="flex h-6 w-6 items-center justify-center rounded text-[#5f6c80] hover:bg-white hover:text-[#0f172a] disabled:opacity-30 dark:hover:bg-slate-700"><lucide-angular name="chevron-up" [size]="13" class="block"></lucide-angular></button>
+                                <button type="button" (click)="moverEnCombinada(k, 1)" [disabled]="k === edicion.columnas.length - 1" aria-label="Bajar prioridad" class="flex h-6 w-6 items-center justify-center rounded text-[#5f6c80] hover:bg-white hover:text-[#0f172a] disabled:opacity-30 dark:hover:bg-slate-700"><lucide-angular name="chevron-down" [size]="13" class="block"></lucide-angular></button>
+                                <button type="button" (click)="alternarEnCombinada(columna)" [attr.aria-label]="'Quitar ' + etiquetaDeMonto(columna)" class="flex h-6 w-6 items-center justify-center rounded text-[#5f6c80] hover:bg-white hover:text-[#b91c1c] dark:hover:bg-slate-700"><lucide-angular name="x" [size]="13" class="block"></lucide-angular></button>
+                              </li>
+                            }
+                          </ol>
+                        }
+                        <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <label for="minimo-combinada" class="text-[12.5px] text-[#334155] dark:text-slate-300">Saltar montos menores a</label>
+                          <div class="flex h-8 w-32 items-center rounded-lg border border-[#8491a3] bg-white pl-2.5 focus-within:border-[#2563eb] focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:border-slate-600 dark:bg-slate-800">
+                            <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">S/</span>
+                            <input id="minimo-combinada" type="number" min="0" step="1" placeholder="sin mínimo" [ngModel]="edicion.minimo" (ngModelChange)="edicion.minimo = $event" [class]="estilos.numeroRango" />
+                          </div>
+                        </div>
+                        <p class="flex items-start gap-2 rounded-md bg-[#f4f7fd] px-2.5 py-2 text-[12px] leading-snug text-[#1e3a8a] dark:bg-blue-950/40 dark:text-blue-200">
+                          <lucide-angular name="info" [size]="13" class="block shrink-0 translate-y-px"></lucide-angular>
+                          <span>{{ reglaEnEdicion(edicion) }}</span>
+                        </p>
+                        <div class="flex items-center justify-end gap-2">
+                          <button type="button" (click)="combinadaEnEdicion.set(null)" class="h-8 rounded-[7px] px-3 text-[12.5px] font-semibold text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">Cancelar</button>
+                          <button type="button" (click)="guardarCombinada()" [disabled]="!edicion.etiqueta.trim() || edicion.columnas.length < 2"
+                                  class="inline-flex h-8 items-center gap-1.5 rounded-[7px] bg-[#0f172a] px-3 text-[12.5px] font-semibold text-white hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-slate-900">
+                            <lucide-angular name="check" [size]="12" class="block"></lucide-angular>
+                            {{ edicion.indice === null ? 'Crear e insertar' : 'Guardar cambios' }}
+                          </button>
+                        </div>
+                      </div>
+                    } @else if (vars.montos.length > 1) {
+                      <button type="button" (click)="nuevaCombinada()"
+                              class="inline-flex h-8 w-fit items-center gap-1.5 rounded-lg border border-dashed border-[#8491a3] bg-white px-3 text-[12.5px] font-medium text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-transparent dark:text-slate-300 dark:hover:bg-slate-800">
+                        <lucide-angular name="layers" [size]="12" class="block"></lucide-angular>
+                        Combinar montos
+                      </button>
+                    }
+
                     <p class="mt-auto flex items-center gap-2 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs text-[#1e40af] ring-1 ring-[#dbe7fb] dark:bg-blue-950/40 dark:text-blue-200 dark:ring-blue-900">
                       <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-white"><lucide-angular name="filter" [size]="10" class="block"></lucide-angular></span>
                       Usar un monto excluye a quien no lo tiene.
@@ -324,6 +425,9 @@ interface ParteMensaje {
                               class="h-8 min-w-0 max-w-[46%] shrink truncate rounded-md border-0 !bg-transparent px-1 text-[13px] font-semibold !text-[#0f172a] focus:outline-none focus:!shadow-none dark:!text-slate-100">
                         @for (m of vars.montos; track m.token) {
                           <option [ngValue]="m.columna">{{ m.etiqueta }}</option>
+                        }
+                        @for (c of combinadas; track c.token) {
+                          <option [ngValue]="c.token">{{ c.etiqueta }} (combinado)</option>
                         }
                       </select>
                       <span class="h-[15px] w-px shrink-0 bg-[#dfe4ea] dark:bg-slate-600"></span>
@@ -457,6 +561,11 @@ export class TenorFormComponent implements OnInit {
   readonly descargando = signal(false);
   /** Hay cambios que afectan a la lista y todavía no se recalcularon. */
   readonly pendiente = signal(false);
+  /** Monto combinado que se está creando o editando; nulo si el constructor está cerrado. */
+  readonly combinadaEnEdicion = signal<CombinadaEnEdicion | null>(null);
+  readonly tokenDe = tokenDe;
+
+  combinadas: CombinadaTenor[] = [];
 
   readonly porcentaje = computed(() => {
     const c = this.conteo();
@@ -562,6 +671,116 @@ export class TenorFormComponent implements OnInit {
       });
       setTimeout(() => this.ajustarAltura());
     }
+  }
+
+  usadaCombinada(c: CombinadaTenor): boolean {
+    return this.plantilla.includes(`{${c.token}}`);
+  }
+
+  /** Inserta o quita la combinada del mensaje, igual que una variable normal. */
+  insertarCombinada(c: CombinadaTenor): void {
+    this.insertar({ token: c.token, columna: null, etiqueta: c.etiqueta, filtra: true });
+  }
+
+  nuevaCombinada(): void {
+    this.combinadaEnEdicion.set({ indice: null, etiqueta: '', columnas: [], minimo: null });
+  }
+
+  editarCombinada(indice: number): void {
+    const c = this.combinadas[indice];
+    this.combinadaEnEdicion.set({ indice, etiqueta: c.etiqueta, columnas: [...c.columnas], minimo: c.minimo ?? null });
+  }
+
+  alternarEnCombinada(columna: string): void {
+    this.combinadaEnEdicion.update(e => {
+      if (!e) {
+        return e;
+      }
+      const columnas = e.columnas.includes(columna) ? e.columnas.filter(c => c !== columna) : [...e.columnas, columna];
+      return { ...e, columnas };
+    });
+  }
+
+  moverEnCombinada(indice: number, paso: number): void {
+    this.combinadaEnEdicion.update(e => {
+      if (!e) {
+        return e;
+      }
+      const destino = indice + paso;
+      if (destino < 0 || destino >= e.columnas.length) {
+        return e;
+      }
+      const columnas = [...e.columnas];
+      [columnas[indice], columnas[destino]] = [columnas[destino], columnas[indice]];
+      return { ...e, columnas };
+    });
+  }
+
+  etiquetaDeMonto(columna: string): string {
+    return this.variables()?.montos.find(m => m.columna === columna)?.etiqueta ?? columna;
+  }
+
+  /** Qué le toca a cada cliente con la regla del constructor, en una frase. */
+  reglaEnEdicion(e: CombinadaEnEdicion): string {
+    const minimo = numeroONulo(e.minimo);
+    const condicion = minimo !== null && minimo > 0 ? `que llegue a S/${miles(minimo)}` : 'que tenga monto';
+    return `A cada cliente le va el primer monto de la lista ${condicion}. Quien no tenga ninguno no entra en la lista.`;
+  }
+
+  /** Regla de una combinada en una línea, para el título de su chip. */
+  resumenCombinada(c: CombinadaTenor): string {
+    const montos = (c.nombres?.length ? c.nombres : c.columnas).join(' → ');
+    return c.minimo ? `${montos} · mínimo S/${miles(c.minimo)}` : montos;
+  }
+
+  /** Guarda la combinada del constructor; si es nueva, además la inserta en el mensaje. */
+  guardarCombinada(): void {
+    const e = this.combinadaEnEdicion();
+    if (!e) {
+      return;
+    }
+    const etiqueta = e.etiqueta.trim();
+    const token = tokenDe(etiqueta);
+    const vars = this.variables();
+    const tokensCatalogo = [...(vars?.cliente ?? []), ...(vars?.montos ?? []), ...(vars?.fechas ?? [])].map(v => v.token);
+    const repetido = tokensCatalogo.includes(token) || this.combinadas.some((c, i) => i !== e.indice && c.token === token);
+    if (!token || repetido) {
+      this.toast.warning('Ese nombre ya lo usa otra variable; elige otro.');
+      return;
+    }
+    const nombres = e.columnas.map(c => this.etiquetaDeMonto(c));
+    const minimo = numeroONulo(e.minimo);
+    const combinada: CombinadaTenor = {
+      token,
+      etiqueta,
+      columnas: [...e.columnas],
+      minimo: minimo !== null && minimo > 0 ? minimo : null,
+      nombres
+    };
+    if (e.indice === null) {
+      this.combinadas = [...this.combinadas, combinada];
+      this.combinadaEnEdicion.set(null);
+      this.insertarCombinada(combinada);
+      return;
+    }
+    const anterior = this.combinadas[e.indice];
+    if (anterior.token !== token) {
+      this.plantilla = this.plantilla.split(`{${anterior.token}}`).join(`{${token}}`);
+      this.rangos = this.rangos.map(r => (r.columna === anterior.token ? { ...r, columna: token } : r));
+    }
+    this.combinadas = this.combinadas.map((c, i) => (i === e.indice ? combinada : c));
+    this.combinadaEnEdicion.set(null);
+    this.marcarCambio();
+  }
+
+  /** Quita la combinada del tenor, del mensaje y de los rangos que la usaban. */
+  quitarCombinada(indice: number): void {
+    const c = this.combinadas[indice];
+    this.plantilla = this.plantilla.replace(new RegExp(' ?' + `{${c.token}}`.replace(/[{}]/g, '\\$&'), 'g'), '');
+    this.rangos = this.rangos.filter(r => r.columna !== c.token);
+    this.combinadas = this.combinadas.filter((_, i) => i !== indice);
+    this.marcarCambio();
+    setTimeout(() => this.ajustarAltura());
   }
 
   agregarRango(): void {
@@ -757,6 +976,7 @@ export class TenorFormComponent implements OnInit {
         this.nombre = tenor.nombre;
         this.plantilla = tenor.plantilla;
         this.rangos = tenor.rangos.map(r => ({ ...r }));
+        this.combinadas = (tenor.combinadas ?? []).map(c => ({ ...c, columnas: [...c.columnas] }));
         this.sinPromesaVigente = tenor.restricciones.sinPromesaVigente;
         this.sinListaNegra = tenor.restricciones.sinListaNegra;
         this.soloNoContenido = tenor.restricciones.soloNoContenido;
@@ -813,6 +1033,8 @@ export class TenorFormComponent implements OnInit {
     this.indicePreview.set(0);
     this.pendiente.set(false);
     this.rangos = [];
+    this.combinadas = [];
+    this.combinadaEnEdicion.set(null);
     this.soloNoContenido = false;
   }
 
@@ -830,6 +1052,12 @@ export class TenorFormComponent implements OnInit {
       idSubcartera: this.idSubcartera || null,
       plantilla: this.plantilla,
       rangos: this.rangos.map(r => ({ columna: r.columna, min: numeroONulo(r.min), max: numeroONulo(r.max) })),
+      combinadas: this.combinadas.map(c => ({
+        token: c.token,
+        etiqueta: c.etiqueta,
+        columnas: [...c.columnas],
+        minimo: c.minimo ?? null
+      })),
       restricciones: {
         sinPromesaVigente: this.sinPromesaVigente,
         sinListaNegra: this.sinListaNegra,
@@ -840,6 +1068,16 @@ export class TenorFormComponent implements OnInit {
 }
 
 /** Un input numérico vacío llega como null o cadena vacía: ambos significan "sin límite". */
+/** Estado del constructor de montos combinados. */
+interface CombinadaEnEdicion {
+  /** Posición en la lista del tenor; nula si es nueva. */
+  indice: number | null;
+  etiqueta: string;
+  columnas: string[];
+  /** Tal como lo deja el campo: vacío o un número. */
+  minimo: number | string | null;
+}
+
 function numeroONulo(valor: unknown): number | null {
   if (valor === null || valor === undefined || valor === '') {
     return null;
