@@ -177,7 +177,68 @@ export interface AudioPart {
   mes: string | null;
   dia: string | null;
   duracion: string | null;
+  /**
+   * La ruta exacta del objeto en S3. Solo viene en el monitoreo del discador.
+   *
+   * La pantalla no la manda a ningún lado: el endpoint de audio del discador recibe el
+   * `idx` y resuelve la key del lado del servidor. Está acá porque es lo que distingue
+   * una parte que se puede reproducir de una que no.
+   */
+  s3Key: string | null;
 }
+
+/**
+ * Cuál de los dos monitoreos es.
+ *
+ * Son la misma pantalla contra dos orígenes distintos. `legacy` mira lo que dejó FOH
+ * hasta agosto de 2026 y busca el audio por nombre de archivo en el bucket histórico;
+ * `discador` mira lo que el discador genera desde septiembre y pide el audio por su
+ * `recording_s3_key`, que la fila de la llamada guarda exacta.
+ */
+export type MonitoringMode = 'legacy' | 'discador';
+
+/** Lo único que cambia entre un monitoreo y el otro. */
+export interface MonitoringModeConfig {
+  /** La ruta base del backend, colgando de `environment.apiUrl`. */
+  ruta: string;
+  /** Primer día que la pantalla acepta, o null si no tiene piso. */
+  desde: string | null;
+  /** Último día que acepta, o null si el techo es hoy. */
+  hasta: string | null;
+  /**
+   * Carteras y subcarteras que este monitoreo no ofrece, ya normalizadas.
+   *
+   * Es lista negra y no blanca a propósito: si una cartera se renombra, el peor caso es
+   * una opción de más —recuperable— y no un desplegable vacío.
+   */
+  carterasFuera: string[];
+  /**
+   * Si «Oportunidad de pago» se oculta para tramo 3 y tramo 5.
+   *
+   * En legacy sí: esas gestiones existen pero ninguna llegó a evaluarse, así que el
+   * filtro solo podía devolver una matriz en blanco. En el discador NO, y no es un
+   * descuido: septiembre tiene 169 gestiones de oportunidad de pago en TRAMO 5 con
+   * audio, y esconderlas sería borrar de la pantalla evaluaciones reales.
+   */
+  ocultaOportunidadEnTramos: boolean;
+}
+
+export const MONITORING_MODES: Record<MonitoringMode, MonitoringModeConfig> = {
+  legacy: {
+    ruta: '/gestion/historica/monitoreo',
+    desde: null,
+    hasta: '2026-08-31',
+    carterasFuera: ['TRAMOPROPIO', 'NSOLUCIONES', 'CASTIGO'],
+    ocultaOportunidadEnTramos: true
+  },
+  discador: {
+    ruta: '/discador/monitoreo',
+    desde: '2026-09-01',
+    hasta: null,
+    carterasFuera: [],
+    ocultaOportunidadEnTramos: false
+  }
+};
 
 /**
  * La ficha completa de un audio evaluado.

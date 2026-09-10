@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -11,7 +11,8 @@ import { ToastService } from '../../../../../shared/services/toast.service';
 import { QualityMonitoringService } from '../../services/quality-monitoring.service';
 import { EvaluationEditorComponent } from '../evaluation-editor/evaluation-editor.component';
 import {
-  MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringWeek
+  MonitoringAgent, MonitoringAudio, MonitoringCriterion, MonitoringDay, MonitoringMode,
+  MonitoringModeConfig, MonitoringWeek, MONITORING_MODES
 } from '../../models/quality-monitoring.model';
 import { TenantService } from '../../../../../maintenance/services/tenant.service';
 import { PortfolioService } from '../../../../../maintenance/services/portfolio.service';
@@ -80,6 +81,7 @@ const RESULTADOS_EVALUABLES: SelectOption[] = [
  */
 const TRAMOS_SIN_OPORTUNIDAD_DE_PAGO = ['TRAMO3', 'TRAMO5'];
 
+
 /**
  * La matriz asesor × día de evaluaciones de calidad.
  *
@@ -114,9 +116,22 @@ const TRAMOS_SIN_OPORTUNIDAD_DE_PAGO = ['TRAMO3', 'TRAMO5'];
   imports: [CommonModule, FormsModule, LucideAngularModule, CustomSelectComponent,
             EvaluationEditorComponent],
   templateUrl: './quality-monitor.component.html',
-  styleUrls: ['./quality-monitor.component.scss']
+  styleUrls: ['./quality-monitor.component.scss'],
+  // El servicio se provee acá y no en root porque su ruta base es estado de la
+  // instancia: los dos monitoreos son la misma pantalla contra endpoints distintos.
+  providers: [QualityMonitoringService]
 })
 export class QualityMonitorComponent implements OnInit {
+  /**
+   * Cuál de los dos monitoreos es esta instancia.
+   *
+   * `legacy` es lo que dejó FOH hasta agosto de 2026 y vive en Grabaciones Históricas;
+   * `discador` es lo que el discador genera desde septiembre y vive en Grabaciones
+   * Discador. Misma pantalla, mismas reglas, mismo cálculo de cumplimiento: lo único que
+   * cambia está en {@link MONITORING_MODES}.
+   */
+  @Input() modo: MonitoringMode = 'legacy';
+
   readonly Search = Search;
   readonly Eye = Eye;
   readonly TrendingUp = TrendingUp;
@@ -277,7 +292,14 @@ export class QualityMonitorComponent implements OnInit {
     private toast: ToastService
   ) {}
 
+  /** Lo único que distingue a un monitoreo del otro. */
+  get cfg(): MonitoringModeConfig {
+    return MONITORING_MODES[this.modo];
+  }
+
   ngOnInit(): void {
+    // Antes que nada: apunta el servicio a los endpoints de este monitoreo.
+    this.monitoreo.usar(this.modo);
     this.cargarProveedores();
     this.recalcularResultados();
 
@@ -319,7 +341,9 @@ export class QualityMonitorComponent implements OnInit {
     if (this.selectedProveedor > 0) {
       this.portfolioService.getPortfoliosByTenant(this.selectedProveedor).subscribe({
         next: (data) => {
-          this.carteras = data.map(p => ({ label: p.portfolioName, value: p.id }));
+          this.carteras = data
+            .filter(p => this.viveEnEsteModo(p.portfolioName))
+            .map(p => ({ label: p.portfolioName, value: p.id }));
         },
         error: () => { this.toast.error('No se pudieron cargar las carteras'); }
       });
@@ -335,8 +359,12 @@ export class QualityMonitorComponent implements OnInit {
     if (this.selectedCartera > 0) {
       this.portfolioService.getSubPortfoliosByPortfolio(this.selectedCartera).subscribe({
         next: (data) => {
-          this.subPortfolios = data;
-          this.subcarteras = data.map(s => ({ label: s.subPortfolioName, value: s.id }));
+          // Se filtra tambien acá y no solo arriba: nada impide que una subcartera de
+          // tramo propio cuelgue de otra cartera, y el corte tiene que ser por lo que
+          // se va a consultar, que es el nombre de la subcartera.
+          this.subPortfolios = data.filter(s => this.viveEnEsteModo(s.subPortfolioName));
+          this.subcarteras = this.subPortfolios
+            .map(s => ({ label: s.subPortfolioName, value: s.id }));
         },
         error: () => { this.toast.error('No se pudieron cargar las subcarteras'); }
       });
@@ -377,6 +405,10 @@ export class QualityMonitorComponent implements OnInit {
 
   /** Si el tramo elegido es uno de los que no usan esa tipificación. */
   private tramoSinOportunidadDePago(): boolean {
+    // En el discador esta regla no aplica: alli si hay oportunidades de pago evaluadas.
+    if (!this.cfg.ocultaOportunidadEnTramos) {
+      return false;
+    }
     // Se miran los dos niveles porque el nombre del tramo vive en uno o en otro según
     // el entorno: en la tabla histórica la cartera es 'FO_TRAMO 3' y la subcartera
     // 'FO_TRAMO_3', pero en el catálogo de QAS hay subcarteras con nombre propio
@@ -394,6 +426,11 @@ export class QualityMonitorComponent implements OnInit {
    * el mismo motivo: el mismo tramo aparece escrito de cuatro formas entre el catálogo
    * y la tabla histórica, y una comparación literal acertaría solo con una de ellas.
    */
+  /** Si una cartera o subcartera del catálogo tiene historia en este monitoreo. */
+  private viveEnEsteModo(nombre: string | undefined | null): boolean {
+    return !this.cfg.carterasFuera.includes(this.claveTramo(nombre));
+  }
+
   private claveTramo(nombre: string | number | undefined | null): string {
     return String(nombre ?? '')
       .toUpperCase()
@@ -449,13 +486,17 @@ export class QualityMonitorComponent implements OnInit {
   }
 
   private fijarSemana(offset: number, consultar = true): void {
-    const hoy = new Date();
-    // getDay(): 0 es domingo. El lunes de la semana en curso queda a -6 el domingo.
-    const diaSemana = hoy.getDay();
+    // El ancla es el último día que este monitoreo puede mostrar. En el discador es hoy,
+    // como en cualquier pantalla; en legacy es el 31/08, porque con el módulo congelado
+    // «la última semana» es la última que tiene datos y no la del calendario. Anclado en
+    // hoy, los dos botones movían el rango dentro de un mes sin ninguna fila.
+    const ancla = new Date(`${this.maxCalendario}T00:00:00`);
+    // getDay(): 0 es domingo. El lunes de esa semana queda a -6 si cae domingo.
+    const diaSemana = ancla.getDay();
     const aLunes = diaSemana === 0 ? -6 : 1 - diaSemana;
 
-    const lunes = new Date(hoy);
-    lunes.setDate(hoy.getDate() + aLunes + offset * 7);
+    const lunes = new Date(ancla);
+    lunes.setDate(ancla.getDate() + aLunes + offset * 7);
 
     const viernes = new Date(lunes);
     viernes.setDate(lunes.getDate() + 4);
@@ -857,11 +898,30 @@ export class QualityMonitorComponent implements OnInit {
    */
   get maxHasta(): string {
     if (!this.desde) {
-      return '';
+      return this.maxCalendario;
     }
     const tope = new Date(`${this.desde}T00:00:00`);
     tope.setDate(tope.getDate() + MAX_DIAS - 1);
-    return this.comoIso(tope);
+    // El más chico de los dos topes: el ancho de la matriz y el fin de la historia de
+    // este monitoreo. Comparar strings 'YYYY-MM-DD' alcanza, que es como las ordena el
+    // propio input.
+    const porAncho = this.comoIso(tope);
+    return porAncho < this.maxCalendario ? porAncho : this.maxCalendario;
+  }
+
+  /**
+   * El último día seleccionable del monitoreo, para el `max` de los dos calendarios.
+   *
+   * En legacy es el fin del histórico. En el discador es hoy: no hay techo declarado y
+   * dejar elegir mañana solo puede devolver una matriz vacía.
+   */
+  get maxCalendario(): string {
+    return this.cfg.hasta ?? this.comoIso(new Date());
+  }
+
+  /** El primer día seleccionable, o cadena vacía si este monitoreo no tiene piso. */
+  get minCalendario(): string {
+    return this.cfg.desde ?? '';
   }
 
   // ------------------------------------------------------------------ paginado de la matriz
