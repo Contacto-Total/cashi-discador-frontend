@@ -94,6 +94,14 @@ export function guardarArchivo(blob: Blob, nombre: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Número entero con espacio fino entre miles (1 340); raya si no hay valor. */
+export function miles(valor: number | null | undefined): string {
+  if (valor === null || valor === undefined) {
+    return '—';
+  }
+  return Math.round(valor).toLocaleString('en-US').replace(/,/g, ' ');
+}
+
 /** Nombre del Excel de un tenor, con la fecha del día. */
 export function nombreArchivoTenor(id: number): string {
   const hoy = new Date();
