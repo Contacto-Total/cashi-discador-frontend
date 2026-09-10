@@ -162,7 +162,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/sms-tenores/tenor-form.component').then(m => m.TenorFormComponent),
     canActivate: [authGuard, adminGuard]
   },
-  { path: 'sms/dynamic', redirectTo: 'sms/tenores/nuevo', pathMatch: 'full' },
 
   // ========================================
   // OTROS MÓDULOS LEGACY
