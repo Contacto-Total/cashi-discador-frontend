@@ -30,8 +30,8 @@ const ESTILOS = {
   panel: 'flex flex-col gap-2.5 rounded-[10px] border border-[#eef1f5] bg-[#f8fafc] px-3 py-3 dark:border-slate-800 dark:bg-slate-950/40',
   etiqueta: 'text-xs font-bold uppercase tracking-[0.05em] text-[#5f6c80] dark:text-slate-400',
   contador: 'rounded-full border border-[#e2e8f0] bg-white px-2 py-px text-xs font-semibold tabular-nums text-[#5f6c80] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400',
-  chip: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-medium text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
-  chipUsado: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#0f172a] bg-[#0f172a] px-[11px] text-[12.5px] font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 dark:border-white dark:bg-white dark:text-slate-900',
+  chip: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8491a3] bg-white px-[11px] text-[12.5px] font-medium text-[#334155] transition-[background-color,transform,box-shadow] duration-150 hover:bg-[#f4f6f9] hover:shadow-[0_2px_8px_rgba(15,23,42,0.08)] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700',
+  chipUsado: 'inline-flex h-[30px] items-center gap-[5px] whitespace-nowrap rounded-full border border-[#0f172a] bg-[#0f172a] px-[11px] text-[12.5px] font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-[#1e293b] active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 dark:border-white dark:bg-white dark:text-slate-900',
   select: 'h-[34px] w-full appearance-none rounded-lg border !border-[#8491a3] !bg-white pl-[11px] pr-8 text-[13px] !text-[#0f172a] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] disabled:cursor-not-allowed disabled:!bg-[#f4f6f9] disabled:!text-[#5f6c80] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:disabled:!bg-slate-900 dark:disabled:!text-slate-400',
   flechaSelect: 'pointer-events-none absolute right-[11px] top-1/2 flex -translate-y-1/2 text-[#5f6c80] dark:text-slate-400',
   campo: 'h-[38px] rounded-lg border !border-[#8491a3] !bg-white px-3 text-[13.5px] !text-[#0f172a] placeholder:text-[#5f6c80] focus:!border-[#2563eb] focus:outline-none focus:!shadow-[0_0_0_3px_rgba(37,99,235,0.2)] dark:!border-slate-600 dark:!bg-slate-800 dark:!text-slate-100 dark:placeholder:text-slate-400',
@@ -168,7 +168,7 @@ interface ParteMensaje {
             <section [class]="estilos.tarjeta">
               <div class="flex flex-wrap items-baseline justify-between gap-3">
                 <h2 class="!m-0 text-[15px] font-bold">Variables</h2>
-                <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Toca una variable para insertarla en el mensaje · las marcadas ya están en uso</span>
+                <span class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Toca una variable para insertarla en el mensaje · tócala otra vez para quitarla</span>
               </div>
               <div class="grid grid-cols-1 items-stretch gap-3 xl:grid-cols-[0.9fr_2.6fr_0.9fr]">
                 <div [class]="estilos.panel">
@@ -522,10 +522,20 @@ export class TenorFormComponent implements OnInit {
     return this.usada(v) ? ESTILOS.chipUsado : ESTILOS.chip;
   }
 
-  /** Inserta la variable donde está el cursor del editor. */
+  /**
+   * Inserta la variable donde está el cursor del editor. Si ya está en el
+   * mensaje, la quita (con el espacio que la precede) en vez de repetirla.
+   */
   insertar(v: VariableTenor): void {
     const token = `{${v.token}}`;
     const editor = this.editor?.nativeElement;
+    if (this.usada(v)) {
+      const escapado = token.replace(/[{}]/g, '\\$&');
+      this.plantilla = this.plantilla.replace(new RegExp(' ?' + escapado, 'g'), '');
+      this.marcarCambio();
+      setTimeout(() => this.ajustarAltura());
+      return;
+    }
     const inicio = editor?.selectionStart ?? this.plantilla.length;
     const fin = editor?.selectionEnd ?? inicio;
     this.plantilla = this.plantilla.slice(0, inicio) + token + this.plantilla.slice(fin);
