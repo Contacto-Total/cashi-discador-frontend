@@ -400,7 +400,11 @@
   border-radius: 10px;
 }
 
-.active-filters-table { width: 100%; min-width: 480px; border-collapse: collapse; }
+.active-filters-table { width: 100%; min-width: 420px; border-collapse: collapse; table-layout: fixed; }
+.active-filters-table th:first-child { width: 28%; }
+.active-filters-table th:nth-child(2) { width: 30%; }
+.active-filters-table th:nth-child(3) { width: 34%; }
+.active-filters-table th:last-child { width: 42px; }
 
 .active-filters-table th {
   padding: 0.55rem 0.7rem;
@@ -423,6 +427,7 @@
 .active-filter-range { display: flex; align-items: center; gap: 0.65rem; font-family: 'SF Mono', Monaco, monospace; font-weight: 700; white-space: nowrap; }
 .active-filter-range lucide-angular { color: #94a3b8; }
 .table-remove-filter { width: 28px; height: 28px; border-color: transparent; }
+.active-filters-table .tipo-contacto-tag { max-width: 100%; padding: 0.35rem 0.5rem; font-size: 0.62rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 :host-context(body.light-theme) .active-filters-table-wrap { border-color: #dbeafe; }
 :host-context(body.light-theme) .active-filters-table th { color: #64748b; background: #f8fafc; }
@@ -723,6 +728,9 @@
 
 .order-field-name { flex: 1; color: #e2e8f0; font-size: 0.78rem; font-weight: 600; }
 .order-field-item .btn-remove-filter { width: 28px; height: 28px; }
+.order-fields-list--inactive { margin-top: 0.35rem; }
+.order-field-item--inactive { border-style: dashed; background: transparent; }
+.order-field-priority--na { width: 28px; border-radius: 5px; background: #64748b; cursor: default; font-size: 0.62rem; }
 
 @media (max-width: 1100px) and (min-width: 641px) {
   .order-fields-add { grid-template-columns: minmax(0, 1fr) 78px; }
@@ -766,6 +774,8 @@
   border-color: #dbeafe;
   background: #eff6ff;
 }
+
+:host-context(body.light-theme) .order-field-item--inactive { border-color: #cbd5e1; background: #f8fafc; }
 
 
 :host-context(body.light-theme) .btn-filter-sort:hover {

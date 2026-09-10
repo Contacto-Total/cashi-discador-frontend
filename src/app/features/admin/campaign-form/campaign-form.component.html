@@ -317,15 +317,9 @@
 
     <!-- SECCIÓN GRANDE: Filtros de Segmentación -->
     <div class="form-section full-width filters-section !rounded-lg !p-3">
-      <h2>
-        <lucide-angular name="filter" [size]="20"></lucide-angular>
-        Filtros de Segmentación por Rango
-      </h2>
-
       <ng-container *ngIf="selectedSubPortfolioId > 0; else noSubcartera">
         <!-- Agregar nuevo filtro -->
         <div class="filter-add-section !mb-3 !rounded-lg !p-3">
-          <h3>Agregar Filtro de Rango</h3>
           <div class="filter-add-grid">
             <div class="form-group">
               <label for="tipoContacto">Tipo de Contacto</label>
@@ -342,7 +336,7 @@
             </div>
 
             <div class="form-group">
-              <label for="filterField">Campo a Filtrar <small>(opcional si solo filtra por estado)</small></label>
+              <label for="filterField">Campo a Filtrar</label>
               <select
                 id="filterField"
                 [(ngModel)]="selectedFieldId"
@@ -491,11 +485,6 @@
         <div class="filter-results-layout">
         <!-- Lista de filtros agregados -->
         <div class="filters-list" *ngIf="campaignFilters.length > 0">
-          <h3>
-            <lucide-angular name="list-filter" [size]="18"></lucide-angular>
-            Filtros Activos ({{ campaignFilters.length }})
-            <button type="button" class="btn-clear-filters" (click)="clearFilters()">Limpiar todos</button>
-          </h3>
           <div class="active-filters-table-wrap">
             <table class="active-filters-table">
               <thead>
@@ -521,32 +510,23 @@
 
         <div class="order-fields-panel">
           <div class="order-fields-header">
-            <div>
-              <h3><lucide-angular name="arrow-down-up" [size]="18"></lucide-angular> Prioridades de ordenamiento</h3>
-              <p>Se aplican a todos los clientes seleccionados, sin depender del tipo de contacto.</p>
-            </div>
+            <h3><lucide-angular name="arrow-down-up" [size]="18"></lucide-angular> Orden de resultados</h3>
             <span>{{ campaignOrderFields.length }}/5</span>
-          </div>
-          <div class="order-fields-add">
-            <select class="form-select" [(ngModel)]="selectedOrderFieldCode" name="selectedOrderFieldCode">
-              <option value="">Seleccione un campo...</option>
-              <option *ngFor="let field of getAvailableOrderFields()" [value]="field.fieldCode">{{ field.fieldName }}</option>
-            </select>
-            <select class="form-select order-direction-select" [(ngModel)]="selectedOrderDirection" name="selectedOrderDirection">
-              <option value="DESC">DESC</option>
-              <option value="ASC">ASC</option>
-            </select>
-            <button type="button" class="btn-add-filter" (click)="addOrderField()" [disabled]="!selectedOrderFieldCode">Agregar prioridad</button>
           </div>
           <div class="order-fields-list" *ngIf="campaignOrderFields.length > 0" cdkDropList (cdkDropListDropped)="reorderOrderFields($event)">
             <div class="order-field-item" *ngFor="let field of campaignOrderFields; let i = index" cdkDrag>
               <span class="order-field-priority" cdkDragHandle title="Arrastrar para cambiar prioridad">{{ i + 1 }}</span>
               <span class="order-field-name">{{ field.fieldName }}</span>
               <button type="button" class="btn-filter-sort active" (click)="toggleOrderDirection(field)">{{ field.orderDirection }}</button>
-              <button type="button" class="btn-remove-filter" (click)="removeOrderField(field)" title="Eliminar prioridad"><lucide-angular name="trash-2" [size]="16"></lucide-angular></button>
             </div>
           </div>
-          <p class="order-fields-empty" *ngIf="campaignOrderFields.length === 0">Sin ordenamiento configurado. El sistema usará su orden predeterminado.</p>
+          <div class="order-fields-list order-fields-list--inactive" *ngIf="getInactiveOrderFields().length > 0">
+            <div class="order-field-item order-field-item--inactive" *ngFor="let field of getInactiveOrderFields()">
+              <span class="order-field-priority order-field-priority--na">NA</span>
+              <span class="order-field-name">{{ field.fieldName }}</span>
+              <button type="button" class="btn-filter-sort" (click)="toggleOrderDirection(field)">NA</button>
+            </div>
+          </div>
         </div>
         </div>
 

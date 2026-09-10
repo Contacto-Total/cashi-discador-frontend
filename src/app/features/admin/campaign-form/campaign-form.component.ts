@@ -25,6 +25,10 @@ import { MAT_DATE_FORMATS } from '@angular/material/core';
 import { AppNumberPipe } from '@/shared/pipes/format.pipes';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 
+type OrderableCampaignField = Omit<CampaignOrderField, 'orderDirection'> & {
+  orderDirection: 'NA' | 'ASC' | 'DESC';
+};
+
 export const MY_DATE_FORMATS = {
   parse: {
     dateInput: 'DD/MM/YYYY',  // cómo se interpreta al escribir
@@ -104,8 +108,6 @@ export class CampaignFormComponent implements OnInit {
   campaignFilters: CampaignFilterRange[] = [];
   private campaignFiltersLoaded = false;
   campaignOrderFields: CampaignOrderField[] = [];
-  selectedOrderFieldCode = '';
-  selectedOrderDirection: 'ASC' | 'DESC' = 'DESC';
   selectedFieldId: number = 0;
   newFilterMinValue: number | null = null;
   newFilterMaxValue: number | null = null;
@@ -830,40 +832,40 @@ export class CampaignFormComponent implements OnInit {
     });
   }
 
-  getAvailableOrderFields(): FilterableField[] {
-    const activeFilterCodes = new Set(this.campaignFilters
-      .filter(filter => !!filter.fieldCode)
-      .map(filter => filter.fieldCode));
-    return this.filterableFields.filter(field =>
-      activeFilterCodes.has(field.fieldCode) && !this.campaignOrderFields.some(order => order.fieldCode === field.fieldCode));
+  getOrderableFields(): OrderableCampaignField[] {
+    const seen = new Set<string>();
+    return this.campaignFilters
+      .filter(filter => !!filter.fieldCode && !seen.has(filter.fieldCode) && !!seen.add(filter.fieldCode))
+      .map(filter => {
+        const order = this.campaignOrderFields.find(item => item.fieldCode === filter.fieldCode);
+        return order ? order : {
+          fieldDefinitionId: filter.fieldDefinitionId,
+          fieldCode: filter.fieldCode,
+          fieldName: filter.fieldName,
+          orderDirection: 'NA'
+        };
+      });
   }
 
-  addOrderField(): void {
-    const field = this.filterableFields.find(item => item.fieldCode === this.selectedOrderFieldCode);
-    if (!field) return;
-    if (this.campaignOrderFields.length >= 5) {
-      this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
-      return;
+  getInactiveOrderFields(): OrderableCampaignField[] {
+    return this.getOrderableFields().filter(field => field.orderDirection === 'NA');
+  }
+
+  toggleOrderDirection(field: OrderableCampaignField): void {
+    const existingIndex = this.campaignOrderFields.findIndex(item => item.fieldCode === field.fieldCode);
+    if (existingIndex < 0) {
+      if (this.campaignOrderFields.length >= 5) {
+        this.error = 'Solo puede configurar hasta 5 prioridades de ordenamiento';
+        return;
+      }
+      this.campaignOrderFields.push({ ...field, orderDirection: 'DESC', orderPriority: this.campaignOrderFields.length + 1 });
+    } else if (this.campaignOrderFields[existingIndex].orderDirection === 'DESC') {
+      this.campaignOrderFields[existingIndex].orderDirection = 'ASC';
+    } else {
+      this.campaignOrderFields.splice(existingIndex, 1);
     }
-    this.campaignOrderFields.push({
-      fieldDefinitionId: field.id,
-      fieldCode: field.fieldCode,
-      fieldName: field.fieldName,
-      orderDirection: this.selectedOrderDirection,
-      orderPriority: this.campaignOrderFields.length + 1
-    });
-    this.selectedOrderFieldCode = '';
-    this.error = null;
-  }
-
-  toggleOrderDirection(field: CampaignOrderField): void {
-    field.orderDirection = field.orderDirection === 'ASC' ? 'DESC' : 'ASC';
-  }
-
-  removeOrderField(field: CampaignOrderField): void {
-    const index = this.campaignOrderFields.indexOf(field);
-    if (index >= 0) this.campaignOrderFields.splice(index, 1);
     this.normalizeOrderPriorities();
+    this.error = null;
   }
 
   reorderOrderFields(event: CdkDragDrop<CampaignOrderField[]>): void {
