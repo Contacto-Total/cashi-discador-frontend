@@ -57,14 +57,14 @@ const ESTILOS = {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
   styles: [`
-    @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-    @keyframes deslizar { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+    @keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    @keyframes deslizar { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
     @keyframes fundir { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes brotar { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: none; } }
-    .aparecer { animation: aparecer 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-    .deslizar { animation: deslizar 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-    .fundir { animation: fundir 0.25s ease both; }
-    .brotar { animation: brotar 0.28s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+    @keyframes brotar { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    .aparecer { animation: aparecer 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .deslizar { animation: deslizar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .fundir { animation: fundir 0.3s ease-out both; }
+    .brotar { animation: brotar 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
     @media (prefers-reduced-motion: reduce) {
       .aparecer, .deslizar, .fundir, .brotar { animation: none; }
     }
@@ -139,9 +139,10 @@ const ESTILOS = {
           <div role="group" aria-label="Estado" class="flex h-[38px] rounded-lg border border-[#8491a3] bg-white p-[3px] dark:border-slate-600 dark:bg-slate-800">
             @for (opcion of estados; track opcion.valor) {
               <button type="button" (click)="estado.set(opcion.valor); irA(1)" [attr.aria-pressed]="estado() === opcion.valor"
-                      class="rounded-[6px] px-3 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
+                      class="inline-flex items-center gap-2 rounded-[6px] pl-3 pr-2 text-[12.5px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb]"
                       [ngClass]="estado() === opcion.valor ? 'bg-[#0f172a] text-white dark:bg-white dark:text-slate-900' : 'text-[#5f6c80] hover:bg-[#f4f6f9] dark:text-slate-300 dark:hover:bg-slate-700'">
-                {{ opcion.texto }} <span class="tabular-nums opacity-70">{{ opcion.valor === 'ACTIVO' ? activos().length : archivados().length }}</span>
+                {{ opcion.texto }}
+                <span class="rounded-full px-1.5 py-px text-[11px] tabular-nums" [ngClass]="estado() === opcion.valor ? 'bg-white/20 dark:bg-slate-900/15' : 'bg-[#eef2f7] dark:bg-slate-700'">{{ opcion.valor === 'ACTIVO' ? activos().length : archivados().length }}</span>
               </button>
             }
           </div>
@@ -188,21 +189,23 @@ const ESTILOS = {
 
                 <h2 class="!m-0 line-clamp-2 text-[18px] font-extrabold leading-tight tracking-[-0.015em]">{{ t.nombre }}</h2>
 
-                <p class="line-clamp-3 rounded-[10px] rounded-bl-[3px] px-[13px] py-[10px] text-[13px] leading-[1.55] text-[#334155] dark:text-slate-200"
-                   [ngClass]="alerta(t) ? 'bg-[#fdf6ea] dark:bg-amber-950/30' : 'bg-[#f4f6f9] dark:bg-slate-800'">
+                <p class="rounded-[10px] rounded-bl-[3px] px-[13px] py-[10px] text-[13px] leading-[1.55] text-[#334155] dark:text-slate-200"
+                   [ngClass]="alerta(t) ? 'bg-[#fbf3e3] dark:bg-amber-950/30' : 'bg-[#f4f6f9] dark:bg-slate-800'">
                   @for (parte of t.partes; track $index) {
-                    @if (parte.variable) {<span class="font-semibold text-[#1d4ed8] dark:text-blue-400">{{ parte.texto }}</span>} @else {<span>{{ parte.texto }}</span>}
+                    @if (parte.variable) {<span class="font-semibold" [ngClass]="alerta(t) ? 'text-[#9a6412] dark:text-amber-300' : 'text-[#1d4ed8] dark:text-blue-400'">{{ parte.texto }}</span>} @else {<span>{{ parte.texto }}</span>}
                   }
                 </p>
 
                 <div class="flex flex-wrap gap-1.5">
                   @for (variable of variablesVisibles(t); track variable; let j = $index) {
-                    <span class="brotar inline-flex h-6 items-center rounded-full bg-[#eff5ff] px-2.5 text-xs font-semibold text-[#1d4ed8] transition-colors group-hover:bg-[#e2ecff] dark:bg-blue-950 dark:text-blue-300"
+                    <span class="brotar inline-flex h-6 items-center rounded-full px-2.5 text-xs font-semibold transition-colors"
+                          [ngClass]="alerta(t) ? 'border border-[#ecd9b5] bg-white text-[#8a5a1f] dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-[#eff5ff] text-[#1d4ed8] group-hover:bg-[#e2ecff] dark:bg-blue-950 dark:text-blue-300'"
                           [style.animation-delay.ms]="i * 35 + j * 40">{{ variable }}</span>
                   }
                   @if (t.variables.length > limiteVariables) {
                     <button type="button" (click)="alternarVariables(t.id)" [attr.aria-expanded]="expandido(t.id)"
-                            class="inline-flex h-6 items-center gap-[3px] rounded-full border border-[#8491a3] bg-white px-2 text-xs font-semibold text-[#334155] transition-colors hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200">
+                            class="inline-flex h-6 items-center gap-[3px] rounded-full border bg-white px-2 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:bg-slate-800"
+                            [ngClass]="alerta(t) ? 'border-[#ecd9b5] text-[#8a5a1f] hover:bg-[#fbf3e3] dark:border-amber-900 dark:text-amber-300' : 'border-[#8491a3] text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-600 dark:text-slate-200'">
                       {{ expandido(t.id) ? 'menos' : '+' + (t.variables.length - limiteVariables) }}
                       <span class="flex transition-transform" [class.rotate-180]="expandido(t.id)"><lucide-angular name="chevron-down" [size]="11" class="block"></lucide-angular></span>
                     </button>
@@ -213,7 +216,7 @@ const ESTILOS = {
                      [ngClass]="alerta(t) ? 'border-[#f3e6cc] dark:border-amber-900/60' : 'border-[#eef1f5] dark:border-slate-800'">
                   <div class="flex flex-col gap-0.5">
                     @if (t.conteoError) {
-                      <span class="line-clamp-2 text-xs font-semibold text-[#b45309] dark:text-amber-300">{{ t.conteoError }}</span>
+                      <span class="line-clamp-2 max-w-[220px] text-xs font-semibold leading-snug text-[#b45309] dark:text-amber-300">{{ t.conteoError }}</span>
                     } @else {
                       <span class="flex items-baseline gap-1.5">
                         <span class="text-[22px] font-extrabold leading-none tracking-[-0.02em] tabular-nums" [ngClass]="t.clientesHoy === 0 ? 'text-[#b45309] dark:text-amber-300' : ''">{{ t.clientesHoy === null ? '—' : miles(t.clientesHoy) }}</span>

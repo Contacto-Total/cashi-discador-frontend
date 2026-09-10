@@ -69,6 +69,11 @@ interface ParteMensaje {
   selector: 'app-tenor-form',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, LucideAngularModule],
+  styles: [`
+    @keyframes aparecer { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .aparecer { animation: aparecer 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    @media (prefers-reduced-motion: reduce) { .aparecer { animation: none; } }
+  `],
   template: `
     <div class="min-h-full bg-[#f6f7f9] font-['Plus_Jakarta_Sans',ui-sans-serif,system-ui,sans-serif] text-[#0f172a] dark:bg-slate-950 dark:text-slate-100">
       <div class="flex flex-wrap items-center justify-between gap-6 border-b border-[#e6e9ee] bg-white px-7 py-3.5 dark:border-slate-800 dark:bg-slate-900">
@@ -124,7 +129,6 @@ interface ParteMensaje {
               <span [class]="estilos.flechaSelect"><lucide-angular [name]="editando() ? 'lock' : 'chevron-down'" [size]="12" class="block"></lucide-angular></span>
             </span>
           </label>
-          <span class="mb-px max-w-[150px] text-xs leading-[1.35] text-[#5f6c80] dark:text-slate-400">La subcartera no se puede cambiar después de crear</span>
         </div>
       </div>
 
@@ -205,9 +209,9 @@ interface ParteMensaje {
                         </button>
                       }
                     </div>
-                    <p class="flex items-start gap-[7px] pt-0.5 text-[12.5px] text-[#1e40af] dark:text-blue-200">
-                      <span class="mt-px flex shrink-0 text-[#1d4ed8] dark:text-blue-300"><lucide-angular name="info" [size]="13" class="block"></lucide-angular></span>
-                      Solo entran los clientes que tienen dato en cada monto que usa el mensaje.
+                    <p class="mt-auto flex items-center gap-2 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs text-[#1e40af] ring-1 ring-[#dbe7fb] dark:bg-blue-950/40 dark:text-blue-200 dark:ring-blue-900">
+                      <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1d4ed8] text-white"><lucide-angular name="filter" [size]="10" class="block"></lucide-angular></span>
+                      Usar un monto excluye a quien no lo tiene.
                     </p>
                   } @else {
                     <p class="text-[12.5px] text-[#5f6c80] dark:text-slate-400">Esta subcartera no tiene montos marcados como visibles en su configuración de cabeceras.</p>
@@ -228,7 +232,112 @@ interface ParteMensaje {
               </div>
             </section>
 
+          </div>
+
+          <div class="flex flex-col gap-3.5">
+            <section class="flex flex-col gap-3.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
+              <div class="flex items-center gap-[18px]">
+                <svg width="108" height="108" viewBox="0 0 108 108" class="shrink-0" role="img" [attr.aria-label]="porcentaje() + '% de la cartera'">
+                  <circle cx="54" cy="54" r="44" fill="none" stroke-width="16" class="stroke-[#e8edf5] dark:stroke-slate-700"></circle>
+                  <circle cx="54" cy="54" r="44" fill="none" stroke-width="16" transform="rotate(-90 54 54)"
+                          class="stroke-[#2563eb] transition-[stroke-dasharray] duration-500 dark:stroke-blue-400"
+                          [attr.stroke-linecap]="arco() > 0 ? 'round' : 'butt'"
+                          [attr.stroke-dasharray]="arco() + ' ' + circunferencia"></circle>
+                  <text x="54" y="60" text-anchor="middle" class="fill-[#0f172a] text-[19px] font-extrabold dark:fill-white">{{ porcentaje() }}%</text>
+                </svg>
+                <div class="flex min-w-0 flex-col gap-[3px]">
+                  @if (conteo(); as c) {
+                    <span class="text-4xl font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(c.clientes) }}</span>
+                  } @else {
+                    <span class="text-4xl font-extrabold leading-none text-[#8491a3]">—</span>
+                  }
+                  <span class="text-[13.5px] font-semibold">clientes en esta lista</span>
+                  <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">de {{ miles(vars.clientesEnCartera) }} en la cartera {{ nombreSubcartera() }}</span>
+                </div>
+              </div>
+              <div class="flex items-center justify-between gap-2.5 border-t border-[#eef1f5] pt-3 dark:border-slate-800">
+                <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ pendiente() ? 'Hay cambios sin recalcular' : 'Calculado con la carga vigente' }}</span>
+                <button type="button" (click)="recalcular()" [disabled]="calculando() || !plantilla.trim()"
+                        class="inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-[11px] text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                        [ngClass]="pendiente() ? 'border-[#2563eb] bg-[#2563eb] text-white hover:bg-[#1d4ed8]' : 'border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800'">
+                  <span class="inline-flex" [class.animate-spin]="calculando()">
+                    <lucide-angular [name]="calculando() ? 'loader-2' : 'refresh-cw'" [size]="12" class="block"></lucide-angular>
+                  </span>
+                  Recalcular
+                </button>
+              </div>
+            </section>
+
             <section [class]="estilos.tarjeta">
+              <div class="flex items-center justify-between gap-3">
+                <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
+                @if (totalPreview() > 0) {
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" (click)="verMensaje(-1)" [disabled]="indicePreview() === 0" aria-label="Mensaje anterior"
+                            class="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-40 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800">
+                      <lucide-angular name="chevron-left" [size]="12" class="block"></lucide-angular>
+                    </button>
+                    <span class="text-[12.5px] tabular-nums text-[#334155] dark:text-slate-300">{{ miles(indicePreview() + 1) }} de {{ miles(totalPreview()) }}</span>
+                    <button type="button" (click)="verMensaje(1)" [disabled]="indicePreview() >= totalPreview() - 1" aria-label="Mensaje siguiente"
+                            class="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-40 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800">
+                      <lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular>
+                    </button>
+                  </div>
+                }
+              </div>
+              <div class="rounded-[22px] border-[6px] border-[#1e293b] bg-[#0f172a] p-2 shadow-[0_12px_30px_rgba(15,23,42,0.22)] dark:border-slate-700">
+                <div class="flex min-h-[200px] flex-col gap-3 rounded-[16px] bg-[#f4f6f9] px-3 pb-4 pt-3 dark:bg-slate-800">
+                  <div class="flex items-center justify-between text-[11px] text-[#5f6c80] dark:text-slate-400">
+                    <span class="font-semibold">SMS · {{ nombreCartera() }}</span>
+                    <span class="tabular-nums">{{ ahora | date: 'HH:mm' }}</span>
+                  </div>
+                  @if (mensaje(); as m) {
+                    @for (actual of [m]; track actual.telefono + actual.texto) {
+                      <div class="aparecer flex flex-col gap-1.5">
+                        <div class="flex items-center gap-2">
+                          <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(actual.nombre) }}</span>
+                          <span class="text-[13px] font-semibold">{{ actual.nombre || 'Cliente' }}</span>
+                          <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ actual.telefono }}</span>
+                        </div>
+                        <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ actual.texto }}</p>
+                        <span class="text-[11px] tabular-nums" [ngClass]="actual.caracteres > limite() ? 'font-semibold text-[#b91c1c] dark:text-red-400' : 'text-[#5f6c80] dark:text-slate-400'">
+                          {{ actual.caracteres }} / {{ limite() }} caracteres{{ actual.caracteres > limite() ? ' · pasa del límite, el archivo no se generará' : '' }}
+                        </span>
+                      </div>
+                    }
+                  } @else {
+                    <p class="my-auto px-2 text-center text-[13px] text-[#5f6c80] dark:text-slate-400">{{ textoSinMensaje() }}</p>
+                  }
+                </div>
+              </div>
+            </section>
+
+            <div class="flex flex-col gap-2">
+              <button type="button" (click)="guardar()" [disabled]="guardando()"
+                      class="flex h-11 items-center justify-center gap-[9px] rounded-[10px] bg-[#0f172a] text-sm font-semibold text-white hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                <span class="inline-flex" [class.animate-spin]="guardando()">
+                  <lucide-angular [name]="guardando() ? 'loader-2' : 'save'" [size]="15" class="block"></lucide-angular>
+                </span>
+                {{ editando() ? 'Guardar cambios' : 'Guardar tenor' }}
+              </button>
+              <div class="flex gap-2">
+                <button type="button" (click)="generarArchivo()" [disabled]="!editando() || descargando()"
+                        [attr.title]="editando() ? null : 'Guarda el tenor para poder generar el archivo'"
+                        class="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-[10px] border border-[#8491a3] bg-white text-[13.5px] font-semibold text-[#0f172a] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800">
+                  <span class="inline-flex" [class.animate-spin]="descargando()">
+                    <lucide-angular [name]="descargando() ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
+                  </span>
+                  Generar archivo
+                </button>
+                <a routerLink="/sms/combos"
+                   class="btn flex h-[42px] w-[104px] items-center justify-center rounded-[10px] text-[13.5px] font-semibold text-[#334155] hover:bg-[#eef1f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">
+                  Cancelar
+                </a>
+              </div>
+            </div>
+          </div>
+
+            <section [class]="estilos.tarjeta + ' lg:col-span-2'">
               <h2 class="!m-0 text-[15px] font-bold">Filtros</h2>
               <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div role="group" aria-labelledby="tenor-rangos" class="flex flex-col gap-[9px]">
@@ -286,100 +395,6 @@ interface ParteMensaje {
                 </div>
               </div>
             </section>
-          </div>
-
-          <div class="flex flex-col gap-3.5 lg:sticky lg:top-4">
-            <section class="flex flex-col gap-3.5 rounded-xl border border-[#e6e9ee] bg-white px-[18px] py-4 dark:border-slate-800 dark:bg-slate-900">
-              <div class="flex items-center gap-[18px]">
-                <svg width="108" height="108" viewBox="0 0 108 108" class="shrink-0" role="img" [attr.aria-label]="porcentaje() + '% de la cartera'">
-                  <circle cx="54" cy="54" r="44" fill="none" stroke-width="16" class="stroke-[#e8edf5] dark:stroke-slate-700"></circle>
-                  <circle cx="54" cy="54" r="44" fill="none" stroke-width="16" transform="rotate(-90 54 54)"
-                          class="stroke-[#2563eb] transition-[stroke-dasharray] duration-500 dark:stroke-blue-400"
-                          [attr.stroke-linecap]="arco() > 0 ? 'round' : 'butt'"
-                          [attr.stroke-dasharray]="arco() + ' ' + circunferencia"></circle>
-                  <text x="54" y="60" text-anchor="middle" class="fill-[#0f172a] text-[19px] font-extrabold dark:fill-white">{{ porcentaje() }}%</text>
-                </svg>
-                <div class="flex min-w-0 flex-col gap-[3px]">
-                  @if (conteo(); as c) {
-                    <span class="text-4xl font-extrabold leading-none tracking-[-0.02em] tabular-nums">{{ miles(c.clientes) }}</span>
-                  } @else {
-                    <span class="text-4xl font-extrabold leading-none text-[#8491a3]">—</span>
-                  }
-                  <span class="text-[13.5px] font-semibold">clientes en esta lista</span>
-                  <span class="text-[12.5px] tabular-nums text-[#5f6c80] dark:text-slate-400">de {{ miles(vars.clientesEnCartera) }} en la cartera {{ nombreSubcartera() }}</span>
-                </div>
-              </div>
-              <div class="flex items-center justify-between gap-2.5 border-t border-[#eef1f5] pt-3 dark:border-slate-800">
-                <span class="text-xs text-[#5f6c80] dark:text-slate-400">{{ pendiente() ? 'Hay cambios sin recalcular' : 'Calculado con la carga vigente' }}</span>
-                <button type="button" (click)="recalcular()" [disabled]="calculando() || !plantilla.trim()"
-                        class="inline-flex h-7 items-center gap-1.5 rounded-[7px] border px-[11px] text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
-                        [ngClass]="pendiente() ? 'border-[#2563eb] bg-[#2563eb] text-white hover:bg-[#1d4ed8]' : 'border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800'">
-                  <span class="inline-flex" [class.animate-spin]="calculando()">
-                    <lucide-angular [name]="calculando() ? 'loader-2' : 'refresh-cw'" [size]="12" class="block"></lucide-angular>
-                  </span>
-                  Recalcular
-                </button>
-              </div>
-            </section>
-
-            <section [class]="estilos.tarjeta">
-              <div class="flex items-center justify-between gap-3">
-                <h2 class="!m-0 text-[15px] font-bold">Previsualización</h2>
-                @if (totalPreview() > 0) {
-                  <div class="flex items-center gap-1.5">
-                    <button type="button" (click)="verMensaje(-1)" [disabled]="indicePreview() === 0" aria-label="Mensaje anterior"
-                            class="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-40 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800">
-                      <lucide-angular name="chevron-left" [size]="12" class="block"></lucide-angular>
-                    </button>
-                    <span class="text-[12.5px] tabular-nums text-[#334155] dark:text-slate-300">{{ miles(indicePreview() + 1) }} de {{ miles(totalPreview()) }}</span>
-                    <button type="button" (click)="verMensaje(1)" [disabled]="indicePreview() >= totalPreview() - 1" aria-label="Mensaje siguiente"
-                            class="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] border border-[#8491a3] bg-white text-[#334155] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:opacity-40 dark:border-slate-600 dark:bg-transparent dark:text-slate-200 dark:hover:bg-slate-800">
-                      <lucide-angular name="chevron-right" [size]="12" class="block"></lucide-angular>
-                    </button>
-                  </div>
-                }
-              </div>
-              @if (mensaje(); as m) {
-                <div class="flex flex-col gap-[9px] rounded-xl bg-[#f4f6f9] p-[13px] dark:bg-slate-800">
-                  <div class="flex items-center gap-2">
-                    <span class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-[#dbe4f0] text-xs font-bold text-[#334155] dark:bg-slate-600 dark:text-slate-100">{{ iniciales(m.nombre) }}</span>
-                    <span class="text-[13px] font-semibold">{{ m.nombre || 'Cliente' }}</span>
-                    <span class="text-xs tabular-nums text-[#5f6c80] dark:text-slate-400">{{ m.telefono }}</span>
-                  </div>
-                  <p class="rounded-xl rounded-bl-[3px] border border-[#e6e9ee] bg-white px-3 py-[11px] text-[13px] leading-[1.55] tabular-nums dark:border-slate-700 dark:bg-slate-900">{{ m.texto }}</p>
-                  @if (m.caracteres > limite()) {
-                    <p class="text-xs font-semibold text-[#b91c1c] dark:text-red-400">Este mensaje pasa de {{ limite() }} caracteres: el archivo no se podrá generar.</p>
-                  }
-                </div>
-              } @else {
-                <p class="rounded-xl bg-[#f4f6f9] px-3 py-6 text-center text-[13px] text-[#5f6c80] dark:bg-slate-800 dark:text-slate-400">{{ textoSinMensaje() }}</p>
-              }
-            </section>
-
-            <div class="flex flex-col gap-2">
-              <button type="button" (click)="guardar()" [disabled]="guardando()"
-                      class="flex h-11 items-center justify-center gap-[9px] rounded-[10px] bg-[#0f172a] text-sm font-semibold text-white hover:bg-[#1e293b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] focus-visible:ring-offset-2 disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
-                <span class="inline-flex" [class.animate-spin]="guardando()">
-                  <lucide-angular [name]="guardando() ? 'loader-2' : 'save'" [size]="15" class="block"></lucide-angular>
-                </span>
-                {{ editando() ? 'Guardar cambios' : 'Guardar tenor' }}
-              </button>
-              <div class="flex gap-2">
-                <button type="button" (click)="generarArchivo()" [disabled]="!editando() || descargando()"
-                        [attr.title]="editando() ? null : 'Guarda el tenor para poder generar el archivo'"
-                        class="flex h-[42px] flex-1 items-center justify-center gap-2 rounded-[10px] border border-[#8491a3] bg-white text-[13.5px] font-semibold text-[#0f172a] hover:bg-[#f4f6f9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-transparent dark:text-slate-100 dark:hover:bg-slate-800">
-                  <span class="inline-flex" [class.animate-spin]="descargando()">
-                    <lucide-angular [name]="descargando() ? 'loader-2' : 'download'" [size]="15" class="block"></lucide-angular>
-                  </span>
-                  Generar archivo
-                </button>
-                <a routerLink="/sms/combos"
-                   class="btn flex h-[42px] w-[104px] items-center justify-center rounded-[10px] text-[13.5px] font-semibold text-[#334155] hover:bg-[#eef1f5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563eb] dark:text-slate-300 dark:hover:bg-slate-800">
-                  Cancelar
-                </a>
-              </div>
-            </div>
-          </div>
         </main>
       } @else if (cargandoVariables()) {
         <main class="px-7 py-10">
@@ -423,6 +438,7 @@ export class TenorFormComponent implements OnInit {
 
   readonly estilos = ESTILOS;
   readonly miles = miles;
+  readonly ahora = new Date();
   readonly circunferencia = CIRCUNFERENCIA;
   readonly indicesSegmento = Array.from({ length: SEGMENTOS }, (_, i) => i);
 
@@ -706,6 +722,10 @@ export class TenorFormComponent implements OnInit {
 
   nombreSubcartera(): string {
     return this.subcarteras().find(s => s.id === this.idSubcartera)?.subPortfolioName ?? '';
+  }
+
+  nombreCartera(): string {
+    return this.carteras().find(c => c.id === this.idCartera)?.portfolioName ?? 'Cashi';
   }
 
   iniciales(nombre: string): string {
